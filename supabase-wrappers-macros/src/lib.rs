@@ -183,7 +183,7 @@ impl ToTokens for WrappersMagic {
 ///
 /// # Example
 ///
-/// Suppose your developed two FDWs `FooFdw` and `BarFdw`, then you can use them
+/// Suppose you developed two FDWs `FooFdw` and `BarFdw`, then you can use them
 /// like below,
 ///
 /// ```
