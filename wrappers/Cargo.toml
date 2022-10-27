@@ -1,0 +1,50 @@
+[package]
+name = "wrappers"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[features]
+default = ["pg14"]
+pg10 = ["pgx/pg10", "pgx-tests/pg10" ]
+pg11 = ["pgx/pg11", "pgx-tests/pg11" ]
+pg12 = ["pgx/pg12", "pgx-tests/pg12" ]
+pg13 = ["pgx/pg13", "pgx-tests/pg13" ]
+pg14 = ["pgx/pg14", "pgx-tests/pg14" ]
+pg_test = []
+
+helloworld_fdw = []
+bigquery_fdw = ["gcp-bigquery-client", "time"]
+clickhouse_fdw = ["clickhouse-rs"]
+stripe_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json"]
+
+[dependencies]
+pgx = "=0.5.6"
+cfg-if = "1.0"
+tokio = { version = "1.21", features = ["rt"] }
+supabase-wrappers = { version = "0.1", path = "../supabase-wrappers" }
+
+clickhouse-rs = { git = "https://github.com/suharev7/clickhouse-rs", branch = "async-await", optional = true }
+
+gcp-bigquery-client = { version = "0.14.0", optional = true }
+time = { version = "0.3.15", features = ["parsing"], optional = true }
+
+reqwest = { version = "0.11.12", features = ["json"], optional = true }
+reqwest-middleware = { version = "0.1.6", optional = true }
+reqwest-retry = { version = "0.1.5", optional = true }
+serde_json = { version = "1.0.86", optional = true }
+
+[dev-dependencies]
+pgx-tests = "=0.5.6"
+
+[profile.dev]
+panic = "unwind"
+lto = "thin"
+
+[profile.release]
+panic = "unwind"
+opt-level = 3
+lto = "fat"
+codegen-units = 1

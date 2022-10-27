@@ -1,0 +1,16 @@
+[package]
+name = "supabase-wrappers"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default = ["pg14"]
+pg14 = ["pgx/pg14", "pgx-tests/pg14" ]
+
+[dependencies]
+pgx = "=0.5.6"
+tokio = { version = "1.21", features = ["rt"] }
+supabase-wrappers-macros = { version = "0.1", path = "../supabase-wrappers-macros" }
+
+[dev-dependencies]
+pgx-tests = "=0.5.6"
