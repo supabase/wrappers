@@ -5,8 +5,8 @@ edition = "2021"
 authors = ["Supabase Inc. https://supabase.com/"]
 license = "Apache-2.0"
 description = "Postgres Foreign Data Wrapper development framework in Rust."
-homepage = "https://github.com/supabase/wrappers"
-repository = "https://github.com/supabase/wrappers"
+homepage = "https://github.com/supabase/wrappers/supabase-wrappers"
+repository = "https://github.com/supabase/wrappers/supabase-wrappers"
 categories = ["database"]
 keywords = ["database", "postgres", "postgresql", "extension"]
 
