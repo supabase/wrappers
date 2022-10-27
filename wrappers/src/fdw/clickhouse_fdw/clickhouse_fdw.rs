@@ -2,10 +2,9 @@ use clickhouse_rs::{types, types::Block, types::SqlType, ClientHandle, Pool};
 use pgx::log::PgSqlErrorCode;
 use pgx::log::{elog, PgLogLevel};
 use std::collections::HashMap;
-use tokio::runtime::Runtime;
 
 use supabase_wrappers::{
-    create_async_runtime, report_error, Cell, ForeignDataWrapper, Limit, Qual, Row, Sort,
+    create_async_runtime, report_error, Cell, ForeignDataWrapper, Limit, Qual, Row, Sort, Runtime,
 };
 
 fn deparse(quals: &Vec<Qual>, columns: &Vec<String>, options: &HashMap<String, String>) -> String {

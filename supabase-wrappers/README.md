@@ -16,7 +16,7 @@ Supabase Wrappers is a pgx extension, so you can follow the [installation steps]
 
 ## Developing a FDW
 
-To develop a FDW using Supabase Wrappers, you only need to implement the [ForeignDataWrapper](./supabase-wrappers/src/interface.rs) trait.
+To develop a FDW using Supabase Wrappers, you only need to implement the [ForeignDataWrapper](./src/interface.rs) trait.
 
 ```rust
 pub trait ForeignDataWrapper {
@@ -40,18 +40,17 @@ pub trait ForeignDataWrapper {
 
 In a minimum FDW, which supports data scan only, `begin_scan()`, `iter_scan()` and `end_scan()` are required, all the other functions are optional.
 
-## Supported Wrappers
+Below are some FDWs developed using this framework, check them out:
 
-We support the following FDWs, with more under development:
+- [HelloWorld](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/helloworld_fdw): A demo FDW to show how to develop a baisc FDW.
+- [BigQuery](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/bigquery_fdw): A FDW for [BigQuery](https://cloud.google.com/bigquery) which only supports async data scan at this moment. 
+- [Clickhouse](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/clickhouse_fdw): A FDW for [ClickHouse](https://clickhouse.com/) which supports both async data scan and modify. 
+- [Stripe](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/stripe_fdw): A FDW for [Stripe](https://stripe.com/) API.
 
-- `HelloWorld`: `/src/fdw/helloworld_fdw`. A demo FDW to show how to develop a baisc FDW.
-- [BigQuery](https://cloud.google.com/bigquery): `/src/fdw/bigquery_fdw`. A FDW for BigQuery which supports async data scan only at this moment. 
-- [Clickhouse](https://clickhouse.com/): `/src/fdw/clickhouse_fdw`. A FDW for ClickHouse which supports both async data scan and modify. 
-- [Stripe](https://stripe.com/): `/src/fdw/stripe_fdw`. A FDW for Stripe API.
 
 ## Basic usage
 
-These steps outline how to use the a demo FDW [HelloWorldFdw](./src/fdw/helloworld_fdw):
+These steps outline how to use the a demo FDW [HelloWorldFdw](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/helloworld_fdw):
 
 1. Clone this repo
 

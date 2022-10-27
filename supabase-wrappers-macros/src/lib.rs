@@ -179,7 +179,7 @@ impl ToTokens for WrappersMagic {
 ///
 /// This macro should be called only once.
 ///
-/// See more details about Supabase Wrappers: https://github.com/supabase/wrappers
+/// See more details about Supabase Wrappers: <https://github.com/supabase/wrappers>
 ///
 /// # Example
 ///

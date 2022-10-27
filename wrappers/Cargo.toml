@@ -23,14 +23,17 @@ stripe_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json"]
 [dependencies]
 pgx = "=0.5.6"
 cfg-if = "1.0"
-tokio = { version = "1.21", features = ["rt"] }
-supabase-wrappers = { version = "0.1", path = "../supabase-wrappers" }
+supabase-wrappers = "0.1"
+#supabase-wrappers = { path = "../supabase-wrappers" }
 
+# for clickhouse_fdw
 clickhouse-rs = { git = "https://github.com/suharev7/clickhouse-rs", branch = "async-await", optional = true }
 
+# for bigquery_fdw
 gcp-bigquery-client = { version = "0.14.0", optional = true }
 time = { version = "0.3.15", features = ["parsing"], optional = true }
 
+# for stripe_fdw
 reqwest = { version = "0.11.12", features = ["json"], optional = true }
 reqwest-middleware = { version = "0.1.6", optional = true }
 reqwest-retry = { version = "0.1.5", optional = true }

@@ -1,3 +1,4 @@
+extern crate supabase_wrappers;
 use supabase_wrappers::wrappers_magic;
 
 mod fdw;

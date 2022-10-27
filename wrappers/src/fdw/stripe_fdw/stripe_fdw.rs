@@ -4,9 +4,8 @@ use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use serde_json::Value;
 use std::collections::HashMap;
-use tokio::runtime::Runtime;
 
-use supabase_wrappers::{create_async_runtime, Cell, ForeignDataWrapper, Limit, Qual, Row, Sort};
+use supabase_wrappers::{create_async_runtime, Cell, ForeignDataWrapper, Limit, Qual, Row, Runtime, Sort};
 
 pub(crate) struct StripeFdw {
     rt: Runtime,

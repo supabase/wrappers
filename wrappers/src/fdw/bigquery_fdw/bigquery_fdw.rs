@@ -9,9 +9,8 @@ use pgx::log::{elog, PgLogLevel};
 use pgx::prelude::{Date, Timestamp};
 use std::collections::HashMap;
 use time::{format_description::well_known::Iso8601, OffsetDateTime, PrimitiveDateTime};
-use tokio::runtime::Runtime;
 
-use supabase_wrappers::{create_async_runtime, Cell, ForeignDataWrapper, Limit, Qual, Row, Sort};
+use supabase_wrappers::{create_async_runtime, Cell, ForeignDataWrapper, Limit, Qual, Row, Sort, Runtime};
 
 macro_rules! field_type_error {
     ($field:ident, $err:ident) => {{
