@@ -1,7 +1,8 @@
 //! A macro to set up facility functions for Postgres FDW development.
 //!
-//! This crate is not supposed to be used directly, please use `supabase-wrappers` instead.
+//! This crate is NOT supposed to be used directly, please use [supabase-wrappers](https://github.com/supabase/wrappers/tree/main/supabase-wrappers) instead.
 //!
+//!  See more details about [Supabase Wrappers](https://github.com/supabase/wrappers).
 
 extern crate proc_macro;
 use proc_macro::TokenStream;
@@ -123,7 +124,7 @@ impl ToTokens for WrappersMagic {
                 #modify
 
                 #[pg_extern]
-                fn remote_handler() -> PgBox<FdwRoutine> {
+                fn wrappers_handler() -> PgBox<FdwRoutine> {
                     let mut fdw_routine = PgBox::<FdwRoutine>::alloc_node(NodeTag_T_FdwRoutine);
 
                     // plan phase
@@ -151,7 +152,7 @@ impl ToTokens for WrappersMagic {
                 }
 
                 #[pg_extern]
-                fn remote_validator(opt_list: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) {
+                fn wrappers_validator(opt_list: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) {
                     // only check if mandatory options exist
                     if let Some(oid) = catalog {
                         match oid {

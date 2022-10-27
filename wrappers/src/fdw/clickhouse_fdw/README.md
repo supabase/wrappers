@@ -1,6 +1,6 @@
 # ClickHouse Foreign Data Wrapper
 
-This is a foreign data wrapper for [Clickhouse](https://clickhouse.com/). It is developed using [Supabase Remote](https://github.com/supabase/remote) and supports both data scan and modify. 
+This is a foreign data wrapper for [Clickhouse](https://clickhouse.com/). It is developed using [Supabase Wrappers](https://github.com/supabase/wrappers) and supports both data scan and modify. 
 
 ## Basic usage
 
@@ -8,42 +8,37 @@ These steps outline how to use the Clickhouse FDW:
 
 1. Clone this repo
 
-```
-git clone https://github.com/supabase/remote.git
+```bash
+git clone https://github.com/supabase/wrappers.git
 ```
 
 2. Run it using pgx with feature:
 
 ```bash
+cd wrappers/wrappers
 cargo pgx run --features clickhouse_fdw
 ```
 
-3. Start a Clickhouse server with some data populated
-
-```
-cd test/remotes/clickhouse
-docker-compose -f clickhouse.yaml up
-```
-
-4. Create the extension, foreign data wrapper and related objects:
+3. Create the extension, foreign data wrapper and related objects:
 
 ```sql
 -- create extension
-create extension remote;
+drop extension if exists wrappers cascade;
+create extension wrappers;
 
--- create foreign data wrapper and enable 'clickhouse_fdw'
-drop foreign data wrapper if exists remote_clickhouse;
-create foreign data wrapper remote_clickhouse
-  handler remote_handler
-  validator remote_validator
+-- create foreign data wrapper and enable 'ClickHouseFdw'
+drop foreign data wrapper if exists wrappers_clickhouse;
+create foreign data wrapper wrappers_clickhouse
+  handler wrappers_handler
+  validator wrappers_validator
   options (
-    wrapper 'clickhouse_fdw'
+    wrapper 'ClickHouseFdw'
   );
 
--- create a remote ClickHouse server and specify connection string
+-- create a wrappers ClickHouse server and specify connection string
 drop server if exists my_clickhouse_server;
 create server my_clickhouse_server
-  foreign data wrapper remote_clickhouse
+  foreign data wrapper wrappers_clickhouse
   options (
     conn_string 'tcp://default:@localhost:9000/default'
   );
@@ -62,6 +57,13 @@ create foreign table people (
   );
 ```
 
+4. Open another shell and start a Clickhouse server with some data populated
+
+```
+cd src/fdw/clickhouse_fdw/test_server
+docker-compose -f clickhouse.yaml up
+```
+
 5. Run some queries to check if it is working:
 
 On Postgres:
@@ -76,15 +78,10 @@ update people set name = 'Princess Leia' where id = 2;
 delete from people where id = 3;
 ```
 
-6. Check the changes on Clickhouse:
+6. Open another shell and check the changes on Clickhouse:
 
 ```bash
-cd test/remotes/clickhouse
-
-# start ClickHouse server
-docker-compose -f clickhouse.yaml up
-
-# open another shell and connect to ClickHouse server
+cd src/fdw/clickhouse_fdw/test_server
 docker-compose -f clickhouse.yaml exec server clickhouse-client
 ```
 
@@ -94,7 +91,7 @@ Run the following SQL on ClickHouse
 -- data scan
 select * from people;
 
--- data modification in CH will appear in PG:
+-- data modification in ClickHouse will appear in Postgres:
 insert into people values (3, 'Han Solo');
 ```
 

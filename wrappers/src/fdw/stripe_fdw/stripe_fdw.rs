@@ -113,8 +113,8 @@ impl StripeFdw {
 impl ForeignDataWrapper for StripeFdw {
     fn begin_scan(
         &mut self,
-        quals: &Vec<Qual>,
-        columns: &Vec<String>,
+        _quals: &Vec<Qual>,
+        _columns: &Vec<String>,
         _sorts: &Vec<Sort>,
         _limit: &Option<Limit>,
         options: &HashMap<String, String>,

@@ -27,7 +27,7 @@ impl ForeignDataWrapper for HelloWorldFdw {
         if self.row_cnt < 1 {
             let mut row = Row::new();
             row.push("id", Some(Cell::I64(self.row_cnt)));
-            row.push("a", Some(Cell::String("Hello world".to_string())));
+            row.push("col", Some(Cell::String("Hello world".to_string())));
             self.row_cnt += 1;
             return Some(row);
         }

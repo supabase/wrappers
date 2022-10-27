@@ -1,0 +1,18 @@
+# Start:      docker-compose -f clickhouse.yaml up
+# Rebuild:    docker-compose -f clickhouse.yaml rm --force && docker-compose -f clickhouse.yaml build
+# Destroy     docker-compose -f clickhouse.yaml down -v --remove-orphans
+# Connect:    docker-compose -f clickhouse.yaml exec server clickhouse-client
+
+version: "3"
+services:
+  server:
+    build: .
+    # image: yandex/clickhouse-server
+    ports:
+      - "9000:9000"
+      # - "8123:8123"
+      # - "9009:9009"
+
+  client:
+    image: yandex/clickhouse-client
+    command: ["--host", "server"]

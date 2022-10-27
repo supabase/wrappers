@@ -1,6 +1,6 @@
 # Stripe Foreign Data Wrapper
 
-This is a foreign data wrapper for [Stripe](https://stripe.com/). It is developed using [Supabase Remote](https://github.com/supabase/remote) and only supports `balance` and `customers` at this moment.
+This is a foreign data wrapper for [Stripe](https://stripe.com/). It is developed using [Supabase Wrappers](https://github.com/supabase/wrappers) and only supports `balance` and `customers` at this moment.
 
 ## Basic usage
 
@@ -8,13 +8,14 @@ These steps outline how to use the Stripe FDW:
 
 1. Clone this repo
 
-```
-git clone https://github.com/supabase/remote.git
+```bash
+git clone https://github.com/supabase/wrappers.git
 ```
 
 2. Run it using pgx with feature:
 
 ```bash
+cd wrappers/wrappers
 cargo pgx run --features stripe_fdw
 ```
 
@@ -22,22 +23,22 @@ cargo pgx run --features stripe_fdw
 
 ```sql
 -- create extension
-drop extension remote cascade;
-create extension remote;
+drop extension if exists wrappers cascade;
+create extension wrappers;
 
--- create foreign data wrapper and enable 'stripe_fdw'
-drop foreign data wrapper if exists remote_stripe cascade;
-create foreign data wrapper remote_stripe
-  handler remote_handler
-  validator remote_validator
+-- create foreign data wrapper and enable 'StripeFdw'
+drop foreign data wrapper if exists wrappers_stripe cascade;
+create foreign data wrapper wrappers_stripe
+  handler wrappers_handler
+  validator wrappers_validator
   options (
-    wrapper 'stripe_fdw'
+    wrapper 'StripeFdw'
   );
 
--- create a remote Stripe server and specify connection info
+-- create a wrappers Stripe server and specify connection info
 drop server if exists my_stripe_server cascade;
 create server my_stripe_server
-  foreign data wrapper remote_stripe
+  foreign data wrapper wrappers_stripe
   options (
     api_key 'sk_test_key'
   );
@@ -72,5 +73,4 @@ On Postgres:
 select * from balance;
 select * from customers;
 ```
-
 

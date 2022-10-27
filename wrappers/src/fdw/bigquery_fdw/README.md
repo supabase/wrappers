@@ -1,6 +1,6 @@
 # BigQuery Foreign Data Wrapper
 
-This is a foreign data wrapper for [BigQuery](https://cloud.google.com/bigquery). It is developed using [Supabase Remote](https://github.com/supabase/remote) and only supports data scan at this moment.
+This is a foreign data wrapper for [BigQuery](https://cloud.google.com/bigquery). It is developed using [Supabase Wrappers](https://github.com/supabase/wrappers) and only supports data scan at this moment.
 
 ## Basic usage
 
@@ -8,13 +8,14 @@ These steps outline how to use the BigQuery FDW:
 
 1. Clone this repo
 
-```
-git clone https://github.com/supabase/remote.git
+```bash
+git clone https://github.com/supabase/wrappers.git
 ```
 
 2. Run it using pgx with feature:
 
 ```bash
+cd wrappers/wrappers
 cargo pgx run --features bigquery_fdw
 ```
 
@@ -22,22 +23,22 @@ cargo pgx run --features bigquery_fdw
 
 ```sql
 -- create extension
-drop extension remote cascade;
-create extension remote;
+drop extension if exists wrappers cascade;
+create extension wrappers;
 
--- create foreign data wrapper and enable 'bigquery_fdw'
-drop foreign data wrapper if exists remote_bigquery cascade;
-create foreign data wrapper remote_bigquery
-  handler remote_handler
-  validator remote_validator
+-- create foreign data wrapper and enable 'BigQueryFdw'
+drop foreign data wrapper if exists wrappers_bigquery cascade;
+create foreign data wrapper wrappers_bigquery
+  handler wrappers_handler
+  validator wrappers_validator
   options (
-    wrapper 'bigquery_fdw'
+    wrapper 'BigQueryFdw'
   );
 
--- create a remote BigQuery server and specify connection info
+-- create a wrappers BigQuery server and specify connection info
 drop server if exists my_bigquery_server cascade;
 create server my_bigquery_server
-  foreign data wrapper remote_bigquery
+  foreign data wrapper wrappers_bigquery
   options (
     sa_key_file '/absolute/path/to/service_account_key.json',
     project_id 'your_gcp_project_id',
