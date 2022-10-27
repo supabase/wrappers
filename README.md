@@ -49,7 +49,7 @@ In a minimum FDW, which supports data scan only, `begin_scan()`, `iter_scan()` a
 
 ## Basic usage
 
-These steps outline how to use the a demo FDW [HelloWorldFdw](./src/fdw/helloworld_fdw):
+These steps outline how to use the a demo FDW [HelloWorldFdw](./wrappers/src/fdw/helloworld_fdw):
 
 1. Clone this repo
 
