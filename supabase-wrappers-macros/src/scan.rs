@@ -14,7 +14,7 @@ fn to_tokens() -> TokenStream2 {
         use pg_sys::*;
         use pgx::*;
         use std::collections::HashMap;
-        use std::os::raw::c_int;
+        use std::os::raw::{c_int, c_char};
         use std::ffi::{CString, CStr};
         use std::ptr;
 
@@ -257,16 +257,16 @@ fn to_tokens() -> TokenStream2 {
                 let label = CString::new("Wrappers").unwrap();
 
                 let value = CString::new(format!("quals = {:?}", state.quals)).unwrap();
-                ExplainPropertyText(label.as_ptr() as *mut i8, value.as_ptr() as *mut i8, es);
+                ExplainPropertyText(label.as_ptr() as *const c_char, value.as_ptr() as *const c_char, es);
 
                 let value = CString::new(format!("tgts = {:?}", state.tgts)).unwrap();
-                ExplainPropertyText(label.as_ptr() as *mut i8, value.as_ptr() as *mut i8, es);
+                ExplainPropertyText(label.as_ptr() as *const c_char, value.as_ptr() as *const c_char, es);
 
                 let value = CString::new(format!("sorts = {:?}", state.sorts)).unwrap();
-                ExplainPropertyText(label.as_ptr() as *mut i8, value.as_ptr() as *mut i8, es);
+                ExplainPropertyText(label.as_ptr() as *const c_char, value.as_ptr() as *const c_char, es);
 
                 let value = CString::new(format!("limit = {:?}", state.limit)).unwrap();
-                ExplainPropertyText(label.as_ptr() as *mut i8, value.as_ptr() as *mut i8, es);
+                ExplainPropertyText(label.as_ptr() as *const c_char, value.as_ptr() as *const c_char, es);
 
                 old_ctx.set_as_current();
             }

@@ -7,6 +7,19 @@ pub(crate) struct HelloWorldFdw {
 }
 
 impl HelloWorldFdw {
+    // 'options' is the key-value pairs defined in 'create server` SQL, for example,
+    //
+    // create server my_helloworld_server
+    //   foreign data wrapper wrappers_helloworld
+    //   options (
+    //     foo 'bar'
+    // );
+    //
+    // 'options' passed here will be a hashmap { 'foo' -> 'bar' }.
+    //
+    // You can do any initalization in this new() function, like saving connection
+    // info or API url in an variable, but don't do any heavy works like making a
+    // database connection or API call.
     pub fn new(_options: &HashMap<String, String>) -> Self {
         Self { row_cnt: 0 }
     }

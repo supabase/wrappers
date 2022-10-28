@@ -32,7 +32,7 @@ pub fn report_error(code: PgSqlErrorCode, msg: &str) {
 /// ```rust
 /// let rt = create_async_runtime();
 ///
-/// // client.query() is async function
+/// // client.query() is an async function
 /// match rt.block_on(client.query(&sql)) {
 ///     Ok(result) => {...}
 ///     Err(err) => {...}

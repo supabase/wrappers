@@ -25,6 +25,19 @@
 //! supabase-wrappers = "0.1"
 //! ```
 //!
+//! # Supported Types
+//!
+//! For simplicity purpose, only a subset of [pgx types](https://github.com/tcdi/pgx#mapping-of-postgres-types-to-rust) are supported currently. For example,
+//!
+//! - bool
+//! - f64
+//! - i64
+//! - String
+//! - Timestamp
+//! - JsonB
+//!
+//! See the full supported types list in [`Cell`]. More types will be added in the future if needed or you can [raise a request](https://github.com/supabase/wrappers/issues) to us.
+//!
 //! # Developing a FDW
 //!
 //! The core interface is the [`ForeignDataWrapper`] trait which provides callback functions to be
@@ -46,7 +59,7 @@
 //!
 //! To give different functionalities to your FDW, you can choose different callback functions to implement. The required ones are `begin_scan`, `iter_scan` and `end_scan`, all the others are optional. See [Postgres FDW document](https://www.postgresql.org/docs/current/fdw-callbacks.html) for more details about FDW development.
 //!
-//! The struct implements [`ForeignDataWrapper`] trait also needs to provide a `new()` initialization function. For example,
+//! The struct implements [`ForeignDataWrapper`] trait needs to provide a `new()` initialization function. For example,
 //!
 //! ```rust
 //! use supabase_wrappers::ForeignDataWrapper;
@@ -72,21 +85,6 @@
 //!     }
 //! }
 //! ```
-//!
-//! # Supported Types
-//!
-//! For simplicity purpose, only a subset of [pgx types](https://github.com/tcdi/pgx#mapping-of-postgres-types-to-rust) are supported currently. For example,
-//!
-//! - bool
-//! - f64
-//! - i64
-//! - String
-//! - Timestamp
-//! - JsonB
-//!
-//! See the full supported types list in [`Cell`]. More types will be added in the future if needed or you can [raise a request](https://github.com/supabase/wrappers/issues) to us.
-//!
-//! # Example
 //!
 //! To develop a simple FDW supports basic query `SELECT`, you need to implement `begin_scan`, `iter_scan` and `end_scan`.
 //!
@@ -148,6 +146,46 @@
 //!     fn end_scan(&mut self) {
 //!         // we do nothing here, but you can do things like resource cleanup and etc.
 //!     }
+//! ```
+//!
+//! Once the trait is implemented, you need to use macro [`wrappers_magic`] to set it up so the
+//! framework knows how to instantiate the FDW struct.
+//!
+//! ```rust
+//! wrappers_magic!(HelloWorldFdw);
+//! ```
+//!
+//! And that's it. Now your FDW is ready to run with pgx,
+//!
+//! ```bash
+//! $ cargo pgx run
+//! ```
+//!
+//! Then query it with SQL,
+//!
+//! ```sql
+//! select * from hello;
+//! ```
+//!
+//! **Pro Tips**
+//!
+//! You can use `EXPLAIN` to check what has been pushed down, for example,
+//!
+//! ```sql
+//! explain select * from hello where id = 1 order by col limit 1;
+//!
+//!                                                        QUERY PLAN
+//! --------------------------------------------------------------------------------------------------------------------------
+//!  Limit  (cost=1.01..1.01 rows=1 width=40)
+//!    ->  Sort  (cost=1.01..1.01 rows=1 width=40)
+//!          Sort Key: col
+//!          ->  Foreign Scan on hello  (cost=0.00..1.00 rows=1 width=0)
+//!                Filter: (id = 1)
+//!                Wrappers: quals = [Qual { field: "id", operator: "=", value: Cell(I32(1)), use_or: false }]
+//!                Wrappers: tgts = ["id", "col"]
+//!                Wrappers: sorts = [Sort { field: "col", field_no: 2, reversed: false, nulls_first: false, collate: None }]
+//!                Wrappers: limit = Some(Limit { count: 1, offset: 0 })
+//! (9 rows)
 //! ```
 //!
 //! See more FDW examples which interact with RDBMS or Restful API.

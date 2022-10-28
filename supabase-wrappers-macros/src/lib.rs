@@ -191,9 +191,9 @@ impl ToTokens for WrappersMagic {
 /// This macro will create all the required callback routines and set them up
 /// with your Postgres FDW developed with `Wrappers`.
 ///
-/// This macro should be called only once.
+/// You don't need to call [`pgx::pg_module_magic!()`](https://docs.rs/pgx/latest/pgx/macro.pg_module_magic.html) as this macro will call it for you.
 ///
-/// See more details about Wrappers: <https://github.com/supabase/wrappers>
+/// This macro should be called only once.
 ///
 /// # Example
 ///
