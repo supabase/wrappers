@@ -2250,9 +2250,7 @@ checksum = "6bdef32e8150c2a081110b42772ffe7d7c9032b606bc226c8260fd97e0976601"
 
 [[package]]
 name = "supabase-wrappers"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6443857ba6118c476db495ee86003cfb101eb49eaafa421de41e80e9ff38d38f"
+version = "0.1.2"
 dependencies = [
  "pgx",
  "supabase-wrappers-macros",
@@ -2261,9 +2259,7 @@ dependencies = [
 
 [[package]]
 name = "supabase-wrappers-macros"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba2bbf1e61b51f8cff0863adc099d2364f2511544ca8a7129b2bcbbb0cc98405"
+version = "0.1.2"
 dependencies = [
  "proc-macro2",
  "quote",

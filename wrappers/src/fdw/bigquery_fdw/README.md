@@ -56,7 +56,7 @@ create foreign table people (
   options (
     table 'people',     -- source table in BigQuery, required
     location 'EU',      -- table location, optional
-    rowid_column 'id',  -- primary key column name, optional for scan, required for update
+    rowid_column 'id',  -- primary key column name, optional for scan, required for modify
     startup_cost '42'   -- execution startup cost for exection planning, optional
   );
 ```

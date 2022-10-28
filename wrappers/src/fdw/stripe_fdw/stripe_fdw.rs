@@ -1,11 +1,13 @@
-use pgx::log::{elog, PgLogLevel};
+use pgx::log::PgSqlErrorCode;
 use reqwest::{self, header};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use serde_json::Value;
 use std::collections::HashMap;
 
-use supabase_wrappers::{create_async_runtime, Cell, ForeignDataWrapper, Limit, Qual, Row, Runtime, Sort};
+use supabase_wrappers::{
+    create_async_runtime, report_error, Cell, ForeignDataWrapper, Limit, Qual, Row, Runtime, Sort,
+};
 
 pub(crate) struct StripeFdw {
     rt: Runtime,
@@ -99,14 +101,23 @@ impl StripeFdw {
                     result.push(row);
                 }
             }
-            _ => elog(
-                PgLogLevel::ERROR,
+            _ => report_error(
+                PgSqlErrorCode::ERRCODE_FDW_TABLE_NOT_FOUND,
                 &format!("'{}' object is not implemented", obj),
             ),
         }
 
         result
     }
+}
+
+macro_rules! report_fetch_error {
+    ($url:ident, $err:ident) => {
+        report_error(
+            PgSqlErrorCode::ERRCODE_FDW_ERROR,
+            &format!("fetch {} failed: {}", $url, $err),
+        )
+    };
 }
 
 impl ForeignDataWrapper for StripeFdw {
@@ -128,9 +139,9 @@ impl ForeignDataWrapper for StripeFdw {
                     let result = self.resp_to_rows(&obj, &body);
                     self.scan_result = Some(result);
                 }
-                Err(err) => elog(PgLogLevel::ERROR, &format!("fetch {} failed: {}", url, err)),
+                Err(err) => report_fetch_error!(url, err),
             },
-            Err(err) => elog(PgLogLevel::ERROR, &format!("fetch {} failed: {}", url, err)),
+            Err(err) => report_fetch_error!(url, err),
         }
     }
 

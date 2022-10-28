@@ -6,6 +6,7 @@ use std::fmt;
 use std::iter::Zip;
 use std::slice::Iter;
 
+/// A data cell in a data row
 #[derive(Debug)]
 pub enum Cell {
     Bool(bool),
@@ -127,16 +128,20 @@ impl FromDatum for Cell {
     }
 }
 
+/// A data row in a table
+///
+/// The row contains a column name list and cell list.
 #[derive(Debug, Clone)]
 pub struct Row {
-    // column names
+    /// column names
     pub cols: Vec<String>,
 
-    // column cell list, should match with cols
+    /// column cell list, should match with cols
     pub cells: Vec<Option<Cell>>,
 }
 
 impl Row {
+    /// Create an empty row
     pub fn new() -> Self {
         Row {
             cols: Vec::new(),
@@ -144,22 +149,26 @@ impl Row {
         }
     }
 
+    /// Push a cell with column name to this row
     pub fn push(&mut self, col: &str, cell: Option<Cell>) {
         self.cols.push(col.to_owned());
         self.cells.push(cell);
     }
 
+    /// Return a zipped <column_name, cell> iterator
     pub fn iter(&self) -> Zip<Iter<'_, String>, Iter<'_, Option<Cell>>> {
         self.cols.iter().zip(self.cells.iter())
     }
 }
 
+/// A restiction value used in [`Qual`], either a [`Cell`] or an array of [`Cell`]
 #[derive(Debug, Clone)]
 pub enum Value {
     Cell(Cell),
     Array(Vec<Cell>),
 }
 
+/// Query restrictions, a.k.a conditions in `WHERE` clause
 #[derive(Debug, Clone)]
 pub struct Qual {
     pub field: String,
@@ -181,6 +190,7 @@ impl Qual {
     }
 }
 
+/// Query sort, a.k.a `ORDER BY` clause
 #[derive(Debug, Clone, Default)]
 pub struct Sort {
     pub field: String,
@@ -190,20 +200,24 @@ pub struct Sort {
     pub collate: Option<String>,
 }
 
+/// Query limit, a.k.a `LIMIT count OFFSET offset` clause
 #[derive(Debug, Clone, Default)]
 pub struct Limit {
     pub count: i64,
     pub offset: i64,
 }
 
-/// Foreign Data Wrapper trait
+/// The Foreign Data Wrapper trait
 ///
 /// This is the main interface for your foreign data wrapper. Required functions
-/// are as below, all the others are optional.
+/// are listed below, all the others are optional.
 ///
 /// 1. begin_scan
 /// 2. iter_scan
 /// 3. end_scan
+///
+/// See the module-level document for more details.
+///
 pub trait ForeignDataWrapper {
     fn get_rel_size(
         &mut self,

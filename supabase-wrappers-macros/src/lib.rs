@@ -117,11 +117,25 @@ impl ToTokens for WrappersMagic {
                 use std::collections::HashMap;
                 use ::supabase_wrappers::{Cell, ForeignDataWrapper, Row, Qual, Sort, Limit, report_error};
 
-                #polyfill
-                #utils
-                #instance
-                #scan
-                #modify
+                mod polyfill {
+                    #polyfill
+                }
+
+                mod utils {
+                    #utils
+                }
+
+                mod instance {
+                    #instance
+                }
+
+                mod scan {
+                    #scan
+                }
+
+                mod modify {
+                    #modify
+                }
 
                 #[pg_extern]
                 fn wrappers_handler() -> PgBox<FdwRoutine> {
@@ -190,7 +204,7 @@ impl ToTokens for WrappersMagic {
 /// use supabase_wrappers::wrappers_magic;
 /// use crate::{FooFdw, BarFdw};
 ///
-/// // use single FDW
+/// // use a single FDW
 /// wrappers_magic!(FooFdw);
 ///
 /// // or use multiple FDWs

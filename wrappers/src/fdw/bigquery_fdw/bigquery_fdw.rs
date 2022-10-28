@@ -5,17 +5,19 @@ use gcp_bigquery_client::{
     },
     Client,
 };
-use pgx::log::{elog, PgLogLevel};
+use pgx::log::PgSqlErrorCode;
 use pgx::prelude::{Date, Timestamp};
 use std::collections::HashMap;
 use time::{format_description::well_known::Iso8601, OffsetDateTime, PrimitiveDateTime};
 
-use supabase_wrappers::{create_async_runtime, Cell, ForeignDataWrapper, Limit, Qual, Row, Sort, Runtime};
+use supabase_wrappers::{
+    create_async_runtime, report_error, Cell, ForeignDataWrapper, Limit, Qual, Row, Runtime, Sort,
+};
 
 macro_rules! field_type_error {
     ($field:ident, $err:ident) => {{
-        elog(
-            PgLogLevel::ERROR,
+        report_error(
+            PgSqlErrorCode::ERRCODE_FDW_INVALID_DATA_TYPE,
             &format!("get field {} failed: {}", &$field.name, $err),
         );
         None
@@ -64,8 +66,8 @@ fn field_to_cell(rs: &ResultSet, field: &TableFieldSchema) -> Option<Cell> {
                 Cell::Timestamp(ts)
             }),
         _ => {
-            elog(
-                PgLogLevel::ERROR,
+            report_error(
+                PgSqlErrorCode::ERRCODE_FDW_ERROR,
                 &format!("field type {:?} not supported", field.r#type),
             );
             None
@@ -163,8 +165,8 @@ impl ForeignDataWrapper for BigQueryFdw {
         )) {
             Ok(tbl) => tbl,
             Err(err) => {
-                elog(
-                    PgLogLevel::ERROR,
+                report_error(
+                    PgSqlErrorCode::ERRCODE_FDW_ERROR,
                     &format!("get table metadata failed: {}", err),
                 );
                 return;
@@ -185,7 +187,10 @@ impl ForeignDataWrapper for BigQueryFdw {
             }
             Err(err) => {
                 self.scan_result = None;
-                elog(PgLogLevel::ERROR, &format!("query failed: {}", err));
+                report_error(
+                    PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                    &format!("query failed: {}", err),
+                );
             }
         }
     }

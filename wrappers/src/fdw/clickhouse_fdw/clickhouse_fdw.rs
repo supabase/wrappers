@@ -1,10 +1,9 @@
 use clickhouse_rs::{types, types::Block, types::SqlType, ClientHandle, Pool};
 use pgx::log::PgSqlErrorCode;
-use pgx::log::{elog, PgLogLevel};
 use std::collections::HashMap;
 
 use supabase_wrappers::{
-    create_async_runtime, report_error, Cell, ForeignDataWrapper, Limit, Qual, Row, Sort, Runtime,
+    create_async_runtime, report_error, Cell, ForeignDataWrapper, Limit, Qual, Row, Runtime, Sort,
 };
 
 fn deparse(quals: &Vec<Qual>, columns: &Vec<String>, options: &HashMap<String, String>) -> String {
@@ -39,7 +38,10 @@ impl ClickHouseFdw {
         let pool = Pool::new(conn_str.as_str());
         let client = rt.block_on(pool.get_handle()).map_or_else(
             |err| {
-                elog(PgLogLevel::ERROR, &format!("connection failed: {}", err));
+                report_error(
+                    PgSqlErrorCode::ERRCODE_FDW_UNABLE_TO_ESTABLISH_CONNECTION,
+                    &format!("connection failed: {}", err),
+                );
                 None
             },
             |client| Some(client),
@@ -78,7 +80,10 @@ impl ForeignDataWrapper for ClickHouseFdw {
                     self.scan_blk = Some(block);
                     return (rows as i64, width as i32);
                 }
-                Err(err) => elog(PgLogLevel::ERROR, &format!("query failed: {}", err)),
+                Err(err) => report_error(
+                    PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                    &format!("query failed: {}", err),
+                ),
             }
         }
         (0, 0)
@@ -160,8 +165,8 @@ impl ForeignDataWrapper for ClickHouseFdw {
                         Cell::F64(v) => row.push((col_name, types::Value::from(*v))),
                         Cell::I64(v) => row.push((col_name, types::Value::from(*v))),
                         Cell::String(v) => row.push((col_name, types::Value::from(v.as_str()))),
-                        _ => elog(
-                            PgLogLevel::ERROR,
+                        _ => report_error(
+                            PgSqlErrorCode::ERRCODE_FDW_INVALID_DATA_TYPE,
                             &format!("field type {:?} not supported", cell),
                         ),
                     }
@@ -172,7 +177,10 @@ impl ForeignDataWrapper for ClickHouseFdw {
 
             // execute query on ClickHouse
             if let Err(err) = self.rt.block_on(client.insert(&self.table, block)) {
-                elog(PgLogLevel::ERROR, &format!("insert failed: {}", err));
+                report_error(
+                    PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                    &format!("insert failed: {}", err),
+                );
             }
         }
     }
@@ -200,7 +208,10 @@ impl ForeignDataWrapper for ClickHouseFdw {
 
             // execute query on ClickHouse
             if let Err(err) = self.rt.block_on(client.execute(&sql)) {
-                elog(PgLogLevel::ERROR, &format!("update failed: {}", err));
+                report_error(
+                    PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                    &format!("update failed: {}", err),
+                );
             }
         }
     }
@@ -216,7 +227,10 @@ impl ForeignDataWrapper for ClickHouseFdw {
 
             // execute query on ClickHouse
             if let Err(err) = self.rt.block_on(client.execute(&sql)) {
-                elog(PgLogLevel::ERROR, &format!("delete failed: {}", err));
+                report_error(
+                    PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                    &format!("delete failed: {}", err),
+                );
             }
         }
     }

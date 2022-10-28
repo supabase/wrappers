@@ -23,8 +23,8 @@ stripe_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json"]
 [dependencies]
 pgx = "=0.5.6"
 cfg-if = "1.0"
-supabase-wrappers = "0.1"
-#supabase-wrappers = { path = "../supabase-wrappers" }
+#supabase-wrappers = "0.1"
+supabase-wrappers = { path = "../supabase-wrappers" }
 
 # for clickhouse_fdw
 clickhouse-rs = { git = "https://github.com/suharev7/clickhouse-rs", branch = "async-await", optional = true }

@@ -101,7 +101,7 @@ create foreign table hello (
   );
 ```
 
-4. Run some queries to check if it is working:
+4. Run a query to check if it is working:
 
 ```sql
 wrappers=# select * from hello;
