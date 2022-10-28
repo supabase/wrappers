@@ -1,6 +1,6 @@
 # HelloWorld Foreign Data Wrapper
 
-This is a demo foreign data wrapper which is developed using [Supabase Wrappers](https://github.com/supabase/wrappers).
+This is a demo foreign data wrapper which is developed using [Wrappers](https://github.com/supabase/wrappers).
 
 ## Basic usage
 

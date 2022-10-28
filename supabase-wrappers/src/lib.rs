@@ -1,10 +1,10 @@
-//! Supabase Wrappers is a development framework for Postgres Foreign Data Wrappers ([FDW](https://wiki.postgresql.org/wiki/Foreign_data_wrappers)) based on [pgx](https://github.com/tcdi/pgx).
+//! Wrappers is a development framework for Postgres Foreign Data Wrappers ([FDW](https://wiki.postgresql.org/wiki/Foreign_data_wrappers)) based on [pgx](https://github.com/tcdi/pgx).
 //!
 //! Its goal is to make Postgres FDW development easier while keeping Rust language's modern capabilities, such as high performance, strong types, and safety.
 //!
 //! # Installation
 //!
-//! Supabase Wrappers is a pgx extension, please follow the [installation steps](https://github.com/tcdi/pgx#system-requirements) to install pgx.
+//! Wrappers is a pgx extension, please follow the [installation steps](https://github.com/tcdi/pgx#system-requirements) to install pgx.
 //!
 //! After pgx is installed, create your project using command like below,
 //!

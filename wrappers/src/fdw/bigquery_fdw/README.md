@@ -1,6 +1,6 @@
 # BigQuery Foreign Data Wrapper
 
-This is a foreign data wrapper for [BigQuery](https://cloud.google.com/bigquery). It is developed using [Supabase Wrappers](https://github.com/supabase/wrappers) and only supports data scan at this moment.
+This is a foreign data wrapper for [BigQuery](https://cloud.google.com/bigquery). It is developed using [Wrappers](https://github.com/supabase/wrappers) and only supports data scan at this moment.
 
 ## Basic usage
 

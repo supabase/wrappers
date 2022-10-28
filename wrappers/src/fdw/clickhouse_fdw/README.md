@@ -1,6 +1,6 @@
 # ClickHouse Foreign Data Wrapper
 
-This is a foreign data wrapper for [Clickhouse](https://clickhouse.com/). It is developed using [Supabase Wrappers](https://github.com/supabase/wrappers) and supports both data scan and modify. 
+This is a foreign data wrapper for [Clickhouse](https://clickhouse.com/). It is developed using [Wrappers](https://github.com/supabase/wrappers) and supports both data scan and modify. 
 
 ## Basic usage
 

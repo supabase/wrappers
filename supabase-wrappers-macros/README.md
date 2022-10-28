@@ -1,11 +1,11 @@
 # supabase-wrappers-macros
 
 A macro `wrappers_magic` to set up facility functions for Postgres FDW
-development framework `Supabase Wrappers`.
+development framework `Wrappers`.
 
 This crate is NOT supposed to be used directly, please use [supabase-wrappers](https://github.com/supabase/wrappers/tree/main/supabase-wrappers) instead.
 
-See more details about [Supabase Wrappers](https://github.com/supabase/wrappers).
+See more details about [Wrappers](https://github.com/supabase/wrappers).
 
 # Example
 

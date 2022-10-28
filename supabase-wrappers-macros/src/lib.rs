@@ -2,7 +2,7 @@
 //!
 //! This crate is NOT supposed to be used directly, please use [supabase-wrappers](https://github.com/supabase/wrappers/tree/main/supabase-wrappers) instead.
 //!
-//!  See more details about [Supabase Wrappers](https://github.com/supabase/wrappers).
+//!  See more details about [Wrappers](https://github.com/supabase/wrappers).
 
 extern crate proc_macro;
 use proc_macro::TokenStream;
@@ -189,11 +189,11 @@ impl ToTokens for WrappersMagic {
 /// Set up all required facilities for Postgres FDW development.
 ///
 /// This macro will create all the required callback routines and set them up
-/// with your Postgres FDW developed with `Supabase Wrappers`.
+/// with your Postgres FDW developed with `Wrappers`.
 ///
 /// This macro should be called only once.
 ///
-/// See more details about Supabase Wrappers: <https://github.com/supabase/wrappers>
+/// See more details about Wrappers: <https://github.com/supabase/wrappers>
 ///
 /// # Example
 ///

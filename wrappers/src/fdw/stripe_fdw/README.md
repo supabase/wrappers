@@ -1,6 +1,6 @@
 # Stripe Foreign Data Wrapper
 
-This is a foreign data wrapper for [Stripe](https://stripe.com/). It is developed using [Supabase Wrappers](https://github.com/supabase/wrappers) and only supports `balance` and `customers` at this moment.
+This is a foreign data wrapper for [Stripe](https://stripe.com/). It is developed using [Wrappers](https://github.com/supabase/wrappers) and only supports `balance` and `customers` at this moment.
 
 ## Basic usage
 

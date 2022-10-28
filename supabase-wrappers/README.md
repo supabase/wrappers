@@ -1,6 +1,6 @@
-# Supabase Wrappers
+# Wrappers
 
-Supabase Wrappers is a development framework for Postgres Foreign Data Wrappers ([FDW](https://wiki.postgresql.org/wiki/Foreign_data_wrappers)), written in Rust. Its goal is to make Postgres FDW development easier while keeping Rust language's modern capabilities, such as high performance, strong types, and safety.
+Wrappers is a development framework for Postgres Foreign Data Wrappers ([FDW](https://wiki.postgresql.org/wiki/Foreign_data_wrappers)), written in Rust. Its goal is to make Postgres FDW development easier while keeping Rust language's modern capabilities, such as high performance, strong types, and safety.
 
 ## Features
 
@@ -12,11 +12,11 @@ Supabase Wrappers is a development framework for Postgres Foreign Data Wrappers 
 
 ## Installation
 
-Supabase Wrappers is a pgx extension, so you can follow the [installation steps](https://github.com/tcdi/pgx#system-requirements) as mentioned by pgx.
+Wrappers is a pgx extension, so you can follow the [installation steps](https://github.com/tcdi/pgx#system-requirements) as mentioned by pgx.
 
 ## Developing a FDW
 
-To develop a FDW using Supabase Wrappers, you only need to implement the [ForeignDataWrapper](./src/interface.rs) trait.
+To develop a FDW using Wrappers, you only need to implement the [ForeignDataWrapper](./src/interface.rs) trait.
 
 ```rust
 pub trait ForeignDataWrapper {
