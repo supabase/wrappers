@@ -11,7 +11,8 @@ use std::collections::HashMap;
 use time::{format_description::well_known::Iso8601, OffsetDateTime, PrimitiveDateTime};
 
 use supabase_wrappers::{
-    create_async_runtime, report_error, Cell, ForeignDataWrapper, Limit, Qual, Row, Runtime, Sort,
+    create_async_runtime, report_error, require_option, Cell, ForeignDataWrapper, Limit, Qual, Row,
+    Runtime, Sort,
 };
 
 macro_rules! field_type_error {
@@ -77,7 +78,7 @@ fn field_to_cell(rs: &ResultSet, field: &TableFieldSchema) -> Option<Cell> {
 
 pub struct BigQueryFdw {
     rt: Runtime,
-    client: Client,
+    client: Option<Client>,
     project_id: String,
     dataset_id: String,
     table: String,
@@ -86,12 +87,16 @@ pub struct BigQueryFdw {
 
 impl BigQueryFdw {
     pub fn new(options: &HashMap<String, String>) -> Self {
-        let sa_key_file = options.get("sa_key_file").map(|t| t.to_owned()).unwrap();
-        let project_id = options.get("project_id").map(|t| t.to_owned()).unwrap();
-        let dataset_id = options.get("dataset_id").map(|t| t.to_owned()).unwrap();
-
         let rt = create_async_runtime();
-        let client = rt.block_on(Client::from_service_account_key_file(&sa_key_file));
+        let sa_key_file = require_option("sa_key_file", options);
+        let project_id = require_option("project_id", options);
+        let dataset_id = require_option("dataset_id", options);
+        let client = if sa_key_file.is_empty() {
+            None
+        } else {
+            Some(rt.block_on(Client::from_service_account_key_file(&sa_key_file)))
+        };
+
         BigQueryFdw {
             rt,
             client,
@@ -109,12 +114,7 @@ impl BigQueryFdw {
         options: &HashMap<String, String>,
     ) -> String {
         let tgts = columns.join(", ");
-        let table = format!(
-            "{}.{}.{}",
-            self.project_id,
-            self.dataset_id,
-            options.get("table").unwrap()
-        );
+        let table = format!("{}.{}.{}", self.project_id, self.dataset_id, self.table,);
         let sql = if quals.is_empty() {
             format!("select {} from {}", tgts, table)
         } else {
@@ -149,48 +149,51 @@ impl ForeignDataWrapper for BigQueryFdw {
         _limit: &Option<Limit>,
         options: &HashMap<String, String>,
     ) {
-        self.table = options.get("table").map(|t| t.to_owned()).unwrap();
+        self.table = require_option("table", options);
+        if self.table.is_empty() {
+            return;
+        }
+
         let location = options
             .get("location")
             .map(|t| t.to_owned())
             .unwrap_or("US".to_string());
 
-        // get table metadata
-        let selected_fields = columns.iter().map(|c| c.as_str()).collect::<Vec<&str>>();
-        let tbl = match self.rt.block_on(self.client.table().get(
-            &self.project_id,
-            &self.dataset_id,
-            &self.table,
-            Some(selected_fields),
-        )) {
-            Ok(tbl) => tbl,
-            Err(err) => {
-                report_error(
-                    PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                    &format!("get table metadata failed: {}", err),
-                );
-                return;
-            }
-        };
+        if let Some(client) = &self.client {
+            // get table metadata
+            let selected_fields = columns.iter().map(|c| c.as_str()).collect::<Vec<&str>>();
+            let tbl = match self.rt.block_on(client.table().get(
+                &self.project_id,
+                &self.dataset_id,
+                &self.table,
+                Some(selected_fields),
+            )) {
+                Ok(tbl) => tbl,
+                Err(err) => {
+                    report_error(
+                        PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                        &format!("get table metadata failed: {}", err),
+                    );
+                    return;
+                }
+            };
 
-        let sql = self.deparse(quals, columns, options);
-        let mut req = QueryRequest::new(sql);
-        req.location = Some(location);
+            let sql = self.deparse(quals, columns, options);
+            let mut req = QueryRequest::new(sql);
+            req.location = Some(location);
 
-        // execute query on BigQuery
-        match self
-            .rt
-            .block_on(self.client.job().query(&self.project_id, req))
-        {
-            Ok(rs) => {
-                self.scan_result = Some((tbl, rs));
-            }
-            Err(err) => {
-                self.scan_result = None;
-                report_error(
-                    PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                    &format!("query failed: {}", err),
-                );
+            // execute query on BigQuery
+            match self.rt.block_on(client.job().query(&self.project_id, req)) {
+                Ok(rs) => {
+                    self.scan_result = Some((tbl, rs));
+                }
+                Err(err) => {
+                    self.scan_result = None;
+                    report_error(
+                        PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                        &format!("query failed: {}", err),
+                    );
+                }
             }
         }
     }

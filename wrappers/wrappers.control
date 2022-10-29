@@ -1,4 +1,4 @@
-comment = 'wrappers:  Created by pgx'
+comment = 'Foreign data wrapper collections by Supabase'
 default_version = '@CARGO_VERSION@'
 module_pathname = '$libdir/wrappers'
 relocatable = false

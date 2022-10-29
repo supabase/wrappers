@@ -1,5 +1,6 @@
 use pgx::log::*;
 use tokio::runtime::{Builder, Runtime};
+use std::collections::HashMap;
 
 /// Report error to Postgres using `ereport`
 ///
@@ -41,4 +42,22 @@ pub fn report_error(code: PgSqlErrorCode, msg: &str) {
 #[inline]
 pub fn create_async_runtime() -> Runtime {
     Builder::new_current_thread().enable_all().build().unwrap()
+}
+
+/// Get required option value from the `options` map
+///
+/// Get the required option's value from `options` map, return an empty string
+/// and report error if it does not exist.
+#[inline]
+pub fn require_option(opt_name: &str, options: &HashMap<String, String>) -> String {
+    options
+        .get(opt_name)
+        .map(|t| t.to_owned())
+        .unwrap_or_else(|| {
+            report_error(
+                PgSqlErrorCode::ERRCODE_FDW_INVALID_OPTION_NAME,
+                &format!("required option \"{}\" not specified", opt_name),
+            );
+            "".to_string()
+        })
 }

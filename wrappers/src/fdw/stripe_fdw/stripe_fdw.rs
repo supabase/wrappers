@@ -6,12 +6,13 @@ use serde_json::Value;
 use std::collections::HashMap;
 
 use supabase_wrappers::{
-    create_async_runtime, report_error, Cell, ForeignDataWrapper, Limit, Qual, Row, Runtime, Sort,
+    create_async_runtime, report_error, require_option, Cell, ForeignDataWrapper, Limit, Qual, Row,
+    Runtime, Sort,
 };
 
 pub(crate) struct StripeFdw {
     rt: Runtime,
-    client: ClientWithMiddleware,
+    client: Option<ClientWithMiddleware>,
     scan_result: Option<Vec<Row>>,
 }
 
@@ -19,21 +20,26 @@ impl StripeFdw {
     const BASE_URL: &'static str = "https://api.stripe.com/v1";
 
     pub fn new(options: &HashMap<String, String>) -> Self {
-        let api_key = options.get("api_key").map(|k| k.to_owned()).unwrap();
+        let api_key = require_option("api_key", options);
 
-        let mut headers = header::HeaderMap::new();
-        let value = format!("Bearer {}", api_key);
-        let mut auth_value = header::HeaderValue::from_str(&value).unwrap();
-        auth_value.set_sensitive(true);
-        headers.insert(header::AUTHORIZATION, auth_value);
-        let client = reqwest::Client::builder()
-            .default_headers(headers)
-            .build()
-            .unwrap();
-        let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
-        let client = ClientBuilder::new(client)
-            .with(RetryTransientMiddleware::new_with_policy(retry_policy))
-            .build();
+        let client = if api_key.is_empty() {
+            None
+        } else {
+            let mut headers = header::HeaderMap::new();
+            let value = format!("Bearer {}", api_key);
+            let mut auth_value = header::HeaderValue::from_str(&value).unwrap();
+            auth_value.set_sensitive(true);
+            headers.insert(header::AUTHORIZATION, auth_value);
+            let client = reqwest::Client::builder()
+                .default_headers(headers)
+                .build()
+                .unwrap();
+            let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
+            let client = ClientBuilder::new(client)
+                .with(RetryTransientMiddleware::new_with_policy(retry_policy))
+                .build();
+            Some(client)
+        };
 
         StripeFdw {
             rt: create_async_runtime(),
@@ -42,6 +48,7 @@ impl StripeFdw {
         }
     }
 
+    #[inline]
     fn build_url(&self, path: &str) -> String {
         format!("{}/{}", Self::BASE_URL, path)
     }
@@ -129,19 +136,25 @@ impl ForeignDataWrapper for StripeFdw {
         _limit: &Option<Limit>,
         options: &HashMap<String, String>,
     ) {
-        let obj = options.get("object").map(|k| k.to_owned()).unwrap();
+        let obj = require_option("object", options);
+        if obj.is_empty() {
+            return;
+        }
+
         let url = self.build_url(&obj);
 
-        match self.rt.block_on(self.client.get(&url).send()) {
-            Ok(resp) => match resp.error_for_status() {
-                Ok(resp) => {
-                    let body = self.rt.block_on(resp.text()).unwrap();
-                    let result = self.resp_to_rows(&obj, &body);
-                    self.scan_result = Some(result);
-                }
+        if let Some(client) = &self.client {
+            match self.rt.block_on(client.get(&url).send()) {
+                Ok(resp) => match resp.error_for_status() {
+                    Ok(resp) => {
+                        let body = self.rt.block_on(resp.text()).unwrap();
+                        let result = self.resp_to_rows(&obj, &body);
+                        self.scan_result = Some(result);
+                    }
+                    Err(err) => report_fetch_error!(url, err),
+                },
                 Err(err) => report_fetch_error!(url, err),
-            },
-            Err(err) => report_fetch_error!(url, err),
+            }
         }
     }
 

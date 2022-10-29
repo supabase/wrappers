@@ -3,24 +3,9 @@ use pgx::log::PgSqlErrorCode;
 use std::collections::HashMap;
 
 use supabase_wrappers::{
-    create_async_runtime, report_error, Cell, ForeignDataWrapper, Limit, Qual, Row, Runtime, Sort,
+    create_async_runtime, report_error, require_option, Cell, ForeignDataWrapper, Limit, Qual, Row,
+    Runtime, Sort,
 };
-
-fn deparse(quals: &Vec<Qual>, columns: &Vec<String>, options: &HashMap<String, String>) -> String {
-    let tgts = columns.join(", ");
-    let table = options.get("table").unwrap();
-    let sql = if quals.is_empty() {
-        format!("select {} from {}", tgts, table)
-    } else {
-        let cond = quals
-            .iter()
-            .map(|q| q.deparse())
-            .collect::<Vec<String>>()
-            .join(" and ");
-        format!("select {} from {} where {}", tgts, table, cond)
-    };
-    sql
-}
 
 pub(crate) struct ClickHouseFdw {
     rt: Runtime,
@@ -34,18 +19,22 @@ pub(crate) struct ClickHouseFdw {
 impl ClickHouseFdw {
     pub fn new(options: &HashMap<String, String>) -> Self {
         let rt = create_async_runtime();
-        let conn_str = options.get("conn_string").unwrap();
-        let pool = Pool::new(conn_str.as_str());
-        let client = rt.block_on(pool.get_handle()).map_or_else(
-            |err| {
-                report_error(
-                    PgSqlErrorCode::ERRCODE_FDW_UNABLE_TO_ESTABLISH_CONNECTION,
-                    &format!("connection failed: {}", err),
-                );
-                None
-            },
-            |client| Some(client),
-        );
+        let conn_str = require_option("conn_string", options);
+        let client = if conn_str.is_empty() {
+            None
+        } else {
+            let pool = Pool::new(conn_str.as_str());
+            rt.block_on(pool.get_handle()).map_or_else(
+                |err| {
+                    report_error(
+                        PgSqlErrorCode::ERRCODE_FDW_UNABLE_TO_ESTABLISH_CONNECTION,
+                        &format!("connection failed: {}", err),
+                    );
+                    None
+                },
+                |client| Some(client),
+            )
+        };
         ClickHouseFdw {
             rt,
             client,
@@ -54,6 +43,21 @@ impl ClickHouseFdw {
             scan_blk: None,
             row_idx: 0,
         }
+    }
+
+    fn deparse(&self, quals: &Vec<Qual>, columns: &Vec<String>) -> String {
+        let tgts = columns.join(", ");
+        let sql = if quals.is_empty() {
+            format!("select {} from {}", tgts, &self.table)
+        } else {
+            let cond = quals
+                .iter()
+                .map(|q| q.deparse())
+                .collect::<Vec<String>>()
+                .join(" and ");
+            format!("select {} from {} where {}", tgts, &self.table, cond)
+        };
+        sql
     }
 }
 
@@ -66,13 +70,17 @@ impl ForeignDataWrapper for ClickHouseFdw {
         _limit: &Option<Limit>,
         options: &HashMap<String, String>,
     ) -> (i64, i32) {
-        if let Some(ref mut client) = self.client {
-            self.table = options.get("table").map(|t| t.to_owned()).unwrap();
-            self.rowid_col = options.get("rowid_column").map(|r| r.to_owned()).unwrap();
+        self.table = require_option("table", options);
+        self.rowid_col = require_option("rowid_column", options);
+        if self.table.is_empty() || self.rowid_col.is_empty() {
+            return (0, 0);
+        }
 
+        let sql = self.deparse(quals, columns, options);
+
+        if let Some(ref mut client) = self.client {
             // for simplicity purpose, we fetch whole query result to local,
             // may need optimization in the future.
-            let sql = deparse(quals, columns, options);
             match self.rt.block_on(client.query(&sql).fetch_all()) {
                 Ok(block) => {
                     let rows = block.row_count();
@@ -150,8 +158,8 @@ impl ForeignDataWrapper for ClickHouseFdw {
     }
 
     fn begin_modify(&mut self, options: &HashMap<String, String>) {
-        self.table = options.get("table").map(|t| t.to_owned()).unwrap();
-        self.rowid_col = options.get("rowid_column").map(|r| r.to_owned()).unwrap();
+        self.table = require_option("table", options);
+        self.rowid_col = require_option("rowid_column", options);
     }
 
     fn insert(&mut self, src: &Row) {
