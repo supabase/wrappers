@@ -219,8 +219,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bfd4d1b31faaa3a89d7934dbded3111da0d2ef28e3ebccdb4f0179f5929d1ef1"
 dependencies = [
  "iana-time-zone",
+ "js-sys",
  "num-integer",
  "num-traits",
+ "time 0.1.44",
+ "wasm-bindgen",
  "winapi",
 ]
 
@@ -276,10 +279,12 @@ dependencies = [
  "lazy_static",
  "log",
  "lz4",
+ "native-tls",
  "percent-encoding",
  "pin-project",
  "thiserror",
  "tokio",
+ "tokio-native-tls",
  "url",
  "uuid 0.8.2",
 ]
@@ -730,7 +735,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
- "time",
+ "time 0.3.16",
  "tokio",
  "tokio-stream",
  "url",
@@ -755,7 +760,7 @@ checksum = "c05aeb6a22b8f62540c194aac980f2115af067bfe15a0734d7277a768d396b31"
 dependencies = [
  "cfg-if",
  "libc",
- "wasi",
+ "wasi 0.11.0+wasi-snapshot-preview1",
 ]
 
 [[package]]
@@ -1167,7 +1172,7 @@ checksum = "e5d732bc30207a6423068df043e3d02e0735b155ad7ce1a6f76fe2baa5b158de"
 dependencies = [
  "libc",
  "log",
- "wasi",
+ "wasi 0.11.0+wasi-snapshot-preview1",
  "windows-sys 0.42.0",
 ]
 
@@ -1413,7 +1418,7 @@ dependencies = [
  "serde_cbor",
  "serde_json",
  "thiserror",
- "time",
+ "time 0.3.16",
  "tracing",
  "tracing-error",
  "uuid 1.2.1",
@@ -1489,7 +1494,7 @@ dependencies = [
  "serde_json",
  "shutdown_hooks",
  "thiserror",
- "time",
+ "time 0.3.16",
 ]
 
 [[package]]
@@ -2346,6 +2351,17 @@ dependencies = [
 
 [[package]]
 name = "time"
+version = "0.1.44"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6db9e6914ab8b1ae1c260a4ae7a49b6c5611b40328a735b21862567685e73255"
+dependencies = [
+ "libc",
+ "wasi 0.10.0+wasi-snapshot-preview1",
+ "winapi",
+]
+
+[[package]]
+name = "time"
 version = "0.3.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0fab5c8b9980850e06d92ddbe3ab839c062c801f3927c0fb8abd6fc8e918fbca"
@@ -2726,6 +2742,12 @@ dependencies = [
 
 [[package]]
 name = "wasi"
+version = "0.10.0+wasi-snapshot-preview1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1a143597ca7c7793eff794def352d41792a93c481eb1042423ff7ff72ba2c31f"
+
+[[package]]
+name = "wasi"
 version = "0.11.0+wasi-snapshot-preview1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9c8d87e72b64a3b4db28d11ce29237c246188f4f51057d65a7eab63b7987e423"
@@ -2970,6 +2992,7 @@ name = "wrappers"
 version = "0.1.0"
 dependencies = [
  "cfg-if",
+ "chrono",
  "clickhouse-rs",
  "gcp-bigquery-client",
  "pgx",
@@ -2979,7 +3002,7 @@ dependencies = [
  "reqwest-retry",
  "serde_json",
  "supabase-wrappers",
- "time",
+ "time 0.3.16",
 ]
 
 [[package]]
@@ -3012,7 +3035,7 @@ dependencies = [
  "seahash",
  "serde",
  "serde_json",
- "time",
+ "time 0.3.16",
  "tokio",
  "tower-service",
  "url",

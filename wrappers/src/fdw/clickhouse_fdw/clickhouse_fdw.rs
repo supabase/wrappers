@@ -1,6 +1,9 @@
+use chrono::DateTime;
 use clickhouse_rs::{types, types::Block, types::SqlType, ClientHandle, Pool};
 use pgx::log::PgSqlErrorCode;
+use pgx::prelude::Timestamp;
 use std::collections::HashMap;
+use time::OffsetDateTime;
 
 use supabase_wrappers::{
     create_async_runtime, report_error, require_option, Cell, ForeignDataWrapper, Limit, Qual, Row,
@@ -76,7 +79,7 @@ impl ForeignDataWrapper for ClickHouseFdw {
             return (0, 0);
         }
 
-        let sql = self.deparse(quals, columns, options);
+        let sql = self.deparse(quals, columns);
 
         if let Some(ref mut client) = self.client {
             // for simplicity purpose, we fetch whole query result to local,
@@ -123,9 +126,29 @@ impl ForeignDataWrapper for ClickHouseFdw {
                             let value = row.get::<u8, usize>(i).unwrap();
                             Cell::Bool(value != 0)
                         }
+                        SqlType::Int16 => {
+                            let value = row.get::<i16, usize>(i).unwrap();
+                            Cell::I16(value)
+                        }
+                        SqlType::Int32 => {
+                            let value = row.get::<i32, usize>(i).unwrap();
+                            Cell::I32(value)
+                        }
+                        SqlType::UInt32 => {
+                            let value = row.get::<u32, usize>(i).unwrap();
+                            Cell::I64(value as i64)
+                        }
+                        SqlType::Float32 => {
+                            let value = row.get::<f32, usize>(i).unwrap();
+                            Cell::F32(value)
+                        }
                         SqlType::Float64 => {
                             let value = row.get::<f64, usize>(i).unwrap();
                             Cell::F64(value)
+                        }
+                        SqlType::UInt64 => {
+                            let value = row.get::<u64, usize>(i).unwrap();
+                            Cell::I64(value as i64)
                         }
                         SqlType::Int64 => {
                             let value = row.get::<i64, usize>(i).unwrap();
@@ -134,6 +157,15 @@ impl ForeignDataWrapper for ClickHouseFdw {
                         SqlType::String => {
                             let value = row.get::<String, usize>(i).unwrap();
                             Cell::String(value)
+                        }
+                        SqlType::DateTime(_) => {
+                            let value = row.get::<DateTime<_>, usize>(i).unwrap();
+                            let dt = OffsetDateTime::from_unix_timestamp_nanos(
+                                (value.timestamp_nanos()) as i128,
+                            )
+                            .unwrap();
+                            let ts = Timestamp::try_from(dt).unwrap();
+                            Cell::Timestamp(ts)
                         }
                         _ => {
                             report_error(

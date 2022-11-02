@@ -6,6 +6,7 @@ use gcp_bigquery_client::{
     Client,
 };
 use pgx::log::PgSqlErrorCode;
+use pgx::log::*;
 use pgx::prelude::{Date, Timestamp};
 use std::collections::HashMap;
 use time::{format_description::well_known::Iso8601, OffsetDateTime, PrimitiveDateTime};

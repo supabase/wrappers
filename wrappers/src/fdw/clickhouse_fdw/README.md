@@ -27,8 +27,8 @@ drop extension if exists wrappers cascade;
 create extension wrappers;
 
 -- create foreign data wrapper and enable 'ClickHouseFdw'
-drop foreign data wrapper if exists wrappers_clickhouse;
-create foreign data wrapper wrappers_clickhouse
+drop foreign data wrapper if exists clickhouse_wrapper;
+create foreign data wrapper clickhouse_wrapper
   handler wrappers_handler
   validator wrappers_validator
   options (
@@ -38,7 +38,7 @@ create foreign data wrapper wrappers_clickhouse
 -- create a wrappers ClickHouse server and specify connection string
 drop server if exists my_clickhouse_server;
 create server my_clickhouse_server
-  foreign data wrapper wrappers_clickhouse
+  foreign data wrapper clickhouse_wrapper
   options (
     conn_string 'tcp://default:@localhost:9000/default'
   );

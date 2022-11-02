@@ -1,6 +1,6 @@
 use pgx::log::*;
-use tokio::runtime::{Builder, Runtime};
 use std::collections::HashMap;
+use tokio::runtime::{Builder, Runtime};
 
 /// Report error to Postgres using `ereport`
 ///
@@ -20,6 +20,16 @@ use std::collections::HashMap;
 #[inline]
 pub fn report_error(code: PgSqlErrorCode, msg: &str) {
     ereport(PgLogLevel::ERROR, code, msg, "Wrappers", 0, 0);
+}
+
+/// Log debug message to Postgres log.
+///
+/// A helper function to emit DEBUG1 level message to Postgres's log.
+/// Set `log_min_messages = DEBUG1` in `postgresql.conf` to show the debug
+/// messages.
+#[inline]
+pub fn log_debug(msg: &str) {
+    elog(PgLogLevel::DEBUG1, &format!("wrappers: {}", msg));
 }
 
 /// Create a Tokio async runtime

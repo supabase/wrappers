@@ -2,6 +2,10 @@
 
 Wrappers is a development framework for Postgres Foreign Data Wrappers ([FDW](https://wiki.postgresql.org/wiki/Foreign_data_wrappers)), written in Rust. Its goal is to make Postgres FDW development easier while keeping Rust language's modern capabilities, such as high performance, strong types, and safety.
 
+## Documentation
+
+Please visit the [full documentation on docs.rs](https://docs.rs/supabase-wrappers/latest/supabase_wrappers/)
+
 ## Features
 
 - Minimum interface and easy to implement.

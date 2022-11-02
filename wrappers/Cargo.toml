@@ -17,7 +17,7 @@ pg_test = []
 
 helloworld_fdw = []
 bigquery_fdw = ["gcp-bigquery-client", "time"]
-clickhouse_fdw = ["clickhouse-rs"]
+clickhouse_fdw = ["clickhouse-rs", "chrono", "time"]
 stripe_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json"]
 
 [dependencies]
@@ -27,7 +27,8 @@ cfg-if = "1.0"
 supabase-wrappers = { path = "../supabase-wrappers" }
 
 # for clickhouse_fdw
-clickhouse-rs = { git = "https://github.com/suharev7/clickhouse-rs", branch = "async-await", optional = true }
+clickhouse-rs = { git = "https://github.com/suharev7/clickhouse-rs", branch = "async-await", features = ["tls"], optional = true }
+chrono = { version = "0.4", optional = true }
 
 # for bigquery_fdw
 gcp-bigquery-client = { version = "0.14.0", optional = true }
