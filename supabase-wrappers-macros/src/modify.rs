@@ -30,6 +30,7 @@ fn to_tokens() -> TokenStream2 {
             _target_rte: *mut RangeTblEntry,
             target_relation: Relation,
         ) {
+            debug2!("---> add_foreign_update_targets");
             unsafe {
                 // get rowid column name from table options
                 let ftable = GetForeignTable((*target_relation).rd_id);
@@ -79,6 +80,7 @@ fn to_tokens() -> TokenStream2 {
             _result_relation: Index,
             _subplan_index: c_int,
         ) -> *mut List {
+            debug2!("---> plan_foreign_modify");
             unsafe {
                 if !(*plan).returningLists.is_null() {
                     report_error(
@@ -102,6 +104,7 @@ fn to_tokens() -> TokenStream2 {
                 return;
             }
 
+            debug2!("---> begin_foreign_modify");
             unsafe {
                 let rel = PgRelation::from_pg((*rinfo).ri_RelationDesc);
 
@@ -152,6 +155,7 @@ fn to_tokens() -> TokenStream2 {
             slot: *mut TupleTableSlot,
             _plan_slot: *mut TupleTableSlot,
         ) -> *mut TupleTableSlot {
+            debug2!("---> exec_foreign_insert");
             unsafe {
                 let mut state =
                     PgBox::<FdwModifyState>::from_pg((*rinfo).ri_FdwState as *mut FdwModifyState);
@@ -183,6 +187,7 @@ fn to_tokens() -> TokenStream2 {
             slot: *mut TupleTableSlot,
             plan_slot: *mut TupleTableSlot,
         ) -> *mut TupleTableSlot {
+            debug2!("---> exec_foreign_delete");
             unsafe {
                 let mut state =
                     PgBox::<FdwModifyState>::from_pg((*rinfo).ri_FdwState as *mut FdwModifyState);
@@ -210,6 +215,7 @@ fn to_tokens() -> TokenStream2 {
             slot: *mut TupleTableSlot,
             plan_slot: *mut TupleTableSlot,
         ) -> *mut TupleTableSlot {
+            debug2!("---> exec_foreign_update");
             unsafe {
                 let mut state =
                     PgBox::<FdwModifyState>::from_pg((*rinfo).ri_FdwState as *mut FdwModifyState);
@@ -233,6 +239,7 @@ fn to_tokens() -> TokenStream2 {
 
         #[no_mangle]
         pub(super) extern "C" fn end_foreign_modify(_estate: *mut EState, rinfo: *mut ResultRelInfo) {
+            debug2!("---> end_foreign_modify");
             unsafe {
                 let fdw_state = (*rinfo).ri_FdwState as *mut FdwModifyState;
                 if fdw_state.is_null() {

@@ -134,7 +134,7 @@ fn to_tokens() -> TokenStream2 {
             baserel: *mut RelOptInfo,
             foreigntableid: Oid,
         ) {
-            debug1!("---> get_foreign_rel_size");
+            debug2!("---> get_foreign_rel_size");
             unsafe {
                 let mut state = FdwState::new(foreigntableid);
 
@@ -174,7 +174,7 @@ fn to_tokens() -> TokenStream2 {
             baserel: *mut RelOptInfo,
             _foreigntableid: Oid,
         ) {
-            debug1!("---> get_foreign_paths");
+            debug2!("---> get_foreign_paths");
             unsafe {
                 let state = PgBox::<FdwState>::from_pg((*baserel).fdw_private as _);
 
@@ -222,7 +222,7 @@ fn to_tokens() -> TokenStream2 {
             scan_clauses: *mut List,
             outer_plan: *mut Plan,
         ) -> *mut ForeignScan {
-            debug1!("---> get_foreign_plan");
+            debug2!("---> get_foreign_plan");
             unsafe {
                 let mut state = PgBox::<FdwState>::from_pg((*baserel).fdw_private as _);
 
@@ -249,7 +249,7 @@ fn to_tokens() -> TokenStream2 {
 
         #[no_mangle]
         pub(super) extern "C" fn explain_foreign_scan(node: *mut ForeignScanState, es: *mut ExplainState) {
-            debug1!("---> explain_foreign_scan");
+            debug2!("---> explain_foreign_scan");
             unsafe {
                 let scan_state = (*node).ss;
                 let plan = scan_state.ps.plan as *mut ForeignScan;
@@ -278,7 +278,7 @@ fn to_tokens() -> TokenStream2 {
 
         #[no_mangle]
         pub(super) extern "C" fn begin_foreign_scan(node: *mut ForeignScanState, eflags: c_int) {
-            debug1!("---> begin_foreign_scan");
+            debug2!("---> begin_foreign_scan");
             if eflags & EXEC_FLAG_EXPLAIN_ONLY as c_int > 0 {
                 return;
             }
@@ -306,7 +306,7 @@ fn to_tokens() -> TokenStream2 {
 
         #[no_mangle]
         pub(super) extern "C" fn iterate_foreign_scan(node: *mut ForeignScanState) -> *mut TupleTableSlot {
-            debug1!("---> iterate_foreign_scan");
+            debug2!("---> iterate_foreign_scan");
             unsafe {
                 let mut state = PgBox::<FdwState>::from_pg((*node).fdw_state as _);
 
@@ -351,7 +351,7 @@ fn to_tokens() -> TokenStream2 {
 
         #[no_mangle]
         pub(super) extern "C" fn re_scan_foreign_scan(node: *mut ForeignScanState) {
-            debug1!("---> re_scan_foreign_scan");
+            debug2!("---> re_scan_foreign_scan");
             unsafe {
                 let fdw_state = (*node).fdw_state as *mut FdwState;
                 if fdw_state.is_null() {
@@ -365,7 +365,7 @@ fn to_tokens() -> TokenStream2 {
 
         #[no_mangle]
         pub(super) extern "C" fn end_foreign_scan(node: *mut ForeignScanState) {
-            debug1!("---> end_foreign_scan");
+            debug2!("---> end_foreign_scan");
             unsafe {
                 let fdw_state = (*node).fdw_state as *mut FdwState;
                 if fdw_state.is_null() {

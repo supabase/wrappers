@@ -12,7 +12,7 @@
 //! $ cargo pgx new my_project
 //! ```
 //!
-//! And then change default Postgres version to `pg14` and add dependencies in your project's `Cargo.toml`,
+//! And then change default Postgres version to `pg14` and add below dependencies to your project's `Cargo.toml`,
 //!
 //! ```toml
 //! [features]
@@ -79,8 +79,8 @@
 //!         // 'options' passed here will be a hashmap { 'foo' -> 'bar' }.
 //!         //
 //!         // You can do any initalization in this new() function, like saving connection
-//!         // info or API url in an variable, but don't do any heavy works like making a
-//!         // database connection or API call.
+//!         // info or API url in an variable, but don't do heavy works like database
+//!         // connection or API call.
 //!         Self {}
 //!     }
 //! }
