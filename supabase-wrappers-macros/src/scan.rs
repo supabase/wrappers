@@ -69,6 +69,21 @@ fn to_tokens() -> TokenStream2 {
                 }
             }
 
+            unsafe fn serialize_to_list(state: PgBox<Self>) -> *mut List {
+                let mut ret = PgList::new();
+                let val = state.into_pg() as i64;
+                let cst = makeConst(INT8OID, -1, InvalidOid, 8, val.into_datum().unwrap(), false, true);
+                ret.push(cst);
+                ret.into_pg()
+            }
+
+            unsafe fn deserialize_from_list(list: *mut List) -> PgBox<Self> {
+                let list = PgList::<Const>::from_pg(list);
+                let cst = list.head().unwrap();
+                let ptr = i64::from_datum((*cst).constvalue, (*cst).constisnull).unwrap();
+                PgBox::<FdwState>::from_pg(ptr as _)
+            }
+
             fn get_rel_size(&mut self) -> (i64, i32) {
                 if let Some(ref mut instance) = self.instance {
                     instance.get_rel_size(&self.quals, &self.tgts, &self.sorts, &self.limit, &self.opts)
@@ -234,12 +249,16 @@ fn to_tokens() -> TokenStream2 {
 
                 old_ctx.set_as_current();
 
+                // "serialize" the state, so that it is safe to be carried
+                // between the plan and the execution
+                let fdw_private = FdwState::serialize_to_list(state);
+
                 make_foreignscan(
                     tlist,
                     scan_clauses,
                     (*baserel).relid,
                     ptr::null_mut(),
-                    state.into_pg() as _,
+                    fdw_private,
                     ptr::null_mut(),
                     ptr::null_mut(),
                     outer_plan,
@@ -251,9 +270,12 @@ fn to_tokens() -> TokenStream2 {
         pub(super) extern "C" fn explain_foreign_scan(node: *mut ForeignScanState, es: *mut ExplainState) {
             debug2!("---> explain_foreign_scan");
             unsafe {
-                let scan_state = (*node).ss;
-                let plan = scan_state.ps.plan as *mut ForeignScan;
-                let mut state = PgBox::<FdwState>::from_pg((*plan).fdw_private as _);
+                let fdw_state = (*node).fdw_state as *mut FdwState;
+                if fdw_state.is_null() {
+                    return;
+                }
+
+                let mut state = PgBox::<FdwState>::from_rust(fdw_state);
 
                 state.tmp_ctx.reset();
                 let old_ctx = state.tmp_ctx.set_as_current();
@@ -273,32 +295,33 @@ fn to_tokens() -> TokenStream2 {
                 ExplainPropertyText(label.as_ptr() as *const c_char, value.as_ptr() as *const c_char, es);
 
                 old_ctx.set_as_current();
+
+                (*node).fdw_state = state.into_pg() as _;
             }
         }
 
         #[no_mangle]
         pub(super) extern "C" fn begin_foreign_scan(node: *mut ForeignScanState, eflags: c_int) {
             debug2!("---> begin_foreign_scan");
-            if eflags & EXEC_FLAG_EXPLAIN_ONLY as c_int > 0 {
-                return;
-            }
-
             unsafe {
                 let scan_state = (*node).ss;
                 let plan = scan_state.ps.plan as *mut ForeignScan;
-                let mut state = PgBox::<FdwState>::from_pg((*plan).fdw_private as _);
+                let mut state = FdwState::deserialize_from_list((*plan).fdw_private as _);
 
-                state.begin_scan();
+                // begin scan if it is not EXPLAIN statement
+                if eflags & EXEC_FLAG_EXPLAIN_ONLY as c_int <= 0 {
+                    state.begin_scan();
 
-                let rel = scan_state.ss_currentRelation;
-                let tup_desc = (*rel).rd_att;
-                let natts = (*tup_desc).natts as usize;
+                    let rel = scan_state.ss_currentRelation;
+                    let tup_desc = (*rel).rd_att;
+                    let natts = (*tup_desc).natts as usize;
 
-                // initialize scan result lists
-                state
-                    .values
-                    .extend_from_slice(&vec![0.into_datum().unwrap(); natts]);
-                state.nulls.extend_from_slice(&vec![true; natts]);
+                    // initialize scan result lists
+                    state
+                        .values
+                        .extend_from_slice(&vec![0.into_datum().unwrap(); natts]);
+                    state.nulls.extend_from_slice(&vec![true; natts]);
+                }
 
                 (*node).fdw_state = state.into_pg() as _;
             }
@@ -354,12 +377,10 @@ fn to_tokens() -> TokenStream2 {
             debug2!("---> re_scan_foreign_scan");
             unsafe {
                 let fdw_state = (*node).fdw_state as *mut FdwState;
-                if fdw_state.is_null() {
-                    return;
+                if !fdw_state.is_null() {
+                    let mut state = PgBox::<FdwState>::from_pg(fdw_state);
+                    state.re_scan();
                 }
-
-                let mut state = PgBox::<FdwState>::from_pg(fdw_state);
-                state.re_scan();
             }
         }
 
@@ -368,13 +389,11 @@ fn to_tokens() -> TokenStream2 {
             debug2!("---> end_foreign_scan");
             unsafe {
                 let fdw_state = (*node).fdw_state as *mut FdwState;
-                if fdw_state.is_null() {
-                    return;
+                if !fdw_state.is_null() {
+                    let mut state = PgBox::<FdwState>::from_rust(fdw_state);
+                    state.end_scan();
+                    state.clear();
                 }
-
-                let mut state = PgBox::<FdwState>::from_rust(fdw_state);
-                state.end_scan();
-                state.clear();
             }
         }
     }

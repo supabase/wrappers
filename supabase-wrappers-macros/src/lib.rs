@@ -200,7 +200,7 @@ impl ToTokens for WrappersMagic {
 /// Suppose you developed two FDWs `FooFdw` and `BarFdw`, then you can use them
 /// like below,
 ///
-/// ```
+/// ```rust,no_run
 /// use supabase_wrappers::wrappers_magic;
 /// use crate::{FooFdw, BarFdw};
 ///
@@ -213,7 +213,7 @@ impl ToTokens for WrappersMagic {
 ///
 /// Feature based conditional compilation is also supported.
 ///
-/// ````
+/// ```rust,no_run
 /// #[cfg(feature = "foo_fdw")]
 /// use crate::FooFdw;
 ///
@@ -227,7 +227,7 @@ impl ToTokens for WrappersMagic {
 ///     #[cfg(feature = "bar_fdw")]
 ///     BarFdw,
 /// );
-/// ````
+/// ```
 #[proc_macro]
 pub fn wrappers_magic(input: TokenStream) -> TokenStream {
     let magic: WrappersMagic = parse_macro_input!(input as WrappersMagic);

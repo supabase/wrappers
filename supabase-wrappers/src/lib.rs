@@ -61,7 +61,7 @@
 //!
 //! The struct implements [`ForeignDataWrapper`] trait needs to provide a `new()` initialization function. For example,
 //!
-//! ```rust
+//! ```rust,no_run
 //! use supabase_wrappers::ForeignDataWrapper;
 //!
 //! pub struct HelloWorldFdw;
@@ -107,7 +107,7 @@
 //!
 //! Then we can implement [`ForeignDataWrapper`] trait like below,
 //!
-//! ```rust
+//! ```rust,no_run
 //! impl ForeignDataWrapper for HelloWorldFdw {
 //!     fn begin_scan(
 //!         &mut self,
@@ -151,7 +151,7 @@
 //! Once the trait is implemented, you need to use macro [`wrappers_magic`] to set it up so the
 //! framework knows how to instantiate the FDW struct.
 //!
-//! ```rust
+//! ```rust,no_run
 //! wrappers_magic!(HelloWorldFdw);
 //! ```
 //!

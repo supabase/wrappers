@@ -5,11 +5,12 @@ fn to_tokens() -> TokenStream2 {
     quote! {
         use pg_sys::*;
         use pgx::*;
+        use std::collections::HashMap;
         use std::ffi::CString;
         use std::os::raw::c_int;
         use std::ptr;
 
-        use ::supabase_wrappers::{Cell, ForeignDataWrapper, report_error};
+        use ::supabase_wrappers::{Cell, Row, ForeignDataWrapper, report_error};
 
         use super::polyfill;
         use super::utils;
@@ -17,10 +18,67 @@ fn to_tokens() -> TokenStream2 {
 
         // Fdw private state for modify
         struct FdwModifyState {
+            // foreign data wrapper instance
             instance: Option<Box<dyn ForeignDataWrapper>>,
-            tmp_ctx: PgMemoryContexts,
+
+            // row id attribute number and type id
             rowid_attno: AttrNumber,
             rowid_typid: Oid,
+
+            // foreign table options
+            opts: HashMap<String, String>,
+
+            // temporary memory context
+            tmp_ctx: PgMemoryContexts,
+        }
+
+        impl FdwModifyState {
+            unsafe fn new(foreigntableid: Oid) -> Self {
+                FdwModifyState {
+                    instance: Some(instance::create_fdw_instance(foreigntableid)),
+                    rowid_attno: 0,
+                    rowid_typid: 0,
+                    opts: HashMap::new(),
+                    tmp_ctx: PgMemoryContexts::new("Wrappers temp modify data"),
+                }
+            }
+
+            fn begin_modify(&mut self) {
+                if let Some(ref mut instance) = self.instance {
+                    instance.begin_modify(&self.opts);
+                }
+            }
+
+            fn insert(&mut self, row: &Row) {
+                if let Some(ref mut instance) = self.instance {
+                    instance.insert(row);
+                }
+            }
+
+            fn update(&mut self, rowid: &Cell, new_row: &Row) {
+                if let Some(ref mut instance) = self.instance {
+                    instance.update(rowid, new_row);
+                }
+            }
+
+            fn delete(&mut self, rowid: &Cell) {
+                if let Some(ref mut instance) = self.instance {
+                    instance.delete(rowid);
+                }
+            }
+
+            fn end_modify(&mut self) {
+                if let Some(ref mut instance) = self.instance {
+                    instance.end_modify();
+                }
+            }
+
+            fn clear(&mut self) {
+                self.instance.take();
+                self.opts.clear();
+                self.opts.shrink_to_fit();
+                self.tmp_ctx.reset();
+            }
         }
 
         #[no_mangle]
@@ -100,18 +158,27 @@ fn to_tokens() -> TokenStream2 {
             _subplan_index: c_int,
             eflags: c_int,
         ) {
+            debug2!("---> begin_foreign_modify");
+
             if eflags & EXEC_FLAG_EXPLAIN_ONLY as c_int > 0 {
                 return;
             }
 
-            debug2!("---> begin_foreign_modify");
             unsafe {
                 let rel = PgRelation::from_pg((*rinfo).ri_RelationDesc);
 
                 // get rowid column name from table options
                 let ftable = GetForeignTable(rel.oid());
                 let opts = utils::options_to_hashmap((*ftable).options);
-                let rowid_name = opts.get("rowid_column").unwrap();
+                let rowid_name = opts.get("rowid_column");
+                if rowid_name.is_none() {
+                    report_error(
+                        PgSqlErrorCode::ERRCODE_FDW_OPTION_NAME_NOT_FOUND,
+                        "option 'rowid_column' is required",
+                    );
+                    return;
+                }
+                let rowid_name = rowid_name.unwrap();
 
                 // get rowid attribute number
                 let rowid_attno = {
@@ -125,17 +192,15 @@ fn to_tokens() -> TokenStream2 {
                 for attr in tup_desc.iter().filter(|a| !a.attisdropped) {
                     let attname = name_data_to_str(&attr.attname);
                     if attname == rowid_name {
-                        let mut instance = instance::create_fdw_instance(rel.oid());
-                        instance.begin_modify(&opts);
+                        // create modify state
+                        let mut state = FdwModifyState::new(rel.oid());
+                        state.rowid_attno = rowid_attno;
+                        state.rowid_typid = attr.atttypid;
+                        state.opts = opts;
 
-                        // create and set modify state
-                        let modify_state = FdwModifyState {
-                            instance: Some(instance),
-                            tmp_ctx: PgMemoryContexts::new("Wrappers temp modify data"),
-                            rowid_attno,
-                            rowid_typid: attr.atttypid,
-                        };
-                        (*rinfo).ri_FdwState = PgBox::new(modify_state).into_pg() as void_mut_ptr;
+                        state.begin_modify();
+
+                        (*rinfo).ri_FdwState = PgBox::new(state).into_pg() as void_mut_ptr;
 
                         return;
                     }
@@ -163,10 +228,8 @@ fn to_tokens() -> TokenStream2 {
                 state.tmp_ctx.reset();
                 let old_ctx = state.tmp_ctx.set_as_current();
 
-                if let Some(ref mut instance) = &mut state.instance {
-                    let row = utils::tuple_table_slot_to_row(slot);
-                    instance.insert(&row);
-                }
+                let row = utils::tuple_table_slot_to_row(slot);
+                state.insert(&row);
 
                 old_ctx.set_as_current();
             }
@@ -196,10 +259,8 @@ fn to_tokens() -> TokenStream2 {
                 let old_ctx = state.tmp_ctx.set_as_current();
 
                 let cell = get_rowid_cell(&state, plan_slot);
-                if let Some(ref mut instance) = &mut state.instance {
-                    if let Some(rowid) = cell {
-                        instance.delete(&rowid);
-                    }
+                if let Some(rowid) = cell {
+                    state.delete(&rowid);
                 }
 
                 old_ctx.set_as_current();
@@ -224,11 +285,9 @@ fn to_tokens() -> TokenStream2 {
                 let old_ctx = state.tmp_ctx.set_as_current();
 
                 let cell = get_rowid_cell(&state, plan_slot);
-                if let Some(ref mut instance) = &mut state.instance {
-                    if let Some(rowid) = cell {
-                        let new_row = utils::tuple_table_slot_to_row(slot);
-                        instance.update(&rowid, &new_row);
-                    }
+                if let Some(rowid) = cell {
+                    let new_row = utils::tuple_table_slot_to_row(slot);
+                    state.update(&rowid, &new_row);
                 }
 
                 old_ctx.set_as_current();
@@ -242,13 +301,11 @@ fn to_tokens() -> TokenStream2 {
             debug2!("---> end_foreign_modify");
             unsafe {
                 let fdw_state = (*rinfo).ri_FdwState as *mut FdwModifyState;
-                if fdw_state.is_null() {
-                    return;
+                if !fdw_state.is_null() {
+                    let mut state = PgBox::<FdwModifyState>::from_rust(fdw_state);
+                    state.end_modify();
+                    state.clear();
                 }
-
-                let mut state = PgBox::<FdwModifyState>::from_rust(fdw_state);
-                let mut instance = state.instance.take().unwrap();
-                instance.end_modify();
             }
         }
     }

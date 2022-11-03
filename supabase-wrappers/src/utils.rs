@@ -9,7 +9,7 @@ use tokio::runtime::{Builder, Runtime};
 ///
 /// For example,
 ///
-/// ```rust
+/// ```rust,no_run
 /// use pgx::log::PgSqlErrorCode;
 ///
 /// report_error(
@@ -40,7 +40,7 @@ pub fn log_debug(msg: &str) {
 ///
 /// For example,
 ///
-/// ```rust
+/// ```rust,no_run
 /// let rt = create_async_runtime();
 ///
 /// // client.query() is an async function
