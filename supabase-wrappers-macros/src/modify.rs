@@ -10,7 +10,7 @@ fn to_tokens() -> TokenStream2 {
         use std::os::raw::c_int;
         use std::ptr;
 
-        use ::supabase_wrappers::{Cell, Row, ForeignDataWrapper, report_error};
+        use ::supabase_wrappers::{Cell, Row, ForeignDataWrapper, report_error, require_option};
 
         use super::polyfill;
         use super::utils;
@@ -93,15 +93,10 @@ fn to_tokens() -> TokenStream2 {
                 // get rowid column name from table options
                 let ftable = GetForeignTable((*target_relation).rd_id);
                 let opts = utils::options_to_hashmap((*ftable).options);
-                let rowid_name = match opts.get("rowid_column") {
-                    Some(name) => name.clone(),
-                    None => {
-                        elog(
-                            PgLogLevel::ERROR,
-                            "foreign table has no \"rowid_column\" option",
-                        );
-                        return;
-                    }
+                let rowid_name = if let Some(name) = require_option("rowid_column", &opts) {
+                    name.clone()
+                } else {
+                    return;
                 };
 
                 // find rowid attribute

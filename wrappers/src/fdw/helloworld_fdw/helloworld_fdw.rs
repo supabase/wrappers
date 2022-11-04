@@ -3,7 +3,11 @@ use supabase_wrappers::{Cell, ForeignDataWrapper, Limit, Qual, Row, Sort};
 
 // A simple demo FDW
 pub(crate) struct HelloWorldFdw {
+    // row counter
     row_cnt: i64,
+
+    // target column name list
+    tgt_cols: Vec<String>,
 }
 
 impl HelloWorldFdw {
@@ -21,7 +25,10 @@ impl HelloWorldFdw {
     // info or API url in an variable, but don't do any heavy works like making a
     // database connection or API call.
     pub fn new(_options: &HashMap<String, String>) -> Self {
-        Self { row_cnt: 0 }
+        Self {
+            row_cnt: 0,
+            tgt_cols: Vec::new(),
+        }
     }
 }
 
@@ -29,13 +36,16 @@ impl ForeignDataWrapper for HelloWorldFdw {
     fn begin_scan(
         &mut self,
         _quals: &Vec<Qual>,
-        _columns: &Vec<String>,
+        columns: &Vec<String>,
         _sorts: &Vec<Sort>,
         _limit: &Option<Limit>,
         _options: &HashMap<String, String>,
     ) {
-        // reset row count
+        // reset row counter
         self.row_cnt = 0;
+
+        // save a copy of target columns
+        self.tgt_cols = columns.clone();
     }
 
     fn iter_scan(&mut self) -> Option<Row> {
@@ -44,11 +54,13 @@ impl ForeignDataWrapper for HelloWorldFdw {
             // create an empty row
             let mut row = Row::new();
 
-            // add value to 'id' column
-            row.push("id", Some(Cell::I64(self.row_cnt)));
-
-            // add value to 'col' column
-            row.push("col", Some(Cell::String("Hello world".to_string())));
+            // add values to row
+            if self.tgt_cols.iter().any(|c| c == "id") {
+                row.push("id", Some(Cell::I64(self.row_cnt)));
+            }
+            if self.tgt_cols.iter().any(|c| c == "col") {
+                row.push("col", Some(Cell::String("Hello world".to_string())));
+            }
 
             self.row_cnt += 1;
 

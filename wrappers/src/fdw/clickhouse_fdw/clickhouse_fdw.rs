@@ -10,11 +10,69 @@ use supabase_wrappers::{
     Runtime, Sort,
 };
 
+fn field_to_cell(row: &types::Row<types::Complex>, i: usize) -> Option<Cell> {
+    let sql_type = row.sql_type(i).unwrap();
+    match sql_type {
+        SqlType::UInt8 => {
+            // Bool is stored as UInt8 in ClickHouse, so we treat it as bool here
+            let value = row.get::<u8, usize>(i).unwrap();
+            Some(Cell::Bool(value != 0))
+        }
+        SqlType::Int16 => {
+            let value = row.get::<i16, usize>(i).unwrap();
+            Some(Cell::I16(value))
+        }
+        SqlType::Int32 => {
+            let value = row.get::<i32, usize>(i).unwrap();
+            Some(Cell::I32(value))
+        }
+        SqlType::UInt32 => {
+            let value = row.get::<u32, usize>(i).unwrap();
+            Some(Cell::I64(value as i64))
+        }
+        SqlType::Float32 => {
+            let value = row.get::<f32, usize>(i).unwrap();
+            Some(Cell::F32(value))
+        }
+        SqlType::Float64 => {
+            let value = row.get::<f64, usize>(i).unwrap();
+            Some(Cell::F64(value))
+        }
+        SqlType::UInt64 => {
+            let value = row.get::<u64, usize>(i).unwrap();
+            Some(Cell::I64(value as i64))
+        }
+        SqlType::Int64 => {
+            let value = row.get::<i64, usize>(i).unwrap();
+            Some(Cell::I64(value))
+        }
+        SqlType::String => {
+            let value = row.get::<String, usize>(i).unwrap();
+            Some(Cell::String(value))
+        }
+        SqlType::DateTime(_) => {
+            let value = row.get::<DateTime<_>, usize>(i).unwrap();
+            let dt = OffsetDateTime::from_unix_timestamp_nanos((value.timestamp_nanos()) as i128)
+                .unwrap();
+            let ts = Timestamp::try_from(dt).unwrap();
+            Some(Cell::Timestamp(ts))
+        }
+        _ => {
+            report_error(
+                PgSqlErrorCode::ERRCODE_FDW_INVALID_DATA_TYPE,
+                &format!("data type {} is not supported", sql_type.to_string()),
+            );
+            None
+        }
+    }
+}
+
 pub(crate) struct ClickHouseFdw {
     rt: Runtime,
     client: Option<ClientHandle>,
     table: String,
     rowid_col: String,
+    tgt_cols: Vec<String>,
     scan_blk: Option<Block<types::Complex>>,
     row_idx: usize,
 }
@@ -22,10 +80,7 @@ pub(crate) struct ClickHouseFdw {
 impl ClickHouseFdw {
     pub fn new(options: &HashMap<String, String>) -> Self {
         let rt = create_async_runtime();
-        let conn_str = require_option("conn_string", options);
-        let client = if conn_str.is_empty() {
-            None
-        } else {
+        let client = require_option("conn_string", options).and_then(|conn_str| {
             let pool = Pool::new(conn_str.as_str());
             rt.block_on(pool.get_handle()).map_or_else(
                 |err| {
@@ -37,19 +92,25 @@ impl ClickHouseFdw {
                 },
                 |client| Some(client),
             )
-        };
+        });
+
         ClickHouseFdw {
             rt,
             client,
             table: "".to_string(),
             rowid_col: "".to_string(),
+            tgt_cols: Vec::new(),
             scan_blk: None,
             row_idx: 0,
         }
     }
 
     fn deparse(&self, quals: &Vec<Qual>, columns: &Vec<String>) -> String {
-        let tgts = columns.join(", ");
+        let tgts = if columns.is_empty() {
+            "*".to_string()
+        } else {
+            columns.join(", ")
+        };
         let sql = if quals.is_empty() {
             format!("select {} from {}", tgts, &self.table)
         } else {
@@ -73,11 +134,14 @@ impl ForeignDataWrapper for ClickHouseFdw {
         _limit: &Option<Limit>,
         options: &HashMap<String, String>,
     ) -> (i64, i32) {
-        self.table = require_option("table", options);
-        self.rowid_col = require_option("rowid_column", options);
-        if self.table.is_empty() || self.rowid_col.is_empty() {
+        let table = require_option("table", options);
+        let rowid_col = require_option("rowid_column", options);
+        if table.is_none() || rowid_col.is_none() {
             return (0, 0);
         }
+        self.table = table.unwrap();
+        self.rowid_col = rowid_col.unwrap();
+        self.tgt_cols = columns.clone();
 
         let sql = self.deparse(quals, columns);
 
@@ -117,67 +181,20 @@ impl ForeignDataWrapper for ClickHouseFdw {
             let mut rows = block.rows();
 
             if let Some(row) = rows.nth(self.row_idx) {
-                for i in 0..block.column_count() {
+                for tgt_col in &self.tgt_cols {
+                    let (i, _) = block
+                        .columns()
+                        .iter()
+                        .enumerate()
+                        .find(|(_, c)| c.name() == tgt_col)
+                        .unwrap();
                     let col_name = row.name(i).unwrap();
-                    let sql_type = row.sql_type(i).unwrap();
-                    let cell = match sql_type {
-                        SqlType::UInt8 => {
-                            // Bool is stored as UInt8 in ClickHouse, so we treat it as bool here
-                            let value = row.get::<u8, usize>(i).unwrap();
-                            Cell::Bool(value != 0)
-                        }
-                        SqlType::Int16 => {
-                            let value = row.get::<i16, usize>(i).unwrap();
-                            Cell::I16(value)
-                        }
-                        SqlType::Int32 => {
-                            let value = row.get::<i32, usize>(i).unwrap();
-                            Cell::I32(value)
-                        }
-                        SqlType::UInt32 => {
-                            let value = row.get::<u32, usize>(i).unwrap();
-                            Cell::I64(value as i64)
-                        }
-                        SqlType::Float32 => {
-                            let value = row.get::<f32, usize>(i).unwrap();
-                            Cell::F32(value)
-                        }
-                        SqlType::Float64 => {
-                            let value = row.get::<f64, usize>(i).unwrap();
-                            Cell::F64(value)
-                        }
-                        SqlType::UInt64 => {
-                            let value = row.get::<u64, usize>(i).unwrap();
-                            Cell::I64(value as i64)
-                        }
-                        SqlType::Int64 => {
-                            let value = row.get::<i64, usize>(i).unwrap();
-                            Cell::I64(value)
-                        }
-                        SqlType::String => {
-                            let value = row.get::<String, usize>(i).unwrap();
-                            Cell::String(value)
-                        }
-                        SqlType::DateTime(_) => {
-                            let value = row.get::<DateTime<_>, usize>(i).unwrap();
-                            let dt = OffsetDateTime::from_unix_timestamp_nanos(
-                                (value.timestamp_nanos()) as i128,
-                            )
-                            .unwrap();
-                            let ts = Timestamp::try_from(dt).unwrap();
-                            Cell::Timestamp(ts)
-                        }
-                        _ => {
-                            report_error(
-                                PgSqlErrorCode::ERRCODE_FDW_INVALID_DATA_TYPE,
-                                &format!("data type {} is not supported", sql_type.to_string()),
-                            );
-                            return None;
-                        }
-                    };
-                    ret.push(col_name, Some(cell));
+                    let cell = field_to_cell(&row, i);
+                    if cell.is_none() {
+                        return None;
+                    }
+                    ret.push(col_name, cell);
                 }
-
                 self.row_idx += 1;
                 return Some(ret);
             }
@@ -190,8 +207,13 @@ impl ForeignDataWrapper for ClickHouseFdw {
     }
 
     fn begin_modify(&mut self, options: &HashMap<String, String>) {
-        self.table = require_option("table", options);
-        self.rowid_col = require_option("rowid_column", options);
+        let table = require_option("table", options);
+        let rowid_col = require_option("rowid_column", options);
+        if table.is_none() || rowid_col.is_none() {
+            return;
+        }
+        self.table = table.unwrap();
+        self.rowid_col = rowid_col.unwrap();
     }
 
     fn insert(&mut self, src: &Row) {

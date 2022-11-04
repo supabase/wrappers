@@ -27,8 +27,8 @@ drop extension if exists wrappers cascade;
 create extension wrappers;
 
 -- create foreign data wrapper and enable 'BigQueryFdw'
-drop foreign data wrapper if exists wrappers_bigquery cascade;
-create foreign data wrapper wrappers_bigquery
+drop foreign data wrapper if exists bigquery_wrapper cascade;
+create foreign data wrapper bigquery_wrapper
   handler wrappers_handler
   validator wrappers_validator
   options (
@@ -38,7 +38,7 @@ create foreign data wrapper wrappers_bigquery
 -- create a wrappers BigQuery server and specify connection info
 drop server if exists my_bigquery_server cascade;
 create server my_bigquery_server
-  foreign data wrapper wrappers_bigquery
+  foreign data wrapper bigquery_wrapper
   options (
     sa_key_file '/absolute/path/to/service_account_key.json',
     project_id 'your_gcp_project_id',

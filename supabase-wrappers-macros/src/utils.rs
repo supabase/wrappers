@@ -45,7 +45,7 @@ fn to_tokens() -> TokenStream2 {
             row
         }
 
-        // extract target column name and attribute no
+        // extract target column name and attribute no list
         pub(super) unsafe fn extract_target_columns(
             root: *mut PlannerInfo,
             baserel: *mut RelOptInfo,
@@ -54,7 +54,7 @@ fn to_tokens() -> TokenStream2 {
             let mut col_attnos = Vec::new();
             let mut col_vars: *mut List = ptr::null_mut();
 
-            // gather vars from target list
+            // gather vars from target column list
             let tgt_list: PgList<Node> = PgList::from_pg((*(*baserel).reltarget).exprs);
             for tgt in tgt_list.iter_ptr() {
                 let tgt_cols = pull_var_clause(
@@ -66,6 +66,7 @@ fn to_tokens() -> TokenStream2 {
                 col_vars = list_union(col_vars, tgt_cols);
             }
 
+            // gather vars from restrictions
             let conds: PgList<RestrictInfo> = PgList::from_pg((*baserel).baserestrictinfo);
             for cond in conds.iter_ptr() {
                 let expr = (*cond).clause as *mut Node;

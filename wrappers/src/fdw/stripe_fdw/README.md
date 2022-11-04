@@ -27,8 +27,8 @@ drop extension if exists wrappers cascade;
 create extension wrappers;
 
 -- create foreign data wrapper and enable 'StripeFdw'
-drop foreign data wrapper if exists wrappers_stripe cascade;
-create foreign data wrapper wrappers_stripe
+drop foreign data wrapper if exists stripe_wrapper cascade;
+create foreign data wrapper stripe_wrapper
   handler wrappers_handler
   validator wrappers_validator
   options (
@@ -38,8 +38,9 @@ create foreign data wrapper wrappers_stripe
 -- create a wrappers Stripe server and specify connection info
 drop server if exists my_stripe_server cascade;
 create server my_stripe_server
-  foreign data wrapper wrappers_stripe
+  foreign data wrapper stripe_wrapper
   options (
+    api_url 'https://api.stripe.com/v1',
     api_key 'sk_test_key'
   );
 

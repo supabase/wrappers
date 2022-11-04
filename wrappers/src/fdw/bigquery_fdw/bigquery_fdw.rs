@@ -82,15 +82,16 @@ pub struct BigQueryFdw {
     project_id: String,
     dataset_id: String,
     table: String,
+    tgt_cols: Vec<String>,
     scan_result: Option<(Table, ResultSet)>,
 }
 
 impl BigQueryFdw {
     pub fn new(options: &HashMap<String, String>) -> Self {
         let rt = create_async_runtime();
-        let sa_key_file = require_option("sa_key_file", options);
-        let project_id = require_option("project_id", options);
-        let dataset_id = require_option("dataset_id", options);
+        let sa_key_file = require_option("sa_key_file", options).unwrap();
+        let project_id = require_option("project_id", options).unwrap();
+        let dataset_id = require_option("dataset_id", options).unwrap();
         let client = if sa_key_file.is_empty() {
             None
         } else {
@@ -103,17 +104,17 @@ impl BigQueryFdw {
             project_id,
             dataset_id,
             table: "".to_string(),
+            tgt_cols: Vec::new(),
             scan_result: None,
         }
     }
 
-    fn deparse(
-        &self,
-        quals: &Vec<Qual>,
-        columns: &Vec<String>,
-        options: &HashMap<String, String>,
-    ) -> String {
-        let tgts = columns.join(", ");
+    fn deparse(&self, quals: &Vec<Qual>, columns: &Vec<String>) -> String {
+        let tgts = if columns.is_empty() {
+            "*".to_string()
+        } else {
+            columns.join(", ")
+        };
         let table = format!("{}.{}.{}", self.project_id, self.dataset_id, self.table,);
         let sql = if quals.is_empty() {
             format!("select {} from {}", tgts, table)
@@ -149,10 +150,12 @@ impl ForeignDataWrapper for BigQueryFdw {
         _limit: &Option<Limit>,
         options: &HashMap<String, String>,
     ) {
-        self.table = require_option("table", options);
-        if self.table.is_empty() {
+        let table = require_option("table", options);
+        if table.is_none() {
             return;
         }
+        self.table = table.unwrap();
+        self.tgt_cols = columns.clone();
 
         let location = options
             .get("location")
@@ -178,7 +181,7 @@ impl ForeignDataWrapper for BigQueryFdw {
                 }
             };
 
-            let sql = self.deparse(quals, columns, options);
+            let sql = self.deparse(quals, columns);
             let mut req = QueryRequest::new(sql);
             req.location = Some(location);
 
@@ -203,8 +206,12 @@ impl ForeignDataWrapper for BigQueryFdw {
             if rs.next_row() {
                 if let Some(fields) = &tbl.schema.fields {
                     let mut ret = Row::new();
-                    for field in fields {
+                    for tgt_col in &self.tgt_cols {
+                        let field = fields.iter().find(|&f| &f.name == tgt_col).unwrap();
                         let cell = field_to_cell(rs, field);
+                        if cell.is_none() {
+                            return None;
+                        }
                         ret.push(&field.name, cell);
                     }
                     return Some(ret);

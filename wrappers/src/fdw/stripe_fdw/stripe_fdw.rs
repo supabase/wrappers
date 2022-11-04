@@ -12,19 +12,18 @@ use supabase_wrappers::{
 
 pub(crate) struct StripeFdw {
     rt: Runtime,
+    base_url: String,
     client: Option<ClientWithMiddleware>,
     scan_result: Option<Vec<Row>>,
 }
 
 impl StripeFdw {
-    const BASE_URL: &'static str = "https://api.stripe.com/v1";
-
     pub fn new(options: &HashMap<String, String>) -> Self {
-        let api_key = require_option("api_key", options);
-
-        let client = if api_key.is_empty() {
-            None
-        } else {
+        let base_url = options
+            .get("api_url")
+            .map(|t| t.to_owned())
+            .unwrap_or("https://api.stripe.com/v1".to_string());
+        let client = require_option("api_key", options).map(|api_key| {
             let mut headers = header::HeaderMap::new();
             let value = format!("Bearer {}", api_key);
             let mut auth_value = header::HeaderValue::from_str(&value).unwrap();
@@ -38,11 +37,12 @@ impl StripeFdw {
             let client = ClientBuilder::new(client)
                 .with(RetryTransientMiddleware::new_with_policy(retry_policy))
                 .build();
-            Some(client)
-        };
+            client
+        });
 
         StripeFdw {
             rt: create_async_runtime(),
+            base_url,
             client,
             scan_result: None,
         }
@@ -50,7 +50,7 @@ impl StripeFdw {
 
     #[inline]
     fn build_url(&self, path: &str) -> String {
-        format!("{}/{}", Self::BASE_URL, path)
+        format!("{}/{}", &self.base_url, path)
     }
 
     // convert response body text to rows
@@ -136,10 +136,11 @@ impl ForeignDataWrapper for StripeFdw {
         _limit: &Option<Limit>,
         options: &HashMap<String, String>,
     ) {
-        let obj = require_option("object", options);
-        if obj.is_empty() {
+        let obj = if let Some(name) = require_option("object", options) {
+            name.clone()
+        } else {
             return;
-        }
+        };
 
         let url = self.build_url(&obj);
 

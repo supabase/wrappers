@@ -56,18 +56,18 @@ pub fn create_async_runtime() -> Runtime {
 
 /// Get required option value from the `options` map
 ///
-/// Get the required option's value from `options` map, return an empty string
-/// and report error if it does not exist.
+/// Get the required option's value from `options` map, return None and report
+/// error if it does not exist.
 #[inline]
-pub fn require_option(opt_name: &str, options: &HashMap<String, String>) -> String {
+pub fn require_option(opt_name: &str, options: &HashMap<String, String>) -> Option<String> {
     options
         .get(opt_name)
         .map(|t| t.to_owned())
-        .unwrap_or_else(|| {
+        .or_else(|| {
             report_error(
                 PgSqlErrorCode::ERRCODE_FDW_INVALID_OPTION_NAME,
                 &format!("required option \"{}\" not specified", opt_name),
             );
-            "".to_string()
+            None
         })
 }

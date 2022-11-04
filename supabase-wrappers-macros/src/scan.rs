@@ -200,8 +200,8 @@ fn to_tokens() -> TokenStream2 {
                     .and_then(|c| match c.parse::<f64>() {
                         Ok(v) => Some(v),
                         Err(_) => {
-                            elog(
-                                PgLogLevel::ERROR,
+                            pgx::log::elog(
+                                pgx::log::PgLogLevel::ERROR,
                                 &format!("invalid option startup_cost: {}", c),
                             );
                             Some(0.0)
