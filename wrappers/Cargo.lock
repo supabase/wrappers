@@ -541,6 +541,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "dyn-clone"
+version = "1.0.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4f94fa09c2aeea5b8839e414b7b841bf429fd25b9c522116ac97ee87856d88b2"
+
+[[package]]
 name = "either"
 version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -723,11 +729,12 @@ dependencies = [
 
 [[package]]
 name = "gcp-bigquery-client"
-version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70a65dce87dddc032499606b2b3aea836be6fcc7c7cd0b5a2466bce74b90fa52"
+version = "0.15.0"
+source = "git+https://github.com/burmecia/gcp-bigquery-client?branch=chore/enhance-client-creation#ff9c161786a6f908e4c419f548e04e69aeea0d1b"
 dependencies = [
  "async-stream",
+ "async-trait",
+ "dyn-clone",
  "hyper",
  "hyper-rustls",
  "log",
@@ -3016,9 +3023,9 @@ dependencies = [
 
 [[package]]
 name = "yup-oauth2"
-version = "7.0.1"
+version = "8.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "98748970d2ddf05253e6525810d989740334aa7509457864048a829902db76f3"
+checksum = "e9b7cbafca6169d93ee1da6b8e4bd9d78250a322f9aafbd468607bae3d2a0e75"
 dependencies = [
  "anyhow",
  "async-trait",

@@ -88,25 +88,42 @@ pub struct BigQueryFdw {
 
 impl BigQueryFdw {
     pub fn new(options: &HashMap<String, String>) -> Self {
-        let rt = create_async_runtime();
-        let sa_key_file = require_option("sa_key_file", options).unwrap();
-        let project_id = require_option("project_id", options).unwrap();
-        let dataset_id = require_option("dataset_id", options).unwrap();
-        let client = if sa_key_file.is_empty() {
-            None
-        } else {
-            Some(rt.block_on(Client::from_service_account_key_file(&sa_key_file)))
-        };
-
-        BigQueryFdw {
-            rt,
-            client,
-            project_id,
-            dataset_id,
+        let mut ret = BigQueryFdw {
+            rt: create_async_runtime(),
+            client: None,
+            project_id: "".to_string(),
+            dataset_id: "".to_string(),
             table: "".to_string(),
             tgt_cols: Vec::new(),
             scan_result: None,
+        };
+
+        let sa_key_file = require_option("sa_key_file", options);
+        let project_id = require_option("project_id", options);
+        let dataset_id = require_option("dataset_id", options);
+        if sa_key_file.is_none() || project_id.is_none() || dataset_id.is_none() {
+            return ret;
         }
+
+        let sa_key_file = sa_key_file.unwrap();
+        ret.project_id = project_id.unwrap();
+        ret.dataset_id = dataset_id.unwrap();
+
+        ret.client = match ret
+            .rt
+            .block_on(Client::from_service_account_key_file(&sa_key_file))
+        {
+            Ok(client) => Some(client),
+            Err(err) => {
+                report_error(
+                    PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                    &format!("create client failed: {}", err),
+                );
+                None
+            }
+        };
+
+        ret
     }
 
     fn deparse(&self, quals: &Vec<Qual>, columns: &Vec<String>) -> String {

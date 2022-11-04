@@ -31,7 +31,8 @@ clickhouse-rs = { git = "https://github.com/suharev7/clickhouse-rs", branch = "a
 chrono = { version = "0.4", optional = true }
 
 # for bigquery_fdw
-gcp-bigquery-client = { version = "0.14.0", optional = true }
+#gcp-bigquery-client = { version = "0.14.0", optional = true }
+gcp-bigquery-client = { git = "https://github.com/burmecia/gcp-bigquery-client", branch = "chore/enhance-client-creation", optional = true }
 time = { version = "0.3.15", features = ["parsing"], optional = true }
 
 # for stripe_fdw
