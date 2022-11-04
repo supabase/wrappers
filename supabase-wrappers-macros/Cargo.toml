@@ -1,6 +1,6 @@
 [package]
 name = "supabase-wrappers-macros"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 authors = ["Supabase Inc. https://supabase.com/"]
 license = "Apache-2.0"
