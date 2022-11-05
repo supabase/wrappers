@@ -146,6 +146,7 @@
 //!     fn end_scan(&mut self) {
 //!         // we do nothing here, but you can do things like resource cleanup and etc.
 //!     }
+//! }
 //! ```
 //!
 //! Once the trait is implemented, you need to use macro [`wrappers_magic`] to set it up so the
@@ -164,10 +165,28 @@
 //! Then query it with SQL,
 //!
 //! ```sql
+//! create extension my_project;
+//!
+//! create foreign data wrapper helloworld_wrapper
+//!   handler wrappers_handler
+//!   validator wrappers_validator
+//!   options (
+//!     wrapper 'HelloWorldFdw'
+//!   );
+//!
+//! create server my_helloworld_server
+//!   foreign data wrapper helloworld_wrapper;
+//!
+//! create foreign table hello (
+//!   id bigint,
+//!   col text
+//! )
+//!   server my_helloworld_server;
+//!
 //! select * from hello;
 //! ```
 //!
-//! **Pro Tips**
+//! ### Pro Tips
 //!
 //! You can use `EXPLAIN` to check what has been pushed down, for example,
 //!
@@ -187,6 +206,8 @@
 //!                Wrappers: limit = Some(Limit { count: 1, offset: 0 })
 //! (9 rows)
 //! ```
+//!
+//! ### More FDW Examples
 //!
 //! See more FDW examples which interact with RDBMS or Restful API.
 //! - [HelloWorld](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/helloworld_fdw): A demo FDW to show how to develop a baisc FDW.

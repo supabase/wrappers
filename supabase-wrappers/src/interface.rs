@@ -169,6 +169,34 @@ pub enum Value {
 }
 
 /// Query restrictions, a.k.a conditions in `WHERE` clause
+///
+/// A Qual defines a simple condition wich can be used by the FDW to restrict the number
+/// of the results. Only simple conditions are supported currently.
+///
+/// ## Examples
+///
+/// ```sql
+/// where id = 1;
+/// -- [Qual { field: "id", operator: "=", value: Cell(I32(1)), use_or: false }]
+/// ```
+///
+/// ```sql
+/// where id in (1, 2);
+/// -- [Qual { field: "id", operator: "=", value: Array([I64(1), I64(2)]), use_or: true }]
+/// ```
+///
+/// ```sql
+/// where col is null
+/// -- [Qual { field: "col", operator: "is", value: Cell(String("null")), use_or: false }]
+/// ```
+///
+/// ```sql
+/// where id > 1 and col = 'foo';
+/// -- [
+/// --   Qual { field: "id", operator: ">", value: Cell(I32(1)), use_or: false },
+/// --   Qual { field: "col", operator: "=", value: Cell(String("foo")), use_or: false }
+/// -- ]
+/// ```
 #[derive(Debug, Clone)]
 pub struct Qual {
     pub field: String,
@@ -191,6 +219,31 @@ impl Qual {
 }
 
 /// Query sort, a.k.a `ORDER BY` clause
+///
+/// ## Examples
+///
+/// ```sql
+/// order by id;
+/// -- [Sort { field: "id", field_no: 1, reversed: false, nulls_first: false, collate: None]
+/// ```
+///
+/// ```sql
+/// order by id desc;
+/// -- [Sort { field: "id", field_no: 1, reversed: true, nulls_first: true, collate: None]
+/// ```
+///
+/// ```sql
+/// order by id desc, col;
+/// -- [
+/// --   Sort { field: "id", field_no: 1, reversed: true, nulls_first: true, collate: None },
+/// --   Sort { field: "col", field_no: 2, reversed: false, nulls_first: false, collate: None }
+/// -- ]
+/// ```
+///
+/// ```sql
+/// order by id collate "de_DE";
+/// -- [Sort { field: "col", field_no: 2, reversed: false, nulls_first: false, collate: Some("de_DE") }]
+/// ```
 #[derive(Debug, Clone, Default)]
 pub struct Sort {
     pub field: String,
@@ -201,6 +254,18 @@ pub struct Sort {
 }
 
 /// Query limit, a.k.a `LIMIT count OFFSET offset` clause
+///
+/// ## Examples
+///
+/// ```sql
+/// limit 42;
+/// -- Limit { count: 42, offset: 0 }
+/// ```
+///
+/// ```sql
+/// limit 42 offset 7;
+/// -- Limit { count: 42, offset: 7 }
+/// ```
 #[derive(Debug, Clone, Default)]
 pub struct Limit {
     pub count: i64,

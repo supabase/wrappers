@@ -3,6 +3,8 @@ use quote::{quote, ToTokens, TokenStreamExt};
 
 fn to_tokens() -> TokenStream2 {
     quote! {
+        use ::supabase_wrappers::report_warning;
+
         // create array of Cell from constant datum array
         unsafe fn form_array_from_datum(
             datum: Datum,
@@ -227,6 +229,9 @@ fn to_tokens() -> TokenStream2 {
                 } else if is_a(expr, NodeTag_T_ScalarArrayOpExpr) {
                     extract_from_scalar_array_op_expr(root, baserel_id, (*baserel).relids, expr as _)
                 } else {
+                    if let Some(stm) = node_to_string(expr) {
+                        report_warning(&format!("unsupported qual: {}", stm));
+                    }
                     None
                 };
 

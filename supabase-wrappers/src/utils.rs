@@ -2,6 +2,20 @@ use pgx::log::*;
 use std::collections::HashMap;
 use tokio::runtime::{Builder, Runtime};
 
+/// Report warning to Postgres using `ereport`
+///
+/// A simple wrapper of Postgres's `ereport` function to emit warning message.
+///
+/// For example,
+///
+/// ```rust,no_run
+/// report_error(&format!("this is a warning"));
+/// ```
+#[inline]
+pub fn report_warning(msg: &str) {
+    ereport(PgLogLevel::WARNING, PgSqlErrorCode::ERRCODE_WARNING, msg, "Wrappers", 0, 0);
+}
+
 /// Report error to Postgres using `ereport`
 ///
 /// A simple wrapper of Postgres's `ereport` function to emit error message and
@@ -24,9 +38,11 @@ pub fn report_error(code: PgSqlErrorCode, msg: &str) {
 
 /// Log debug message to Postgres log.
 ///
-/// A helper function to emit DEBUG1 level message to Postgres's log.
+/// A helper function to emit `DEBUG1` level message to Postgres's log.
 /// Set `log_min_messages = DEBUG1` in `postgresql.conf` to show the debug
 /// messages.
+///
+/// See more details in [Postgres documents](https://www.postgresql.org/docs/current/runtime-config-logging.html#RUNTIME-CONFIG-LOGGING-WHEN).
 #[inline]
 pub fn log_debug(msg: &str) {
     elog(PgLogLevel::DEBUG1, &format!("wrappers: {}", msg));

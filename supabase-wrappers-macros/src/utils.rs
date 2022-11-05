@@ -10,7 +10,7 @@ fn to_tokens() -> TokenStream2 {
         use std::num::NonZeroUsize;
         use std::ptr;
 
-        use ::supabase_wrappers::{Cell, Row, report_error};
+        use ::supabase_wrappers::{Cell, Row, report_warning, report_error};
 
         // convert options definition to hashmap
         pub(super) unsafe fn options_to_hashmap(options: *mut List) -> HashMap<String, String> {
