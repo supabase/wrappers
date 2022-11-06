@@ -108,6 +108,24 @@ impl StripeFdw {
                     result.push(row);
                 }
             }
+            "subscriptions" => {
+                let subscriptions = value
+                    .as_object()
+                    .and_then(|v| v.get("data"))
+                    .and_then(|v| v.as_array())
+                    .unwrap();
+                for sub in subscriptions {
+                    let mut row = Row::new();
+                    let customer_id = sub
+                        .as_object()
+                        .and_then(|v| v.get("customer"))
+                        .and_then(|v| v.as_str())
+                        .map(|v| v.to_owned())
+                        .unwrap();
+                    row.push("customer_id", Some(Cell::String(customer_id)));
+                    result.push(row);
+                }
+            }
             _ => report_error(
                 PgSqlErrorCode::ERRCODE_FDW_TABLE_NOT_FOUND,
                 &format!("'{}' object is not implemented", obj),

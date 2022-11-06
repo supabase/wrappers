@@ -64,6 +64,20 @@ create foreign table customers (
   options (
     object 'customers'    -- source object in stripe, required
   );
+  
+drop foreign table if exists customers;
+create foreign table subscriptions (
+  customer_id text,
+  collection_method text,
+  currency text,
+  email text,
+  current_period_start bigint,
+  current_period_end bigint
+)
+  server my_stripe_server
+  options (
+    object subscriptions    -- source object in stripe, required
+  );
 ```
 
 4. Run some queries to check if it is working:
