@@ -16,7 +16,7 @@ like below,
 use supabase_wrappers::wrappers_magic;
 use crate::{FooFdw, BarFdw};
 
-// use single FDW
+// use a single FDW
 wrappers_magic!(FooFdw);
 
 // or use multiple FDWs

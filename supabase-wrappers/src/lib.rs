@@ -46,10 +46,10 @@
 //! - Query planning phase
 //!   - [get_rel_size()](`ForeignDataWrapper#method.get_rel_size`)
 //! - Scan phase
-//!   - [begin_scan()](`ForeignDataWrapper#method.begin_scan`) *required*
-//!   - [iter_scan()](`ForeignDataWrapper#method.iter_scan`) *required*
+//!   - [begin_scan()](`ForeignDataWrapper#tymethod.begin_scan`) *required*
+//!   - [iter_scan()](`ForeignDataWrapper#tymethod.iter_scan`) *required*
 //!   - [re_scan()](`ForeignDataWrapper#method.re_scan`)
-//!   - [end_scan()](`ForeignDataWrapper#method.end_scan`) *required*
+//!   - [end_scan()](`ForeignDataWrapper#tymethod.end_scan`) *required*
 //! - Modify phase
 //!   - [begin_modify()](`ForeignDataWrapper#method.begin_modify`)
 //!   - [insert()](`ForeignDataWrapper#method.insert`)
@@ -59,7 +59,7 @@
 //!
 //! To give different functionalities to your FDW, you can choose different callback functions to implement. The required ones are `begin_scan`, `iter_scan` and `end_scan`, all the others are optional. See [Postgres FDW document](https://www.postgresql.org/docs/current/fdw-callbacks.html) for more details about FDW development.
 //!
-//! The struct implements [`ForeignDataWrapper`] trait needs to provide a `new()` initialization function. For example,
+//! The struct implements [`ForeignDataWrapper`] trait must provide a `new()` initialization function. For example,
 //!
 //! ```rust,no_run
 //! use supabase_wrappers::ForeignDataWrapper;

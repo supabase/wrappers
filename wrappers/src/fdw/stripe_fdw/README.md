@@ -40,8 +40,8 @@ drop server if exists my_stripe_server cascade;
 create server my_stripe_server
   foreign data wrapper stripe_wrapper
   options (
-    api_url 'https://api.stripe.com/v1',
-    api_key 'sk_test_key'
+    api_url 'https://api.stripe.com/v1',  -- Stripe API base URL, optional
+    api_key 'sk_test_key'  -- Stripe API Key, required
   );
 
 -- create an example foreign table
