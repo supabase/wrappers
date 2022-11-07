@@ -44,7 +44,7 @@ create server my_helloworld_server
   );
 
 -- create an example foreign table
-drop foreign table if exists balance;
+drop foreign table if exists hello;
 create foreign table hello (
   id bigint,
   col text
@@ -55,7 +55,7 @@ create foreign table hello (
   );
 ```
 
-4. Run some queries to check if it is working:
+4. Run a query to check if it is working:
 
 ```sql
 wrappers=# select * from hello;

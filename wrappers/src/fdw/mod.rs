@@ -27,3 +27,10 @@ cfg_if! {
         pub(crate) use stripe_fdw::StripeFdw;
     }
 }
+
+cfg_if! {
+    if #[cfg(feature = "firebase_fdw")] {
+        mod firebase_fdw;
+        pub(crate) use firebase_fdw::FirebaseFdw;
+    }
+}

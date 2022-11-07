@@ -19,6 +19,7 @@ helloworld_fdw = []
 bigquery_fdw = ["gcp-bigquery-client", "time"]
 clickhouse_fdw = ["clickhouse-rs", "chrono", "time"]
 stripe_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json"]
+firebase_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "yup-oauth2"]
 
 [dependencies]
 pgx = "=0.5.6"
@@ -35,11 +36,14 @@ chrono = { version = "0.4", optional = true }
 gcp-bigquery-client = { git = "https://github.com/burmecia/gcp-bigquery-client", branch = "chore/enhance-client-creation", optional = true }
 time = { version = "0.3.15", features = ["parsing"], optional = true }
 
-# for stripe_fdw
+# for stripe_fdw, firebase_fdw
 reqwest = { version = "0.11.12", features = ["json"], optional = true }
 reqwest-middleware = { version = "0.1.6", optional = true }
 reqwest-retry = { version = "0.1.5", optional = true }
 serde_json = { version = "1.0.86", optional = true }
+
+# for firebase_fdw
+yup-oauth2 = { version = "8.0.0", optional = true }
 
 [dev-dependencies]
 pgx-tests = "=0.5.6"

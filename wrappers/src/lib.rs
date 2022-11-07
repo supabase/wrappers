@@ -14,6 +14,9 @@ use fdw::ClickHouseFdw;
 #[cfg(feature = "stripe_fdw")]
 use fdw::StripeFdw;
 
+#[cfg(feature = "firebase_fdw")]
+use fdw::FirebaseFdw;
+
 // define FDWs
 wrappers_magic!(
     #[cfg(feature = "helloworld_fdw")]
@@ -24,4 +27,6 @@ wrappers_magic!(
     ClickHouseFdw,
     #[cfg(feature = "stripe_fdw")]
     StripeFdw,
+    #[cfg(feature = "firebase_fdw")]
+    FirebaseFdw,
 );

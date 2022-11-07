@@ -3010,6 +3010,7 @@ dependencies = [
  "serde_json",
  "supabase-wrappers",
  "time 0.3.16",
+ "yup-oauth2",
 ]
 
 [[package]]
