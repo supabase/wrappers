@@ -1,12 +1,14 @@
 use gcp_bigquery_client::{
     model::{
         field_type::FieldType, query_request::QueryRequest, query_response::ResultSet,
-        table::Table, table_field_schema::TableFieldSchema,
+        table::Table, table_data_insert_all_request::TableDataInsertAllRequest,
+        table_field_schema::TableFieldSchema,
     },
     Client,
 };
 use pgx::log::PgSqlErrorCode;
 use pgx::prelude::{Date, Timestamp};
+use serde_json::json;
 use std::collections::HashMap;
 use time::{format_description::well_known::Iso8601, OffsetDateTime, PrimitiveDateTime};
 
@@ -241,4 +243,54 @@ impl ForeignDataWrapper for BigQueryFdw {
     fn end_scan(&mut self) {
         self.scan_result.take();
     }
+
+    fn begin_modify(&mut self, options: &HashMap<String, String>) {
+        let table = require_option("table", options);
+        if table.is_none() {
+            return;
+        }
+        self.table = table.unwrap();
+    }
+
+    fn insert(&mut self, src: &Row) {
+        if let Some(ref mut client) = self.client {
+            let mut insert_request = TableDataInsertAllRequest::new();
+            let mut row_json = json!({});
+
+            for (col_name, cell) in src.iter() {
+                if let Some(cell) = cell {
+                    match cell {
+                        Cell::Bool(v) => row_json[col_name] = json!(v),
+                        Cell::I8(v) => row_json[col_name] = json!(v),
+                        Cell::I16(v) => row_json[col_name] = json!(v),
+                        Cell::I32(v) => row_json[col_name] = json!(v),
+                        Cell::I64(v) => row_json[col_name] = json!(v),
+                        Cell::F32(v) => row_json[col_name] = json!(v),
+                        Cell::F64(v) => row_json[col_name] = json!(v),
+                        Cell::String(v) => row_json[col_name] = json!(v),
+                        Cell::Date(v) => row_json[col_name] = json!(v),
+                        Cell::Timestamp(v) => row_json[col_name] = json!(v),
+                        Cell::Json(v) => row_json[col_name] = json!(v),
+                    }
+                }
+            }
+
+            insert_request.add_row(None, row_json).unwrap();
+
+            // execute insert job on BigQuery
+            if let Err(err) = self.rt.block_on(client.tabledata().insert_all(
+                &self.project_id,
+                &self.dataset_id,
+                &self.table,
+                insert_request,
+            )) {
+                report_error(
+                    PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                    &format!("insert failed: {}", err),
+                );
+            }
+        }
+    }
+
+    fn end_modify(&mut self) {}
 }
