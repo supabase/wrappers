@@ -107,6 +107,7 @@ impl AirtableRecord {
             ),
             String(v) => Some(Cell::String(v.clone())),
             // XXX Handle timestamps somehow...
+
             // XXX Fix (probably map to JsonB)
             _ => panic!("Unsupported: Array/Object"),
         }
@@ -140,7 +141,6 @@ impl AirtableFdw {
             .trim_end_matches('/')
             .to_owned();
 
-        // TODO: Support a cache
         let client = require_option("api_key", options).map(|api_key| {
             let mut headers = header::HeaderMap::new();
             let value = format!("Bearer {}", api_key);
@@ -168,7 +168,6 @@ impl AirtableFdw {
 
     #[inline]
     fn build_url(&self, base_id: &str, table_name: &str) -> String {
-        // XXX: Test with table that has a space in the name (do we need to encode here?)
         format!("{}/{}/{}", &self.base_url, base_id, table_name)
     }
 
@@ -194,18 +193,17 @@ macro_rules! report_fetch_error {
     };
 }
 
-// XXX Add support for INSERT
+// TODO Add support for INSERT, UPDATE, DELETE
 impl ForeignDataWrapper for AirtableFdw {
     fn begin_scan(
         &mut self,
-        // TODO: We should be able to propagate some of these through to airtable
-        _quals: &Vec<Qual>,
+        _quals: &Vec<Qual>, // TODO: Propagate filters
         columns: &Vec<String>,
-        _sorts: &Vec<Sort>,
+        _sorts: &Vec<Sort>,     // TODO: Propagate sort
         _limit: &Option<Limit>, // TODO: maxRecords
         options: &HashMap<String, String>,
     ) {
-        // TODO: Support specifying other options (view, maxRecords)
+        // TODO: Support specifying other options (view)
         let url = if let Some(url) = require_option("base_id", options).and_then(|base_id| {
             require_option("table", options).map(|table| self.build_url(&base_id, &table))
         }) {
