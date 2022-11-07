@@ -17,6 +17,9 @@ use fdw::StripeFdw;
 #[cfg(feature = "firebase_fdw")]
 use fdw::FirebaseFdw;
 
+#[cfg(feature = "airtable_fdw")]
+use fdw::AirtableFdw;
+
 // define FDWs
 wrappers_magic!(
     #[cfg(feature = "helloworld_fdw")]
@@ -29,4 +32,6 @@ wrappers_magic!(
     StripeFdw,
     #[cfg(feature = "firebase_fdw")]
     FirebaseFdw,
+    #[cfg(feature = "airtable_fdw")]
+    AirtableFdw,
 );
