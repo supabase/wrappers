@@ -41,19 +41,20 @@ create server my_airtable_server
   foreign data wrapper airtable_wrapper
   options (
     api_url 'https://api.airtable.com/v0',  -- Airtable API base URL, optional
-    api_key 'sk_test_key'  -- Airtable API Key, required
+    api_key 'at_test_key'  -- Airtable API Key, required
   );
 
--- XXX FIX  
 -- create an example foreign table
-drop foreign table if exists balance;
-create foreign table balance (
-  amount bigint,
-  currency text
+drop foreign table if exists t1;
+create foreign table t1(
+    id text, -- The builtin "id" field in Airtable
+    name text, -- The fields in your Airtable table. Airtable is case insensitive so capitalization does not matter.
+    status text,
 )
   server my_airtable_server
   options (
-    object 'balance'    -- source object in airtable, required
+    base_id 'at_base_id' -- Airtable Base ID, required
+    table 'My Table Name' -- Airtable Table Name (or ID), required
   );
 ```
 
@@ -62,7 +63,5 @@ create foreign table balance (
 On Postgres:
 
 ```sql
-select * from balance;
-select * from customers;
+select * from t1;
 ```
-
