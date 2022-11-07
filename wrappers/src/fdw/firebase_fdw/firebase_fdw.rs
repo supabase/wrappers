@@ -1,4 +1,5 @@
 use pgx::log::PgSqlErrorCode;
+use pgx::JsonB;
 use reqwest::{self, header};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
@@ -144,8 +145,10 @@ impl FirebaseFdw {
                         .and_then(|v| v.as_str())
                         .map(|v| v.to_owned())
                         .unwrap();
+                    let props = serde_json::from_str(&user.to_string()).unwrap();
                     row.push("local_id", Some(Cell::String(local_id)));
                     row.push("email", Some(Cell::String(email)));
+                    row.push("props", Some(Cell::Json(JsonB(props))));
                     result.push(row);
                 }
             }

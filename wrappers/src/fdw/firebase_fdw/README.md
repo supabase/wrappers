@@ -49,7 +49,8 @@ create server my_firebase_server
 drop foreign table if exists firebase_users;
 create foreign table firebase_users (
   local_id text,
-  email text
+  email text,
+  props jsonb
 )
   server my_firebase_server
   options (
