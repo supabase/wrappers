@@ -333,5 +333,26 @@ impl ForeignDataWrapper for BigQueryFdw {
         }
     }
 
+    fn delete(&mut self, rowid: &Cell) {
+        if let Some(ref mut client) = self.client {
+            let sql = format!(
+                "delete from `{}.{}.{}` where {} = {}",
+                self.project_id, self.dataset_id, self.table, self.rowid_col, rowid
+            );
+
+            let query_job = client
+                .job()
+                .query(&self.project_id, QueryRequest::new(&sql));
+
+            // execute delete on BigQuery
+            if let Err(err) = self.rt.block_on(query_job) {
+                report_error(
+                    PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                    &format!("update failed: {}", err),
+                );
+            }
+        }
+    }
+
     fn end_modify(&mut self) {}
 }
