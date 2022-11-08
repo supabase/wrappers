@@ -108,6 +108,48 @@ impl StripeFdw {
                     result.push(row);
                 }
             }
+            "subscriptions" => {
+                let subscriptions = value
+                    .as_object()
+                    .and_then(|v| v.get("data"))
+                    .and_then(|v| v.as_array())
+                    .unwrap();
+                for sub in subscriptions {
+                    let mut row = Row::new();
+                    let customer_id = sub
+                        .as_object()
+                        .and_then(|v| v.get("customer"))
+                        .and_then(|v| v.as_str())
+                        .map(|v| v.to_owned())
+                        .unwrap();
+                    let currency = sub
+                        .as_object()
+                        .and_then(|v| v.get("currency"))
+                        .and_then(|v| v.as_str())
+                        .map(|v| v.to_owned())
+                        .unwrap();
+                    let current_period_start = sub
+                        .as_object()
+                        .and_then(|v| v.get("current_period_start"))
+                        .and_then(|v| v.as_i64())
+                        .map(|v| v.to_owned())
+                        .unwrap();
+                    let current_period_end = sub
+                        .as_object()
+                        .and_then(|v| v.get("current_period_end"))
+                        .and_then(|v| v.as_i64())
+                        .map(|v| v.to_owned())
+                        .unwrap();
+                    row.push("customer_id", Some(Cell::String(customer_id)));
+                    row.push("currency", Some(Cell::String(currency)));
+                    row.push(
+                        "current_period_start",
+                        Some(Cell::I64(current_period_start)),
+                    );
+                    row.push("current_period_end", Some(Cell::I64(current_period_end)));
+                    result.push(row);
+                }
+            }
             _ => report_error(
                 PgSqlErrorCode::ERRCODE_FDW_TABLE_NOT_FOUND,
                 &format!("'{}' object is not implemented", obj),

@@ -64,6 +64,18 @@ create foreign table customers (
   options (
     object 'customers'    -- source object in stripe, required
   );
+  
+drop foreign table if exists subscriptions;
+create foreign table subscriptions (
+  customer_id text,
+  currency text,
+  current_period_start bigint,
+  current_period_end bigint
+)
+  server my_stripe_server
+  options (
+    object 'subscriptions'    -- source object in stripe, required
+  );
 ```
 
 4. Run some queries to check if it is working:
@@ -73,5 +85,6 @@ On Postgres:
 ```sql
 select * from balance;
 select * from customers;
+select * from subscriptions;
 ```
 
