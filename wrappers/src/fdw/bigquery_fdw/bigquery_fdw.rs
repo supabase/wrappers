@@ -84,6 +84,7 @@ pub struct BigQueryFdw {
     project_id: String,
     dataset_id: String,
     table: String,
+    rowid_col: String,
     tgt_cols: Vec<String>,
     scan_result: Option<(Table, ResultSet)>,
 }
@@ -96,6 +97,7 @@ impl BigQueryFdw {
             project_id: "".to_string(),
             dataset_id: "".to_string(),
             table: "".to_string(),
+            rowid_col: "".to_string(),
             tgt_cols: Vec::new(),
             scan_result: None,
         };
@@ -246,10 +248,12 @@ impl ForeignDataWrapper for BigQueryFdw {
 
     fn begin_modify(&mut self, options: &HashMap<String, String>) {
         let table = require_option("table", options);
-        if table.is_none() {
+        let rowid_col = require_option("rowid_column", options);
+        if table.is_none() || rowid_col.is_none() {
             return;
         }
         self.table = table.unwrap();
+        self.rowid_col = rowid_col.unwrap();
     }
 
     fn insert(&mut self, src: &Row) {
@@ -287,6 +291,43 @@ impl ForeignDataWrapper for BigQueryFdw {
                 report_error(
                     PgSqlErrorCode::ERRCODE_FDW_ERROR,
                     &format!("insert failed: {}", err),
+                );
+            }
+        }
+    }
+
+    fn update(&mut self, rowid: &Cell, new_row: &Row) {
+        if let Some(ref mut client) = self.client {
+            let mut sets = Vec::new();
+            for (col, cell) in new_row.iter() {
+                if col == &self.rowid_col {
+                    continue;
+                }
+                if let Some(cell) = cell {
+                    sets.push(format!("{} = {}", col, cell));
+                } else {
+                    sets.push(format!("{} = null", col));
+                }
+            }
+            let sql = format!(
+                "update `{}.{}.{}` set {} where {} = {}",
+                self.project_id,
+                self.dataset_id,
+                self.table,
+                sets.join(", "),
+                self.rowid_col,
+                rowid
+            );
+
+            let query_job = client
+                .job()
+                .query(&self.project_id, QueryRequest::new(&sql));
+
+            // execute update on BigQuery
+            if let Err(err) = self.rt.block_on(query_job) {
+                report_error(
+                    PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                    &format!("update failed: {}", err),
                 );
             }
         }
