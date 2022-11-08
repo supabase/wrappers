@@ -30,6 +30,10 @@ pub(crate) struct FirebaseFdw {
 impl FirebaseFdw {
     const BASE_URL: &'static str = "https://identitytoolkit.googleapis.com/v1/projects";
 
+    // maximum allowed page size
+    // https://firebase.google.com/docs/reference/admin/node/firebase-admin.auth.baseauth.md#baseauthlistusers
+    const PAGE_SIZE: usize = 1000;
+
     pub fn new(options: &HashMap<String, String>) -> Self {
         let mut ret = FirebaseFdw {
             rt: create_async_runtime(),
@@ -43,7 +47,7 @@ impl FirebaseFdw {
             None => return ret,
         };
 
-        // get Oauth2 access token
+        // get oauth2 access token
         let sa_key_file = match require_option("sa_key_file", options) {
             Some(sa_key_file) => sa_key_file,
             None => return ret,
@@ -112,25 +116,39 @@ impl FirebaseFdw {
     }
 
     #[inline]
-    fn build_url(&self, obj: &str) -> String {
+    fn build_url(&self, obj: &str, next_page: &Option<String>) -> String {
         match obj {
-            "users" => format!("{}/{}/accounts:batchGet", Self::BASE_URL, self.project_id),
+            "users" => {
+                let mut ret = format!(
+                    "{}/{}/accounts:batchGet?maxResults={}",
+                    Self::BASE_URL,
+                    self.project_id,
+                    Self::PAGE_SIZE,
+                );
+                if let Some(next_page_token) = next_page {
+                    ret.push_str(&format!("&nextPageToken={}", next_page_token));
+                }
+                ret
+            }
             _ => "".to_string(),
         }
     }
 
     // convert response body text to rows
-    fn resp_to_rows(&self, obj: &str, resp_body: &str) -> Vec<Row> {
-        let value: Value = serde_json::from_str(resp_body).unwrap();
+    fn resp_to_rows(&self, obj: &str, resp: &Value) -> Vec<Row> {
         let mut result = Vec::new();
 
         match obj {
             "users" => {
-                let users = value
+                let users = match resp
                     .as_object()
                     .and_then(|v| v.get("users"))
                     .and_then(|v| v.as_array())
-                    .unwrap();
+                {
+                    Some(users) => users,
+                    None => return result,
+                };
+
                 for user in users {
                     let mut row = Row::new();
                     let local_id = user
@@ -138,13 +156,13 @@ impl FirebaseFdw {
                         .and_then(|v| v.get("localId"))
                         .and_then(|v| v.as_str())
                         .map(|v| v.to_owned())
-                        .unwrap();
+                        .unwrap_or_default();
                     let email = user
                         .as_object()
                         .and_then(|v| v.get("email"))
                         .and_then(|v| v.as_str())
                         .map(|v| v.to_owned())
-                        .unwrap();
+                        .unwrap_or_default();
                     let props = serde_json::from_str(&user.to_string()).unwrap();
                     row.push("local_id", Some(Cell::String(local_id)));
                     row.push("email", Some(Cell::String(email)));
@@ -175,20 +193,46 @@ impl ForeignDataWrapper for FirebaseFdw {
             Some(obj) => obj,
             None => return,
         };
-        let url = self.build_url(&obj);
+
+        self.scan_result = None;
 
         if let Some(client) = &self.client {
-            match self.rt.block_on(client.get(&url).send()) {
-                Ok(resp) => match resp.error_for_status() {
-                    Ok(resp) => {
-                        let body = self.rt.block_on(resp.text()).unwrap();
-                        let result = self.resp_to_rows(&obj, &body);
-                        self.scan_result = Some(result);
+            let mut next_page: Option<String> = None;
+            let mut result = Vec::new();
+
+            loop {
+                let url = self.build_url(&obj, &next_page);
+
+                match self.rt.block_on(client.get(&url).send()) {
+                    Ok(resp) => match resp.error_for_status() {
+                        Ok(resp) => {
+                            let body = self.rt.block_on(resp.text()).unwrap();
+                            let json: Value = serde_json::from_str(&body).unwrap();
+                            let mut rows = self.resp_to_rows(&obj, &json);
+                            result.append(&mut rows);
+
+                            // get next page token, stop fetching if no more pages
+                            next_page = json
+                                .get("nextPageToken")
+                                .and_then(|v| v.as_str())
+                                .map(|v| v.to_owned());
+                            if next_page.is_none() {
+                                break;
+                            }
+                        }
+                        Err(err) => {
+                            report_fetch_error!(url, err);
+                            break;
+                        }
+                    },
+                    Err(err) => {
+                        report_fetch_error!(url, err);
+                        break;
                     }
-                    Err(err) => report_fetch_error!(url, err),
-                },
-                Err(err) => report_fetch_error!(url, err),
+                }
             }
+
+            self.scan_result = Some(result);
         }
     }
 
