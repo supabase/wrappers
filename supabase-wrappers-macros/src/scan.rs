@@ -280,19 +280,19 @@ fn to_tokens() -> TokenStream2 {
                 state.tmp_ctx.reset();
                 let old_ctx = state.tmp_ctx.set_as_current();
 
-                let label = CString::new("Wrappers").unwrap();
+                let label = CString::new("Wrappers").unwrap().as_ptr() as *const c_char;
 
                 let value = CString::new(format!("quals = {:?}", state.quals)).unwrap();
-                ExplainPropertyText(label.as_ptr() as *const c_char, value.as_ptr() as *const c_char, es);
+                ExplainPropertyText(label, value.as_ptr() as *const c_char, es);
 
                 let value = CString::new(format!("tgts = {:?}", state.tgts)).unwrap();
-                ExplainPropertyText(label.as_ptr() as *const c_char, value.as_ptr() as *const c_char, es);
+                ExplainPropertyText(label, value.as_ptr() as *const c_char, es);
 
                 let value = CString::new(format!("sorts = {:?}", state.sorts)).unwrap();
-                ExplainPropertyText(label.as_ptr() as *const c_char, value.as_ptr() as *const c_char, es);
+                ExplainPropertyText(label, value.as_ptr() as *const c_char, es);
 
                 let value = CString::new(format!("limit = {:?}", state.limit)).unwrap();
-                ExplainPropertyText(label.as_ptr() as *const c_char, value.as_ptr() as *const c_char, es);
+                ExplainPropertyText(label, value.as_ptr() as *const c_char, es);
 
                 old_ctx.set_as_current();
 

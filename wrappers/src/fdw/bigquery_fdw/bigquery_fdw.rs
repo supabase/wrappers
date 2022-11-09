@@ -13,8 +13,8 @@ use std::collections::HashMap;
 use time::{format_description::well_known::Iso8601, OffsetDateTime, PrimitiveDateTime};
 
 use supabase_wrappers::{
-    create_async_runtime, report_error, require_option, Cell, ForeignDataWrapper, Limit, Qual, Row,
-    Runtime, Sort,
+    create_async_runtime, report_error, require_option, wrappers_meta, Cell, ForeignDataWrapper,
+    Limit, Qual, Row, Runtime, Sort,
 };
 
 macro_rules! field_type_error {
@@ -78,7 +78,12 @@ fn field_to_cell(rs: &ResultSet, field: &TableFieldSchema) -> Option<Cell> {
     }
 }
 
-pub struct BigQueryFdw {
+#[wrappers_meta(
+    version = "0.1.0",
+    author = "Supabase",
+    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/bigquery_fdw"
+)]
+pub(crate) struct BigQueryFdw {
     rt: Runtime,
     client: Option<Client>,
     project_id: String,

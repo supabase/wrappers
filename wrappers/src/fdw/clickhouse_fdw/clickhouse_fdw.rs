@@ -6,8 +6,8 @@ use std::collections::HashMap;
 use time::OffsetDateTime;
 
 use supabase_wrappers::{
-    create_async_runtime, report_error, require_option, Cell, ForeignDataWrapper, Limit, Qual, Row,
-    Runtime, Sort,
+    create_async_runtime, report_error, require_option, wrappers_meta, Cell, ForeignDataWrapper,
+    Limit, Qual, Row, Runtime, Sort,
 };
 
 fn field_to_cell(row: &types::Row<types::Complex>, i: usize) -> Option<Cell> {
@@ -67,6 +67,11 @@ fn field_to_cell(row: &types::Row<types::Complex>, i: usize) -> Option<Cell> {
     }
 }
 
+#[wrappers_meta(
+    version = "0.1.0",
+    author = "Supabase",
+    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/clickhouse_fdw"
+)]
 pub(crate) struct ClickHouseFdw {
     rt: Runtime,
     client: Option<ClientHandle>,

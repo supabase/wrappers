@@ -13,7 +13,14 @@ use tokio::runtime::{Builder, Runtime};
 /// ```
 #[inline]
 pub fn report_warning(msg: &str) {
-    ereport(PgLogLevel::WARNING, PgSqlErrorCode::ERRCODE_WARNING, msg, "Wrappers", 0, 0);
+    ereport(
+        PgLogLevel::WARNING,
+        PgSqlErrorCode::ERRCODE_WARNING,
+        msg,
+        "Wrappers",
+        0,
+        0,
+    );
 }
 
 /// Report error to Postgres using `ereport`
@@ -76,14 +83,11 @@ pub fn create_async_runtime() -> Runtime {
 /// error if it does not exist.
 #[inline]
 pub fn require_option(opt_name: &str, options: &HashMap<String, String>) -> Option<String> {
-    options
-        .get(opt_name)
-        .map(|t| t.to_owned())
-        .or_else(|| {
-            report_error(
-                PgSqlErrorCode::ERRCODE_FDW_INVALID_OPTION_NAME,
-                &format!("required option \"{}\" not specified", opt_name),
-            );
-            None
-        })
+    options.get(opt_name).map(|t| t.to_owned()).or_else(|| {
+        report_error(
+            PgSqlErrorCode::ERRCODE_FDW_INVALID_OPTION_NAME,
+            &format!("required option \"{}\" not specified", opt_name),
+        );
+        None
+    })
 }

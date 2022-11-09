@@ -1,7 +1,12 @@
 use std::collections::HashMap;
-use supabase_wrappers::{Cell, ForeignDataWrapper, Limit, Qual, Row, Sort};
+use supabase_wrappers::{wrappers_meta, Cell, ForeignDataWrapper, Limit, Qual, Row, Sort};
 
 // A simple demo FDW
+#[wrappers_meta(
+    version = "0.1.0",
+    author = "Supabase",
+    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/helloworld_fdw"
+)]
 pub(crate) struct HelloWorldFdw {
     // row counter
     row_cnt: i64,

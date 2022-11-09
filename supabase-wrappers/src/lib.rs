@@ -219,6 +219,6 @@ mod interface;
 mod utils;
 
 pub use interface::*;
-pub use supabase_wrappers_macros::wrappers_magic;
+pub use supabase_wrappers_macros::*;
 pub use tokio::runtime::Runtime;
 pub use utils::*;

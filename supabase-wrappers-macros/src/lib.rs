@@ -7,102 +7,46 @@
 extern crate proc_macro;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
-use quote::{quote, ToTokens, TokenStreamExt};
+use quote::{format_ident, quote, ToTokens, TokenStreamExt};
 use syn::{
     parse::{Parse, ParseStream, Result},
-    parse_macro_input, Attribute, Error, Ident, Meta, NestedMeta,
+    parse_macro_input,
+    punctuated::Punctuated,
+    ItemStruct, Lit, MetaNameValue, Token,
 };
 
 mod instance;
 mod limit;
+mod meta;
 mod modify;
+mod parser;
 mod polyfill;
 mod qual;
 mod scan;
 mod sort;
 mod utils;
 
-use crate::{instance::Instance, modify::Modify, polyfill::Polyfill, scan::Scan, utils::Utils};
-
-// Parse a FDW type with optional feature config attributes
-//
-// #[cfg(feature = "your-feature")]
-// MyFdwType
-//
-pub(crate) struct FdwType {
-    attr: Option<Attribute>,
-    fdw: Ident,
-}
-
-impl Parse for FdwType {
-    fn parse(input: ParseStream) -> Result<Self> {
-        let attrs = input.call(Attribute::parse_outer)?;
-        let attr = if attrs.is_empty() {
-            None
-        } else if attrs.len() == 1 {
-            let attr = attrs.first().unwrap();
-            let meta = attr.parse_meta()?;
-            let err = Error::new_spanned(attr, "expect #[cfg(feature = \"...\")] attribute");
-            match meta {
-                Meta::List(meta_list) => {
-                    let segments = &meta_list.path.segments;
-                    if segments.len() != 1 || segments.first().unwrap().ident != "cfg" {
-                        return Err(err);
-                    }
-                    let nested = &meta_list.nested;
-                    if nested.len() != 1 {
-                        return Err(err);
-                    }
-                    match nested.first().unwrap() {
-                        NestedMeta::Meta(meta) => match meta {
-                            Meta::NameValue(nv) => {
-                                let segments = &nv.path.segments;
-                                if segments.len() != 1
-                                    || segments.first().unwrap().ident != "feature"
-                                {
-                                    return Err(err);
-                                }
-                            }
-                            _ => {
-                                return Err(err);
-                            }
-                        },
-                        _ => {
-                            return Err(err);
-                        }
-                    }
-                }
-                _ => {
-                    return Err(err);
-                }
-            }
-            Some(attr.clone())
-        } else {
-            let last_attr = attrs.last().unwrap().clone();
-            let err = Error::new_spanned(last_attr, "only one feature config allowd");
-            return Err(err);
-        };
-        let fdw = input.parse()?;
-        Ok(Self { attr, fdw })
-    }
-}
+use crate::{
+    instance::Instance, meta::Meta as WrappersMeta, modify::Modify, parser::FdwType,
+    polyfill::Polyfill, scan::Scan, utils::Utils,
+};
 
 // All the magic come from here :-)
 struct WrappersMagic {
-    instance: Instance,
+    fdw_types: Punctuated<FdwType, Token![,]>,
 }
 
 impl Parse for WrappersMagic {
     fn parse(input: ParseStream) -> Result<Self> {
         let fdw_types = input.parse_terminated(FdwType::parse)?;
-        let instance = Instance::new(fdw_types);
-        Ok(Self { instance })
+        Ok(Self { fdw_types })
     }
 }
 
 impl ToTokens for WrappersMagic {
     fn to_tokens(&self, tokens: &mut TokenStream2) {
-        let instance = &self.instance;
+        let instance = Instance::new(self.fdw_types.clone());
+        let meta = WrappersMeta::new(self.fdw_types.clone());
         let polyfill = Polyfill {};
         let utils = Utils {};
         let scan = Scan {};
@@ -135,6 +79,10 @@ impl ToTokens for WrappersMagic {
 
                 mod modify {
                     #modify
+                }
+
+                mod meta {
+                    #meta
                 }
 
                 #[pg_extern]
@@ -233,6 +181,73 @@ pub fn wrappers_magic(input: TokenStream) -> TokenStream {
     let magic: WrappersMagic = parse_macro_input!(input as WrappersMagic);
     quote! {
         #magic
+    }
+    .into()
+}
+
+/// Set up metadata for Postgres FDW
+///
+/// This macro will set up metadata for your Postgres FDW. All metadata value
+/// type should be `String`.
+///
+/// The FDW metadata can be queried once `Wrappers` extension is installed.
+///
+/// ```sql
+/// create extension wrappers;
+/// select * from wrappers_meta();
+///
+///      fdw      | version |  author  |             website
+/// --------------+---------+----------+---------------------------------------
+/// HelloWorldFdw | 0.1.0   | Supabase | https://github.com/supabase/wrappers/
+/// ```
+///
+/// # Example
+///
+/// ```rust,no_run
+/// use supabase_wrappers::wrappers_meta;
+///
+/// #[wrappers_meta(
+///     version = "0.1.0",
+///     author = "Supabase",
+///     website = "https://github.com/supabase/wrappers/",
+/// )]
+/// pub(crate) struct HelloWorldFdw {...}
+/// ```
+#[proc_macro_attribute]
+pub fn wrappers_meta(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let mut metas = TokenStream2::new();
+    let meta_attrs: Punctuated<MetaNameValue, Token![,]> =
+        parse_macro_input!(attr with Punctuated::parse_terminated);
+    for attr in meta_attrs {
+        let name = format!("{}", attr.path.segments.first().unwrap().ident);
+        match attr.lit {
+            Lit::Str(val) => {
+                let value = val.value();
+                let stmt = quote! {
+                    ret.insert(#name.to_owned(), #value.to_owned());
+                };
+                metas.append_all(stmt);
+            }
+            _ => {}
+        }
+    }
+
+    let item: ItemStruct = parse_macro_input!(item as ItemStruct);
+    let item_name = format!("{}", item.ident);
+    let item_ident = format_ident!("{}", item.ident);
+    let item_tokens = item.to_token_stream();
+
+    quote! {
+        #item_tokens
+
+        impl #item_ident {
+            pub(crate) fn _wrappers_meta() -> std::collections::HashMap<String, String> {
+                let mut ret = HashMap::new();
+                ret.insert("fdw".to_owned(), #item_name.to_owned());
+                #metas
+                ret
+            }
+        }
     }
     .into()
 }
