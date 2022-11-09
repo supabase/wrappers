@@ -16,7 +16,7 @@ pg14 = ["pgx/pg14", "pgx-tests/pg14" ]
 pg_test = []
 
 helloworld_fdw = []
-bigquery_fdw = ["gcp-bigquery-client", "time"]
+bigquery_fdw = ["gcp-bigquery-client", "time", "serde_json"]
 clickhouse_fdw = ["clickhouse-rs", "chrono", "time"]
 stripe_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json"]
 firebase_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "yup-oauth2"]
