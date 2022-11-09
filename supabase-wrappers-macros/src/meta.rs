@@ -30,21 +30,6 @@ fn to_tokens(fdw_types: &Punctuated<FdwType, Token![,]>) -> TokenStream2 {
     quote! {
         use pgx::*;
         use pgx::iter::*;
-        use pg_sys::*;
-
-        // Wrappers' metadata
-        #[derive(Copy, Clone, Default)]
-        pub(super) struct WrappersMeta {
-        }
-
-        unsafe impl PGXSharedMemory for WrappersMeta {}
-
-        pub(super) static WRAPPERS_META: PgLwLock<WrappersMeta> = PgLwLock::new();
-
-        #[pg_guard]
-        pub extern "C" fn _PG_init() {
-            pg_shmem_init!(WRAPPERS_META);
-        }
 
         #[pg_extern]
         fn wrappers_meta() -> TableIterator<'static, (
