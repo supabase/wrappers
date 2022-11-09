@@ -1,5 +1,6 @@
-comment = 'Foreign data wrapper collections by Supabase'
+comment = 'Foreign data wrappers developed by Supabase'
 default_version = '@CARGO_VERSION@'
-module_pathname = '$libdir/wrappers'
+# commenting-out module_pathname results in this extension being built/run/tested in "versioned shared-object mode"
+#module_pathname = '$libdir/wrappers'
 relocatable = false
 superuser = false
