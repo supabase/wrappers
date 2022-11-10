@@ -16,4 +16,4 @@ jobs:
       run: docker-compose -f wrappers/.ci/docker-compose.yaml build
 
     - name: Run tests
-      run: docker-compose -f wrappers/.ci/docker-compose.yaml run test
+      run: docker-compose -f wrappers/.ci/docker-compose.yaml run test-wrappers
