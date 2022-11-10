@@ -1,4 +1,5 @@
 use gcp_bigquery_client::{
+    client_builder::ClientBuilder,
     model::{
         field_type::FieldType, query_request::QueryRequest, query_response::ResultSet,
         table::Table, table_data_insert_all_request::TableDataInsertAllRequest,
@@ -118,10 +119,16 @@ impl BigQueryFdw {
         ret.project_id = project_id.unwrap();
         ret.dataset_id = dataset_id.unwrap();
 
-        ret.client = match ret
-            .rt
-            .block_on(Client::from_service_account_key_file(&sa_key_file))
-        {
+        let mut bq_client_builder = ClientBuilder::new();
+
+        let bq_client = match require_option("api_endpoint", options) {
+            Some(api_endpoint) => bq_client_builder
+                .with_v2_base_url(api_endpoint)
+                .build_from_service_account_key_file(&sa_key_file),
+            None => bq_client_builder.build_from_service_account_key_file(&sa_key_file),
+        };
+
+        ret.client = match ret.rt.block_on(bq_client) {
             Ok(client) => Some(client),
             Err(err) => {
                 report_error(
