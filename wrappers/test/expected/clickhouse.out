@@ -1,6 +1,10 @@
--- create extension
-drop extension if exists wrappers cascade;
-create extension wrappers;
+-- The clickhouse healthcheck lies
+select pg_sleep(3);
+ pg_sleep 
+----------
+ 
+(1 row)
+
 -- create foreign data wrapper and enable 'ClickHouseFdw'
 drop foreign data wrapper if exists clickhouse_wrapper;
 NOTICE:  foreign-data wrapper "clickhouse_wrapper" does not exist, skipping
