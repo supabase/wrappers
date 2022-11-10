@@ -33,36 +33,11 @@ RUN cargo pgx init --pg14 $(which pg_config)
 
 USER root
 
-# Cache as much as possible
-COPY supabase-wrappers supabase-wrappers
-COPY supabase-wrappers-macros supabase-wrappers-macros
-RUN mkdir wrappers
-COPY wrappers/Cargo.toml wrappers/
-COPY wrappers/Cargo.lock wrappers/
-COPY wrappers/wrappers.control wrappers/
-COPY wrappers/.cargo wrappers/
-RUN mkdir wrappers/src
-# dummy file
-COPY wrappers/dockerfiles/pg/lib.rs wrappers/src/lib.rs
-
+# Install the extension
+COPY . .
 WORKDIR /home/app/wrappers
 RUN cargo pgx install --features bigquery_fdw --features pg14
 
-# Copy in the actual source
-# TODO: HERE HERE HERE
-COPY wrappers/src src
-COPY wrappers/bin bin
-COPY wrappers/test test
-RUN cargo pgx install --features bigquery_fdw --features pg14
-
 RUN chown -R postgres:postgres /home/app
+
 USER postgres
-
-#COPY Cargo.toml
-#COPY supabase-wrappers .
-#COPY supabase-wrappers-macros .
-#RUN mkdir wrappers
-#COPY wrappers/Cargo.toml wrappers/Cargo.toml
-#RUN cargo pgx install --features bigquery_fdw --features pg14
-#RUN cargo pgx install --features bigquery_fdw --features pg14
-

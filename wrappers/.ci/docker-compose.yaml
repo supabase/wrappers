@@ -8,13 +8,3 @@ services:
         dockerfile: ./wrappers/dockerfiles/pg/Dockerfile
     command:
       - ./bin/installcheck
-    depends_on:
-      - bigquery
-
-  bigquery:
-    container_name: bigquery-local
-    image: ghcr.io/goccy/bigquery-emulator:latest
-    volumes:
-      - ${PWD}/dockerfiles/bigquery/data.yaml:/app/data.yaml
-      - ${PWD}/dockerfiles/bigquery/dummy_auth.json:/app/dummy_auth.json
-    command: --project=test --dataset=dataset1 --data-from-yaml=/app/data.yaml --port=9111
