@@ -8,3 +8,16 @@ services:
         dockerfile: ./wrappers/dockerfiles/pg/Dockerfile
     command:
       - ./bin/installcheck
+    depends_on:
+      - clickhouse
+
+  clickhouse:
+    image: clickhouse/clickhouse-server
+    container_name: clickhouse-wrapped
+    volumes:
+        - ../dockerfiles/clickhouse/setup.sql:/docker-entrypoint-initdb.d/setup.sql
+    ports:
+      - "9000:9000"
+      - "8123:8123"
+    environment:
+      CLICKHOUSE_DB: supa
