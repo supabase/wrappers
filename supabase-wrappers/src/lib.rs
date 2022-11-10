@@ -2,7 +2,7 @@
 //!
 //! Its goal is to make Postgres FDW development easier while keeping Rust language's modern capabilities, such as high performance, strong types, and safety.
 //!
-//! # Installation
+//! # Usage
 //!
 //! Wrappers is a pgx extension, please follow the [installation steps](https://github.com/tcdi/pgx#system-requirements) to install pgx.
 //!

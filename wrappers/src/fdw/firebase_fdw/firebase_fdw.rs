@@ -1,5 +1,7 @@
 use pgx::log::PgSqlErrorCode;
+use pgx::prelude::Timestamp;
 use pgx::JsonB;
+use regex::Regex;
 use reqwest::{self, header};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
@@ -9,6 +11,7 @@ use supabase_wrappers::{
     create_async_runtime, report_error, require_option, wrappers_meta, Cell, ForeignDataWrapper,
     Limit, Qual, Row, Runtime, Sort,
 };
+use time::{format_description::well_known::Iso8601, PrimitiveDateTime};
 use yup_oauth2::ServiceAccountAuthenticator;
 
 macro_rules! report_fetch_error {
@@ -33,11 +36,15 @@ pub(crate) struct FirebaseFdw {
 }
 
 impl FirebaseFdw {
-    const BASE_URL: &'static str = "https://identitytoolkit.googleapis.com/v1/projects";
+    const AUTH_BASE_URL: &'static str = "https://identitytoolkit.googleapis.com/v1/projects";
+    const FIRESTORE_BASE_URL: &'static str = "https://firestore.googleapis.com/v1beta1";
 
     // maximum allowed page size
     // https://firebase.google.com/docs/reference/admin/node/firebase-admin.auth.baseauth.md#baseauthlistusers
     const PAGE_SIZE: usize = 1000;
+
+    // default maximum row count limit
+    const DEFAULT_ROWS_LIMIT: usize = 10_000;
 
     pub fn new(options: &HashMap<String, String>) -> Self {
         let mut ret = FirebaseFdw {
@@ -124,9 +131,10 @@ impl FirebaseFdw {
     fn build_url(&self, obj: &str, next_page: &Option<String>) -> String {
         match obj {
             "users" => {
+                // ref: https://firebase.google.com/docs/reference/admin/node/firebase-admin.auth.baseauth.md#baseauthlistusers
                 let mut ret = format!(
                     "{}/{}/accounts:batchGet?maxResults={}",
-                    Self::BASE_URL,
+                    Self::AUTH_BASE_URL,
                     self.project_id,
                     Self::PAGE_SIZE,
                 );
@@ -135,12 +143,32 @@ impl FirebaseFdw {
                 }
                 ret
             }
-            _ => "".to_string(),
+            _ => {
+                // match for firestore documents
+                // ref: https://firebase.google.com/docs/firestore/reference/rest/v1beta1/projects.databases.documents/listDocuments
+                let re = Regex::new(r"^firestore/(?P<collection>[^/]+)").unwrap();
+                if let Some(caps) = re.captures(obj) {
+                    let collection = caps.name("collection").unwrap().as_str();
+                    let mut ret = format!(
+                        "{}/projects/{}/databases/(default)/documents/{}?pageSize={}",
+                        Self::FIRESTORE_BASE_URL,
+                        self.project_id,
+                        collection,
+                        Self::PAGE_SIZE,
+                    );
+                    if let Some(next_page_token) = next_page {
+                        ret.push_str(&format!("&pageToken={}", next_page_token));
+                    }
+                    return ret;
+                }
+
+                "".to_string()
+            }
         }
     }
 
     // convert response body text to rows
-    fn resp_to_rows(&self, obj: &str, resp: &Value) -> Vec<Row> {
+    fn resp_to_rows(&self, obj: &str, resp: &Value, tgt_cols: &Vec<String>) -> Vec<Row> {
         let mut result = Vec::new();
 
         match obj {
@@ -156,29 +184,93 @@ impl FirebaseFdw {
 
                 for user in users {
                     let mut row = Row::new();
-                    let local_id = user
-                        .as_object()
-                        .and_then(|v| v.get("localId"))
-                        .and_then(|v| v.as_str())
-                        .map(|v| v.to_owned())
-                        .unwrap_or_default();
-                    let email = user
-                        .as_object()
-                        .and_then(|v| v.get("email"))
-                        .and_then(|v| v.as_str())
-                        .map(|v| v.to_owned())
-                        .unwrap_or_default();
-                    let props = serde_json::from_str(&user.to_string()).unwrap();
-                    row.push("local_id", Some(Cell::String(local_id)));
-                    row.push("email", Some(Cell::String(email)));
-                    row.push("props", Some(Cell::Json(JsonB(props))));
+                    if tgt_cols.iter().any(|c| c == "local_id") {
+                        let local_id = user
+                            .as_object()
+                            .and_then(|v| v.get("localId"))
+                            .and_then(|v| v.as_str())
+                            .map(|v| v.to_owned())
+                            .unwrap_or_default();
+                        row.push("local_id", Some(Cell::String(local_id)));
+                    }
+                    if tgt_cols.iter().any(|c| c == "email") {
+                        let email = user
+                            .as_object()
+                            .and_then(|v| v.get("email"))
+                            .and_then(|v| v.as_str())
+                            .map(|v| v.to_owned())
+                            .unwrap_or_default();
+                        row.push("email", Some(Cell::String(email)));
+                    }
+                    if tgt_cols.iter().any(|c| c == "email") {
+                        let fields = serde_json::from_str(&user.to_string()).unwrap();
+                        row.push("fields", Some(Cell::Json(JsonB(fields))));
+                    }
                     result.push(row);
                 }
             }
-            _ => report_error(
-                PgSqlErrorCode::ERRCODE_FDW_TABLE_NOT_FOUND,
-                &format!("'{}' object is not implemented", obj),
-            ),
+            _ => {
+                // match firestore documents
+                if obj.starts_with("firestore/") {
+                    let docs = match resp
+                        .as_object()
+                        .and_then(|v| v.get("documents"))
+                        .and_then(|v| v.as_array())
+                    {
+                        Some(docs) => docs,
+                        None => return result,
+                    };
+
+                    for doc in docs {
+                        let mut row = Row::new();
+                        if tgt_cols.iter().any(|c| c == "name") {
+                            let name = doc
+                                .as_object()
+                                .and_then(|v| v.get("name"))
+                                .and_then(|v| v.as_str())
+                                .map(|v| v.to_owned())
+                                .unwrap_or_default();
+                            row.push("name", Some(Cell::String(name)));
+                        }
+                        if tgt_cols.iter().any(|c| c == "fields") {
+                            let fields = doc.pointer("/fields").map(|v| v.clone()).unwrap();
+                            row.push("fields", Some(Cell::Json(JsonB(fields))));
+                        }
+                        if tgt_cols.iter().any(|c| c == "create_time") {
+                            let create_ts = doc
+                                .as_object()
+                                .and_then(|v| v.get("createTime"))
+                                .and_then(|v| v.as_str())
+                                .map(|v| {
+                                    let dt =
+                                        PrimitiveDateTime::parse(&v, &Iso8601::DEFAULT).unwrap();
+                                    Timestamp::try_from(dt).unwrap()
+                                })
+                                .unwrap_or(Timestamp::INFINITY);
+                            row.push("create_time", Some(Cell::Timestamp(create_ts)));
+                        }
+                        if tgt_cols.iter().any(|c| c == "update_time") {
+                            let update_ts = doc
+                                .as_object()
+                                .and_then(|v| v.get("updateTime"))
+                                .and_then(|v| v.as_str())
+                                .map(|v| {
+                                    let dt =
+                                        PrimitiveDateTime::parse(&v, &Iso8601::DEFAULT).unwrap();
+                                    Timestamp::try_from(dt).unwrap()
+                                })
+                                .unwrap_or(Timestamp::INFINITY);
+                            row.push("update_time", Some(Cell::Timestamp(update_ts)));
+                        }
+                        result.push(row);
+                    }
+                } else {
+                    report_error(
+                        PgSqlErrorCode::ERRCODE_FDW_TABLE_NOT_FOUND,
+                        &format!("'{}' object is not implemented", obj),
+                    );
+                }
+            }
         }
 
         result
@@ -189,7 +281,7 @@ impl ForeignDataWrapper for FirebaseFdw {
     fn begin_scan(
         &mut self,
         _quals: &Vec<Qual>,
-        _columns: &Vec<String>,
+        columns: &Vec<String>,
         _sorts: &Vec<Sort>,
         _limit: &Option<Limit>,
         options: &HashMap<String, String>,
@@ -198,6 +290,10 @@ impl ForeignDataWrapper for FirebaseFdw {
             Some(obj) => obj,
             None => return,
         };
+        let row_cnt_limit = options
+            .get("limit")
+            .map(|n| n.parse::<usize>().unwrap())
+            .unwrap_or(Self::DEFAULT_ROWS_LIMIT);
 
         self.scan_result = None;
 
@@ -213,8 +309,11 @@ impl ForeignDataWrapper for FirebaseFdw {
                         Ok(resp) => {
                             let body = self.rt.block_on(resp.text()).unwrap();
                             let json: Value = serde_json::from_str(&body).unwrap();
-                            let mut rows = self.resp_to_rows(&obj, &json);
+                            let mut rows = self.resp_to_rows(&obj, &json, columns);
                             result.append(&mut rows);
+                            if result.len() >= row_cnt_limit {
+                                break;
+                            }
 
                             // get next page token, stop fetching if no more pages
                             next_page = json

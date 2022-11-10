@@ -56,6 +56,18 @@ create foreign table firebase_users (
   options (
     object 'users'
   );
+
+drop foreign table if exists firebase_docs;
+create foreign table firebase_docs (
+  name text,
+  props jsonb,
+  create_time timestamp,
+  update_time timestamp
+)
+  server my_firebase_server
+  options (
+    object 'firestore/user-profiles'
+  );
 ```
 
 4. Run a query to check if it is working:
