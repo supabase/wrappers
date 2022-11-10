@@ -38,5 +38,5 @@ select * from people;
  id | name 
 ----+------
   1 | foo
-(2 rows)
+(1 row)
 

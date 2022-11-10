@@ -34,10 +34,17 @@ RUN cargo pgx init --pg14 $(which pg_config)
 USER root
 
 # Install the extension
-COPY . .
+COPY supabase-wrappers supabase-wrappers
+COPY supabase-wrappers-macros supabase-wrappers-macros
 WORKDIR /home/app/wrappers
+COPY wrappers/Cargo.toml Cargo.toml
+COPY wrappers/Cargo.lock Cargo.lock
+COPY wrappers/wrappers.control wrappers.control
+COPY wrappers/bin bin
+COPY wrappers/src src
 RUN cargo pgx install --features clickhouse_fdw --features pg14
 
+COPY wrappers/test test
 RUN chown -R postgres:postgres /home/app
 
 USER postgres
