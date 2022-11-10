@@ -108,10 +108,12 @@ impl BigQueryFdw {
             scan_result: None,
         };
 
-        let sa_key_file = require_option("sa_key_file", options);
+        //let sa_key_file = require_option("sa_key_file", options);
         let project_id = require_option("project_id", options);
         let dataset_id = require_option("dataset_id", options);
-        if sa_key_file.is_none() || project_id.is_none() || dataset_id.is_none() {
+
+        //if sa_key_file.is_none() || project_id.is_none() || dataset_id.is_none() {
+        if project_id.is_none() || dataset_id.is_none() {
             return ret;
         }
 
