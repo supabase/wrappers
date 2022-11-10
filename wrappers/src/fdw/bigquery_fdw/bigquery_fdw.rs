@@ -1,5 +1,4 @@
 use gcp_bigquery_client::{
-    client_builder::ClientBuilder,
     model::{
         field_type::FieldType, query_request::QueryRequest, query_response::ResultSet,
         table::Table, table_data_insert_all_request::TableDataInsertAllRequest,
@@ -108,12 +107,10 @@ impl BigQueryFdw {
             scan_result: None,
         };
 
-        //let sa_key_file = require_option("sa_key_file", options);
+        let sa_key_file = require_option("sa_key_file", options);
         let project_id = require_option("project_id", options);
         let dataset_id = require_option("dataset_id", options);
-
-        //if sa_key_file.is_none() || project_id.is_none() || dataset_id.is_none() {
-        if project_id.is_none() || dataset_id.is_none() {
+        if sa_key_file.is_none() || project_id.is_none() || dataset_id.is_none() {
             return ret;
         }
 
@@ -121,16 +118,10 @@ impl BigQueryFdw {
         ret.project_id = project_id.unwrap();
         ret.dataset_id = dataset_id.unwrap();
 
-        let mut bq_client_builder = ClientBuilder::new();
-
-        let bq_client = match require_option("api_endpoint", options) {
-            Some(api_endpoint) => bq_client_builder
-                .with_v2_base_url(api_endpoint)
-                .build_from_service_account_key_file(&sa_key_file),
-            None => bq_client_builder.build_from_service_account_key_file(&sa_key_file),
-        };
-
-        ret.client = match ret.rt.block_on(bq_client) {
+        ret.client = match ret
+            .rt
+            .block_on(Client::from_service_account_key_file(&sa_key_file))
+        {
             Ok(client) => Some(client),
             Err(err) => {
                 report_error(
