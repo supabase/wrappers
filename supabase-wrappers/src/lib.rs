@@ -4,7 +4,7 @@
 //!
 //! # Usage
 //!
-//! Wrappers is a pgx extension, please follow the [installation steps](https://github.com/tcdi/pgx#system-requirements) to install pgx.
+//! Wrappers is a pgx extension, please follow the [installation steps](https://github.com/tcdi/pgx#system-requirements) to install `pgx` first.
 //!
 //! After pgx is installed, create your project using command like below,
 //!
