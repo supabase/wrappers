@@ -127,7 +127,6 @@ impl FirebaseFdw {
         ret
     }
 
-    #[inline]
     fn build_url(&self, obj: &str, next_page: &Option<String>) -> String {
         match obj {
             "users" => {
