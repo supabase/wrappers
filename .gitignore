@@ -9,3 +9,5 @@ target/
 *.swp
 cmake*/
 .direnv
+results/
+wrappers/results/
