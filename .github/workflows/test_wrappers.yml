@@ -1,7 +1,7 @@
-name: Test
+name: Test Wrappers
 on:
   pull_request:
-  push: { branches: master }
+  push: { branches: main }
 
 jobs:
   test:
