@@ -4,7 +4,7 @@ services:
     container_name: pg-wrappers
     build:
         context: ../..
-         dockerfile: ./wrappers/dockerfiles/pg/Dockerfile
+        dockerfile: ./wrappers/dockerfiles/pg/Dockerfile
      command:
        - ./bin/installcheck
      depends_on:
