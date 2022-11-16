@@ -38,7 +38,7 @@ fn to_tokens(fdw_types: &Punctuated<FdwType, Token![,]>) -> TokenStream2 {
             name!(author, Option<String>),
             name!(website, Option<String>),
         )> {
-            let mut metas = Vec::new();
+            let mut metas: Vec<std::collections::HashMap<String, String>> = Vec::new();
             #fdw_meta_tokens
 
             TableIterator::new(

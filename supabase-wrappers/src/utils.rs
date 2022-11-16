@@ -9,7 +9,7 @@ use tokio::runtime::{Builder, Runtime};
 /// For example,
 ///
 /// ```rust,no_run
-/// report_error(&format!("this is a warning"));
+/// report_warning(&format!("this is a warning"));
 /// ```
 #[inline]
 pub fn report_warning(msg: &str) {
@@ -43,6 +43,36 @@ pub fn report_error(code: PgSqlErrorCode, msg: &str) {
     ereport(PgLogLevel::ERROR, code, msg, "Wrappers", 0, 0);
 }
 
+/// Send info message to client.
+///
+/// A helper function to send `INFO` message to client.
+///
+/// See more details in [pgx docs](https://docs.rs/pgx/latest/pgx/log/enum.PgLogLevel.html#variant.INFO).
+#[inline]
+pub fn log_info(msg: &str) {
+    elog(PgLogLevel::INFO, msg);
+}
+
+/// Send notice message to client.
+///
+/// A helper function to send `NOTICE` message to client.
+///
+/// See more details in [pgx docs](https://docs.rs/pgx/latest/pgx/log/enum.PgLogLevel.html#variant.NOTICE).
+#[inline]
+pub fn log_notice(msg: &str) {
+    elog(PgLogLevel::NOTICE, msg);
+}
+
+/// Send warning message to client.
+///
+/// A helper function to send `WARNING` message to client.
+///
+/// See more details in [pgx docs](https://docs.rs/pgx/latest/pgx/log/enum.PgLogLevel.html#variant.WARNING).
+#[inline]
+pub fn log_warning(msg: &str) {
+    elog(PgLogLevel::WARNING, msg);
+}
+
 /// Log debug message to Postgres log.
 ///
 /// A helper function to emit `DEBUG1` level message to Postgres's log.
@@ -51,7 +81,7 @@ pub fn report_error(code: PgSqlErrorCode, msg: &str) {
 ///
 /// See more details in [Postgres documents](https://www.postgresql.org/docs/current/runtime-config-logging.html#RUNTIME-CONFIG-LOGGING-WHEN).
 #[inline]
-pub fn log_debug(msg: &str) {
+pub fn log_debug1(msg: &str) {
     elog(PgLogLevel::DEBUG1, &format!("wrappers: {}", msg));
 }
 

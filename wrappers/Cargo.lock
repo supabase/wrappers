@@ -3005,6 +3005,7 @@ dependencies = [
  "gcp-bigquery-client",
  "pgx",
  "pgx-tests",
+ "regex",
  "reqwest",
  "reqwest-middleware",
  "reqwest-retry",

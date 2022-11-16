@@ -8,3 +8,23 @@ services:
         dockerfile: ./wrappers/dockerfiles/pg/Dockerfile
     command:
       - ./bin/installcheck
+    depends_on:
+      - clickhouse
+    links:
+      - clickhouse
+
+  clickhouse:
+    image: clickhouse/clickhouse-server
+    container_name: clickhouse-wrapped
+    volumes:
+        - ../dockerfiles/clickhouse/setup.sql:/docker-entrypoint-initdb.d/setup.sql
+    environment:
+      CLICKHOUSE_DB: supa
+    ports:
+      - "9000:9000" # native interface
+      - "8123:8123" # http interface
+    healthcheck:
+      test: sleep 4 && wget --no-verbose --tries=1 --spider http://localhost:8123/?query=SELECT%201 || exit 1
+      interval: 30s
+      timeout: 5s
+      retries: 3

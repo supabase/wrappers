@@ -141,7 +141,7 @@ impl BigQueryFdw {
         } else {
             columns.join(", ")
         };
-        let table = format!("{}.{}.{}", self.project_id, self.dataset_id, self.table,);
+        let table = format!("`{}.{}.{}`", self.project_id, self.dataset_id, self.table,);
         let sql = if quals.is_empty() {
             format!("select {} from {}", tgts, table)
         } else {
@@ -235,9 +235,6 @@ impl ForeignDataWrapper for BigQueryFdw {
                     for tgt_col in &self.tgt_cols {
                         let field = fields.iter().find(|&f| &f.name == tgt_col).unwrap();
                         let cell = field_to_cell(rs, field);
-                        if cell.is_none() {
-                            return None;
-                        }
                         ret.push(&field.name, cell);
                     }
                     return Some(ret);

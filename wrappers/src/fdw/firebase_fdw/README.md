@@ -50,11 +50,23 @@ drop foreign table if exists firebase_users;
 create foreign table firebase_users (
   local_id text,
   email text,
-  props jsonb
+  fields jsonb
 )
   server my_firebase_server
   options (
     object 'users'
+  );
+
+drop foreign table if exists firebase_docs;
+create foreign table firebase_docs (
+  name text,
+  fields jsonb,
+  create_time timestamp,
+  update_time timestamp
+)
+  server my_firebase_server
+  options (
+    object 'firestore/user-profiles'  -- format: 'firestore/[collection_id]'
   );
 ```
 
@@ -62,6 +74,7 @@ create foreign table firebase_users (
 
 ```sql
 select * from firebase_users;
+select * from firebase_docs;
 ```
 
 
