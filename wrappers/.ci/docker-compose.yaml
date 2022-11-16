@@ -6,12 +6,15 @@ services:
     build:
         context: ../..
         dockerfile: ./wrappers/dockerfiles/pg/Dockerfile
+    # volumes:
+    #     - ../results:/home/app/wrappers/results
     command:
       - ./bin/installcheck
     depends_on:
-      - clickhouse
-    links:
-      - clickhouse
+      clickhouse:
+        condition: service_healthy
+      firebase:
+        condition: service_healthy
 
   clickhouse:
     image: clickhouse/clickhouse-server
@@ -25,6 +28,24 @@ services:
       - "8123:8123" # http interface
     healthcheck:
       test: sleep 4 && wget --no-verbose --tries=1 --spider http://localhost:8123/?query=SELECT%201 || exit 1
-      interval: 30s
+      interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 20
+
+  firebase:
+    image: andreysenov/firebase-tools
+    container_name: firebase-wrapped
+    command: firebase emulators:start --project supa --import=/baseline-data
+    volumes:
+        - ../dockerfiles/firebase/baseline-data:/baseline-data
+        - ../dockerfiles/firebase/firebase.json:/home/node/firebase.json
+        - ../dockerfiles/firebase/storage.rules:/home/node/storage.rules
+    ports:
+      - "4000:4000" # UI
+      - "8080:8080" # Firestore
+      - "9099:9099" # Auth
+    healthcheck:
+      test: sleep 4 && wget --no-verbose --tries=1 --spider http://localhost:9099/ || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 30

@@ -6,6 +6,7 @@ use reqwest::{self, header};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use serde_json::Value;
+use yup_oauth2::AccessToken;
 use std::collections::HashMap;
 use supabase_wrappers::{
     create_async_runtime, report_error, require_option, wrappers_meta, Cell, ForeignDataWrapper,
@@ -23,6 +24,50 @@ macro_rules! report_fetch_error {
     };
 }
 
+fn get_oauth2_token(sa_key_file: &str, rt: &Runtime) -> Option<AccessToken> {
+    let creds = match rt
+        .block_on(yup_oauth2::read_service_account_key(sa_key_file))
+        {
+            Ok(creds) => creds,
+            Err(err) => {
+                report_error(
+                    PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                    &format!("read service account key file failed: {}", err),
+                );
+                return None;
+            }
+        };
+    let sa = match rt
+        .block_on(ServiceAccountAuthenticator::builder(creds).build())
+        {
+            Ok(sa) => sa,
+            Err(err) => {
+                report_error(
+                    PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                    &format!("invalid service account key: {}", err),
+                );
+                return None;
+            }
+        };
+    let scopes = &[
+        "https://www.googleapis.com/auth/cloud-platform",
+        "https://www.googleapis.com/auth/firebase.database",
+        "https://www.googleapis.com/auth/firebase.messaging",
+        "https://www.googleapis.com/auth/identitytoolkit",
+        "https://www.googleapis.com/auth/userinfo.email",
+    ];
+    match rt.block_on(sa.token(scopes)) {
+        Ok(token) => Some(token),
+        Err(err) => {
+            report_error(
+                PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                &format!("get token failed: {}", err),
+            );
+            None
+        }
+    }
+}
+
 #[wrappers_meta(
     version = "0.1.0",
     author = "Supabase",
@@ -36,8 +81,8 @@ pub(crate) struct FirebaseFdw {
 }
 
 impl FirebaseFdw {
-    const AUTH_BASE_URL: &'static str = "https://identitytoolkit.googleapis.com/v1/projects";
-    const FIRESTORE_BASE_URL: &'static str = "https://firestore.googleapis.com/v1beta1";
+    const DEFAULT_AUTH_BASE_URL: &'static str = "https://identitytoolkit.googleapis.com/v1/projects";
+    const DEFAULT_FIRESTORE_BASE_URL: &'static str = "https://firestore.googleapis.com/v1beta1/projects";
 
     // maximum allowed page size
     // https://firebase.google.com/docs/reference/admin/node/firebase-admin.auth.baseauth.md#baseauthlistusers
@@ -60,57 +105,23 @@ impl FirebaseFdw {
         };
 
         // get oauth2 access token
-        let sa_key_file = match require_option("sa_key_file", options) {
-            Some(sa_key_file) => sa_key_file,
-            None => return ret,
-        };
-        let creds = match ret
-            .rt
-            .block_on(yup_oauth2::read_service_account_key(sa_key_file))
-        {
-            Ok(creds) => creds,
-            Err(err) => {
-                report_error(
-                    PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                    &format!("read service account key file failed: {}", err),
-                );
+        let token = if let Some(access_token) = options.get("access_token") {
+            access_token.to_owned()
+        } else {
+            let sa_key_file = match require_option("sa_key_file", options) {
+                Some(sa_key_file) => sa_key_file,
+                None => return ret,
+            };
+            if let Some(access_token) = get_oauth2_token(&sa_key_file, &ret.rt) {
+                access_token.token().map(|t| t.to_owned()).unwrap()
+            } else {
                 return ret;
             }
         };
-        let sa = match ret
-            .rt
-            .block_on(ServiceAccountAuthenticator::builder(creds).build())
-        {
-            Ok(sa) => sa,
-            Err(err) => {
-                report_error(
-                    PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                    &format!("invalid service account key: {}", err),
-                );
-                return ret;
-            }
-        };
-        let scopes = &[
-            "https://www.googleapis.com/auth/cloud-platform",
-            "https://www.googleapis.com/auth/firebase.database",
-            "https://www.googleapis.com/auth/firebase.messaging",
-            "https://www.googleapis.com/auth/identitytoolkit",
-            "https://www.googleapis.com/auth/userinfo.email",
-        ];
-        let token = match ret.rt.block_on(sa.token(scopes)) {
-            Ok(token) => token,
-            Err(err) => {
-                report_error(
-                    PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                    &format!("get token failed: {}", err),
-                );
-                return ret;
-            }
-        };
-
+        
         // create client
         let mut headers = header::HeaderMap::new();
-        let value = format!("Bearer {}", token.token().unwrap());
+        let value = format!("Bearer {}", token);
         let mut auth_value = header::HeaderValue::from_str(&value).unwrap();
         auth_value.set_sensitive(true);
         headers.insert(header::AUTHORIZATION, auth_value);
@@ -127,13 +138,21 @@ impl FirebaseFdw {
         ret
     }
 
-    fn build_url(&self, obj: &str, next_page: &Option<String>) -> String {
+    fn build_url(&self,
+        obj: &str,
+        next_page: &Option<String>,
+        options: &HashMap<String, String>,
+    ) -> String {
         match obj {
-            "users" => {
+            "auth/users" => {
                 // ref: https://firebase.google.com/docs/reference/admin/node/firebase-admin.auth.baseauth.md#baseauthlistusers
+                let base_url = options
+                    .get("base_url")
+                    .map(|t| t.to_owned())
+                    .unwrap_or(Self::DEFAULT_AUTH_BASE_URL.to_owned());
                 let mut ret = format!(
                     "{}/{}/accounts:batchGet?maxResults={}",
-                    Self::AUTH_BASE_URL,
+                    base_url,
                     self.project_id,
                     Self::PAGE_SIZE,
                 );
@@ -147,10 +166,14 @@ impl FirebaseFdw {
                 // ref: https://firebase.google.com/docs/firestore/reference/rest/v1beta1/projects.databases.documents/listDocuments
                 let re = Regex::new(r"^firestore/(?P<collection>[^/]+)").unwrap();
                 if let Some(caps) = re.captures(obj) {
+                    let base_url = options
+                        .get("base_url")
+                        .map(|t| t.to_owned())
+                        .unwrap_or(Self::DEFAULT_FIRESTORE_BASE_URL.to_owned());
                     let collection = caps.name("collection").unwrap().as_str();
                     let mut ret = format!(
-                        "{}/projects/{}/databases/(default)/documents/{}?pageSize={}",
-                        Self::FIRESTORE_BASE_URL,
+                        "{}/{}/databases/(default)/documents/{}?pageSize={}",
+                        base_url,
                         self.project_id,
                         collection,
                         Self::PAGE_SIZE,
@@ -171,7 +194,7 @@ impl FirebaseFdw {
         let mut result = Vec::new();
 
         match obj {
-            "users" => {
+            "auth/users" => {
                 let users = match resp
                     .as_object()
                     .and_then(|v| v.get("users"))
@@ -201,7 +224,7 @@ impl FirebaseFdw {
                             .unwrap_or_default();
                         row.push("email", Some(Cell::String(email)));
                     }
-                    if tgt_cols.iter().any(|c| c == "email") {
+                    if tgt_cols.iter().any(|c| c == "fields") {
                         let fields = serde_json::from_str(&user.to_string()).unwrap();
                         row.push("fields", Some(Cell::Json(JsonB(fields))));
                     }
@@ -301,8 +324,8 @@ impl ForeignDataWrapper for FirebaseFdw {
             let mut result = Vec::new();
 
             loop {
-                let url = self.build_url(&obj, &next_page);
-
+                let url = self.build_url(&obj, &next_page, options);
+                
                 match self.rt.block_on(client.get(&url).send()) {
                     Ok(resp) => match resp.error_for_status() {
                         Ok(resp) => {

@@ -42,7 +42,7 @@ COPY wrappers/Cargo.lock Cargo.lock
 COPY wrappers/wrappers.control wrappers.control
 COPY wrappers/bin bin
 COPY wrappers/src src
-RUN cargo pgx install --features clickhouse_fdw --features pg14
+RUN cargo pgx install --features pg14,clickhouse_fdw,firebase_fdw
 
 COPY wrappers/test test
 RUN chown -R postgres:postgres /home/app
