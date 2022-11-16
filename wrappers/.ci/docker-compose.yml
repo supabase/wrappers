@@ -8,11 +8,11 @@ services:
      command:
        - ./bin/installcheck
      depends_on:
-       - clickhouse
-       - stripe
-     links:
-       - clickhouse
-       - stripe
+       clickhouse:
+         condition: service_healthy
+       stripe:
+         condition: service_healthy
+
 
    clickhouse:
      image: clickhouse/clickhouse-server
@@ -34,3 +34,10 @@ services:
      container_name: stripe-mock
      volumes:
          - ../dockerfiles/stripe/setup.sql:/docker-entrypoint-initdb.d/setup.sql
+     ports:
+       - "12111-12112:12111-12112"
+     healthcheck:
+       test: sleep 4 && wget --no-verbose --tries=1 --spider http://localhost:12111/ || exit 1
+       interval: 10s
+       timeout: 5s
+       retries: 30
