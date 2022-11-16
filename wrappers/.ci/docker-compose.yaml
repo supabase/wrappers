@@ -35,9 +35,11 @@ services:
   firebase:
     image: andreysenov/firebase-tools
     container_name: firebase-wrapped
-    command: firebase emulators:start --project supa --import=./baseline-data
+    command: firebase emulators:start --project supa --import=/baseline-data
     volumes:
-        - ../dockerfiles/firebase:/home/node
+        - ../dockerfiles/firebase/baseline-data:/baseline-data
+        - ../dockerfiles/firebase/firebase.json:/home/node/firebase.json
+        - ../dockerfiles/firebase/storage.rules:/home/node/storage.rules
     ports:
       - "4000:4000" # UI
       - "8080:8080" # Firestore
