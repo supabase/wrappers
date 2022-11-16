@@ -6,8 +6,8 @@ services:
     build:
         context: ../..
         dockerfile: ./wrappers/dockerfiles/pg/Dockerfile
-    volumes:
-        - ../results:/home/app/wrappers/results
+    # volumes:
+    #     - ../results:/home/app/wrappers/results
     command:
       - ./bin/installcheck
     depends_on:
