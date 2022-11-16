@@ -1,4 +1,4 @@
--- The clickhouse healthcheck lies
+-- The stripe healthcheck lies
 select pg_sleep(3);
 -- create extension
 drop extension if exists wrappers cascade;
@@ -18,8 +18,8 @@ drop server if exists my_stripe_server cascade;
 create server my_stripe_server
   foreign data wrapper stripe_wrapper
   options (
-    api_url 'https://api.stripe.com/v1',  -- Stripe API base URL, optional
-    api_key 'sk_test_key'  -- Stripe API Key, required
+    api_url 'http://localhost:12111/v1/',  -- Stripe API base URL, optional
+    api_key 'pk_test_51LUmojFkiV6mfx3c1TkHNLNij5nHOXkD6MyoD1Ne4oUTtNeskyih96k0rE6cdnczQjeOS1M8Rf8gBZjGFaxnckuR004jAXanvF'  -- Stripe API Key, required
   );
 
 -- create an example foreign table
