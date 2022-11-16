@@ -7,6 +7,9 @@ target/
 *.so
 *.a
 *.swp
+*.log
+.bash_history
+.config/
 cmake*/
 .direnv
 results/
