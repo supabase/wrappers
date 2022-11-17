@@ -54,7 +54,8 @@ create foreign table firebase_users (
 )
   server my_firebase_server
   options (
-    object 'users'
+    object 'auth/users',
+    base_url 'https://identitytoolkit.googleapis.com/v1/projects'
   );
 
 drop foreign table if exists firebase_docs;
@@ -66,7 +67,8 @@ create foreign table firebase_docs (
 )
   server my_firebase_server
   options (
-    object 'firestore/user-profiles'  -- format: 'firestore/[collection_id]'
+    object 'firestore/user-profiles',  -- format: 'firestore/[collection_id]'
+    base_url 'https://firestore.googleapis.com/v1beta1/projects'
   );
 ```
 
