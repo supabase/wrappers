@@ -10,8 +10,6 @@ services:
     depends_on:
       clickhouse:
         condition: service_healthy
-      stripe:
-        condition: service_healthy
       firebase:
         condition: service_healthy
   clickhouse:
@@ -29,16 +27,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-  stripe:
-    image: stripe/stripe-mock:v0.144.0
-    container_name: stripe-mock
-    volumes:
-      - ../dockerfiles/stripe/setup.sql:/docker-entrypoint-initdb.d/setup.sql
-    ports:
-      - "12111-12112:12111-12112"
-    healthcheck:
-      test: sleep 4 && wget --no-verbose --tries=1 --spider http://localhost:12111/ || exit 1
-      retries: 20
   firebase:
     image: andreysenov/firebase-tools
     container_name: firebase-wrapped
