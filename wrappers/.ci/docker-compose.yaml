@@ -35,9 +35,9 @@ services:
     volumes:
       - ../dockerfiles/stripe/setup.sql:/docker-entrypoint-initdb.d/setup.sql
     ports:
-      - "12111-12112:12111-12112"
+      - "12111:12111"
     healthcheck:
-      test: sleep 4 && wget --no-verbose --tries=1 --spider http://localhost:12111/ || exit 1
+      test: sleep 4 && wget --no-verbose --header="Authorization: Bearer pk_test_51LUmojFkiV6mfx3c1TkHNLNij5nHOXkD6MyoD1Ne4oUTtNeskyih96k0rE6cdnczQjeOS1M8Rf8gBZjGFaxnckuR004jAXanvF" --tries=1 --spider http://localhost:12111/v1/charges || exit 1
       retries: 20
   firebase:
     image: andreysenov/firebase-tools
