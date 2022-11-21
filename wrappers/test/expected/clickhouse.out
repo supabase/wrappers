@@ -25,7 +25,7 @@ declare
 begin
   select id into csid from pgsodium.valid_key where name = 'clickhouse' limit 1;
 
-  drop server if exists my_clickhouse_server;
+  drop server if exists my_clickhouse_server cascade;
 
   execute format(
     E'create server my_clickhouse_server \n'
