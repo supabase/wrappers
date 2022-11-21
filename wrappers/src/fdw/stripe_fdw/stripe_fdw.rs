@@ -6,8 +6,8 @@ use serde_json::Value;
 use std::collections::HashMap;
 
 use supabase_wrappers::{
-    create_async_runtime, report_error, require_option, wrappers_meta, Cell, ForeignDataWrapper,
-    Limit, Qual, Row, Runtime, Sort,
+    create_async_runtime, get_secret, report_error, require_option, wrappers_meta, Cell,
+    ForeignDataWrapper, Limit, Qual, Row, Runtime, Sort,
 };
 
 #[wrappers_meta(
@@ -28,22 +28,24 @@ impl StripeFdw {
             .get("api_url")
             .map(|t| t.to_owned())
             .unwrap_or("https://api.stripe.com/v1".to_string());
-        let client = require_option("api_key", options).map(|api_key| {
-            let mut headers = header::HeaderMap::new();
-            let value = format!("Bearer {}", api_key);
-            let mut auth_value = header::HeaderValue::from_str(&value).unwrap();
-            auth_value.set_sensitive(true);
-            headers.insert(header::AUTHORIZATION, auth_value);
-            let client = reqwest::Client::builder()
-                .default_headers(headers)
-                .build()
-                .unwrap();
-            let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
-            let client = ClientBuilder::new(client)
-                .with(RetryTransientMiddleware::new_with_policy(retry_policy))
-                .build();
-            client
-        });
+        let client = require_option("api_key_id", options)
+            .and_then(|key_id| get_secret(&key_id))
+            .and_then(|api_key| {
+                let mut headers = header::HeaderMap::new();
+                let value = format!("Bearer {}", api_key);
+                let mut auth_value = header::HeaderValue::from_str(&value).unwrap();
+                auth_value.set_sensitive(true);
+                headers.insert(header::AUTHORIZATION, auth_value);
+                let client = reqwest::Client::builder()
+                    .default_headers(headers)
+                    .build()
+                    .unwrap();
+                let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
+                let client = ClientBuilder::new(client)
+                    .with(RetryTransientMiddleware::new_with_policy(retry_policy))
+                    .build();
+                Some(client)
+            });
 
         StripeFdw {
             rt: create_async_runtime(),

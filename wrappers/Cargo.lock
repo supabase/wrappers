@@ -2452,6 +2452,7 @@ dependencies = [
  "pgx",
  "supabase-wrappers-macros",
  "tokio",
+ "uuid 1.2.2",
 ]
 
 [[package]]
@@ -3232,7 +3233,6 @@ dependencies = [
  "serde",
  "serde_json",
  "supabase-wrappers",
- "tempfile",
  "time 0.3.17",
  "wiremock",
  "yup-oauth2",

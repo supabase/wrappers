@@ -6,8 +6,8 @@ use std::collections::HashMap;
 use time::OffsetDateTime;
 
 use supabase_wrappers::{
-    create_async_runtime, report_error, require_option, wrappers_meta, Cell, ForeignDataWrapper,
-    Limit, Qual, Row, Runtime, Sort,
+    create_async_runtime, get_secret, report_error, require_option, wrappers_meta, Cell,
+    ForeignDataWrapper, Limit, Qual, Row, Runtime, Sort,
 };
 
 fn field_to_cell(row: &types::Row<types::Complex>, i: usize) -> Option<Cell> {
@@ -85,19 +85,21 @@ pub(crate) struct ClickHouseFdw {
 impl ClickHouseFdw {
     pub fn new(options: &HashMap<String, String>) -> Self {
         let rt = create_async_runtime();
-        let client = require_option("conn_string", options).and_then(|conn_str| {
-            let pool = Pool::new(conn_str.as_str());
-            rt.block_on(pool.get_handle()).map_or_else(
-                |err| {
-                    report_error(
-                        PgSqlErrorCode::ERRCODE_FDW_UNABLE_TO_ESTABLISH_CONNECTION,
-                        &format!("connection failed: {}", err),
-                    );
-                    None
-                },
-                |client| Some(client),
-            )
-        });
+        let client = require_option("conn_string_id", options)
+            .and_then(|conn_str_id| get_secret(&conn_str_id))
+            .and_then(|conn_str| {
+                let pool = Pool::new(conn_str.as_str());
+                rt.block_on(pool.get_handle()).map_or_else(
+                    |err| {
+                        report_error(
+                            PgSqlErrorCode::ERRCODE_FDW_UNABLE_TO_ESTABLISH_CONNECTION,
+                            &format!("connection failed: {}", err),
+                        );
+                        None
+                    },
+                    |client| Some(client),
+                )
+            });
 
         ClickHouseFdw {
             rt,

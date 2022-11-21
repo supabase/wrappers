@@ -35,15 +35,38 @@ create foreign data wrapper bigquery_wrapper
     wrapper 'BigQueryFdw'
   );
 
+-- save BigQuery service account json in Vault and get its key id
+select pgsodium.create_key(name := 'bigquery');
+insert into vault.secrets (secret, key_id) values ('
+{
+  "type": "service_account",
+  "project_id": "your_gcp_project_id",
+  ...
+}
+',
+(select id from pgsodium.valid_key where name = 'bigquery')
+) returning key_id;
+
 -- create a wrappers BigQuery server and specify connection info
-drop server if exists my_bigquery_server cascade;
-create server my_bigquery_server
-  foreign data wrapper bigquery_wrapper
-  options (
-    sa_key_file '/absolute/path/to/service_account_key.json',
-    project_id 'your_gcp_project_id',
-    dataset_id 'your_gcp_dataset_id'
+do $$
+declare
+  csid text;
+begin
+  select id into csid from pgsodium.valid_key where name = 'bigquery' limit 1;
+
+  drop server if exists my_bigquery_server cascade;
+
+  execute format(
+    E'create server my_bigquery_server \n'
+    '   foreign data wrapper bigquery_wrapper \n'
+    '   options ( \n'
+    '     sa_key_id ''%s'', \n'
+    '     project_id ''your_gcp_project_id'', \n'
+    '     dataset_id ''your_gcp_dataset_id'' \n'
+    ' );',
+    csid
   );
+end $$;
 
 -- create an example foreign table
 drop foreign table if exists people;

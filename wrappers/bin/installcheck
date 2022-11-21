@@ -25,7 +25,8 @@ rm -rf "$tmpdir"
 # Initialize: setting PGUSER as the owner
 initdb --no-locale --encoding=UTF8 --nosync -U "$PGUSER"
 # Start the server
-pg_ctl start -o "-F -c listen_addresses=\"\" -c log_min_messages=WARNING -k $PGDATA"
+pg_ctl start -o "-F -c listen_addresses=\"\" -c log_min_messages=WARNING -c shared_preload_libraries='pgsodium' -c pgsodium.getkey_script='/usr/share/postgresql/14/extension/pgsodium_getkey.sh' -k $PGDATA"
+
 # Start the server
 createdb contrib_regression
 

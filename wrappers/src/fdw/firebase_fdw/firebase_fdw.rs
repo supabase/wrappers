@@ -6,13 +6,13 @@ use reqwest::{self, header};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use serde_json::Value;
-use yup_oauth2::AccessToken;
 use std::collections::HashMap;
 use supabase_wrappers::{
-    create_async_runtime, report_error, require_option, wrappers_meta, Cell, ForeignDataWrapper,
-    Limit, Qual, Row, Runtime, Sort,
+    create_async_runtime, get_secret, report_error, require_option, wrappers_meta, Cell,
+    ForeignDataWrapper, Limit, Qual, Row, Runtime, Sort,
 };
 use time::{format_description::well_known::Iso8601, PrimitiveDateTime};
+use yup_oauth2::AccessToken;
 use yup_oauth2::ServiceAccountAuthenticator;
 
 macro_rules! report_fetch_error {
@@ -24,31 +24,27 @@ macro_rules! report_fetch_error {
     };
 }
 
-fn get_oauth2_token(sa_key_file: &str, rt: &Runtime) -> Option<AccessToken> {
-    let creds = match rt
-        .block_on(yup_oauth2::read_service_account_key(sa_key_file))
-        {
-            Ok(creds) => creds,
-            Err(err) => {
-                report_error(
-                    PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                    &format!("read service account key file failed: {}", err),
-                );
-                return None;
-            }
-        };
-    let sa = match rt
-        .block_on(ServiceAccountAuthenticator::builder(creds).build())
-        {
-            Ok(sa) => sa,
-            Err(err) => {
-                report_error(
-                    PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                    &format!("invalid service account key: {}", err),
-                );
-                return None;
-            }
-        };
+fn get_oauth2_token(sa_key: &str, rt: &Runtime) -> Option<AccessToken> {
+    let creds = match yup_oauth2::parse_service_account_key(sa_key.as_bytes()) {
+        Ok(creds) => creds,
+        Err(err) => {
+            report_error(
+                PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                &format!("parse service account key JSON failed: {}", err),
+            );
+            return None;
+        }
+    };
+    let sa = match rt.block_on(ServiceAccountAuthenticator::builder(creds).build()) {
+        Ok(sa) => sa,
+        Err(err) => {
+            report_error(
+                PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                &format!("invalid service account key: {}", err),
+            );
+            return None;
+        }
+    };
     let scopes = &[
         "https://www.googleapis.com/auth/cloud-platform",
         "https://www.googleapis.com/auth/firebase.database",
@@ -81,8 +77,10 @@ pub(crate) struct FirebaseFdw {
 }
 
 impl FirebaseFdw {
-    const DEFAULT_AUTH_BASE_URL: &'static str = "https://identitytoolkit.googleapis.com/v1/projects";
-    const DEFAULT_FIRESTORE_BASE_URL: &'static str = "https://firestore.googleapis.com/v1beta1/projects";
+    const DEFAULT_AUTH_BASE_URL: &'static str =
+        "https://identitytoolkit.googleapis.com/v1/projects";
+    const DEFAULT_FIRESTORE_BASE_URL: &'static str =
+        "https://firestore.googleapis.com/v1beta1/projects";
 
     // maximum allowed page size
     // https://firebase.google.com/docs/reference/admin/node/firebase-admin.auth.baseauth.md#baseauthlistusers
@@ -104,21 +102,26 @@ impl FirebaseFdw {
             None => return ret,
         };
 
-        // get oauth2 access token
+        // get oauth2 access token if it is directly defined in options
         let token = if let Some(access_token) = options.get("access_token") {
             access_token.to_owned()
         } else {
-            let sa_key_file = match require_option("sa_key_file", options) {
-                Some(sa_key_file) => sa_key_file,
+            // otherwise, get it from the Vault
+            let sa_key_id = match require_option("sa_key_id", options) {
+                Some(sa_key_id) => sa_key_id,
                 None => return ret,
             };
-            if let Some(access_token) = get_oauth2_token(&sa_key_file, &ret.rt) {
+            let sa_key = match get_secret(&sa_key_id) {
+                Some(sa_key) => sa_key,
+                None => return ret,
+            };
+            if let Some(access_token) = get_oauth2_token(&sa_key, &ret.rt) {
                 access_token.token().map(|t| t.to_owned()).unwrap()
             } else {
                 return ret;
             }
         };
-        
+
         // create client
         let mut headers = header::HeaderMap::new();
         let value = format!("Bearer {}", token);
@@ -138,7 +141,8 @@ impl FirebaseFdw {
         ret
     }
 
-    fn build_url(&self,
+    fn build_url(
+        &self,
         obj: &str,
         next_page: &Option<String>,
         options: &HashMap<String, String>,
@@ -325,7 +329,7 @@ impl ForeignDataWrapper for FirebaseFdw {
 
             loop {
                 let url = self.build_url(&obj, &next_page, options);
-                
+
                 match self.rt.block_on(client.get(&url).send()) {
                     Ok(resp) => match resp.error_for_status() {
                         Ok(resp) => {

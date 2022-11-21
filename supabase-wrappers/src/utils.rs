@@ -1,6 +1,10 @@
 use pgx::log::*;
+use pgx::prelude::PgBuiltInOids;
+use pgx::spi::Spi;
+use pgx::IntoDatum;
 use std::collections::HashMap;
 use tokio::runtime::{Builder, Runtime};
+use uuid::Uuid;
 
 /// Report warning to Postgres using `ereport`
 ///
@@ -111,13 +115,38 @@ pub fn create_async_runtime() -> Runtime {
 ///
 /// Get the required option's value from `options` map, return None and report
 /// error if it does not exist.
-#[inline]
 pub fn require_option(opt_name: &str, options: &HashMap<String, String>) -> Option<String> {
     options.get(opt_name).map(|t| t.to_owned()).or_else(|| {
         report_error(
-            PgSqlErrorCode::ERRCODE_FDW_INVALID_OPTION_NAME,
+            PgSqlErrorCode::ERRCODE_FDW_OPTION_NAME_NOT_FOUND,
             &format!("required option \"{}\" not specified", opt_name),
         );
         None
     })
+}
+
+/// Get decrypted secret from Vault
+///
+/// Get decrypted secret as string from Vault. Vault is an extension for storing
+/// encrypted secrets, [see more details](https://github.com/supabase/vault).
+pub fn get_secret(secret_id: &str) -> Option<String> {
+    match Uuid::try_parse(&secret_id) {
+        Ok(sid) => {
+            let sid = sid.into_bytes();
+            Spi::get_one_with_args::<String>(
+                "select decrypted_secret from vault.decrypted_secrets where key_id = $1",
+                vec![(
+                    PgBuiltInOids::UUIDOID.oid(),
+                    pgx::Uuid::from_bytes(sid).into_datum(),
+                )],
+            )
+        }
+        Err(err) => {
+            report_error(
+                PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                &format!("invalid secret id \"{}\": {}", secret_id, err),
+            );
+            None
+        }
+    }
 }
