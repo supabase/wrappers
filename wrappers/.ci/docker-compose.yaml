@@ -9,7 +9,7 @@ services:
     # volumes:
     #     - ../results:/home/app/wrappers/results
     command:
-      - ./bin/installcheck
+      - sleep 10 && ./bin/installcheck
     depends_on:
       clickhouse:
         condition: service_healthy
