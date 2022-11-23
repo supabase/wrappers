@@ -2,7 +2,7 @@
 
 Wrappers is a development framework for Postgres Foreign Data Wrappers ([FDW](https://wiki.postgresql.org/wiki/Foreign_data_wrappers)), written in Rust. Its goal is to make Postgres FDW development easier while keeping Rust language's modern capabilities, such as high performance, strong types, and safety.
 
-Wrappers is also a collection of FDWs built by [Supabase](https://www.supabase.com). We current support the following FDWs, with more are under development:
+Wrappers is also a collection of FDWs built by [Supabase](https://www.supabase.com). We currently support the following FDWs, with more are under development:
 
 - [HelloWorld](./wrappers/src/fdw/helloworld_fdw): A demo FDW to show how to develop a baisc FDW.
 - [BigQuery](./wrappers/src/fdw/bigquery_fdw): A FDW for [BigQuery](https://cloud.google.com/bigquery) which only supports async data scan at this moment. 
