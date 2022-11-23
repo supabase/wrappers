@@ -6,14 +6,16 @@ use std::fmt;
 use std::marker::PhantomData;
 use supabase_wrappers::{Cell, Row};
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct AirtableResponse {
     pub records: Vec<AirtableRecord>,
+    pub offset: Option<String>,
 }
 
+#[derive(Debug)]
 pub struct AirtableFields(HashMap<String, Value>);
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct AirtableRecord {
     pub id: String,
     pub fields: AirtableFields,

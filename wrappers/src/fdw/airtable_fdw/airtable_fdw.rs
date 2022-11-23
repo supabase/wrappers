@@ -3,14 +3,20 @@ use reqwest::{self, header};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use std::collections::HashMap;
+use url::Url;
 
 use supabase_wrappers::{
-    create_async_runtime, report_error, require_option, ForeignDataWrapper, Limit, Qual, Row,
-    Runtime, Sort,
+    create_async_runtime, log_warning, report_error, require_option, wrappers_meta,
+    ForeignDataWrapper, Limit, Qual, Row, Runtime, Sort,
 };
 
 use super::result::AirtableResponse;
 
+#[wrappers_meta(
+    version = "0.1.0",
+    author = "Ankur Goyal",
+    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/airtable_fdw"
+)]
 pub(crate) struct AirtableFdw {
     rt: Runtime,
     base_url: String,
@@ -57,8 +63,26 @@ impl AirtableFdw {
         format!("{}/{}/{}", &self.base_url, base_id, table_name)
     }
 
+    #[inline]
+    fn set_limit_offset(
+        &self,
+        url: &str,
+        page_size: Option<usize>,
+        offset: Option<&str>,
+    ) -> Result<String, url::ParseError> {
+        let mut params = Vec::new();
+        if let Some(page_size) = page_size {
+            params.push(("pageSize", format!("{}", page_size)));
+        }
+        if let Some(offset) = offset {
+            params.push(("offset", offset.to_string()));
+        }
+
+        Url::parse_with_params(url, &params).map(|x| x.into())
+    }
+
     // convert response body text to rows
-    fn resp_to_rows(&self, resp_body: &str, columns: &Vec<String>) -> Vec<Row> {
+    fn parse_resp(&self, resp_body: &str, columns: &Vec<String>) -> (Vec<Row>, Option<String>) {
         let response: AirtableResponse = serde_json::from_str(resp_body).unwrap();
         let mut result = Vec::new();
 
@@ -66,7 +90,7 @@ impl AirtableFdw {
             result.push(record.to_row(columns));
         }
 
-        result
+        (result, response.offset)
     }
 }
 
@@ -95,25 +119,49 @@ impl ForeignDataWrapper for AirtableFdw {
         }) {
             url
         } else {
-            // XXX Should we report an error here? It doesn't seem like the Stripe one does
-            // if object is empty
             return;
         };
 
-        // XXX Implement pagination
+        let mut rows = Vec::new();
         if let Some(client) = &self.client {
-            match self.rt.block_on(client.get(&url).send()) {
-                Ok(resp) => match resp.error_for_status() {
-                    Ok(resp) => {
-                        let body = self.rt.block_on(resp.text()).unwrap();
-                        let result = self.resp_to_rows(&body, columns);
-                        self.scan_result = Some(result);
+            let mut offset: Option<String> = None;
+
+            loop {
+                // Fetch all of the rows upfront. Arguably, this could be done in batches (and invoked each
+                // time iter_scan() runs out of rows) to pipeline the I/O, but we'd have to manage more
+                // state so starting with the simpler solution.
+                let url = match self.set_limit_offset(&url, None, offset.as_deref()) {
+                    Ok(url) => url,
+                    Err(err) => {
+                        report_error(
+                            PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                            &format!("internal error: {}", err),
+                        );
+                        return;
                     }
+                };
+
+                match self.rt.block_on(client.get(&url).send()) {
+                    Ok(resp) => match resp.error_for_status() {
+                        Ok(resp) => {
+                            let body = self.rt.block_on(resp.text()).unwrap();
+                            let (new_rows, new_offset) = self.parse_resp(&body, columns);
+                            rows.extend(new_rows.into_iter());
+
+                            if let Some(new_offset) = new_offset {
+                                offset = Some(new_offset);
+                            } else {
+                                break;
+                            }
+                        }
+                        Err(err) => report_fetch_error!(url, err),
+                    },
                     Err(err) => report_fetch_error!(url, err),
-                },
-                Err(err) => report_fetch_error!(url, err),
+                }
             }
         }
+
+        self.scan_result = Some(rows);
     }
 
     fn iter_scan(&mut self) -> Option<Row> {

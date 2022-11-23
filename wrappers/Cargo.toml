@@ -22,7 +22,7 @@ stripe_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json"]
 firebase_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "yup-oauth2", "regex", "time"]
 
 # TODO: audit dependencies
-airtable_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "serde"]
+airtable_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "serde", "url"]
 
 [dependencies]
 pgx = "=0.5.6"
@@ -34,7 +34,7 @@ supabase-wrappers = { path = "../supabase-wrappers" }
 clickhouse-rs = { git = "https://github.com/suharev7/clickhouse-rs", branch = "async-await", features = ["tls"], optional = true }
 chrono = { version = "0.4", optional = true }
 
-# for bigquery_fdw, firebase_fdw and etc.
+# for bigquery_fdw, firebase_fdw, airtable_fdw and etc.
 gcp-bigquery-client = { version = "0.16.0", optional = true }
 time = { version = "0.3.15", features = ["parsing"], optional = true }
 serde = { version = "1", optional = true }
@@ -52,7 +52,7 @@ yup-oauth2 = { version = "8.0.0", optional = true }
 regex = { version = "1", optional = true }
 
 # for airtable_fdw
-serde = { version = "1.0", optional = true }
+url = { version = "2.3", optional = true }
 
 [dev-dependencies]
 pgx-tests = "=0.5.6"

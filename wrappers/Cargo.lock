@@ -3234,6 +3234,7 @@ dependencies = [
  "serde_json",
  "supabase-wrappers",
  "time 0.3.17",
+ "url",
  "wiremock",
  "yup-oauth2",
 ]
