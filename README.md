@@ -8,6 +8,7 @@ Wrappers is also a collection of FDWs built by [Supabase](https://www.supabase.c
 - [BigQuery](./wrappers/src/fdw/bigquery_fdw): A FDW for [BigQuery](https://cloud.google.com/bigquery) which only supports async data scan at this moment. 
 - [Clickhouse](./wrappers/src/fdw/clickhouse_fdw): A FDW for [ClickHouse](https://clickhouse.com/) which supports both async data scan and modify. 
 - [Stripe](./wrappers/src/fdw/stripe_fdw): A FDW for [Stripe](https://stripe.com/) API.
+- [Airtable](./wrappers/src/fdw/airtable_fdw): A FDW for [Airtable](https://airtable.com/) API.
 
 ## Features
 
