@@ -1,6 +1,5 @@
 FROM postgres:14
 RUN apt-get update
-
 ENV build_deps ca-certificates \
   git \
   build-essential \
@@ -9,12 +8,8 @@ ENV build_deps ca-certificates \
   curl \
   libreadline6-dev \
   zlib1g-dev
-
-
 RUN apt-get install -y --no-install-recommends $build_deps pkg-config cmake
-
 WORKDIR /home/app
-
 ENV HOME=/home/app
 ENV PATH=/home/app/.cargo/bin:$PATH
 ENV LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
@@ -27,12 +22,10 @@ RUN \
   rustup --version && \
   rustc --version && \
   cargo --version
-
+  
 # PGX
 RUN cargo install cargo-pgx
-
 RUN cargo pgx init --pg14 $(which pg_config)
-
 USER root
 
 # Install libsodium
@@ -64,7 +57,7 @@ COPY wrappers/Cargo.lock Cargo.lock
 COPY wrappers/wrappers.control wrappers.control
 COPY wrappers/bin bin
 COPY wrappers/src src
-RUN cargo pgx install --features pg14,clickhouse_fdw,firebase_fdw,bigquery_fdw
+RUN cargo pgx install --features pg14,clickhouse_fdw,firebase_fdw,bigquery_fdw,stripe_fdw
 
 COPY wrappers/test test
 RUN chown -R postgres:postgres /home/app
