@@ -35,14 +35,32 @@ create foreign data wrapper stripe_wrapper
     wrapper 'StripeFdw'
   );
 
+-- save Stripe API key in Vault and get its key id
+select pgsodium.create_key(name := 'stripe');
+insert into vault.secrets (secret, key_id) values (
+  'sk_test_xxx',
+  (select id from pgsodium.valid_key where name = 'stripe')
+) returning key_id;
+
 -- create a wrappers Stripe server and specify connection info
-drop server if exists my_stripe_server cascade;
-create server my_stripe_server
-  foreign data wrapper stripe_wrapper
-  options (
-    api_url 'http://localhost:12111/v1',  -- Stripe API base URL, optional
-    api_key 'sk_test_51LUmojFkiV6mfx3cpEzG9VaxhA86SA4DIj3b62RKHnRC0nhPp2JBbAmQ1izsX9RKD8rlzvw2xpY54AwZtXmWciif00Qi8J0w3O'  -- Stripe API Key, required
+do $$
+declare
+  csid text;
+begin
+  select id into csid from pgsodium.valid_key where name = 'stripe' limit 1;
+
+  drop server if exists my_stripe_server cascade;
+
+  execute format(
+    E'create server my_stripe_server \n'
+    '   foreign data wrapper stripe_wrapper \n'
+    '   options ( \n'
+    '     api_url ''https://api.stripe.com/v1'', \n'  -- Stripe API base URL, optional
+    '     api_key_id ''%s'' \n'  -- the API Key ID saved in Vault, required
+    ' );',
+    csid
   );
+end $$;
 
 -- create an example foreign table
 drop foreign table if exists balance;

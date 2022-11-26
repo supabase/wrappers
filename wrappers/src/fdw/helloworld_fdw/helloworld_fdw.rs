@@ -59,7 +59,7 @@ impl ForeignDataWrapper for HelloWorldFdw {
             // create an empty row
             let mut row = Row::new();
 
-            // add values to row
+            // add values to row if they are in target column list
             if self.tgt_cols.iter().any(|c| c == "id") {
                 row.push("id", Some(Cell::I64(self.row_cnt)));
             }

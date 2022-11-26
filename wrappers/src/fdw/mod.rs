@@ -34,3 +34,10 @@ cfg_if! {
         pub(crate) use firebase_fdw::FirebaseFdw;
     }
 }
+
+cfg_if! {
+    if #[cfg(feature = "airtable_fdw")] {
+        mod airtable_fdw;
+        pub(crate) use airtable_fdw::AirtableFdw;
+    }
+}
