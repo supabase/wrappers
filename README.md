@@ -5,10 +5,11 @@ Wrappers is a development framework for Postgres Foreign Data Wrappers ([FDW](ht
 Wrappers is also a collection of FDWs built by [Supabase](https://www.supabase.com). We currently support the following FDWs, with more are under development:
 
 - [HelloWorld](./wrappers/src/fdw/helloworld_fdw): A demo FDW to show how to develop a baisc FDW.
-- [BigQuery](./wrappers/src/fdw/bigquery_fdw): A FDW for [BigQuery](https://cloud.google.com/bigquery) which only supports async data scan at this moment. 
-- [Clickhouse](./wrappers/src/fdw/clickhouse_fdw): A FDW for [ClickHouse](https://clickhouse.com/) which supports both async data scan and modify. 
-- [Stripe](./wrappers/src/fdw/stripe_fdw): A FDW for [Stripe](https://stripe.com/) API.
-- [Airtable](./wrappers/src/fdw/airtable_fdw): A FDW for [Airtable](https://airtable.com/) API.
+- [BigQuery](./wrappers/src/fdw/bigquery_fdw): A FDW for Google [BigQuery](https://cloud.google.com/bigquery) which supports data read and modify. 
+- [Clickhouse](./wrappers/src/fdw/clickhouse_fdw): A FDW for [ClickHouse](https://clickhouse.com/) which supports data read and modify. 
+- [Stripe](./wrappers/src/fdw/stripe_fdw): A FDW for [Stripe](https://stripe.com/) API which supports data read only.
+- [Firebase](./wrappers/src/fdw/firebase_fdw): A FDW for Google [Firebase](https://firebase.google.com/) which supports data read only.
+- [Airtable](./wrappers/src/fdw/airtable_fdw): A FDW for [Airtable](https://airtable.com/) API which supports data read only.
 
 ## Features
 
@@ -20,7 +21,7 @@ Wrappers is also a collection of FDWs built by [Supabase](https://www.supabase.c
 
 ## Installation
 
-Wrappers is a pgx extension, so you can follow the [installation steps](https://github.com/tcdi/pgx#system-requirements) as mentioned by pgx.
+Wrappers is a pgx extension, so you can follow the [pgx installation steps](https://github.com/tcdi/pgx#system-requirements) to install Wrappers.
 
 ## Developing a FDW
 
@@ -47,6 +48,8 @@ pub trait ForeignDataWrapper {
 ```
 
 In a minimum FDW, which supports data scan only, `begin_scan()`, `iter_scan()` and `end_scan()` are required, all the other functions are optional.
+
+To know more about FDW development, please visit the [Wrappers documentation](https://docs.rs/supabase-wrappers/latest/supabase_wrappers/).
 
 ## Basic usage
 
@@ -113,7 +116,7 @@ wrappers=# select * from hello;
 
 ## Limitations
 
-- Windows is not supported, that limitation inherits from `pgx`.
+- Windows is not supported, that limitation inherits from [pgx](https://github.com/tcdi/pgx).
 - Currently only supports PostgreSQL v14.
 
 ## Contribution

@@ -16,7 +16,7 @@ Please visit the [full documentation on docs.rs](https://docs.rs/supabase-wrappe
 
 ## Installation
 
-Wrappers is a pgx extension, so you can follow the [installation steps](https://github.com/tcdi/pgx#system-requirements) as mentioned by pgx.
+Wrappers is a pgx extension, so you can follow the [pgx installation steps](https://github.com/tcdi/pgx#system-requirements) to install Wrappers.
 
 ## Developing a FDW
 
@@ -44,12 +44,14 @@ pub trait ForeignDataWrapper {
 
 In a minimum FDW, which supports data scan only, `begin_scan()`, `iter_scan()` and `end_scan()` are required, all the other functions are optional.
 
-Below are some FDWs developed using this framework, check them out:
+Below are some FDWs developed using this framework by [Supabase](https://supabase.com/), check them out:
 
 - [HelloWorld](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/helloworld_fdw): A demo FDW to show how to develop a baisc FDW.
-- [BigQuery](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/bigquery_fdw): A FDW for [BigQuery](https://cloud.google.com/bigquery) which only supports async data scan at this moment. 
-- [Clickhouse](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/clickhouse_fdw): A FDW for [ClickHouse](https://clickhouse.com/) which supports both async data scan and modify. 
-- [Stripe](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/stripe_fdw): A FDW for [Stripe](https://stripe.com/) API.
+- [BigQuery](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/bigquery_fdw): A FDW for Google [BigQuery](https://cloud.google.com/bigquery) which supports data read and modify. 
+- [Clickhouse](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/clickhouse_fdw): A FDW for [ClickHouse](https://clickhouse.com/) which supports data read and modify. 
+- [Stripe](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/stripe_fdw): A FDW for [Stripe](https://stripe.com/) API which supports data read only.
+- [Firebase](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/firebase_fdw): A FDW for Google [Firebase](https://firebase.google.com/) which supports data read only.
+- [Airtable](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/airtable_fdw): A FDW for [Airtable](https://airtable.com/) API which supports data read only.
 
 
 ## Basic usage
@@ -117,7 +119,7 @@ wrappers=# select * from hello;
 
 ## Limitations
 
-- Windows is not supported, that limitation inherits from `pgx`.
+- Windows is not supported, that limitation inherits from [pgx](https://github.com/tcdi/pgx).
 - Currently only supports PostgreSQL v14.
 
 ## Contribution
