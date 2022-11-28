@@ -39,10 +39,10 @@ fn to_tokens(fdw_types: &Punctuated<FdwType, Token![,]>) -> TokenStream2 {
     }
 
     quote! {
-        use pg_sys::*;
-        use pgx::*;
+        use pgx::prelude::*;
+        use pgx::log::PgSqlErrorCode;
         use std::collections::HashMap;
-        use ::supabase_wrappers::{ForeignDataWrapper, Cell, Row, Qual, Value, Sort, Limit, report_error};
+        use ::supabase_wrappers::prelude::*;
 
         use super::utils;
 
@@ -68,11 +68,11 @@ fn to_tokens(fdw_types: &Punctuated<FdwType, Token![,]>) -> TokenStream2 {
         }
 
         // create a fdw instance
-        pub(super) unsafe fn create_fdw_instance(ftable_id: Oid) -> Box<dyn ForeignDataWrapper> {
-            let ftable = GetForeignTable(ftable_id);
-            let fserver = GetForeignServer((*ftable).serverid);
+        pub(super) unsafe fn create_fdw_instance(ftable_id: pg_sys::Oid) -> Box<dyn ForeignDataWrapper> {
+            let ftable = pg_sys::GetForeignTable(ftable_id);
+            let fserver = pg_sys::GetForeignServer((*ftable).serverid);
             let fserver_opts = utils::options_to_hashmap((*fserver).options);
-            let fdw = GetForeignDataWrapper((*fserver).fdwid);
+            let fdw = pg_sys::GetForeignDataWrapper((*fserver).fdwid);
             let opts = utils::options_to_hashmap((*fdw).options);
             let wrapper = opts.get("wrapper").unwrap();
 

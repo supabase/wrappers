@@ -3,22 +3,24 @@ use quote::{quote, ToTokens, TokenStreamExt};
 
 fn to_tokens() -> TokenStream2 {
     quote! {
-        use pg_sys::*;
-        use pgx::*;
+        use pgx::prelude::*;
+        use pgx::log::PgSqlErrorCode;
+        use pgx::tupdesc::PgTupleDesc;
+        use pgx::list::PgList;
         use std::collections::HashMap;
         use std::ffi::CStr;
         use std::num::NonZeroUsize;
         use std::ptr;
 
-        use ::supabase_wrappers::{Cell, Row, report_warning, report_error};
+        use ::supabase_wrappers::prelude::*;
 
         // convert options definition to hashmap
-        pub(super) unsafe fn options_to_hashmap(options: *mut List) -> HashMap<String, String> {
+        pub(super) unsafe fn options_to_hashmap(options: *mut pg_sys::List) -> HashMap<String, String> {
             let mut ret = HashMap::new();
-            let options: PgList<DefElem> = PgList::from_pg(options);
+            let options: PgList<pg_sys::DefElem> = PgList::from_pg(options);
             for option in options.iter_ptr() {
                 let name = CStr::from_ptr((*option).defname);
-                let value = CStr::from_ptr(defGetString(option));
+                let value = CStr::from_ptr(pg_sys::defGetString(option));
                 ret.insert(
                     name.to_str().unwrap().to_owned(),
                     value.to_str().unwrap().to_owned(),
@@ -27,18 +29,18 @@ fn to_tokens() -> TokenStream2 {
             ret
         }
 
-        pub(super) unsafe fn tuple_table_slot_to_row(slot: *mut TupleTableSlot) -> Row {
+        pub(super) unsafe fn tuple_table_slot_to_row(slot: *mut pg_sys::TupleTableSlot) -> Row {
             let tup_desc = PgTupleDesc::from_pg_copy((*slot).tts_tupleDescriptor);
 
             let mut should_free = false;
-            let htup = ExecFetchSlotHeapTuple(slot, false, &mut should_free);
+            let htup = pg_sys::ExecFetchSlotHeapTuple(slot, false, &mut should_free);
             let htup = PgBox::from_pg(htup);
             let mut row = Row::new();
 
             for (att_idx, attr) in tup_desc.iter().filter(|a| !a.attisdropped).enumerate() {
-                let col = name_data_to_str(&attr.attname);
+                let col = pgx::name_data_to_str(&attr.attname);
                 let attno = NonZeroUsize::new(att_idx + 1).unwrap();
-                let cell: Option<Cell> = heap_getattr(&htup, attno, &tup_desc);
+                let cell: Option<Cell> = pgx::htup::heap_getattr(&htup, attno, &tup_desc);
                 row.push(col, cell);
             }
 
@@ -47,44 +49,44 @@ fn to_tokens() -> TokenStream2 {
 
         // extract target column name and attribute no list
         pub(super) unsafe fn extract_target_columns(
-            root: *mut PlannerInfo,
-            baserel: *mut RelOptInfo,
+            root: *mut pg_sys::PlannerInfo,
+            baserel: *mut pg_sys::RelOptInfo,
         ) -> (Vec<String>, Vec<usize>) {
             let mut col_names = Vec::new();
             let mut col_attnos = Vec::new();
-            let mut col_vars: *mut List = ptr::null_mut();
+            let mut col_vars: *mut pg_sys::List = ptr::null_mut();
 
             // gather vars from target column list
-            let tgt_list: PgList<Node> = PgList::from_pg((*(*baserel).reltarget).exprs);
+            let tgt_list: PgList<pg_sys::Node> = PgList::from_pg((*(*baserel).reltarget).exprs);
             for tgt in tgt_list.iter_ptr() {
-                let tgt_cols = pull_var_clause(
+                let tgt_cols = pg_sys::pull_var_clause(
                     tgt,
-                    (PVC_RECURSE_AGGREGATES | PVC_RECURSE_PLACEHOLDERS)
+                    (pg_sys::PVC_RECURSE_AGGREGATES | pg_sys::PVC_RECURSE_PLACEHOLDERS)
                         .try_into()
                         .unwrap(),
                 );
-                col_vars = list_union(col_vars, tgt_cols);
+                col_vars = pg_sys::list_union(col_vars, tgt_cols);
             }
 
             // gather vars from restrictions
-            let conds: PgList<RestrictInfo> = PgList::from_pg((*baserel).baserestrictinfo);
+            let conds: PgList<pg_sys::RestrictInfo> = PgList::from_pg((*baserel).baserestrictinfo);
             for cond in conds.iter_ptr() {
-                let expr = (*cond).clause as *mut Node;
-                let tgt_cols = pull_var_clause(
+                let expr = (*cond).clause as *mut pg_sys::Node;
+                let tgt_cols = pg_sys::pull_var_clause(
                     expr,
-                    (PVC_RECURSE_AGGREGATES | PVC_RECURSE_PLACEHOLDERS)
+                    (pg_sys::PVC_RECURSE_AGGREGATES | pg_sys::PVC_RECURSE_PLACEHOLDERS)
                         .try_into()
                         .unwrap(),
                 );
-                col_vars = list_union(col_vars, tgt_cols);
+                col_vars = pg_sys::list_union(col_vars, tgt_cols);
             }
 
             // get column names from var list
-            let col_vars: PgList<Var> = PgList::from_pg(col_vars);
+            let col_vars: PgList<pg_sys::Var> = PgList::from_pg(col_vars);
             for var in col_vars.iter_ptr() {
-                let rte = planner_rt_fetch((*var).varno, root);
+                let rte = pg_sys::planner_rt_fetch((*var).varno, root);
                 let attno = (*var).varattno;
-                let attname = get_attname((*rte).relid, attno, true);
+                let attname = pg_sys::get_attname((*rte).relid, attno, true);
                 if !attname.is_null() {
                     col_names.push(CStr::from_ptr(attname).to_str().unwrap().to_owned());
                     col_attnos.push(attno as usize);

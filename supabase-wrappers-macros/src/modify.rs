@@ -3,14 +3,20 @@ use quote::{quote, ToTokens, TokenStreamExt};
 
 fn to_tokens() -> TokenStream2 {
     quote! {
-        use pg_sys::*;
-        use pgx::*;
+        use pgx::{
+            prelude::*,
+            memcxt::{PgMemoryContexts, void_mut_ptr},
+            tupdesc::PgTupleDesc,
+            rel::PgRelation,
+            log::PgSqlErrorCode,
+            FromDatum, debug2
+        };
         use std::collections::HashMap;
         use std::ffi::CString;
         use std::os::raw::c_int;
         use std::ptr;
 
-        use ::supabase_wrappers::{Cell, Row, ForeignDataWrapper, report_error, require_option};
+        use ::supabase_wrappers::prelude::*;
 
         use super::polyfill;
         use super::utils;
@@ -22,8 +28,8 @@ fn to_tokens() -> TokenStream2 {
             instance: Option<Box<dyn ForeignDataWrapper>>,
 
             // row id attribute number and type id
-            rowid_attno: AttrNumber,
-            rowid_typid: Oid,
+            rowid_attno: pg_sys::AttrNumber,
+            rowid_typid: pg_sys::Oid,
 
             // foreign table options
             opts: HashMap<String, String>,
@@ -33,7 +39,7 @@ fn to_tokens() -> TokenStream2 {
         }
 
         impl FdwModifyState {
-            unsafe fn new(foreigntableid: Oid) -> Self {
+            unsafe fn new(foreigntableid: pg_sys::Oid) -> Self {
                 FdwModifyState {
                     instance: Some(instance::create_fdw_instance(foreigntableid)),
                     rowid_attno: 0,
@@ -83,15 +89,15 @@ fn to_tokens() -> TokenStream2 {
 
         #[no_mangle]
         pub(super) extern "C" fn add_foreign_update_targets(
-            root: *mut PlannerInfo,
-            rtindex: Index,
-            _target_rte: *mut RangeTblEntry,
-            target_relation: Relation,
+            root: *mut pg_sys::PlannerInfo,
+            rtindex: pg_sys::Index,
+            _target_rte: *mut pg_sys::RangeTblEntry,
+            target_relation: pg_sys::Relation,
         ) {
             debug2!("---> add_foreign_update_targets");
             unsafe {
                 // get rowid column name from table options
-                let ftable = GetForeignTable((*target_relation).rd_id);
+                let ftable = pg_sys::GetForeignTable((*target_relation).rd_id);
                 let opts = utils::options_to_hashmap((*ftable).options);
                 let rowid_name = if let Some(name) = require_option("rowid_column", &opts) {
                     name.clone()
@@ -102,9 +108,9 @@ fn to_tokens() -> TokenStream2 {
                 // find rowid attribute
                 let tup_desc = PgTupleDesc::from_pg_copy((*target_relation).rd_att);
                 for attr in tup_desc.iter().filter(|a| !a.attisdropped) {
-                    if name_data_to_str(&attr.attname) == rowid_name {
+                    if pgx::name_data_to_str(&attr.attname) == rowid_name {
                         // make a Var representing the desired value
-                        let var = makeVar(
+                        let var = pg_sys::makeVar(
                             rtindex,
                             attr.attnum,
                             attr.atttypid,
@@ -114,7 +120,7 @@ fn to_tokens() -> TokenStream2 {
                         );
 
                         // register it as a row-identity column needed by this target rel
-                        add_row_identity_var(root, var, rtindex, &attr.attname.data as _);
+                        pg_sys::add_row_identity_var(root, var, rtindex, &attr.attname.data as _);
                         return;
                     }
                 }
@@ -128,11 +134,11 @@ fn to_tokens() -> TokenStream2 {
 
         #[no_mangle]
         pub(super) extern "C" fn plan_foreign_modify(
-            _root: *mut PlannerInfo,
-            plan: *mut ModifyTable,
-            _result_relation: Index,
+            _root: *mut pg_sys::PlannerInfo,
+            plan: *mut pg_sys::ModifyTable,
+            _result_relation: pg_sys::Index,
             _subplan_index: c_int,
-        ) -> *mut List {
+        ) -> *mut pg_sys::List {
             debug2!("---> plan_foreign_modify");
             unsafe {
                 if !(*plan).returningLists.is_null() {
@@ -147,15 +153,15 @@ fn to_tokens() -> TokenStream2 {
 
         #[no_mangle]
         pub(super) extern "C" fn begin_foreign_modify(
-            mtstate: *mut ModifyTableState,
-            rinfo: *mut ResultRelInfo,
-            _fdw_private: *mut List,
+            mtstate: *mut pg_sys::ModifyTableState,
+            rinfo: *mut pg_sys::ResultRelInfo,
+            _fdw_private: *mut pg_sys::List,
             _subplan_index: c_int,
             eflags: c_int,
         ) {
             debug2!("---> begin_foreign_modify");
 
-            if eflags & EXEC_FLAG_EXPLAIN_ONLY as c_int > 0 {
+            if eflags & pg_sys::EXEC_FLAG_EXPLAIN_ONLY as c_int > 0 {
                 return;
             }
 
@@ -163,7 +169,7 @@ fn to_tokens() -> TokenStream2 {
                 let rel = PgRelation::from_pg((*rinfo).ri_RelationDesc);
 
                 // get rowid column name from table options
-                let ftable = GetForeignTable(rel.oid());
+                let ftable = pg_sys::GetForeignTable(rel.oid());
                 let opts = utils::options_to_hashmap((*ftable).options);
                 let rowid_name = opts.get("rowid_column");
                 if rowid_name.is_none() {
@@ -179,13 +185,13 @@ fn to_tokens() -> TokenStream2 {
                 let rowid_attno = {
                     let subplan = (*polyfill::outer_plan_state(&mut (*mtstate).ps)).plan;
                     let rowid_name_c = CString::new(rowid_name.as_str()).unwrap();
-                    ExecFindJunkAttributeInTlist((*subplan).targetlist, rowid_name_c.as_ptr())
+                    pg_sys::ExecFindJunkAttributeInTlist((*subplan).targetlist, rowid_name_c.as_ptr())
                 };
 
                 // search for rowid attribute in tuple descrition
                 let tup_desc = PgTupleDesc::from_relation(&rel);
                 for attr in tup_desc.iter().filter(|a| !a.attisdropped) {
-                    let attname = name_data_to_str(&attr.attname);
+                    let attname = pgx::name_data_to_str(&attr.attname);
                     if attname == rowid_name {
                         // create modify state
                         let mut state = FdwModifyState::new(rel.oid());
@@ -210,11 +216,11 @@ fn to_tokens() -> TokenStream2 {
 
         #[no_mangle]
         pub(super) extern "C" fn exec_foreign_insert(
-            _estate: *mut EState,
-            rinfo: *mut ResultRelInfo,
-            slot: *mut TupleTableSlot,
-            _plan_slot: *mut TupleTableSlot,
-        ) -> *mut TupleTableSlot {
+            _estate: *mut pg_sys::EState,
+            rinfo: *mut pg_sys::ResultRelInfo,
+            slot: *mut pg_sys::TupleTableSlot,
+            _plan_slot: *mut pg_sys::TupleTableSlot,
+        ) -> *mut pg_sys::TupleTableSlot {
             debug2!("---> exec_foreign_insert");
             unsafe {
                 let mut state =
@@ -232,7 +238,7 @@ fn to_tokens() -> TokenStream2 {
             slot
         }
 
-        unsafe fn get_rowid_cell(state: &FdwModifyState, plan_slot: *mut TupleTableSlot) -> Option<Cell> {
+        unsafe fn get_rowid_cell(state: &FdwModifyState, plan_slot: *mut pg_sys::TupleTableSlot) -> Option<Cell> {
             let mut is_null: bool = true;
             let datum = polyfill::slot_getattr(plan_slot, state.rowid_attno.into(), &mut is_null);
             Cell::from_polymorphic_datum(datum, is_null, state.rowid_typid)
@@ -240,11 +246,11 @@ fn to_tokens() -> TokenStream2 {
 
         #[no_mangle]
         pub(super) extern "C" fn exec_foreign_delete(
-            _estate: *mut EState,
-            rinfo: *mut ResultRelInfo,
-            slot: *mut TupleTableSlot,
-            plan_slot: *mut TupleTableSlot,
-        ) -> *mut TupleTableSlot {
+            _estate: *mut pg_sys::EState,
+            rinfo: *mut pg_sys::ResultRelInfo,
+            slot: *mut pg_sys::TupleTableSlot,
+            plan_slot: *mut pg_sys::TupleTableSlot,
+        ) -> *mut pg_sys::TupleTableSlot {
             debug2!("---> exec_foreign_delete");
             unsafe {
                 let mut state =
@@ -266,11 +272,11 @@ fn to_tokens() -> TokenStream2 {
 
         #[no_mangle]
         pub(super) extern "C" fn exec_foreign_update(
-            _estate: *mut EState,
-            rinfo: *mut ResultRelInfo,
-            slot: *mut TupleTableSlot,
-            plan_slot: *mut TupleTableSlot,
-        ) -> *mut TupleTableSlot {
+            _estate: *mut pg_sys::EState,
+            rinfo: *mut pg_sys::ResultRelInfo,
+            slot: *mut pg_sys::TupleTableSlot,
+            plan_slot: *mut pg_sys::TupleTableSlot,
+        ) -> *mut pg_sys::TupleTableSlot {
             debug2!("---> exec_foreign_update");
             unsafe {
                 let mut state =
@@ -292,7 +298,10 @@ fn to_tokens() -> TokenStream2 {
         }
 
         #[no_mangle]
-        pub(super) extern "C" fn end_foreign_modify(_estate: *mut EState, rinfo: *mut ResultRelInfo) {
+        pub(super) extern "C" fn end_foreign_modify(
+            _estate: *mut pg_sys::EState,
+            rinfo: *mut pg_sys::ResultRelInfo
+        ) {
             debug2!("---> end_foreign_modify");
             unsafe {
                 let fdw_state = (*rinfo).ri_FdwState as *mut FdwModifyState;

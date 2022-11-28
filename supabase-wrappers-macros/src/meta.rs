@@ -28,7 +28,7 @@ fn to_tokens(fdw_types: &Punctuated<FdwType, Token![,]>) -> TokenStream2 {
     }
 
     quote! {
-        use pgx::*;
+        use pgx::prelude::*;
         use pgx::iter::*;
 
         #[pg_extern]

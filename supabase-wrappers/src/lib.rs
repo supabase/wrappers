@@ -215,10 +215,14 @@
 //! - [Clickhouse](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/clickhouse_fdw): A FDW for [ClickHouse](https://clickhouse.com/) which supports both async data scan and modify.
 //! - [Stripe](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/stripe_fdw): A FDW for [Stripe](https://stripe.com/) API.
 
-mod interface;
-mod utils;
+pub mod interface;
+pub mod utils;
 
-pub use interface::*;
-pub use supabase_wrappers_macros::*;
-pub use tokio::runtime::Runtime;
-pub use utils::*;
+pub use ::supabase_wrappers_macros::*;
+
+pub mod prelude {
+    pub use crate::interface::*;
+    pub use crate::utils::*;
+    pub use ::supabase_wrappers_macros::*;
+    pub use ::tokio::runtime::Runtime;
+}

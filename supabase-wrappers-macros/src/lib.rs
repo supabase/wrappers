@@ -57,10 +57,9 @@ impl ToTokens for WrappersMagic {
             pgx::pg_module_magic!();
 
             mod _supabase_wrappers {
-                use pgx::*;
-                use pg_sys::*;
+                use pgx::prelude::*;
                 use std::collections::HashMap;
-                use ::supabase_wrappers::{Cell, ForeignDataWrapper, Row, Qual, Sort, Limit, report_error};
+                use ::supabase_wrappers::prelude::*;
 
                 mod polyfill {
                     #polyfill
@@ -87,8 +86,8 @@ impl ToTokens for WrappersMagic {
                 }
 
                 #[pg_extern]
-                fn wrappers_handler() -> PgBox<FdwRoutine> {
-                    let mut fdw_routine = PgBox::<FdwRoutine>::alloc_node(NodeTag_T_FdwRoutine);
+                fn wrappers_handler() -> PgBox<pg_sys::FdwRoutine> {
+                    let mut fdw_routine = PgBox::<pg_sys::FdwRoutine>::alloc_node(pg_sys::NodeTag_T_FdwRoutine);
 
                     // plan phase
                     fdw_routine.GetForeignRelSize = Some(scan::get_foreign_rel_size);

@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use supabase_wrappers::{wrappers_meta, Cell, ForeignDataWrapper, Limit, Qual, Row, Sort};
+use supabase_wrappers::prelude::*;
 
 // A simple demo FDW
 #[wrappers_meta(

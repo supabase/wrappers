@@ -11,14 +11,22 @@ fn to_tokens() -> TokenStream2 {
     let limit = Limit {};
 
     quote! {
-        use pg_sys::*;
-        use pgx::*;
+        use pgx::{
+            prelude::*,
+            list::PgList,
+            log::PgSqlErrorCode,
+            memcxt::PgMemoryContexts,
+            nodes::is_a,
+            tupdesc::PgTupleDesc,
+            rel::PgRelation,
+            Datum, FromDatum, IntoDatum, PgOid, debug2
+        };
         use std::collections::HashMap;
         use std::os::raw::{c_int, c_char};
         use std::ffi::{CString, CStr};
         use std::ptr;
 
-        use ::supabase_wrappers::{ForeignDataWrapper, Cell, Row, Qual, Value, Sort, Limit, report_error};
+        use ::supabase_wrappers::utils::report_warning;
 
         use super::polyfill;
         use super::utils;
@@ -54,7 +62,7 @@ fn to_tokens() -> TokenStream2 {
         }
 
         impl FdwState {
-            unsafe fn new(foreigntableid: Oid) -> Self {
+            unsafe fn new(foreigntableid: pg_sys::Oid) -> Self {
                 FdwState {
                     instance: Some(instance::create_fdw_instance(foreigntableid)),
                     quals: Vec::new(),
@@ -69,16 +77,24 @@ fn to_tokens() -> TokenStream2 {
                 }
             }
 
-            unsafe fn serialize_to_list(state: PgBox<Self>) -> *mut List {
+            unsafe fn serialize_to_list(state: PgBox<Self>) -> *mut pg_sys::List {
                 let mut ret = PgList::new();
                 let val = state.into_pg() as i64;
-                let cst = makeConst(INT8OID, -1, InvalidOid, 8, val.into_datum().unwrap(), false, true);
+                let cst = pg_sys::makeConst(
+                    pg_sys::INT8OID,
+                    -1,
+                    pg_sys::InvalidOid,
+                    8,
+                    val.into_datum().unwrap(),
+                    false,
+                    true
+                );
                 ret.push(cst);
                 ret.into_pg()
             }
 
-            unsafe fn deserialize_from_list(list: *mut List) -> PgBox<Self> {
-                let list = PgList::<Const>::from_pg(list);
+            unsafe fn deserialize_from_list(list: *mut pg_sys::List) -> PgBox<Self> {
+                let list = PgList::<pg_sys::Const>::from_pg(list);
                 let cst = list.head().unwrap();
                 let ptr = i64::from_datum((*cst).constvalue, (*cst).constisnull).unwrap();
                 PgBox::<FdwState>::from_pg(ptr as _)
@@ -145,9 +161,9 @@ fn to_tokens() -> TokenStream2 {
 
         #[no_mangle]
         pub(super) extern "C" fn get_foreign_rel_size(
-            root: *mut PlannerInfo,
-            baserel: *mut RelOptInfo,
-            foreigntableid: Oid,
+            root: *mut pg_sys::PlannerInfo,
+            baserel: *mut pg_sys::RelOptInfo,
+            foreigntableid: pg_sys::Oid,
         ) {
             debug2!("---> get_foreign_rel_size");
             unsafe {
@@ -169,7 +185,7 @@ fn to_tokens() -> TokenStream2 {
                 state.limit = extract_limit(root, baserel, foreigntableid);
 
                 // get foreign table options
-                let ftable = GetForeignTable(foreigntableid);
+                let ftable = pg_sys::GetForeignTable(foreigntableid);
                 state.opts = utils::options_to_hashmap((*ftable).options);
 
                 // get estimate row count and mean row width
@@ -185,9 +201,9 @@ fn to_tokens() -> TokenStream2 {
 
         #[no_mangle]
         pub(super) extern "C" fn get_foreign_paths(
-            root: *mut PlannerInfo,
-            baserel: *mut RelOptInfo,
-            _foreigntableid: Oid,
+            root: *mut pg_sys::PlannerInfo,
+            baserel: *mut pg_sys::RelOptInfo,
+            _foreigntableid: pg_sys::Oid,
         ) {
             debug2!("---> get_foreign_paths");
             unsafe {
@@ -211,7 +227,7 @@ fn to_tokens() -> TokenStream2 {
                 let total_cost = startup_cost + (*baserel).rows;
 
                 // create a ForeignPath node and add it as the only possible path
-                let path = create_foreignscan_path(
+                let path = pg_sys::create_foreignscan_path(
                     root,
                     baserel,
                     ptr::null_mut(), // default pathtarget
@@ -223,20 +239,20 @@ fn to_tokens() -> TokenStream2 {
                     ptr::null_mut(), // no extra plan
                     ptr::null_mut(), // no fdw_private data
                 );
-                add_path(baserel, &mut ((*path).path));
+                pg_sys::add_path(baserel, &mut ((*path).path));
             }
         }
 
         #[no_mangle]
         pub(super) extern "C" fn get_foreign_plan(
-            _root: *mut PlannerInfo,
-            baserel: *mut RelOptInfo,
-            _foreigntableid: Oid,
-            _best_path: *mut ForeignPath,
-            tlist: *mut List,
-            scan_clauses: *mut List,
-            outer_plan: *mut Plan,
-        ) -> *mut ForeignScan {
+            _root: *mut pg_sys::PlannerInfo,
+            baserel: *mut pg_sys::RelOptInfo,
+            _foreigntableid: pg_sys::Oid,
+            _best_path: *mut pg_sys::ForeignPath,
+            tlist: *mut pg_sys::List,
+            scan_clauses: *mut pg_sys::List,
+            outer_plan: *mut pg_sys::Plan,
+        ) -> *mut pg_sys::ForeignScan {
             debug2!("---> get_foreign_plan");
             unsafe {
                 let mut state = PgBox::<FdwState>::from_pg((*baserel).fdw_private as _);
@@ -245,7 +261,7 @@ fn to_tokens() -> TokenStream2 {
                 let old_ctx = state.tmp_ctx.set_as_current();
 
                 // make foreign scan plan
-                let scan_clauses = extract_actual_clauses(scan_clauses, false);
+                let scan_clauses = pg_sys::extract_actual_clauses(scan_clauses, false);
 
                 old_ctx.set_as_current();
 
@@ -253,7 +269,7 @@ fn to_tokens() -> TokenStream2 {
                 // between the plan and the execution
                 let fdw_private = FdwState::serialize_to_list(state);
 
-                make_foreignscan(
+                pg_sys::make_foreignscan(
                     tlist,
                     scan_clauses,
                     (*baserel).relid,
@@ -267,7 +283,10 @@ fn to_tokens() -> TokenStream2 {
         }
 
         #[no_mangle]
-        pub(super) extern "C" fn explain_foreign_scan(node: *mut ForeignScanState, es: *mut ExplainState) {
+        pub(super) extern "C" fn explain_foreign_scan(
+            node: *mut pg_sys::ForeignScanState,
+            es: *mut pg_sys::ExplainState
+        ) {
             debug2!("---> explain_foreign_scan");
             unsafe {
                 let fdw_state = (*node).fdw_state as *mut FdwState;
@@ -283,16 +302,16 @@ fn to_tokens() -> TokenStream2 {
                 let label = CString::new("Wrappers").unwrap().as_ptr() as *const c_char;
 
                 let value = CString::new(format!("quals = {:?}", state.quals)).unwrap();
-                ExplainPropertyText(label, value.as_ptr() as *const c_char, es);
+                pg_sys::ExplainPropertyText(label, value.as_ptr() as *const c_char, es);
 
                 let value = CString::new(format!("tgts = {:?}", state.tgts)).unwrap();
-                ExplainPropertyText(label, value.as_ptr() as *const c_char, es);
+                pg_sys::ExplainPropertyText(label, value.as_ptr() as *const c_char, es);
 
                 let value = CString::new(format!("sorts = {:?}", state.sorts)).unwrap();
-                ExplainPropertyText(label, value.as_ptr() as *const c_char, es);
+                pg_sys::ExplainPropertyText(label, value.as_ptr() as *const c_char, es);
 
                 let value = CString::new(format!("limit = {:?}", state.limit)).unwrap();
-                ExplainPropertyText(label, value.as_ptr() as *const c_char, es);
+                pg_sys::ExplainPropertyText(label, value.as_ptr() as *const c_char, es);
 
                 old_ctx.set_as_current();
 
@@ -301,15 +320,15 @@ fn to_tokens() -> TokenStream2 {
         }
 
         #[no_mangle]
-        pub(super) extern "C" fn begin_foreign_scan(node: *mut ForeignScanState, eflags: c_int) {
+        pub(super) extern "C" fn begin_foreign_scan(node: *mut pg_sys::ForeignScanState, eflags: c_int) {
             debug2!("---> begin_foreign_scan");
             unsafe {
                 let scan_state = (*node).ss;
-                let plan = scan_state.ps.plan as *mut ForeignScan;
+                let plan = scan_state.ps.plan as *mut pg_sys::ForeignScan;
                 let mut state = FdwState::deserialize_from_list((*plan).fdw_private as _);
 
                 // begin scan if it is not EXPLAIN statement
-                if eflags & EXEC_FLAG_EXPLAIN_ONLY as c_int <= 0 {
+                if eflags & pg_sys::EXEC_FLAG_EXPLAIN_ONLY as c_int <= 0 {
                     state.begin_scan();
 
                     let rel = scan_state.ss_currentRelation;
@@ -328,7 +347,9 @@ fn to_tokens() -> TokenStream2 {
         }
 
         #[no_mangle]
-        pub(super) extern "C" fn iterate_foreign_scan(node: *mut ForeignScanState) -> *mut TupleTableSlot {
+        pub(super) extern "C" fn iterate_foreign_scan(
+            node: *mut pg_sys::ForeignScanState
+        ) -> *mut pg_sys::TupleTableSlot {
             debug2!("---> iterate_foreign_scan");
             unsafe {
                 let mut state = PgBox::<FdwState>::from_pg((*node).fdw_state as _);
@@ -363,7 +384,7 @@ fn to_tokens() -> TokenStream2 {
 
                     (*slot).tts_values = state.values.as_mut_ptr();
                     (*slot).tts_isnull = state.nulls.as_mut_ptr();
-                    ExecStoreVirtualTuple(slot);
+                    pg_sys::ExecStoreVirtualTuple(slot);
                 }
 
                 old_ctx.set_as_current();
@@ -373,7 +394,7 @@ fn to_tokens() -> TokenStream2 {
         }
 
         #[no_mangle]
-        pub(super) extern "C" fn re_scan_foreign_scan(node: *mut ForeignScanState) {
+        pub(super) extern "C" fn re_scan_foreign_scan(node: *mut pg_sys::ForeignScanState) {
             debug2!("---> re_scan_foreign_scan");
             unsafe {
                 let fdw_state = (*node).fdw_state as *mut FdwState;
@@ -385,7 +406,7 @@ fn to_tokens() -> TokenStream2 {
         }
 
         #[no_mangle]
-        pub(super) extern "C" fn end_foreign_scan(node: *mut ForeignScanState) {
+        pub(super) extern "C" fn end_foreign_scan(node: *mut pg_sys::ForeignScanState) {
             debug2!("---> end_foreign_scan");
             unsafe {
                 let fdw_state = (*node).fdw_state as *mut FdwState;

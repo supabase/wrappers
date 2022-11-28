@@ -4,7 +4,7 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::fmt;
 use std::marker::PhantomData;
-use supabase_wrappers::{Cell, Row};
+use supabase_wrappers::interface::{Cell, Row};
 
 #[derive(Deserialize, Debug)]
 pub struct AirtableResponse {
