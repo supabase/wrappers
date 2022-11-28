@@ -49,11 +49,28 @@ insert into vault.secrets (secret, key_id) values ('
 ) returning key_id;
 
 -- create server and specify custom options
+-- Here we're using the service account key stored in Vault, if you don't want
+-- to use Vault, you can directly specify the service account key using `sa_key`
+-- option. For example,
+--
+-- create server my_firebase_server
+--   foreign data wrapper firebase_wrapper
+--   options (
+--     sa_key '
+--     {
+--        "type": "service_account",
+--        "project_id": "your_gcp_project_id",
+--        ...
+--     }
+--    ',
+--     project_id 'firebase_project_id',
+--   );
+--
 do $$
 declare
-  csid text;
+  key_id text;
 begin
-  select id into csid from pgsodium.valid_key where name = 'firebase' limit 1;
+  select id into key_id from pgsodium.valid_key where name = 'firebase' limit 1;
 
   drop server if exists my_firebase_server cascade;
 
@@ -64,7 +81,7 @@ begin
     '     sa_key_id ''%s'', \n'
     '     project_id ''firebase_project_id'' \n'
     ' );',
-    csid
+    key_id
   );
 end $$;
 

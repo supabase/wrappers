@@ -129,7 +129,7 @@ pub fn require_option(opt_name: &str, options: &HashMap<String, String>) -> Opti
 ///
 /// Get decrypted secret as string from Vault. Vault is an extension for storing
 /// encrypted secrets, [see more details](https://github.com/supabase/vault).
-pub fn get_secret(secret_id: &str) -> Option<String> {
+pub fn get_vault_secret(secret_id: &str) -> Option<String> {
     match Uuid::try_parse(&secret_id) {
         Ok(sid) => {
             let sid = sid.into_bytes();

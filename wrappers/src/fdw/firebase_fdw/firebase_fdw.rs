@@ -104,14 +104,19 @@ impl FirebaseFdw {
         let token = if let Some(access_token) = options.get("access_token") {
             access_token.to_owned()
         } else {
-            // otherwise, get it from the Vault
-            let sa_key_id = match require_option("sa_key_id", options) {
-                Some(sa_key_id) => sa_key_id,
-                None => return ret,
-            };
-            let sa_key = match get_secret(&sa_key_id) {
-                Some(sa_key) => sa_key,
-                None => return ret,
+            // otherwise, get it from the options or Vault
+            let sa_key = match options.get("sa_key") {
+                Some(sa_key) => sa_key.to_owned(),
+                None => {
+                    let sa_key_id = match require_option("sa_key_id", options) {
+                        Some(sa_key_id) => sa_key_id,
+                        None => return ret,
+                    };
+                    match get_vault_secret(&sa_key_id) {
+                        Some(sa_key) => sa_key,
+                        None => return ret,
+                    }
+                }
             };
             if let Some(access_token) = get_oauth2_token(&sa_key, &ret.rt) {
                 access_token.token().map(|t| t.to_owned()).unwrap()

@@ -48,11 +48,29 @@ insert into vault.secrets (secret, key_id) values ('
 ) returning key_id;
 
 -- create a wrappers BigQuery server and specify connection info
+-- Here we're using the service account key stored in Vault, if you don't want
+-- to use Vault, you can directly specify the service account key using `sa_key`
+-- option. For example,
+--
+-- create server my_bigquery_server
+--   foreign data wrapper bigquery_wrapper
+--   options (
+--     sa_key '
+--     {
+--        "type": "service_account",
+--        "project_id": "your_gcp_project_id",
+--        ...
+--     }
+--    ',
+--     project_id 'your_gcp_project_id',
+--     dataset_id 'your_gcp_dataset_id'
+--   );
+--
 do $$
 declare
-  csid text;
+  key_id text;
 begin
-  select id into csid from pgsodium.valid_key where name = 'bigquery' limit 1;
+  select id into key_id from pgsodium.valid_key where name = 'bigquery' limit 1;
 
   drop server if exists my_bigquery_server cascade;
 
@@ -64,7 +82,7 @@ begin
     '     project_id ''your_gcp_project_id'', \n'
     '     dataset_id ''your_gcp_dataset_id'' \n'
     ' );',
-    csid
+    key_id
   );
 end $$;
 

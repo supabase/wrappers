@@ -1,6 +1,6 @@
 # Stripe Foreign Data Wrapper
 
-This is a foreign data wrapper for [Stripe](https://stripe.com/). It is developed using [Wrappers](https://github.com/supabase/wrappers) and only supports `balance` and `customers` at this moment.
+This is a foreign data wrapper for [Stripe](https://stripe.com/). It is developed using [Wrappers](https://github.com/supabase/wrappers) and only supports `balance`, `customers` and `subscription` at this moment.
 
 ## Basic usage
 
@@ -42,12 +42,21 @@ insert into vault.secrets (secret, key_id) values (
   (select id from pgsodium.valid_key where name = 'stripe')
 ) returning key_id;
 
--- create a wrappers Stripe server and specify connection info
+-- Create a wrappers Stripe server and specify connection info.
+-- Here we're using the API key stored in Vault, if you don't want to use Vault,
+-- you can directly specify API key using `api_key` option. For example,
+--
+-- create server my_stripe_server
+--   foreign data wrapper stripe_wrapper
+--   options (
+--     api_key 'sk_test_xxx'
+--   );
+--
 do $$
 declare
-  csid text;
+  key_id text;
 begin
-  select id into csid from pgsodium.valid_key where name = 'stripe' limit 1;
+  select id into key_id from pgsodium.valid_key where name = 'stripe' limit 1;
 
   drop server if exists my_stripe_server cascade;
 
@@ -58,7 +67,7 @@ begin
     '     api_url ''https://api.stripe.com/v1'', \n'  -- Stripe API base URL, optional
     '     api_key_id ''%s'' \n'  -- the API Key ID saved in Vault, required
     ' );',
-    csid
+    key_id
   );
 end $$;
 

@@ -141,19 +141,21 @@ impl BigQueryFdw {
                 (auth_mock_uri.to_string(), sa_key_json)
             }
             false => {
-                // key id is required if we're not mocking auth
-                let sa_key_id = match require_option("sa_key_id", options) {
-                    Some(sa_key_id) => sa_key_id,
-                    None => return ret,
-                };
-                let sa_key_json = match get_secret(&sa_key_id) {
-                    Some(sa_key) => sa_key,
-                    None => return ret,
-                };
-                (
-                    "https://www.googleapis.com/auth/bigquery".to_string(),
-                    sa_key_json,
-                )
+                let uri = "https://www.googleapis.com/auth/bigquery".to_string();
+                match options.get("sa_key") {
+                    Some(sa_key) => (uri, sa_key.to_owned()),
+                    None => {
+                        let sa_key_id = match require_option("sa_key_id", options) {
+                            Some(sa_key_id) => sa_key_id,
+                            None => return ret,
+                        };
+                        let sa_key_json = match get_vault_secret(&sa_key_id) {
+                            Some(sa_key) => sa_key,
+                            None => return ret,
+                        };
+                        (uri, sa_key_json)
+                    }
+                }
             }
         };
 

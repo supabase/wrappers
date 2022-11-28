@@ -7,6 +7,22 @@ use std::collections::HashMap;
 
 use supabase_wrappers::prelude::*;
 
+fn create_client(api_key: &str) -> ClientWithMiddleware {
+    let mut headers = header::HeaderMap::new();
+    let value = format!("Bearer {}", api_key);
+    let mut auth_value = header::HeaderValue::from_str(&value).unwrap();
+    auth_value.set_sensitive(true);
+    headers.insert(header::AUTHORIZATION, auth_value);
+    let client = reqwest::Client::builder()
+        .default_headers(headers)
+        .build()
+        .unwrap();
+    let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
+    ClientBuilder::new(client)
+        .with(RetryTransientMiddleware::new_with_policy(retry_policy))
+        .build()
+}
+
 #[wrappers_meta(
     version = "0.1.0",
     author = "Supabase",
@@ -25,24 +41,12 @@ impl StripeFdw {
             .get("api_url")
             .map(|t| t.to_owned())
             .unwrap_or("https://api.stripe.com/v1".to_string());
-        let client = require_option("api_key_id", options)
-            .and_then(|key_id| get_secret(&key_id))
-            .and_then(|api_key| {
-                let mut headers = header::HeaderMap::new();
-                let value = format!("Bearer {}", api_key);
-                let mut auth_value = header::HeaderValue::from_str(&value).unwrap();
-                auth_value.set_sensitive(true);
-                headers.insert(header::AUTHORIZATION, auth_value);
-                let client = reqwest::Client::builder()
-                    .default_headers(headers)
-                    .build()
-                    .unwrap();
-                let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
-                let client = ClientBuilder::new(client)
-                    .with(RetryTransientMiddleware::new_with_policy(retry_policy))
-                    .build();
-                Some(client)
-            });
+        let client = match options.get("api_key") {
+            Some(api_key) => Some(create_client(&api_key)),
+            None => require_option("api_key_id", options)
+                .and_then(|key_id| get_vault_secret(&key_id))
+                .and_then(|api_key| Some(create_client(&api_key))),
+        };
 
         StripeFdw {
             rt: create_async_runtime(),

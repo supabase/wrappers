@@ -43,11 +43,21 @@ insert into vault.secrets (secret, key_id) values (
 ) returning key_id;
 
 -- create a wrappers ClickHouse server with connection string id option
+-- Here we're using the connection string stored in Vault, if you don't want
+-- to use Vault, you can directly specify the connection string using `conn_string`
+-- option. For example,
+--
+-- create server my_clickhouse_server
+--   foreign data wrapper clickhouse_wrapper
+--   options (
+--     conn_string 'tcp://default:@localhost:9000/default'
+--   );
+--
 do $$
 declare
-  csid text;
+  key_id text;
 begin
-  select id into csid from pgsodium.valid_key where name = 'clickhouse' limit 1;
+  select id into key_id from pgsodium.valid_key where name = 'clickhouse' limit 1;
 
   drop server if exists my_clickhouse_server cascade;
 
@@ -55,7 +65,7 @@ begin
     E'create server my_clickhouse_server \n'
     '   foreign data wrapper clickhouse_wrapper \n'
     '   options (conn_string_id ''%s'');',
-    csid
+    key_id
   );
 end $$;
 
