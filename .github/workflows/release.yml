@@ -83,6 +83,14 @@ jobs:
           # https://github.com/tcdi/pgx/issues/288
           cargo pgx package --no-default-features --features pg${{ matrix.postgres }},${{ matrix.features }}
 
+          # Create installable package
+          mkdir archive
+          cp `find target/release -type f -name "${{ matrix.extension_name }}*"` archive
+
+          # Create directory structure
+          mkdir -p ${{ matrix.extension_name }}-${{ github.ref_name }}-pg${{ matrix.postgres }}-${{ matrix.box.arch }}-linux-gnu/usr/lib/postgresql/lib
+          mkdir -p ${{ matrix.extension_name }}-${{ github.ref_name }}-pg${{ matrix.postgres }}-${{ matrix.box.arch }}-linux-gnu/var/lib/postgresql/extension
+
           # Copy files into directory structure
           cp archive/*.so ${{ matrix.extension_name }}-${{ github.ref_name }}-pg${{ matrix.postgres }}-${{ matrix.box.arch }}-linux-gnu/usr/lib/postgresql/lib
           cp archive/*.control ${{ matrix.extension_name }}-${{ github.ref_name }}-pg${{ matrix.postgres }}-${{ matrix.box.arch }}-linux-gnu/var/lib/postgresql/extension
