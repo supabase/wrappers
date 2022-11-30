@@ -213,14 +213,14 @@ impl FirebaseFdw {
 
                 for user in users {
                     let mut row = Row::new();
-                    if tgt_cols.iter().any(|c| c == "local_id") {
-                        let local_id = user
+                    if tgt_cols.iter().any(|c| c == "uid") {
+                        let uid = user
                             .as_object()
                             .and_then(|v| v.get("localId"))
                             .and_then(|v| v.as_str())
                             .map(|v| v.to_owned())
                             .unwrap_or_default();
-                        row.push("local_id", Some(Cell::String(local_id)));
+                        row.push("uid", Some(Cell::String(uid)));
                     }
                     if tgt_cols.iter().any(|c| c == "email") {
                         let email = user
