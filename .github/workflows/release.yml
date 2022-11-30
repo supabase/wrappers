@@ -43,6 +43,7 @@ jobs:
         features:
           - "bigquery_fdw,clickhouse_fdw,stripe_fdw,firebase_fdw"
         box:
+          - { runner: ubuntu-20.04, arch: amd64 }
           - { runner: arm-runner, arch: arm64 }
     runs-on: ${{ matrix.box.runner }}
     timeout-minutes: 45
