@@ -17,8 +17,6 @@ services:
         condition: service_healthy
       firebase:
         condition: service_healthy
-      bigquery:
-        condition: service_healthy
 
   clickhouse:
     image: clickhouse/clickhouse-server
@@ -64,20 +62,3 @@ services:
       interval: 10s
       timeout: 5s
       retries: 30
-
-  bigquery:
-    container_name: bigquery-local
-    build:
-      context: ../..
-      dockerfile: ./wrappers/dockerfiles/bigquery/Dockerfile
-    volumes:
-      - ${PWD}/dockerfiles/bigquery/data.yaml:/app/data.yaml
-    ports:
-      - "9111:9111" # REST
-      - "9060:9060" # gRPC
-    command: --project=test --dataset=dataset1 --data-from-yaml=/app/data.yaml --port=9111
-    healthcheck:
-      test: curl --fail http://0.0.0.0:9111/bigquery/v2/projects/test_project/datasets/test_dataset || exit 1
-      interval: 10s
-      timeout: 5s
-      retries: 3
