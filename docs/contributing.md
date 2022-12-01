@@ -32,7 +32,7 @@ cargo pgx run pg14 --features clickhouse_fdw
 Try out the commands below to spin up a database with the extension installed & query a table using GraphQL. Experiment with aliasing field/table names and filtering on different columns.
 
 ```sql
-= create extension wrappers cascade;
+> create extension wrappers cascade;
 CREATE EXTENSION
 ```
 
