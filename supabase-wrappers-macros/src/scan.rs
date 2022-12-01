@@ -23,7 +23,7 @@ fn to_tokens() -> TokenStream2 {
         };
         use std::collections::HashMap;
         use std::os::raw::{c_int, c_char};
-        use std::ffi::{CString, CStr};
+        use std::ffi::CStr;
         use std::ptr;
 
         use ::supabase_wrappers::utils::report_warning;
@@ -299,19 +299,19 @@ fn to_tokens() -> TokenStream2 {
                 state.tmp_ctx.reset();
                 let old_ctx = state.tmp_ctx.set_as_current();
 
-                let label = CString::new("Wrappers").unwrap().as_ptr() as *const c_char;
+                let label = PgMemoryContexts::CurrentMemoryContext.pstrdup("Wrappers");
 
-                let value = CString::new(format!("quals = {:?}", state.quals)).unwrap();
-                pg_sys::ExplainPropertyText(label, value.as_ptr() as *const c_char, es);
+                let value = PgMemoryContexts::CurrentMemoryContext.pstrdup(&format!("quals = {:?}", state.quals));
+                pg_sys::ExplainPropertyText(label, value, es);
 
-                let value = CString::new(format!("tgts = {:?}", state.tgts)).unwrap();
-                pg_sys::ExplainPropertyText(label, value.as_ptr() as *const c_char, es);
+                let value = PgMemoryContexts::CurrentMemoryContext.pstrdup(&format!("tgts = {:?}", state.tgts));
+                pg_sys::ExplainPropertyText(label, value, es);
 
-                let value = CString::new(format!("sorts = {:?}", state.sorts)).unwrap();
-                pg_sys::ExplainPropertyText(label, value.as_ptr() as *const c_char, es);
+                let value = PgMemoryContexts::CurrentMemoryContext.pstrdup(&format!("sorts = {:?}", state.sorts));
+                pg_sys::ExplainPropertyText(label, value, es);
 
-                let value = CString::new(format!("limit = {:?}", state.limit)).unwrap();
-                pg_sys::ExplainPropertyText(label, value.as_ptr() as *const c_char, es);
+                let value = PgMemoryContexts::CurrentMemoryContext.pstrdup(&format!("limit = {:?}", state.limit));
+                pg_sys::ExplainPropertyText(label, value, es);
 
                 old_ctx.set_as_current();
 

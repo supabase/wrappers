@@ -12,7 +12,6 @@ fn to_tokens() -> TokenStream2 {
             FromDatum, debug2
         };
         use std::collections::HashMap;
-        use std::ffi::CString;
         use std::os::raw::c_int;
         use std::ptr;
 
@@ -181,13 +180,6 @@ fn to_tokens() -> TokenStream2 {
                 }
                 let rowid_name = rowid_name.unwrap();
 
-                // get rowid attribute number
-                let rowid_attno = {
-                    let subplan = (*polyfill::outer_plan_state(&mut (*mtstate).ps)).plan;
-                    let rowid_name_c = CString::new(rowid_name.as_str()).unwrap();
-                    pg_sys::ExecFindJunkAttributeInTlist((*subplan).targetlist, rowid_name_c.as_ptr())
-                };
-
                 // search for rowid attribute in tuple descrition
                 let tup_desc = PgTupleDesc::from_relation(&rel);
                 for attr in tup_desc.iter().filter(|a| !a.attisdropped) {
@@ -195,6 +187,17 @@ fn to_tokens() -> TokenStream2 {
                     if attname == rowid_name {
                         // create modify state
                         let mut state = FdwModifyState::new(rel.oid());
+
+                        // get rowid attribute number
+                        let rowid_attno = {
+                            let old_ctx = state.tmp_ctx.set_as_current();
+                            let subplan = (*polyfill::outer_plan_state(&mut (*mtstate).ps)).plan;
+                            let rowid_name_c = PgMemoryContexts::CurrentMemoryContext.pstrdup(rowid_name);
+                            let attr_no = pg_sys::ExecFindJunkAttributeInTlist((*subplan).targetlist, rowid_name_c);
+                            old_ctx.set_as_current();
+                            attr_no
+                        };
+
                         state.rowid_attno = rowid_attno;
                         state.rowid_typid = attr.atttypid;
                         state.opts = opts;
