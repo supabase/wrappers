@@ -17,18 +17,18 @@
 
 ## Overview
 
-`supabase/wrappers` is a PostgreSQL extension that provides third-party integrations so you can interact with external data from SQL.
+`supabase/wrappers` is a PostgreSQL extension that provides integrations with external data so you can interact with third-party data from SQL.
 
 Currently `supabase/wrappers` supports:
 
-| Integration | Status      | Select            | Insert            | Update            | Delete            | Truncate          |
-| ----------- | ----------- | :----:            | :----:            | :----:            | :----:            | :----:            |
-| BigQuery    | Unstable    | :white_check_mark:| :white_check_mark:| :white_check_mark:| :white_check_mark:| :x:               |
-| ClickHouse  | Unstable    | :white_check_mark:| :white_check_mark:| :white_check_mark:| :white_check_mark:| :x:               |
-| Firebase    | Unstable    | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| Stripe      | Unstable    | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
+| Integration | Status   | Select            | Insert            | Update            | Delete            | Truncate          |
+| ----------- | -------- | :----:            | :----:            | :----:            | :----:            | :----:            |
+| Firebase    | Stable   | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
+| Stripe      | Stable   | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
+| BigQuery    | Unstable | :white_check_mark:| :white_check_mark:| :white_check_mark:| :white_check_mark:| :x:               |
+| ClickHouse  | Unstable | :white_check_mark:| :white_check_mark:| :white_check_mark:| :white_check_mark:| :x:               |
 
-For example
+For example, setting up the Stripe extension enables:
 ```sql
 -- Returns all of your stripe customers
 select
