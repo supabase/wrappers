@@ -1,7 +1,6 @@
 use chrono::DateTime;
 use clickhouse_rs::{types, types::Block, types::SqlType, ClientHandle, Pool};
-use pgx::log::PgSqlErrorCode;
-use pgx::prelude::Timestamp;
+use pgx::prelude::{PgSqlErrorCode, Timestamp};
 use std::collections::HashMap;
 use time::OffsetDateTime;
 

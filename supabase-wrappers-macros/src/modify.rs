@@ -8,7 +8,7 @@ fn to_tokens() -> TokenStream2 {
             memcxt::{PgMemoryContexts, void_mut_ptr},
             tupdesc::PgTupleDesc,
             rel::PgRelation,
-            log::PgSqlErrorCode,
+            PgSqlErrorCode,
             FromDatum, debug2
         };
         use std::collections::HashMap;
@@ -110,7 +110,7 @@ fn to_tokens() -> TokenStream2 {
                     if pgx::name_data_to_str(&attr.attname) == rowid_name {
                         // make a Var representing the desired value
                         let var = pg_sys::makeVar(
-                            rtindex,
+                            rtindex as i32,
                             attr.attnum,
                             attr.atttypid,
                             attr.atttypmod,
