@@ -1336,7 +1336,6 @@ version = "0.1.4"
 dependencies = [
  "pgx",
  "pgx-tests",
- "supabase-wrappers-macros",
  "tokio",
  "uuid",
 ]

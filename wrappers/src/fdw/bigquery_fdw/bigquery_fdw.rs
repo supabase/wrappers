@@ -77,11 +77,6 @@ fn field_to_cell(rs: &ResultSet, field: &TableFieldSchema) -> Option<Cell> {
     }
 }
 
-#[wrappers_meta(
-    version = "0.1.0",
-    author = "Supabase",
-    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/bigquery_fdw"
-)]
 pub(crate) struct BigQueryFdw {
     rt: Runtime,
     client: Option<Client>,
@@ -95,7 +90,29 @@ pub(crate) struct BigQueryFdw {
 }
 
 impl BigQueryFdw {
-    pub fn new(options: &HashMap<String, String>) -> Self {
+    fn deparse(&self, quals: &Vec<Qual>, columns: &Vec<String>) -> String {
+        let tgts = if columns.is_empty() {
+            "*".to_string()
+        } else {
+            columns.join(", ")
+        };
+        let table = format!("`{}.{}.{}`", self.project_id, self.dataset_id, self.table,);
+        let sql = if quals.is_empty() {
+            format!("select {} from {}", tgts, table)
+        } else {
+            let cond = quals
+                .iter()
+                .map(|q| q.deparse())
+                .collect::<Vec<String>>()
+                .join(" and ");
+            format!("select {} from {} where {}", tgts, table, cond)
+        };
+        sql
+    }
+}
+
+impl ForeignDataWrapper for BigQueryFdw {
+    fn new(options: &HashMap<String, String>) -> Self {
         let mut ret = BigQueryFdw {
             rt: create_async_runtime(),
             client: None,
@@ -190,28 +207,6 @@ impl BigQueryFdw {
         ret
     }
 
-    fn deparse(&self, quals: &Vec<Qual>, columns: &Vec<String>) -> String {
-        let tgts = if columns.is_empty() {
-            "*".to_string()
-        } else {
-            columns.join(", ")
-        };
-        let table = format!("`{}.{}.{}`", self.project_id, self.dataset_id, self.table,);
-        let sql = if quals.is_empty() {
-            format!("select {} from {}", tgts, table)
-        } else {
-            let cond = quals
-                .iter()
-                .map(|q| q.deparse())
-                .collect::<Vec<String>>()
-                .join(" and ");
-            format!("select {} from {} where {}", tgts, table, cond)
-        };
-        sql
-    }
-}
-
-impl ForeignDataWrapper for BigQueryFdw {
     fn get_rel_size(
         &mut self,
         _quals: &Vec<Qual>,

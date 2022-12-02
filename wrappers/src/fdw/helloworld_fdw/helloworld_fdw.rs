@@ -2,11 +2,6 @@ use std::collections::HashMap;
 use supabase_wrappers::prelude::*;
 
 // A simple demo FDW
-#[wrappers_meta(
-    version = "0.1.0",
-    author = "Supabase",
-    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/helloworld_fdw"
-)]
 pub(crate) struct HelloWorldFdw {
     // row counter
     row_cnt: i64,
@@ -15,7 +10,7 @@ pub(crate) struct HelloWorldFdw {
     tgt_cols: Vec<String>,
 }
 
-impl HelloWorldFdw {
+impl ForeignDataWrapper for HelloWorldFdw {
     // 'options' is the key-value pairs defined in 'create server` SQL, for example,
     //
     // create server my_helloworld_server
@@ -29,15 +24,13 @@ impl HelloWorldFdw {
     // You can do any initalization in this new() function, like saving connection
     // info or API url in an variable, but don't do any heavy works like making a
     // database connection or API call.
-    pub fn new(_options: &HashMap<String, String>) -> Self {
+    fn new(_options: &HashMap<String, String>) -> Self {
         Self {
             row_cnt: 0,
             tgt_cols: Vec::new(),
         }
     }
-}
 
-impl ForeignDataWrapper for HelloWorldFdw {
     fn begin_scan(
         &mut self,
         _quals: &Vec<Qual>,

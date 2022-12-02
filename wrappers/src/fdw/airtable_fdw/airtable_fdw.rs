@@ -1,3 +1,4 @@
+use pgx::pg_sys;
 use pgx::prelude::PgSqlErrorCode;
 use reqwest::{self, header};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
@@ -9,11 +10,6 @@ use supabase_wrappers::prelude::*;
 
 use super::result::AirtableResponse;
 
-#[wrappers_meta(
-    version = "0.1.0",
-    author = "Ankur Goyal",
-    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/airtable_fdw"
-)]
 pub(crate) struct AirtableFdw {
     rt: Runtime,
     base_url: String,
@@ -22,39 +18,6 @@ pub(crate) struct AirtableFdw {
 }
 
 impl AirtableFdw {
-    pub fn new(options: &HashMap<String, String>) -> Self {
-        let base_url = options
-            .get("api_url")
-            .map(|t| t.to_owned())
-            .unwrap_or("https://api.airtable.com/v0/app4PDEzNrArJdQ5k".to_string())
-            .trim_end_matches('/')
-            .to_owned();
-
-        let client = require_option("api_key", options).map(|api_key| {
-            let mut headers = header::HeaderMap::new();
-            let value = format!("Bearer {}", api_key);
-            let mut auth_value = header::HeaderValue::from_str(&value).unwrap();
-            auth_value.set_sensitive(true);
-            headers.insert(header::AUTHORIZATION, auth_value);
-            let client = reqwest::Client::builder()
-                .default_headers(headers)
-                .build()
-                .unwrap();
-            let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
-            let client = ClientBuilder::new(client)
-                .with(RetryTransientMiddleware::new_with_policy(retry_policy))
-                .build();
-            client
-        });
-
-        AirtableFdw {
-            rt: create_async_runtime(),
-            base_url,
-            client,
-            scan_result: None,
-        }
-    }
-
     #[inline]
     fn build_url(&self, base_id: &str, table_name: &str) -> String {
         format!("{}/{}/{}", &self.base_url, base_id, table_name)
@@ -102,6 +65,39 @@ macro_rules! report_fetch_error {
 
 // TODO Add support for INSERT, UPDATE, DELETE
 impl ForeignDataWrapper for AirtableFdw {
+    fn new(options: &HashMap<String, String>) -> Self {
+        let base_url = options
+            .get("api_url")
+            .map(|t| t.to_owned())
+            .unwrap_or("https://api.airtable.com/v0/app4PDEzNrArJdQ5k".to_string())
+            .trim_end_matches('/')
+            .to_owned();
+
+        let client = require_option("api_key", options).map(|api_key| {
+            let mut headers = header::HeaderMap::new();
+            let value = format!("Bearer {}", api_key);
+            let mut auth_value = header::HeaderValue::from_str(&value).unwrap();
+            auth_value.set_sensitive(true);
+            headers.insert(header::AUTHORIZATION, auth_value);
+            let client = reqwest::Client::builder()
+                .default_headers(headers)
+                .build()
+                .unwrap();
+            let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
+            let client = ClientBuilder::new(client)
+                .with(RetryTransientMiddleware::new_with_policy(retry_policy))
+                .build();
+            client
+        });
+
+        Self {
+            rt: create_async_runtime(),
+            base_url,
+            client,
+            scan_result: None,
+        }
+    }
+
     fn begin_scan(
         &mut self,
         _quals: &Vec<Qual>, // TODO: Propagate filters
@@ -172,5 +168,22 @@ impl ForeignDataWrapper for AirtableFdw {
 
     fn end_scan(&mut self) {
         self.scan_result.take();
+    }
+
+    fn validator(options: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) {
+        use supabase_wrappers::polyfill;
+        if let Some(oid) = catalog {
+            match oid {
+                polyfill::FOREIGN_DATA_WRAPPER_RELATION_ID => {}
+                polyfill::FOREIGN_SERVER_RELATION_ID => {
+                    check_options_contain(&options, "api_key");
+                }
+                polyfill::FOREIGN_TABLE_RELATION_ID => {
+                    check_options_contain(&options, "base_id");
+                    check_options_contain(&options, "table");
+                }
+                _ => {}
+            }
+        }
     }
 }
