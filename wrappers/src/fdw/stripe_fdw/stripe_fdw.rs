@@ -1,4 +1,4 @@
-use pgx::log::PgSqlErrorCode;
+use pgx::prelude::PgSqlErrorCode;
 use reqwest::{self, header};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};

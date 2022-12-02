@@ -8,7 +8,7 @@ use gcp_bigquery_client::{
     },
     Client,
 };
-use pgx::log::PgSqlErrorCode;
+use pgx::prelude::PgSqlErrorCode;
 use pgx::prelude::{Date, Timestamp};
 use serde_json::json;
 use std::collections::HashMap;

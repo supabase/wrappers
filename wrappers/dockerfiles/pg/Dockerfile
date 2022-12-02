@@ -1,10 +1,10 @@
-FROM postgres:14
+FROM postgres:15
 RUN apt-get update
 ENV build_deps ca-certificates \
   git \
   build-essential \
   libpq-dev \
-  postgresql-server-dev-14 \
+  postgresql-server-dev-15 \
   curl \
   libreadline6-dev \
   zlib1g-dev
@@ -22,10 +22,10 @@ RUN \
   rustup --version && \
   rustc --version && \
   cargo --version
-  
+
 # PGX
-RUN cargo install cargo-pgx
-RUN cargo pgx init --pg14 $(which pg_config)
+RUN cargo install cargo-pgx --version 0.6.0
+RUN cargo pgx init --pg15 $(which pg_config)
 USER root
 
 # Install libsodium
@@ -40,7 +40,7 @@ RUN \
   git clone https://github.com/michelp/pgsodium.git && \
   cd pgsodium && \
   make && make install && \
-  cp getkey_scripts/pgsodium_getkey_urandom.sh /usr/share/postgresql/14/extension/pgsodium_getkey.sh
+  cp getkey_scripts/pgsodium_getkey_urandom.sh /usr/share/postgresql/15/extension/pgsodium_getkey.sh
 
 # Install Vault
 RUN \
@@ -57,7 +57,7 @@ COPY wrappers/Cargo.lock Cargo.lock
 COPY wrappers/wrappers.control wrappers.control
 COPY wrappers/bin bin
 COPY wrappers/src src
-RUN cargo pgx install --features pg14,clickhouse_fdw,firebase_fdw,bigquery_fdw,stripe_fdw
+RUN cargo pgx install --features pg15,clickhouse_fdw,firebase_fdw,bigquery_fdw,stripe_fdw
 
 COPY wrappers/test test
 RUN chown -R postgres:postgres /home/app

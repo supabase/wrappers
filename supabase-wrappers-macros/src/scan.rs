@@ -14,12 +14,12 @@ fn to_tokens() -> TokenStream2 {
         use pgx::{
             prelude::*,
             list::PgList,
-            log::PgSqlErrorCode,
+            PgSqlErrorCode,
             memcxt::PgMemoryContexts,
             nodes::is_a,
             tupdesc::PgTupleDesc,
             rel::PgRelation,
-            Datum, FromDatum, IntoDatum, PgOid, debug2
+            pg_sys::Datum, FromDatum, IntoDatum, PgOid, debug2
         };
         use std::collections::HashMap;
         use std::os::raw::{c_int, c_char};
@@ -216,11 +216,9 @@ fn to_tokens() -> TokenStream2 {
                     .and_then(|c| match c.parse::<f64>() {
                         Ok(v) => Some(v),
                         Err(_) => {
-                            pgx::log::elog(
-                                pgx::log::PgLogLevel::ERROR,
-                                &format!("invalid option startup_cost: {}", c),
+                            pgx::error!(
+                                "invalid option startup_cost: {}", c
                             );
-                            Some(0.0)
                         }
                     })
                     .unwrap_or(0.0);

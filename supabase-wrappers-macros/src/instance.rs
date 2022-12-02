@@ -40,7 +40,6 @@ fn to_tokens(fdw_types: &Punctuated<FdwType, Token![,]>) -> TokenStream2 {
 
     quote! {
         use pgx::prelude::*;
-        use pgx::log::PgSqlErrorCode;
         use std::collections::HashMap;
         use ::supabase_wrappers::prelude::*;
 

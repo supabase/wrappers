@@ -38,8 +38,8 @@ jobs:
         extension_name:
           - wrappers
         pgx_version:
-          - 0.5.6
-        postgres: [14]
+          - 0.6.0
+        postgres: [14, 15]
         features:
           - "bigquery_fdw,clickhouse_fdw,stripe_fdw,firebase_fdw"
         box:

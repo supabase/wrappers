@@ -11,25 +11,25 @@ categories = ["database"]
 keywords = ["database", "postgres", "postgresql", "extension"]
 
 [features]
-default = ["pg14"]
-pg10 = ["pgx/pg10", "pgx-tests/pg10" ]
+default = ["pg15"]
 pg11 = ["pgx/pg11", "pgx-tests/pg11" ]
 pg12 = ["pgx/pg12", "pgx-tests/pg12" ]
 pg13 = ["pgx/pg13", "pgx-tests/pg13" ]
 pg14 = ["pgx/pg14", "pgx-tests/pg14" ]
+pg15 = ["pgx/pg15", "pgx-tests/pg15" ]
 pg_test = []
 
 [dependencies]
-pgx = { version = "=0.5.6" }
+pgx = {version = "=0.6.0", default-features = false }
 tokio = { version = "1.21", features = ["rt"] }
 uuid = { version = "1.2.2" }
 supabase-wrappers-macros = { version = "0.1", path = "../supabase-wrappers-macros" }
 
 [dev-dependencies]
-pgx-tests = "=0.5.6"
+pgx-tests = "=0.6.0"
 
 [package.metadata.docs.rs]
-features = ["pg14"]
+features = ["pg15"]
 no-default-features = true
 # Enable `#[cfg(docsrs)]` (https://docs.rs/about/builds#cross-compiling)
 rustc-args = ["--cfg", "docsrs"]

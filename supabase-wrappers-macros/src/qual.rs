@@ -61,11 +61,9 @@ fn to_tokens() -> TokenStream2 {
             );
             if htup.is_null() {
                 pg_sys::ReleaseSysCache(htup);
-                pgx::log::elog(
-                    pgx::log::PgLogLevel::ERROR,
-                    &format!("cache lookup operator {} failed", opno),
+                pgx::error!(
+                    "cache lookup operator {} failed", opno
                 );
-                return ptr::null_mut();
             }
             let op = pg_sys::pgx_GETSTRUCT(htup) as pg_sys::Form_pg_operator;
             pg_sys::ReleaseSysCache(htup);

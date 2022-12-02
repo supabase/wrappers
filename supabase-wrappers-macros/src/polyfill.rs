@@ -4,7 +4,7 @@ use quote::{quote, ToTokens, TokenStreamExt};
 fn to_tokens() -> TokenStream2 {
     quote! {
         use pgx::prelude::*;
-        use pgx::Datum;
+        use pgx::pg_sys::Datum;
         use std::os::raw::c_int;
         use std::slice;
 

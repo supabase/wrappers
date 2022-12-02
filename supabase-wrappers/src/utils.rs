@@ -1,14 +1,14 @@
-use pgx::log::*;
 use pgx::prelude::PgBuiltInOids;
 use pgx::spi::Spi;
 use pgx::IntoDatum;
+use pgx::*;
 use std::collections::HashMap;
 use tokio::runtime::{Builder, Runtime};
 use uuid::Uuid;
 
-/// Report warning to Postgres using `ereport`
+/// Report warning to Postgres using `ereport!`
 ///
-/// A simple wrapper of Postgres's `ereport` function to emit warning message.
+/// A simple wrapper of Postgres's `ereport!` function to emit warning message.
 ///
 /// For example,
 ///
@@ -17,25 +17,23 @@ use uuid::Uuid;
 /// ```
 #[inline]
 pub fn report_warning(msg: &str) {
-    ereport(
+    ereport!(
         PgLogLevel::WARNING,
         PgSqlErrorCode::ERRCODE_WARNING,
         msg,
-        "Wrappers",
-        0,
-        0,
+        "Wrappers"
     );
 }
 
-/// Report error to Postgres using `ereport`
+/// Report error to Postgres using `ereport!`
 ///
-/// A simple wrapper of Postgres's `ereport` function to emit error message and
+/// A simple wrapper of Postgres's `ereport!` function to emit error message and
 /// abort current query execution.
 ///
 /// For example,
 ///
 /// ```rust,no_run
-/// use pgx::log::PgSqlErrorCode;
+/// use pgx::prelude::PgSqlErrorCode;
 ///
 /// report_error(
 ///     PgSqlErrorCode::ERRCODE_FDW_INVALID_COLUMN_NUMBER,
@@ -44,7 +42,7 @@ pub fn report_warning(msg: &str) {
 /// ```
 #[inline]
 pub fn report_error(code: PgSqlErrorCode, msg: &str) {
-    ereport(PgLogLevel::ERROR, code, msg, "Wrappers", 0, 0);
+    ereport!(PgLogLevel::ERROR, code, msg, "Wrappers");
 }
 
 /// Send info message to client.
@@ -54,7 +52,11 @@ pub fn report_error(code: PgSqlErrorCode, msg: &str) {
 /// See more details in [pgx docs](https://docs.rs/pgx/latest/pgx/log/enum.PgLogLevel.html#variant.INFO).
 #[inline]
 pub fn log_info(msg: &str) {
-    elog(PgLogLevel::INFO, msg);
+    ereport!(
+        PgLogLevel::INFO,
+        PgSqlErrorCode::ERRCODE_SUCCESSFUL_COMPLETION,
+        msg
+    );
 }
 
 /// Send notice message to client.
@@ -64,7 +66,11 @@ pub fn log_info(msg: &str) {
 /// See more details in [pgx docs](https://docs.rs/pgx/latest/pgx/log/enum.PgLogLevel.html#variant.NOTICE).
 #[inline]
 pub fn log_notice(msg: &str) {
-    elog(PgLogLevel::NOTICE, msg);
+    ereport!(
+        PgLogLevel::NOTICE,
+        PgSqlErrorCode::ERRCODE_SUCCESSFUL_COMPLETION,
+        msg
+    );
 }
 
 /// Send warning message to client.
@@ -74,7 +80,7 @@ pub fn log_notice(msg: &str) {
 /// See more details in [pgx docs](https://docs.rs/pgx/latest/pgx/log/enum.PgLogLevel.html#variant.WARNING).
 #[inline]
 pub fn log_warning(msg: &str) {
-    elog(PgLogLevel::WARNING, msg);
+    ereport!(PgLogLevel::WARNING, PgSqlErrorCode::ERRCODE_WARNING, msg);
 }
 
 /// Log debug message to Postgres log.
@@ -86,7 +92,7 @@ pub fn log_warning(msg: &str) {
 /// See more details in [Postgres documents](https://www.postgresql.org/docs/current/runtime-config-logging.html#RUNTIME-CONFIG-LOGGING-WHEN).
 #[inline]
 pub fn log_debug1(msg: &str) {
-    elog(PgLogLevel::DEBUG1, &format!("wrappers: {}", msg));
+    debug1!("wrappers: {}", msg);
 }
 
 /// Create a Tokio async runtime

@@ -4,7 +4,6 @@ use quote::{quote, ToTokens, TokenStreamExt};
 fn to_tokens() -> TokenStream2 {
     quote! {
         use pgx::prelude::*;
-        use pgx::log::PgSqlErrorCode;
         use pgx::tupdesc::PgTupleDesc;
         use pgx::list::PgList;
         use std::collections::HashMap;
@@ -84,7 +83,7 @@ fn to_tokens() -> TokenStream2 {
             // get column names from var list
             let col_vars: PgList<pg_sys::Var> = PgList::from_pg(col_vars);
             for var in col_vars.iter_ptr() {
-                let rte = pg_sys::planner_rt_fetch((*var).varno, root);
+                let rte = pg_sys::planner_rt_fetch((*var).varno as u32, root);
                 let attno = (*var).varattno;
                 let attname = pg_sys::get_attname((*rte).relid, attno, true);
                 if !attname.is_null() {
