@@ -20,7 +20,7 @@
 //! ...
 //!
 //! [dependencies]
-//! pgx = "=0.5.6"
+//! pgx = "=0.6.0"
 //! cfg-if = "1.0"
 //! supabase-wrappers = "0.1"
 //! ```

@@ -1,8 +1,8 @@
 # Stripe Foreign Data Wrapper
 
-This is a foreign data wrapper for [Stripe](https://stripe.com/) developed using [Wrappers](https://github.com/supabase/wrappers) and only supports `balance`, `customers` and `subscription` at this moment.
+This is a foreign data wrapper for [Stripe](https://stripe.com/) developed using [Wrappers](https://github.com/supabase/wrappers).
 
-This FDW currently supports reading below data from Stripe:
+This FDW currently supports reading below objects from Stripe:
 
 1. [Balance](https://stripe.com/docs/api/balance)
 2. [Balance Transactions](https://stripe.com/docs/api/balance_transactions/list)

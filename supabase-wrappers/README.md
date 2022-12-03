@@ -1,10 +1,16 @@
 # Wrappers
 
-Wrappers is a development framework for Postgres Foreign Data Wrappers ([FDW](https://wiki.postgresql.org/wiki/Foreign_data_wrappers)), written in Rust. Its goal is to make Postgres FDW development easier while keeping Rust language's modern capabilities, such as high performance, strong types, and safety.
+[![crates.io badge](https://img.shields.io/crates/v/supabase-wrappers.svg)](https://crates.io/crates/supabase-wrappers)
+[![docs.rs badge](https://docs.rs/supabase-wrappers/badge.svg)](https://docs.rs/supabase-wrappers)
+[![CI](https://github.com/supabase/wrappers/workflows/CI/badge.svg)](https://github.com/supabase/wrappers/actions?query=workflow%3ACI)
+[![MIT/Apache-2 licensed](https://img.shields.io/crates/l/supabase-wrappers.svg)](./LICENSE)
+[![Contributors](https://img.shields.io/github/contributors/supabase/wrappers)](https://github.com/supabase/wrappers/graphs/contributors)
+
+`Wrappers` is a development framework for Postgres Foreign Data Wrappers ([FDW](https://wiki.postgresql.org/wiki/Foreign_data_wrappers)), written in Rust. Its goal is to make Postgres FDW development easier while keeping Rust language's modern capabilities, such as high performance, strong types, and safety.
 
 ## Documentation
 
-Please visit the [full documentation on docs.rs](https://docs.rs/supabase-wrappers/latest/supabase_wrappers/)
+Please visit the [documentation on docs.rs](https://docs.rs/supabase-wrappers/latest/supabase_wrappers/)
 
 ## Features
 
@@ -12,11 +18,18 @@ Please visit the [full documentation on docs.rs](https://docs.rs/supabase-wrappe
 - Support for rich data types.
 - Support both sync and async backends, such as RDBMS, RESTful APIs, flat files and etc.
 - Built on top of [pgx](https://github.com/tcdi/pgx), providing higher level interfaces, without hiding lower-level C APIs.
-- Pushdown is supported.
+- `WEHRE`, `ORDER BY`, `LIMIT` pushdown are supported.
 
 ## Installation
 
 Wrappers is a pgx extension, so you can follow the [pgx installation steps](https://github.com/tcdi/pgx#system-requirements) to install Wrappers.
+
+```toml
+[dependencies]
+pgx = "=0.6.0"
+cfg-if = "1.0"
+supabase-wrappers = "0.1"
+```
 
 ## Developing a FDW
 
