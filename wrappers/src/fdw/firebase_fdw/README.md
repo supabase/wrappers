@@ -17,7 +17,7 @@ After `pgx` installed, run below command to install this FDW.
 cargo pgx install --pg-config [path_to_pg_config] --features firebase_fdw
 ```
 
-If you are using [Supabase](https://www.supabase.com), go to https://app.supabase.com/project/_/database/extensions to enable this FDW.
+If you are using [Supabase](https://www.supabase.com), this FDW is already included in `Wrappers` extension, go to https://app.supabase.com/project/_/database/extensions to enable it.
 
 ## Basic usage
 
@@ -148,7 +148,7 @@ Below are the options can be used in `CREATE SERVER`:
 
 Below are the options can be used in `CREATE FOREIGN TABLE`:
 
-1. `object`
+1. `object`, required
 
    - For Authentication users, it is fixed to `auth/users`.
    - For Firestore database, its format is `firestore/[collection_id]`, for example, `firestore/user-profiles`.
@@ -165,3 +165,8 @@ Below are the options can be used in `CREATE FOREIGN TABLE`:
 - Firebase Storage is not supported, please refer to [Firebase to Supabase migration guide](https://supabase.com/docs/guides/migrations/firebase-storage) to learn more about how to read its data out.
 - `WHERE`, `ORDER BY`, `LIMIT` pushdown are not supported.
 
+## Changelog
+
+| Version | Date       | Notes                                                |
+| ------- | ---------- | ---------------------------------------------------- |
+| 0.1.0   | 2022-11-30 | Initial version                                      |
