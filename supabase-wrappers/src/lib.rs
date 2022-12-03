@@ -12,11 +12,11 @@
 //! $ cargo pgx new my_project
 //! ```
 //!
-//! And then change default Postgres version to `pg14` and add below dependencies to your project's `Cargo.toml`,
+//! And then change default Postgres version to `pg15` and add below dependencies to your project's `Cargo.toml`,
 //!
 //! ```toml
 //! [features]
-//! default = ["pg14"]
+//! default = ["pg15"]
 //! ...
 //!
 //! [dependencies]

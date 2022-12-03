@@ -7,12 +7,12 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [features]
-default = ["pg14"]
-pg10 = ["pgx/pg10", "pgx-tests/pg10" ]
-pg11 = ["pgx/pg11", "pgx-tests/pg11" ]
-pg12 = ["pgx/pg12", "pgx-tests/pg12" ]
-pg13 = ["pgx/pg13", "pgx-tests/pg13" ]
-pg14 = ["pgx/pg14", "pgx-tests/pg14" ]
+default = ["pg15"]
+pg11 = ["pgx/pg11", "pgx-tests/pg11", "supabase-wrappers/pg11" ]
+pg12 = ["pgx/pg12", "pgx-tests/pg12", "supabase-wrappers/pg12" ]
+pg13 = ["pgx/pg13", "pgx-tests/pg13", "supabase-wrappers/pg13" ]
+pg14 = ["pgx/pg14", "pgx-tests/pg14", "supabase-wrappers/pg14" ]
+pg15 = ["pgx/pg15", "pgx-tests/pg15", "supabase-wrappers/pg15" ]
 pg_test = []
 
 helloworld_fdw = []
@@ -25,10 +25,10 @@ firebase_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", 
 airtable_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "serde", "url"]
 
 [dependencies]
-pgx = "=0.5.6"
+pgx = { version = "=0.6.0", features = ["time-crate"] }
 cfg-if = "1.0"
 #supabase-wrappers = "0.1"
-supabase-wrappers = { path = "../supabase-wrappers" }
+supabase-wrappers = { path = "../supabase-wrappers", default-features = false }
 
 # for clickhouse_fdw
 clickhouse-rs = { git = "https://github.com/suharev7/clickhouse-rs", branch = "async-await", features = ["tls"], optional = true }
@@ -55,7 +55,7 @@ regex = { version = "1", optional = true }
 url = { version = "2.3", optional = true }
 
 [dev-dependencies]
-pgx-tests = "=0.5.6"
+pgx-tests = "=0.6.0"
 
 [profile.dev]
 panic = "unwind"

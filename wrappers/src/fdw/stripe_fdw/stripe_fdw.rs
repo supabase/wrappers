@@ -1,5 +1,4 @@
-use pgx::log::PgSqlErrorCode;
-use pgx::prelude::Timestamp;
+use pgx::prelude::{PgSqlErrorCode, Timestamp};
 use pgx::JsonB;
 use reqwest::{self, header, Url};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};

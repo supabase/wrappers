@@ -1,6 +1,6 @@
 use pgx::pg_sys::Oid;
 use pgx::prelude::{Date, Timestamp};
-use pgx::{Datum, FromDatum, IntoDatum, JsonB, PgBuiltInOids, PgOid};
+use pgx::{pg_sys::Datum, FromDatum, IntoDatum, JsonB, PgBuiltInOids, PgOid};
 use std::collections::HashMap;
 use std::fmt;
 use std::iter::Zip;
