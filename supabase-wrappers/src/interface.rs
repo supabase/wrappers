@@ -1,6 +1,9 @@
-use pgx::pg_sys::Oid;
+use crate::FdwRoutine;
 use pgx::prelude::{Date, Timestamp};
-use pgx::{pg_sys::Datum, FromDatum, IntoDatum, JsonB, PgBuiltInOids, PgOid};
+use pgx::{
+    pg_sys::{self, Datum, Oid},
+    AllocatedByRust, FromDatum, IntoDatum, JsonB, PgBuiltInOids, PgOid,
+};
 use std::collections::HashMap;
 use std::fmt;
 use std::iter::Zip;
@@ -284,6 +287,8 @@ pub struct Limit {
 /// See the module-level document for more details.
 ///
 pub trait ForeignDataWrapper {
+    fn new(options: &HashMap<String, String>) -> Self;
+
     fn get_rel_size(
         &mut self,
         _quals: &Vec<Qual>,
@@ -312,4 +317,44 @@ pub trait ForeignDataWrapper {
     fn update(&mut self, _rowid: &Cell, _new_row: &Row) {}
     fn delete(&mut self, _rowid: &Cell) {}
     fn end_modify(&mut self) {}
+
+    /// Returns a FdwRoutine for the FDW
+    fn fdw_routine() -> FdwRoutine
+    where
+        Self: Sized,
+    {
+        use crate::{modify, scan};
+        let mut fdw_routine =
+            FdwRoutine::<AllocatedByRust>::alloc_node(pg_sys::NodeTag_T_FdwRoutine);
+
+        // plan phase
+        fdw_routine.GetForeignRelSize = Some(scan::get_foreign_rel_size::<Self>);
+        fdw_routine.GetForeignPaths = Some(scan::get_foreign_paths::<Self>);
+        fdw_routine.GetForeignPlan = Some(scan::get_foreign_plan::<Self>);
+        fdw_routine.ExplainForeignScan = Some(scan::explain_foreign_scan::<Self>);
+
+        // scan phase
+        fdw_routine.BeginForeignScan = Some(scan::begin_foreign_scan::<Self>);
+        fdw_routine.IterateForeignScan = Some(scan::iterate_foreign_scan::<Self>);
+        fdw_routine.ReScanForeignScan = Some(scan::re_scan_foreign_scan::<Self>);
+        fdw_routine.EndForeignScan = Some(scan::end_foreign_scan::<Self>);
+
+        // modify phase
+        fdw_routine.AddForeignUpdateTargets = Some(modify::add_foreign_update_targets);
+        fdw_routine.PlanForeignModify = Some(modify::plan_foreign_modify);
+        fdw_routine.BeginForeignModify = Some(modify::begin_foreign_modify::<Self>);
+        fdw_routine.ExecForeignInsert = Some(modify::exec_foreign_insert::<Self>);
+        fdw_routine.ExecForeignDelete = Some(modify::exec_foreign_delete::<Self>);
+        fdw_routine.ExecForeignUpdate = Some(modify::exec_foreign_update::<Self>);
+        fdw_routine.EndForeignModify = Some(modify::end_foreign_modify::<Self>);
+
+        Self::fdw_routine_hook(&mut fdw_routine);
+        fdw_routine.into_pg_boxed()
+    }
+
+    /// Additional FwdRoutine setup, called by default `Self::fdw_routine()`
+    /// after completing its initialization.
+    fn fdw_routine_hook(_routine: &mut FdwRoutine<AllocatedByRust>) {}
+
+    fn validator(_options: Vec<Option<String>>, _catalog: Option<pg_sys::Oid>) {}
 }

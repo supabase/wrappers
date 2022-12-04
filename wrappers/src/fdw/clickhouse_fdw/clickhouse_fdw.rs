@@ -77,11 +77,6 @@ fn field_to_cell(row: &types::Row<types::Complex>, i: usize) -> Option<Cell> {
     }
 }
 
-#[wrappers_meta(
-    version = "0.1.0",
-    author = "Supabase",
-    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/clickhouse_fdw"
-)]
 pub(crate) struct ClickHouseFdw {
     rt: Runtime,
     client: Option<ClientHandle>,
@@ -93,26 +88,6 @@ pub(crate) struct ClickHouseFdw {
 }
 
 impl ClickHouseFdw {
-    pub fn new(options: &HashMap<String, String>) -> Self {
-        let rt = create_async_runtime();
-        let client = match options.get("conn_string") {
-            Some(conn_str) => create_client(&rt, conn_str),
-            None => require_option("conn_string_id", options)
-                .and_then(|conn_str_id| get_vault_secret(&conn_str_id))
-                .and_then(|conn_str| create_client(&rt, &conn_str)),
-        };
-
-        ClickHouseFdw {
-            rt,
-            client,
-            table: "".to_string(),
-            rowid_col: "".to_string(),
-            tgt_cols: Vec::new(),
-            scan_blk: None,
-            row_idx: 0,
-        }
-    }
-
     fn deparse(&self, quals: &Vec<Qual>, columns: &Vec<String>) -> String {
         let tgts = if columns.is_empty() {
             "*".to_string()
@@ -134,6 +109,26 @@ impl ClickHouseFdw {
 }
 
 impl ForeignDataWrapper for ClickHouseFdw {
+    fn new(options: &HashMap<String, String>) -> Self {
+        let rt = create_async_runtime();
+        let client = match options.get("conn_string") {
+            Some(conn_str) => create_client(&rt, conn_str),
+            None => require_option("conn_string_id", options)
+                .and_then(|conn_str_id| get_vault_secret(&conn_str_id))
+                .and_then(|conn_str| create_client(&rt, &conn_str)),
+        };
+
+        Self {
+            rt,
+            client,
+            table: "".to_string(),
+            rowid_col: "".to_string(),
+            tgt_cols: Vec::new(),
+            scan_blk: None,
+            row_idx: 0,
+        }
+    }
+
     fn get_rel_size(
         &mut self,
         quals: &Vec<Qual>,
@@ -286,8 +281,6 @@ impl ForeignDataWrapper for ClickHouseFdw {
         }
     }
 
-    fn end_modify(&mut self) {}
-
     fn delete(&mut self, rowid: &Cell) {
         if let Some(ref mut client) = self.client {
             let sql = format!(
@@ -304,4 +297,6 @@ impl ForeignDataWrapper for ClickHouseFdw {
             }
         }
     }
+
+    fn end_modify(&mut self) {}
 }

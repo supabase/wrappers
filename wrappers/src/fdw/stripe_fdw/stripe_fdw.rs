@@ -108,11 +108,6 @@ fn pushdown_quals(url: &mut Url, quals: &Vec<Qual>, fields: Vec<&str>) {
     }
 }
 
-#[wrappers_meta(
-    version = "0.1.1",
-    author = "Supabase",
-    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/stripe_fdw"
-)]
 pub(crate) struct StripeFdw {
     rt: Runtime,
     base_url: Url,
@@ -121,26 +116,6 @@ pub(crate) struct StripeFdw {
 }
 
 impl StripeFdw {
-    pub fn new(options: &HashMap<String, String>) -> Self {
-        let base_url = options
-            .get("api_url")
-            .map(|t| t.to_owned())
-            .unwrap_or("https://api.stripe.com/v1/".to_string());
-        let client = match options.get("api_key") {
-            Some(api_key) => Some(create_client(&api_key)),
-            None => require_option("api_key_id", options)
-                .and_then(|key_id| get_vault_secret(&key_id))
-                .and_then(|api_key| Some(create_client(&api_key))),
-        };
-
-        StripeFdw {
-            rt: create_async_runtime(),
-            base_url: Url::parse(&base_url).unwrap(),
-            client,
-            scan_result: None,
-        }
-    }
-
     fn build_url(
         &self,
         obj: &str,
@@ -312,6 +287,26 @@ macro_rules! report_fetch_error {
 }
 
 impl ForeignDataWrapper for StripeFdw {
+    fn new(options: &HashMap<String, String>) -> Self {
+        let base_url = options
+            .get("api_url")
+            .map(|t| t.to_owned())
+            .unwrap_or("https://api.stripe.com/v1/".to_string());
+        let client = match options.get("api_key") {
+            Some(api_key) => Some(create_client(&api_key)),
+            None => require_option("api_key_id", options)
+                .and_then(|key_id| get_vault_secret(&key_id))
+                .and_then(|api_key| Some(create_client(&api_key))),
+        };
+
+        StripeFdw {
+            rt: create_async_runtime(),
+            base_url: Url::parse(&base_url).unwrap(),
+            client,
+            scan_result: None,
+        }
+    }
+
     fn begin_scan(
         &mut self,
         quals: &Vec<Qual>,

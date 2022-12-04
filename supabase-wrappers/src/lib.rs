@@ -220,11 +220,21 @@
 pub mod interface;
 pub mod utils;
 
-pub use ::supabase_wrappers_macros::*;
-
 pub mod prelude {
     pub use crate::interface::*;
     pub use crate::utils::*;
-    pub use ::supabase_wrappers_macros::*;
     pub use ::tokio::runtime::Runtime;
 }
+
+use pgx::prelude::*;
+use pgx::AllocatedByPostgres;
+
+mod instance;
+mod limit;
+mod modify;
+pub mod polyfill;
+mod qual;
+mod scan;
+mod sort;
+
+pub type FdwRoutine<A = AllocatedByPostgres> = PgBox<pg_sys::FdwRoutine, A>;

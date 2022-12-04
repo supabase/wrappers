@@ -61,11 +61,6 @@ fn get_oauth2_token(sa_key: &str, rt: &Runtime) -> Option<AccessToken> {
     }
 }
 
-#[wrappers_meta(
-    version = "0.1.0",
-    author = "Supabase",
-    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/firebase_fdw"
-)]
 pub(crate) struct FirebaseFdw {
     rt: Runtime,
     project_id: String,
@@ -85,63 +80,6 @@ impl FirebaseFdw {
 
     // default maximum row count limit
     const DEFAULT_ROWS_LIMIT: usize = 10_000;
-
-    pub fn new(options: &HashMap<String, String>) -> Self {
-        let mut ret = FirebaseFdw {
-            rt: create_async_runtime(),
-            project_id: "".to_string(),
-            client: None,
-            scan_result: None,
-        };
-
-        ret.project_id = match require_option("project_id", options) {
-            Some(project_id) => project_id,
-            None => return ret,
-        };
-
-        // get oauth2 access token if it is directly defined in options
-        let token = if let Some(access_token) = options.get("access_token") {
-            access_token.to_owned()
-        } else {
-            // otherwise, get it from the options or Vault
-            let sa_key = match options.get("sa_key") {
-                Some(sa_key) => sa_key.to_owned(),
-                None => {
-                    let sa_key_id = match require_option("sa_key_id", options) {
-                        Some(sa_key_id) => sa_key_id,
-                        None => return ret,
-                    };
-                    match get_vault_secret(&sa_key_id) {
-                        Some(sa_key) => sa_key,
-                        None => return ret,
-                    }
-                }
-            };
-            if let Some(access_token) = get_oauth2_token(&sa_key, &ret.rt) {
-                access_token.token().map(|t| t.to_owned()).unwrap()
-            } else {
-                return ret;
-            }
-        };
-
-        // create client
-        let mut headers = header::HeaderMap::new();
-        let value = format!("Bearer {}", token);
-        let mut auth_value = header::HeaderValue::from_str(&value).unwrap();
-        auth_value.set_sensitive(true);
-        headers.insert(header::AUTHORIZATION, auth_value);
-        let client = reqwest::Client::builder()
-            .default_headers(headers)
-            .build()
-            .unwrap();
-        let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
-        let client = ClientBuilder::new(client)
-            .with(RetryTransientMiddleware::new_with_policy(retry_policy))
-            .build();
-        ret.client = Some(client);
-
-        ret
-    }
 
     fn build_url(
         &self,
@@ -306,6 +244,63 @@ impl FirebaseFdw {
 }
 
 impl ForeignDataWrapper for FirebaseFdw {
+    fn new(options: &HashMap<String, String>) -> Self {
+        let mut ret = Self {
+            rt: create_async_runtime(),
+            project_id: "".to_string(),
+            client: None,
+            scan_result: None,
+        };
+
+        ret.project_id = match require_option("project_id", options) {
+            Some(project_id) => project_id,
+            None => return ret,
+        };
+
+        // get oauth2 access token if it is directly defined in options
+        let token = if let Some(access_token) = options.get("access_token") {
+            access_token.to_owned()
+        } else {
+            // otherwise, get it from the options or Vault
+            let sa_key = match options.get("sa_key") {
+                Some(sa_key) => sa_key.to_owned(),
+                None => {
+                    let sa_key_id = match require_option("sa_key_id", options) {
+                        Some(sa_key_id) => sa_key_id,
+                        None => return ret,
+                    };
+                    match get_vault_secret(&sa_key_id) {
+                        Some(sa_key) => sa_key,
+                        None => return ret,
+                    }
+                }
+            };
+            if let Some(access_token) = get_oauth2_token(&sa_key, &ret.rt) {
+                access_token.token().map(|t| t.to_owned()).unwrap()
+            } else {
+                return ret;
+            }
+        };
+
+        // create client
+        let mut headers = header::HeaderMap::new();
+        let value = format!("Bearer {}", token);
+        let mut auth_value = header::HeaderValue::from_str(&value).unwrap();
+        auth_value.set_sensitive(true);
+        headers.insert(header::AUTHORIZATION, auth_value);
+        let client = reqwest::Client::builder()
+            .default_headers(headers)
+            .build()
+            .unwrap();
+        let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
+        let client = ClientBuilder::new(client)
+            .with(RetryTransientMiddleware::new_with_policy(retry_policy))
+            .build();
+        ret.client = Some(client);
+
+        ret
+    }
+
     fn begin_scan(
         &mut self,
         _quals: &Vec<Qual>,
