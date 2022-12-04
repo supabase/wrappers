@@ -213,6 +213,63 @@ pub(crate) unsafe fn extract_from_scalar_array_op_expr(
     None
 }
 
+pub(crate) unsafe fn extract_from_var(
+    _root: *mut pg_sys::PlannerInfo,
+    baserel_id: pg_sys::Oid,
+    baserel_ids: pg_sys::Relids,
+    var: *mut pg_sys::Var,
+) -> Option<Qual> {
+    if (*var).varattno < 1
+        || (*var).vartype != pg_sys::BOOLOID
+        || !pg_sys::bms_is_member((*var).varno.try_into().unwrap(), baserel_ids)
+    {
+        return None;
+    }
+
+    let field = pg_sys::get_attname(baserel_id, (*var).varattno, false);
+
+    let qual = Qual {
+        field: CStr::from_ptr(field).to_str().unwrap().to_string(),
+        operator: "=".to_string(),
+        value: Value::Cell(Cell::Bool(true)),
+        use_or: false,
+    };
+
+    Some(qual)
+}
+
+pub(crate) unsafe fn extract_from_bool_expr(
+    _root: *mut pg_sys::PlannerInfo,
+    baserel_id: pg_sys::Oid,
+    baserel_ids: pg_sys::Relids,
+    expr: *mut pg_sys::BoolExpr,
+) -> Option<Qual> {
+    let args: PgList<pg_sys::Node> = PgList::from_pg((*expr).args);
+
+    if (*expr).boolop != pg_sys::BoolExprType_NOT_EXPR || args.len() != 1 {
+        return None;
+    }
+
+    let var = args.head().unwrap() as *mut pg_sys::Var;
+    if (*var).varattno < 1
+        || (*var).vartype != pg_sys::BOOLOID
+        || !pg_sys::bms_is_member((*var).varno.try_into().unwrap(), baserel_ids)
+    {
+        return None;
+    }
+
+    let field = pg_sys::get_attname(baserel_id, (*var).varattno, false);
+
+    let qual = Qual {
+        field: CStr::from_ptr(field).to_str().unwrap().to_string(),
+        operator: "=".to_string(),
+        value: Value::Cell(Cell::Bool(false)),
+        use_or: false,
+    };
+
+    Some(qual)
+}
+
 pub(crate) unsafe fn extract_quals(
     root: *mut pg_sys::PlannerInfo,
     baserel: *mut pg_sys::RelOptInfo,
@@ -229,6 +286,10 @@ pub(crate) unsafe fn extract_quals(
             extract_from_null_test(baserel_id, expr as _)
         } else if is_a(expr, pg_sys::NodeTag_T_ScalarArrayOpExpr) {
             extract_from_scalar_array_op_expr(root, baserel_id, (*baserel).relids, expr as _)
+        } else if is_a(expr, pg_sys::NodeTag_T_Var) {
+            extract_from_var(root, baserel_id, (*baserel).relids, expr as _)
+        } else if is_a(expr, pg_sys::NodeTag_T_BoolExpr) {
+            extract_from_bool_expr(root, baserel_id, (*baserel).relids, expr as _)
         } else {
             if let Some(stm) = pgx::nodes::node_to_string(expr) {
                 report_warning(&format!("unsupported qual: {}", stm));

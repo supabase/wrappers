@@ -1,12 +1,11 @@
 use pgx::{
-    debug2, list::PgList, memcxt::PgMemoryContexts, pg_sys::Datum, prelude::*, FromDatum, IntoDatum, PgSqlErrorCode,
+    debug2, list::PgList, memcxt::PgMemoryContexts, pg_sys::Datum, prelude::*, FromDatum,
+    IntoDatum, PgSqlErrorCode,
 };
 use std::collections::HashMap;
 
-use std::os::raw::{c_int};
+use std::os::raw::c_int;
 use std::ptr;
-
-
 
 use super::instance;
 use super::polyfill;
