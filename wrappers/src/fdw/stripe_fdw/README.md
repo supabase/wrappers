@@ -10,7 +10,8 @@ This FDW currently supports reading below objects from Stripe:
 4. [Customers](https://stripe.com/docs/api/customers/list)
 5. [Invoices](https://stripe.com/docs/api/invoices/list)
 6. [PaymentIntents](https://stripe.com/docs/api/payment_intents/list)
-7. [Subscriptions](https://stripe.com/docs/api/subscriptions/list)
+7. [Products](https://stripe.com/docs/api/products/list)
+8. [Subscriptions](https://stripe.com/docs/api/subscriptions/list)
 
 ## Installation
 
@@ -51,11 +52,7 @@ create extension wrappers;
 -- create foreign data wrapper and enable 'StripeFdw'
 drop foreign data wrapper if exists stripe_wrapper cascade;
 create foreign data wrapper stripe_wrapper
-  handler wrappers_handler
-  validator wrappers_validator
-  options (
-    wrapper 'StripeFdw'
-  );
+  handler stripe_fdw_handler;
 
 -- Below we're using the API key stored in Vault, if you don't want
 -- to use Vault, you can directly specify the API key in `api_key`
@@ -184,6 +181,22 @@ create foreign table payment_intents (
     object 'payment_intents'
   );
 
+drop foreign table if exists products;
+create foreign table products (
+  id text,
+  name text,
+  active bool,
+  default_price text,
+  description text,
+  created timestamp,
+  updated timestamp,
+  attrs jsonb
+)
+  server my_stripe_server
+  options (
+    object 'products'
+  );
+
 drop foreign table if exists subscriptions;
 create foreign table subscriptions (
   id text,
@@ -251,6 +264,7 @@ Below are the options can be used in `CREATE FOREIGN TABLE`:
    - customers
    - invoices
    - payment_intents
+   - products
    - subscriptions
 
 ## Limitations
@@ -268,6 +282,7 @@ Below are the options can be used in `CREATE FOREIGN TABLE`:
   - customers: `email`
   - invoices: `customer`, `status`, `subscription`
   - payment_intents: `customer`
+  - products: `active`
   - subscriptions: `customer`, `price`, `status`
 
 - `LIMIT` pushdown support is limited, `limit` parameter used in Stripe API call is always 100.
@@ -278,5 +293,6 @@ Below are the options can be used in `CREATE FOREIGN TABLE`:
 
 | Version | Date       | Notes                                                |
 | ------- | ---------- | ---------------------------------------------------- |
+| 0.1.2   | 2022-12-04 | Added 'products' objects support                     |
 | 0.1.1   | 2022-12-03 | Added quals pushdown support                         |
 | 0.1.0   | 2022-12-01 | Initial version                                      |

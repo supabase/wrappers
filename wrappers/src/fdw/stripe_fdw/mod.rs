@@ -5,6 +5,6 @@ mod stripe_fdw;
 pub(crate) use stripe_fdw::StripeFdw;
 
 #[pg_extern]
-fn stripe_fdw() -> supabase_wrappers::FdwRoutine {
+fn stripe_fdw_handler() -> supabase_wrappers::FdwRoutine {
     StripeFdw::fdw_routine()
 }

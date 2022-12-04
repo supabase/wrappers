@@ -50,6 +50,7 @@ fn extract_to_rows(
                     .as_object()
                     .and_then(|v| v.get(*col_name))
                     .and_then(|v| match *col_type {
+                        "bool" => v.as_bool().map(|a| Cell::Bool(a)),
                         "i64" => v.as_i64().map(|a| Cell::I64(a)),
                         "string" => v.as_str().map(|a| Cell::String(a.to_owned())),
                         "timestamp" => v.as_i64().map(|a| {
@@ -96,6 +97,9 @@ fn pushdown_quals(url: &mut Url, quals: &Vec<Qual>, fields: Vec<&str>) {
             if qual.field == *field && qual.operator == "=" && !qual.use_or {
                 match &qual.value {
                     Value::Cell(cell) => match cell {
+                        Cell::Bool(b) => {
+                            url.query_pairs_mut().append_pair(field, &format!("{}", b));
+                        }
                         Cell::String(s) => {
                             url.query_pairs_mut().append_pair(field, &s);
                         }
@@ -153,6 +157,12 @@ impl StripeFdw {
         // ref: https://stripe.com/docs/api/payment_intents/list
         if obj == "payment_intents" {
             pushdown_quals(&mut url, quals, vec!["customer"]);
+        }
+
+        // pushdown quals for payment intents
+        // ref: https://stripe.com/docs/api/products/list
+        if obj == "products" {
+            pushdown_quals(&mut url, quals, vec!["active"]);
         }
 
         // pushdown quals for subscriptions
@@ -253,6 +263,20 @@ impl StripeFdw {
                 ],
                 tgt_cols,
             ),
+            "products" => extract_to_rows(
+                resp_body,
+                "data",
+                vec![
+                    ("id", "string"),
+                    ("name", "string"),
+                    ("active", "bool"),
+                    ("default_price", "string"),
+                    ("description", "string"),
+                    ("created", "timestamp"),
+                    ("updated", "timestamp"),
+                ],
+                tgt_cols,
+            ),
             "subscriptions" => extract_to_rows(
                 resp_body,
                 "data",
@@ -339,6 +363,7 @@ impl ForeignDataWrapper for StripeFdw {
             while page < page_cnt {
                 // build url
                 let url = self.build_url(&obj, quals, page_size, &cursor);
+                log_info(&format!("{:?}", url)); 
                 if url.is_none() {
                     return;
                 }
@@ -355,10 +380,13 @@ impl ForeignDataWrapper for StripeFdw {
                                 break;
                             }
                             result.extend(rows);
-                            if let Some(has_more) = has_more {
-                                if !has_more {
-                                    break;
+                            match has_more {
+                                Some(has_more) => {
+                                    if !has_more {
+                                        break;
+                                    }
                                 }
+                                None => break,
                             }
                             cursor = starting_after;
                         }
