@@ -93,7 +93,7 @@ pub(super) extern "C" fn add_foreign_update_targets(
             if pgx::name_data_to_str(&attr.attname) == rowid_name {
                 // make a Var representing the desired value
                 let var = pg_sys::makeVar(
-                    rtindex as i32,
+                    rtindex.try_into().unwrap(),
                     attr.attnum,
                     attr.atttypid,
                     attr.atttypmod,

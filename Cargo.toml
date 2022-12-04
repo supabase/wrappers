@@ -1,7 +1,6 @@
 [workspace]
 members = [
     "supabase-wrappers",
-    "supabase-wrappers-macros",
 ]
 exclude = [
     "wrappers",
