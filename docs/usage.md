@@ -9,11 +9,11 @@ create extension wrappers
 
 ## Firebase
 
-Firebase is ...
+Firebase is an app development platform built around non-relational technologies. The Firebase wrapper supports connecting to the [auth/users collection](https://firebase.google.com/docs/auth/users) and any [Firestore collection](https://firebase.google.com/docs/firestore). 
 
 
 ### Wrapper 
-To get started with the Firebase wrapper, create a foreign data wrapper specifying the `FirebaseFdw` as the `wrapper` key of the `options` section.
+To get started with the Firebase wrapper, create a foreign data wrapper specifying `FirebaseFdw` as the `wrapper` key of the `options` section.
 
 ```sql
 create foreign data wrapper firebase_wrapper
@@ -37,7 +37,7 @@ Create a secure key using pgsodium
 select pgsodium.create_key(name := 'firebase');
 ```
 
-Save your Firebase service account key in Vault and retrieve the `key_id`
+Save your [Firebase service account key](https://firebase.google.com/docs/admin/setup#add_firebase_to_your_app) in Vault and retrieve the `key_id`
 ```sql
 insert into
   vault.secrets (secret, key_id)
@@ -66,7 +66,7 @@ create server firebase_server
 
 #### Auth (Insecure)
 
-If the platform you are using does not support `pgsodium` and `Vault` you can create a server by storing service account info directly.
+If the platform you are using does not support `pgsodium` and `Vault`, you can create a server by storing yourt [service account key](https://firebase.google.com/docs/admin/setup#add_firebase_to_your_app) directly.
 
 
 !!! important
@@ -92,11 +92,11 @@ create server firebase_server
 
 #### Tables
 
-Firebase collections are non-relational/documents. With the exception of metadata fields `name`, `create_time`, and `update_time`, all returned data is availble in the `fields` jsonb column. 
+Firebase collections are non-relational/documents. With the exception of metadata fields, all returned data are availble as a `fields` jsonb column. 
 
 ##### Firestore
 
-To map a Firestore provide its location using the format `firestore/[collection_id]` as the `object` option as shown below.
+To map a Firestore collection provide its location using the format `firestore/<collection_id>` as the `object` option as shown below.
 
 ```sql
 create foreign table firebase_docs (
@@ -110,6 +110,8 @@ create foreign table firebase_docs (
     object 'firestore/user-profiles'  -- format: 'firestore/[collection_id]'
   );
 ```
+
+Note that `name`, `create_time`, and `update_time`, are automatic metadata fields on all Firestore collections.
 
 
 ##### auth/users 
@@ -130,7 +132,7 @@ create foreign table firebase_users (
 
 ## Stripe
 
-Stripe is ...
+Stripe is an API driven online payment processing utilty. `supabase/wrappers` exposes the `balance`, `customers`, and `subscriptions`, endpoints.
 
 ### Wrapper 
 To get started with the Stripe wrapper, create a foreign data wrapper specifying the `StripeFdw` as the `wrapper` key of the `options` section.
@@ -150,7 +152,7 @@ Next, we need to create a server for the FDW to hold options and credentials.
 
 #### Auth (Supabase)
 
-If you are using the Supabase platform, this is the recommended approach for securing your Firebase service account credentials.
+If you are using the Supabase platform, this is the recommended approach for securing your [Stripe API key](https://stripe.com/docs/keys).
 
 Create a secure key using pgsodium
 ```sql
@@ -179,7 +181,7 @@ create server stripe_server
 
 #### Auth (Insecure)
 
-If the platform you are using does not support `pgsodium` and `Vault` you can create a server by storing service account info directly.
+If the platform you are using does not support `pgsodium` and `Vault` you can create a server by storing your [Stripe API key](https://stripe.com/docs/keys) directly.
 
 
 !!! important
@@ -196,7 +198,7 @@ create server stripe_server
 
 ### Tables
 
-The Stripe FDW is based onStripes API's Firebase collections are non-relational/documents. With the exception of metadata fields `name`, `create_time`, and `update_time`, all returned data is availble in the `fields` jsonb column. 
+The Stripe tables mirror Stripe's API. Available tables represent [balance](https://stripe.com/docs/api/balance), [customers](https://stripe.com/docs/api/customers), and [subscriptions](https://stripe.com/docs/api/subscriptions).
 
 (Optional) Create a schema to hold the Stripe tables.
 ```sql
@@ -205,7 +207,7 @@ create schema stripe;
 
 ##### Balance 
 
-asdfasd
+Shows the balance currently on your Stripe account.
 
 ```sql
 create foreign table stripe.balance (
@@ -220,6 +222,9 @@ create foreign table stripe.balance (
 ```
 
 ##### Customers 
+
+Contains customers known to Stripe.
+
 ```sql
 create foreign table stripe.customers (
   id text,
@@ -232,6 +237,9 @@ create foreign table stripe.customers (
 ```
 
 ##### Subscriptions 
+
+Customer recurring payment schedules.
+
 ```sql
 create foreign table stripe.subscriptions (
   customer_id text,
@@ -244,15 +252,3 @@ create foreign table stripe.subscriptions (
     object 'subscriptions'
   );
 ```
-
-
-## BigQuery
-
-Coming soon
-
-## ClickHouse
-
-Coming soon
-
-
-

@@ -17,20 +17,10 @@
 
 ## Overview
 
-`supabase/wrappers` is a PostgreSQL extension that provides integrations with external data so you can interact with third-party data from SQL.
+`supabase/wrappers` is a PostgreSQL extension that provides integrations with external sources so you can interact with third-party data using SQL.
 
-Currently `supabase/wrappers` supports:
-
-| Integration | Status   | Select            | Insert            | Update            | Delete            | Truncate          |
-| ----------- | -------- | :----:            | :----:            | :----:            | :----:            | :----:            |
-| Firebase    | Stable   | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| Stripe      | Stable   | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| BigQuery    | Unstable | :white_check_mark:| :white_check_mark:| :white_check_mark:| :white_check_mark:| :x:               |
-| ClickHouse  | Unstable | :white_check_mark:| :white_check_mark:| :white_check_mark:| :white_check_mark:| :x:               |
-
-For example, setting up the Stripe extension enables:
+For example, the Stripe wrapper allows you to query and join against your Stripe customer data straight from PostgreSQL:
 ```sql
--- Returns all of your stripe customers
 select
   customer_id
   currency
@@ -44,6 +34,15 @@ returns
  cus_MJiBtCqOF1Bb3F | usd      
 (1 row)
 ```
+
+Currently `supabase/wrappers` supports:
+
+| Integration | Status   | Select            | Insert            | Update            | Delete            | Truncate          |
+| ----------- | -------- | :----:            | :----:            | :----:            | :----:            | :----:            |
+| Firebase    | Stable   | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
+| Stripe      | Stable   | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
+
+
 
 
 Check out [usage](usage.md) for more info on how to get started.
