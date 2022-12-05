@@ -1,6 +1,6 @@
 site_name: wrappers
 site_url: https://supabase.github.io/wrappers
-site_description: A PostgreSQL extension adding GraphQL support
+site_description: A PostgreSQL extension for connecting to external data sources
 
 repo_name: supabase/wrappers
 repo_url: https://github.com/supabase/wrappers
