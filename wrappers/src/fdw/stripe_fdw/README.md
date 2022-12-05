@@ -23,8 +23,6 @@ After `pgx` installed, run below command to install this FDW.
 cargo pgx install --pg-config [path_to_pg_config] --features stripe_fdw
 ```
 
-If you are using [Supabase](https://www.supabase.com), this FDW is already included in `Wrappers` extension, go to https://app.supabase.com/project/_/database/extensions to enable it.
-
 ## Basic usage
 
 These steps outline how to use the Stripe FDW locally:
@@ -142,11 +140,15 @@ drop foreign table if exists customers;
 create foreign table customers (
   id text,
   email text,
+  name text,
+  description text,
+  created timestamp,
   attrs jsonb
 )
   server my_stripe_server
   options (
-    object 'customers'
+    object 'customers',
+    rowid_column 'id'
   );
   
 drop foreign table if exists invoices;
@@ -194,7 +196,8 @@ create foreign table products (
 )
   server my_stripe_server
   options (
-    object 'products'
+    object 'products',
+    rowid_column 'id'
   );
 
 drop foreign table if exists subscriptions;
@@ -208,7 +211,8 @@ create foreign table subscriptions (
 )
   server my_stripe_server
   options (
-    object 'subscriptions'
+    object 'subscriptions',
+    rowid_column 'id'
   );
 ```
 

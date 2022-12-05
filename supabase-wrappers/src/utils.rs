@@ -134,6 +134,20 @@ pub fn require_option(opt_name: &str, options: &HashMap<String, String>) -> Opti
     })
 }
 
+/// Get required option value from the `options` map or a provided default
+///
+/// Get the required option's value from `options` map, return default if it does not exist.
+pub fn require_option_or(
+    opt_name: &str,
+    options: &HashMap<String, String>,
+    default: String,
+) -> String {
+    options
+        .get(opt_name)
+        .map(|t| t.to_owned())
+        .unwrap_or(default)
+}
+
 /// Get decrypted secret from Vault
 ///
 /// Get decrypted secret as string from Vault. Vault is an extension for storing
@@ -256,5 +270,38 @@ pub fn check_options_contain(opt_list: &Vec<Option<String>>, tgt: &str) {
             PgSqlErrorCode::ERRCODE_FDW_OPTION_NAME_NOT_FOUND,
             &format!("option '{}' not found", tgt),
         );
+    }
+}
+
+// trait for "serialize" and "deserialize" state, so that it is safe to be carried
+// between the plan and the execution
+pub(super) trait SerdeList {
+    unsafe fn serialize_to_list(state: PgBox<Self>) -> *mut pg_sys::List
+    where
+        Self: Sized,
+    {
+        let mut ret = PgList::new();
+        let val = state.into_pg() as i64;
+        let cst = pg_sys::makeConst(
+            pg_sys::INT8OID,
+            -1,
+            pg_sys::InvalidOid,
+            8,
+            val.into_datum().unwrap(),
+            false,
+            true,
+        );
+        ret.push(cst);
+        ret.into_pg()
+    }
+
+    unsafe fn deserialize_from_list(list: *mut pg_sys::List) -> PgBox<Self>
+    where
+        Self: Sized,
+    {
+        let list = PgList::<pg_sys::Const>::from_pg(list);
+        let cst = list.head().unwrap();
+        let ptr = i64::from_datum((*cst).constvalue, (*cst).constisnull).unwrap();
+        PgBox::<Self>::from_pg(ptr as _)
     }
 }

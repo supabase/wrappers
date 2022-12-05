@@ -162,6 +162,18 @@ impl Row {
     pub fn iter(&self) -> Zip<Iter<'_, String>, Iter<'_, Option<Cell>>> {
         self.cols.iter().zip(self.cells.iter())
     }
+
+    /// Remove a cell at the specified index
+    pub fn retain<F>(&mut self, f: F)
+    where
+        F: FnMut((&String, &Option<Cell>)) -> bool,
+    {
+        let keep: Vec<bool> = self.iter().map(f).collect();
+        let mut iter = keep.iter();
+        self.cols.retain(|_| *iter.next().unwrap());
+        iter = keep.iter();
+        self.cells.retain(|_| *iter.next().unwrap());
+    }
 }
 
 /// A restiction value used in [`Qual`], either a [`Cell`] or an array of [`Cell`]
@@ -341,7 +353,7 @@ pub trait ForeignDataWrapper {
 
         // modify phase
         fdw_routine.AddForeignUpdateTargets = Some(modify::add_foreign_update_targets);
-        fdw_routine.PlanForeignModify = Some(modify::plan_foreign_modify);
+        fdw_routine.PlanForeignModify = Some(modify::plan_foreign_modify::<Self>);
         fdw_routine.BeginForeignModify = Some(modify::begin_foreign_modify::<Self>);
         fdw_routine.ExecForeignInsert = Some(modify::exec_foreign_insert::<Self>);
         fdw_routine.ExecForeignDelete = Some(modify::exec_foreign_delete::<Self>);

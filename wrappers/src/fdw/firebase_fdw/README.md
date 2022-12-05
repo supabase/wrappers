@@ -46,11 +46,7 @@ create extension wrappers;
 -- create foreign data wrapper and enable 'FirebaseFdw'
 drop foreign data wrapper if exists firebase_wrapper cascade;
 create foreign data wrapper firebase_wrapper
-  handler wrappers_handler
-  validator wrappers_validator
-  options (
-    wrapper 'FirebaseFdw'
-  );
+  handler firebase_fdw_handler;
 
 -- Below we're using the service account key stored in Vault, if you don't want
 -- to use Vault, you can directly specify the service account key in `sa_key`

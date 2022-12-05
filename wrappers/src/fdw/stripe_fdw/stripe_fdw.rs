@@ -3,7 +3,7 @@ use pgx::JsonB;
 use reqwest::{self, header, Url};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
-use serde_json::Value as JsonValue;
+use serde_json::{Map as JsonMap, Number, Value as JsonValue};
 use std::collections::HashMap;
 use time::OffsetDateTime;
 
@@ -25,7 +25,7 @@ fn create_client(api_key: &str) -> ClientWithMiddleware {
         .build()
 }
 
-fn extract_to_rows(
+fn body_to_rows(
     resp_body: &str,
     obj_key: &str,
     common_cols: Vec<(&str, &str)>,
@@ -33,19 +33,38 @@ fn extract_to_rows(
 ) -> (Vec<Row>, Option<String>, Option<bool>) {
     let mut result = Vec::new();
     let value: JsonValue = serde_json::from_str(resp_body).unwrap();
-    let objs = value
+    let is_list = value
         .as_object()
-        .and_then(|v| v.get(obj_key))
-        .and_then(|v| v.as_array())
-        .unwrap();
+        .and_then(|v| v.get("object"))
+        .and_then(|v| v.as_str())
+        .map(|v| v == "list")
+        .unwrap_or_default();
+    let single_wrapped: Vec<JsonValue> = if is_list {
+        Vec::new()
+    } else {
+        let obj = value.as_object().map(|v| v.clone()).unwrap();
+        vec![JsonValue::Object(obj)]
+    };
+    let objs = if is_list {
+        value
+            .as_object()
+            .and_then(|v| v.get(obj_key))
+            .and_then(|v| v.as_array())
+            .unwrap()
+    } else {
+        &single_wrapped
+    };
     let mut cursor: Option<String> = None;
 
     for obj in objs {
         let mut row = Row::new();
 
         // extract common columns
-        for (col_name, col_type) in &common_cols {
-            if tgt_cols.iter().any(|c| c == col_name) {
+        for tgt_col in tgt_cols {
+            for (col_name, col_type) in &common_cols {
+                if col_name != tgt_col {
+                    continue;
+                }
                 let cell = obj
                     .as_object()
                     .and_then(|v| v.get(*col_name))
@@ -61,6 +80,7 @@ fn extract_to_rows(
                         _ => None,
                     });
                 row.push(col_name, cell);
+                break;
             }
         }
 
@@ -91,6 +111,62 @@ fn extract_to_rows(
     (result, cursor, has_more)
 }
 
+fn row_to_body(row: &Row) -> JsonValue {
+    let mut map = JsonMap::new();
+
+    for (col_name, cell) in row.iter() {
+        if let Some(cell) = cell {
+            let col_name = col_name.to_owned();
+
+            match cell {
+                Cell::Bool(v) => {
+                    map.insert(col_name, JsonValue::Bool(*v));
+                }
+                Cell::I64(v) => {
+                    map.insert(col_name, JsonValue::Number(Number::from(*v)));
+                }
+                Cell::String(v) => {
+                    map.insert(col_name, JsonValue::String(v.to_string()));
+                }
+                Cell::Json(v) => {
+                    if col_name == "attrs" {
+                        v.0.clone().as_object_mut().map(|m| map.append(m));
+                    }
+                }
+                _ => {
+                    report_error(
+                        PgSqlErrorCode::ERRCODE_FDW_INVALID_DATA_TYPE,
+                        &format!("field type {:?} not supported", cell),
+                    );
+                    return JsonValue::Null;
+                }
+            }
+        }
+    }
+
+    JsonValue::Object(map)
+}
+
+// for scan with a single id, optimized to single object GET request
+fn pushdown_single_id(url: &Url, quals: &Vec<Qual>) -> Option<Url> {
+    if quals.len() != 1 {
+        return None;
+    }
+    let qual = &quals[0];
+    if qual.field == "id" && qual.operator == "=" && !qual.use_or {
+        match &qual.value {
+            Value::Cell(cell) => match cell {
+                Cell::String(s) => {
+                    return Url::parse(&format!("{}/{}", url.as_str(), &s)).ok();
+                }
+                _ => {}
+            },
+            _ => {}
+        }
+    }
+    None
+}
+
 fn pushdown_quals(url: &mut Url, quals: &Vec<Qual>, fields: Vec<&str>) {
     for qual in quals {
         for field in &fields {
@@ -98,7 +174,8 @@ fn pushdown_quals(url: &mut Url, quals: &Vec<Qual>, fields: Vec<&str>) {
                 match &qual.value {
                     Value::Cell(cell) => match cell {
                         Cell::Bool(b) => {
-                            url.query_pairs_mut().append_pair(field, &format!("{}", b));
+                            url.query_pairs_mut()
+                                .append_pair(field, b.to_string().as_str());
                         }
                         Cell::String(s) => {
                             url.query_pairs_mut().append_pair(field, &s);
@@ -112,11 +189,24 @@ fn pushdown_quals(url: &mut Url, quals: &Vec<Qual>, fields: Vec<&str>) {
     }
 }
 
+macro_rules! report_request_error {
+    ($err:ident) => {{
+        //log_info(&format!("{:?}", $err));
+        report_error(
+            PgSqlErrorCode::ERRCODE_FDW_ERROR,
+            &format!("request failed: {}", $err),
+        );
+        return;
+    }};
+}
+
 pub(crate) struct StripeFdw {
     rt: Runtime,
     base_url: Url,
     client: Option<ClientWithMiddleware>,
     scan_result: Option<Vec<Row>>,
+    obj: String,
+    rowid_col: String,
 }
 
 impl StripeFdw {
@@ -144,6 +234,10 @@ impl StripeFdw {
         // pushdown quals for customers
         // ref: https://stripe.com/docs/api/customers/list
         if obj == "customers" {
+            let single_id_url = pushdown_single_id(&url, quals);
+            if single_id_url.is_some() {
+                return single_id_url;
+            }
             pushdown_quals(&mut url, quals, vec!["email"]);
         }
 
@@ -162,12 +256,20 @@ impl StripeFdw {
         // pushdown quals for payment intents
         // ref: https://stripe.com/docs/api/products/list
         if obj == "products" {
+            let single_id_url = pushdown_single_id(&url, quals);
+            if single_id_url.is_some() {
+                return single_id_url;
+            }
             pushdown_quals(&mut url, quals, vec!["active"]);
         }
 
         // pushdown quals for subscriptions
         // ref: https://stripe.com/docs/api/subscriptions/list
         if obj == "subscriptions" {
+            let single_id_url = pushdown_single_id(&url, quals);
+            if single_id_url.is_some() {
+                return single_id_url;
+            }
             pushdown_quals(&mut url, quals, vec!["customer", "price", "status"]);
         }
 
@@ -191,13 +293,13 @@ impl StripeFdw {
         tgt_cols: &Vec<String>,
     ) -> (Vec<Row>, Option<String>, Option<bool>) {
         match obj {
-            "balance" => extract_to_rows(
+            "balance" => body_to_rows(
                 resp_body,
                 "available",
                 vec![("amount", "i64"), ("currency", "string")],
                 tgt_cols,
             ),
-            "balance_transactions" => extract_to_rows(
+            "balance_transactions" => body_to_rows(
                 resp_body,
                 "data",
                 vec![
@@ -213,7 +315,7 @@ impl StripeFdw {
                 ],
                 tgt_cols,
             ),
-            "charges" => extract_to_rows(
+            "charges" => body_to_rows(
                 resp_body,
                 "data",
                 vec![
@@ -229,13 +331,19 @@ impl StripeFdw {
                 ],
                 tgt_cols,
             ),
-            "customers" => extract_to_rows(
+            "customers" => body_to_rows(
                 resp_body,
                 "data",
-                vec![("id", "string"), ("email", "string")],
+                vec![
+                    ("id", "string"),
+                    ("email", "string"),
+                    ("name", "string"),
+                    ("description", "string"),
+                    ("created", "timestamp"),
+                ],
                 tgt_cols,
             ),
-            "invoices" => extract_to_rows(
+            "invoices" => body_to_rows(
                 resp_body,
                 "data",
                 vec![
@@ -250,7 +358,7 @@ impl StripeFdw {
                 ],
                 tgt_cols,
             ),
-            "payment_intents" => extract_to_rows(
+            "payment_intents" => body_to_rows(
                 resp_body,
                 "data",
                 vec![
@@ -263,7 +371,7 @@ impl StripeFdw {
                 ],
                 tgt_cols,
             ),
-            "products" => extract_to_rows(
+            "products" => body_to_rows(
                 resp_body,
                 "data",
                 vec![
@@ -277,7 +385,7 @@ impl StripeFdw {
                 ],
                 tgt_cols,
             ),
-            "subscriptions" => extract_to_rows(
+            "subscriptions" => body_to_rows(
                 resp_body,
                 "data",
                 vec![
@@ -300,16 +408,6 @@ impl StripeFdw {
     }
 }
 
-macro_rules! report_fetch_error {
-    ($err:ident) => {{
-        report_error(
-            PgSqlErrorCode::ERRCODE_FDW_ERROR,
-            &format!("fetch failed: {}", $err),
-        );
-        return;
-    }};
-}
-
 impl ForeignDataWrapper for StripeFdw {
     fn new(options: &HashMap<String, String>) -> Self {
         let base_url = options
@@ -328,6 +426,8 @@ impl ForeignDataWrapper for StripeFdw {
             base_url: Url::parse(&base_url).unwrap(),
             client,
             scan_result: None,
+            obj: String::default(),
+            rowid_col: String::default(),
         }
     }
 
@@ -363,7 +463,6 @@ impl ForeignDataWrapper for StripeFdw {
             while page < page_cnt {
                 // build url
                 let url = self.build_url(&obj, quals, page_size, &cursor);
-                log_info(&format!("{:?}", url)); 
                 if url.is_none() {
                     return;
                 }
@@ -390,9 +489,9 @@ impl ForeignDataWrapper for StripeFdw {
                             }
                             cursor = starting_after;
                         }
-                        Err(err) => report_fetch_error!(err),
+                        Err(err) => report_request_error!(err),
                     },
-                    Err(err) => report_fetch_error!(err),
+                    Err(err) => report_request_error!(err),
                 }
 
                 page += 1;
@@ -414,4 +513,102 @@ impl ForeignDataWrapper for StripeFdw {
     fn end_scan(&mut self) {
         self.scan_result.take();
     }
+
+    fn begin_modify(&mut self, options: &HashMap<String, String>) {
+        self.obj = require_option("object", options).unwrap_or_else(String::default);
+        self.rowid_col = require_option("rowid_column", options).unwrap_or_else(String::default);
+    }
+
+    fn insert(&mut self, src: &Row) {
+        if let Some(ref mut client) = self.client {
+            let url = self.base_url.join(&self.obj).unwrap();
+            let body = row_to_body(src);
+            if body.is_null() {
+                return;
+            }
+
+            // call Stripe API
+            match self.rt.block_on(client.post(url).form(&body).send()) {
+                Ok(resp) => match resp.error_for_status() {
+                    Ok(resp) => {
+                        let body = self.rt.block_on(resp.text()).unwrap();
+                        let json: JsonValue = serde_json::from_str(&body).unwrap();
+                        if let Some(id) = json.get("id").and_then(|v| v.as_str()) {
+                            log_info(&format!("inserted {} {}", self.obj, id));
+                        }
+                    }
+                    Err(err) => report_request_error!(err),
+                },
+                Err(err) => report_request_error!(err),
+            }
+        }
+    }
+
+    fn update(&mut self, rowid: &Cell, new_row: &Row) {
+        if let Some(ref mut client) = self.client {
+            match rowid {
+                Cell::String(rowid) => {
+                    let url = self
+                        .base_url
+                        .join(&format!("{}/", self.obj))
+                        .unwrap()
+                        .join(rowid)
+                        .unwrap();
+                    let body = row_to_body(new_row);
+                    if body.is_null() {
+                        return;
+                    }
+
+                    // call Stripe API
+                    match self.rt.block_on(client.post(url).form(&body).send()) {
+                        Ok(resp) => match resp.error_for_status() {
+                            Ok(resp) => {
+                                let body = self.rt.block_on(resp.text()).unwrap();
+                                let json: JsonValue = serde_json::from_str(&body).unwrap();
+                                if let Some(id) = json.get("id").and_then(|v| v.as_str()) {
+                                    log_info(&format!("updated {} {}", self.obj, id));
+                                }
+                            }
+                            Err(err) => report_request_error!(err),
+                        },
+                        Err(err) => report_request_error!(err),
+                    }
+                }
+                _ => unreachable!(),
+            }
+        }
+    }
+
+    fn delete(&mut self, rowid: &Cell) {
+        if let Some(ref mut client) = self.client {
+            match rowid {
+                Cell::String(rowid) => {
+                    let url = self
+                        .base_url
+                        .join(&format!("{}/", self.obj))
+                        .unwrap()
+                        .join(rowid)
+                        .unwrap();
+
+                    // call Stripe API
+                    match self.rt.block_on(client.delete(url).send()) {
+                        Ok(resp) => match resp.error_for_status() {
+                            Ok(resp) => {
+                                let body = self.rt.block_on(resp.text()).unwrap();
+                                let json: JsonValue = serde_json::from_str(&body).unwrap();
+                                if let Some(id) = json.get("id").and_then(|v| v.as_str()) {
+                                    log_info(&format!("deleted {} {}", self.obj, id));
+                                }
+                            }
+                            Err(err) => report_request_error!(err),
+                        },
+                        Err(err) => report_request_error!(err),
+                    }
+                }
+                _ => unreachable!(),
+            }
+        }
+    }
+
+    fn end_modify(&mut self) {}
 }

@@ -1,6 +1,6 @@
 use pgx::{
     debug2,
-    memcxt::{void_mut_ptr, PgMemoryContexts},
+    memcxt::PgMemoryContexts,
     prelude::*,
     rel::PgRelation,
     tupdesc::PgTupleDesc,
@@ -22,6 +22,7 @@ struct FdwModifyState<W: ForeignDataWrapper> {
     instance: W,
 
     // row id attribute number and type id
+    rowid_name: String,
     rowid_attno: pg_sys::AttrNumber,
     rowid_typid: pg_sys::Oid,
 
@@ -36,6 +37,7 @@ impl<W: ForeignDataWrapper> FdwModifyState<W> {
     unsafe fn new(foreigntableid: pg_sys::Oid) -> Self {
         Self {
             instance: instance::create_fdw_instance(foreigntableid),
+            rowid_name: String::default(),
             rowid_attno: 0,
             rowid_typid: 0,
             opts: HashMap::new(),
@@ -69,6 +71,8 @@ impl<W: ForeignDataWrapper> FdwModifyState<W> {
         self.tmp_ctx.reset();
     }
 }
+
+impl<W: ForeignDataWrapper> utils::SerdeList for FdwModifyState<W> {}
 
 pub(super) extern "C" fn add_foreign_update_targets(
     root: *mut pg_sys::PlannerInfo,
@@ -114,10 +118,10 @@ pub(super) extern "C" fn add_foreign_update_targets(
     }
 }
 
-pub(super) extern "C" fn plan_foreign_modify(
-    _root: *mut pg_sys::PlannerInfo,
+pub(super) extern "C" fn plan_foreign_modify<W: ForeignDataWrapper>(
+    root: *mut pg_sys::PlannerInfo,
     plan: *mut pg_sys::ModifyTable,
-    _result_relation: pg_sys::Index,
+    result_relation: pg_sys::Index,
     _subplan_index: c_int,
 ) -> *mut pg_sys::List {
     debug2!("---> plan_foreign_modify");
@@ -128,25 +132,12 @@ pub(super) extern "C" fn plan_foreign_modify(
                 "RETURNING is not supported",
             )
         }
-    }
-    ptr::null_mut()
-}
 
-pub(super) extern "C" fn begin_foreign_modify<W: ForeignDataWrapper>(
-    mtstate: *mut pg_sys::ModifyTableState,
-    rinfo: *mut pg_sys::ResultRelInfo,
-    _fdw_private: *mut pg_sys::List,
-    _subplan_index: c_int,
-    eflags: c_int,
-) {
-    debug2!("---> begin_foreign_modify");
+        let rte = pg_sys::planner_rt_fetch(result_relation, root);
 
-    if eflags & pg_sys::EXEC_FLAG_EXPLAIN_ONLY as c_int > 0 {
-        return;
-    }
-
-    unsafe {
-        let rel = PgRelation::from_pg((*rinfo).ri_RelationDesc);
+        // core code already has some lock on each rel being planned, so we can
+	    // use NoLock here.
+        let rel = PgRelation::with_lock((*rte).relid, pg_sys::NoLock as _);
 
         // get rowid column name from table options
         let ftable = pg_sys::GetForeignTable(rel.oid());
@@ -157,7 +148,7 @@ pub(super) extern "C" fn begin_foreign_modify<W: ForeignDataWrapper>(
                 PgSqlErrorCode::ERRCODE_FDW_OPTION_NAME_NOT_FOUND,
                 "option 'rowid_column' is required",
             );
-            return;
+            return ptr::null_mut();
         }
         let rowid_name = rowid_name.unwrap();
 
@@ -169,33 +160,52 @@ pub(super) extern "C" fn begin_foreign_modify<W: ForeignDataWrapper>(
                 // create modify state
                 let mut state = FdwModifyState::<W>::new(rel.oid());
 
-                // get rowid attribute number
-                let rowid_attno = {
-                    let old_ctx = state.tmp_ctx.set_as_current();
-                    let subplan = (*polyfill::outer_plan_state(&mut (*mtstate).ps)).plan;
-                    let rowid_name_c = PgMemoryContexts::CurrentMemoryContext.pstrdup(rowid_name);
-                    let attr_no =
-                        pg_sys::ExecFindJunkAttributeInTlist((*subplan).targetlist, rowid_name_c);
-                    old_ctx.set_as_current();
-                    attr_no
-                };
-
-                state.rowid_attno = rowid_attno;
+                state.rowid_name = rowid_name.to_string();
                 state.rowid_typid = attr.atttypid;
                 state.opts = opts;
 
-                state.begin_modify();
-
-                (*rinfo).ri_FdwState = PgBox::new(state).into_pg() as void_mut_ptr;
-
-                return;
+                let boxed_state = PgBox::new(state).into_pg_boxed();
+                return FdwModifyState::serialize_to_list(boxed_state);
             }
         }
 
         report_error(
             PgSqlErrorCode::ERRCODE_FDW_ERROR,
             &format!("rowid_column attribute {:?} does not exist", rowid_name),
-        )
+        );
+
+        ptr::null_mut()
+    }
+}
+
+pub(super) extern "C" fn begin_foreign_modify<W: ForeignDataWrapper>(
+    mtstate: *mut pg_sys::ModifyTableState,
+    rinfo: *mut pg_sys::ResultRelInfo,
+    fdw_private: *mut pg_sys::List,
+    _subplan_index: c_int,
+    eflags: c_int,
+) {
+    debug2!("---> begin_foreign_modify");
+
+    if eflags & pg_sys::EXEC_FLAG_EXPLAIN_ONLY as c_int > 0 {
+        return;
+    }
+
+    unsafe {
+        let mut state = FdwModifyState::<W>::deserialize_from_list(fdw_private as _);
+
+        let old_ctx = state.tmp_ctx.set_as_current();
+
+        // search for rowid attribute number
+        let subplan = (*polyfill::outer_plan_state(&mut (*mtstate).ps)).plan;
+        let rowid_name_c = PgMemoryContexts::CurrentMemoryContext.pstrdup(&state.rowid_name);
+        state.rowid_attno = pg_sys::ExecFindJunkAttributeInTlist((*subplan).targetlist, rowid_name_c);
+
+        state.begin_modify();
+
+        (*rinfo).ri_FdwState = state.into_pg() as _;
+
+        old_ctx.set_as_current();
     }
 }
 
@@ -270,9 +280,20 @@ pub(super) extern "C" fn exec_foreign_update<W: ForeignDataWrapper>(
         state.tmp_ctx.reset();
         let old_ctx = state.tmp_ctx.set_as_current();
 
-        let cell = get_rowid_cell(&state, plan_slot);
-        if let Some(rowid) = cell {
-            let new_row = utils::tuple_table_slot_to_row(slot);
+        let rowid_cell = get_rowid_cell(&state, plan_slot);
+        if let Some(rowid) = rowid_cell {
+            let mut new_row = utils::tuple_table_slot_to_row(plan_slot);
+
+            // remove junk attributes, including rowid attribute, from the new row
+            // so we only keep the updated new attributes
+            let tup_desc = PgTupleDesc::from_pg_copy((*slot).tts_tupleDescriptor);
+            new_row.retain(|(col, _)| {
+                tup_desc.iter().filter(|a| !a.attisdropped).any(|a| {
+                    let attr_name = pgx::name_data_to_str(&a.attname);
+                    attr_name == col.as_str()
+                }) && state.rowid_name != col.as_str()
+            });
+
             state.update(&rowid, &new_row);
         }
 

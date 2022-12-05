@@ -1,22 +1,17 @@
-use pgx::{
-    debug2, list::PgList, memcxt::PgMemoryContexts, pg_sys::Datum, prelude::*, FromDatum,
-    IntoDatum, PgSqlErrorCode,
-};
+use pgx::{debug2, memcxt::PgMemoryContexts, pg_sys::Datum, prelude::*, IntoDatum, PgSqlErrorCode};
 use std::collections::HashMap;
 
 use std::os::raw::c_int;
 use std::ptr;
 
-use super::instance;
-use super::polyfill;
-use super::utils;
-
+use crate::instance;
 use crate::interface::{Limit, Qual, Row, Sort};
 use crate::limit::*;
+use crate::polyfill;
 use crate::prelude::ForeignDataWrapper;
 use crate::qual::*;
 use crate::sort::*;
-use crate::utils::report_error;
+use crate::utils::{self, report_error, SerdeList};
 
 // Fdw private state for scan
 struct FdwState<W: ForeignDataWrapper> {
@@ -61,29 +56,6 @@ impl<W: ForeignDataWrapper> FdwState<W> {
             values: Vec::new(),
             nulls: Vec::new(),
         }
-    }
-
-    unsafe fn serialize_to_list(state: PgBox<Self>) -> *mut pg_sys::List {
-        let mut ret = PgList::new();
-        let val = state.into_pg() as i64;
-        let cst = pg_sys::makeConst(
-            pg_sys::INT8OID,
-            -1,
-            pg_sys::InvalidOid,
-            8,
-            val.into_datum().unwrap(),
-            false,
-            true,
-        );
-        ret.push(cst);
-        ret.into_pg()
-    }
-
-    unsafe fn deserialize_from_list(list: *mut pg_sys::List) -> PgBox<Self> {
-        let list = PgList::<pg_sys::Const>::from_pg(list);
-        let cst = list.head().unwrap();
-        let ptr = i64::from_datum((*cst).constvalue, (*cst).constisnull).unwrap();
-        PgBox::<FdwState<W>>::from_pg(ptr as _)
     }
 
     fn get_rel_size(&mut self) -> (i64, i32) {
@@ -137,6 +109,8 @@ impl<W: ForeignDataWrapper> FdwState<W> {
         self.tmp_ctx.reset();
     }
 }
+
+impl<W: ForeignDataWrapper> utils::SerdeList for FdwState<W> {}
 
 pub(super) extern "C" fn get_foreign_rel_size<W: ForeignDataWrapper>(
     root: *mut pg_sys::PlannerInfo,
@@ -237,8 +211,6 @@ pub(super) extern "C" fn get_foreign_plan<W: ForeignDataWrapper>(
 
         old_ctx.set_as_current();
 
-        // "serialize" the state, so that it is safe to be carried
-        // between the plan and the execution
         let fdw_private = FdwState::serialize_to_list(state);
 
         pg_sys::make_foreignscan(

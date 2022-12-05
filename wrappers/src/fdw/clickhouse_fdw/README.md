@@ -99,7 +99,7 @@ On Postgres:
 select * from people;
 
 -- data modify
-insert into people values (4, 'Yoda') ;
+insert into people values (4, 'Yoda');
 update people set name = 'Princess Leia' where id = 2;
 delete from people where id = 3;
 ```

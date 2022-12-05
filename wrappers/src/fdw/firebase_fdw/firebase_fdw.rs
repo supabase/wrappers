@@ -4,7 +4,7 @@ use regex::Regex;
 use reqwest::{self, header};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
-use serde_json::Value;
+use serde_json::Value as JsonValue;
 use std::collections::HashMap;
 use time::{format_description::well_known::Iso8601, PrimitiveDateTime};
 use yup_oauth2::AccessToken;
@@ -110,10 +110,11 @@ impl FirebaseFdw {
                 // ref: https://firebase.google.com/docs/firestore/reference/rest/v1beta1/projects.databases.documents/listDocuments
                 let re = Regex::new(r"^firestore/(?P<collection>[^/]+)").unwrap();
                 if let Some(caps) = re.captures(obj) {
-                    let base_url = options
-                        .get("base_url")
-                        .map(|t| t.to_owned())
-                        .unwrap_or(Self::DEFAULT_FIRESTORE_BASE_URL.to_owned());
+                    let base_url = require_option_or(
+                        "base_url",
+                        options,
+                        Self::DEFAULT_FIRESTORE_BASE_URL.to_owned(),
+                    );
                     let collection = caps.name("collection").unwrap().as_str();
                     let mut ret = format!(
                         "{}/{}/databases/(default)/documents/{}?pageSize={}",
@@ -134,7 +135,7 @@ impl FirebaseFdw {
     }
 
     // convert response body text to rows
-    fn resp_to_rows(&self, obj: &str, resp: &Value, tgt_cols: &Vec<String>) -> Vec<Row> {
+    fn resp_to_rows(&self, obj: &str, resp: &JsonValue, tgt_cols: &Vec<String>) -> Vec<Row> {
         let mut result = Vec::new();
 
         match obj {
@@ -331,7 +332,7 @@ impl ForeignDataWrapper for FirebaseFdw {
                     Ok(resp) => match resp.error_for_status() {
                         Ok(resp) => {
                             let body = self.rt.block_on(resp.text()).unwrap();
-                            let json: Value = serde_json::from_str(&body).unwrap();
+                            let json: JsonValue = serde_json::from_str(&body).unwrap();
                             let mut rows = self.resp_to_rows(&obj, &json, columns);
                             result.append(&mut rows);
                             if result.len() >= row_cnt_limit {
