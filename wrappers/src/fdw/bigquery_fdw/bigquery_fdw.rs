@@ -288,9 +288,10 @@ impl ForeignDataWrapper for BigQueryFdw {
                 if let Some(fields) = &tbl.schema.fields {
                     let mut ret = Row::new();
                     for tgt_col in &self.tgt_cols {
-                        let field = fields.iter().find(|&f| &f.name == tgt_col).unwrap();
-                        let cell = field_to_cell(rs, field);
-                        ret.push(&field.name, cell);
+                        if let Some(field) = fields.iter().find(|&f| &f.name == tgt_col) {
+                            let cell = field_to_cell(rs, field);
+                            ret.push(&field.name, cell);
+                        }
                     }
                     return Some(ret);
                 }
