@@ -77,6 +77,7 @@ fn field_to_cell(row: &types::Row<types::Complex>, i: usize) -> Option<Cell> {
     }
 }
 
+#[wrappers_fdw]
 pub(crate) struct ClickHouseFdw {
     rt: Runtime,
     client: Option<ClientHandle>,

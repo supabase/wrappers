@@ -223,6 +223,7 @@ pub mod utils;
 pub mod prelude {
     pub use crate::interface::*;
     pub use crate::utils::*;
+    pub use crate::wrappers_fdw;
     pub use ::tokio::runtime::Runtime;
 }
 
@@ -238,3 +239,5 @@ mod scan;
 mod sort;
 
 pub type FdwRoutine<A = AllocatedByPostgres> = PgBox<pg_sys::FdwRoutine, A>;
+
+pub use supabase_wrappers_macros::wrappers_fdw;

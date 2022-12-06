@@ -23,6 +23,7 @@ pg_test = []
 pgx = {version = "=0.6.0", default-features = false }
 tokio = { version = "1.21", features = ["rt"] }
 uuid = { version = "1.2.2" }
+supabase-wrappers-macros = { version = "0.1", path = "../supabase-wrappers-macros" }
 
 [dev-dependencies]
 pgx-tests = "=0.6.0"

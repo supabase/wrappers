@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use supabase_wrappers::prelude::*;
 
 // A simple demo FDW
+#[wrappers_fdw]
 pub(crate) struct HelloWorldFdw {
     // row counter
     row_cnt: i64,

@@ -200,6 +200,7 @@ macro_rules! report_request_error {
     }};
 }
 
+#[wrappers_fdw]
 pub(crate) struct StripeFdw {
     rt: Runtime,
     base_url: Url,
