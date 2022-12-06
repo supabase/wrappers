@@ -10,14 +10,14 @@
       
       
       
-        <link rel="canonical" href="https://supabase.github.io/wrappers/usage/">
+        <link rel="canonical" href="https://supabase.github.io/wrappers/stripe/">
       
       <link rel="icon" href="../assets/favicon.ico">
       <meta name="generator" content="mkdocs-1.4.0, mkdocs-material-8.5.10">
     
     
       
-        <title>Usage - wrappers</title>
+        <title>Stripe - wrappers</title>
       
     
     
@@ -70,7 +70,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#firebase" class="md-skip">
+        <a href="#wrapper" class="md-skip">
           Skip to content
         </a>
       
@@ -102,7 +102,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Usage
+              Stripe
             
           </span>
         </div>
@@ -227,6 +227,48 @@
     
   
   
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" checked>
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2">
+          Wrappers
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Wrappers" data-md-level="1">
+        <label class="md-nav__title" for="__nav_2">
+          <span class="md-nav__icon md-icon"></span>
+          Wrappers
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../firebase/" class="md-nav__link">
+        Firebase
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+    
+  
+  
     <li class="md-nav__item md-nav__item--active">
       
       <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
@@ -234,12 +276,12 @@
       
       
         <label class="md-nav__link md-nav__link--active" for="__toc">
-          Usage
+          Stripe
           <span class="md-nav__icon md-icon"></span>
         </label>
       
       <a href="./" class="md-nav__link md-nav__link--active">
-        Usage
+        Stripe
       </a>
       
         
@@ -256,21 +298,13 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#firebase" class="md-nav__link">
-    Firebase
-  </a>
-  
-    <nav class="md-nav" aria-label="Firebase">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
   <a href="#wrapper" class="md-nav__link">
     Wrapper
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
+      
+        <li class="md-nav__item">
   <a href="#server" class="md-nav__link">
     Server
   </a>
@@ -292,87 +326,13 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#tables" class="md-nav__link">
-    Tables
-  </a>
-  
-    <nav class="md-nav" aria-label="Tables">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#firestore" class="md-nav__link">
-    Firestore
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#authusers" class="md-nav__link">
-    auth/users
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
       </ul>
     </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#stripe" class="md-nav__link">
-    Stripe
-  </a>
-  
-    <nav class="md-nav" aria-label="Stripe">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#wrapper_1" class="md-nav__link">
-    Wrapper
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#server_1" class="md-nav__link">
-    Server
-  </a>
-  
-    <nav class="md-nav" aria-label="Server">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#auth-supabase_1" class="md-nav__link">
-    Auth (Supabase)
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#auth-insecure_1" class="md-nav__link">
-    Auth (Insecure)
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#tables_1" class="md-nav__link">
+  <a href="#tables" class="md-nav__link">
     Tables
   </a>
   
@@ -404,16 +364,18 @@
     </nav>
   
 </li>
-        
-      </ul>
-    </nav>
-  
-</li>
       
     </ul>
   
 </nav>
       
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
     </li>
   
 
@@ -473,21 +435,13 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#firebase" class="md-nav__link">
-    Firebase
-  </a>
-  
-    <nav class="md-nav" aria-label="Firebase">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
   <a href="#wrapper" class="md-nav__link">
     Wrapper
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
+      
+        <li class="md-nav__item">
   <a href="#server" class="md-nav__link">
     Server
   </a>
@@ -509,87 +463,13 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#tables" class="md-nav__link">
-    Tables
-  </a>
-  
-    <nav class="md-nav" aria-label="Tables">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#firestore" class="md-nav__link">
-    Firestore
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#authusers" class="md-nav__link">
-    auth/users
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
       </ul>
     </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#stripe" class="md-nav__link">
-    Stripe
-  </a>
-  
-    <nav class="md-nav" aria-label="Stripe">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#wrapper_1" class="md-nav__link">
-    Wrapper
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#server_1" class="md-nav__link">
-    Server
-  </a>
-  
-    <nav class="md-nav" aria-label="Server">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#auth-supabase_1" class="md-nav__link">
-    Auth (Supabase)
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#auth-insecure_1" class="md-nav__link">
-    Auth (Insecure)
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#tables_1" class="md-nav__link">
+  <a href="#tables" class="md-nav__link">
     Tables
   </a>
   
@@ -621,11 +501,6 @@
     </nav>
   
 </li>
-        
-      </ul>
-    </nav>
-  
-</li>
       
     </ul>
   
@@ -641,138 +516,17 @@
                 
                   
 
-  <a href="https://github.com/supabase/wrappers/edit/master/docs/usage.md" title="Edit this page" class="md-content__button md-icon">
+  <a href="https://github.com/supabase/wrappers/edit/master/docs/stripe.md" title="Edit this page" class="md-content__button md-icon">
     
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25Z"/></svg>
   </a>
 
 
-  <h1>Usage</h1>
+  <h1>Stripe</h1>
 
-<p><code>supabase/wrappers</code> leverages PostgreSQL's builtin foreign data wrapper (FDW) functionality to integrate with third-party services. </p>
-<p>To enable an integration, we first must enable the extension</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">extension</span><span class="w"> </span><span class="n">wrappers</span><span class="w"></span>
-</code></pre></div></td></tr></table></div>
-<h2 id="firebase">Firebase</h2>
-<p>Firebase is an app development platform built around non-relational technologies. The Firebase wrapper supports connecting to the <a href="https://firebase.google.com/docs/auth/users">auth/users collection</a> and any <a href="https://firebase.google.com/docs/firestore">Firestore collection</a>. </p>
+<p>Stripe is an API driven online payment processing utilty. <code>supabase/wrappers</code> exposes the <code>balance</code>, <code>customers</code>, and <code>subscriptions</code>, endpoints.</p>
 <h3 id="wrapper">Wrapper</h3>
-<p>To get started with the Firebase wrapper, create a foreign data wrapper specifying <code>FirebaseFdw</code> as the <code>wrapper</code> key of the <code>options</code> section.</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">firebase_wrapper</span><span class="w"></span>
-<span class="w">  </span><span class="k">handler</span><span class="w"> </span><span class="n">wrappers_handler</span><span class="w"></span>
-<span class="w">  </span><span class="k">validator</span><span class="w"> </span><span class="n">wrappers_validator</span><span class="w"></span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
-<span class="w">    </span><span class="n">wrapper</span><span class="w"> </span><span class="s1">&#39;FirebaseFdw&#39;</span><span class="w"></span>
-<span class="w">  </span><span class="p">);</span><span class="w"></span>
-</code></pre></div></td></tr></table></div>
-<h3 id="server">Server</h3>
-<p>Next, we need to create a server for the FDW to hold options and credentials.</p>
-<h4 id="auth-supabase">Auth (Supabase)</h4>
-<p>If you are using the Supabase platform, this is the recommended approach for securing your Firebase service account credentials.</p>
-<p>Create a secure key using pgsodium
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="n">pgsodium</span><span class="p">.</span><span class="n">create_key</span><span class="p">(</span><span class="n">name</span><span class="w"> </span><span class="p">:</span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;firebase&#39;</span><span class="p">);</span><span class="w"></span>
-</code></pre></div></td></tr></table></div></p>
-<p>Save your <a href="https://firebase.google.com/docs/admin/setup#add_firebase_to_your_app">Firebase service account key</a> in Vault and retrieve the <code>key_id</code>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span>
-<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"></span>
-<span class="w">  </span><span class="n">vault</span><span class="p">.</span><span class="n">secrets</span><span class="w"> </span><span class="p">(</span><span class="n">secret</span><span class="p">,</span><span class="w"> </span><span class="n">key_id</span><span class="p">)</span><span class="w"></span>
-<span class="k">values</span><span class="w"> </span>
-<span class="w">  </span><span class="p">(</span><span class="w"></span>
-<span class="w">    </span><span class="s1">&#39;{</span>
-<span class="s1">      &quot;type&quot;: &quot;service_account&quot;,</span>
-<span class="s1">      &quot;project_id&quot;: &quot;your_gcp_project_id&quot;,</span>
-<span class="s1">      ...</span>
-<span class="s1">    }&#39;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">pgsodium</span><span class="p">.</span><span class="n">valid_key</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;firebase&#39;</span><span class="p">)</span><span class="w"></span>
-<span class="w">  </span><span class="p">);</span><span class="w"></span>
-<span class="n">returning</span><span class="w"></span>
-<span class="w">  </span><span class="n">key_id</span><span class="p">;</span><span class="w"></span>
-</code></pre></div></td></tr></table></div></p>
-<p>Create the foreign server
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">firebase_server</span><span class="w"></span>
-<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">firebase_wrapper</span><span class="w"></span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
-<span class="w">    </span><span class="n">sa_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;your key_id from above&gt;&#39;</span><span class="w"></span>
-<span class="w">    </span><span class="n">project_id</span><span class="w"> </span><span class="s1">&#39;&lt;firebase_project_id&gt;&#39;</span><span class="w"></span>
-<span class="p">);</span><span class="w"></span>
-</code></pre></div></td></tr></table></div></p>
-<h4 id="auth-insecure">Auth (Insecure)</h4>
-<p>If the platform you are using does not support <code>pgsodium</code> and <code>Vault</code>, you can create a server by storing yourt <a href="https://firebase.google.com/docs/admin/setup#add_firebase_to_your_app">service account key</a> directly.</p>
-<div class="admonition important">
-<p class="admonition-title">Important</p>
-<p>Credentials stored using this method can be viewed as plain text by anyone with access to <code>pg_catalog.pg_foreign_server</code></p>
-</div>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">firebase_server</span><span class="w"></span>
-<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">firebase_wrapper</span><span class="w"></span>
-<span class="w">   </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
-<span class="w">     </span><span class="n">sa_key</span><span class="w"> </span><span class="s1">&#39;</span>
-<span class="s1">     {</span>
-<span class="s1">        &quot;type&quot;: &quot;service_account&quot;,</span>
-<span class="s1">        &quot;project_id&quot;: &quot;your_gcp_project_id&quot;,</span>
-<span class="s1">        ...</span>
-<span class="s1">     }</span>
-<span class="s1">    &#39;</span><span class="p">,</span><span class="w"></span>
-<span class="w">     </span><span class="n">project_id</span><span class="w"> </span><span class="s1">&#39;firebase_project_id&#39;</span><span class="p">,</span><span class="w"></span>
-<span class="w">   </span><span class="p">);</span><span class="w"></span>
-</code></pre></div></td></tr></table></div>
-<h4 id="tables">Tables</h4>
-<p>Firebase collections are non-relational/documents. With the exception of metadata fields, all returned data are availble as a <code>fields</code> jsonb column. </p>
-<h5 id="firestore">Firestore</h5>
-<p>To map a Firestore collection provide its location using the format <code>firestore/&lt;collection_id&gt;</code> as the <code>object</code> option as shown below.</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">firebase_docs</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
-<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
-<span class="w">  </span><span class="n">fields</span><span class="w"> </span><span class="n">jsonb</span><span class="p">,</span><span class="w"></span>
-<span class="w">  </span><span class="n">create_time</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span><span class="w"></span>
-<span class="w">  </span><span class="n">update_time</span><span class="w"> </span><span class="k">timestamp</span><span class="w"></span>
-<span class="p">)</span><span class="w"></span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">my_firebase_server</span><span class="w"></span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;firestore/user-profiles&#39;</span><span class="w">  </span><span class="c1">-- format: &#39;firestore/[collection_id]&#39;</span>
-<span class="w">  </span><span class="p">);</span><span class="w"></span>
-</code></pre></div></td></tr></table></div>
-<p>Note that <code>name</code>, <code>create_time</code>, and <code>update_time</code>, are automatic metadata fields on all Firestore collections.</p>
-<h5 id="authusers">auth/users</h5>
-<p>The <code>auth/users</code> collection is a special case with unique metadata. The following shows how to map Firebase users to PostgreSQL table.</p>
+<p>To get started with the Stripe wrapper, create a foreign data wrapper specifying the <code>StripeFdw</code> as the <code>wrapper</code> key of the <code>options</code> section.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
@@ -780,36 +534,18 @@
 <span class="normal">5</span>
 <span class="normal">6</span>
 <span class="normal">7</span>
-<span class="normal">8</span>
-<span class="normal">9</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">firebase_users</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
-<span class="w">  </span><span class="n">uid</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
-<span class="w">  </span><span class="n">email</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
-<span class="w">  </span><span class="n">fields</span><span class="w"> </span><span class="n">jsonb</span><span class="w"></span>
-<span class="p">)</span><span class="w"></span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">my_firebase_server</span><span class="w"></span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;auth/users&#39;</span><span class="w"></span>
-<span class="w">  </span><span class="p">);</span><span class="w"></span>
-</code></pre></div></td></tr></table></div>
-<h2 id="stripe">Stripe</h2>
-<p>Stripe is an API driven online payment processing utilty. <code>supabase/wrappers</code> exposes the <code>balance</code>, <code>customers</code>, and <code>subscriptions</code>, endpoints.</p>
-<h3 id="wrapper_1">Wrapper</h3>
-<p>To get started with the Stripe wrapper, create a foreign data wrapper specifying the <code>StripeFdw</code> as the <code>wrapper</code> key of the <code>options</code> section.</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">stripe_wrapper</span><span class="w"></span>
+<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">extension</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">wrappers</span><span class="p">;</span><span class="w"></span>
+
+<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">stripe_wrapper</span><span class="w"></span>
 <span class="w">  </span><span class="k">handler</span><span class="w"> </span><span class="n">wrappers_handler</span><span class="w"></span>
 <span class="w">  </span><span class="k">validator</span><span class="w"> </span><span class="n">wrappers_validator</span><span class="w"></span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
 <span class="w">    </span><span class="n">wrapper</span><span class="w"> </span><span class="s1">&#39;StripeFdw&#39;</span><span class="w"></span>
 <span class="w">  </span><span class="p">);</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
-<h3 id="server_1">Server</h3>
+<h3 id="server">Server</h3>
 <p>Next, we need to create a server for the FDW to hold options and credentials.</p>
-<h4 id="auth-supabase_1">Auth (Supabase)</h4>
+<h4 id="auth-supabase">Auth (Supabase)</h4>
 <p>If you are using the Supabase platform, this is the recommended approach for securing your <a href="https://stripe.com/docs/keys">Stripe API key</a>.</p>
 <p>Create a secure key using pgsodium
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="n">pgsodium</span><span class="p">.</span><span class="n">create_key</span><span class="p">(</span><span class="n">name</span><span class="w"> </span><span class="p">:</span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;stripe&#39;</span><span class="p">);</span><span class="w"></span>
@@ -840,7 +576,7 @@
 <span class="w">    </span><span class="n">api_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;your key_id from above&gt;&#39;</span><span class="w"></span>
 <span class="w">  </span><span class="p">);</span><span class="w"></span>
 </code></pre></div></td></tr></table></div></p>
-<h4 id="auth-insecure_1">Auth (Insecure)</h4>
+<h4 id="auth-insecure">Auth (Insecure)</h4>
 <p>If the platform you are using does not support <code>pgsodium</code> and <code>Vault</code> you can create a server by storing your <a href="https://stripe.com/docs/keys">Stripe API key</a> directly.</p>
 <div class="admonition important">
 <p class="admonition-title">Important</p>
@@ -856,7 +592,7 @@
 <span class="w">     </span><span class="n">api_key</span><span class="w"> </span><span class="s1">&#39;sk_test_xxx&#39;</span><span class="w"></span>
 <span class="w">   </span><span class="p">);</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
-<h3 id="tables_1">Tables</h3>
+<h3 id="tables">Tables</h3>
 <p>The Stripe tables mirror Stripe's API. Available tables represent <a href="https://stripe.com/docs/api/balance">balance</a>, <a href="https://stripe.com/docs/api/customers">customers</a>, and <a href="https://stripe.com/docs/api/subscriptions">subscriptions</a>.</p>
 <p>(Optional) Create a schema to hold the Stripe tables.
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">stripe</span><span class="p">;</span><span class="w"></span>
@@ -939,7 +675,7 @@
     <nav class="md-footer__inner md-grid" aria-label="Footer" >
       
         
-        <a href=".." class="md-footer__link md-footer__link--prev" aria-label="Previous: Welcome" rel="prev">
+        <a href="../firebase/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Firebase" rel="prev">
           <div class="md-footer__button md-icon">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
           </div>
@@ -948,7 +684,7 @@
               <span class="md-footer__direction">
                 Previous
               </span>
-              Welcome
+              Firebase
             </div>
           </div>
         </a>
@@ -992,7 +728,7 @@
       <div class="md-dialog__inner md-typeset"></div>
     </div>
     
-    <script id="__config" type="application/json">{"base": "..", "features": [], "search": "../assets/javascripts/workers/search.16e2a7d4.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "..", "features": ["navigation.expand"], "search": "../assets/javascripts/workers/search.16e2a7d4.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
     
     
       <script src="../assets/javascripts/bundle.d6c3db9e.min.js"></script>
