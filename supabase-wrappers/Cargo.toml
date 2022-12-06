@@ -20,12 +20,12 @@ pg15 = ["pgx/pg15", "pgx-tests/pg15" ]
 pg_test = []
 
 [dependencies]
-pgx = {version = "=0.6.0", default-features = false }
+pgx = {version = "=0.6.1", default-features = false }
 tokio = { version = "1.21", features = ["rt"] }
 uuid = { version = "1.2.2" }
 
 [dev-dependencies]
-pgx-tests = "=0.6.0"
+pgx-tests = "=0.6.1"
 
 [package.metadata.docs.rs]
 features = ["pg15"]

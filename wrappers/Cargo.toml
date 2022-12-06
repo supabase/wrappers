@@ -28,7 +28,7 @@ airtable_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", 
 all_fdws = ["airtable_fdw", "bigquery_fdw", "clickhouse_fdw", "stripe_fdw", "firebase_fdw"]
 
 [dependencies]
-pgx = { version = "=0.6.0", features = ["time-crate"] }
+pgx = { version = "=0.6.1", features = ["time-crate"] }
 cfg-if = "1.0"
 #supabase-wrappers = "0.1"
 supabase-wrappers = { path = "../supabase-wrappers", default-features = false }
@@ -58,7 +58,7 @@ regex = { version = "1", optional = true }
 url = { version = "2.3", optional = true }
 
 [dev-dependencies]
-pgx-tests = "=0.6.0"
+pgx-tests = "=0.6.1"
 
 [profile.dev]
 panic = "unwind"
