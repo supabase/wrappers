@@ -7,7 +7,9 @@ repo_url: https://github.com/supabase/wrappers
 
 nav:
     - Welcome: 'index.md'
-    - Usage: 'usage.md'
+    - Wrappers:
+      - Firebase: 'firebase.md'
+      - Stripe: 'stripe.md'
     - Installation: 'installation.md'
     - Contributing: 'contributing.md'
 
@@ -16,6 +18,8 @@ theme:
     favicon: 'assets/favicon.ico'
     logo: 'assets/favicon.ico'
     homepage: https://supabase.github.io/wrappers
+    features:
+      - navigation.expand  
     palette:
         primary: black
         accent: light green
