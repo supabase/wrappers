@@ -29,11 +29,7 @@ create extension wrappers;
 -- create foreign data wrapper and enable 'HelloWorldFdw'
 drop foreign data wrapper if exists helloworld_wrapper cascade;
 create foreign data wrapper helloworld_wrapper
-  handler wrappers_handler
-  validator wrappers_validator
-  options (
-    wrapper 'HelloWorldFdw'
-  );
+  handler helloworld_fdw_handler;
 
 -- create server and specify custom options
 drop server if exists my_helloworld_server cascade;
