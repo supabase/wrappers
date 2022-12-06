@@ -1336,8 +1336,17 @@ version = "0.1.4"
 dependencies = [
  "pgx",
  "pgx-tests",
+ "supabase-wrappers-macros",
  "tokio",
  "uuid",
+]
+
+[[package]]
+name = "supabase-wrappers-macros"
+version = "0.1.4"
+dependencies = [
+ "quote",
+ "syn",
 ]
 
 [[package]]

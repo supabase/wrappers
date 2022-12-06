@@ -61,6 +61,7 @@ fn get_oauth2_token(sa_key: &str, rt: &Runtime) -> Option<AccessToken> {
     }
 }
 
+#[wrappers_fdw]
 pub(crate) struct FirebaseFdw {
     rt: Runtime,
     project_id: String,

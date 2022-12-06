@@ -10,6 +10,7 @@ use supabase_wrappers::prelude::*;
 
 use super::result::AirtableResponse;
 
+#[wrappers_fdw]
 pub(crate) struct AirtableFdw {
     rt: Runtime,
     base_url: String,
