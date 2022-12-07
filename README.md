@@ -91,7 +91,8 @@ create extension wrappers;
 
 -- create foreign data wrapper and enable 'HelloWorldFdw'
 create foreign data wrapper helloworld_wrapper
-  handler helloworld_fdw_handler;
+  handler hello_world_fdw_handler
+  validator hello_world_fdw_validator;
 
 -- create server and specify custom options
 create server my_helloworld_server
