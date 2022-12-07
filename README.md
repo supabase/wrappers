@@ -122,6 +122,15 @@ wrappers=# select * from hello;
 (1 row)
 ```
 
+## Running tests
+
+In order to run tests in `wrappers`:
+
+```bash
+docker-compose -f .ci/docker-compose.yaml up -d
+cargo pgx test --features all_fdws,pg15
+```
+
 ## Limitations
 
 - Windows is not supported, that limitation inherits from [pgx](https://github.com/tcdi/pgx).
