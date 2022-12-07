@@ -29,11 +29,8 @@ create extension wrappers;
 -- create foreign data wrapper and enable 'AirtableFdw'
 drop foreign data wrapper if exists airtable_wrapper cascade;
 create foreign data wrapper airtable_wrapper
-  handler wrappers_handler
-  validator wrappers_validator
-  options (
-    wrapper 'AirtableFdw'
-  );
+  handler airtable_fdw_handler
+  validator airtable_fdw_validator;
 
 -- create a wrappers Airtable server and specify connection info
 drop server if exists my_airtable_server cascade;
@@ -65,3 +62,9 @@ On Postgres:
 ```sql
 select * from t1;
 ```
+
+## Changelog
+
+| Version | Date       | Notes                                                |
+| ------- | ---------- | ---------------------------------------------------- |
+| 0.1.0   | 2022-11-30 | Initial version                                      |

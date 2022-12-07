@@ -3,14 +3,6 @@ use pgx::prelude::*;
 use std::os::raw::c_int;
 use std::slice;
 
-// fdw system catalog oids
-// https://doxygen.postgresql.org/pg__foreign__data__wrapper_8h.html
-// https://doxygen.postgresql.org/pg__foreign__server_8h.html
-// https://doxygen.postgresql.org/pg__foreign__table_8h.html
-pub const FOREIGN_DATA_WRAPPER_RELATION_ID: pg_sys::Oid = 2328;
-pub const FOREIGN_SERVER_RELATION_ID: pg_sys::Oid = 1417;
-pub const FOREIGN_TABLE_RELATION_ID: pg_sys::Oid = 3118;
-
 // ExecClearTuple
 pub(super) unsafe fn exec_clear_tuple(slot: *mut pg_sys::TupleTableSlot) {
     if let Some(clear) = (*(*slot).tts_ops).clear {

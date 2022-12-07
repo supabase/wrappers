@@ -1,3 +1,6 @@
+//! Provides interface types and trait to develop Postgres foreign data wrapper
+//!
+
 use crate::FdwRoutine;
 use pgx::prelude::{Date, Timestamp};
 use pgx::{
@@ -8,6 +11,20 @@ use std::collections::HashMap;
 use std::fmt;
 use std::iter::Zip;
 use std::slice::Iter;
+
+// fdw system catalog oids
+// https://doxygen.postgresql.org/pg__foreign__data__wrapper_8h.html
+// https://doxygen.postgresql.org/pg__foreign__server_8h.html
+// https://doxygen.postgresql.org/pg__foreign__table_8h.html
+
+/// Constant can be used in [validator](ForeignDataWrapper::validator)
+pub const FOREIGN_DATA_WRAPPER_RELATION_ID: pg_sys::Oid = 2328;
+
+/// Constant can be used in [validator](ForeignDataWrapper::validator)
+pub const FOREIGN_SERVER_RELATION_ID: pg_sys::Oid = 1417;
+
+/// Constant can be used in [validator](ForeignDataWrapper::validator)
+pub const FOREIGN_TABLE_RELATION_ID: pg_sys::Oid = 3118;
 
 /// A data cell in a data row
 #[derive(Debug)]
@@ -133,7 +150,8 @@ impl FromDatum for Cell {
 
 /// A data row in a table
 ///
-/// The row contains a column name list and cell list.
+/// The row contains a column name list and cell list with same number of
+/// elements.
 #[derive(Debug, Clone)]
 pub struct Row {
     /// column names
@@ -203,6 +221,11 @@ pub enum Value {
 /// ```sql
 /// where col is null
 /// -- [Qual { field: "col", operator: "is", value: Cell(String("null")), use_or: false }]
+/// ```
+///
+/// ```sql
+/// where bool_col
+/// -- [Qual { field: "bool_col", operator: "=", value: Cell(Bool(true)), use_or: false }]
 /// ```
 ///
 /// ```sql
@@ -292,15 +315,39 @@ pub struct Limit {
 /// This is the main interface for your foreign data wrapper. Required functions
 /// are listed below, all the others are optional.
 ///
-/// 1. begin_scan
-/// 2. iter_scan
-/// 3. end_scan
+/// 1. new
+/// 2. begin_scan
+/// 3. iter_scan
+/// 4. end_scan
 ///
 /// See the module-level document for more details.
 ///
 pub trait ForeignDataWrapper {
+    /// Create a FDW instance
+    ///
+    /// `options` is the key-value pairs defined in `CREATE SERVER` SQL. For example,
+    ///
+    /// ```sql
+    /// create server my_helloworld_server
+    ///   foreign data wrapper wrappers_helloworld
+    ///   options (
+    ///     foo 'bar'
+    /// );
+    /// ```
+    ///
+    /// `options` passed here will be a hashmap { 'foo' -> 'bar' }.
+    ///
+    /// You can do any initalization in this function, like saving connection
+    /// info or API url in an variable, but don't do heavy works like database
+    /// connection or API call.
     fn new(options: &HashMap<String, String>) -> Self;
 
+    /// Obtain relation size estimates for a foreign table
+    ///
+    /// Return the expected number of rows and row size (in bytes) by the
+    /// foreign table scan.
+    ///
+    /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-SCAN).
     fn get_rel_size(
         &mut self,
         _quals: &Vec<Qual>,
@@ -312,6 +359,15 @@ pub trait ForeignDataWrapper {
         (0, 0)
     }
 
+    /// Called when begin executing a foreign scan
+    ///
+    /// - `quals` - `WHERE` clause pushed down
+    /// - `columns` - target columns to be queried
+    /// - `sorts` - `ORDER BY` clause pushed down
+    /// - `limit` - `LIMIT` clause pushed down
+    /// - `options` - the options defined when `CREATE FOREIGN TABLE`
+    ///
+    /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-SCAN).
     fn begin_scan(
         &mut self,
         quals: &Vec<Qual>,
@@ -320,17 +376,76 @@ pub trait ForeignDataWrapper {
         limit: &Option<Limit>,
         options: &HashMap<String, String>,
     );
+
+    /// Called when fetch one row from the foreign source, returning it in a [`Row`]
+    ///
+    /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-SCAN).
     fn iter_scan(&mut self) -> Option<Row>;
+
+    /// Called when restart the scan from the beginning.
+    ///
+    /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-SCAN).
     fn re_scan(&mut self) {}
+
+    /// Called when end the scan
+    ///
+    /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-SCAN).
     fn end_scan(&mut self);
 
+    /// Called when begin executing a foreign table modification operation.
+    ///
+    /// - `options` - the options defined when `CREATE FOREIGN TABLE`
+    ///
+    /// The foreign table must include a `rowid_column` option which specify
+    /// the unique identification column of the foreign table to enable data
+    /// modification.
+    ///
+    /// For example,
+    ///
+    /// ```sql
+    /// create foreign table my_foreign_table (
+    ///   id bigint,
+    ///   name text
+    /// )
+    ///   server my_server
+    ///   options (
+    ///     rowid_column 'id'
+    ///   );
+    /// ```
+    ///
+    /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-UPDATE).
     fn begin_modify(&mut self, _options: &HashMap<String, String>) {}
+
+    /// Called when insert one row into the foreign table
+    ///
+    /// - row - the new row to be inserted
+    ///
+    /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-UPDATE).
     fn insert(&mut self, _row: &Row) {}
+
+    /// Called when update one row into the foreign table
+    ///
+    /// - rowid - the `rowid_column` cell
+    /// - new_row - the new row with updated cells
+    ///
+    /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-UPDATE).
     fn update(&mut self, _rowid: &Cell, _new_row: &Row) {}
+
+    /// Called when delete one row into the foreign table
+    ///
+    /// - rowid - the `rowid_column` cell
+    ///
+    /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-UPDATE).
     fn delete(&mut self, _rowid: &Cell) {}
+
+    /// Called when end the table update
+    ///
+    /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-UPDATE).
     fn end_modify(&mut self) {}
 
     /// Returns a FdwRoutine for the FDW
+    ///
+    /// Not to be used directly, use [`wrappers_fdw`](crate::wrappers_fdw) macro instead.
     fn fdw_routine() -> FdwRoutine
     where
         Self: Sized,
@@ -368,5 +483,32 @@ pub trait ForeignDataWrapper {
     /// after completing its initialization.
     fn fdw_routine_hook(_routine: &mut FdwRoutine<AllocatedByRust>) {}
 
+    /// Validator function for validating options given in `CREATE` and `ALTER`
+    /// commands for its foreign data wrapper, as well as foreign servers, user
+    /// mappings, and foreign tables using the wrapper.
+    ///
+    /// [See more details about validator](https://www.postgresql.org/docs/current/fdw-functions.html)
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// fn validator(opt_list: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) {
+    ///     if let Some(oid) = catalog {
+    ///         match oid {
+    ///             FOREIGN_DATA_WRAPPER_RELATION_ID => {
+    ///                 // check a required option when create foreign data wrapper
+    ///                 check_options_contain(&opt_list, "required_option");
+    ///             }
+    ///             FOREIGN_SERVER_RELATION_ID => {
+    ///                 // check option here when create server
+    ///             }
+    ///             FOREIGN_TABLE_RELATION_ID => {
+    ///                 // check option here when create foreign table
+    ///             }
+    ///             _ => {}
+    ///         }
+    ///     }
+    /// }
+    /// ```
     fn validator(_options: Vec<Option<String>>, _catalog: Option<pg_sys::Oid>) {}
 }

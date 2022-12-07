@@ -12,7 +12,7 @@ pub(crate) struct HelloWorldFdw {
 }
 
 impl ForeignDataWrapper for HelloWorldFdw {
-    // 'options' is the key-value pairs defined in 'create server` SQL, for example,
+    // 'options' is the key-value pairs defined in `CREATE SERVER` SQL, for example,
     //
     // create server my_helloworld_server
     //   foreign data wrapper wrappers_helloworld

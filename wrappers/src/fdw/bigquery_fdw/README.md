@@ -29,11 +29,7 @@ create extension wrappers;
 -- create foreign data wrapper and enable 'BigQueryFdw'
 drop foreign data wrapper if exists bigquery_wrapper cascade;
 create foreign data wrapper bigquery_wrapper
-  handler wrappers_handler
-  validator wrappers_validator
-  options (
-    wrapper 'BigQueryFdw'
-  );
+  handler bigquery_fdw_handler;
 
 -- save BigQuery service account json in Vault and get its key id
 select pgsodium.create_key(name := 'bigquery');
@@ -135,3 +131,8 @@ select * from people;
 insert into people values (4, 'Yoda', current_timestamp());
 ```
 
+## Changelog
+
+| Version | Date       | Notes                                                |
+| ------- | ---------- | ---------------------------------------------------- |
+| 0.1.0   | 2022-11-30 | Initial version                                      |

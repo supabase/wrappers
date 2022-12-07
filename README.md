@@ -13,7 +13,7 @@
 - [HelloWorld](./wrappers/src/fdw/helloworld_fdw): A demo FDW to show how to develop a baisc FDW.
 - [BigQuery](./wrappers/src/fdw/bigquery_fdw): A FDW for Google [BigQuery](https://cloud.google.com/bigquery) which supports data read and modify.
 - [Clickhouse](./wrappers/src/fdw/clickhouse_fdw): A FDW for [ClickHouse](https://clickhouse.com/) which supports data read and modify.
-- [Stripe](./wrappers/src/fdw/stripe_fdw): A FDW for [Stripe](https://stripe.com/) API which supports data read only.
+- [Stripe](./wrappers/src/fdw/stripe_fdw): A FDW for [Stripe](https://stripe.com/) API which supports data read and modify.
 - [Firebase](./wrappers/src/fdw/firebase_fdw): A FDW for Google [Firebase](https://firebase.google.com/) which supports data read only.
 - [Airtable](./wrappers/src/fdw/airtable_fdw): A FDW for [Airtable](https://airtable.com/) API which supports data read only.
 
@@ -25,23 +25,29 @@
 - Built on top of [pgx](https://github.com/tcdi/pgx), providing higher level interfaces, without hiding lower-level C APIs.
 - `WEHRE`, `ORDER BY`, `LIMIT` pushdown are supported.
 
+## Documentation
+
+[Documentation on docs.rs](https://docs.rs/supabase-wrappers/latest/supabase_wrappers/).
+
 ## Installation
 
-Wrappers is a pgx extension, so you can follow the [pgx installation steps](https://github.com/tcdi/pgx#system-requirements) to install Wrappers.
+`Wrappers` is a pgx extension, you can follow the [pgx installation steps](https://github.com/tcdi/pgx#system-requirements) to install Wrappers.
+
+Basically, run below command to install FDW after `pgx` is installed. For example,
+
+```bash
+cargo pgx install --pg-config [path_to_pg_config] --features stripe_fdw
+```
 
 ## Developing a FDW
 
-To develop a FDW using Wrappers, you only need to implement the [ForeignDataWrapper](./supabase-wrappers/src/interface.rs) trait.
+To develop a FDW using `Wrappers`, you only need to implement the [ForeignDataWrapper](./supabase-wrappers/src/interface.rs) trait.
 
 ```rust
 pub trait ForeignDataWrapper {
-    // function for query planning
-    fn get_rel_size(...) -> (i64, i32)
-
     // functions for data scan, e.g. select
     fn begin_scan(...);
     fn iter_scan(...) -> Option<Row>;
-    fn re_scan(...);
     fn end_scan(...);
 
     // functions for data modify, e.g. insert, update and delete
@@ -50,6 +56,9 @@ pub trait ForeignDataWrapper {
     fn update(...);
     fn delete(...);
     fn end_modify(...);
+
+    // other optional functions
+    ...
 }
 ```
 
@@ -59,7 +68,7 @@ To know more about FDW development, please visit the [Wrappers documentation](ht
 
 ## Basic usage
 
-These steps outline how to use the a demo FDW [HelloWorldFdw](./wrappers/src/fdw/helloworld_fdw):
+These steps outline how to use the a demo FDW [HelloWorldFdw](./wrappers/src/fdw/helloworld_fdw), which only outputs a single line of fake data:
 
 1. Clone this repo
 
@@ -78,20 +87,13 @@ cargo pgx run --features helloworld_fdw
 
 ```sql
 -- create extension
-drop extension if exists wrappers cascade;
 create extension wrappers;
 
 -- create foreign data wrapper and enable 'HelloWorldFdw'
-drop foreign data wrapper if exists helloworld_wrapper cascade;
 create foreign data wrapper helloworld_wrapper
-  handler wrappers_handler
-  validator wrappers_validator
-  options (
-    wrapper 'HelloWorldFdw'
-  );
+  handler helloworld_fdw_handler;
 
 -- create server and specify custom options
-drop server if exists my_helloworld_server cascade;
 create server my_helloworld_server
   foreign data wrapper helloworld_wrapper
   options (
@@ -99,7 +101,6 @@ create server my_helloworld_server
   );
 
 -- create an example foreign table
-drop foreign table if exists balance;
 create foreign table hello (
   id bigint,
   col text
@@ -123,7 +124,7 @@ wrappers=# select * from hello;
 ## Limitations
 
 - Windows is not supported, that limitation inherits from [pgx](https://github.com/tcdi/pgx).
-- Currently only supports PostgreSQL v14.
+- Currently only supports PostgreSQL v14 and v15.
 
 ## Contribution
 

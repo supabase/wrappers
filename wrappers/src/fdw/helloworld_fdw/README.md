@@ -61,4 +61,8 @@ wrappers=# select * from hello;
 (1 row)
 ```
 
+## Changelog
 
+| Version | Date       | Notes                                                |
+| ------- | ---------- | ---------------------------------------------------- |
+| 0.1.0   | 2022-11-30 | Initial version                                      |

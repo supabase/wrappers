@@ -2,22 +2,22 @@
 
 This is a foreign data wrapper for [Stripe](https://stripe.com/) developed using [Wrappers](https://github.com/supabase/wrappers).
 
-This FDW currently supports reading below objects from Stripe:
+This FDW currently supports below objects from Stripe:
 
-1. [Balance](https://stripe.com/docs/api/balance)
-2. [Balance Transactions](https://stripe.com/docs/api/balance_transactions/list)
-3. [Charges](https://stripe.com/docs/api/charges/list)
-4. [Customers](https://stripe.com/docs/api/customers/list)
-5. [Invoices](https://stripe.com/docs/api/invoices/list)
-6. [PaymentIntents](https://stripe.com/docs/api/payment_intents/list)
-7. [Products](https://stripe.com/docs/api/products/list)
-8. [Subscriptions](https://stripe.com/docs/api/subscriptions/list)
+1. [Balance](https://stripe.com/docs/api/balance) (*read only*)
+2. [Balance Transactions](https://stripe.com/docs/api/balance_transactions/list) (*read only*)
+3. [Charges](https://stripe.com/docs/api/charges/list) (*read only*)
+4. [Customers](https://stripe.com/docs/api/customers/list) (*read and modify*)
+5. [Invoices](https://stripe.com/docs/api/invoices/list) (*read only*)
+6. [PaymentIntents](https://stripe.com/docs/api/payment_intents/list) (*read only*)
+7. [Products](https://stripe.com/docs/api/products/list) (*read and modify*)
+8. [Subscriptions](https://stripe.com/docs/api/subscriptions/list) (*read and modify*)
 
 ## Installation
 
 This FDW requires [pgx](https://github.com/tcdi/pgx), please refer to its installtion page to install it first.
 
-After `pgx` installed, run below command to install this FDW.
+After `pgx` is installed, run below command to install this FDW.
 
 ```bash
 cargo pgx install --pg-config [path_to_pg_config] --features stripe_fdw
@@ -44,13 +44,12 @@ cargo pgx run --features stripe_fdw
 
 ```sql
 -- create extension
-drop extension if exists wrappers cascade;
 create extension wrappers;
 
 -- create foreign data wrapper and enable 'StripeFdw'
-drop foreign data wrapper if exists stripe_wrapper cascade;
 create foreign data wrapper stripe_wrapper
-  handler stripe_fdw_handler;
+  handler stripe_fdw_handler
+  validator stripe_fdw_validator;
 
 -- Below we're using the API key stored in Vault, if you don't want
 -- to use Vault, you can directly specify the API key in `api_key`
@@ -76,8 +75,6 @@ declare
 begin
   select id into key_id from pgsodium.valid_key where name = 'stripe' limit 1;
 
-  drop server if exists my_stripe_server cascade;
-
   execute format(
     E'create server my_stripe_server \n'
     '   foreign data wrapper stripe_wrapper \n'
@@ -89,10 +86,7 @@ begin
 end $$;
 
 -- create foreign tables
-drop foreign table if exists balance;
-create foreign table balance (
-  amount bigint,
-  currency text,
+create foreign table stripe_balance (
   attrs jsonb
 )
   server my_stripe_server
@@ -100,8 +94,7 @@ create foreign table balance (
     object 'balance'
   );
 
-drop foreign table if exists balance_transactions;
-create foreign table balance_transactions (
+create foreign table stripe_balance_transactions (
   id text,
   amount bigint,
   currency text,
@@ -118,8 +111,7 @@ create foreign table balance_transactions (
     object 'balance_transactions'
   );
 
-drop foreign table if exists charges;
-create foreign table charges (
+create foreign table stripe_charges (
   id text,
   amount bigint,
   currency text,
@@ -136,8 +128,7 @@ create foreign table charges (
     object 'charges'
   );
 
-drop foreign table if exists customers;
-create foreign table customers (
+create foreign table stripe_customers (
   id text,
   email text,
   name text,
@@ -151,8 +142,7 @@ create foreign table customers (
     rowid_column 'id'
   );
   
-drop foreign table if exists invoices;
-create foreign table invoices (
+create foreign table stripe_invoices (
   id text,
   customer text,
   subscription text,
@@ -168,8 +158,7 @@ create foreign table invoices (
     object 'invoices'
   );
 
-drop foreign table if exists payment_intents;
-create foreign table payment_intents (
+create foreign table stripe_payment_intents (
   id text,
   customer text,
   amount bigint,
@@ -183,8 +172,7 @@ create foreign table payment_intents (
     object 'payment_intents'
   );
 
-drop foreign table if exists products;
-create foreign table products (
+create foreign table stripe_products (
   id text,
   name text,
   active bool,
@@ -200,8 +188,7 @@ create foreign table products (
     rowid_column 'id'
   );
 
-drop foreign table if exists subscriptions;
-create foreign table subscriptions (
+create foreign table stripe_subscriptions (
   id text,
   customer text,
   currency text,
@@ -221,8 +208,7 @@ create foreign table subscriptions (
 On Postgres:
 
 ```sql
--- use 'limit' to reduce data fetched from Stripe
-select * from balance limit 10;
+-- always use 'limit' to reduce API calls to Stripe
 select * from customers limit 10;
 select * from invoices limit 10;
 select * from subscriptions limit 10;
@@ -242,6 +228,12 @@ from invoices where id = 'in_xxx';
 -- extract subscription items for a subscription
 select id, attrs#>'{items,data}' as items
 from subscriptions where id = 'sub_xxx';
+
+-- check if data modify is working
+insert into stripe_customers(email,name,description) values ('test@test.com', 'test name', null);
+update stripe_customers set description='hello fdw' where id ='cus_xxx';
+update stripe_customers set attrs='{"metadata[foo]": "bar"}' where id ='cus_xxx';
+delete from stripe_customers where id ='cus_xxx';
 ```
 
 ## Configurations
@@ -271,7 +263,7 @@ Below are the options can be used in `CREATE FOREIGN TABLE`:
    - products
    - subscriptions
 
-## Limitations
+## Pushdown
 
 - `WHERE` pushdown support is limited.
 
@@ -281,6 +273,8 @@ Below are the options can be used in `CREATE FOREIGN TABLE`:
   select * from customers where email = 'someone@foo.com';
   ```
 
+  Below is the fields can be pushed down:
+
   - balance_transactions: `payout`, `type`
   - charges: `customer`
   - customers: `email`
@@ -288,6 +282,8 @@ Below are the options can be used in `CREATE FOREIGN TABLE`:
   - payment_intents: `customer`
   - products: `active`
   - subscriptions: `customer`, `price`, `status`
+
+  Also, `id` field can be pushed down for all the objects with that field.
 
 - `LIMIT` pushdown support is limited, `limit` parameter used in Stripe API call is always 100.
 

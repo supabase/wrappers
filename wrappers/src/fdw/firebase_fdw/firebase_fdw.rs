@@ -1,3 +1,4 @@
+use pgx::pg_sys;
 use pgx::prelude::*;
 use pgx::JsonB;
 use regex::Regex;
@@ -6,13 +7,13 @@ use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;
-use time::{format_description::well_known::Iso8601, PrimitiveDateTime};
+use time::{format_description::well_known::Iso8601, OffsetDateTime, PrimitiveDateTime};
 use yup_oauth2::AccessToken;
 use yup_oauth2::ServiceAccountAuthenticator;
 
 use supabase_wrappers::prelude::*;
 
-macro_rules! report_fetch_error {
+macro_rules! report_request_error {
     ($url:ident, $err:ident) => {
         report_error(
             PgSqlErrorCode::ERRCODE_FDW_ERROR,
@@ -59,6 +60,110 @@ fn get_oauth2_token(sa_key: &str, rt: &Runtime) -> Option<AccessToken> {
             None
         }
     }
+}
+
+fn body_to_rows(
+    resp: &JsonValue,
+    obj_key: &str,
+    normal_cols: Vec<(&str, &str, &str)>,
+    tgt_cols: &Vec<String>,
+) -> Vec<Row> {
+    let mut result = Vec::new();
+
+    let objs = match resp
+        .as_object()
+        .and_then(|v| v.get(obj_key))
+        .and_then(|v| v.as_array())
+    {
+        Some(objs) => objs,
+        None => return result,
+    };
+
+    for obj in objs {
+        let mut row = Row::new();
+
+        // extract normal columns
+        for tgt_col in tgt_cols {
+            for (src_name, col_name, col_type) in
+                normal_cols.iter().filter(|(_, c, _)| c == tgt_col)
+            {
+                let cell = obj
+                    .as_object()
+                    .and_then(|v| v.get(*src_name))
+                    .and_then(|v| match *col_type {
+                        "bool" => v.as_bool().map(|a| Cell::Bool(a)),
+                        "i64" => v.as_i64().map(|a| Cell::I64(a)),
+                        "string" => v.as_str().map(|a| Cell::String(a.to_owned())),
+                        "timestamp" => v.as_str().map(|a| {
+                            let secs = a.parse::<i64>().unwrap() / 1000;
+                            let dt = OffsetDateTime::from_unix_timestamp(secs).unwrap();
+                            let ts = Timestamp::try_from(dt).unwrap();
+                            Cell::Timestamp(ts)
+                        }),
+                        "timestamp_iso" => v.as_str().map(|a| {
+                            let dt = PrimitiveDateTime::parse(&a, &Iso8601::DEFAULT).unwrap();
+                            let ts = Timestamp::try_from(dt).unwrap();
+                            Cell::Timestamp(ts)
+                        }),
+                        _ => None,
+                    });
+                row.push(col_name, cell);
+                break;
+            }
+        }
+
+        // put all properties into 'attrs' JSON column
+        if tgt_cols.iter().any(|c| c == "attrs") {
+            let attrs = serde_json::from_str(&obj.to_string()).unwrap();
+            row.push("attrs", Some(Cell::Json(JsonB(attrs))));
+        }
+
+        result.push(row);
+    }
+
+    result
+}
+
+// convert response body text to rows
+fn resp_to_rows(obj: &str, resp: &JsonValue, tgt_cols: &Vec<String>) -> Vec<Row> {
+    let mut result = Vec::new();
+
+    match obj {
+        "auth/users" => {
+            result = body_to_rows(
+                resp,
+                "users",
+                vec![
+                    ("localId", "uid", "string"),
+                    ("email", "email", "string"),
+                    ("createdAt", "created_at", "timestamp"),
+                ],
+                tgt_cols,
+            );
+        }
+        _ => {
+            // match firestore documents
+            if obj.starts_with("firestore/") {
+                result = body_to_rows(
+                    resp,
+                    "documents",
+                    vec![
+                        ("name", "name", "string"),
+                        ("createTime", "created_at", "timestamp_iso"),
+                        ("updateTime", "updated_at", "timestamp_iso"),
+                    ],
+                    tgt_cols,
+                );
+            } else {
+                report_error(
+                    PgSqlErrorCode::ERRCODE_FDW_TABLE_NOT_FOUND,
+                    &format!("'{}' object is not implemented", obj),
+                );
+            }
+        }
+    }
+
+    result
 }
 
 #[wrappers_fdw]
@@ -133,115 +238,6 @@ impl FirebaseFdw {
                 "".to_string()
             }
         }
-    }
-
-    // convert response body text to rows
-    fn resp_to_rows(&self, obj: &str, resp: &JsonValue, tgt_cols: &Vec<String>) -> Vec<Row> {
-        let mut result = Vec::new();
-
-        match obj {
-            "auth/users" => {
-                let users = match resp
-                    .as_object()
-                    .and_then(|v| v.get("users"))
-                    .and_then(|v| v.as_array())
-                {
-                    Some(users) => users,
-                    None => return result,
-                };
-
-                for user in users {
-                    let mut row = Row::new();
-                    if tgt_cols.iter().any(|c| c == "uid") {
-                        let uid = user
-                            .as_object()
-                            .and_then(|v| v.get("localId"))
-                            .and_then(|v| v.as_str())
-                            .map(|v| v.to_owned())
-                            .unwrap_or_default();
-                        row.push("uid", Some(Cell::String(uid)));
-                    }
-                    if tgt_cols.iter().any(|c| c == "email") {
-                        let email = user
-                            .as_object()
-                            .and_then(|v| v.get("email"))
-                            .and_then(|v| v.as_str())
-                            .map(|v| v.to_owned())
-                            .unwrap_or_default();
-                        row.push("email", Some(Cell::String(email)));
-                    }
-                    if tgt_cols.iter().any(|c| c == "fields") {
-                        let fields = serde_json::from_str(&user.to_string()).unwrap();
-                        row.push("fields", Some(Cell::Json(JsonB(fields))));
-                    }
-                    result.push(row);
-                }
-            }
-            _ => {
-                // match firestore documents
-                if obj.starts_with("firestore/") {
-                    let docs = match resp
-                        .as_object()
-                        .and_then(|v| v.get("documents"))
-                        .and_then(|v| v.as_array())
-                    {
-                        Some(docs) => docs,
-                        None => return result,
-                    };
-
-                    for doc in docs {
-                        let mut row = Row::new();
-                        if tgt_cols.iter().any(|c| c == "name") {
-                            let name = doc
-                                .as_object()
-                                .and_then(|v| v.get("name"))
-                                .and_then(|v| v.as_str())
-                                .map(|v| v.to_owned())
-                                .unwrap_or_default();
-                            row.push("name", Some(Cell::String(name)));
-                        }
-                        if tgt_cols.iter().any(|c| c == "fields") {
-                            let fields = doc.pointer("/fields").map(|v| v.clone()).unwrap();
-                            row.push("fields", Some(Cell::Json(JsonB(fields))));
-                        }
-                        if tgt_cols.iter().any(|c| c == "create_time") {
-                            let create_ts = doc
-                                .as_object()
-                                .and_then(|v| v.get("createTime"))
-                                .and_then(|v| v.as_str())
-                                .map(|v| {
-                                    let dt =
-                                        PrimitiveDateTime::parse(&v, &Iso8601::DEFAULT).unwrap();
-                                    Timestamp::try_from(dt).unwrap()
-                                })
-                                .unwrap_or(Timestamp::INFINITY);
-                            row.push("create_time", Some(Cell::Timestamp(create_ts)));
-                        }
-                        if tgt_cols.iter().any(|c| c == "update_time") {
-                            let update_ts = doc
-                                .as_object()
-                                .and_then(|v| v.get("updateTime"))
-                                .and_then(|v| v.as_str())
-                                .map(|v| {
-                                    let dt =
-                                        PrimitiveDateTime::parse(&v, &Iso8601::DEFAULT).unwrap();
-                                    Timestamp::try_from(dt).unwrap()
-                                })
-                                .unwrap_or(Timestamp::INFINITY);
-                            row.push("update_time", Some(Cell::Timestamp(update_ts)));
-                        }
-                        result.push(row);
-                    }
-                } else {
-                    report_error(
-                        PgSqlErrorCode::ERRCODE_FDW_TABLE_NOT_FOUND,
-                        &format!("'{}' object is not implemented", obj),
-                    );
-                }
-            }
-        }
-
-        result
     }
 }
 
@@ -334,7 +330,7 @@ impl ForeignDataWrapper for FirebaseFdw {
                         Ok(resp) => {
                             let body = self.rt.block_on(resp.text()).unwrap();
                             let json: JsonValue = serde_json::from_str(&body).unwrap();
-                            let mut rows = self.resp_to_rows(&obj, &json, columns);
+                            let mut rows = resp_to_rows(&obj, &json, columns);
                             result.append(&mut rows);
                             if result.len() >= row_cnt_limit {
                                 break;
@@ -350,12 +346,12 @@ impl ForeignDataWrapper for FirebaseFdw {
                             }
                         }
                         Err(err) => {
-                            report_fetch_error!(url, err);
+                            report_request_error!(url, err);
                             break;
                         }
                     },
                     Err(err) => {
-                        report_fetch_error!(url, err);
+                        report_request_error!(url, err);
                         break;
                     }
                 }
@@ -376,5 +372,16 @@ impl ForeignDataWrapper for FirebaseFdw {
 
     fn end_scan(&mut self) {
         self.scan_result.take();
+    }
+
+    fn validator(options: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) {
+        if let Some(oid) = catalog {
+            match oid {
+                FOREIGN_TABLE_RELATION_ID => {
+                    check_options_contain(&options, "object");
+                }
+                _ => {}
+            }
+        }
     }
 }

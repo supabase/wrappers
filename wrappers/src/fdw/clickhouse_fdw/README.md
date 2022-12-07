@@ -29,11 +29,7 @@ create extension wrappers;
 -- create foreign data wrapper and enable 'ClickHouseFdw'
 drop foreign data wrapper if exists clickhouse_wrapper;
 create foreign data wrapper clickhouse_wrapper
-  handler wrappers_handler
-  validator wrappers_validator
-  options (
-    wrapper 'ClickHouseFdw'
-  );
+  handler clickhouse_fdw_handler;
 
 -- create and save ClickHouse connection string in Vault
 select pgsodium.create_key(name := 'clickhouse');
@@ -121,3 +117,8 @@ select * from people;
 insert into people values (3, 'Han Solo');
 ```
 
+## Changelog
+
+| Version | Date       | Notes                                                |
+| ------- | ---------- | ---------------------------------------------------- |
+| 0.1.0   | 2022-11-30 | Initial version                                      |

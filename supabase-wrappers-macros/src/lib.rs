@@ -3,6 +3,16 @@ use proc_macro::TokenStream;
 use quote::{format_ident, quote, ToTokens};
 use syn::{parse_macro_input, ItemStruct};
 
+/// Create necessary handler and validator functions for foreign data wrapper
+///
+/// # Example
+///
+/// ```rust,no_run
+/// use supabase_wrappers::prelude::*;
+///
+/// #[wrappers_fdw]
+/// pub struct HelloWorldFdw;
+/// ```
 #[proc_macro_attribute]
 pub fn wrappers_fdw(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let item: ItemStruct = parse_macro_input!(item as ItemStruct);
