@@ -2,27 +2,27 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://supabase.github.io/wrappers/</loc>
-         <lastmod>2022-12-06</lastmod>
+         <lastmod>2022-12-07</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/contributing/</loc>
-         <lastmod>2022-12-06</lastmod>
+         <lastmod>2022-12-07</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/firebase/</loc>
-         <lastmod>2022-12-06</lastmod>
+         <lastmod>2022-12-07</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/installation/</loc>
-         <lastmod>2022-12-06</lastmod>
+         <lastmod>2022-12-07</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/stripe/</loc>
-         <lastmod>2022-12-06</lastmod>
+         <lastmod>2022-12-07</lastmod>
          <changefreq>daily</changefreq>
     </url>
 </urlset>
