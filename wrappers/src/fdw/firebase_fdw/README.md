@@ -11,13 +11,11 @@ This FDW currently supports reading below data from Firebase:
 
 This FDW requires [pgx](https://github.com/tcdi/pgx), please refer to its installtion page to install it first.
 
-After `pgx` installed, run below command to install this FDW.
+After `pgx` is installed, run below command to install this FDW.
 
 ```bash
 cargo pgx install --pg-config [path_to_pg_config] --features firebase_fdw
 ```
-
-If you are using [Supabase](https://www.supabase.com), this FDW is already included in `Wrappers` extension, go to https://app.supabase.com/project/_/database/extensions to enable it.
 
 ## Basic usage
 
@@ -40,13 +38,12 @@ cargo pgx run --features firebase_fdw
 
 ```sql
 -- create extension
-drop extension if exists wrappers cascade;
 create extension wrappers;
 
 -- create foreign data wrapper and enable 'FirebaseFdw'
-drop foreign data wrapper if exists firebase_wrapper cascade;
 create foreign data wrapper firebase_wrapper
-  handler firebase_fdw_handler;
+  handler firebase_fdw_handler
+  validator firebase_fdw_validator;
 
 -- Below we're using the service account key stored in Vault, if you don't want
 -- to use Vault, you can directly specify the service account key in `sa_key`
@@ -84,8 +81,6 @@ declare
 begin
   select id into key_id from pgsodium.valid_key where name = 'firebase' limit 1;
 
-  drop server if exists my_firebase_server cascade;
-
   execute format(
     E'create server my_firebase_server \n'
     '   foreign data wrapper firebase_wrapper \n'
@@ -98,23 +93,22 @@ begin
 end $$;
 
 -- create an example foreign table
-drop foreign table if exists firebase_users;
 create foreign table firebase_users (
   uid text,
   email text,
-  fields jsonb
+  created_at timestamp,
+  attrs jsonb
 )
   server my_firebase_server
   options (
     object 'auth/users'
   );
 
-drop foreign table if exists firebase_docs;
 create foreign table firebase_docs (
   name text,
-  fields jsonb,
-  create_time timestamp,
-  update_time timestamp
+  created_at timestamp,
+  updated_at timestamp,
+  attrs jsonb
 )
   server my_firebase_server
   options (
@@ -165,4 +159,5 @@ Below are the options can be used in `CREATE FOREIGN TABLE`:
 
 | Version | Date       | Notes                                                |
 | ------- | ---------- | ---------------------------------------------------- |
+| 0.1.1   | 2022-12-07 | Added validator function                             |
 | 0.1.0   | 2022-11-30 | Initial version                                      |

@@ -77,6 +77,11 @@ fn field_to_cell(rs: &ResultSet, field: &TableFieldSchema) -> Option<Cell> {
     }
 }
 
+#[wrappers_fdw(
+    version = "0.1.0",
+    author = "Supabase",
+    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/bigquery_fdw"
+)]
 pub(crate) struct BigQueryFdw {
     rt: Runtime,
     client: Option<Client>,
@@ -283,9 +288,10 @@ impl ForeignDataWrapper for BigQueryFdw {
                 if let Some(fields) = &tbl.schema.fields {
                     let mut ret = Row::new();
                     for tgt_col in &self.tgt_cols {
-                        let field = fields.iter().find(|&f| &f.name == tgt_col).unwrap();
-                        let cell = field_to_cell(rs, field);
-                        ret.push(&field.name, cell);
+                        if let Some(field) = fields.iter().find(|&f| &f.name == tgt_col) {
+                            let cell = field_to_cell(rs, field);
+                            ret.push(&field.name, cell);
+                        }
                     }
                     return Some(ret);
                 }

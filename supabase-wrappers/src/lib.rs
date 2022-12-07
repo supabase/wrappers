@@ -12,7 +12,7 @@
 //! $ cargo pgx new my_project
 //! ```
 //!
-//! And then change default Postgres version to `pg15` and add below dependencies to your project's `Cargo.toml`,
+//! And then change default Postgres version to `pg14` or `pg15` and add below dependencies to your project's `Cargo.toml`,
 //!
 //! ```toml
 //! [features]
@@ -20,8 +20,7 @@
 //! ...
 //!
 //! [dependencies]
-//! pgx = "=0.6.0"
-//! cfg-if = "1.0"
+//! pgx = "=0.6.1"
 //! supabase-wrappers = "0.1"
 //! ```
 //!
@@ -36,39 +35,49 @@
 //! - Timestamp
 //! - JsonB
 //!
-//! See the full supported types list in [`Cell`]. More types will be added in the future if needed or you can [raise a request](https://github.com/supabase/wrappers/issues) to us.
+//! See the full supported types list in [`interface::Cell`]. More types will be added in the future if needed or you can [raise a request](https://github.com/supabase/wrappers/issues) to us.
 //!
 //! # Developing a FDW
 //!
-//! The core interface is the [`ForeignDataWrapper`] trait which provides callback functions to be
-//! called by Postgres during different querying phases.
+//! The core interface is the [`interface::ForeignDataWrapper`] trait which provides callback functions to be called by Postgres during different querying phases. For example,
 //!
 //! - Query planning phase
-//!   - [get_rel_size()](`ForeignDataWrapper#method.get_rel_size`)
+//!   - [get_rel_size()](`interface::ForeignDataWrapper#method.get_rel_size`)
 //! - Scan phase
-//!   - [begin_scan()](`ForeignDataWrapper#tymethod.begin_scan`) *required*
-//!   - [iter_scan()](`ForeignDataWrapper#tymethod.iter_scan`) *required*
-//!   - [re_scan()](`ForeignDataWrapper#method.re_scan`)
-//!   - [end_scan()](`ForeignDataWrapper#tymethod.end_scan`) *required*
+//!   - [begin_scan()](`interface::ForeignDataWrapper#tymethod.begin_scan`) *required*
+//!   - [iter_scan()](`interface::ForeignDataWrapper#tymethod.iter_scan`) *required*
+//!   - [re_scan()](`interface::ForeignDataWrapper#method.re_scan`)
+//!   - [end_scan()](`interface::ForeignDataWrapper#tymethod.end_scan`) *required*
 //! - Modify phase
-//!   - [begin_modify()](`ForeignDataWrapper#method.begin_modify`)
-//!   - [insert()](`ForeignDataWrapper#method.insert`)
-//!   - [update()](`ForeignDataWrapper#method.update`)
-//!   - [delete()](`ForeignDataWrapper#method.delete`)
-//!   - [end_modify()](`ForeignDataWrapper#method.end_modify`)
+//!   - [begin_modify()](`interface::ForeignDataWrapper#method.begin_modify`)
+//!   - [insert()](`interface::ForeignDataWrapper#method.insert`)
+//!   - [update()](`interface::ForeignDataWrapper#method.update`)
+//!   - [delete()](`interface::ForeignDataWrapper#method.delete`)
+//!   - [end_modify()](`interface::ForeignDataWrapper#method.end_modify`)
 //!
 //! To give different functionalities to your FDW, you can choose different callback functions to implement. The required ones are `begin_scan`, `iter_scan` and `end_scan`, all the others are optional. See [Postgres FDW document](https://www.postgresql.org/docs/current/fdw-callbacks.html) for more details about FDW development.
 //!
-//! The struct implements [`ForeignDataWrapper`] trait must provide a `new()` initialization function. For example,
+//! The FDW implements [`interface::ForeignDataWrapper`] trait must use [`wrappers_fdw`] macro and implement a `new()` initialization function. For example,
 //!
 //! ```rust,no_run
-//! use supabase_wrappers::ForeignDataWrapper;
+//! use supabase_wrappers::prelude::*;
 //!
-//! pub struct HelloWorldFdw;
+//! #[wrappers_fdw(
+//!    version = "0.1.0",
+//!    author = "Supabase",
+//!    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/helloworld_fdw"
+//! )]
+//! pub struct HelloWorldFdw {
+//!     //row counter
+//!     row_cnt: i64,
 //!
-//! impl HelloWorldFdw {
+//!     // target column name list
+//!     tgt_cols: Vec<String>,
+//! }
+//!
+//! impl ForeignDataWrapper for HelloWorldFdw {
 //!     pub fn new(options: &HashMap<String, String>) -> Self {
-//!         // 'options' is the key-value pairs defined in 'create server` SQL, for example,
+//!         // 'options' is the key-value pairs defined in `CREATE SERVER` SQL, for example,
 //!         //
 //!         // create server my_helloworld_server
 //!         //   foreign data wrapper wrappers_helloworld
@@ -81,7 +90,10 @@
 //!         // You can do any initalization in this new() function, like saving connection
 //!         // info or API url in an variable, but don't do heavy works like database
 //!         // connection or API call.
-//!         Self {}
+//!         Self {
+//!             row_cnt: 0,
+//!             tgt_cols: Vec::new(),
+//!         }
 //!     }
 //! }
 //! ```
@@ -105,20 +117,23 @@
 //!   );
 //! ```
 //!
-//! Then we can implement [`ForeignDataWrapper`] trait like below,
+//! Then we can implement [`interface::ForeignDataWrapper`] trait like below,
 //!
 //! ```rust,no_run
 //! impl ForeignDataWrapper for HelloWorldFdw {
 //!     fn begin_scan(
 //!         &mut self,
 //!         _quals: &Vec<Qual>,
-//!         _columns: &Vec<String>,
+//!         columns: &Vec<String>,
 //!         _sorts: &Vec<Sort>,
 //!         _limit: &Option<Limit>,
 //!         _options: &HashMap<String, String>,
 //!     ) {
 //!         // reset row count
 //!         self.row_cnt = 0;
+//!
+//!         // save a copy of target columns
+//!         self.tgt_cols = columns.clone();
 //!     }
 //!
 //!     fn iter_scan(&mut self) -> Option<Row> {
@@ -127,11 +142,14 @@
 //!             // create an empty row
 //!             let mut row = Row::new();
 //!
-//!             // add value to 'id' column
-//!             row.push("id", Some(Cell::I64(self.row_cnt)));
-//!
-//!             // add value to 'col' column
-//!             row.push("col", Some(Cell::String("Hello world".to_string())));
+//!             // add values to row if they are in target column list
+//!             for tgt_col in &self.tgt_cols {
+//!                 match tgt_col.as_str() {
+//!                     "id" => row.push("id", Some(Cell::I64(self.row_cnt))),
+//!                     "col" => row.push("col", Some(Cell::String("Hello world".to_string()))),
+//!                     _ => {}
+//!                 }
+//!             }
 //!
 //!             self.row_cnt += 1;
 //!
@@ -144,35 +162,25 @@
 //!     }
 //!
 //!     fn end_scan(&mut self) {
-//!         // we do nothing here, but you can do things like resource cleanup and etc.
+//!         // we do nothing here, but you can things like resource cleanup and etc.
 //!     }
 //! }
 //! ```
 //!
-//! Once the trait is implemented, you need to use macro [`wrappers_magic`] to set it up so the
-//! framework knows how to instantiate the FDW struct.
-//!
-//! ```rust,no_run
-//! wrappers_magic!(HelloWorldFdw);
-//! ```
-//!
-//! And that's it. Now your FDW is ready to run with pgx,
+//! And that's it. Now your FDW is ready to run,
 //!
 //! ```bash
 //! $ cargo pgx run
 //! ```
 //!
-//! Then query it with SQL,
+//! Then create the FDW and foreign table, and make a query on it,
 //!
 //! ```sql
 //! create extension my_project;
 //!
 //! create foreign data wrapper helloworld_wrapper
-//!   handler wrappers_handler
-//!   validator wrappers_validator
-//!   options (
-//!     wrapper 'HelloWorldFdw'
-//!   );
+//!   handler hello_world_fdw_handler
+//!   validator hello_world_fdw_validator;
 //!
 //! create server my_helloworld_server
 //!   foreign data wrapper helloworld_wrapper;
@@ -184,11 +192,16 @@
 //!   server my_helloworld_server;
 //!
 //! select * from hello;
+//!
+//!  id |    col
+//! ----+-------------
+//!   0 | Hello world
+//! (1 row)
 //! ```
 //!
 //! ### Pro Tips
 //!
-//! You can use `EXPLAIN` to check what has been pushed down, for example,
+//! You can use `EXPLAIN` to check what have been pushed down. For example,
 //!
 //! ```sql
 //! explain select * from hello where id = 1 order by col limit 1;
@@ -209,20 +222,22 @@
 //!
 //! ### More FDW Examples
 //!
-//! See more FDW examples which interact with RDBMS or Restful API.
+//! See more FDW examples which interact with RDBMS or RESTful API.
 //! - [HelloWorld](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/helloworld_fdw): A demo FDW to show how to develop a baisc FDW.
 //! - [BigQuery](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/bigquery_fdw): A FDW for Google [BigQuery](https://cloud.google.com/bigquery) which supports data read and modify.
 //! - [Clickhouse](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/clickhouse_fdw): A FDW for [ClickHouse](https://clickhouse.com/) which supports data read and modify.
-//! - [Stripe](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/stripe_fdw): A FDW for [Stripe](https://stripe.com/) API which supports data read only.
+//! - [Stripe](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/stripe_fdw): A FDW for [Stripe](https://stripe.com/) API which supports data read and modify.
 //! - [Firebase](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/firebase_fdw): A FDW for Google [Firebase](https://firebase.google.com/) which supports data read only.
 //! - [Airtable](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/airtable_fdw): A FDW for [Airtable](https://airtable.com/) API which supports data read only.
 
 pub mod interface;
 pub mod utils;
 
+/// The prelude includes all necessary imports to make Wrappers work
 pub mod prelude {
     pub use crate::interface::*;
     pub use crate::utils::*;
+    pub use crate::wrappers_fdw;
     pub use ::tokio::runtime::Runtime;
 }
 
@@ -232,9 +247,12 @@ use pgx::AllocatedByPostgres;
 mod instance;
 mod limit;
 mod modify;
-pub mod polyfill;
+mod polyfill;
 mod qual;
 mod scan;
 mod sort;
 
+/// PgBox'ed `FdwRoutine`, used in [`fdw_routine`](interface::ForeignDataWrapper::fdw_routine)
 pub type FdwRoutine<A = AllocatedByPostgres> = PgBox<pg_sys::FdwRoutine, A>;
+
+pub use supabase_wrappers_macros::wrappers_fdw;

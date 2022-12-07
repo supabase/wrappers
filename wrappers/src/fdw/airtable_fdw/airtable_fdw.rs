@@ -10,6 +10,11 @@ use supabase_wrappers::prelude::*;
 
 use super::result::AirtableResponse;
 
+#[wrappers_fdw(
+    version = "0.1.0",
+    author = "Ankur Goyal",
+    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/airtable_fdw"
+)]
 pub(crate) struct AirtableFdw {
     rt: Runtime,
     base_url: String,
@@ -171,14 +176,13 @@ impl ForeignDataWrapper for AirtableFdw {
     }
 
     fn validator(options: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) {
-        use supabase_wrappers::polyfill;
         if let Some(oid) = catalog {
             match oid {
-                polyfill::FOREIGN_DATA_WRAPPER_RELATION_ID => {}
-                polyfill::FOREIGN_SERVER_RELATION_ID => {
+                FOREIGN_DATA_WRAPPER_RELATION_ID => {}
+                FOREIGN_SERVER_RELATION_ID => {
                     check_options_contain(&options, "api_key");
                 }
-                polyfill::FOREIGN_TABLE_RELATION_ID => {
+                FOREIGN_TABLE_RELATION_ID => {
                     check_options_contain(&options, "base_id");
                     check_options_contain(&options, "table");
                 }

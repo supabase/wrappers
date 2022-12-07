@@ -112,6 +112,7 @@ impl<W: ForeignDataWrapper> FdwState<W> {
 
 impl<W: ForeignDataWrapper> utils::SerdeList for FdwState<W> {}
 
+#[pg_guard]
 pub(super) extern "C" fn get_foreign_rel_size<W: ForeignDataWrapper>(
     root: *mut pg_sys::PlannerInfo,
     baserel: *mut pg_sys::RelOptInfo,
@@ -122,7 +123,7 @@ pub(super) extern "C" fn get_foreign_rel_size<W: ForeignDataWrapper>(
         let mut state = FdwState::<W>::new(foreigntableid);
 
         state.tmp_ctx.reset();
-        let old_ctx = state.tmp_ctx.set_as_current();
+        let mut old_ctx = state.tmp_ctx.set_as_current();
 
         // extract qual list
         state.quals = extract_quals(root, baserel, foreigntableid);
@@ -151,6 +152,7 @@ pub(super) extern "C" fn get_foreign_rel_size<W: ForeignDataWrapper>(
     }
 }
 
+#[pg_guard]
 pub(super) extern "C" fn get_foreign_paths<W: ForeignDataWrapper>(
     root: *mut pg_sys::PlannerInfo,
     baserel: *mut pg_sys::RelOptInfo,
@@ -190,6 +192,7 @@ pub(super) extern "C" fn get_foreign_paths<W: ForeignDataWrapper>(
     }
 }
 
+#[pg_guard]
 pub(super) extern "C" fn get_foreign_plan<W: ForeignDataWrapper>(
     _root: *mut pg_sys::PlannerInfo,
     baserel: *mut pg_sys::RelOptInfo,
@@ -204,7 +207,7 @@ pub(super) extern "C" fn get_foreign_plan<W: ForeignDataWrapper>(
         let mut state = PgBox::<FdwState<W>>::from_pg((*baserel).fdw_private as _);
 
         state.tmp_ctx.reset();
-        let old_ctx = state.tmp_ctx.set_as_current();
+        let mut old_ctx = state.tmp_ctx.set_as_current();
 
         // make foreign scan plan
         let scan_clauses = pg_sys::extract_actual_clauses(scan_clauses, false);
@@ -226,6 +229,7 @@ pub(super) extern "C" fn get_foreign_plan<W: ForeignDataWrapper>(
     }
 }
 
+#[pg_guard]
 pub(super) extern "C" fn explain_foreign_scan<W: ForeignDataWrapper>(
     node: *mut pg_sys::ForeignScanState,
     es: *mut pg_sys::ExplainState,
@@ -240,7 +244,7 @@ pub(super) extern "C" fn explain_foreign_scan<W: ForeignDataWrapper>(
         let mut state = PgBox::<FdwState<W>>::from_rust(fdw_state);
 
         state.tmp_ctx.reset();
-        let old_ctx = state.tmp_ctx.set_as_current();
+        let mut old_ctx = state.tmp_ctx.set_as_current();
 
         let label = PgMemoryContexts::CurrentMemoryContext.pstrdup("Wrappers");
 
@@ -266,6 +270,7 @@ pub(super) extern "C" fn explain_foreign_scan<W: ForeignDataWrapper>(
     }
 }
 
+#[pg_guard]
 pub(super) extern "C" fn begin_foreign_scan<W: ForeignDataWrapper>(
     node: *mut pg_sys::ForeignScanState,
     eflags: c_int,
@@ -295,6 +300,7 @@ pub(super) extern "C" fn begin_foreign_scan<W: ForeignDataWrapper>(
     }
 }
 
+#[pg_guard]
 pub(super) extern "C" fn iterate_foreign_scan<W: ForeignDataWrapper>(
     node: *mut pg_sys::ForeignScanState,
 ) -> *mut pg_sys::TupleTableSlot {
@@ -307,7 +313,7 @@ pub(super) extern "C" fn iterate_foreign_scan<W: ForeignDataWrapper>(
         polyfill::exec_clear_tuple(slot);
 
         state.tmp_ctx.reset();
-        let old_ctx = state.tmp_ctx.set_as_current();
+        let mut old_ctx = state.tmp_ctx.set_as_current();
 
         if let Some(mut row) = state.iter_scan() {
             if row.cols.len() != state.tgts.len() {
@@ -341,6 +347,7 @@ pub(super) extern "C" fn iterate_foreign_scan<W: ForeignDataWrapper>(
     }
 }
 
+#[pg_guard]
 pub(super) extern "C" fn re_scan_foreign_scan<W: ForeignDataWrapper>(
     node: *mut pg_sys::ForeignScanState,
 ) {
@@ -354,6 +361,7 @@ pub(super) extern "C" fn re_scan_foreign_scan<W: ForeignDataWrapper>(
     }
 }
 
+#[pg_guard]
 pub(super) extern "C" fn end_foreign_scan<W: ForeignDataWrapper>(
     node: *mut pg_sys::ForeignScanState,
 ) {

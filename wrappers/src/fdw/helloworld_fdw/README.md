@@ -23,16 +23,14 @@ cargo pgx run --features helloworld_fdw
 
 ```sql
 -- create extension
-drop extension if exists wrappers cascade;
 create extension wrappers;
 
 -- create foreign data wrapper and enable 'HelloWorldFdw'
-drop foreign data wrapper if exists helloworld_wrapper cascade;
 create foreign data wrapper helloworld_wrapper
-  handler helloworld_fdw_handler;
+  handler hello_world_fdw_handler
+  validator hello_world_fdw_validator;
 
 -- create server and specify custom options
-drop server if exists my_helloworld_server cascade;
 create server my_helloworld_server
   foreign data wrapper helloworld_wrapper
   options (
@@ -40,7 +38,6 @@ create server my_helloworld_server
   );
 
 -- create an example foreign table
-drop foreign table if exists hello;
 create foreign table hello (
   id bigint,
   col text
@@ -61,4 +58,8 @@ wrappers=# select * from hello;
 (1 row)
 ```
 
+## Changelog
 
+| Version | Date       | Notes                                                |
+| ------- | ---------- | ---------------------------------------------------- |
+| 0.1.0   | 2022-11-30 | Initial version                                      |

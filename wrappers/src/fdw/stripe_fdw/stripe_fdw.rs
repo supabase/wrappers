@@ -1,3 +1,4 @@
+use pgx::pg_sys;
 use pgx::prelude::{PgSqlErrorCode, Timestamp};
 use pgx::JsonB;
 use reqwest::{self, header, Url};
@@ -27,8 +28,7 @@ fn create_client(api_key: &str) -> ClientWithMiddleware {
 
 fn body_to_rows(
     resp_body: &str,
-    obj_key: &str,
-    common_cols: Vec<(&str, &str)>,
+    normal_cols: Vec<(&str, &str)>,
     tgt_cols: &Vec<String>,
 ) -> (Vec<Row>, Option<String>, Option<bool>) {
     let mut result = Vec::new();
@@ -39,16 +39,30 @@ fn body_to_rows(
         .and_then(|v| v.as_str())
         .map(|v| v == "list")
         .unwrap_or_default();
+
+    let is_balance = value
+        .as_object()
+        .and_then(|v| v.get("object"))
+        .and_then(|v| v.as_str())
+        .map(|v| v == "balance")
+        .unwrap_or_default();
+
     let single_wrapped: Vec<JsonValue> = if is_list {
         Vec::new()
+    } else if is_balance {
+        let obj = value.as_object().and_then(|v| v.get("available")).unwrap();
+        obj.as_array().unwrap().to_vec()
     } else {
-        let obj = value.as_object().map(|v| v.clone()).unwrap();
-        vec![JsonValue::Object(obj)]
+        // wrap a single object in vec
+        value
+            .as_object()
+            .map(|v| vec![JsonValue::Object(v.clone())])
+            .unwrap()
     };
     let objs = if is_list {
         value
             .as_object()
-            .and_then(|v| v.get(obj_key))
+            .and_then(|v| v.get("data"))
             .and_then(|v| v.as_array())
             .unwrap()
     } else {
@@ -59,12 +73,9 @@ fn body_to_rows(
     for obj in objs {
         let mut row = Row::new();
 
-        // extract common columns
+        // extract normal columns
         for tgt_col in tgt_cols {
-            for (col_name, col_type) in &common_cols {
-                if col_name != tgt_col {
-                    continue;
-                }
+            for (col_name, col_type) in normal_cols.iter().filter(|(c, _)| c == tgt_col) {
                 let cell = obj
                     .as_object()
                     .and_then(|v| v.get(*col_name))
@@ -147,27 +158,34 @@ fn row_to_body(row: &Row) -> JsonValue {
     JsonValue::Object(map)
 }
 
-// for scan with a single id, optimized to single object GET request
-fn pushdown_single_id(url: &Url, quals: &Vec<Qual>) -> Option<Url> {
-    if quals.len() != 1 {
-        return None;
-    }
-    let qual = &quals[0];
-    if qual.field == "id" && qual.operator == "=" && !qual.use_or {
-        match &qual.value {
-            Value::Cell(cell) => match cell {
-                Cell::String(s) => {
-                    return Url::parse(&format!("{}/{}", url.as_str(), &s)).ok();
-                }
+fn pushdown_quals(
+    url: &mut Url,
+    obj: &str,
+    quals: &Vec<Qual>,
+    fields: Vec<&str>,
+    page_size: i64,
+    cursor: &Option<String>,
+) {
+    // for scan with a single id query param, optimized to single object GET request
+    if quals.len() == 1 {
+        let qual = &quals[0];
+        if qual.field == "id" && qual.operator == "=" && !qual.use_or {
+            match &qual.value {
+                Value::Cell(cell) => match cell {
+                    Cell::String(id) => {
+                        let new_path = format!("{}/{}", url.path(), id);
+                        url.set_path(&new_path);
+                        url.set_query(None);
+                        return;
+                    }
+                    _ => {}
+                },
                 _ => {}
-            },
-            _ => {}
+            }
         }
     }
-    None
-}
 
-fn pushdown_quals(url: &mut Url, quals: &Vec<Qual>, fields: Vec<&str>) {
+    // pushdown quals
     for qual in quals {
         for field in &fields {
             if qual.field == *field && qual.operator == "=" && !qual.use_or {
@@ -187,11 +205,19 @@ fn pushdown_quals(url: &mut Url, quals: &Vec<Qual>, fields: Vec<&str>) {
             }
         }
     }
+
+    // add pagination parameters except for 'balance' object
+    if obj != "balance" {
+        url.query_pairs_mut()
+            .append_pair("limit", &format!("{}", page_size));
+        if let Some(ref cursor) = cursor {
+            url.query_pairs_mut().append_pair("starting_after", cursor);
+        }
+    }
 }
 
 macro_rules! report_request_error {
     ($err:ident) => {{
-        //log_info(&format!("{:?}", $err));
         report_error(
             PgSqlErrorCode::ERRCODE_FDW_ERROR,
             &format!("request failed: {}", $err),
@@ -200,6 +226,11 @@ macro_rules! report_request_error {
     }};
 }
 
+#[wrappers_fdw(
+    version = "0.1.2",
+    author = "Supabase",
+    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/stripe_fdw"
+)]
 pub(crate) struct StripeFdw {
     rt: Runtime,
     base_url: Url,
@@ -219,68 +250,26 @@ impl StripeFdw {
     ) -> Option<Url> {
         let mut url = self.base_url.join(&obj).unwrap();
 
-        // pushdown quals for balance transactions
-        // ref: https://stripe.com/docs/api/balance_transactions/list
-        if obj == "balance_transactions" {
-            pushdown_quals(&mut url, quals, vec!["payout", "type"]);
-        }
-
-        // pushdown quals for charges
-        // ref: https://stripe.com/docs/api/charges/list
-        if obj == "charges" {
-            pushdown_quals(&mut url, quals, vec!["customer"]);
-        }
-
-        // pushdown quals for customers
-        // ref: https://stripe.com/docs/api/customers/list
-        if obj == "customers" {
-            let single_id_url = pushdown_single_id(&url, quals);
-            if single_id_url.is_some() {
-                return single_id_url;
+        // pushdown quals
+        // ref: https://stripe.com/docs/api/[object]/list
+        let fields = match obj {
+            "balance" => vec![],
+            "balance_transactions" => vec!["payout", "type"],
+            "charges" => vec!["customer"],
+            "customers" => vec!["email"],
+            "invoices" => vec!["customer", "status", "subscription"],
+            "payment_intents" => vec!["customer"],
+            "products" => vec!["active"],
+            "subscriptions" => vec!["customer", "price", "status"],
+            _ => {
+                report_error(
+                    PgSqlErrorCode::ERRCODE_FDW_TABLE_NOT_FOUND,
+                    &format!("'{}' object is not implemented", obj),
+                );
+                return None;
             }
-            pushdown_quals(&mut url, quals, vec!["email"]);
-        }
-
-        // pushdown quals for invoices
-        // ref: https://stripe.com/docs/api/invoices/list
-        if obj == "invoices" {
-            pushdown_quals(&mut url, quals, vec!["customer", "status", "subscription"]);
-        }
-
-        // pushdown quals for payment intents
-        // ref: https://stripe.com/docs/api/payment_intents/list
-        if obj == "payment_intents" {
-            pushdown_quals(&mut url, quals, vec!["customer"]);
-        }
-
-        // pushdown quals for payment intents
-        // ref: https://stripe.com/docs/api/products/list
-        if obj == "products" {
-            let single_id_url = pushdown_single_id(&url, quals);
-            if single_id_url.is_some() {
-                return single_id_url;
-            }
-            pushdown_quals(&mut url, quals, vec!["active"]);
-        }
-
-        // pushdown quals for subscriptions
-        // ref: https://stripe.com/docs/api/subscriptions/list
-        if obj == "subscriptions" {
-            let single_id_url = pushdown_single_id(&url, quals);
-            if single_id_url.is_some() {
-                return single_id_url;
-            }
-            pushdown_quals(&mut url, quals, vec!["customer", "price", "status"]);
-        }
-
-        // add pagination parameters except for 'balance' object
-        if obj != "balance" {
-            url.query_pairs_mut()
-                .append_pair("limit", &format!("{}", page_size));
-            if let Some(ref cursor) = cursor {
-                url.query_pairs_mut().append_pair("starting_after", cursor);
-            }
-        }
+        };
+        pushdown_quals(&mut url, obj, quals, fields, page_size, cursor);
 
         Some(url)
     }
@@ -295,13 +284,11 @@ impl StripeFdw {
         match obj {
             "balance" => body_to_rows(
                 resp_body,
-                "available",
                 vec![("amount", "i64"), ("currency", "string")],
                 tgt_cols,
             ),
             "balance_transactions" => body_to_rows(
                 resp_body,
-                "data",
                 vec![
                     ("id", "string"),
                     ("amount", "i64"),
@@ -317,7 +304,6 @@ impl StripeFdw {
             ),
             "charges" => body_to_rows(
                 resp_body,
-                "data",
                 vec![
                     ("id", "string"),
                     ("amount", "i64"),
@@ -333,7 +319,6 @@ impl StripeFdw {
             ),
             "customers" => body_to_rows(
                 resp_body,
-                "data",
                 vec![
                     ("id", "string"),
                     ("email", "string"),
@@ -345,7 +330,6 @@ impl StripeFdw {
             ),
             "invoices" => body_to_rows(
                 resp_body,
-                "data",
                 vec![
                     ("id", "string"),
                     ("customer", "string"),
@@ -360,7 +344,6 @@ impl StripeFdw {
             ),
             "payment_intents" => body_to_rows(
                 resp_body,
-                "data",
                 vec![
                     ("id", "string"),
                     ("customer", "string"),
@@ -373,7 +356,6 @@ impl StripeFdw {
             ),
             "products" => body_to_rows(
                 resp_body,
-                "data",
                 vec![
                     ("id", "string"),
                     ("name", "string"),
@@ -387,7 +369,6 @@ impl StripeFdw {
             ),
             "subscriptions" => body_to_rows(
                 resp_body,
-                "data",
                 vec![
                     ("id", "string"),
                     ("customer", "string"),
@@ -413,6 +394,15 @@ impl ForeignDataWrapper for StripeFdw {
         let base_url = options
             .get("api_url")
             .map(|t| t.to_owned())
+            // Ensure trailing slash is always present, otherwise /v1 will get obliterated when
+            // joined with object
+            .map(|s| {
+                if s.ends_with("/") {
+                    s
+                } else {
+                    format!("{}/", s)
+                }
+            })
             .unwrap_or("https://api.stripe.com/v1/".to_string());
         let client = match options.get("api_key") {
             Some(api_key) => Some(create_client(&api_key)),
@@ -534,7 +524,7 @@ impl ForeignDataWrapper for StripeFdw {
                         let body = self.rt.block_on(resp.text()).unwrap();
                         let json: JsonValue = serde_json::from_str(&body).unwrap();
                         if let Some(id) = json.get("id").and_then(|v| v.as_str()) {
-                            log_info(&format!("inserted {} {}", self.obj, id));
+                            report_info(&format!("inserted {} {}", self.obj, id));
                         }
                     }
                     Err(err) => report_request_error!(err),
@@ -566,7 +556,7 @@ impl ForeignDataWrapper for StripeFdw {
                                 let body = self.rt.block_on(resp.text()).unwrap();
                                 let json: JsonValue = serde_json::from_str(&body).unwrap();
                                 if let Some(id) = json.get("id").and_then(|v| v.as_str()) {
-                                    log_info(&format!("updated {} {}", self.obj, id));
+                                    report_info(&format!("updated {} {}", self.obj, id));
                                 }
                             }
                             Err(err) => report_request_error!(err),
@@ -597,7 +587,7 @@ impl ForeignDataWrapper for StripeFdw {
                                 let body = self.rt.block_on(resp.text()).unwrap();
                                 let json: JsonValue = serde_json::from_str(&body).unwrap();
                                 if let Some(id) = json.get("id").and_then(|v| v.as_str()) {
-                                    log_info(&format!("deleted {} {}", self.obj, id));
+                                    report_info(&format!("deleted {} {}", self.obj, id));
                                 }
                             }
                             Err(err) => report_request_error!(err),
@@ -611,4 +601,15 @@ impl ForeignDataWrapper for StripeFdw {
     }
 
     fn end_modify(&mut self) {}
+
+    fn validator(options: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) {
+        if let Some(oid) = catalog {
+            match oid {
+                FOREIGN_TABLE_RELATION_ID => {
+                    check_options_contain(&options, "object");
+                }
+                _ => {}
+            }
+        }
+    }
 }
