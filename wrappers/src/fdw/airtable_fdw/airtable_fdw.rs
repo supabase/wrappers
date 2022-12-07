@@ -10,7 +10,11 @@ use supabase_wrappers::prelude::*;
 
 use super::result::AirtableResponse;
 
-#[wrappers_fdw]
+#[wrappers_fdw(
+    version = "0.1.0",
+    author = "Ankur Goyal",
+    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/airtable_fdw"
+)]
 pub(crate) struct AirtableFdw {
     rt: Runtime,
     base_url: String,

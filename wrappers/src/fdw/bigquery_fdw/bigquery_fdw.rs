@@ -77,7 +77,11 @@ fn field_to_cell(rs: &ResultSet, field: &TableFieldSchema) -> Option<Cell> {
     }
 }
 
-#[wrappers_fdw]
+#[wrappers_fdw(
+    version = "0.1.0",
+    author = "Supabase",
+    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/bigquery_fdw"
+)]
 pub(crate) struct BigQueryFdw {
     rt: Runtime,
     client: Option<Client>,

@@ -2452,6 +2452,7 @@ dependencies = [
 name = "supabase-wrappers-macros"
 version = "0.1.5"
 dependencies = [
+ "proc-macro2",
  "quote",
  "syn",
 ]

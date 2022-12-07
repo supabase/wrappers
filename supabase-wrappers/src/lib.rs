@@ -62,8 +62,18 @@
 //! ```rust,no_run
 //! use supabase_wrappers::prelude::*;
 //!
-//! #[wrappers_fdw]
-//! pub struct HelloWorldFdw;
+//! #[wrappers_fdw(
+//!    version = "0.1.0",
+//!    author = "Supabase",
+//!    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/helloworld_fdw"
+//! )]
+//! pub struct HelloWorldFdw {
+//!     //row counter
+//!     row_cnt: i64,
+//!
+//!     // target column name list
+//!     tgt_cols: Vec<String>,
+//! }
 //!
 //! impl ForeignDataWrapper for HelloWorldFdw {
 //!     pub fn new(options: &HashMap<String, String>) -> Self {
@@ -80,7 +90,10 @@
 //!         // You can do any initalization in this new() function, like saving connection
 //!         // info or API url in an variable, but don't do heavy works like database
 //!         // connection or API call.
-//!         Self {}
+//!         Self {
+//!             row_cnt: 0,
+//!             tgt_cols: Vec::new(),
+//!         }
 //!     }
 //! }
 //! ```
@@ -111,13 +124,16 @@
 //!     fn begin_scan(
 //!         &mut self,
 //!         _quals: &Vec<Qual>,
-//!         _columns: &Vec<String>,
+//!         columns: &Vec<String>,
 //!         _sorts: &Vec<Sort>,
 //!         _limit: &Option<Limit>,
 //!         _options: &HashMap<String, String>,
 //!     ) {
 //!         // reset row count
 //!         self.row_cnt = 0;
+//!
+//!         // save a copy of target columns
+//!         self.tgt_cols = columns.clone();
 //!     }
 //!
 //!     fn iter_scan(&mut self) -> Option<Row> {
@@ -126,11 +142,14 @@
 //!             // create an empty row
 //!             let mut row = Row::new();
 //!
-//!             // add value to 'id' column
-//!             row.push("id", Some(Cell::I64(self.row_cnt)));
-//!
-//!             // add value to 'col' column
-//!             row.push("col", Some(Cell::String("Hello world".to_string())));
+//!             // add values to row if they are in target column list
+//!             for tgt_col in &self.tgt_cols {
+//!                 match tgt_col.as_str() {
+//!                     "id" => row.push("id", Some(Cell::I64(self.row_cnt))),
+//!                     "col" => row.push("col", Some(Cell::String("Hello world".to_string()))),
+//!                     _ => {}
+//!                 }
+//!             }
 //!
 //!             self.row_cnt += 1;
 //!
@@ -160,7 +179,8 @@
 //! create extension my_project;
 //!
 //! create foreign data wrapper helloworld_wrapper
-//!   handler helloworld_fdw_handler;
+//!   handler hello_world_fdw_handler
+//!   validator hello_world_fdw_validator;
 //!
 //! create server my_helloworld_server
 //!   foreign data wrapper helloworld_wrapper;

@@ -166,7 +166,11 @@ fn resp_to_rows(obj: &str, resp: &JsonValue, tgt_cols: &Vec<String>) -> Vec<Row>
     result
 }
 
-#[wrappers_fdw]
+#[wrappers_fdw(
+    version = "0.1.1",
+    author = "Supabase",
+    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/firebase_fdw"
+)]
 pub(crate) struct FirebaseFdw {
     rt: Runtime,
     project_id: String,

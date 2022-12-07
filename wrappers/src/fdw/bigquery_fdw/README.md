@@ -23,25 +23,12 @@ cargo pgx run --features bigquery_fdw
 
 ```sql
 -- create extension
-drop extension if exists wrappers cascade;
 create extension wrappers;
 
 -- create foreign data wrapper and enable 'BigQueryFdw'
-drop foreign data wrapper if exists bigquery_wrapper cascade;
 create foreign data wrapper bigquery_wrapper
-  handler bigquery_fdw_handler;
-
--- save BigQuery service account json in Vault and get its key id
-select pgsodium.create_key(name := 'bigquery');
-insert into vault.secrets (secret, key_id) values ('
-{
-  "type": "service_account",
-  "project_id": "your_gcp_project_id",
-  ...
-}
-',
-(select id from pgsodium.valid_key where name = 'bigquery')
-) returning key_id;
+  handler big_query_fdw_handler
+  validator big_query_fdw_validator;
 
 -- create a wrappers BigQuery server and specify connection info
 -- Here we're using the service account key stored in Vault, if you don't want
@@ -61,14 +48,26 @@ insert into vault.secrets (secret, key_id) values ('
 --     project_id 'your_gcp_project_id',
 --     dataset_id 'your_gcp_dataset_id'
 --   );
---
+
+-- save BigQuery service account json in Vault and get its key id
+select pgsodium.create_key(name := 'bigquery');
+insert into vault.secrets (secret, key_id) values ('
+{
+  "type": "service_account",
+  "project_id": "your_gcp_project_id",
+  "private_key_id": "your_private_key_id",
+  "private_key": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n",
+  ...
+}
+',
+(select id from pgsodium.valid_key where name = 'bigquery')
+) returning key_id;
+
 do $$
 declare
   key_id text;
 begin
   select id into key_id from pgsodium.valid_key where name = 'bigquery' limit 1;
-
-  drop server if exists my_bigquery_server cascade;
 
   execute format(
     E'create server my_bigquery_server \n'
@@ -83,7 +82,6 @@ begin
 end $$;
 
 -- create an example foreign table
-drop foreign table if exists people;
 create foreign table people (
   id bigint,
   name text,

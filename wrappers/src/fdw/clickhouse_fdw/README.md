@@ -23,13 +23,12 @@ cargo pgx run --features clickhouse_fdw
 
 ```sql
 -- create extension
-drop extension if exists wrappers cascade;
 create extension wrappers;
 
 -- create foreign data wrapper and enable 'ClickHouseFdw'
-drop foreign data wrapper if exists clickhouse_wrapper;
 create foreign data wrapper clickhouse_wrapper
-  handler clickhouse_fdw_handler;
+  handler click_house_fdw_handler
+  validator click_house_fdw_validator;
 
 -- create and save ClickHouse connection string in Vault
 select pgsodium.create_key(name := 'clickhouse');
@@ -55,8 +54,6 @@ declare
 begin
   select id into key_id from pgsodium.valid_key where name = 'clickhouse' limit 1;
 
-  drop server if exists my_clickhouse_server cascade;
-
   execute format(
     E'create server my_clickhouse_server \n'
     '   foreign data wrapper clickhouse_wrapper \n'
@@ -66,7 +63,6 @@ begin
 end $$;
 
 -- create an example foreign table
-drop foreign table if exists people;
 create foreign table people (
   id bigint,
   name text

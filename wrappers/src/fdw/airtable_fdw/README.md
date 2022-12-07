@@ -23,17 +23,14 @@ cargo pgx run --features airtable_fdw
 
 ```sql
 -- create extension
-drop extension if exists wrappers cascade;
 create extension wrappers;
 
 -- create foreign data wrapper and enable 'AirtableFdw'
-drop foreign data wrapper if exists airtable_wrapper cascade;
 create foreign data wrapper airtable_wrapper
   handler airtable_fdw_handler
   validator airtable_fdw_validator;
 
 -- create a wrappers Airtable server and specify connection info
-drop server if exists my_airtable_server cascade;
 create server my_airtable_server
   foreign data wrapper airtable_wrapper
   options (
@@ -42,11 +39,10 @@ create server my_airtable_server
   );
 
 -- create an example foreign table
-drop foreign table if exists t1;
 create foreign table t1(
-    id text, -- The builtin "id" field in Airtable
-    name text, -- The fields in your Airtable table. Airtable is case insensitive so capitalization does not matter.
-    status text,
+  id text, -- The builtin "id" field in Airtable
+  name text, -- The fields in your Airtable table. Airtable is case insensitive so capitalization does not matter.
+  status text,
 )
   server my_airtable_server
   options (

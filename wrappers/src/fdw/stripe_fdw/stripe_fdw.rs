@@ -215,7 +215,11 @@ macro_rules! report_request_error {
     }};
 }
 
-#[wrappers_fdw]
+#[wrappers_fdw(
+    version = "0.1.2",
+    author = "Supabase",
+    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/stripe_fdw"
+)]
 pub(crate) struct StripeFdw {
     rt: Runtime,
     base_url: Url,

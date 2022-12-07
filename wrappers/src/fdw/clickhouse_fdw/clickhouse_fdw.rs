@@ -77,7 +77,11 @@ fn field_to_cell(row: &types::Row<types::Complex>, i: usize) -> Option<Cell> {
     }
 }
 
-#[wrappers_fdw]
+#[wrappers_fdw(
+    version = "0.1.0",
+    author = "Supabase",
+    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/clickhouse_fdw"
+)]
 pub(crate) struct ClickHouseFdw {
     rt: Runtime,
     client: Option<ClientHandle>,

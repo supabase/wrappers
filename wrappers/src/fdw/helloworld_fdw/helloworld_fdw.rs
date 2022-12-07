@@ -2,7 +2,11 @@ use std::collections::HashMap;
 use supabase_wrappers::prelude::*;
 
 // A simple demo FDW
-#[wrappers_fdw]
+#[wrappers_fdw(
+    version = "0.1.0",
+    author = "Supabase",
+    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/helloworld_fdw"
+)]
 pub(crate) struct HelloWorldFdw {
     // row counter
     row_cnt: i64,
@@ -54,11 +58,12 @@ impl ForeignDataWrapper for HelloWorldFdw {
             let mut row = Row::new();
 
             // add values to row if they are in target column list
-            if self.tgt_cols.iter().any(|c| c == "id") {
-                row.push("id", Some(Cell::I64(self.row_cnt)));
-            }
-            if self.tgt_cols.iter().any(|c| c == "col") {
-                row.push("col", Some(Cell::String("Hello world".to_string())));
+            for tgt_col in &self.tgt_cols {
+                match tgt_col.as_str() {
+                    "id" => row.push("id", Some(Cell::I64(self.row_cnt))),
+                    "col" => row.push("col", Some(Cell::String("Hello world".to_string()))),
+                    _ => {}
+                }
             }
 
             self.row_cnt += 1;
