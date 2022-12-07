@@ -105,6 +105,7 @@ fn body_to_rows(
                             let ts = Timestamp::try_from(dt).unwrap();
                             Cell::Timestamp(ts)
                         }),
+                        "json" => Some(Cell::Json(JsonB(v.clone()))),
                         _ => None,
                     });
                 row.push(col_name, cell);
@@ -149,6 +150,7 @@ fn resp_to_rows(obj: &str, resp: &JsonValue, tgt_cols: &Vec<String>) -> Vec<Row>
                     "documents",
                     vec![
                         ("name", "name", "string"),
+                        ("fields", "fields", "json"),
                         ("createTime", "created_at", "timestamp_iso"),
                         ("updateTime", "updated_at", "timestamp_iso"),
                     ],

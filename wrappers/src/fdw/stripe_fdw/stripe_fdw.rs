@@ -39,8 +39,19 @@ fn body_to_rows(
         .and_then(|v| v.as_str())
         .map(|v| v == "list")
         .unwrap_or_default();
+
+    let is_balance = value
+        .as_object()
+        .and_then(|v| v.get("object"))
+        .and_then(|v| v.as_str())
+        .map(|v| v == "balance")
+        .unwrap_or_default();
+
     let single_wrapped: Vec<JsonValue> = if is_list {
         Vec::new()
+    } else if is_balance {
+        let obj = value.as_object().and_then(|v| v.get("available")).unwrap();
+        obj.as_array().unwrap().to_vec()
     } else {
         // wrap a single object in vec
         value
@@ -383,6 +394,15 @@ impl ForeignDataWrapper for StripeFdw {
         let base_url = options
             .get("api_url")
             .map(|t| t.to_owned())
+            // Ensure trailing slash is always present, otherwise /v1 will get obliterated when
+            // joined with object
+            .map(|s| {
+                if s.ends_with("/") {
+                    s
+                } else {
+                    format!("{}/", s)
+                }
+            })
             .unwrap_or("https://api.stripe.com/v1/".to_string());
         let client = match options.get("api_key") {
             Some(api_key) => Some(create_client(&api_key)),
