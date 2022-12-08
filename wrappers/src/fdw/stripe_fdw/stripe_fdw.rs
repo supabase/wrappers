@@ -50,8 +50,22 @@ fn body_to_rows(
     let single_wrapped: Vec<JsonValue> = if is_list {
         Vec::new()
     } else if is_balance {
-        let obj = value.as_object().and_then(|v| v.get("available")).unwrap();
-        obj.as_array().unwrap().to_vec()
+        // specially transform balance object to 2 rows
+        let mut ret = Vec::new();
+        for bal_type in vec!["available", "pending"] {
+            let mut obj = value
+                .as_object()
+                .and_then(|v| v.get(bal_type))
+                .and_then(|v| v.as_array())
+                .map(|v| v[0].as_object().unwrap().clone())
+                .unwrap();
+            obj.insert(
+                "balance_type".to_string(),
+                JsonValue::String(bal_type.to_owned()),
+            );
+            ret.push(JsonValue::Object(obj));
+        }
+        ret
     } else {
         // wrap a single object in vec
         value
@@ -284,7 +298,11 @@ impl StripeFdw {
         match obj {
             "balance" => body_to_rows(
                 resp_body,
-                vec![("amount", "i64"), ("currency", "string")],
+                vec![
+                    ("balance_type", "string"),
+                    ("amount", "i64"),
+                    ("currency", "string"),
+                ],
                 tgt_cols,
             ),
             "balance_transactions" => body_to_rows(
