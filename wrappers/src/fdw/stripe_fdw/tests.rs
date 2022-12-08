@@ -325,6 +325,86 @@ mod tests {
                     287883090000000
                 )]
             );
+
+            // test insert
+            c.update(
+                r#"
+                INSERT INTO stripe_customers(email, name, description)
+                VALUES ('test@test.com', 'test name', null)
+                "#,
+                None,
+                None,
+            );
+
+            let results = c
+                .select(
+                    "SELECT * FROM stripe_customers WHERE email = 'test@test.com'",
+                    None,
+                    None,
+                )
+                .filter_map(|r| {
+                    r.by_name("email")
+                        .ok()
+                        .and_then(|v| v.value::<&str>())
+                        .zip(r.by_name("name").ok().and_then(|v| v.value::<&str>()))
+                })
+                .collect::<Vec<_>>();
+
+            assert_eq!(results, vec![("test@test.com", "test name")]);
+
+            // test update
+            c.update(
+                r#"
+                UPDATE stripe_customers
+                SET description = 'hello fdw'
+                WHERE email = 'test@test.com'
+                "#,
+                None,
+                None,
+            );
+
+            let results = c
+                .select(
+                    "SELECT * FROM stripe_customers WHERE email = 'test@test.com'",
+                    None,
+                    None,
+                )
+                .filter_map(|r| {
+                    r.by_name("email").ok().and_then(|v| v.value::<&str>()).zip(
+                        r.by_name("description")
+                            .ok()
+                            .and_then(|v| v.value::<&str>()),
+                    )
+                })
+                .collect::<Vec<_>>();
+
+            assert_eq!(results, vec![("test@test.com", "hello fdw")]);
+
+            // test delete
+            c.update(
+                r#"
+                DELETE FROM stripe_customers WHERE email = 'test@test.com'
+                "#,
+                None,
+                None,
+            );
+
+            let results = c
+                .select(
+                    "SELECT * FROM stripe_customers WHERE email = 'test@test.com'",
+                    None,
+                    None,
+                )
+                .filter_map(|r| {
+                    r.by_name("email").ok().and_then(|v| v.value::<&str>()).zip(
+                        r.by_name("description")
+                            .ok()
+                            .and_then(|v| v.value::<&str>()),
+                    )
+                })
+                .collect::<Vec<_>>();
+
+            assert!(results.is_empty());
         });
     }
 }
