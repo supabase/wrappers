@@ -326,6 +326,12 @@ mod tests {
                 )]
             );
 
+            // Stripe mock container is currently stateless, so we cannot test
+            // data modify for now but will keep the code below for future use.
+            //
+            // ref: https://github.com/stripe/stripe-mock
+
+            /*
             // test insert
             c.update(
                 r#"
@@ -405,6 +411,7 @@ mod tests {
                 .collect::<Vec<_>>();
 
             assert!(results.is_empty());
+            */
         });
     }
 }
