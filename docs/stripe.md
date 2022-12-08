@@ -83,8 +83,10 @@ Ref: [Stripe docs](https://stripe.com/docs/api/balance)
 
 ```sql
 create foreign table stripe.balance (
+  balance_type text,
   amount bigint,
-  currency text
+  currency text,
+  attrs jsonb
 )
   server stripe_server
   options (
@@ -192,8 +194,8 @@ create foreign table stripe.invoices (
   status text,
   total bigint,
   currency text,
-  period_start timestamp,
-  period_end timestamp,
+  current_period_start timestamp,
+  current_period_end timestamp,
   attrs jsonb
 )
   server stripe_server
