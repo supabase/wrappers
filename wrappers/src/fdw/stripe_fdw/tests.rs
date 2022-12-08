@@ -203,7 +203,7 @@ mod tests {
 
             assert_eq!(
                 results,
-                vec![("available", 0, "usd"), ("pending", 0, "usd")]
+                vec![(("available", 0), "usd"), (("pending", 0), "usd")]
             );
 
             let results = c
