@@ -193,14 +193,18 @@ mod tests {
             let results = c
                 .select("SELECT * FROM stripe_balance", None, None)
                 .filter_map(|r| {
-                    r.by_name("amount")
+                    r.by_name("balance_type")
                         .ok()
-                        .and_then(|v| v.value::<i64>())
+                        .and_then(|v| v.value::<&str>())
+                        .zip(r.by_name("amount").ok().and_then(|v| v.value::<i64>()))
                         .zip(r.by_name("currency").ok().and_then(|v| v.value::<&str>()))
                 })
                 .collect::<Vec<_>>();
 
-            assert_eq!(results, vec![(0, "usd")]);
+            assert_eq!(
+                results,
+                vec![("available", 0, "usd"), ("pending", 0, "usd")]
+            );
 
             let results = c
                 .select("SELECT * FROM stripe_balance_transactions", None, None)
@@ -215,7 +219,10 @@ mod tests {
                 })
                 .collect::<Vec<_>>();
 
-            assert_eq!(results, vec![(((((100, "usd"), 0), "available"), "charge"))]);
+            assert_eq!(
+                results,
+                vec![(((((100, "usd"), 0), "available"), "charge"))]
+            );
 
             let results = c
                 .select("SELECT * FROM stripe_charges", None, None)
@@ -254,7 +261,10 @@ mod tests {
                 })
                 .collect::<Vec<_>>();
 
-            assert_eq!(results, vec![((("cus_MJiBgSUgeWFN0z", 1000), "usd"), "draft")]);
+            assert_eq!(
+                results,
+                vec![((("cus_MJiBgSUgeWFN0z", 1000), "usd"), "draft")]
+            );
 
             let results = c
                 .select("SELECT * FROM stripe_payment_intents", None, None)
@@ -275,11 +285,18 @@ mod tests {
                         .ok()
                         .and_then(|v| v.value::<&str>())
                         .zip(r.by_name("active").ok().and_then(|v| v.value::<bool>()))
-                        .zip(r.by_name("description").ok().and_then(|v| v.value::<&str>()))
+                        .zip(
+                            r.by_name("description")
+                                .ok()
+                                .and_then(|v| v.value::<&str>()),
+                        )
                 })
                 .collect::<Vec<_>>();
 
-            assert_eq!(results, vec![(("T-shirt", true), "Comfortable gray cotton t-shirt")]);
+            assert_eq!(
+                results,
+                vec![(("T-shirt", true), "Comfortable gray cotton t-shirt")]
+            );
 
             let results = c
                 .select("SELECT * FROM stripe_subscriptions", None, None)
