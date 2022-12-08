@@ -247,7 +247,7 @@ mod tests {
                 })
                 .collect::<Vec<_>>();
 
-            assert_eq!(results, vec![("cus_MJiBgSUgeWFN0z", 1234567890000)]);
+            assert_eq!(results, vec![("cus_MJiBgSUgeWFN0z", 287883090000000)]);
 
             let results = c
                 .select("SELECT * FROM stripe_invoices", None, None)
