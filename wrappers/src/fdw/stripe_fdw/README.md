@@ -87,6 +87,9 @@ end $$;
 
 -- create foreign tables
 create foreign table stripe_balance (
+  balance_type text,
+  amount bigint,
+  currency text,
   attrs jsonb
 )
   server my_stripe_server
