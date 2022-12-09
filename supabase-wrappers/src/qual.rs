@@ -1,6 +1,7 @@
 use crate::prelude::*;
 use pgx::{is_a, pg_sys, pg_sys::Datum, FromDatum, PgBuiltInOids, PgList, PgOid};
 use std::ffi::CStr;
+use std::os::raw::c_int;
 
 // create array of Cell from constant datum array
 pub(crate) unsafe fn form_array_from_datum(
@@ -110,7 +111,7 @@ pub(crate) unsafe fn extract_from_op_expr(
         let left = left as *mut pg_sys::Var;
         let right = right as *mut pg_sys::Const;
 
-        if pg_sys::bms_is_member((*left).varno, baserel_ids) && (*left).varattno >= 1 {
+        if pg_sys::bms_is_member((*left).varno as c_int, baserel_ids) && (*left).varattno >= 1 {
             let field = pg_sys::get_attname(baserel_id, (*left).varattno, false);
             let value = Cell::from_polymorphic_datum(
                 (*right).constvalue,
@@ -186,7 +187,7 @@ pub(crate) unsafe fn extract_from_scalar_array_op_expr(
         let left = left as *mut pg_sys::Var;
         let right = right as *mut pg_sys::Const;
 
-        if pg_sys::bms_is_member((*left).varno, baserel_ids) && (*left).varattno >= 1 {
+        if pg_sys::bms_is_member((*left).varno as c_int, baserel_ids) && (*left).varattno >= 1 {
             let field = pg_sys::get_attname(baserel_id, (*left).varattno, false);
 
             let value: Option<Vec<Cell>> = form_array_from_datum(
@@ -217,7 +218,7 @@ pub(crate) unsafe fn extract_from_var(
 ) -> Option<Qual> {
     if (*var).varattno < 1
         || (*var).vartype != pg_sys::BOOLOID
-        || !pg_sys::bms_is_member((*var).varno, baserel_ids)
+        || !pg_sys::bms_is_member((*var).varno as c_int, baserel_ids)
     {
         return None;
     }
@@ -249,7 +250,7 @@ pub(crate) unsafe fn extract_from_bool_expr(
     let var = args.head().unwrap() as *mut pg_sys::Var;
     if (*var).varattno < 1
         || (*var).vartype != pg_sys::BOOLOID
-        || !pg_sys::bms_is_member((*var).varno, baserel_ids)
+        || !pg_sys::bms_is_member((*var).varno as c_int, baserel_ids)
     {
         return None;
     }
