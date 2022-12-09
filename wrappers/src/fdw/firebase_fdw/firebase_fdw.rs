@@ -66,7 +66,7 @@ fn body_to_rows(
     resp: &JsonValue,
     obj_key: &str,
     normal_cols: Vec<(&str, &str, &str)>,
-    tgt_cols: &Vec<String>,
+    tgt_cols: &[String],
 ) -> Vec<Row> {
     let mut result = Vec::new();
 
@@ -84,15 +84,15 @@ fn body_to_rows(
 
         // extract normal columns
         for tgt_col in tgt_cols {
-            for (src_name, col_name, col_type) in
-                normal_cols.iter().filter(|(_, c, _)| c == tgt_col)
+            if let Some((src_name, col_name, col_type)) =
+                normal_cols.iter().find(|(_, c, _)| c == tgt_col)
             {
                 let cell = obj
                     .as_object()
                     .and_then(|v| v.get(*src_name))
                     .and_then(|v| match *col_type {
-                        "bool" => v.as_bool().map(|a| Cell::Bool(a)),
-                        "i64" => v.as_i64().map(|a| Cell::I64(a)),
+                        "bool" => v.as_bool().map(Cell::Bool),
+                        "i64" => v.as_i64().map(Cell::I64),
                         "string" => v.as_str().map(|a| Cell::String(a.to_owned())),
                         "timestamp" => v.as_str().map(|a| {
                             let secs = a.parse::<i64>().unwrap() / 1000;
@@ -101,7 +101,7 @@ fn body_to_rows(
                             Cell::Timestamp(ts)
                         }),
                         "timestamp_iso" => v.as_str().map(|a| {
-                            let dt = PrimitiveDateTime::parse(&a, &Iso8601::DEFAULT).unwrap();
+                            let dt = PrimitiveDateTime::parse(a, &Iso8601::DEFAULT).unwrap();
                             let ts = Timestamp::try_from(dt).unwrap();
                             Cell::Timestamp(ts)
                         }),
@@ -109,7 +109,6 @@ fn body_to_rows(
                         _ => None,
                     });
                 row.push(col_name, cell);
-                break;
             }
         }
 
@@ -126,7 +125,7 @@ fn body_to_rows(
 }
 
 // convert response body text to rows
-fn resp_to_rows(obj: &str, resp: &JsonValue, tgt_cols: &Vec<String>) -> Vec<Row> {
+fn resp_to_rows(obj: &str, resp: &JsonValue, tgt_cols: &[String]) -> Vec<Row> {
     let mut result = Vec::new();
 
     match obj {
@@ -205,7 +204,7 @@ impl FirebaseFdw {
                 let base_url = options
                     .get("base_url")
                     .map(|t| t.to_owned())
-                    .unwrap_or(Self::DEFAULT_AUTH_BASE_URL.to_owned());
+                    .unwrap_or_else(|| Self::DEFAULT_AUTH_BASE_URL.to_owned());
                 let mut ret = format!(
                     "{}/{}/accounts:batchGet?maxResults={}",
                     base_url,
@@ -307,9 +306,9 @@ impl ForeignDataWrapper for FirebaseFdw {
 
     fn begin_scan(
         &mut self,
-        _quals: &Vec<Qual>,
-        columns: &Vec<String>,
-        _sorts: &Vec<Sort>,
+        _quals: &[Qual],
+        columns: &[String],
+        _sorts: &[Sort],
         _limit: &Option<Limit>,
         options: &HashMap<String, String>,
     ) {
@@ -382,11 +381,8 @@ impl ForeignDataWrapper for FirebaseFdw {
 
     fn validator(options: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) {
         if let Some(oid) = catalog {
-            match oid {
-                FOREIGN_TABLE_RELATION_ID => {
-                    check_options_contain(&options, "object");
-                }
-                _ => {}
+            if oid == FOREIGN_TABLE_RELATION_ID {
+                check_options_contain(&options, "object");
             }
         }
     }

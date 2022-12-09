@@ -10,11 +10,13 @@ pub(crate) unsafe fn create_sort(
     let attno = (*var).varattno;
     let attname = pg_sys::get_attname(baserel_id, attno, true);
     if !attname.is_null() {
-        let mut sort = Sort::default();
-        sort.field = CStr::from_ptr(attname).to_str().unwrap().to_owned();
-        sort.field_no = attno as usize;
-        sort.reversed = (*pathkey).pk_strategy as u32 == pg_sys::BTGreaterStrategyNumber;
-        sort.nulls_first = (*pathkey).pk_nulls_first;
+        let sort = Sort {
+            field: CStr::from_ptr(attname).to_str().unwrap().to_owned(),
+            field_no: attno as usize,
+            reversed: (*pathkey).pk_strategy as u32 == pg_sys::BTGreaterStrategyNumber,
+            nulls_first: (*pathkey).pk_nulls_first,
+            ..Default::default()
+        };
         return Some(sort);
     }
     None
