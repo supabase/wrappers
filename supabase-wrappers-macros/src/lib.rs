@@ -43,14 +43,11 @@ pub fn wrappers_fdw(attr: TokenStream, item: TokenStream) -> TokenStream {
         parse_macro_input!(attr with Punctuated::parse_terminated);
     for attr in meta_attrs {
         let name = format!("{}", attr.path.segments.first().unwrap().ident);
-        match attr.lit {
-            Lit::Str(val) => {
-                let value = val.value();
-                metas.append_all(quote! {
-                    meta.insert(#name.to_owned(), #value.to_owned());
-                });
-            }
-            _ => {}
+        if let Lit::Str(val) = attr.lit {
+            let value = val.value();
+            metas.append_all(quote! {
+                meta.insert(#name.to_owned(), #value.to_owned());
+            });
         }
     }
 

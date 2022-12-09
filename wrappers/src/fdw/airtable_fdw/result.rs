@@ -86,10 +86,9 @@ impl AirtableRecord {
         match value {
             Null => None,
             Bool(v) => Some(Cell::Bool(*v)),
-            Number(n) => n.as_i64().map_or_else(
-                || n.as_f64().map_or(None, |v| Some(Cell::F64(v))),
-                |v| Some(Cell::I64(v)),
-            ),
+            Number(n) => n
+                .as_i64()
+                .map_or_else(|| n.as_f64().map(Cell::F64), |v| Some(Cell::I64(v))),
             String(v) => Some(Cell::String(v.clone())),
             // XXX Handle timestamps somehow...
 
@@ -98,7 +97,7 @@ impl AirtableRecord {
         }
     }
 
-    pub fn to_row(&self, columns: &Vec<String>) -> Row {
+    pub fn to_row(&self, columns: &[String]) -> Row {
         let mut row = Row::new();
         for col in columns.iter() {
             if col == "id" {

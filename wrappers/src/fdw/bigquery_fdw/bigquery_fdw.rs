@@ -32,15 +32,15 @@ fn field_to_cell(rs: &ResultSet, field: &TableFieldSchema) -> Option<Cell> {
         FieldType::Boolean => rs
             .get_bool_by_name(&field.name)
             .unwrap_or_else(|err| field_type_error!(field, err))
-            .map(|v| Cell::Bool(v)),
+            .map(Cell::Bool),
         FieldType::Int64 | FieldType::Integer => rs
             .get_i64_by_name(&field.name)
             .unwrap_or_else(|err| field_type_error!(field, err))
-            .map(|v| Cell::I64(v.try_into().unwrap())),
+            .map(Cell::I64),
         FieldType::String => rs
             .get_string_by_name(&field.name)
             .unwrap_or_else(|err| field_type_error!(field, err))
-            .map(|v| Cell::String(v)),
+            .map(Cell::String),
         FieldType::Date => rs
             .get_string_by_name(&field.name)
             .unwrap_or_else(|err| field_type_error!(field, err))
@@ -95,7 +95,7 @@ pub(crate) struct BigQueryFdw {
 }
 
 impl BigQueryFdw {
-    fn deparse(&self, quals: &Vec<Qual>, columns: &Vec<String>) -> String {
+    fn deparse(&self, quals: &[Qual], columns: &[String]) -> String {
         let tgts = if columns.is_empty() {
             "*".to_string()
         } else {
@@ -143,13 +143,13 @@ impl ForeignDataWrapper for BigQueryFdw {
         let mock_auth: bool = options
             .get("mock_auth")
             .map(|t| t.to_owned())
-            .unwrap_or("false".to_string())
-            == "true".to_string();
+            .unwrap_or_else(|| "false".to_string())
+            == *"true";
 
         let api_endpoint = options
             .get("api_endpoint")
             .map(|t| t.to_owned())
-            .unwrap_or("https://bigquery.googleapis.com/bigquery/v2".to_string());
+            .unwrap_or_else(|| "https://bigquery.googleapis.com/bigquery/v2".to_string());
 
         let (auth_endpoint, sa_key_json) = match mock_auth {
             true => {
@@ -160,7 +160,7 @@ impl ForeignDataWrapper for BigQueryFdw {
                 let dummy_auth_config = dummy_configuration(&auth_mock_uri);
                 ret.auth_mock = Some(auth_mock);
                 let sa_key_json = serde_json::to_string_pretty(&dummy_auth_config).unwrap();
-                (auth_mock_uri.to_string(), sa_key_json)
+                (auth_mock_uri, sa_key_json)
             }
             false => {
                 let uri = "https://www.googleapis.com/auth/bigquery".to_string();
@@ -214,9 +214,9 @@ impl ForeignDataWrapper for BigQueryFdw {
 
     fn get_rel_size(
         &mut self,
-        _quals: &Vec<Qual>,
-        _columns: &Vec<String>,
-        _sorts: &Vec<Sort>,
+        _quals: &[Qual],
+        _columns: &[String],
+        _sorts: &[Sort],
         _limit: &Option<Limit>,
         _options: &HashMap<String, String>,
     ) -> (i64, i32) {
@@ -225,9 +225,9 @@ impl ForeignDataWrapper for BigQueryFdw {
 
     fn begin_scan(
         &mut self,
-        quals: &Vec<Qual>,
-        columns: &Vec<String>,
-        _sorts: &Vec<Sort>,
+        quals: &[Qual],
+        columns: &[String],
+        _sorts: &[Sort],
         _limit: &Option<Limit>,
         options: &HashMap<String, String>,
     ) {
@@ -236,12 +236,12 @@ impl ForeignDataWrapper for BigQueryFdw {
             return;
         }
         self.table = table.unwrap();
-        self.tgt_cols = columns.clone();
+        self.tgt_cols = columns.to_vec();
 
         let location = options
             .get("location")
             .map(|t| t.to_owned())
-            .unwrap_or("US".to_string());
+            .unwrap_or_else(|| "US".to_string());
 
         if let Some(client) = &self.client {
             // get table metadata
