@@ -37,6 +37,10 @@ fn field_to_cell(rs: &ResultSet, field: &TableFieldSchema) -> Option<Cell> {
             .get_i64_by_name(&field.name)
             .unwrap_or_else(|err| field_type_error!(field, err))
             .map(Cell::I64),
+        FieldType::Float64 | FieldType::Float => rs
+            .get_f64_by_name(&field.name)
+            .unwrap_or_else(|err| field_type_error!(field, err))
+            .map(Cell::F64),
         FieldType::String => rs
             .get_string_by_name(&field.name)
             .unwrap_or_else(|err| field_type_error!(field, err))
