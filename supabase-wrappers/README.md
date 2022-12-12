@@ -45,6 +45,9 @@ To develop a FDW using `Wrappers`, you only need to implement the [ForeignDataWr
 
 ```rust
 pub trait ForeignDataWrapper {
+    // create a FDW instance
+    fn new(...) -> Self;
+
     // functions for data scan, e.g. select
     fn begin_scan(...);
     fn iter_scan(...) -> Option<Row>;
@@ -62,7 +65,7 @@ pub trait ForeignDataWrapper {
 }
 ```
 
-In a minimum FDW, which supports data scan only, `begin_scan()`, `iter_scan()` and `end_scan()` are required, all the other functions are optional.
+In a minimum FDW, which supports data scan only, `new()`, `begin_scan()`, `iter_scan()` and `end_scan()` are required, all the other functions are optional.
 
 To know more about FDW development, please visit the [Wrappers documentation](https://docs.rs/supabase-wrappers/latest/supabase_wrappers/).
 
