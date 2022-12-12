@@ -117,7 +117,7 @@ jobs:
 
           mkdir -p ${package_dir}/DEBIAN
           touch ${package_dir}/DEBIAN/control
-          echo 'Package: ${{ matrix.package_name }}' >> ${package_dir}/DEBIAN/control
+          echo 'Package: ${{ matrix.extension_name }}' >> ${package_dir}/DEBIAN/control
           echo 'Version:' ${deb_version} >> ${package_dir}/DEBIAN/control
           echo 'Architecture: ${{ matrix.box.arch }}' >> ${package_dir}/DEBIAN/control
           echo 'Maintainer: supabase' >> ${package_dir}/DEBIAN/control
