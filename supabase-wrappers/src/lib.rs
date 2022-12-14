@@ -133,7 +133,7 @@
 //!         self.row_cnt = 0;
 //!
 //!         // save a copy of target columns
-//!         self.tgt_cols = columns.clone();
+//!         self.tgt_cols = columns.to_vec();
 //!     }
 //!
 //!     fn iter_scan(&mut self) -> Option<Row> {
