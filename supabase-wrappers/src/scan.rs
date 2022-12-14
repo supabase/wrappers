@@ -52,7 +52,8 @@ impl<W: ForeignDataWrapper> FdwState<W> {
             sorts: Vec::new(),
             limit: None,
             opts: HashMap::new(),
-            tmp_ctx: PgMemoryContexts::new("Wrappers temp data"),
+            tmp_ctx: PgMemoryContexts::CurTransactionContext
+                .switch_to(|_| PgMemoryContexts::new("Wrappers temp data")),
             values: Vec::new(),
             nulls: Vec::new(),
         }
@@ -148,7 +149,8 @@ pub(super) extern "C" fn get_foreign_rel_size<W: ForeignDataWrapper>(
 
         old_ctx.set_as_current();
 
-        (*baserel).fdw_private = PgBox::new(state).into_pg() as _;
+        (*baserel).fdw_private =
+            PgBox::new_in_context(state, PgMemoryContexts::CurTransactionContext).into_pg() as _;
     }
 }
 
