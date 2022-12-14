@@ -114,6 +114,7 @@ The `auth/users` collection is a special case with unique metadata. The followin
 create foreign table firebase_users (
   uid text,
   email text,
+  created_at timestamp,
   fields jsonb
 )
   server my_firebase_server

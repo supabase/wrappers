@@ -194,8 +194,8 @@ create foreign table stripe.invoices (
   status text,
   total bigint,
   currency text,
-  current_period_start timestamp,
-  current_period_end timestamp,
+  period_start timestamp,
+  period_end timestamp,
   attrs jsonb
 )
   server stripe_server
