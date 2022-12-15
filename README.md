@@ -77,7 +77,7 @@ git clone https://github.com/supabase/wrappers.git
 
 ```bash
 cd wrappers/wrappers
-cargo pgx run --features helloworld_fdw
+cargo pgx run pg14 --features helloworld_fdw
 ```
 
 3. Create the extension, foreign data wrapper and related objects:
