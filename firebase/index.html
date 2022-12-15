@@ -510,7 +510,11 @@
 
   <h1>Firebase</h1>
 
-<p><a href="https://firebase.google.com/">Firebase</a> is an app development platform built around non-relational technologies. The Firebase wrapper supports connecting to the <a href="https://firebase.google.com/docs/auth/users">auth/users collection</a> and any <a href="https://firebase.google.com/docs/firestore">Firestore collection</a>. </p>
+<p><a href="https://firebase.google.com/">Firebase</a> is an app development platform built around non-relational technologies. The Firebase wrapper supports connecting to below objects.</p>
+<ol>
+<li><a href="https://firebase.google.com/docs/auth/users">Authentication Users</a> (<em>read only</em>)</li>
+<li><a href="https://firebase.google.com/docs/firestore">Firestore Database Documents</a> (<em>read only</em>)</li>
+</ol>
 <h3 id="wrapper">Wrapper</h3>
 <p>To get started with the Firebase wrapper, create a foreign data wrapper specifying <code>handler</code> and <code>validator</code> as below.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
