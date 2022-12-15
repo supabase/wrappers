@@ -1,3 +1,4 @@
+use pgx::JsonB;
 use serde::de::{MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
@@ -83,6 +84,7 @@ impl<'de> Deserialize<'de> for AirtableFields {
 impl AirtableRecord {
     fn value_to_cell(value: &Value) -> Option<Cell> {
         use serde_json::Value::*;
+
         match value {
             Null => None,
             Bool(v) => Some(Cell::Bool(*v)),
@@ -90,10 +92,9 @@ impl AirtableRecord {
                 .as_i64()
                 .map_or_else(|| n.as_f64().map(Cell::F64), |v| Some(Cell::I64(v))),
             String(v) => Some(Cell::String(v.clone())),
+            Array(v) => Some(Cell::Json(JsonB(serde_json::Value::Array(v.clone())))),
+            Object(v) => Some(Cell::Json(JsonB(serde_json::Value::Object(v.clone())))),
             // XXX Handle timestamps somehow...
-
-            // XXX Fix (probably map to JsonB)
-            _ => panic!("Unsupported: Array/Object"),
         }
     }
 
