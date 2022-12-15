@@ -1,11 +1,5 @@
 # Wrappers
 
-[![crates.io badge](https://img.shields.io/crates/v/supabase-wrappers.svg)](https://crates.io/crates/supabase-wrappers)
-[![docs.rs badge](https://docs.rs/supabase-wrappers/badge.svg)](https://docs.rs/supabase-wrappers)
-[![Test Status](https://img.shields.io/github/workflow/status/supabase/wrappers/Test%20Wrappers)](https://github.com/supabase/wrappers/actions/workflows/test_wrappers.yml)
-[![MIT/Apache-2 licensed](https://img.shields.io/crates/l/supabase-wrappers.svg)](./LICENSE)
-[![Contributors](https://img.shields.io/github/contributors/supabase/wrappers)](https://github.com/supabase/wrappers/graphs/contributors)
-
 `Wrappers` is a development framework for Postgres Foreign Data Wrappers ([FDW](https://wiki.postgresql.org/wiki/Foreign_data_wrappers)), written in Rust. Its goal is to make Postgres FDW development easier while keeping Rust language's modern capabilities, such as high performance, strong types, and safety.
 
 `Wrappers` is also a collection of FDWs built by [Supabase](https://www.supabase.com). We currently support the following FDWs, with more are under development:
@@ -146,4 +140,12 @@ All contributions, feature requests, bug report or ideas are welcomed.
 ## License
 
 [Apache License Version 2.0](./LICENSE)
+
+
+[![crates.io badge](https://img.shields.io/crates/v/supabase-wrappers.svg)](https://crates.io/crates/supabase-wrappers)
+[![docs.rs badge](https://docs.rs/supabase-wrappers/badge.svg)](https://docs.rs/supabase-wrappers)
+[![Test Status](https://img.shields.io/github/workflow/status/supabase/wrappers/Test%20Wrappers)](https://github.com/supabase/wrappers/actions/workflows/test_wrappers.yml)
+[![MIT/Apache-2 licensed](https://img.shields.io/crates/l/supabase-wrappers.svg)](./LICENSE)
+[![Contributors](https://img.shields.io/github/contributors/supabase/wrappers)](https://github.com/supabase/wrappers/graphs/contributors)
+
 
