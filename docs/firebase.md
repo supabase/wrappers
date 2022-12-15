@@ -1,5 +1,7 @@
-[Firebase](https://firebase.google.com/) is an app development platform built around non-relational technologies. The Firebase wrapper supports connecting to the [auth/users collection](https://firebase.google.com/docs/auth/users) and any [Firestore collection](https://firebase.google.com/docs/firestore). 
+[Firebase](https://firebase.google.com/) is an app development platform built around non-relational technologies. The Firebase wrapper supports connecting to below objects.
 
+1. [Authentication Users](https://firebase.google.com/docs/auth/users) (*read only*)
+2. [Firestore Database Documents](https://firebase.google.com/docs/firestore) (*read only*)
 
 ### Wrapper 
 To get started with the Firebase wrapper, create a foreign data wrapper specifying `handler` and `validator` as below.
