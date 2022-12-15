@@ -4,7 +4,7 @@
 
 `Wrappers` is also a collection of FDWs built by [Supabase](https://www.supabase.com). We currently support the following FDWs, with more are under development:
 
-- [HelloWorld](./wrappers/src/fdw/helloworld_fdw): A demo FDW to show how to develop a baisc FDW.
+- [HelloWorld](./wrappers/src/fdw/helloworld_fdw): A demo FDW to show how to develop a basic FDW.
 - [BigQuery](./wrappers/src/fdw/bigquery_fdw): A FDW for Google [BigQuery](https://cloud.google.com/bigquery) which supports data read and modify.
 - [Clickhouse](./wrappers/src/fdw/clickhouse_fdw): A FDW for [ClickHouse](https://clickhouse.com/) which supports data read and modify.
 - [Stripe](./wrappers/src/fdw/stripe_fdw): A FDW for [Stripe](https://stripe.com/) API which supports data read and modify.
@@ -17,7 +17,7 @@
 - Support for rich data types.
 - Support both sync and async backends, such as RDBMS, RESTful APIs, flat files and etc.
 - Built on top of [pgx](https://github.com/tcdi/pgx), providing higher level interfaces, without hiding lower-level C APIs.
-- `WEHRE`, `ORDER BY`, `LIMIT` pushdown are supported.
+- `WHERE`, `ORDER BY`, `LIMIT` pushdown are supported.
 
 ## Documentation
 
