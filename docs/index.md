@@ -40,4 +40,4 @@ Currently `supabase/wrappers` supports:
 | Integration | Select            | Insert            | Update            | Delete            | Truncate          |
 | ----------- | :----:            | :----:            | :----:            | :----:            | :----:            |
 | Firebase    | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| Stripe      | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
+| Stripe      | :white_check_mark:| :white_check_mark:| :white_check_mark:| :white_check_mark:| :x:               |

@@ -1,17 +1,23 @@
-Stripe is an API driven online payment processing utilty. `supabase/wrappers` exposes the `balance`, `customers`, and `subscriptions`, endpoints.
+[Stripe](https://stripe.com) is an API driven online payment processing utilty. `supabase/wrappers` exposes below endpoints.
+
+1. [Balance](https://stripe.com/docs/api/balance) (*read only*)
+2. [Balance Transactions](https://stripe.com/docs/api/balance_transactions/list) (*read only*)
+3. [Charges](https://stripe.com/docs/api/charges/list) (*read only*)
+4. [Customers](https://stripe.com/docs/api/customers/list) (*read and modify*)
+5. [Invoices](https://stripe.com/docs/api/invoices/list) (*read only*)
+6. [PaymentIntents](https://stripe.com/docs/api/payment_intents/list) (*read only*)
+7. [Products](https://stripe.com/docs/api/products/list) (*read and modify*)
+8. [Subscriptions](https://stripe.com/docs/api/subscriptions/list) (*read and modify*)
 
 ### Wrapper 
-To get started with the Stripe wrapper, create a foreign data wrapper specifying the `StripeFdw` as the `wrapper` key of the `options` section.
+To get started with the Stripe wrapper, create a foreign data wrapper specifying `handler` and `validator` as below.
 
 ```sql
 create extension if not exists wrappers;
 
 create foreign data wrapper stripe_wrapper
-  handler wrappers_handler
-  validator wrappers_validator
-  options (
-    wrapper 'StripeFdw'
-  );
+  handler stripe_fdw_handler
+  validator stripe_fdw_validator;
 ```
 
 ### Server 
@@ -175,7 +181,8 @@ create foreign table stripe.customers (
 )
   server my_stripe_server
   options (
-    object 'customers'
+    object 'customers',
+    rowid_column 'id'
   );
 ```
 
@@ -233,7 +240,6 @@ create foreign table stripe.payment_intents (
   server my_stripe_server
   options (
     object 'payment_intents'
-    rowid_column 'id'
   );
 ```
 
@@ -291,7 +297,7 @@ create foreign table stripe.subscriptions (
 )
   server my_stripe_server
   options (
-    object 'subscriptions'
+    object 'subscriptions',
     rowid_column 'id'
   );
 ```

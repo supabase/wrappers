@@ -1,19 +1,15 @@
-Firebase is an app development platform built around non-relational technologies. The Firebase wrapper supports connecting to the [auth/users collection](https://firebase.google.com/docs/auth/users) and any [Firestore collection](https://firebase.google.com/docs/firestore). 
+[Firebase](https://firebase.google.com/) is an app development platform built around non-relational technologies. The Firebase wrapper supports connecting to the [auth/users collection](https://firebase.google.com/docs/auth/users) and any [Firestore collection](https://firebase.google.com/docs/firestore). 
 
 
 ### Wrapper 
-To get started with the Firebase wrapper, create a foreign data wrapper specifying `FirebaseFdw` as the `wrapper` key of the `options` section.
-
+To get started with the Firebase wrapper, create a foreign data wrapper specifying `handler` and `validator` as below.
 
 ```sql
 create extension if not exists wrappers;
 
 create foreign data wrapper firebase_wrapper
-  handler wrappers_handler
-  validator wrappers_validator
-  options (
-    wrapper 'FirebaseFdw'
-  );
+  handler firebase_fdw_handler
+  validator firebase_fdw_validator;
 ```
 
 ### Server 
@@ -84,7 +80,7 @@ create server firebase_server
 
 ### Tables
 
-Firebase collections are non-relational/documents. With the exception of metadata fields, all returned data are availble as a `fields` jsonb column. 
+Firebase collections are non-relational/documents. With the exception of metadata fields, all returned data are availble as a `attrs` jsonb column. 
 
 #### Firestore
 
@@ -93,17 +89,17 @@ To map a Firestore collection provide its location using the format `firestore/<
 ```sql
 create foreign table firebase_docs (
   name text,
-  fields jsonb,
-  create_time timestamp,
-  update_time timestamp
+  created_at timestamp,
+  updated_at timestamp,
+  attrs jsonb
 )
-  server my_firebase_server
+  server firebase_server
   options (
     object 'firestore/user-profiles'  -- format: 'firestore/[collection_id]'
   );
 ```
 
-Note that `name`, `create_time`, and `update_time`, are automatic metadata fields on all Firestore collections.
+Note that `name`, `created_at`, and `updated_at`, are automatic metadata fields on all Firestore collections.
 
 
 #### auth/users 
@@ -115,9 +111,9 @@ create foreign table firebase_users (
   uid text,
   email text,
   created_at timestamp,
-  fields jsonb
+  attrs jsonb
 )
-  server my_firebase_server
+  server firebase_server
   options (
     object 'auth/users'
   );
