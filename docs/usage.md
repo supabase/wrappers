@@ -66,7 +66,7 @@ create server firebase_server
 
 #### Auth (Insecure)
 
-If the platform you are using does not support `pgsodium` and `Vault`, you can create a server by storing yourt [service account key](https://firebase.google.com/docs/admin/setup#add_firebase_to_your_app) directly.
+If the platform you are using does not support `pgsodium` and `Vault`, you can create a server by storing your [service account key](https://firebase.google.com/docs/admin/setup#add_firebase_to_your_app) directly.
 
 
 !!! important
@@ -92,7 +92,7 @@ create server firebase_server
 
 #### Tables
 
-Firebase collections are non-relational/documents. With the exception of metadata fields, all returned data are availble as a `fields` jsonb column. 
+Firebase collections are non-relational/documents. With the exception of metadata fields, all returned data are available as a `fields` jsonb column. 
 
 ##### Firestore
 
@@ -132,7 +132,7 @@ create foreign table firebase_users (
 
 ## Stripe
 
-Stripe is an API driven online payment processing utilty. `supabase/wrappers` exposes the `balance`, `customers`, and `subscriptions`, endpoints.
+Stripe is an API driven online payment processing utility. `supabase/wrappers` exposes the `balance`, `customers`, and `subscriptions`, endpoints.
 
 ### Wrapper 
 To get started with the Stripe wrapper, create a foreign data wrapper specifying the `StripeFdw` as the `wrapper` key of the `options` section.
