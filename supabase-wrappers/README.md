@@ -23,7 +23,7 @@
 - Support for rich data types.
 - Support both sync and async backends, such as RDBMS, RESTful APIs, flat files and etc.
 - Built on top of [pgx](https://github.com/tcdi/pgx), providing higher level interfaces, without hiding lower-level C APIs.
-- `WEHRE`, `ORDER BY`, `LIMIT` pushdown are supported.
+- `WHERE`, `ORDER BY`, `LIMIT` pushdown are supported.
 
 ## Documentation
 
