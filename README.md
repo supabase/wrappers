@@ -144,7 +144,7 @@ All contributions, feature requests, bug report or ideas are welcomed.
 
 [![crates.io badge](https://img.shields.io/crates/v/supabase-wrappers.svg)](https://crates.io/crates/supabase-wrappers)
 [![docs.rs badge](https://docs.rs/supabase-wrappers/badge.svg)](https://docs.rs/supabase-wrappers)
-[![Test Status](https://img.shields.io/github/workflow/status/supabase/wrappers/Test%20Wrappers)](https://github.com/supabase/wrappers/actions/workflows/test_wrappers.yml)
+[![Test Status](https://img.shields.io/github/actions/workflow/status/supabase/wrappers/test_wrappers.yml?branch=main&label=test)](https://github.com/supabase/wrappers/actions/workflows/test_wrappers.yml)
 [![MIT/Apache-2 licensed](https://img.shields.io/crates/l/supabase-wrappers.svg)](./LICENSE)
 [![Contributors](https://img.shields.io/github/contributors/supabase/wrappers)](https://github.com/supabase/wrappers/graphs/contributors)
 
