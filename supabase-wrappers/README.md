@@ -41,7 +41,7 @@ cargo pgx install --pg-config [path_to_pg_config] --features stripe_fdw
 
 ## Developing a FDW
 
-To develop a FDW using `Wrappers`, you only need to implement the [ForeignDataWrapper](./supabase-wrappers/src/interface.rs) trait.
+To develop a FDW using `Wrappers`, you only need to implement the [ForeignDataWrapper](./src/interface.rs) trait.
 
 ```rust
 pub trait ForeignDataWrapper {
