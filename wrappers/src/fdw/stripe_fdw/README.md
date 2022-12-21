@@ -4,14 +4,17 @@ This is a foreign data wrapper for [Stripe](https://stripe.com/) developed using
 
 This FDW currently supports below objects from Stripe:
 
-1. [Balance](https://stripe.com/docs/api/balance) (*read only*)
-2. [Balance Transactions](https://stripe.com/docs/api/balance_transactions/list) (*read only*)
-3. [Charges](https://stripe.com/docs/api/charges/list) (*read only*)
-4. [Customers](https://stripe.com/docs/api/customers/list) (*read and modify*)
-5. [Invoices](https://stripe.com/docs/api/invoices/list) (*read only*)
-6. [PaymentIntents](https://stripe.com/docs/api/payment_intents/list) (*read only*)
-7. [Products](https://stripe.com/docs/api/products/list) (*read and modify*)
-8. [Subscriptions](https://stripe.com/docs/api/subscriptions/list) (*read and modify*)
+1.  [Balance](https://stripe.com/docs/api/balance) (*read only*)
+2.  [Balance Transactions](https://stripe.com/docs/api/balance_transactions/list) (*read only*)
+3.  [Charges](https://stripe.com/docs/api/charges/list) (*read only*)
+4.  [Customers](https://stripe.com/docs/api/customers/list) (*read and modify*)
+5.  [Disputes](https://stripe.com/docs/api/disputes/list) (*read only*)
+6.  [Events](https://stripe.com/docs/api/events/list) (*read only*)
+7.  [Files](https://stripe.com/docs/api/files/list) (*read only*)
+8.  [Invoices](https://stripe.com/docs/api/invoices/list) (*read only*)
+9.  [PaymentIntents](https://stripe.com/docs/api/payment_intents/list) (*read only*)
+10. [Products](https://stripe.com/docs/api/products/list) (*read and modify*)
+11. [Subscriptions](https://stripe.com/docs/api/subscriptions/list) (*read and modify*)
 
 ## Installation
 
@@ -145,6 +148,51 @@ create foreign table stripe_customers (
     rowid_column 'id'
   );
   
+create foreign table stripe_disputes (
+  id text,
+  amount bigint,
+  currency text,
+  charge text,
+  payment_intent text,
+  reason text,
+  status text,
+  created timestamp,
+  attrs jsonb
+)
+  server my_stripe_server
+  options (
+    object 'disputes'
+  );
+  
+create foreign table stripe_events (
+  id text,
+  type text,
+  api_version text,
+  created timestamp,
+  attrs jsonb
+)
+  server my_stripe_server
+  options (
+    object 'events'
+  );
+  
+create foreign table stripe_files (
+  id text,
+  filename text,
+  purpose text,
+  title text,
+  size bigint,
+  type text,
+  url text,
+  created timestamp,
+  expires_at timestamp,
+  attrs jsonb
+)
+  server my_stripe_server
+  options (
+    object 'files'
+  );
+  
 create foreign table stripe_invoices (
   id text,
   customer text,
@@ -261,6 +309,9 @@ Below are the options can be used in `CREATE FOREIGN TABLE`:
    - balance_transactions
    - charges
    - customers
+   - disputes
+   - events
+   - files
    - invoices
    - payment_intents
    - products
@@ -281,6 +332,9 @@ Below are the options can be used in `CREATE FOREIGN TABLE`:
   - balance_transactions: `payout`, `type`
   - charges: `customer`
   - customers: `email`
+  - disputes: `charge`, `payment_intent`
+  - events: `type`
+  - files: `purpose`
   - invoices: `customer`, `status`, `subscription`
   - payment_intents: `customer`
   - products: `active`

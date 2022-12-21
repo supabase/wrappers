@@ -108,6 +108,69 @@ mod tests {
 
             c.update(
                 r#"
+                CREATE FOREIGN TABLE stripe_disputes (
+                  id text,
+                  amount bigint,
+                  currency text,
+                  charge text,
+                  payment_intent text,
+                  reason text,
+                  status text,
+                  created timestamp,
+                  attrs jsonb
+                )
+                SERVER my_stripe_server
+                OPTIONS (
+                    object 'disputes'    -- source object in stripe, required
+                )
+             "#,
+                None,
+                None,
+            );
+
+            c.update(
+                r#"
+                CREATE FOREIGN TABLE stripe_events (
+                  id text,
+                  type text,
+                  api_version text,
+                  created timestamp,
+                  attrs jsonb
+                )
+                SERVER my_stripe_server
+                OPTIONS (
+                    object 'events'    -- source object in stripe, required
+                )
+             "#,
+                None,
+                None,
+            );
+
+            c.update(
+                r#"
+                CREATE FOREIGN TABLE stripe_files (
+                  id text,
+                  filename text,
+                  purpose text,
+                  title text,
+                  size bigint,
+                  type text,
+                  url text,
+                  created timestamp,
+                  expires_at timestamp,
+                  attrs jsonb
+                )
+                SERVER my_stripe_server
+                OPTIONS (
+                    object 'files'    -- source object in stripe, required
+                )
+             "#,
+                None,
+                None,
+            );
+
+            c.update(
+                r#"
                 CREATE FOREIGN TABLE stripe_invoices (
                   id text,
                   customer text,
@@ -200,7 +263,6 @@ mod tests {
                         .zip(r.by_name("currency").ok().and_then(|v| v.value::<&str>()))
                 })
                 .collect::<Vec<_>>();
-
             assert_eq!(
                 results,
                 vec![(("available", 0), "usd"), (("pending", 0), "usd")]
@@ -218,7 +280,6 @@ mod tests {
                         .zip(r.by_name("type").ok().and_then(|v| v.value::<&str>()))
                 })
                 .collect::<Vec<_>>();
-
             assert_eq!(
                 results,
                 vec![(((((100, "usd"), 0), "available"), "charge"))]
@@ -234,7 +295,6 @@ mod tests {
                         .zip(r.by_name("status").ok().and_then(|v| v.value::<&str>()))
                 })
                 .collect::<Vec<_>>();
-
             assert_eq!(results, vec![(((100, "usd"), "succeeded"))]);
 
             let results = c
@@ -246,8 +306,61 @@ mod tests {
                         .zip(r.by_name("created").ok().and_then(|v| v.value::<i64>()))
                 })
                 .collect::<Vec<_>>();
-
             assert_eq!(results, vec![("cus_MJiBgSUgeWFN0z", 287883090000000)]);
+
+            let results = c
+                .select("SELECT * FROM stripe_disputes", None, None)
+                .filter_map(|r| {
+                    r.by_name("id")
+                        .ok()
+                        .and_then(|v| v.value::<&str>())
+                        .zip(r.by_name("amount").ok().and_then(|v| v.value::<i64>()))
+                        .zip(r.by_name("currency").ok().and_then(|v| v.value::<&str>()))
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                results,
+                vec![(("dp_1Lb4lXDciZwYG8GPXn1Bh0MY", 1000), "usd")]
+            );
+
+            let results = c
+                .select("SELECT * FROM stripe_events", None, None)
+                .filter_map(|r| {
+                    r.by_name("id")
+                        .ok()
+                        .and_then(|v| v.value::<&str>())
+                        .zip(r.by_name("type").ok().and_then(|v| v.value::<&str>()))
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                results,
+                vec![("evt_1Lb4lfDciZwYG8GPHARl3JTf", "plan.created")]
+            );
+
+            let results = c
+                .select("SELECT * FROM stripe_files", None, None)
+                .filter_map(|r| {
+                    r.by_name("id")
+                        .ok()
+                        .and_then(|v| v.value::<&str>())
+                        .zip(r.by_name("filename").ok().and_then(|v| v.value::<&str>()))
+                        .zip(r.by_name("purpose").ok().and_then(|v| v.value::<&str>()))
+                        .zip(r.by_name("size").ok().and_then(|v| v.value::<i64>()))
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                results,
+                vec![(
+                    (
+                        (
+                            "file_1Lb4liDciZwYG8GPvkwgZXix",
+                            "file_1Lb4liDciZwYG8GPvkwgZXix"
+                        ),
+                        "dispute_evidence"
+                    ),
+                    9863
+                )]
+            );
 
             let results = c
                 .select("SELECT * FROM stripe_invoices", None, None)
@@ -260,7 +373,6 @@ mod tests {
                         .zip(r.by_name("status").ok().and_then(|v| v.value::<&str>()))
                 })
                 .collect::<Vec<_>>();
-
             assert_eq!(
                 results,
                 vec![((("cus_MJiBgSUgeWFN0z", 1000), "usd"), "draft")]
@@ -275,7 +387,6 @@ mod tests {
                         .zip(r.by_name("currency").ok().and_then(|v| v.value::<&str>()))
                 })
                 .collect::<Vec<_>>();
-
             assert_eq!(results, vec![(1099, "usd")]);
 
             let results = c
@@ -292,7 +403,6 @@ mod tests {
                         )
                 })
                 .collect::<Vec<_>>();
-
             assert_eq!(
                 results,
                 vec![(("T-shirt", true), "Comfortable gray cotton t-shirt")]
@@ -317,7 +427,6 @@ mod tests {
                         )
                 })
                 .collect::<Vec<_>>();
-
             assert_eq!(
                 results,
                 vec![(
