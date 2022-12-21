@@ -171,6 +171,26 @@ mod tests {
 
             c.update(
                 r#"
+                CREATE FOREIGN TABLE stripe_file_links (
+                  id text,
+                  file text,
+                  url text,
+                  created timestamp,
+                  expired bool,
+                  expires_at timestamp,
+                  attrs jsonb
+                )
+                SERVER my_stripe_server
+                OPTIONS (
+                    object 'file_links'    -- source object in stripe, required
+                )
+             "#,
+                None,
+                None,
+            );
+
+            c.update(
+                r#"
                 CREATE FOREIGN TABLE stripe_invoices (
                   id text,
                   customer text,
@@ -227,6 +247,28 @@ mod tests {
                 OPTIONS (
                     object 'products',    -- source object in stripe, required
                     rowid_column 'id'
+                  )
+             "#,
+                None,
+                None,
+            );
+
+            c.update(
+                r#"
+                CREATE FOREIGN TABLE stripe_setup_intents (
+                  id text,
+                  client_secret text,
+                  customer text,
+                  description text,
+                  payment_method text,
+                  status text,
+                  usage text,
+                  created timestamp,
+                  attrs jsonb
+                )
+                SERVER my_stripe_server
+                OPTIONS (
+                    object 'setup_intents'    -- source object in stripe, required
                   )
              "#,
                 None,
@@ -363,6 +405,27 @@ mod tests {
             );
 
             let results = c
+                .select("SELECT * FROM stripe_file_links", None, None)
+                .filter_map(|r| {
+                    r.by_name("id")
+                        .ok()
+                        .and_then(|v| v.value::<&str>())
+                        .zip(r.by_name("file").ok().and_then(|v| v.value::<&str>()))
+                        .zip(r.by_name("url").ok().and_then(|v| v.value::<&str>()))
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                results,
+                vec![((
+                            "link_1Lb4liDciZwYG8GPQ8qAqnEa",
+                            "file_1Lb4liDciZwYG8GP2VGapbrq"
+                        ),
+                        "https://dcr-upload-mydev.dev.stripe.me/links/MDB8YWNjdF8xTGI0bEREY2lad1lHOEdQfGZsX3Rlc3RfbFNhUld1aDYzdDd6eDYzU01RUzNzZWlE00zJ1o9SLI"
+                    )
+                ]
+            );
+
+            let results = c
                 .select("SELECT * FROM stripe_invoices", None, None)
                 .filter_map(|r| {
                     r.by_name("customer")
@@ -406,6 +469,24 @@ mod tests {
             assert_eq!(
                 results,
                 vec![(("T-shirt", true), "Comfortable gray cotton t-shirt")]
+            );
+
+            let results = c
+                .select("SELECT * FROM stripe_setup_intents", None, None)
+                .filter_map(|r| {
+                    r.by_name("id")
+                        .ok()
+                        .and_then(|v| v.value::<&str>())
+                        .zip(r.by_name("status").ok().and_then(|v| v.value::<&str>()))
+                        .zip(r.by_name("usage").ok().and_then(|v| v.value::<&str>()))
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                results,
+                vec![(
+                    ("seti_1Lb4lgDciZwYG8GPdEjT5Ico", "requires_payment_method"),
+                    "off_session"
+                )]
             );
 
             let results = c

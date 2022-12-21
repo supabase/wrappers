@@ -268,9 +268,12 @@ impl StripeFdw {
             "disputes" => vec!["charge", "payment_intent"],
             "events" => vec!["type"],
             "files" => vec!["purpose"],
+            "file_links" => vec![],
             "invoices" => vec!["customer", "status", "subscription"],
+            "mandates" => vec![],
             "payment_intents" => vec!["customer"],
             "products" => vec!["active"],
+            "setup_intents" => vec!["customer", "payment_method"],
             "subscriptions" => vec!["customer", "price", "status"],
             _ => {
                 report_error(
@@ -382,6 +385,18 @@ impl StripeFdw {
                 ],
                 tgt_cols,
             ),
+            "file_links" => body_to_rows(
+                resp_body,
+                vec![
+                    ("id", "string"),
+                    ("file", "string"),
+                    ("url", "string"),
+                    ("created", "timestamp"),
+                    ("expired", "bool"),
+                    ("expires_at", "timestamp"),
+                ],
+                tgt_cols,
+            ),
             "invoices" => body_to_rows(
                 resp_body,
                 vec![
@@ -393,6 +408,16 @@ impl StripeFdw {
                     ("currency", "string"),
                     ("period_start", "timestamp"),
                     ("period_end", "timestamp"),
+                ],
+                tgt_cols,
+            ),
+            "mandates" => body_to_rows(
+                resp_body,
+                vec![
+                    ("id", "string"),
+                    ("payment_method", "string"),
+                    ("status", "string"),
+                    ("type", "string"),
                 ],
                 tgt_cols,
             ),
@@ -418,6 +443,20 @@ impl StripeFdw {
                     ("description", "string"),
                     ("created", "timestamp"),
                     ("updated", "timestamp"),
+                ],
+                tgt_cols,
+            ),
+            "setup_intents" => body_to_rows(
+                resp_body,
+                vec![
+                    ("id", "string"),
+                    ("client_secret", "string"),
+                    ("customer", "string"),
+                    ("description", "string"),
+                    ("payment_method", "string"),
+                    ("status", "string"),
+                    ("usage", "string"),
+                    ("created", "timestamp"),
                 ],
                 tgt_cols,
             ),

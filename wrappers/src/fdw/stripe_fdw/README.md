@@ -11,10 +11,13 @@ This FDW currently supports below objects from Stripe:
 5.  [Disputes](https://stripe.com/docs/api/disputes/list) (*read only*)
 6.  [Events](https://stripe.com/docs/api/events/list) (*read only*)
 7.  [Files](https://stripe.com/docs/api/files/list) (*read only*)
-8.  [Invoices](https://stripe.com/docs/api/invoices/list) (*read only*)
-9.  [PaymentIntents](https://stripe.com/docs/api/payment_intents/list) (*read only*)
-10. [Products](https://stripe.com/docs/api/products/list) (*read and modify*)
-11. [Subscriptions](https://stripe.com/docs/api/subscriptions/list) (*read and modify*)
+8.  [File Links](https://stripe.com/docs/api/file_links/list) (*read only*)
+9.  [Invoices](https://stripe.com/docs/api/invoices/list) (*read only*)
+10. [Mandates](https://stripe.com/docs/api/mandates) (*read only*)
+11. [PaymentIntents](https://stripe.com/docs/api/payment_intents/list) (*read only*)
+12. [Products](https://stripe.com/docs/api/products/list) (*read and modify*)
+13. [SetupIntents](https://stripe.com/docs/api/setup_intents/list) (*read only*)
+14. [Subscriptions](https://stripe.com/docs/api/subscriptions/list) (*read and modify*)
 
 ## Installation
 
@@ -193,6 +196,20 @@ create foreign table stripe_files (
     object 'files'
   );
   
+create foreign table stripe_file_links (
+  id text,
+  file text,
+  url text,
+  created timestamp,
+  expired bool,
+  expires_at timestamp,
+  attrs jsonb
+)
+  server my_stripe_server
+  options (
+    object 'file_links'
+  );
+
 create foreign table stripe_invoices (
   id text,
   customer text,
@@ -207,6 +224,18 @@ create foreign table stripe_invoices (
   server my_stripe_server
   options (
     object 'invoices'
+  );
+
+create foreign table stripe_mandates (
+  id text,
+  payment_method text,
+  status text,
+  type text,
+  attrs jsonb
+)
+  server my_stripe_server
+  options (
+    object 'mandates'
   );
 
 create foreign table stripe_payment_intents (
@@ -237,6 +266,22 @@ create foreign table stripe_products (
   options (
     object 'products',
     rowid_column 'id'
+  );
+
+create foreign table stripe_setup_intents (
+  id text,
+  client_secret text,
+  customer text,
+  description text,
+  payment_method text,
+  status text,
+  usage text,
+  created timestamp,
+  attrs jsonb
+)
+  server my_stripe_server
+  options (
+    object 'setup_intents'
   );
 
 create foreign table stripe_subscriptions (
@@ -312,9 +357,12 @@ Below are the options can be used in `CREATE FOREIGN TABLE`:
    - disputes
    - events
    - files
+   - file_links
    - invoices
+   - mandates
    - payment_intents
    - products
+   - setup_intents
    - subscriptions
 
 ## Pushdown
@@ -338,6 +386,7 @@ Below are the options can be used in `CREATE FOREIGN TABLE`:
   - invoices: `customer`, `status`, `subscription`
   - payment_intents: `customer`
   - products: `active`
+  - setup_intents: `customer`, `payment_method`
   - subscriptions: `customer`, `price`, `status`
 
   Also, `id` field can be pushed down for all the objects with that field.
