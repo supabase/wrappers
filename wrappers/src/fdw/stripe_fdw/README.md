@@ -15,9 +15,13 @@ This FDW currently supports below objects from Stripe:
 9.  [Invoices](https://stripe.com/docs/api/invoices/list) (*read only*)
 10. [Mandates](https://stripe.com/docs/api/mandates) (*read only*)
 11. [PaymentIntents](https://stripe.com/docs/api/payment_intents/list) (*read only*)
-12. [Products](https://stripe.com/docs/api/products/list) (*read and modify*)
-13. [SetupIntents](https://stripe.com/docs/api/setup_intents/list) (*read only*)
-14. [Subscriptions](https://stripe.com/docs/api/subscriptions/list) (*read and modify*)
+12. [Payouts](https://stripe.com/docs/api/payouts/list) (*read only*)
+13. [Products](https://stripe.com/docs/api/products/list) (*read and modify*)
+14. [Refunds](https://stripe.com/docs/api/refunds/list) (*read only*)
+15. [SetupAttempts](https://stripe.com/docs/api/setup_attempts/list) (*read only*)
+16. [SetupIntents](https://stripe.com/docs/api/setup_intents/list) (*read only*)
+17. [Subscriptions](https://stripe.com/docs/api/subscriptions/list) (*read and modify*)
+18. [Tokens](https://stripe.com/docs/api/tokens) (*read only*)
 
 ## Installation
 
@@ -252,6 +256,22 @@ create foreign table stripe_payment_intents (
     object 'payment_intents'
   );
 
+create foreign table stripe_payouts (
+  id text,
+  amount bigint,
+  currency text,
+  arrival_date timestamp,
+  description text,
+  statement_descriptor text,
+  status text,
+  created timestamp,
+  attrs jsonb
+)
+  server my_stripe_server
+  options (
+    object 'payouts'
+  );
+
 create foreign table stripe_products (
   id text,
   name text,
@@ -266,6 +286,39 @@ create foreign table stripe_products (
   options (
     object 'products',
     rowid_column 'id'
+  );
+
+create foreign table stripe_refunds (
+  id text,
+  amount bigint,
+  currency text,
+  charge text,
+  payment_intent text,
+  reason text,
+  status text,
+  created timestamp,
+  attrs jsonb
+)
+  server my_stripe_server
+  options (
+    object 'refunds'
+  );
+
+create foreign table stripe_setup_attempts (
+  id text,
+  application text,
+  customer text,
+  on_behalf_of text,
+  payment_method text,
+  setup_intent text,
+  status text,
+  usage text,
+  created timestamp,
+  attrs jsonb
+)
+  server my_stripe_server
+  options (
+    object 'setup_attempts'
   );
 
 create foreign table stripe_setup_intents (
@@ -296,6 +349,19 @@ create foreign table stripe_subscriptions (
   options (
     object 'subscriptions',
     rowid_column 'id'
+  );
+
+create foreign table stripe_tokens (
+  id text,
+  customer text,
+  currency text,
+  current_period_start timestamp,
+  current_period_end timestamp,
+  attrs jsonb
+)
+  server my_stripe_server
+  options (
+    object 'tokens'
   );
 ```
 
@@ -361,9 +427,13 @@ Below are the options can be used in `CREATE FOREIGN TABLE`:
    - invoices
    - mandates
    - payment_intents
+   - payouts
    - products
+   - refunds
+   - setup_attempts
    - setup_intents
    - subscriptions
+   - tokens
 
 ## Pushdown
 
@@ -385,7 +455,10 @@ Below are the options can be used in `CREATE FOREIGN TABLE`:
   - files: `purpose`
   - invoices: `customer`, `status`, `subscription`
   - payment_intents: `customer`
+  - payouts: `status`
   - products: `active`
+  - refunds: `charge`, `payment_intent`
+  - setup_attempts: `setup_intent`
   - setup_intents: `customer`, `payment_method`
   - subscriptions: `customer`, `price`, `status`
 
@@ -399,6 +472,7 @@ Below are the options can be used in `CREATE FOREIGN TABLE`:
 
 | Version | Date       | Notes                                                |
 | ------- | ---------- | ---------------------------------------------------- |
+| 0.1.3   | 2022-12-21 | Added more core objects                              |
 | 0.1.2   | 2022-12-04 | Added 'products' objects support                     |
 | 0.1.1   | 2022-12-03 | Added quals pushdown support                         |
 | 0.1.0   | 2022-12-01 | Initial version                                      |

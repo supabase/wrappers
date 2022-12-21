@@ -233,6 +233,28 @@ mod tests {
 
             c.update(
                 r#"
+                CREATE FOREIGN TABLE stripe_payouts (
+                  id text,
+                  amount bigint,
+                  currency text,
+                  arrival_date timestamp,
+                  description text,
+                  statement_descriptor text,
+                  status text,
+                  created timestamp,
+                  attrs jsonb
+                )
+                SERVER my_stripe_server
+                OPTIONS (
+                    object 'payouts'    -- source object in stripe, required
+                  )
+             "#,
+                None,
+                None,
+            );
+
+            c.update(
+                r#"
                 CREATE FOREIGN TABLE stripe_products (
                   id text,
                   name text,
@@ -247,6 +269,51 @@ mod tests {
                 OPTIONS (
                     object 'products',    -- source object in stripe, required
                     rowid_column 'id'
+                  )
+             "#,
+                None,
+                None,
+            );
+
+            c.update(
+                r#"
+                CREATE FOREIGN TABLE stripe_refunds (
+                  id text,
+                  amount bigint,
+                  currency text,
+                  charge text,
+                  payment_intent text,
+                  reason text,
+                  status text,
+                  created timestamp,
+                  attrs jsonb
+                )
+                SERVER my_stripe_server
+                OPTIONS (
+                    object 'refunds'    -- source object in stripe, required
+                  )
+             "#,
+                None,
+                None,
+            );
+
+            c.update(
+                r#"
+                CREATE FOREIGN TABLE stripe_setup_attempts (
+                  id text,
+                  application text,
+                  customer text,
+                  on_behalf_of text,
+                  payment_method text,
+                  setup_intent text,
+                  status text,
+                  usage text,
+                  created timestamp,
+                  attrs jsonb
+                )
+                SERVER my_stripe_server
+                OPTIONS (
+                    object 'setup_attempts'    -- source object in stripe, required
                   )
              "#,
                 None,
@@ -453,6 +520,22 @@ mod tests {
             assert_eq!(results, vec![(1099, "usd")]);
 
             let results = c
+                .select("SELECT * FROM stripe_payouts", None, None)
+                .filter_map(|r| {
+                    r.by_name("id")
+                        .ok()
+                        .and_then(|v| v.value::<&str>())
+                        .zip(r.by_name("amount").ok().and_then(|v| v.value::<i64>()))
+                        .zip(r.by_name("currency").ok().and_then(|v| v.value::<&str>()))
+                        .zip(r.by_name("status").ok().and_then(|v| v.value::<&str>()))
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                results,
+                vec![((("po_1Lb4lcDciZwYG8GPa5iKACTe", 1100), "usd"), "in_transit")]
+            );
+
+            let results = c
                 .select("SELECT * FROM stripe_products", None, None)
                 .filter_map(|r| {
                     r.by_name("name")
@@ -469,6 +552,40 @@ mod tests {
             assert_eq!(
                 results,
                 vec![(("T-shirt", true), "Comfortable gray cotton t-shirt")]
+            );
+
+            let results = c
+                .select("SELECT * FROM stripe_refunds", None, None)
+                .filter_map(|r| {
+                    r.by_name("id")
+                        .ok()
+                        .and_then(|v| v.value::<&str>())
+                        .zip(r.by_name("amount").ok().and_then(|v| v.value::<i64>()))
+                        .zip(r.by_name("currency").ok().and_then(|v| v.value::<&str>()))
+                        .zip(r.by_name("status").ok().and_then(|v| v.value::<&str>()))
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                results,
+                vec![((("re_1Lb4lXDciZwYG8GPkrV42Kaz", 100), "usd"), "succeeded")]
+            );
+
+            let results = c
+                .select("SELECT * FROM stripe_setup_attempts where setup_intent='seti_1Lb4lgDciZwYG8GPdEjT5Ico'", None, None)
+                .filter_map(|r| {
+                    r.by_name("id")
+                        .ok()
+                        .and_then(|v| v.value::<&str>())
+                        .zip(r.by_name("status").ok().and_then(|v| v.value::<&str>()))
+                        .zip(r.by_name("usage").ok().and_then(|v| v.value::<&str>()))
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                results,
+                vec![(
+                    ("setatt_123456789012345678901234", "succeeded"),
+                    "off_session"
+                )]
             );
 
             let results = c
