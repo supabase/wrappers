@@ -306,7 +306,8 @@ pub(super) extern "C" fn begin_foreign_scan<W: ForeignDataWrapper>(
 pub(super) extern "C" fn iterate_foreign_scan<W: ForeignDataWrapper>(
     node: *mut pg_sys::ForeignScanState,
 ) -> *mut pg_sys::TupleTableSlot {
-    debug2!("---> iterate_foreign_scan");
+    // `debug!` macros are quite expensive at the moment, so avoid logging in the inner loop
+    // debug2!("---> iterate_foreign_scan");
     unsafe {
         let mut state = PgBox::<FdwState<W>>::from_pg((*node).fdw_state as _);
 
