@@ -208,13 +208,11 @@ pub(super) extern "C" fn get_foreign_plan<W: ForeignDataWrapper>(
     unsafe {
         let mut state = PgBox::<FdwState<W>>::from_pg((*baserel).fdw_private as _);
 
-        state.tmp_ctx.reset();
-        let mut old_ctx = state.tmp_ctx.set_as_current();
+        // Plan and plan data (e.g. scan_clauses) must live for the entire duration of the query
+        // As such, it must be allocated in the caller's memory context
 
         // make foreign scan plan
         let scan_clauses = pg_sys::extract_actual_clauses(scan_clauses, false);
-
-        old_ctx.set_as_current();
 
         let fdw_private = FdwState::serialize_to_list(state);
 
