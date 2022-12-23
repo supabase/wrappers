@@ -206,7 +206,7 @@ pub(super) extern "C" fn get_foreign_plan<W: ForeignDataWrapper>(
 ) -> *mut pg_sys::ForeignScan {
     debug2!("---> get_foreign_plan");
     unsafe {
-        let mut state = PgBox::<FdwState<W>>::from_pg((*baserel).fdw_private as _);
+        let state = PgBox::<FdwState<W>>::from_pg((*baserel).fdw_private as _);
 
         // Plan and plan data (e.g. scan_clauses) must live for the entire duration of the query
         // As such, it must be allocated in the caller's memory context
