@@ -189,6 +189,11 @@ impl Row {
         iter = keep.iter();
         self.cells.retain(|_| *iter.next().unwrap());
     }
+
+    pub fn clear(&mut self) {
+        self.cols.clear();
+        self.cells.clear();
+    }
 }
 
 /// A restiction value used in [`Qual`], either a [`Cell`] or an array of [`Cell`]
@@ -378,6 +383,11 @@ pub trait ForeignDataWrapper {
     ///
     /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-SCAN).
     fn iter_scan(&mut self) -> Option<Row>;
+
+    fn iter_scan_borrowed(&mut self, row: &mut Row) -> Option<()> {
+        let _ = std::mem::replace(row, self.iter_scan()?);
+        Some(())
+    }
 
     /// Called when restart the scan from the beginning.
     ///
