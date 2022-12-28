@@ -51,12 +51,9 @@ impl ForeignDataWrapper for HelloWorldFdw {
         self.tgt_cols = columns.to_vec();
     }
 
-    fn iter_scan(&mut self) -> Option<Row> {
+    fn iter_scan(&mut self, row: &mut Row) -> Option<()> {
         // this is called on each row and we only return one row here
         if self.row_cnt < 1 {
-            // create an empty row
-            let mut row = Row::new();
-
             // add values to row if they are in target column list
             for tgt_col in &self.tgt_cols {
                 match tgt_col.as_str() {
@@ -68,8 +65,8 @@ impl ForeignDataWrapper for HelloWorldFdw {
 
             self.row_cnt += 1;
 
-            // return the Some(row) to Postgres and continue data scan
-            return Some(row);
+            // return Some(()) to Postgres and continue data scan
+            return Some(());
         }
 
         // return 'None' to stop data scan

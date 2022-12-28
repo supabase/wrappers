@@ -286,18 +286,17 @@ impl ForeignDataWrapper for BigQueryFdw {
         }
     }
 
-    fn iter_scan(&mut self) -> Option<Row> {
+    fn iter_scan(&mut self, row: &mut Row) -> Option<()> {
         if let Some((ref tbl, ref mut rs)) = self.scan_result {
             if rs.next_row() {
                 if let Some(fields) = &tbl.schema.fields {
-                    let mut ret = Row::new();
                     for tgt_col in &self.tgt_cols {
                         if let Some(field) = fields.iter().find(|&f| &f.name == tgt_col) {
                             let cell = field_to_cell(rs, field);
-                            ret.push(&field.name, cell);
+                            row.push(&field.name, cell);
                         }
                     }
-                    return Some(ret);
+                    return Some(());
                 }
             }
         }
