@@ -8,6 +8,7 @@ target/
 *.a
 *.swp
 *.log
+site/
 .bash_history
 .config/
 cmake*/

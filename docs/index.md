@@ -37,12 +37,7 @@ returns
 
 Currently `supabase/wrappers` supports:
 
-| Integration | Status   | Select            | Insert            | Update            | Delete            | Truncate          |
-| ----------- | -------- | :----:            | :----:            | :----:            | :----:            | :----:            |
-| Firebase    | Stable   | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| Stripe      | Stable   | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-
-
-
-
-Check out [usage](usage.md) for more info on how to get started.
+| Integration | Select            | Insert            | Update            | Delete            | Truncate          |
+| ----------- | :----:            | :----:            | :----:            | :----:            | :----:            |
+| Firebase    | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
+| Stripe      | :white_check_mark:| :white_check_mark:| :white_check_mark:| :white_check_mark:| :x:               |
