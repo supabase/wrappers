@@ -37,7 +37,8 @@ impl<W: ForeignDataWrapper> FdwModifyState<W> {
             rowid_attno: 0,
             rowid_typid: 0,
             opts: HashMap::new(),
-            tmp_ctx: PgMemoryContexts::new("Wrappers temp modify data"),
+            tmp_ctx: PgMemoryContexts::CurTransactionContext
+                .switch_to(|_| PgMemoryContexts::new("Wrappers temp modify data")),
         }
     }
 
@@ -162,7 +163,9 @@ pub(super) extern "C" fn plan_foreign_modify<W: ForeignDataWrapper>(
                 state.rowid_typid = attr.atttypid;
                 state.opts = opts;
 
-                let boxed_state = PgBox::new(state).into_pg_boxed();
+                let boxed_state =
+                    PgBox::new_in_context(state, PgMemoryContexts::CurTransactionContext)
+                        .into_pg_boxed();
                 return FdwModifyState::serialize_to_list(boxed_state);
             }
         }

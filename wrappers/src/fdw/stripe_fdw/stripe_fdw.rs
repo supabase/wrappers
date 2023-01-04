@@ -29,7 +29,7 @@ fn create_client(api_key: &str) -> ClientWithMiddleware {
 fn body_to_rows(
     resp_body: &str,
     normal_cols: Vec<(&str, &str)>,
-    tgt_cols: &Vec<String>,
+    tgt_cols: &[String],
 ) -> (Vec<Row>, Option<String>, Option<bool>) {
     let mut result = Vec::new();
     let value: JsonValue = serde_json::from_str(resp_body).unwrap();
@@ -50,8 +50,22 @@ fn body_to_rows(
     let single_wrapped: Vec<JsonValue> = if is_list {
         Vec::new()
     } else if is_balance {
-        let obj = value.as_object().and_then(|v| v.get("available")).unwrap();
-        obj.as_array().unwrap().to_vec()
+        // specially transform balance object to 2 rows
+        let mut ret = Vec::new();
+        for bal_type in &["available", "pending"] {
+            let mut obj = value
+                .as_object()
+                .and_then(|v| v.get(*bal_type))
+                .and_then(|v| v.as_array())
+                .map(|v| v[0].as_object().unwrap().clone())
+                .unwrap();
+            obj.insert(
+                "balance_type".to_string(),
+                JsonValue::String(bal_type.to_string()),
+            );
+            ret.push(JsonValue::Object(obj));
+        }
+        ret
     } else {
         // wrap a single object in vec
         value
@@ -75,13 +89,13 @@ fn body_to_rows(
 
         // extract normal columns
         for tgt_col in tgt_cols {
-            for (col_name, col_type) in normal_cols.iter().filter(|(c, _)| c == tgt_col) {
+            if let Some((col_name, col_type)) = normal_cols.iter().find(|(c, _)| c == tgt_col) {
                 let cell = obj
                     .as_object()
                     .and_then(|v| v.get(*col_name))
                     .and_then(|v| match *col_type {
-                        "bool" => v.as_bool().map(|a| Cell::Bool(a)),
-                        "i64" => v.as_i64().map(|a| Cell::I64(a)),
+                        "bool" => v.as_bool().map(Cell::Bool),
+                        "i64" => v.as_i64().map(Cell::I64),
                         "string" => v.as_str().map(|a| Cell::String(a.to_owned())),
                         "timestamp" => v.as_i64().map(|a| {
                             let dt = OffsetDateTime::from_unix_timestamp(a).unwrap();
@@ -91,7 +105,6 @@ fn body_to_rows(
                         _ => None,
                     });
                 row.push(col_name, cell);
-                break;
             }
         }
 
@@ -141,7 +154,9 @@ fn row_to_body(row: &Row) -> JsonValue {
                 }
                 Cell::Json(v) => {
                     if col_name == "attrs" {
-                        v.0.clone().as_object_mut().map(|m| map.append(m));
+                        if let Some(m) = v.0.clone().as_object_mut() {
+                            map.append(m)
+                        }
                     }
                 }
                 _ => {
@@ -161,7 +176,7 @@ fn row_to_body(row: &Row) -> JsonValue {
 fn pushdown_quals(
     url: &mut Url,
     obj: &str,
-    quals: &Vec<Qual>,
+    quals: &[Qual],
     fields: Vec<&str>,
     page_size: i64,
     cursor: &Option<String>,
@@ -170,17 +185,11 @@ fn pushdown_quals(
     if quals.len() == 1 {
         let qual = &quals[0];
         if qual.field == "id" && qual.operator == "=" && !qual.use_or {
-            match &qual.value {
-                Value::Cell(cell) => match cell {
-                    Cell::String(id) => {
-                        let new_path = format!("{}/{}", url.path(), id);
-                        url.set_path(&new_path);
-                        url.set_query(None);
-                        return;
-                    }
-                    _ => {}
-                },
-                _ => {}
+            if let Value::Cell(Cell::String(id)) = &qual.value {
+                let new_path = format!("{}/{}", url.path(), id);
+                url.set_path(&new_path);
+                url.set_query(None);
+                return;
             }
         }
     }
@@ -189,18 +198,17 @@ fn pushdown_quals(
     for qual in quals {
         for field in &fields {
             if qual.field == *field && qual.operator == "=" && !qual.use_or {
-                match &qual.value {
-                    Value::Cell(cell) => match cell {
+                if let Value::Cell(cell) = &qual.value {
+                    match cell {
                         Cell::Bool(b) => {
                             url.query_pairs_mut()
                                 .append_pair(field, b.to_string().as_str());
                         }
                         Cell::String(s) => {
-                            url.query_pairs_mut().append_pair(field, &s);
+                            url.query_pairs_mut().append_pair(field, s);
                         }
                         _ => {}
-                    },
-                    _ => {}
+                    }
                 }
             }
         }
@@ -244,11 +252,11 @@ impl StripeFdw {
     fn build_url(
         &self,
         obj: &str,
-        quals: &Vec<Qual>,
+        quals: &[Qual],
         page_size: i64,
         cursor: &Option<String>,
     ) -> Option<Url> {
-        let mut url = self.base_url.join(&obj).unwrap();
+        let mut url = self.base_url.join(obj).unwrap();
 
         // pushdown quals
         // ref: https://stripe.com/docs/api/[object]/list
@@ -279,12 +287,16 @@ impl StripeFdw {
         &self,
         obj: &str,
         resp_body: &str,
-        tgt_cols: &Vec<String>,
+        tgt_cols: &[String],
     ) -> (Vec<Row>, Option<String>, Option<bool>) {
         match obj {
             "balance" => body_to_rows(
                 resp_body,
-                vec![("amount", "i64"), ("currency", "string")],
+                vec![
+                    ("balance_type", "string"),
+                    ("amount", "i64"),
+                    ("currency", "string"),
+                ],
                 tgt_cols,
             ),
             "balance_transactions" => body_to_rows(
@@ -397,18 +409,18 @@ impl ForeignDataWrapper for StripeFdw {
             // Ensure trailing slash is always present, otherwise /v1 will get obliterated when
             // joined with object
             .map(|s| {
-                if s.ends_with("/") {
+                if s.ends_with('/') {
                     s
                 } else {
                     format!("{}/", s)
                 }
             })
-            .unwrap_or("https://api.stripe.com/v1/".to_string());
+            .unwrap_or_else(|| "https://api.stripe.com/v1/".to_string());
         let client = match options.get("api_key") {
-            Some(api_key) => Some(create_client(&api_key)),
+            Some(api_key) => Some(create_client(api_key)),
             None => require_option("api_key_id", options)
                 .and_then(|key_id| get_vault_secret(&key_id))
-                .and_then(|api_key| Some(create_client(&api_key))),
+                .map(|api_key| create_client(&api_key)),
         };
 
         StripeFdw {
@@ -423,14 +435,14 @@ impl ForeignDataWrapper for StripeFdw {
 
     fn begin_scan(
         &mut self,
-        quals: &Vec<Qual>,
-        columns: &Vec<String>,
-        _sorts: &Vec<Sort>,
+        quals: &[Qual],
+        columns: &[String],
+        _sorts: &[Sort],
         limit: &Option<Limit>,
         options: &HashMap<String, String>,
     ) {
         let obj = if let Some(name) = require_option("object", options) {
-            name.clone()
+            name
         } else {
             return;
         };
@@ -505,8 +517,8 @@ impl ForeignDataWrapper for StripeFdw {
     }
 
     fn begin_modify(&mut self, options: &HashMap<String, String>) {
-        self.obj = require_option("object", options).unwrap_or_else(String::default);
-        self.rowid_col = require_option("rowid_column", options).unwrap_or_else(String::default);
+        self.obj = require_option("object", options).unwrap_or_default();
+        self.rowid_col = require_option("rowid_column", options).unwrap_or_default();
     }
 
     fn insert(&mut self, src: &Row) {
@@ -604,11 +616,8 @@ impl ForeignDataWrapper for StripeFdw {
 
     fn validator(options: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) {
         if let Some(oid) = catalog {
-            match oid {
-                FOREIGN_TABLE_RELATION_ID => {
-                    check_options_contain(&options, "object");
-                }
-                _ => {}
+            if oid == FOREIGN_TABLE_RELATION_ID {
+                check_options_contain(&options, "object");
             }
         }
     }

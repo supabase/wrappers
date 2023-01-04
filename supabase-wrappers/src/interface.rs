@@ -152,7 +152,7 @@ impl FromDatum for Cell {
 ///
 /// The row contains a column name list and cell list with same number of
 /// elements.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Row {
     /// column names
     pub cols: Vec<String>,
@@ -164,10 +164,7 @@ pub struct Row {
 impl Row {
     /// Create an empty row
     pub fn new() -> Self {
-        Row {
-            cols: Vec::new(),
-            cells: Vec::new(),
-        }
+        Self::default()
     }
 
     /// Push a cell with column name to this row
@@ -191,6 +188,11 @@ impl Row {
         self.cols.retain(|_| *iter.next().unwrap());
         iter = keep.iter();
         self.cells.retain(|_| *iter.next().unwrap());
+    }
+
+    pub fn clear(&mut self) {
+        self.cols.clear();
+        self.cells.clear();
     }
 }
 
@@ -350,9 +352,9 @@ pub trait ForeignDataWrapper {
     /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-SCAN).
     fn get_rel_size(
         &mut self,
-        _quals: &Vec<Qual>,
-        _columns: &Vec<String>,
-        _sorts: &Vec<Sort>,
+        _quals: &[Qual],
+        _columns: &[String],
+        _sorts: &[Sort],
         _limit: &Option<Limit>,
         _options: &HashMap<String, String>,
     ) -> (i64, i32) {
@@ -370,9 +372,9 @@ pub trait ForeignDataWrapper {
     /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-SCAN).
     fn begin_scan(
         &mut self,
-        quals: &Vec<Qual>,
-        columns: &Vec<String>,
-        sorts: &Vec<Sort>,
+        quals: &[Qual],
+        columns: &[String],
+        sorts: &[Sort],
         limit: &Option<Limit>,
         options: &HashMap<String, String>,
     );
@@ -381,6 +383,11 @@ pub trait ForeignDataWrapper {
     ///
     /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-SCAN).
     fn iter_scan(&mut self) -> Option<Row>;
+
+    fn iter_scan_borrowed(&mut self, row: &mut Row) -> Option<()> {
+        let _ = std::mem::replace(row, self.iter_scan()?);
+        Some(())
+    }
 
     /// Called when restart the scan from the beginning.
     ///

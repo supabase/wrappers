@@ -16,7 +16,7 @@ fn create_client(rt: &Runtime, conn_str: &str) -> Option<ClientHandle> {
             );
             None
         },
-        |client| Some(client),
+        Some,
     )
 }
 
@@ -93,7 +93,7 @@ pub(crate) struct ClickHouseFdw {
 }
 
 impl ClickHouseFdw {
-    fn deparse(&self, quals: &Vec<Qual>, columns: &Vec<String>) -> String {
+    fn deparse(&self, quals: &[Qual], columns: &[String]) -> String {
         let tgts = if columns.is_empty() {
             "*".to_string()
         } else {
@@ -136,9 +136,9 @@ impl ForeignDataWrapper for ClickHouseFdw {
 
     fn get_rel_size(
         &mut self,
-        quals: &Vec<Qual>,
-        columns: &Vec<String>,
-        _sorts: &Vec<Sort>,
+        quals: &[Qual],
+        columns: &[String],
+        _sorts: &[Sort],
         _limit: &Option<Limit>,
         options: &HashMap<String, String>,
     ) -> (i64, i32) {
@@ -149,7 +149,7 @@ impl ForeignDataWrapper for ClickHouseFdw {
         }
         self.table = table.unwrap();
         self.rowid_col = rowid_col.unwrap();
-        self.tgt_cols = columns.clone();
+        self.tgt_cols = columns.to_vec();
 
         let sql = self.deparse(quals, columns);
 
@@ -174,9 +174,9 @@ impl ForeignDataWrapper for ClickHouseFdw {
 
     fn begin_scan(
         &mut self,
-        _quals: &Vec<Qual>,
-        _columns: &Vec<String>,
-        _sorts: &Vec<Sort>,
+        _quals: &[Qual],
+        _columns: &[String],
+        _sorts: &[Sort],
         _limit: &Option<Limit>,
         _options: &HashMap<String, String>,
     ) {
@@ -198,9 +198,7 @@ impl ForeignDataWrapper for ClickHouseFdw {
                         .unwrap();
                     let col_name = row.name(i).unwrap();
                     let cell = field_to_cell(&row, i);
-                    if cell.is_none() {
-                        return None;
-                    }
+                    cell.as_ref()?;
                     ret.push(col_name, cell);
                 }
                 self.row_idx += 1;

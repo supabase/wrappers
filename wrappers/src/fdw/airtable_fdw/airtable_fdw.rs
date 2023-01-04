@@ -47,7 +47,7 @@ impl AirtableFdw {
     }
 
     // convert response body text to rows
-    fn parse_resp(&self, resp_body: &str, columns: &Vec<String>) -> (Vec<Row>, Option<String>) {
+    fn parse_resp(&self, resp_body: &str, columns: &[String]) -> (Vec<Row>, Option<String>) {
         let response: AirtableResponse = serde_json::from_str(resp_body).unwrap();
         let mut result = Vec::new();
 
@@ -74,7 +74,7 @@ impl ForeignDataWrapper for AirtableFdw {
         let base_url = options
             .get("api_url")
             .map(|t| t.to_owned())
-            .unwrap_or("https://api.airtable.com/v0/app4PDEzNrArJdQ5k".to_string())
+            .unwrap_or_else(|| "https://api.airtable.com/v0/app4PDEzNrArJdQ5k".to_string())
             .trim_end_matches('/')
             .to_owned();
 
@@ -89,10 +89,9 @@ impl ForeignDataWrapper for AirtableFdw {
                 .build()
                 .unwrap();
             let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
-            let client = ClientBuilder::new(client)
+            ClientBuilder::new(client)
                 .with(RetryTransientMiddleware::new_with_policy(retry_policy))
-                .build();
-            client
+                .build()
         });
 
         Self {
@@ -105,9 +104,9 @@ impl ForeignDataWrapper for AirtableFdw {
 
     fn begin_scan(
         &mut self,
-        _quals: &Vec<Qual>, // TODO: Propagate filters
-        columns: &Vec<String>,
-        _sorts: &Vec<Sort>,     // TODO: Propagate sort
+        _quals: &[Qual], // TODO: Propagate filters
+        columns: &[String],
+        _sorts: &[Sort],        // TODO: Propagate sort
         _limit: &Option<Limit>, // TODO: maxRecords
         options: &HashMap<String, String>,
     ) {

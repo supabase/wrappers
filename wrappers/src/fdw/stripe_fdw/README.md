@@ -15,7 +15,7 @@ This FDW currently supports below objects from Stripe:
 
 ## Installation
 
-This FDW requires [pgx](https://github.com/tcdi/pgx), please refer to its installtion page to install it first.
+This FDW requires [pgx](https://github.com/tcdi/pgx), please refer to its installation page to install it first.
 
 After `pgx` is installed, run below command to install this FDW.
 
@@ -87,6 +87,9 @@ end $$;
 
 -- create foreign tables
 create foreign table stripe_balance (
+  balance_type text,
+  amount bigint,
+  currency text,
   attrs jsonb
 )
   server my_stripe_server

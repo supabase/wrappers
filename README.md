@@ -1,16 +1,10 @@
 # Wrappers
 
-[![crates.io badge](https://img.shields.io/crates/v/supabase-wrappers.svg)](https://crates.io/crates/supabase-wrappers)
-[![docs.rs badge](https://docs.rs/supabase-wrappers/badge.svg)](https://docs.rs/supabase-wrappers)
-[![Release Status](https://img.shields.io/github/workflow/status/supabase/wrappers/Release)](https://github.com/supabase/wrappers/actions/workflows/Release)
-[![MIT/Apache-2 licensed](https://img.shields.io/crates/l/supabase-wrappers.svg)](./LICENSE)
-[![Contributors](https://img.shields.io/github/contributors/supabase/wrappers)](https://github.com/supabase/wrappers/graphs/contributors)
-
 `Wrappers` is a development framework for Postgres Foreign Data Wrappers ([FDW](https://wiki.postgresql.org/wiki/Foreign_data_wrappers)), written in Rust. Its goal is to make Postgres FDW development easier while keeping Rust language's modern capabilities, such as high performance, strong types, and safety.
 
 `Wrappers` is also a collection of FDWs built by [Supabase](https://www.supabase.com). We currently support the following FDWs, with more are under development:
 
-- [HelloWorld](./wrappers/src/fdw/helloworld_fdw): A demo FDW to show how to develop a baisc FDW.
+- [HelloWorld](./wrappers/src/fdw/helloworld_fdw): A demo FDW to show how to develop a basic FDW.
 - [BigQuery](./wrappers/src/fdw/bigquery_fdw): A FDW for Google [BigQuery](https://cloud.google.com/bigquery) which supports data read and modify.
 - [Clickhouse](./wrappers/src/fdw/clickhouse_fdw): A FDW for [ClickHouse](https://clickhouse.com/) which supports data read and modify.
 - [Stripe](./wrappers/src/fdw/stripe_fdw): A FDW for [Stripe](https://stripe.com/) API which supports data read and modify.
@@ -23,7 +17,7 @@
 - Support for rich data types.
 - Support both sync and async backends, such as RDBMS, RESTful APIs, flat files and etc.
 - Built on top of [pgx](https://github.com/tcdi/pgx), providing higher level interfaces, without hiding lower-level C APIs.
-- `WEHRE`, `ORDER BY`, `LIMIT` pushdown are supported.
+- `WHERE`, `ORDER BY`, `LIMIT` pushdown are supported.
 
 ## Documentation
 
@@ -45,6 +39,9 @@ To develop a FDW using `Wrappers`, you only need to implement the [ForeignDataWr
 
 ```rust
 pub trait ForeignDataWrapper {
+    // create a FDW instance
+    fn new(...) -> Self;
+
     // functions for data scan, e.g. select
     fn begin_scan(...);
     fn iter_scan(...) -> Option<Row>;
@@ -62,7 +59,7 @@ pub trait ForeignDataWrapper {
 }
 ```
 
-In a minimum FDW, which supports data scan only, `begin_scan()`, `iter_scan()` and `end_scan()` are required, all the other functions are optional.
+In a minimum FDW, which supports data scan only, `new()`, `begin_scan()`, `iter_scan()` and `end_scan()` are required, all the other functions are optional.
 
 To know more about FDW development, please visit the [Wrappers documentation](https://docs.rs/supabase-wrappers/latest/supabase_wrappers/).
 
@@ -80,7 +77,7 @@ git clone https://github.com/supabase/wrappers.git
 
 ```bash
 cd wrappers/wrappers
-cargo pgx run --features helloworld_fdw
+cargo pgx run pg14 --features helloworld_fdw
 ```
 
 3. Create the extension, foreign data wrapper and related objects:
@@ -143,4 +140,12 @@ All contributions, feature requests, bug report or ideas are welcomed.
 ## License
 
 [Apache License Version 2.0](./LICENSE)
+
+
+[![crates.io badge](https://img.shields.io/crates/v/supabase-wrappers.svg)](https://crates.io/crates/supabase-wrappers)
+[![docs.rs badge](https://docs.rs/supabase-wrappers/badge.svg)](https://docs.rs/supabase-wrappers)
+[![Test Status](https://img.shields.io/github/actions/workflow/status/supabase/wrappers/test_wrappers.yml?branch=main&label=test)](https://github.com/supabase/wrappers/actions/workflows/test_wrappers.yml)
+[![MIT/Apache-2 licensed](https://img.shields.io/crates/l/supabase-wrappers.svg)](./LICENSE)
+[![Contributors](https://img.shields.io/github/contributors/supabase/wrappers)](https://github.com/supabase/wrappers/graphs/contributors)
+
 

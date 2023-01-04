@@ -123,9 +123,9 @@
 //! impl ForeignDataWrapper for HelloWorldFdw {
 //!     fn begin_scan(
 //!         &mut self,
-//!         _quals: &Vec<Qual>,
-//!         columns: &Vec<String>,
-//!         _sorts: &Vec<Sort>,
+//!         _quals: &[Qual],
+//!         columns: &[String],
+//!         _sorts: &[Sort],
 //!         _limit: &Option<Limit>,
 //!         _options: &HashMap<String, String>,
 //!     ) {
@@ -133,7 +133,7 @@
 //!         self.row_cnt = 0;
 //!
 //!         // save a copy of target columns
-//!         self.tgt_cols = columns.clone();
+//!         self.tgt_cols = columns.to_vec();
 //!     }
 //!
 //!     fn iter_scan(&mut self) -> Option<Row> {

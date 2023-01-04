@@ -40,6 +40,7 @@ struct FdwState<W: ForeignDataWrapper> {
     // query result list
     values: Vec<Datum>,
     nulls: Vec<bool>,
+    row: Row,
 }
 
 impl<W: ForeignDataWrapper> FdwState<W> {
@@ -52,9 +53,11 @@ impl<W: ForeignDataWrapper> FdwState<W> {
             sorts: Vec::new(),
             limit: None,
             opts: HashMap::new(),
-            tmp_ctx: PgMemoryContexts::new("Wrappers temp data"),
+            tmp_ctx: PgMemoryContexts::CurTransactionContext
+                .switch_to(|_| PgMemoryContexts::new("Wrappers temp data")),
             values: Vec::new(),
             nulls: Vec::new(),
+            row: Row::new(),
         }
     }
 
@@ -78,9 +81,10 @@ impl<W: ForeignDataWrapper> FdwState<W> {
         )
     }
 
-    fn iter_scan(&mut self) -> Option<Row> {
-        self.instance.iter_scan()
+    fn iter_scan_borrowed(&mut self) -> Option<()> {
+        self.instance.iter_scan_borrowed(&mut self.row)
     }
+
 
     fn re_scan(&mut self) {
         self.instance.re_scan()
@@ -148,7 +152,8 @@ pub(super) extern "C" fn get_foreign_rel_size<W: ForeignDataWrapper>(
 
         old_ctx.set_as_current();
 
-        (*baserel).fdw_private = PgBox::new(state).into_pg() as _;
+        (*baserel).fdw_private =
+            PgBox::new_in_context(state, PgMemoryContexts::CurTransactionContext).into_pg() as _;
     }
 }
 
@@ -204,15 +209,13 @@ pub(super) extern "C" fn get_foreign_plan<W: ForeignDataWrapper>(
 ) -> *mut pg_sys::ForeignScan {
     debug2!("---> get_foreign_plan");
     unsafe {
-        let mut state = PgBox::<FdwState<W>>::from_pg((*baserel).fdw_private as _);
+        let state = PgBox::<FdwState<W>>::from_pg((*baserel).fdw_private as _);
 
-        state.tmp_ctx.reset();
-        let mut old_ctx = state.tmp_ctx.set_as_current();
+        // Plan and plan data (e.g. scan_clauses) must live for the entire duration of the query
+        // As such, it must be allocated in the caller's memory context
 
         // make foreign scan plan
         let scan_clauses = pg_sys::extract_actual_clauses(scan_clauses, false);
-
-        old_ctx.set_as_current();
 
         let fdw_private = FdwState::serialize_to_list(state);
 
@@ -304,7 +307,8 @@ pub(super) extern "C" fn begin_foreign_scan<W: ForeignDataWrapper>(
 pub(super) extern "C" fn iterate_foreign_scan<W: ForeignDataWrapper>(
     node: *mut pg_sys::ForeignScanState,
 ) -> *mut pg_sys::TupleTableSlot {
-    debug2!("---> iterate_foreign_scan");
+    // `debug!` macros are quite expensive at the moment, so avoid logging in the inner loop
+    // debug2!("---> iterate_foreign_scan");
     unsafe {
         let mut state = PgBox::<FdwState<W>>::from_pg((*node).fdw_state as _);
 
@@ -315,8 +319,9 @@ pub(super) extern "C" fn iterate_foreign_scan<W: ForeignDataWrapper>(
         state.tmp_ctx.reset();
         let mut old_ctx = state.tmp_ctx.set_as_current();
 
-        if let Some(mut row) = state.iter_scan() {
-            if row.cols.len() != state.tgts.len() {
+        state.row.clear();
+        if state.iter_scan_borrowed().is_some() {
+            if state.row.cols.len() != state.tgts.len() {
                 report_error(
                     PgSqlErrorCode::ERRCODE_FDW_INVALID_COLUMN_NUMBER,
                     "target column number not match",
@@ -325,8 +330,9 @@ pub(super) extern "C" fn iterate_foreign_scan<W: ForeignDataWrapper>(
                 return slot;
             }
 
-            for (i, cell) in row.cells.iter_mut().enumerate() {
+            for i in 0..state.row.cells.len() {
                 let att_idx = state.tgt_attnos[i] - 1;
+                let cell =  state.row.cells.get_unchecked_mut(i);
                 match cell.take() {
                     Some(cell) => {
                         state.values[att_idx] = cell.into_datum().unwrap();

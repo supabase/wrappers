@@ -273,7 +273,7 @@ pub(super) unsafe fn extract_target_columns(
 }
 
 /// Check if the option list contains a specific option, used in [validator](crate::interface::ForeignDataWrapper::validator)
-pub fn check_options_contain(opt_list: &Vec<Option<String>>, tgt: &str) {
+pub fn check_options_contain(opt_list: &[Option<String>], tgt: &str) {
     let search_key = tgt.to_owned() + "=";
     if !opt_list.iter().any(|opt| {
         if let Some(s) = opt {
