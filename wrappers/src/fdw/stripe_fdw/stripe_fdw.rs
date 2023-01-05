@@ -235,7 +235,7 @@ macro_rules! report_request_error {
 }
 
 #[wrappers_fdw(
-    version = "0.1.2",
+    version = "0.1.3",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/stripe_fdw"
 )]
@@ -258,17 +258,27 @@ impl StripeFdw {
     ) -> Option<Url> {
         let mut url = self.base_url.join(obj).unwrap();
 
-        // pushdown quals
+        // pushdown quals other than id
         // ref: https://stripe.com/docs/api/[object]/list
         let fields = match obj {
             "balance" => vec![],
-            "balance_transactions" => vec!["payout", "type"],
+            "balance_transactions" => vec!["type"],
             "charges" => vec!["customer"],
             "customers" => vec!["email"],
+            "disputes" => vec!["charge", "payment_intent"],
+            "events" => vec!["type"],
+            "files" => vec!["purpose"],
+            "file_links" => vec![],
             "invoices" => vec!["customer", "status", "subscription"],
+            "mandates" => vec![],
             "payment_intents" => vec!["customer"],
+            "payouts" => vec!["status"],
             "products" => vec!["active"],
+            "refunds" => vec!["charge", "payment_intent"],
+            "setup_attempts" => vec!["setup_intent"],
+            "setup_intents" => vec!["customer", "payment_method"],
             "subscriptions" => vec!["customer", "price", "status"],
+            "tokens" => vec![],
             _ => {
                 report_error(
                     PgSqlErrorCode::ERRCODE_FDW_TABLE_NOT_FOUND,
@@ -340,6 +350,57 @@ impl StripeFdw {
                 ],
                 tgt_cols,
             ),
+            "disputes" => body_to_rows(
+                resp_body,
+                vec![
+                    ("id", "string"),
+                    ("amount", "i64"),
+                    ("currency", "string"),
+                    ("charge", "string"),
+                    ("payment_intent", "string"),
+                    ("reason", "string"),
+                    ("status", "string"),
+                    ("created", "timestamp"),
+                ],
+                tgt_cols,
+            ),
+            "events" => body_to_rows(
+                resp_body,
+                vec![
+                    ("id", "string"),
+                    ("type", "string"),
+                    ("api_version", "string"),
+                    ("created", "timestamp"),
+                ],
+                tgt_cols,
+            ),
+            "files" => body_to_rows(
+                resp_body,
+                vec![
+                    ("id", "string"),
+                    ("filename", "string"),
+                    ("purpose", "string"),
+                    ("title", "string"),
+                    ("size", "i64"),
+                    ("type", "string"),
+                    ("url", "string"),
+                    ("created", "timestamp"),
+                    ("expires_at", "timestamp"),
+                ],
+                tgt_cols,
+            ),
+            "file_links" => body_to_rows(
+                resp_body,
+                vec![
+                    ("id", "string"),
+                    ("file", "string"),
+                    ("url", "string"),
+                    ("created", "timestamp"),
+                    ("expired", "bool"),
+                    ("expires_at", "timestamp"),
+                ],
+                tgt_cols,
+            ),
             "invoices" => body_to_rows(
                 resp_body,
                 vec![
@@ -354,6 +415,16 @@ impl StripeFdw {
                 ],
                 tgt_cols,
             ),
+            "mandates" => body_to_rows(
+                resp_body,
+                vec![
+                    ("id", "string"),
+                    ("payment_method", "string"),
+                    ("status", "string"),
+                    ("type", "string"),
+                ],
+                tgt_cols,
+            ),
             "payment_intents" => body_to_rows(
                 resp_body,
                 vec![
@@ -362,6 +433,20 @@ impl StripeFdw {
                     ("amount", "i64"),
                     ("currency", "string"),
                     ("payment_method", "string"),
+                    ("created", "timestamp"),
+                ],
+                tgt_cols,
+            ),
+            "payouts" => body_to_rows(
+                resp_body,
+                vec![
+                    ("id", "string"),
+                    ("amount", "i64"),
+                    ("currency", "string"),
+                    ("arrival_date", "timestamp"),
+                    ("description", "string"),
+                    ("statement_descriptor", "string"),
+                    ("status", "string"),
                     ("created", "timestamp"),
                 ],
                 tgt_cols,
@@ -379,6 +464,49 @@ impl StripeFdw {
                 ],
                 tgt_cols,
             ),
+            "refunds" => body_to_rows(
+                resp_body,
+                vec![
+                    ("id", "string"),
+                    ("amount", "i64"),
+                    ("currency", "string"),
+                    ("charge", "string"),
+                    ("payment_intent", "string"),
+                    ("reason", "string"),
+                    ("status", "string"),
+                    ("created", "timestamp"),
+                ],
+                tgt_cols,
+            ),
+            "setup_attempts" => body_to_rows(
+                resp_body,
+                vec![
+                    ("id", "string"),
+                    ("application", "string"),
+                    ("customer", "string"),
+                    ("on_behalf_of", "string"),
+                    ("payment_method", "string"),
+                    ("setup_intent", "string"),
+                    ("status", "string"),
+                    ("usage", "string"),
+                    ("created", "timestamp"),
+                ],
+                tgt_cols,
+            ),
+            "setup_intents" => body_to_rows(
+                resp_body,
+                vec![
+                    ("id", "string"),
+                    ("client_secret", "string"),
+                    ("customer", "string"),
+                    ("description", "string"),
+                    ("payment_method", "string"),
+                    ("status", "string"),
+                    ("usage", "string"),
+                    ("created", "timestamp"),
+                ],
+                tgt_cols,
+            ),
             "subscriptions" => body_to_rows(
                 resp_body,
                 vec![
@@ -387,6 +515,17 @@ impl StripeFdw {
                     ("currency", "string"),
                     ("current_period_start", "timestamp"),
                     ("current_period_end", "timestamp"),
+                ],
+                tgt_cols,
+            ),
+            "tokens" => body_to_rows(
+                resp_body,
+                vec![
+                    ("id", "string"),
+                    ("type", "string"),
+                    ("client_ip", "string"),
+                    ("used", "bool"),
+                    ("created", "timestamp"),
                 ],
                 tgt_cols,
             ),
