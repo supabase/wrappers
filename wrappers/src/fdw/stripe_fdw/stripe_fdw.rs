@@ -262,7 +262,7 @@ impl StripeFdw {
         // ref: https://stripe.com/docs/api/[object]/list
         let fields = match obj {
             "balance" => vec![],
-            "balance_transactions" => vec!["payout", "type"],
+            "balance_transactions" => vec!["type"],
             "charges" => vec!["customer"],
             "customers" => vec!["email"],
             "disputes" => vec!["charge", "payment_intent"],
