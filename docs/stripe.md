@@ -207,7 +207,7 @@ A dispute occurs when a customer questions your charge with their card issuer.
 Ref: [Stripe docs](https://stripe.com/docs/api/disputes/list) 
 
 ```sql
-create foreign table stripe_disputes (
+create foreign table stripe.disputes (
   id text,
   amount bigint,
   currency text,
@@ -238,7 +238,7 @@ Events are our way of letting you know when something interesting happens in you
 Ref: [Stripe docs](https://stripe.com/docs/api/events/list) 
 
 ```sql
-create foreign table stripe_events (
+create foreign table stripe.events (
   id text,
   type text,
   api_version text,
@@ -264,7 +264,7 @@ This is an object representing a file hosted on Stripe's servers.
 Ref: [Stripe docs](https://stripe.com/docs/api/files/list) 
 
 ```sql
-create foreign table stripe_files (
+create foreign table stripe.files (
   id text,
   filename text,
   purpose text,
@@ -295,7 +295,7 @@ To share the contents of a `File` object with non-Stripe users, you can create a
 Ref: [Stripe docs](https://stripe.com/docs/api/file_links/list) 
 
 ```sql
-create foreign table stripe_file_links (
+create foreign table stripe.file_links (
   id text,
   file text,
   url text,
@@ -351,7 +351,7 @@ A Mandate is a record of the permission a customer has given you to debit their 
 Ref: [Stripe docs](https://stripe.com/docs/api/mandates) 
 
 ```sql
-create foreign table stripe_mandates (
+create foreign table stripe.mandates (
   id text,
   payment_method text,
   status text,
@@ -405,7 +405,7 @@ A `Payout` object is created when you receive funds from Stripe, or when you ini
 Ref: [Stripe docs](https://stripe.com/docs/api/payouts/list) 
 
 ```sql
-create foreign table stripe_payouts (
+create foreign table stripe.payouts (
   id text,
   amount bigint,
   currency text,
@@ -465,7 +465,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 Ref: [Stripe docs](https://stripe.com/docs/api/refunds/list) 
 
 ```sql
-create foreign table stripe_refunds (
+create foreign table stripe.refunds (
   id text,
   amount bigint,
   currency text,
@@ -496,7 +496,7 @@ A `SetupAttempt` describes one attempted confirmation of a SetupIntent, whether 
 Ref: [Stripe docs](https://stripe.com/docs/api/setup_attempts/list) 
 
 ```sql
-create foreign table stripe_setup_attempts (
+create foreign table stripe.setup_attempts (
   id text,
   application text,
   customer text,
@@ -527,7 +527,7 @@ A `SetupIntent` guides you through the process of setting up and saving a custom
 Ref: [Stripe docs](https://stripe.com/docs/api/setup_intents/list) 
 
 ```sql
-create foreign table stripe_setup_intents (
+create foreign table stripe.setup_intents (
   id text,
   client_secret text,
   customer text,
@@ -589,7 +589,7 @@ Tokenization is the process Stripe uses to collect sensitive card or bank accoun
 Ref: [Stripe docs](https://stripe.com/docs/api/tokens) 
 
 ```sql
-create foreign table stripe_tokens (
+create foreign table stripe.tokens (
   id text,
   customer text,
   currency text,
@@ -606,3 +606,46 @@ create foreign table stripe_tokens (
 While any column is allowed in a where clause, it is most efficient to filter by:
 
 - id
+
+### Examples
+
+Some examples on how to use Stripe foreign tables.
+
+##### Simple Query
+
+```sql
+-- always limit records to reduce API calls to Stripe
+select * from stripe.customers limit 10;
+select * from stripe.invoices limit 10;
+select * from stripe.subscriptions limit 10;
+```
+
+##### Query JSON Attributes
+
+`attrs` is a common column which stores all the object attributes in JSON format,
+you can extract any attributes needed or its associated sub objects from it.
+For example,
+
+```sql
+-- extract account name for an invoice
+select id, attrs->>'account_name' as account_name
+from stripe.invoices where id = 'in_xxx';
+
+-- extract invoice line items for an invoice
+select id, attrs#>'{lines,data}' as line_items
+from stripe.invoices where id = 'in_xxx';
+
+-- extract subscription items for a subscription
+select id, attrs#>'{items,data}' as items
+from stripe.subscriptions where id = 'sub_xxx';
+```
+
+##### Data Modify
+
+```sql
+insert into stripe.customers(email,name,description) values ('test@test.com', 'test name', null);
+update stripe.customers set description='hello fdw' where id ='cus_xxx';
+update stripe.customers set attrs='{"metadata[foo]": "bar"}' where id ='cus_xxx';
+delete from stripe.customers where id ='cus_xxx';
+```
+
