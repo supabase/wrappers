@@ -81,10 +81,9 @@ impl<W: ForeignDataWrapper> FdwState<W> {
         )
     }
 
-    fn iter_scan_borrowed(&mut self) -> Option<()> {
-        self.instance.iter_scan_borrowed(&mut self.row)
+    fn iter_scan(&mut self) -> Option<()> {
+        self.instance.iter_scan(&mut self.row)
     }
-
 
     fn re_scan(&mut self) {
         self.instance.re_scan()
@@ -320,7 +319,7 @@ pub(super) extern "C" fn iterate_foreign_scan<W: ForeignDataWrapper>(
         let mut old_ctx = state.tmp_ctx.set_as_current();
 
         state.row.clear();
-        if state.iter_scan_borrowed().is_some() {
+        if state.iter_scan().is_some() {
             if state.row.cols.len() != state.tgts.len() {
                 report_error(
                     PgSqlErrorCode::ERRCODE_FDW_INVALID_COLUMN_NUMBER,
@@ -332,7 +331,7 @@ pub(super) extern "C" fn iterate_foreign_scan<W: ForeignDataWrapper>(
 
             for i in 0..state.row.cells.len() {
                 let att_idx = state.tgt_attnos[i] - 1;
-                let cell =  state.row.cells.get_unchecked_mut(i);
+                let cell = state.row.cells.get_unchecked_mut(i);
                 match cell.take() {
                     Some(cell) => {
                         state.values[att_idx] = cell.into_datum().unwrap();

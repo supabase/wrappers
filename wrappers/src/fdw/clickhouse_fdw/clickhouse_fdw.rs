@@ -183,12 +183,11 @@ impl ForeignDataWrapper for ClickHouseFdw {
         self.row_idx = 0;
     }
 
-    fn iter_scan(&mut self) -> Option<Row> {
+    fn iter_scan(&mut self, row: &mut Row) -> Option<()> {
         if let Some(block) = &self.scan_blk {
-            let mut ret = Row::new();
             let mut rows = block.rows();
 
-            if let Some(row) = rows.nth(self.row_idx) {
+            if let Some(src_row) = rows.nth(self.row_idx) {
                 for tgt_col in &self.tgt_cols {
                     let (i, _) = block
                         .columns()
@@ -196,13 +195,13 @@ impl ForeignDataWrapper for ClickHouseFdw {
                         .enumerate()
                         .find(|(_, c)| c.name() == tgt_col)
                         .unwrap();
-                    let col_name = row.name(i).unwrap();
-                    let cell = field_to_cell(&row, i);
+                    let col_name = src_row.name(i).unwrap();
+                    let cell = field_to_cell(&src_row, i);
                     cell.as_ref()?;
-                    ret.push(col_name, cell);
+                    row.push(col_name, cell);
                 }
                 self.row_idx += 1;
-                return Some(ret);
+                return Some(());
             }
         }
         None

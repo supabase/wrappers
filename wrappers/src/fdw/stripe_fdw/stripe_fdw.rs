@@ -642,10 +642,13 @@ impl ForeignDataWrapper for StripeFdw {
         }
     }
 
-    fn iter_scan(&mut self) -> Option<Row> {
+    fn iter_scan(&mut self, row: &mut Row) -> Option<()> {
         if let Some(ref mut result) = self.scan_result {
             if !result.is_empty() {
-                return result.drain(0..1).last();
+                return result
+                    .drain(0..1)
+                    .last()
+                    .map(|src_row| row.replace_with(src_row));
             }
         }
         None
