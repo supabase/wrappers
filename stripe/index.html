@@ -224,6 +224,21 @@
 
   
   
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        Installation
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
     
   
   
@@ -231,18 +246,18 @@
     <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
       
-        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" checked>
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3" type="checkbox" id="__nav_3" checked>
       
       
       
       
-        <label class="md-nav__link" for="__nav_2">
+        <label class="md-nav__link" for="__nav_3">
           Wrappers
           <span class="md-nav__icon md-icon"></span>
         </label>
       
       <nav class="md-nav" aria-label="Wrappers" data-md-level="1">
-        <label class="md-nav__title" for="__nav_2">
+        <label class="md-nav__title" for="__nav_3">
           <span class="md-nav__icon md-icon"></span>
           Wrappers
         </label>
@@ -470,6 +485,40 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    Examples
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#simple-query" class="md-nav__link">
+    Simple Query
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#query-json-attributes" class="md-nav__link">
+    Query JSON Attributes
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#data-modify" class="md-nav__link">
+    Data Modify
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -481,21 +530,6 @@
           
         </ul>
       </nav>
-    </li>
-  
-
-    
-      
-      
-      
-
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../installation/" class="md-nav__link">
-        Installation
-      </a>
     </li>
   
 
@@ -703,6 +737,40 @@
           <li class="md-nav__item">
   <a href="#tokens" class="md-nav__link">
     Tokens
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    Examples
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#simple-query" class="md-nav__link">
+    Simple Query
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#query-json-attributes" class="md-nav__link">
+    Query JSON Attributes
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#data-modify" class="md-nav__link">
+    Data Modify
   </a>
   
 </li>
@@ -980,7 +1048,7 @@
 <span class="normal">12</span>
 <span class="normal">13</span>
 <span class="normal">14</span>
-<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">stripe_disputes</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">stripe</span><span class="p">.</span><span class="n">disputes</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
 <span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="n">amount</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="n">currency</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
@@ -1016,7 +1084,7 @@
 <span class="normal"> 8</span>
 <span class="normal"> 9</span>
 <span class="normal">10</span>
-<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">stripe_events</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">stripe</span><span class="p">.</span><span class="n">events</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
 <span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="k">type</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="n">api_version</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
@@ -1052,7 +1120,7 @@
 <span class="normal">13</span>
 <span class="normal">14</span>
 <span class="normal">15</span>
-<span class="normal">16</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">stripe_files</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="normal">16</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">stripe</span><span class="p">.</span><span class="n">files</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
 <span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="n">filename</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="n">purpose</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
@@ -1090,7 +1158,7 @@
 <span class="normal">10</span>
 <span class="normal">11</span>
 <span class="normal">12</span>
-<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">stripe_file_links</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">stripe</span><span class="p">.</span><span class="n">file_links</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
 <span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="n">file</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="n">url</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
@@ -1159,7 +1227,7 @@
 <span class="normal"> 8</span>
 <span class="normal"> 9</span>
 <span class="normal">10</span>
-<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">stripe_mandates</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">stripe</span><span class="p">.</span><span class="n">mandates</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
 <span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="n">payment_method</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="n">status</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
@@ -1228,7 +1296,7 @@
 <span class="normal">12</span>
 <span class="normal">13</span>
 <span class="normal">14</span>
-<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">stripe_payouts</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">stripe</span><span class="p">.</span><span class="n">payouts</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
 <span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="n">amount</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="n">currency</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
@@ -1306,7 +1374,7 @@
 <span class="normal">12</span>
 <span class="normal">13</span>
 <span class="normal">14</span>
-<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">stripe_refunds</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">stripe</span><span class="p">.</span><span class="n">refunds</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
 <span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="n">amount</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="n">currency</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
@@ -1347,7 +1415,7 @@
 <span class="normal">13</span>
 <span class="normal">14</span>
 <span class="normal">15</span>
-<span class="normal">16</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">stripe_setup_attempts</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="normal">16</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">stripe</span><span class="p">.</span><span class="n">setup_attempts</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
 <span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="n">application</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="n">customer</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
@@ -1387,7 +1455,7 @@
 <span class="normal">12</span>
 <span class="normal">13</span>
 <span class="normal">14</span>
-<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">stripe_setup_intents</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">stripe</span><span class="p">.</span><span class="n">setup_intents</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
 <span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="n">client_secret</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="n">customer</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
@@ -1461,7 +1529,7 @@
 <span class="normal"> 9</span>
 <span class="normal">10</span>
 <span class="normal">11</span>
-<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">stripe_tokens</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">stripe</span><span class="p">.</span><span class="n">tokens</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
 <span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="n">customer</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="n">currency</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
@@ -1478,6 +1546,52 @@
 <ul>
 <li>id</li>
 </ul>
+<h3 id="examples">Examples</h3>
+<p>Some examples on how to use Stripe foreign tables.</p>
+<h5 id="simple-query">Simple Query</h5>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- always limit records to reduce API calls to Stripe</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">stripe</span><span class="p">.</span><span class="n">customers</span><span class="w"> </span><span class="k">limit</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span><span class="w"></span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">stripe</span><span class="p">.</span><span class="n">invoices</span><span class="w"> </span><span class="k">limit</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span><span class="w"></span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">stripe</span><span class="p">.</span><span class="n">subscriptions</span><span class="w"> </span><span class="k">limit</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span><span class="w"></span>
+</code></pre></div></td></tr></table></div>
+<h5 id="query-json-attributes">Query JSON Attributes</h5>
+<p><code>attrs</code> is a common column which stores all the object attributes in JSON format,
+you can extract any attributes needed or its associated sub objects from it.
+For example,</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- extract account name for an invoice</span>
+<span class="k">select</span><span class="w"> </span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">attrs</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;account_name&#39;</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">account_name</span><span class="w"></span>
+<span class="k">from</span><span class="w"> </span><span class="n">stripe</span><span class="p">.</span><span class="n">invoices</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;in_xxx&#39;</span><span class="p">;</span><span class="w"></span>
+
+<span class="c1">-- extract invoice line items for an invoice</span>
+<span class="k">select</span><span class="w"> </span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">attrs</span><span class="o">#&gt;</span><span class="s1">&#39;{lines,data}&#39;</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">line_items</span><span class="w"></span>
+<span class="k">from</span><span class="w"> </span><span class="n">stripe</span><span class="p">.</span><span class="n">invoices</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;in_xxx&#39;</span><span class="p">;</span><span class="w"></span>
+
+<span class="c1">-- extract subscription items for a subscription</span>
+<span class="k">select</span><span class="w"> </span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">attrs</span><span class="o">#&gt;</span><span class="s1">&#39;{items,data}&#39;</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">items</span><span class="w"></span>
+<span class="k">from</span><span class="w"> </span><span class="n">stripe</span><span class="p">.</span><span class="n">subscriptions</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;sub_xxx&#39;</span><span class="p">;</span><span class="w"></span>
+</code></pre></div></td></tr></table></div>
+<h5 id="data-modify">Data Modify</h5>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">stripe</span><span class="p">.</span><span class="n">customers</span><span class="p">(</span><span class="n">email</span><span class="p">,</span><span class="n">name</span><span class="p">,</span><span class="n">description</span><span class="p">)</span><span class="w"> </span><span class="k">values</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;test@test.com&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;test name&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">null</span><span class="p">);</span><span class="w"></span>
+<span class="k">update</span><span class="w"> </span><span class="n">stripe</span><span class="p">.</span><span class="n">customers</span><span class="w"> </span><span class="k">set</span><span class="w"> </span><span class="n">description</span><span class="o">=</span><span class="s1">&#39;hello fdw&#39;</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="s1">&#39;cus_xxx&#39;</span><span class="p">;</span><span class="w"></span>
+<span class="k">update</span><span class="w"> </span><span class="n">stripe</span><span class="p">.</span><span class="n">customers</span><span class="w"> </span><span class="k">set</span><span class="w"> </span><span class="n">attrs</span><span class="o">=</span><span class="s1">&#39;{&quot;metadata[foo]&quot;: &quot;bar&quot;}&#39;</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="s1">&#39;cus_xxx&#39;</span><span class="p">;</span><span class="w"></span>
+<span class="k">delete</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">stripe</span><span class="p">.</span><span class="n">customers</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="s1">&#39;cus_xxx&#39;</span><span class="p">;</span><span class="w"></span>
+</code></pre></div></td></tr></table></div>
 
 
 
@@ -1514,13 +1628,13 @@
       
       
         
-        <a href="../installation/" class="md-footer__link md-footer__link--next" aria-label="Next: Installation" rel="next">
+        <a href="../contributing/" class="md-footer__link md-footer__link--next" aria-label="Next: Contributing" rel="next">
           <div class="md-footer__title">
             <div class="md-ellipsis">
               <span class="md-footer__direction">
                 Next
               </span>
-              Installation
+              Contributing
             </div>
           </div>
           <div class="md-footer__button md-icon">
