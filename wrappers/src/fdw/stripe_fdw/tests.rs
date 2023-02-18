@@ -363,7 +363,7 @@ mod tests {
             );
 
             let results = c
-                .select("SELECT * FROM stripe_balance", None, None)
+                .select("SELECT * FROM stripe_balance WHERE balance_type IS NOT NULL", None, None)
                 .filter_map(|r| {
                     r.by_name("balance_type")
                         .ok()

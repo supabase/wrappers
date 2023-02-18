@@ -259,7 +259,15 @@ impl Qual {
             "".to_string()
         } else {
             match &self.value {
-                Value::Cell(cell) => format!("{} {} {}", self.field, self.operator, cell),
+                Value::Cell(cell) => match self.operator.as_str() {
+                    "is" | "is not" => match cell {
+                        Cell::String(cell) if cell == "null" => {
+                            format!("{} {} null", self.field, self.operator)
+                        }
+                        _ => format!("{} {} {}", self.field, self.operator, cell),
+                    },
+                    _ => format!("{} {} {}", self.field, self.operator, cell),
+                },
                 Value::Array(_) => unreachable!(),
             }
         }
