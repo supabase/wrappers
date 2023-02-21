@@ -261,6 +261,7 @@ impl StripeFdw {
         // pushdown quals other than id
         // ref: https://stripe.com/docs/api/[object]/list
         let fields = match obj {
+            "accounts" => vec![],
             "balance" => vec![],
             "balance_transactions" => vec!["type"],
             "charges" => vec!["customer"],
@@ -279,6 +280,7 @@ impl StripeFdw {
             "setup_intents" => vec!["customer", "payment_method"],
             "subscriptions" => vec!["customer", "price", "status"],
             "tokens" => vec![],
+            "transfers" => vec!["destination"],
             _ => {
                 report_error(
                     PgSqlErrorCode::ERRCODE_FDW_TABLE_NOT_FOUND,
@@ -300,6 +302,16 @@ impl StripeFdw {
         tgt_cols: &[String],
     ) -> (Vec<Row>, Option<String>, Option<bool>) {
         match obj {
+            "accounts" => body_to_rows(
+                resp_body,
+                vec![
+                    ("id", "string"),
+                    ("business_type", "string"),
+                    ("email", "string"),
+                    ("created", "timestamp"),
+                ],
+                tgt_cols,
+            ),
             "balance" => body_to_rows(
                 resp_body,
                 vec![
@@ -526,6 +538,17 @@ impl StripeFdw {
                     ("client_ip", "string"),
                     ("used", "bool"),
                     ("created", "timestamp"),
+                ],
+                tgt_cols,
+            ),
+            "transfers" => body_to_rows(
+                resp_body,
+                vec![
+                    ("id", "string"),
+                    ("amount", "i64"),
+                    ("currency", "string"),
+                    ("created", "timestamp"),
+                    ("destination", "string"),
                 ],
                 tgt_cols,
             ),
