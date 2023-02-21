@@ -25,6 +25,26 @@ mod tests {
 
             c.update(
                 r#"
+                CREATE FOREIGN TABLE stripe_accounts (
+                  id text,
+                  business_type text,
+                  country text,
+                  email text,
+                  type text,
+                  created timestamp,
+                  attrs jsonb
+                )
+                SERVER my_stripe_server
+                OPTIONS (
+                    object 'accounts'    -- source object in stripe, required
+                  )
+             "#,
+                None,
+                None,
+            );
+
+            c.update(
+                r#"
                 CREATE FOREIGN TABLE stripe_balance (
                   balance_type text,
                   amount bigint,
@@ -362,8 +382,64 @@ mod tests {
                 None,
             );
 
+            c.update(
+                r#"
+                CREATE FOREIGN TABLE stripe_topups (
+                  id text,
+                  amount bigint,
+                  currency text,
+                  description text,
+                  status text,
+                  created timestamp,
+                  attrs jsonb
+                )
+                SERVER my_stripe_server
+                OPTIONS (
+                  object 'topups',    -- source object in stripe, required
+                )
+             "#,
+                None,
+                None,
+            );
+
+            c.update(
+                r#"
+                CREATE FOREIGN TABLE stripe_transfers (
+                  id text,
+                  amount bigint,
+                  currency text,
+                  description text,
+                  destination text,
+                  created timestamp,
+                  attrs jsonb
+                )
+                SERVER my_stripe_server
+                OPTIONS (
+                  object 'transfers',    -- source object in stripe, required
+                )
+             "#,
+                None,
+                None,
+            );
+
             let results = c
-                .select("SELECT * FROM stripe_balance WHERE balance_type IS NOT NULL", None, None)
+                .select("SELECT * FROM stripe_accounts", None, None)
+                .filter_map(|r| {
+                    r.by_name("email")
+                        .ok()
+                        .and_then(|v| v.value::<&str>())
+                        .zip(r.by_name("country").ok().and_then(|v| v.value::<&str>()))
+                        .zip(r.by_name("type").ok().and_then(|v| v.value::<&str>()))
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(results, vec![(("site@stripe.com", "US"), "standard")]);
+
+            let results = c
+                .select(
+                    "SELECT * FROM stripe_balance WHERE balance_type IS NOT NULL",
+                    None,
+                    None,
+                )
                 .filter_map(|r| {
                     r.by_name("balance_type")
                         .ok()
@@ -630,6 +706,45 @@ mod tests {
                 vec![(
                     (("cus_MJiBtCqOF1Bb3F", "usd"), 287883090000000),
                     287883090000000
+                )]
+            );
+
+            let results = c
+                .select("SELECT * FROM stripe_topups", None, None)
+                .filter_map(|r| {
+                    r.by_name("id")
+                        .ok()
+                        .and_then(|v| v.value::<&str>())
+                        .zip(r.by_name("amount").ok().and_then(|v| v.value::<i64>()))
+                        .zip(r.by_name("currency").ok().and_then(|v| v.value::<&str>()))
+                        .zip(r.by_name("status").ok().and_then(|v| v.value::<&str>()))
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                results,
+                vec![((("tu_1Lb4leDciZwYG8GPbKaCK9X3", 1000), "usd"), "pending")]
+            );
+
+            let results = c
+                .select("SELECT * FROM stripe_transfers", None, None)
+                .filter_map(|r| {
+                    r.by_name("id")
+                        .ok()
+                        .and_then(|v| v.value::<&str>())
+                        .zip(r.by_name("amount").ok().and_then(|v| v.value::<i64>()))
+                        .zip(r.by_name("currency").ok().and_then(|v| v.value::<&str>()))
+                        .zip(
+                            r.by_name("destination")
+                                .ok()
+                                .and_then(|v| v.value::<&str>()),
+                        )
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                results,
+                vec![(
+                    (("tr_1Lb4lcDciZwYG8GPNq6RhhYq", 1100), "usd"),
+                    "acct_1Lb4lDDciZwYG8GP"
                 )]
             );
 

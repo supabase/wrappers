@@ -1,23 +1,26 @@
 [Stripe](https://stripe.com) is an API driven online payment processing utilty. `supabase/wrappers` exposes below endpoints.
 
-1.  [Balance](https://stripe.com/docs/api/balance) (*read only*)
-2.  [Balance Transactions](https://stripe.com/docs/api/balance_transactions/list) (*read only*)
-3.  [Charges](https://stripe.com/docs/api/charges/list) (*read only*)
-4.  [Customers](https://stripe.com/docs/api/customers/list) (*read and modify*)
-5.  [Disputes](https://stripe.com/docs/api/disputes/list) (*read only*)
-6.  [Events](https://stripe.com/docs/api/events/list) (*read only*)
-7.  [Files](https://stripe.com/docs/api/files/list) (*read only*)
-8.  [File Links](https://stripe.com/docs/api/file_links/list) (*read only*)
-9.  [Invoices](https://stripe.com/docs/api/invoices/list) (*read only*)
-10. [Mandates](https://stripe.com/docs/api/mandates) (*read only*)
-11. [PaymentIntents](https://stripe.com/docs/api/payment_intents/list) (*read only*)
-12. [Payouts](https://stripe.com/docs/api/payouts/list) (*read only*)
-13. [Products](https://stripe.com/docs/api/products/list) (*read and modify*)
-14. [Refunds](https://stripe.com/docs/api/refunds/list) (*read only*)
-15. [SetupAttempts](https://stripe.com/docs/api/setup_attempts/list) (*read only*)
-16. [SetupIntents](https://stripe.com/docs/api/setup_intents/list) (*read only*)
-17. [Subscriptions](https://stripe.com/docs/api/subscriptions/list) (*read and modify*)
-18. [Tokens](https://stripe.com/docs/api/tokens) (*read only*)
+1.  [Accounts](https://stripe.com/docs/api/accounts/list) (*read only*)
+2.  [Balance](https://stripe.com/docs/api/balance) (*read only*)
+3.  [Balance Transactions](https://stripe.com/docs/api/balance_transactions/list) (*read only*)
+4.  [Charges](https://stripe.com/docs/api/charges/list) (*read only*)
+5.  [Customers](https://stripe.com/docs/api/customers/list) (*read and modify*)
+6.  [Disputes](https://stripe.com/docs/api/disputes/list) (*read only*)
+7.  [Events](https://stripe.com/docs/api/events/list) (*read only*)
+8.  [Files](https://stripe.com/docs/api/files/list) (*read only*)
+9.  [File Links](https://stripe.com/docs/api/file_links/list) (*read only*)
+10. [Invoices](https://stripe.com/docs/api/invoices/list) (*read only*)
+11. [Mandates](https://stripe.com/docs/api/mandates) (*read only*)
+12. [PaymentIntents](https://stripe.com/docs/api/payment_intents/list) (*read only*)
+13. [Payouts](https://stripe.com/docs/api/payouts/list) (*read only*)
+14. [Products](https://stripe.com/docs/api/products/list) (*read and modify*)
+15. [Refunds](https://stripe.com/docs/api/refunds/list) (*read only*)
+16. [SetupAttempts](https://stripe.com/docs/api/setup_attempts/list) (*read only*)
+17. [SetupIntents](https://stripe.com/docs/api/setup_intents/list) (*read only*)
+18. [Subscriptions](https://stripe.com/docs/api/subscriptions/list) (*read and modify*)
+19. [Tokens](https://stripe.com/docs/api/tokens) (*read only*)
+20. [Topups](https://stripe.com/docs/api/topups/list) (*read only*)
+21. [Transfers](https://stripe.com/docs/api/transfers/list) (*read only*)
 
 ### Wrapper 
 To get started with the Stripe wrapper, create a foreign data wrapper specifying `handler` and `validator` as below.
@@ -88,6 +91,33 @@ The Stripe tables mirror Stripe's API.
 ```sql
 create schema stripe;
 ```
+
+##### Accounts
+*read only*
+
+This is an object representing a Stripe account.
+
+Ref: [Stripe docs](https://stripe.com/docs/api/accounts/list)
+
+```sql
+create foreign table stripe.accounts (
+  id text,
+  business_type text,
+  country text,
+  email text,
+  type text,
+  created timestamp,
+  attrs jsonb
+)
+  server stripe_server
+  options (
+    object 'accounts'
+  );
+```
+
+While any column is allowed in a where clause, it is most efficient to filter by:
+
+- id
 
 ##### Balance
 *read only*
@@ -603,9 +633,61 @@ create foreign table stripe.tokens (
   );
 ```
 
+##### Top-ups
+*read only*
+
+To top up your Stripe balance, you create a top-up object.
+
+Ref: [Stripe docs](https://stripe.com/docs/api/topups/list)
+
+```sql
+create foreign table stripe.topups (
+  id text,
+  amount bigint,
+  currency text,
+  description text,
+  status text,
+  created timestamp,
+  attrs jsonb
+)
+  server stripe_server
+  options (
+    object 'topups'
+  );
+```
+
 While any column is allowed in a where clause, it is most efficient to filter by:
 
 - id
+- status
+
+##### Transfers
+*read only*
+
+A Transfer object is created when you move funds between Stripe accounts as part of Connect.
+
+Ref: [Stripe docs](https://stripe.com/docs/api/transfers/list)
+
+```sql
+create foreign table stripe.transfers (
+  id text,
+  amount bigint,
+  currency text,
+  description text,
+  destination text,
+  created timestamp,
+  attrs jsonb
+)
+  server stripe_server
+  options (
+    object 'transfers'
+  );
+```
+
+While any column is allowed in a where clause, it is most efficient to filter by:
+
+- id
+- destination
 
 ### Examples
 
