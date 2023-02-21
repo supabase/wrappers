@@ -355,6 +355,13 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#accounts" class="md-nav__link">
+    Accounts
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#balance" class="md-nav__link">
     Balance
   </a>
@@ -476,6 +483,20 @@
           <li class="md-nav__item">
   <a href="#tokens" class="md-nav__link">
     Tokens
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#top-ups" class="md-nav__link">
+    Top-ups
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#transfers" class="md-nav__link">
+    Transfers
   </a>
   
 </li>
@@ -616,6 +637,13 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#accounts" class="md-nav__link">
+    Accounts
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#balance" class="md-nav__link">
     Balance
   </a>
@@ -741,6 +769,20 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#top-ups" class="md-nav__link">
+    Top-ups
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#transfers" class="md-nav__link">
+    Transfers
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -804,6 +846,7 @@
 
 <p><a href="https://stripe.com">Stripe</a> is an API driven online payment processing utilty. <code>supabase/wrappers</code> exposes below endpoints.</p>
 <ol>
+<li><a href="https://stripe.com/docs/api/accounts/list">Accounts</a> (<em>read only</em>)</li>
 <li><a href="https://stripe.com/docs/api/balance">Balance</a> (<em>read only</em>)</li>
 <li><a href="https://stripe.com/docs/api/balance_transactions/list">Balance Transactions</a> (<em>read only</em>)</li>
 <li><a href="https://stripe.com/docs/api/charges/list">Charges</a> (<em>read only</em>)</li>
@@ -822,6 +865,8 @@
 <li><a href="https://stripe.com/docs/api/setup_intents/list">SetupIntents</a> (<em>read only</em>)</li>
 <li><a href="https://stripe.com/docs/api/subscriptions/list">Subscriptions</a> (<em>read and modify</em>)</li>
 <li><a href="https://stripe.com/docs/api/tokens">Tokens</a> (<em>read only</em>)</li>
+<li><a href="https://stripe.com/docs/api/topups/list">Topups</a> (<em>read only</em>)</li>
+<li><a href="https://stripe.com/docs/api/transfers/list">Transfers</a> (<em>read only</em>)</li>
 </ol>
 <h3 id="wrapper">Wrapper</h3>
 <p>To get started with the Stripe wrapper, create a foreign data wrapper specifying <code>handler</code> and <code>validator</code> as below.</p>
@@ -889,6 +934,40 @@
 <p>(Optional) Create a schema to hold the Stripe tables.
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">stripe</span><span class="p">;</span><span class="w"></span>
 </code></pre></div></td></tr></table></div></p>
+<h5 id="accounts">Accounts</h5>
+<p><em>read only</em></p>
+<p>This is an object representing a Stripe account.</p>
+<p>Ref: <a href="https://stripe.com/docs/api/accounts/list">Stripe docs</a></p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">stripe</span><span class="p">.</span><span class="n">accounts</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">business_type</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">country</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">email</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="k">type</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">created</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span><span class="w"></span>
+<span class="p">)</span><span class="w"></span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">stripe_server</span><span class="w"></span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;accounts&#39;</span><span class="w"></span>
+<span class="w">  </span><span class="p">);</span><span class="w"></span>
+</code></pre></div></td></tr></table></div>
+<p>While any column is allowed in a where clause, it is most efficient to filter by:</p>
+<ul>
+<li>id</li>
+</ul>
 <h5 id="balance">Balance</h5>
 <p><em>read only</em></p>
 <p>Shows the balance currently on your Stripe account.</p>
@@ -1542,9 +1621,75 @@
 <span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;tokens&#39;</span><span class="w"></span>
 <span class="w">  </span><span class="p">);</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
+<h5 id="top-ups">Top-ups</h5>
+<p><em>read only</em></p>
+<p>To top up your Stripe balance, you create a top-up object.</p>
+<p>Ref: <a href="https://stripe.com/docs/api/topups/list">Stripe docs</a></p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">stripe</span><span class="p">.</span><span class="n">topups</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">amount</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">currency</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">description</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">status</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">created</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span><span class="w"></span>
+<span class="p">)</span><span class="w"></span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">stripe_server</span><span class="w"></span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;topups&#39;</span><span class="w"></span>
+<span class="w">  </span><span class="p">);</span><span class="w"></span>
+</code></pre></div></td></tr></table></div>
 <p>While any column is allowed in a where clause, it is most efficient to filter by:</p>
 <ul>
 <li>id</li>
+<li>status</li>
+</ul>
+<h5 id="transfers">Transfers</h5>
+<p><em>read only</em></p>
+<p>A Transfer object is created when you move funds between Stripe accounts as part of Connect.</p>
+<p>Ref: <a href="https://stripe.com/docs/api/transfers/list">Stripe docs</a></p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">stripe</span><span class="p">.</span><span class="n">transfers</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">amount</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">currency</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">description</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">destination</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">created</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span><span class="w"></span>
+<span class="p">)</span><span class="w"></span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">stripe_server</span><span class="w"></span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;transfers&#39;</span><span class="w"></span>
+<span class="w">  </span><span class="p">);</span><span class="w"></span>
+</code></pre></div></td></tr></table></div>
+<p>While any column is allowed in a where clause, it is most efficient to filter by:</p>
+<ul>
+<li>id</li>
+<li>destination</li>
 </ul>
 <h3 id="examples">Examples</h3>
 <p>Some examples on how to use Stripe foreign tables.</p>
