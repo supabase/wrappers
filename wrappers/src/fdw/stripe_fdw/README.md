@@ -10,6 +10,7 @@ This is a foreign data wrapper for [Stripe](https://stripe.com/) developed using
 
 | Version | Date       | Notes                                                |
 | ------- | ---------- | ---------------------------------------------------- |
+| 0.1.4   | 2023-02-21 | Added Connect objects                                |
 | 0.1.3   | 2022-12-21 | Added more core objects                              |
 | 0.1.2   | 2022-12-04 | Added 'products' objects support                     |
 | 0.1.1   | 2022-12-03 | Added quals pushdown support                         |
