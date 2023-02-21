@@ -395,7 +395,7 @@ mod tests {
                 )
                 SERVER my_stripe_server
                 OPTIONS (
-                  object 'topups',    -- source object in stripe, required
+                  object 'topups'    -- source object in stripe, required
                 )
              "#,
                 None,
@@ -415,7 +415,7 @@ mod tests {
                 )
                 SERVER my_stripe_server
                 OPTIONS (
-                  object 'transfers',    -- source object in stripe, required
+                  object 'transfers'    -- source object in stripe, required
                 )
              "#,
                 None,
