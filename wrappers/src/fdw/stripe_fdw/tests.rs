@@ -494,6 +494,16 @@ mod tests {
             assert_eq!(results, vec![("cus_MJiBgSUgeWFN0z", 287883090000000)]);
 
             let results = c
+                .select(
+                    "SELECT attrs->>'id' as id FROM stripe_customers",
+                    None,
+                    None,
+                )
+                .filter_map(|r| r.by_name("id").ok().and_then(|v| v.value::<&str>()))
+                .collect::<Vec<_>>();
+            assert_eq!(results, vec!["cus_MJiBgSUgeWFN0z"]);
+
+            let results = c
                 .select("SELECT * FROM stripe_disputes", None, None)
                 .filter_map(|r| {
                     r.by_name("id")

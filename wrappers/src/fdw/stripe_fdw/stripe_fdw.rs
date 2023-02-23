@@ -105,13 +105,11 @@ fn body_to_rows(
                         _ => None,
                     });
                 row.push(col_name, cell);
+            } else if tgt_col == "attrs" {
+                // put all properties into 'attrs' JSON column
+                let attrs = serde_json::from_str(&obj.to_string()).unwrap();
+                row.push("attrs", Some(Cell::Json(JsonB(attrs))));
             }
-        }
-
-        // put all properties into 'attrs' JSON column
-        if tgt_cols.iter().any(|c| c == "attrs") {
-            let attrs = serde_json::from_str(&obj.to_string()).unwrap();
-            row.push("attrs", Some(Cell::Json(JsonB(attrs))));
         }
 
         result.push(row);
