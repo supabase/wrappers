@@ -57,6 +57,13 @@ mod tests {
 
             assert_eq!(results, vec!["foo", "bar"]);
 
+            let results = c
+                .select("SELECT name FROM test_table ORDER BY id DESC LIMIT 1", None, None)
+                .filter_map(|r| r.by_name("name").ok().and_then(|v| v.value::<&str>()))
+                .collect::<Vec<_>>();
+
+            assert_eq!(results, vec!["bar"]);
+
             // DISABLED: error: [FIXME]
             // insert failed: Request error (error: error decoding response body: missing field `status` at line 1 column 436)
 

@@ -309,6 +309,30 @@ pub struct Sort {
     pub collate: Option<String>,
 }
 
+impl Sort {
+    pub fn deparse(&self) -> String {
+        let mut sql = format!("order by {}", self.field);
+
+        if self.reversed {
+            sql.push_str(" desc");
+        } else {
+            sql.push_str(" asc");
+        }
+
+        if self.nulls_first {
+            sql.push_str(" nulls first")
+        } else {
+            sql.push_str(" nulls last")
+        }
+
+        if let Some(collate) = &self.collate {
+            sql.push_str(&format!(" collate {}", collate));
+        }
+
+        sql
+    }
+}
+
 /// Query limit, a.k.a `LIMIT count OFFSET offset` clause
 ///
 /// ## Examples
@@ -326,6 +350,12 @@ pub struct Sort {
 pub struct Limit {
     pub count: i64,
     pub offset: i64,
+}
+
+impl Limit {
+    pub fn deparse(&self) -> String {
+        format!("limit {} offset {}", self.count, self.offset)
+    }
 }
 
 /// The Foreign Data Wrapper trait
