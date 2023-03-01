@@ -2,8 +2,9 @@ use futures::executor;
 use gcp_bigquery_client::{
     client_builder::ClientBuilder,
     model::{
-        field_type::FieldType, query_request::QueryRequest, query_response::ResultSet,
-        table::Table, table_data_insert_all_request::TableDataInsertAllRequest,
+        field_type::FieldType, get_query_results_parameters::GetQueryResultsParameters,
+        query_request::QueryRequest, query_response::QueryResponse, query_response::ResultSet,
+        table_data_insert_all_request::TableDataInsertAllRequest,
         table_field_schema::TableFieldSchema,
     },
     Client,
@@ -82,7 +83,7 @@ fn field_to_cell(rs: &ResultSet, field: &TableFieldSchema) -> Option<Cell> {
 }
 
 #[wrappers_fdw(
-    version = "0.1.0",
+    version = "0.1.1",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/bigquery_fdw"
 )]
@@ -94,19 +95,26 @@ pub(crate) struct BigQueryFdw {
     table: String,
     rowid_col: String,
     tgt_cols: Vec<String>,
-    scan_result: Option<(Table, ResultSet)>,
+    scan_result: Option<ResultSet>,
     auth_mock: Option<GoogleAuthMock>,
 }
 
 impl BigQueryFdw {
-    fn deparse(&self, quals: &[Qual], columns: &[String]) -> String {
+    fn deparse(
+        &self,
+        quals: &[Qual],
+        columns: &[String],
+        sorts: &[Sort],
+        limit: &Option<Limit>,
+    ) -> String {
         let tgts = if columns.is_empty() {
             "*".to_string()
         } else {
             columns.join(", ")
         };
         let table = format!("`{}.{}.{}`", self.project_id, self.dataset_id, self.table,);
-        let sql = if quals.is_empty() {
+
+        let mut sql = if quals.is_empty() {
             format!("select {} from {}", tgts, table)
         } else {
             let cond = quals
@@ -116,6 +124,21 @@ impl BigQueryFdw {
                 .join(" and ");
             format!("select {} from {} where {}", tgts, table, cond)
         };
+
+        // push down sorts
+        for sort in sorts {
+            sql.push_str(&format!(" {}", sort.deparse()));
+        }
+
+        // push down limits
+        // Note: Postgres will take limit and offset locally after reading rows
+        // from remote, so we calculate the real limit and only use it without
+        // pushing down offset.
+        if let Some(limit) = limit {
+            let real_limit = limit.offset + limit.count;
+            sql.push_str(&format!(" limit {}", real_limit));
+        }
+
         sql
     }
 }
@@ -231,8 +254,8 @@ impl ForeignDataWrapper for BigQueryFdw {
         &mut self,
         quals: &[Qual],
         columns: &[String],
-        _sorts: &[Sort],
-        _limit: &Option<Limit>,
+        sorts: &[Sort],
+        limit: &Option<Limit>,
         options: &HashMap<String, String>,
     ) {
         let table = require_option("table", options);
@@ -248,32 +271,14 @@ impl ForeignDataWrapper for BigQueryFdw {
             .unwrap_or_else(|| "US".to_string());
 
         if let Some(client) = &self.client {
-            // get table metadata
-            let selected_fields = columns.iter().map(|c| c.as_str()).collect::<Vec<&str>>();
-            let tbl = match self.rt.block_on(client.table().get(
-                &self.project_id,
-                &self.dataset_id,
-                &self.table,
-                Some(selected_fields),
-            )) {
-                Ok(tbl) => tbl,
-                Err(err) => {
-                    report_error(
-                        PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                        &format!("get table metadata failed: {}", err),
-                    );
-                    return;
-                }
-            };
-
-            let sql = self.deparse(quals, columns);
+            let sql = self.deparse(quals, columns, sorts, limit);
             let mut req = QueryRequest::new(sql);
             req.location = Some(location);
 
             // execute query on BigQuery
             match self.rt.block_on(client.job().query(&self.project_id, req)) {
                 Ok(rs) => {
-                    self.scan_result = Some((tbl, rs));
+                    self.scan_result = Some(rs);
                 }
                 Err(err) => {
                     self.scan_result = None;
@@ -287,16 +292,60 @@ impl ForeignDataWrapper for BigQueryFdw {
     }
 
     fn iter_scan(&mut self, row: &mut Row) -> Option<()> {
-        if let Some((ref tbl, ref mut rs)) = self.scan_result {
-            if rs.next_row() {
-                if let Some(fields) = &tbl.schema.fields {
-                    for tgt_col in &self.tgt_cols {
-                        if let Some(field) = fields.iter().find(|&f| &f.name == tgt_col) {
-                            let cell = field_to_cell(rs, field);
-                            row.push(&field.name, cell);
+        if let Some(client) = &self.client {
+            if let Some(ref mut rs) = self.scan_result {
+                let mut extract_row = |rs: &mut ResultSet| {
+                    if rs.next_row() {
+                        if let Some(schema) = &rs.query_response().schema {
+                            if let Some(fields) = &schema.fields {
+                                for tgt_col in &self.tgt_cols {
+                                    if let Some(field) = fields.iter().find(|&f| &f.name == tgt_col)
+                                    {
+                                        let cell = field_to_cell(rs, field);
+                                        row.push(&field.name, cell);
+                                    }
+                                }
+                                return true;
+                            }
                         }
                     }
+                    false
+                };
+
+                if extract_row(rs) {
                     return Some(());
+                }
+
+                // deal with pagination
+                if rs.query_response().page_token.is_some() {
+                    if let Some(job_ref) = &rs.query_response().job_reference {
+                        if let Some(job_id) = &job_ref.job_id {
+                            match self.rt.block_on(client.job().get_query_results(
+                                &self.project_id,
+                                job_id,
+                                GetQueryResultsParameters {
+                                    location: job_ref.location.clone(),
+                                    page_token: rs.query_response().page_token.clone(),
+                                    ..Default::default()
+                                },
+                            )) {
+                                Ok(resp) => {
+                                    // replace result set with data from the new page
+                                    *rs = ResultSet::new(QueryResponse::from(resp));
+                                    if extract_row(rs) {
+                                        return Some(());
+                                    }
+                                }
+                                Err(err) => {
+                                    self.scan_result = None;
+                                    report_error(
+                                        PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                                        &format!("fetch query result failed: {}", err),
+                                    );
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

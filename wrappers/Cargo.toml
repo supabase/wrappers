@@ -1,6 +1,6 @@
 [package]
 name = "wrappers"
-version = "0.1.7"
+version = "0.1.8"
 edition = "2021"
 
 [lib]
@@ -38,7 +38,7 @@ clickhouse-rs = { git = "https://github.com/suharev7/clickhouse-rs", branch = "a
 chrono = { version = "0.4", optional = true }
 
 # for bigquery_fdw, firebase_fdw, airtable_fdw and etc.
-gcp-bigquery-client = { version = "0.16.0", optional = true }
+gcp-bigquery-client = { version = "0.16.5", optional = true }
 time = { version = "0.3.17", features = ["parsing"], optional = true }
 serde = { version = "1", optional = true }
 serde_json = { version = "1.0.86", optional = true }

@@ -134,3 +134,4 @@ insert into people values (4, 'Yoda', current_timestamp());
 | Version | Date       | Notes                                                |
 | ------- | ---------- | ---------------------------------------------------- |
 | 0.1.0   | 2022-11-30 | Initial version                                      |
+| 0.1.1   | 2023-02-15 | Upgrade bq client lib to v0.16.5, code improvement   |
