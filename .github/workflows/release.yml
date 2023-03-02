@@ -84,6 +84,16 @@ jobs:
           # https://github.com/tcdi/pgx/issues/288
           cargo pgx package --no-default-features --features pg${{ matrix.postgres }},${{ matrix.features }}
 
+          # Extension version and path
+          extension_version=${{ github.ref_name }}
+          extension_dir=`pg_config --sharedir`/extension
+          # strip the leading v
+          deb_version=${extension_version:1}
+
+          # copy schema file to version update sql files
+          cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--0.1.6--${deb_version}.sql
+          cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--0.1.7--${deb_version}.sql
+
           # Create installable package
           mkdir archive
           cp `find target/release -type f -name "${{ matrix.extension_name }}*"` archive
@@ -109,11 +119,6 @@ jobs:
           cp -s ../../../../../var/lib/postgresql/extension/${{ matrix.extension_name }}.control .
           cp -s ../../../../../var/lib/postgresql/extension/${{ matrix.extension_name }}*.sql .
           cd ../../../../../.. 
-
-          # Create install control file
-          extension_version=${{ github.ref_name }}
-          # strip the leading v
-          deb_version=${extension_version:1}
 
           mkdir -p ${package_dir}/DEBIAN
           touch ${package_dir}/DEBIAN/control

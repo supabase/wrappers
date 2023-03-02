@@ -71,17 +71,17 @@ pub fn wrappers_fdw(attr: TokenStream, item: TokenStream) -> TokenStream {
             use pgx::prelude::*;
             use supabase_wrappers::prelude::*;
 
-            #[pg_extern]
+            #[pg_extern(create_or_replace)]
             fn #fn_ident() -> supabase_wrappers::FdwRoutine {
                 #ident::fdw_routine()
             }
 
-            #[pg_extern]
+            #[pg_extern(create_or_replace)]
             fn #fn_validator_ident(options: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) {
                 #ident::validator(options, catalog)
             }
 
-            #[pg_extern]
+            #[pg_extern(create_or_replace)]
             fn #fn_meta_ident() -> TableIterator<'static, (
                 name!(name, Option<String>),
                 name!(version, Option<String>),
