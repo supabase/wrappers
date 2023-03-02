@@ -86,7 +86,7 @@ jobs:
 
           # Extension version and path
           extension_version=${{ github.ref_name }}
-          extension_dir=`pg_config --sharedir`/extension
+          extension_dir=target/release/${{ matrix.extension_name }}-pg${{ matrix.postgres }}/usr/share/postgresql/${{ matrix.postgres }}/extension
           # strip the leading v
           deb_version=${extension_version:1}
 
