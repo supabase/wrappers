@@ -256,7 +256,16 @@ pub struct Qual {
 impl Qual {
     pub fn deparse(&self) -> String {
         if self.use_or {
-            "".to_string()
+            match &self.value {
+                Value::Cell(_) => unreachable!(),
+                Value::Array(cells) => {
+                    let conds: Vec<String> = cells
+                        .iter()
+                        .map(|cell| format!("{} {} {}", self.field, self.operator, cell))
+                        .collect();
+                    conds.join(" or ")
+                }
+            }
         } else {
             match &self.value {
                 Value::Cell(cell) => match self.operator.as_str() {
