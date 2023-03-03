@@ -58,7 +58,11 @@ mod tests {
             assert_eq!(results, vec!["foo", "bar"]);
 
             let results = c
-                .select("SELECT name FROM test_table ORDER BY id DESC LIMIT 1", None, None)
+                .select(
+                    "SELECT name FROM test_table ORDER BY id DESC, name LIMIT 1",
+                    None,
+                    None,
+                )
                 .filter_map(|r| r.by_name("name").ok().and_then(|v| v.value::<&str>()))
                 .collect::<Vec<_>>();
 

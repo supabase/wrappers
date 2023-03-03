@@ -126,8 +126,13 @@ impl BigQueryFdw {
         };
 
         // push down sorts
-        for sort in sorts {
-            sql.push_str(&format!(" {}", sort.deparse()));
+        if !sorts.is_empty() {
+            let order_by = sorts
+                .iter()
+                .map(|sort| sort.deparse())
+                .collect::<Vec<String>>()
+                .join(", ");
+            sql.push_str(&format!(" order by {}", order_by));
         }
 
         // push down limits

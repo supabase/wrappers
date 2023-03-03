@@ -320,7 +320,7 @@ pub struct Sort {
 
 impl Sort {
     pub fn deparse(&self) -> String {
-        let mut sql = format!("order by {}", self.field);
+        let mut sql = self.field.to_string();
 
         if self.reversed {
             sql.push_str(" desc");
@@ -333,6 +333,12 @@ impl Sort {
         } else {
             sql.push_str(" nulls last")
         }
+
+        sql
+    }
+
+    pub fn deparse_with_collate(&self) -> String {
+        let mut sql = self.deparse();
 
         if let Some(collate) = &self.collate {
             sql.push_str(&format!(" collate {}", collate));
