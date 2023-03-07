@@ -26,7 +26,7 @@ s3_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "aws-config", "aws-s
 airtable_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "serde", "url"]
 
 # Does not include helloworld_fdw because of its general uselessness
-all_fdws = ["airtable_fdw", "bigquery_fdw", "clickhouse_fdw", "stripe_fdw", "firebase_fdw"]
+all_fdws = ["airtable_fdw", "bigquery_fdw", "clickhouse_fdw", "stripe_fdw", "firebase_fdw", "s3_fdw"]
 
 [dependencies]
 pgx = { version = "=0.6.1", features = ["time-crate"] }
