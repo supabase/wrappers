@@ -68,6 +68,25 @@ mod tests {
 
             c.update(
                 r#"
+                CREATE FOREIGN TABLE s3_test_table_jsonl (
+                  name text,
+                  sex text,
+                  age text,
+                  height text,
+                  weight text
+                )
+                SERVER s3_server
+                OPTIONS (
+                    uri 's3://test/test_data.jsonl',
+                    format 'jsonl'
+                  )
+             "#,
+                None,
+                None,
+            );
+
+            c.update(
+                r#"
                 CREATE FOREIGN TABLE s3_test_table_jsonl_bz (
                   name text,
                   sex text,
@@ -91,7 +110,7 @@ mod tests {
                 let results = c
                     .select(&sql, None, None)
                     .filter_map(|r| {
-                        r.by_name("email")
+                        r.by_name("name")
                             .ok()
                             .and_then(|v| v.value::<&str>())
                             .zip(r.by_name("age").ok().and_then(|v| v.value::<&str>()))
