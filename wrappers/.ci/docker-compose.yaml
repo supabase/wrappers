@@ -59,3 +59,19 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+
+  s3:
+    image: localstack/localstack
+    container_name: s3-mock
+    volumes:
+      - ../dockerfiles/s3/test_data:/data
+      - ../dockerfiles/s3/init:/etc/localstack/init/ready.d
+    ports:
+      - "4566:4566"
+      - "4510-4559:4510-4559"
+    healthcheck:
+      test: curl --fail http://127.0.0.1:4566/_localstack/init || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      
