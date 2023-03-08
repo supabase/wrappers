@@ -41,3 +41,4 @@ Currently `supabase/wrappers` supports:
 | ----------- | :----:            | :----:            | :----:            | :----:            | :----:            |
 | Firebase    | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
 | Stripe      | :white_check_mark:| :white_check_mark:| :white_check_mark:| :white_check_mark:| :x:               |
+| S3          | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |

@@ -124,8 +124,6 @@ mod tests {
             check_test_table("s3_test_table_csv_gz");
             check_test_table("s3_test_table_jsonl");
             check_test_table("s3_test_table_jsonl_bz");
-
         });
     }
 }
-

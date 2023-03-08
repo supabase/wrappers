@@ -387,11 +387,12 @@ impl ForeignDataWrapper for S3Fdw {
         self.rdr.take();
     }
 
-    fn validator(_options: Vec<Option<String>>, _catalog: Option<pg_sys::Oid>) {
-        // if let Some(oid) = catalog {
-        //     if oid == FOREIGN_TABLE_RELATION_ID {
-        //         check_options_contain(&options, "object");
-        //     }
-        // }
+    fn validator(options: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) {
+        if let Some(oid) = catalog {
+            if oid == FOREIGN_TABLE_RELATION_ID {
+                check_options_contain(&options, "uri");
+                check_options_contain(&options, "format");
+            }
+        }
     }
 }
