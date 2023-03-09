@@ -35,3 +35,9 @@ cfg_if! {
         mod airtable_fdw;
     }
 }
+
+cfg_if! {
+    if #[cfg(feature = "s3_fdw")] {
+        mod s3_fdw;
+    }
+}
