@@ -66,7 +66,7 @@ fn body_to_rows(
     resp: &JsonValue,
     obj_key: &str,
     normal_cols: Vec<(&str, &str, &str)>,
-    tgt_cols: &[String],
+    tgt_cols: &[Column],
 ) -> Vec<Row> {
     let mut result = Vec::new();
 
@@ -85,7 +85,7 @@ fn body_to_rows(
         // extract normal columns
         for tgt_col in tgt_cols {
             if let Some((src_name, col_name, col_type)) =
-                normal_cols.iter().find(|(_, c, _)| c == tgt_col)
+                normal_cols.iter().find(|(_, c, _)| c == &tgt_col.name)
             {
                 let cell = obj
                     .as_object()
@@ -113,7 +113,7 @@ fn body_to_rows(
         }
 
         // put all properties into 'attrs' JSON column
-        if tgt_cols.iter().any(|c| c == "attrs") {
+        if tgt_cols.iter().any(|c| &c.name == "attrs") {
             let attrs = serde_json::from_str(&obj.to_string()).unwrap();
             row.push("attrs", Some(Cell::Json(JsonB(attrs))));
         }
@@ -125,7 +125,7 @@ fn body_to_rows(
 }
 
 // convert response body text to rows
-fn resp_to_rows(obj: &str, resp: &JsonValue, tgt_cols: &[String]) -> Vec<Row> {
+fn resp_to_rows(obj: &str, resp: &JsonValue, tgt_cols: &[Column]) -> Vec<Row> {
     let mut result = Vec::new();
 
     match obj {
@@ -307,7 +307,7 @@ impl ForeignDataWrapper for FirebaseFdw {
     fn begin_scan(
         &mut self,
         _quals: &[Qual],
-        columns: &[String],
+        columns: &[Column],
         _sorts: &[Sort],
         _limit: &Option<Limit>,
         options: &HashMap<String, String>,

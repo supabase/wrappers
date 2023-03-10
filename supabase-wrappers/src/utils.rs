@@ -1,7 +1,7 @@
 //! Helper functions for working with Wrappers
 //!
 
-use crate::interface::{Cell, Row};
+use crate::interface::{Cell, Column, Row};
 use pgx::prelude::PgBuiltInOids;
 use pgx::spi::Spi;
 use pgx::IntoDatum;
@@ -227,9 +227,8 @@ pub(super) unsafe fn tuple_table_slot_to_row(slot: *mut pg_sys::TupleTableSlot) 
 pub(super) unsafe fn extract_target_columns(
     root: *mut pg_sys::PlannerInfo,
     baserel: *mut pg_sys::RelOptInfo,
-) -> (Vec<String>, Vec<usize>) {
-    let mut col_names = Vec::new();
-    let mut col_attnos = Vec::new();
+) -> Vec<Column> {
+    let mut ret = Vec::new();
     let mut col_vars: *mut pg_sys::List = ptr::null_mut();
 
     // gather vars from target column list
@@ -264,12 +263,16 @@ pub(super) unsafe fn extract_target_columns(
         let attno = (*var).varattno;
         let attname = pg_sys::get_attname((*rte).relid, attno, true);
         if !attname.is_null() {
-            col_names.push(CStr::from_ptr(attname).to_str().unwrap().to_owned());
-            col_attnos.push(attno as usize);
+            let type_oid = pg_sys::get_atttype((*rte).relid, attno);
+            ret.push(Column {
+                name: CStr::from_ptr(attname).to_str().unwrap().to_owned(),
+                num: attno as usize,
+                type_oid,
+            });
         }
     }
 
-    (col_names, col_attnos)
+    ret
 }
 
 /// Check if the option list contains a specific option, used in [validator](crate::interface::ForeignDataWrapper::validator)

@@ -204,6 +204,21 @@ impl Row {
     }
 }
 
+/// A column definition in a table
+///
+/// The column represents a column definition in a table.
+#[derive(Debug, Clone, Default)]
+pub struct Column {
+    /// column name
+    pub name: String,
+
+    /// 1-based column number
+    pub num: usize,
+
+    /// column type OID, can be used to match pg_sys::BuiltinOid
+    pub type_oid: pg_sys::Oid,
+}
+
 /// A restiction value used in [`Qual`], either a [`Cell`] or an array of [`Cell`]
 #[derive(Debug, Clone)]
 pub enum Value {
@@ -414,7 +429,7 @@ pub trait ForeignDataWrapper {
     fn get_rel_size(
         &mut self,
         _quals: &[Qual],
-        _columns: &[String],
+        _columns: &[Column],
         _sorts: &[Sort],
         _limit: &Option<Limit>,
         _options: &HashMap<String, String>,
@@ -434,7 +449,7 @@ pub trait ForeignDataWrapper {
     fn begin_scan(
         &mut self,
         quals: &[Qual],
-        columns: &[String],
+        columns: &[Column],
         sorts: &[Sort],
         limit: &Option<Limit>,
         options: &HashMap<String, String>,

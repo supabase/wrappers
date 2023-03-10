@@ -12,7 +12,7 @@ pub(crate) struct HelloWorldFdw {
     row_cnt: i64,
 
     // target column name list
-    tgt_cols: Vec<String>,
+    tgt_cols: Vec<Column>,
 }
 
 impl ForeignDataWrapper for HelloWorldFdw {
@@ -39,7 +39,7 @@ impl ForeignDataWrapper for HelloWorldFdw {
     fn begin_scan(
         &mut self,
         _quals: &[Qual],
-        columns: &[String],
+        columns: &[Column],
         _sorts: &[Sort],
         _limit: &Option<Limit>,
         _options: &HashMap<String, String>,
@@ -56,7 +56,7 @@ impl ForeignDataWrapper for HelloWorldFdw {
         if self.row_cnt < 1 {
             // add values to row if they are in target column list
             for tgt_col in &self.tgt_cols {
-                match tgt_col.as_str() {
+                match tgt_col.name.as_str() {
                     "id" => row.push("id", Some(Cell::I64(self.row_cnt))),
                     "col" => row.push("col", Some(Cell::String("Hello world".to_string()))),
                     _ => {}

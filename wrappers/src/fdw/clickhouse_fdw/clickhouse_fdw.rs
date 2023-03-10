@@ -87,17 +87,21 @@ pub(crate) struct ClickHouseFdw {
     client: Option<ClientHandle>,
     table: String,
     rowid_col: String,
-    tgt_cols: Vec<String>,
+    tgt_cols: Vec<Column>,
     scan_blk: Option<Block<types::Complex>>,
     row_idx: usize,
 }
 
 impl ClickHouseFdw {
-    fn deparse(&self, quals: &[Qual], columns: &[String]) -> String {
+    fn deparse(&self, quals: &[Qual], columns: &[Column]) -> String {
         let tgts = if columns.is_empty() {
             "*".to_string()
         } else {
-            columns.join(", ")
+            columns
+                .iter()
+                .map(|c| c.name.clone())
+                .collect::<Vec<String>>()
+                .join(", ")
         };
         let sql = if quals.is_empty() {
             format!("select {} from {}", tgts, &self.table)
@@ -137,7 +141,7 @@ impl ForeignDataWrapper for ClickHouseFdw {
     fn get_rel_size(
         &mut self,
         quals: &[Qual],
-        columns: &[String],
+        columns: &[Column],
         _sorts: &[Sort],
         _limit: &Option<Limit>,
         options: &HashMap<String, String>,
@@ -175,7 +179,7 @@ impl ForeignDataWrapper for ClickHouseFdw {
     fn begin_scan(
         &mut self,
         _quals: &[Qual],
-        _columns: &[String],
+        _columns: &[Column],
         _sorts: &[Sort],
         _limit: &Option<Limit>,
         _options: &HashMap<String, String>,
@@ -193,7 +197,7 @@ impl ForeignDataWrapper for ClickHouseFdw {
                         .columns()
                         .iter()
                         .enumerate()
-                        .find(|(_, c)| c.name() == tgt_col)
+                        .find(|(_, c)| c.name() == tgt_col.name)
                         .unwrap();
                     let col_name = src_row.name(i).unwrap();
                     let cell = field_to_cell(&src_row, i);

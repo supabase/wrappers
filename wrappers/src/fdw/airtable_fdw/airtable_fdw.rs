@@ -47,7 +47,7 @@ impl AirtableFdw {
     }
 
     // convert response body text to rows
-    fn parse_resp(&self, resp_body: &str, columns: &[String]) -> (Vec<Row>, Option<String>) {
+    fn parse_resp(&self, resp_body: &str, columns: &[Column]) -> (Vec<Row>, Option<String>) {
         let response: AirtableResponse = serde_json::from_str(resp_body).unwrap();
         let mut result = Vec::new();
 
@@ -105,7 +105,7 @@ impl ForeignDataWrapper for AirtableFdw {
     fn begin_scan(
         &mut self,
         _quals: &[Qual], // TODO: Propagate filters
-        columns: &[String],
+        columns: &[Column],
         _sorts: &[Sort],        // TODO: Propagate sort
         _limit: &Option<Limit>, // TODO: maxRecords
         options: &HashMap<String, String>,
