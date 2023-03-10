@@ -72,7 +72,7 @@
 //!     row_cnt: i64,
 //!
 //!     // target column name list
-//!     tgt_cols: Vec<String>,
+//!     tgt_cols: Vec<Column>,
 //! }
 //!
 //! impl ForeignDataWrapper for HelloWorldFdw {
@@ -124,7 +124,7 @@
 //!     fn begin_scan(
 //!         &mut self,
 //!         _quals: &[Qual],
-//!         columns: &[String],
+//!         columns: &[Column],
 //!         _sorts: &[Sort],
 //!         _limit: &Option<Limit>,
 //!         _options: &HashMap<String, String>,

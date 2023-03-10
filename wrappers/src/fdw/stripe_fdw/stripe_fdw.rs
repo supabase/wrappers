@@ -29,7 +29,7 @@ fn create_client(api_key: &str) -> ClientWithMiddleware {
 fn body_to_rows(
     resp_body: &str,
     normal_cols: Vec<(&str, &str)>,
-    tgt_cols: &[String],
+    tgt_cols: &[Column],
 ) -> (Vec<Row>, Option<String>, Option<bool>) {
     let mut result = Vec::new();
     let value: JsonValue = serde_json::from_str(resp_body).unwrap();
@@ -89,7 +89,8 @@ fn body_to_rows(
 
         // extract normal columns
         for tgt_col in tgt_cols {
-            if let Some((col_name, col_type)) = normal_cols.iter().find(|(c, _)| c == tgt_col) {
+            if let Some((col_name, col_type)) = normal_cols.iter().find(|(c, _)| c == &tgt_col.name)
+            {
                 let cell = obj
                     .as_object()
                     .and_then(|v| v.get(*col_name))
@@ -105,7 +106,7 @@ fn body_to_rows(
                         _ => None,
                     });
                 row.push(col_name, cell);
-            } else if tgt_col == "attrs" {
+            } else if &tgt_col.name == "attrs" {
                 // put all properties into 'attrs' JSON column
                 let attrs = serde_json::from_str(&obj.to_string()).unwrap();
                 row.push("attrs", Some(Cell::Json(JsonB(attrs))));
@@ -298,7 +299,7 @@ impl StripeFdw {
         &self,
         obj: &str,
         resp_body: &str,
-        tgt_cols: &[String],
+        tgt_cols: &[Column],
     ) -> (Vec<Row>, Option<String>, Option<bool>) {
         match obj {
             "accounts" => body_to_rows(
@@ -612,7 +613,7 @@ impl ForeignDataWrapper for StripeFdw {
     fn begin_scan(
         &mut self,
         quals: &[Qual],
-        columns: &[String],
+        columns: &[Column],
         _sorts: &[Sort],
         limit: &Option<Limit>,
         options: &HashMap<String, String>,

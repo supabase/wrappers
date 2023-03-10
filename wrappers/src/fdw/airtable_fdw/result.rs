@@ -4,7 +4,7 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::fmt;
 use std::marker::PhantomData;
-use supabase_wrappers::interface::{Cell, Row};
+use supabase_wrappers::interface::{Cell, Column, Row};
 
 #[derive(Deserialize, Debug)]
 pub struct AirtableResponse {
@@ -97,15 +97,15 @@ impl AirtableRecord {
         }
     }
 
-    pub fn to_row(&self, columns: &[String]) -> Row {
+    pub fn to_row(&self, columns: &[Column]) -> Row {
         let mut row = Row::new();
         for col in columns.iter() {
-            if col == "id" {
+            if col.name == "id" {
                 row.push("id", Some(Cell::String(self.id.clone())));
             } else {
                 row.push(
-                    col,
-                    match self.fields.0.get(col) {
+                    &col.name,
+                    match self.fields.0.get(&col.name) {
                         Some(val) => AirtableRecord::value_to_cell(val),
                         None => None,
                     },

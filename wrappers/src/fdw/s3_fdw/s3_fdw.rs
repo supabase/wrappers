@@ -29,7 +29,7 @@ pub(crate) struct S3Fdw {
     client: Option<s3::Client>,
     rdr: Option<BufReader<Pin<Box<dyn AsyncRead>>>>,
     parser: Parser,
-    tgt_cols: Vec<String>,
+    tgt_cols: Vec<Column>,
     buf: String,
 }
 
@@ -185,7 +185,7 @@ impl ForeignDataWrapper for S3Fdw {
     fn begin_scan(
         &mut self,
         _quals: &[Qual],
-        columns: &[String],
+        columns: &[Column],
         _sorts: &[Sort],
         _limit: &Option<Limit>,
         options: &HashMap<String, String>,
@@ -312,20 +312,10 @@ impl ForeignDataWrapper for S3Fdw {
                     match rdr.read_record(&mut record) {
                         Ok(result) => {
                             if result {
-                                if self.tgt_cols.len() != record.len() {
-                                    report_error(
-                                        PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                                        &format!(
-                                            "column number not match: {} in query, {} in csv",
-                                            self.tgt_cols.len(),
-                                            record.len()
-                                        ),
-                                    );
-                                    break;
-                                }
-                                for (idx, col) in self.tgt_cols.iter().enumerate() {
-                                    let cell = Some(Cell::String(record[idx].to_owned()));
-                                    row.push(col, cell);
+                                for col in &self.tgt_cols {
+                                    let cell =
+                                        record.get(col.num - 1).map(|s| Cell::String(s.to_owned()));
+                                    row.push(&col.name, cell);
                                 }
                                 return Some(());
                             } else {
@@ -348,7 +338,7 @@ impl ForeignDataWrapper for S3Fdw {
                             if let Some(obj) = record.as_object() {
                                 for col in &self.tgt_cols {
                                     let cell = obj
-                                        .get(col)
+                                        .get(&col.name)
                                         .map(|val| match val {
                                             JsonValue::Null => None,
                                             JsonValue::Bool(v) => Some(Cell::String(v.to_string())),
@@ -366,7 +356,7 @@ impl ForeignDataWrapper for S3Fdw {
                                             }
                                         })
                                         .unwrap_or(None);
-                                    row.push(col, cell);
+                                    row.push(&col.name, cell);
                                 }
                             }
                             return Some(());

@@ -5,7 +5,7 @@ use std::os::raw::c_int;
 use std::ptr;
 
 use crate::instance;
-use crate::interface::{Limit, Qual, Row, Sort};
+use crate::interface::{Column, Limit, Qual, Row, Sort};
 use crate::limit::*;
 use crate::polyfill;
 use crate::prelude::ForeignDataWrapper;
@@ -22,8 +22,7 @@ struct FdwState<W: ForeignDataWrapper> {
     quals: Vec<Qual>,
 
     // query target column list
-    tgts: Vec<String>,
-    tgt_attnos: Vec<usize>,
+    tgts: Vec<Column>,
 
     // sort list
     sorts: Vec<Sort>,
@@ -49,7 +48,6 @@ impl<W: ForeignDataWrapper> FdwState<W> {
             instance: instance::create_fdw_instance(foreigntableid),
             quals: Vec::new(),
             tgts: Vec::new(),
-            tgt_attnos: Vec::new(),
             sorts: Vec::new(),
             limit: None,
             opts: HashMap::new(),
@@ -98,8 +96,6 @@ impl<W: ForeignDataWrapper> FdwState<W> {
         self.quals.shrink_to_fit();
         self.tgts.clear();
         self.tgts.shrink_to_fit();
-        self.tgt_attnos.clear();
-        self.tgt_attnos.shrink_to_fit();
         self.sorts.clear();
         self.sorts.shrink_to_fit();
         self.limit.take();
@@ -132,7 +128,7 @@ pub(super) extern "C" fn get_foreign_rel_size<W: ForeignDataWrapper>(
         state.quals = extract_quals(root, baserel, foreigntableid);
 
         // extract target column list from target and restriction expression
-        (state.tgts, state.tgt_attnos) = utils::extract_target_columns(root, baserel);
+        state.tgts = utils::extract_target_columns(root, baserel);
 
         // extract sort list
         state.sorts = extract_sorts(root, baserel, foreigntableid);
@@ -330,7 +326,7 @@ pub(super) extern "C" fn iterate_foreign_scan<W: ForeignDataWrapper>(
             }
 
             for i in 0..state.row.cells.len() {
-                let att_idx = state.tgt_attnos[i] - 1;
+                let att_idx = state.tgts[i].num - 1;
                 let cell = state.row.cells.get_unchecked_mut(i);
                 match cell.take() {
                     Some(cell) => {

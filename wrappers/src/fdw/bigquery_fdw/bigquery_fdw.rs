@@ -94,7 +94,7 @@ pub(crate) struct BigQueryFdw {
     dataset_id: String,
     table: String,
     rowid_col: String,
-    tgt_cols: Vec<String>,
+    tgt_cols: Vec<Column>,
     scan_result: Option<ResultSet>,
     auth_mock: Option<GoogleAuthMock>,
 }
@@ -103,14 +103,18 @@ impl BigQueryFdw {
     fn deparse(
         &self,
         quals: &[Qual],
-        columns: &[String],
+        columns: &[Column],
         sorts: &[Sort],
         limit: &Option<Limit>,
     ) -> String {
         let tgts = if columns.is_empty() {
             "*".to_string()
         } else {
-            columns.join(", ")
+            columns
+                .iter()
+                .map(|c| c.name.clone())
+                .collect::<Vec<String>>()
+                .join(", ")
         };
         let table = format!("`{}.{}.{}`", self.project_id, self.dataset_id, self.table,);
 
@@ -247,7 +251,7 @@ impl ForeignDataWrapper for BigQueryFdw {
     fn get_rel_size(
         &mut self,
         _quals: &[Qual],
-        _columns: &[String],
+        _columns: &[Column],
         _sorts: &[Sort],
         _limit: &Option<Limit>,
         _options: &HashMap<String, String>,
@@ -258,7 +262,7 @@ impl ForeignDataWrapper for BigQueryFdw {
     fn begin_scan(
         &mut self,
         quals: &[Qual],
-        columns: &[String],
+        columns: &[Column],
         sorts: &[Sort],
         limit: &Option<Limit>,
         options: &HashMap<String, String>,
@@ -304,7 +308,8 @@ impl ForeignDataWrapper for BigQueryFdw {
                         if let Some(schema) = &rs.query_response().schema {
                             if let Some(fields) = &schema.fields {
                                 for tgt_col in &self.tgt_cols {
-                                    if let Some(field) = fields.iter().find(|&f| &f.name == tgt_col)
+                                    if let Some(field) =
+                                        fields.iter().find(|&f| f.name == tgt_col.name)
                                     {
                                         let cell = field_to_cell(rs, field);
                                         row.push(&field.name, cell);
