@@ -262,7 +262,9 @@ pub(super) unsafe fn extract_target_columns(
         let rte = pg_sys::planner_rt_fetch((*var).varno as u32, root);
         let attno = (*var).varattno;
         let attname = pg_sys::get_attname((*rte).relid, attno, true);
-        if !attname.is_null() {
+
+        // column must exist and not a generated column
+        if !attname.is_null() && pg_sys::get_attgenerated((*rte).relid, attno) == 0 {
             let type_oid = pg_sys::get_atttype((*rte).relid, attno);
             ret.push(Column {
                 name: CStr::from_ptr(attname).to_str().unwrap().to_owned(),
