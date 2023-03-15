@@ -263,6 +263,12 @@ pub(super) unsafe fn extract_target_columns(
         let attno = (*var).varattno;
         let attname = pg_sys::get_attname((*rte).relid, attno, true);
         if !attname.is_null() {
+            // generated column is not supported
+            if pg_sys::get_attgenerated((*rte).relid, attno) > 0 {
+                report_warning("generated column is not supported");
+                continue;
+            }
+
             let type_oid = pg_sys::get_atttype((*rte).relid, attno);
             ret.push(Column {
                 name: CStr::from_ptr(attname).to_str().unwrap().to_owned(),

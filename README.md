@@ -133,6 +133,7 @@ cargo pgx test --features all_fdws,pg15
 
 - Windows is not supported, that limitation inherits from [pgx](https://github.com/tcdi/pgx).
 - Currently only supports PostgreSQL v14 and v15.
+- Generated column is not supported.
 
 ## Contribution
 
