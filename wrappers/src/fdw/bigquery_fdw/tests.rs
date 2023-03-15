@@ -40,6 +40,20 @@ mod tests {
                 None,
                 None,
             );
+            c.update(
+                r#"
+                  CREATE FOREIGN TABLE test_table_with_subquery (
+                    id bigint,
+                    name text
+                  )
+                  SERVER my_bigquery_server
+                  OPTIONS (
+                    table '(select id, upper(name) as name from `test_project.test_dataset.test_table`)'
+                  )
+             "#,
+                None,
+                None,
+            );
 
             /*
              The tables below come from the code in docker-compose.yml that looks like this:
@@ -67,6 +81,13 @@ mod tests {
                 .collect::<Vec<_>>();
 
             assert_eq!(results, vec!["bar"]);
+
+            let results = c
+                .select("SELECT name FROM test_table_with_subquery", None, None)
+                .filter_map(|r| r.by_name("name").ok().and_then(|v| v.value::<&str>()))
+                .collect::<Vec<_>>();
+
+            assert_eq!(results, vec!["FOO", "BAR"]);
 
             // DISABLED: error: [FIXME]
             // insert failed: Request error (error: error decoding response body: missing field `status` at line 1 column 436)
