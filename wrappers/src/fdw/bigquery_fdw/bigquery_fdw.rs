@@ -83,7 +83,7 @@ fn field_to_cell(rs: &ResultSet, field: &TableFieldSchema) -> Option<Cell> {
 }
 
 #[wrappers_fdw(
-    version = "0.1.1",
+    version = "0.1.2",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/bigquery_fdw"
 )]
@@ -116,7 +116,11 @@ impl BigQueryFdw {
                 .collect::<Vec<String>>()
                 .join(", ")
         };
-        let table = format!("`{}.{}.{}`", self.project_id, self.dataset_id, self.table,);
+        let table = if self.table.starts_with('(') {
+            self.table.clone()
+        } else {
+            format!("`{}.{}.{}`", self.project_id, self.dataset_id, self.table,)
+        };
 
         let mut sql = if quals.is_empty() {
             format!("select {} from {}", tgts, table)

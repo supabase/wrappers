@@ -90,6 +90,8 @@ create foreign table people (
   server my_bigquery_server
   options (
     table 'people',     -- source table in BigQuery, required
+                        -- This can also be a subquery enclosed in parentheses, for example,
+                        -- `table '(select * except(props), to_json_string(props) as props from ``my_project.my_dataset.my_table``)`
     location 'EU',      -- table location, optional
     rowid_column 'id',  -- primary key column name, optional for scan, required for modify
     startup_cost '42'   -- execution startup cost for exection planning, optional
@@ -133,5 +135,6 @@ insert into people values (4, 'Yoda', current_timestamp());
 
 | Version | Date       | Notes                                                |
 | ------- | ---------- | ---------------------------------------------------- |
-| 0.1.0   | 2022-11-30 | Initial version                                      |
+| 0.1.2   | 2023-03-15 | Added subquery support for `table` option            |
 | 0.1.1   | 2023-02-15 | Upgrade bq client lib to v0.16.5, code improvement   |
+| 0.1.0   | 2022-11-30 | Initial version                                      |
