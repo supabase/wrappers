@@ -91,7 +91,7 @@ create foreign table people (
   options (
     table 'people',     -- source table in BigQuery, required
                         -- This can also be a subquery enclosed in parentheses, for example,
-                        -- `table '(select * except(props), to_json_string(props) as props from ``my_project.my_dataset.my_table``)`
+                        -- table '(select * except(props), to_json_string(props) as props from `my_project.my_dataset.my_table`)'
     location 'EU',      -- table location, optional
     rowid_column 'id',  -- primary key column name, optional for scan, required for modify
     startup_cost '42'   -- execution startup cost for exection planning, optional
