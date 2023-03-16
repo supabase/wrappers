@@ -697,7 +697,7 @@
 <span class="w">  </span><span class="p">);</span><span class="w"></span>
 
 <span class="c1">-- GZIP compressed CSV file</span>
-<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">s3_table_csv_zip</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">s3_table_csv_gzip</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
 <span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="n">sex</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="n">age</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
@@ -709,7 +709,7 @@
 <span class="w">    </span><span class="n">uri</span><span class="w"> </span><span class="s1">&#39;s3://bucket/s3_table.csv.gz&#39;</span><span class="p">,</span><span class="w"></span>
 <span class="w">    </span><span class="n">format</span><span class="w"> </span><span class="s1">&#39;csv&#39;</span><span class="p">,</span><span class="w"></span>
 <span class="w">    </span><span class="n">has_header</span><span class="w"> </span><span class="s1">&#39;true&#39;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="n">compress</span><span class="w"> </span><span class="s1">&#39;gz&#39;</span><span class="w"></span>
+<span class="w">    </span><span class="n">compress</span><span class="w"> </span><span class="s1">&#39;gzip&#39;</span><span class="w"></span>
 <span class="w">  </span><span class="p">);</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
 
