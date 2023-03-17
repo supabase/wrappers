@@ -9,9 +9,10 @@ nav:
     - Welcome: 'index.md'
     - Installation: 'installation.md'
     - Wrappers:
+      - BigQuery: 'bigquery.md'
       - Firebase: 'firebase.md'
-      - Stripe: 'stripe.md'
       - S3: 's3.md'
+      - Stripe: 'stripe.md'
     - Contributing: 'contributing.md'
 
 theme:
