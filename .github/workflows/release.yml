@@ -41,7 +41,7 @@ jobs:
           - 0.6.1
         postgres: [14, 15]
         features:
-          - "bigquery_fdw,clickhouse_fdw,stripe_fdw,firebase_fdw"
+          - "bigquery_fdw,clickhouse_fdw,stripe_fdw,firebase_fdw,s3_fdw"
         box:
           - { runner: ubuntu-20.04, arch: amd64 }
           - { runner: arm-runner, arch: arm64 }
@@ -93,6 +93,7 @@ jobs:
           # copy schema file to version update sql files
           cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--0.1.6--${deb_version}.sql
           cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--0.1.7--${deb_version}.sql
+          cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--0.1.8--${deb_version}.sql
 
           # Create installable package
           mkdir archive
