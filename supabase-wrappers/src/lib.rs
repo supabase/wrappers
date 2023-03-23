@@ -211,7 +211,7 @@
 //!          ->  Foreign Scan on hello  (cost=0.00..1.00 rows=1 width=0)
 //!                Filter: (id = 1)
 //!                Wrappers: quals = [Qual { field: "id", operator: "=", value: Cell(I32(1)), use_or: false }]
-//!                Wrappers: tgts = ["id", "col"]
+//!                Wrappers: tgts = [Column { name: "id", num: 1, type_oid: 20 }, Column { name: "col", num: 2, type_oid: 25 }]
 //!                Wrappers: sorts = [Sort { field: "col", field_no: 2, reversed: false, nulls_first: false, collate: None }]
 //!                Wrappers: limit = Some(Limit { count: 1, offset: 0 })
 //! (9 rows)

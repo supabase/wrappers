@@ -229,7 +229,11 @@ pub enum Value {
 /// Query restrictions, a.k.a conditions in `WHERE` clause
 ///
 /// A Qual defines a simple condition wich can be used by the FDW to restrict the number
-/// of the results. Only simple conditions are supported currently.
+/// of the results.
+///
+/// <div class="example-wrap" style="display:inline-block"><pre class="compile_fail" style="white-space:normal;font:inherit;">
+/// <strong>Warning</strong>: Currently only simple conditions are supported, see below for examples. Other kinds of conditions, like JSON attribute filter e.g. `where json_col->>'key' = 'value'`, are not supported yet.
+/// </pre></div>
 ///
 /// ## Examples
 ///

@@ -10,13 +10,13 @@
 
 `Wrappers` is also a collection of FDWs built by [Supabase](https://www.supabase.com). We currently support the following FDWs, with more are under development:
 
-- [HelloWorld](../wrappers/src/fdw/helloworld_fdw): A demo FDW to show how to develop a baisc FDW.
-- [BigQuery](../wrappers/src/fdw/bigquery_fdw): A FDW for Google [BigQuery](https://cloud.google.com/bigquery) which supports data read and modify.
-- [Clickhouse](../wrappers/src/fdw/clickhouse_fdw): A FDW for [ClickHouse](https://clickhouse.com/) which supports data read and modify.
-- [Stripe](../wrappers/src/fdw/stripe_fdw): A FDW for [Stripe](https://stripe.com/) API which supports data read and modify.
-- [Firebase](../wrappers/src/fdw/firebase_fdw): A FDW for Google [Firebase](https://firebase.google.com/) which supports data read only.
-- [Airtable](../wrappers/src/fdw/airtable_fdw): A FDW for [Airtable](https://airtable.com/) API which supports data read only.
-- [S3](../wrappers/src/fdw/s3_fdw): A FDW for [AWS S3](https://aws.amazon.com/s3/) which supports data read only.
+- [HelloWorld](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/helloworld_fdw): A demo FDW to show how to develop a baisc FDW.
+- [BigQuery](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/bigquery_fdw): A FDW for Google [BigQuery](https://cloud.google.com/bigquery) which supports data read and modify.
+- [Clickhouse](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/clickhouse_fdw): A FDW for [ClickHouse](https://clickhouse.com/) which supports data read and modify.
+- [Stripe](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/stripe_fdw): A FDW for [Stripe](https://stripe.com/) API which supports data read and modify.
+- [Firebase](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/firebase_fdw): A FDW for Google [Firebase](https://firebase.google.com/) which supports data read only.
+- [Airtable](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/airtable_fdw): A FDW for [Airtable](https://airtable.com/) API which supports data read only.
+- [S3](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/s3_fdw): A FDW for [AWS S3](https://aws.amazon.com/s3/) which supports data read only.
 
 ## Features
 
@@ -42,7 +42,7 @@ cargo pgx install --pg-config [path_to_pg_config] --features stripe_fdw
 
 ## Developing a FDW
 
-To develop a FDW using `Wrappers`, you only need to implement the [ForeignDataWrapper](./src/interface.rs) trait.
+To develop a FDW using `Wrappers`, you only need to implement the [ForeignDataWrapper](https://github.com/supabase/wrappers/blob/main/supabase-wrappers/src/interface.rs) trait.
 
 ```rust
 pub trait ForeignDataWrapper {
@@ -72,7 +72,7 @@ To know more about FDW development, please visit the [Wrappers documentation](ht
 
 ## Basic usage
 
-These steps outline how to use the a demo FDW [HelloWorldFdw](../wrappers/src/fdw/helloworld_fdw), which only outputs a single line of fake data:
+These steps outline how to use the a demo FDW [HelloWorldFdw](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/helloworld_fdw), which only outputs a single line of fake data:
 
 1. Clone this repo
 
