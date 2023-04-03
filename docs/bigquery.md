@@ -122,6 +122,7 @@ The full list of foreign table options are below:
    **Note**: When using subquery in this option, full qualitified table name must be used.
 
 - `location` - Source table location, optional. Default is 'US'.
+- `timeout` - Query request timeout in milliseconds, optional. Default is '30000' (30 seconds).
 - `rowid_column` - Primary key column name, optional for data scan, required for data modify
 
 #### Examples
