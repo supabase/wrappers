@@ -9,8 +9,8 @@ To get started with the BigQuery wrapper, create a foreign data wrapper specifyi
 create extension if not exists wrappers;
 
 create foreign data wrapper bigquery_wrapper
-  handler bigquery_fdw_handler
-  validator bigquery_fdw_validator;
+  handler big_query_fdw_handler
+  validator big_query_fdw_validator;
 ```
 
 ### Server 
