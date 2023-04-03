@@ -10,7 +10,7 @@ use gcp_bigquery_client::{
     Client,
 };
 use pgx::prelude::PgSqlErrorCode;
-use pgx::prelude::{Date, Timestamp};
+use pgx::prelude::{AnyNumeric, Date, Timestamp};
 use serde_json::json;
 use std::collections::HashMap;
 use time::{format_description::well_known::Iso8601, OffsetDateTime, PrimitiveDateTime};
@@ -42,6 +42,10 @@ fn field_to_cell(rs: &ResultSet, field: &TableFieldSchema) -> Option<Cell> {
             .get_f64_by_name(&field.name)
             .unwrap_or_else(|err| field_type_error!(field, err))
             .map(Cell::F64),
+        FieldType::Numeric => rs
+            .get_f64_by_name(&field.name)
+            .unwrap_or_else(|err| field_type_error!(field, err))
+            .map(|v| Cell::Numeric(AnyNumeric::try_from(v).unwrap())),
         FieldType::String => rs
             .get_string_by_name(&field.name)
             .unwrap_or_else(|err| field_type_error!(field, err))
@@ -83,7 +87,7 @@ fn field_to_cell(rs: &ResultSet, field: &TableFieldSchema) -> Option<Cell> {
 }
 
 #[wrappers_fdw(
-    version = "0.1.2",
+    version = "0.1.3",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/bigquery_fdw"
 )]
@@ -283,15 +287,34 @@ impl ForeignDataWrapper for BigQueryFdw {
             .map(|t| t.to_owned())
             .unwrap_or_else(|| "US".to_string());
 
+        let mut timeout: i32 = 30_000;
+        if let Some(timeout_str) = options.get("timeout") {
+            match timeout_str.parse::<i32>() {
+                Ok(t) => timeout = t,
+                Err(_) => report_error(
+                    PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                    &format!("invalid timeout value: {}", timeout_str),
+                ),
+            }
+        }
+
         if let Some(client) = &self.client {
             let sql = self.deparse(quals, columns, sorts, limit);
             let mut req = QueryRequest::new(sql);
             req.location = Some(location);
+            req.timeout_ms = Some(timeout);
 
             // execute query on BigQuery
             match self.rt.block_on(client.job().query(&self.project_id, req)) {
                 Ok(rs) => {
-                    self.scan_result = Some(rs);
+                    if rs.query_response().job_complete == Some(false) {
+                        report_error(
+                            PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                            &format!("query timeout {}ms expired", timeout),
+                        );
+                    } else {
+                        self.scan_result = Some(rs);
+                    }
                 }
                 Err(err) => {
                     self.scan_result = None;
@@ -395,6 +418,7 @@ impl ForeignDataWrapper for BigQueryFdw {
                         Cell::I64(v) => row_json[col_name] = json!(v),
                         Cell::F32(v) => row_json[col_name] = json!(v),
                         Cell::F64(v) => row_json[col_name] = json!(v),
+                        Cell::Numeric(v) => row_json[col_name] = json!(v),
                         Cell::String(v) => row_json[col_name] = json!(v),
                         Cell::Date(v) => row_json[col_name] = json!(v),
                         Cell::Timestamp(v) => row_json[col_name] = json!(v),

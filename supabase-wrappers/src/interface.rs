@@ -5,7 +5,7 @@ use crate::FdwRoutine;
 use pgx::prelude::{Date, Timestamp};
 use pgx::{
     pg_sys::{self, Datum, Oid},
-    AllocatedByRust, FromDatum, IntoDatum, JsonB, PgBuiltInOids, PgOid,
+    AllocatedByRust, AnyNumeric, FromDatum, IntoDatum, JsonB, PgBuiltInOids, PgOid,
 };
 use std::collections::HashMap;
 use std::fmt;
@@ -37,6 +37,7 @@ pub enum Cell {
     I32(i32),
     F64(f64),
     I64(i64),
+    Numeric(AnyNumeric),
     String(String),
     Date(Date),
     Timestamp(Timestamp),
@@ -53,6 +54,7 @@ impl Clone for Cell {
             Cell::I32(v) => Cell::I32(*v),
             Cell::F64(v) => Cell::F64(*v),
             Cell::I64(v) => Cell::I64(*v),
+            Cell::Numeric(v) => Cell::Numeric(v.clone()),
             Cell::String(v) => Cell::String(v.clone()),
             Cell::Date(v) => Cell::Date(v.clone()),
             Cell::Timestamp(v) => Cell::Timestamp(v.clone()),
@@ -71,6 +73,7 @@ impl fmt::Display for Cell {
             Cell::I32(v) => write!(f, "{}", v),
             Cell::F64(v) => write!(f, "{}", v),
             Cell::I64(v) => write!(f, "{}", v),
+            Cell::Numeric(v) => write!(f, "{:?}", v),
             Cell::String(v) => write!(f, "'{}'", v),
             Cell::Date(v) => write!(f, "{:?}", v),
             Cell::Timestamp(v) => write!(f, "{:?}", v),
@@ -89,6 +92,7 @@ impl IntoDatum for Cell {
             Cell::I32(v) => v.into_datum(),
             Cell::F64(v) => v.into_datum(),
             Cell::I64(v) => v.into_datum(),
+            Cell::Numeric(v) => v.into_datum(),
             Cell::String(v) => v.into_datum(),
             Cell::Date(v) => v.into_datum(),
             Cell::Timestamp(v) => v.into_datum(),
@@ -131,6 +135,9 @@ impl FromDatum for Cell {
             }
             PgOid::BuiltIn(PgBuiltInOids::INT8OID) => {
                 Some(Cell::I64(i64::from_datum(datum, false).unwrap()))
+            }
+            PgOid::BuiltIn(PgBuiltInOids::NUMERICOID) => {
+                Some(Cell::Numeric(AnyNumeric::from_datum(datum, false).unwrap()))
             }
             PgOid::BuiltIn(PgBuiltInOids::TEXTOID) => {
                 Some(Cell::String(String::from_datum(datum, false).unwrap()))

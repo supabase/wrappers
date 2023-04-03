@@ -2,6 +2,20 @@
 
 BigQuery FDW supports both data read and modify.
 
+### Supported Data Types
+
+| Postgres Type      | BigQuery Type   |
+| ------------------ | --------------- |
+| boolean            | BOOL            |
+| bigint             | INT64           |
+| double precision   | FLOAT64         |
+| numeric            | NUMERIC         |
+| text               | STRING          |
+| varchar            | STRING          |
+| date               | DATE            |
+| timestamp          | DATETIME        |
+| timestamp          | TIMESTAMP       |
+
 ### Wrapper 
 To get started with the BigQuery wrapper, create a foreign data wrapper specifying `handler` and `validator` as below.
 
@@ -104,6 +118,8 @@ The full list of foreign table options are below:
    ```
    table '(select * except(props), to_json_string(props) as props from `my_project.my_dataset.my_table`)'
    ```
+
+   **Note**: When using subquery in this option, full qualitified table name must be used.
 
 - `location` - Source table location, optional. Default is 'US'.
 - `rowid_column` - Primary key column name, optional for data scan, required for data modify

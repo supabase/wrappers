@@ -10,9 +10,14 @@ projects:
               mode: REQUIRED
             - name: name
               type: STRING
-              mode: required
+              mode: REQUIRED
+            - name: num
+              type: NUMERIC
+              mode: REQUIRED
           data:
             - id: 1
               name: foo
+              num: 0.123
             - id: 2
               name: bar
+              num: 1234.56789

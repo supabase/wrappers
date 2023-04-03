@@ -29,7 +29,8 @@ mod tests {
                 r#"
                   CREATE FOREIGN TABLE test_table (
                     id bigint,
-                    name text
+                    name text,
+                    num numeric
                   )
                   SERVER my_bigquery_server
                   OPTIONS (
@@ -44,7 +45,8 @@ mod tests {
                 r#"
                   CREATE FOREIGN TABLE test_table_with_subquery (
                     id bigint,
-                    name text
+                    name text,
+                    num numeric
                   )
                   SERVER my_bigquery_server
                   OPTIONS (
@@ -88,6 +90,13 @@ mod tests {
                 .collect::<Vec<_>>();
 
             assert_eq!(results, vec!["FOO", "BAR"]);
+
+            let results = c
+                .select("SELECT num FROM test_table ORDER BY num", None, None)
+                .filter_map(|r| r.by_name("num").ok().and_then(|v| v.value::<f64>()))
+                .collect::<Vec<_>>();
+
+            assert_eq!(results, vec![0.123, 1234.56789]);
 
             // DISABLED: error: [FIXME]
             // insert failed: Request error (error: error decoding response body: missing field `status` at line 1 column 436)
