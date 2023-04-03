@@ -549,8 +549,8 @@
 <span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">extension</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">wrappers</span><span class="p">;</span><span class="w"></span>
 
 <span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">bigquery_wrapper</span><span class="w"></span>
-<span class="w">  </span><span class="k">handler</span><span class="w"> </span><span class="n">bigquery_fdw_handler</span><span class="w"></span>
-<span class="w">  </span><span class="k">validator</span><span class="w"> </span><span class="n">bigquery_fdw_validator</span><span class="p">;</span><span class="w"></span>
+<span class="w">  </span><span class="k">handler</span><span class="w"> </span><span class="n">big_query_fdw_handler</span><span class="w"></span>
+<span class="w">  </span><span class="k">validator</span><span class="w"> </span><span class="n">big_query_fdw_validator</span><span class="p">;</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
 <h3 id="server">Server</h3>
 <p>Next, we need to create a server for the FDW to hold options and credentials.</p>
