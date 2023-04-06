@@ -10,6 +10,7 @@ nav:
     - Installation: 'installation.md'
     - Wrappers:
       - BigQuery: 'bigquery.md'
+      - ClickHouse: 'clickhouse.md'
       - Firebase: 'firebase.md'
       - S3: 's3.md'
       - Stripe: 'stripe.md'

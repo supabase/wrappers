@@ -77,7 +77,7 @@ end $$;
 
 #### Auth (Non-Supabase)
 
-If the platform you are using does not support `pgsodium` and `Vault`, you can create a server by storing yourt GCP credentials directly.
+If the platform you are using does not support `pgsodium` and `Vault`, you can create a server by storing your GCP credentials directly.
 
 
 !!! important
