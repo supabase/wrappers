@@ -25,13 +25,12 @@ services:
       retries: 20
       
   firebase:
-    image: andreysenov/firebase-tools
+    image: andreysenov/firebase-tools:11.24.1-node-14-alpine
     container_name: firebase-wrapped
-    command: firebase emulators:start --project supa --import=/baseline-data
+    command: firebase emulators:start --project supa --only auth,firestore --import=/baseline-data
     volumes:
       - ../dockerfiles/firebase/baseline-data:/baseline-data
       - ../dockerfiles/firebase/firebase.json:/home/node/firebase.json
-      - ../dockerfiles/firebase/storage.rules:/home/node/storage.rules
     ports:
       - "4000:4000" # UI
       - "8080:8080" # Firestore
