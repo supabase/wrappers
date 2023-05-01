@@ -13,14 +13,15 @@
 11. [Mandates](https://stripe.com/docs/api/mandates) (*read only*)
 12. [PaymentIntents](https://stripe.com/docs/api/payment_intents/list) (*read only*)
 13. [Payouts](https://stripe.com/docs/api/payouts/list) (*read only*)
-14. [Products](https://stripe.com/docs/api/products/list) (*read and modify*)
-15. [Refunds](https://stripe.com/docs/api/refunds/list) (*read only*)
-16. [SetupAttempts](https://stripe.com/docs/api/setup_attempts/list) (*read only*)
-17. [SetupIntents](https://stripe.com/docs/api/setup_intents/list) (*read only*)
-18. [Subscriptions](https://stripe.com/docs/api/subscriptions/list) (*read and modify*)
-19. [Tokens](https://stripe.com/docs/api/tokens) (*read only*)
-20. [Topups](https://stripe.com/docs/api/topups/list) (*read only*)
-21. [Transfers](https://stripe.com/docs/api/transfers/list) (*read only*)
+14. [Prices](https://stripe.com/docs/api/prices/list) (*read only*)
+15. [Products](https://stripe.com/docs/api/products/list) (*read and modify*)
+16. [Refunds](https://stripe.com/docs/api/refunds/list) (*read only*)
+17. [SetupAttempts](https://stripe.com/docs/api/setup_attempts/list) (*read only*)
+18. [SetupIntents](https://stripe.com/docs/api/setup_intents/list) (*read only*)
+19. [Subscriptions](https://stripe.com/docs/api/subscriptions/list) (*read and modify*)
+20. [Tokens](https://stripe.com/docs/api/tokens) (*read only*)
+21. [Topups](https://stripe.com/docs/api/topups/list) (*read only*)
+22. [Transfers](https://stripe.com/docs/api/transfers/list) (*read only*)
 
 ### Wrapper 
 To get started with the Stripe wrapper, create a foreign data wrapper specifying `handler` and `validator` as below.
@@ -456,6 +457,35 @@ While any column is allowed in a where clause, it is most efficient to filter by
 
 - id
 - status
+
+##### Prices
+*read only*
+
+A `Price` object is needed for all of your products to facilitate multiple currencies and pricing options.
+
+Ref: [Stripe docs](https://stripe.com/docs/api/prices/list) 
+
+```sql
+create foreign table stripe.prices (
+  id text,
+  active bool,
+  currency text,
+  product text,
+  unit_amount bigint,
+  type text,
+  created timestamp,
+  attrs jsonb
+)
+  server stripe_server
+  options (
+    object 'pricing'
+  );
+```
+
+While any column is allowed in a where clause, it is most efficient to filter by:
+
+- id
+- active
 
 ##### Products
 *read and modify*

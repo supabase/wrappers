@@ -234,7 +234,7 @@ macro_rules! report_request_error {
 }
 
 #[wrappers_fdw(
-    version = "0.1.4",
+    version = "0.1.5",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/stripe_fdw"
 )]
@@ -273,6 +273,7 @@ impl StripeFdw {
             "mandates" => vec![],
             "payment_intents" => vec!["customer"],
             "payouts" => vec!["status"],
+            "prices" => vec!["active", "currency", "product", "type",],
             "products" => vec!["active"],
             "refunds" => vec!["charge", "payment_intent"],
             "setup_attempts" => vec!["setup_intent"],
@@ -461,6 +462,19 @@ impl StripeFdw {
                     ("description", "string"),
                     ("statement_descriptor", "string"),
                     ("status", "string"),
+                    ("created", "timestamp"),
+                ],
+                tgt_cols,
+            ),
+            "prices" => body_to_rows(
+                resp_body,
+                vec![
+                    ("id", "string"),
+                    ("active", "bool"),
+                    ("currency", "string"),
+                    ("product", "string"),
+                    ("unit_amount", "i64"),
+                    ("type", "string"),
                     ("created", "timestamp"),
                 ],
                 tgt_cols,
