@@ -1,4 +1,4 @@
-[Stripe](https://stripe.com) is an API driven online payment processing utilty. `supabase/wrappers` exposes below endpoints.
+[Stripe](https://stripe.com) is an API driven online payment processing utility. `supabase/wrappers` exposes below endpoints.
 
 1.  [Accounts](https://stripe.com/docs/api/accounts/list) (*read only*)
 2.  [Balance](https://stripe.com/docs/api/balance) (*read only*)
