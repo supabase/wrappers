@@ -56,7 +56,7 @@ create server firebase_server
 
 #### Auth (Insecure)
 
-If the platform you are using does not support `pgsodium` and `Vault`, you can create a server by storing yourt [service account key](https://firebase.google.com/docs/admin/setup#add_firebase_to_your_app) directly.
+If the platform you are using does not support `pgsodium` and `Vault`, you can create a server by storing your [service account key](https://firebase.google.com/docs/admin/setup#add_firebase_to_your_app) directly.
 
 
 !!! important
@@ -82,8 +82,8 @@ create server firebase_server
 
 ### Tables
 
-Firebase collections are non-relational/documents. With the exception of metadata fields, all returned data are availble as a `attrs` jsonb column. 
-
+Firebase collections are non-relational/documents. With the exception of metadata fields, all returned data are available as a `attrs` jsonb column. 
+s
 #### Firestore
 
 To map a Firestore collection provide its location using the format `firestore/<collection_id>` as the `object` option as shown below.

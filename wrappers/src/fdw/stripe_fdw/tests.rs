@@ -275,6 +275,27 @@ mod tests {
 
             c.update(
                 r#"
+                CREATE FOREIGN TABLE stripe_prices (
+                  id text,
+                  active bool,
+                  currency text,
+                  product text,
+                  unit_amount bigint,
+                  type text,
+                  created timestamp,
+                  attrs jsonb
+                )
+                SERVER my_stripe_server
+                OPTIONS (
+                    object 'prices'    -- source object in stripe, required
+                  )
+             "#,
+                None,
+                None,
+            );
+
+            c.update(
+                r#"
                 CREATE FOREIGN TABLE stripe_products (
                   id text,
                   name text,
@@ -619,6 +640,23 @@ mod tests {
             assert_eq!(
                 results,
                 vec![((("po_1Lb4lcDciZwYG8GPa5iKACTe", 1100), "usd"), "in_transit")]
+            );
+
+            let results = c
+                .select("SELECT * FROM stripe_prices", None, None)
+                .filter_map(|r| {
+                    r.by_name("id")
+                        .ok()
+                        .and_then(|v| v.value::<&str>())
+                        .zip(r.by_name("active").ok().and_then(|v| v.value::<bool>()))
+                        .zip(r.by_name("currency").ok().and_then(|v| v.value::<&str>()))
+                        .zip(r.by_name("product").ok().and_then(|v| v.value::<&str>()))
+                        .zip(r.by_name("type").ok().and_then(|v| v.value::<&str>()))
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                results,
+                vec![(((("price_1Lb4lXDciZwYG8GPenVxKLUQ", true), "usd"), "prod_MJiB8qAdQc9hgR"), "recurring")]
             );
 
             let results = c
