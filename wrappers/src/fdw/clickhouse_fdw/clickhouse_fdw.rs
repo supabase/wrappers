@@ -1,24 +1,15 @@
-use chrono::DateTime;
+use chrono::{Date, DateTime, NaiveDate, NaiveDateTime, Utc};
+use chrono_tz::Tz;
 use clickhouse_rs::{types, types::Block, types::SqlType, ClientHandle, Pool};
-use pgx::prelude::{PgSqlErrorCode, Timestamp};
+use pgx::{
+    pg_sys,
+    prelude::{PgSqlErrorCode, Timestamp},
+};
+use regex::{Captures, Regex};
 use std::collections::HashMap;
 use time::OffsetDateTime;
 
 use supabase_wrappers::prelude::*;
-
-fn create_client(rt: &Runtime, conn_str: &str) -> Option<ClientHandle> {
-    let pool = Pool::new(conn_str);
-    rt.block_on(pool.get_handle()).map_or_else(
-        |err| {
-            report_error(
-                PgSqlErrorCode::ERRCODE_FDW_UNABLE_TO_ESTABLISH_CONNECTION,
-                &format!("connection failed: {}", err),
-            );
-            None
-        },
-        Some,
-    )
-}
 
 fn field_to_cell(row: &types::Row<types::Complex>, i: usize) -> Option<Cell> {
     let sql_type = row.sql_type(i).unwrap();
@@ -31,6 +22,10 @@ fn field_to_cell(row: &types::Row<types::Complex>, i: usize) -> Option<Cell> {
         SqlType::Int16 => {
             let value = row.get::<i16, usize>(i).unwrap();
             Some(Cell::I16(value))
+        }
+        SqlType::UInt16 => {
+            let value = row.get::<u16, usize>(i).unwrap();
+            Some(Cell::I32(value as i32))
         }
         SqlType::Int32 => {
             let value = row.get::<i32, usize>(i).unwrap();
@@ -60,6 +55,15 @@ fn field_to_cell(row: &types::Row<types::Complex>, i: usize) -> Option<Cell> {
             let value = row.get::<String, usize>(i).unwrap();
             Some(Cell::String(value))
         }
+        SqlType::Date => {
+            let value = row.get::<Date<_>, usize>(i).unwrap();
+            let epoch = NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
+            let days_epoch = value.naive_utc().signed_duration_since(epoch).num_days() as i32;
+            let dt = pgx::datum::Date::from_pg_epoch_days(
+                days_epoch + pg_sys::UNIX_EPOCH_JDATE as i32 - pg_sys::POSTGRES_EPOCH_JDATE as i32,
+            );
+            Some(Cell::Date(dt))
+        }
         SqlType::DateTime(_) => {
             let value = row.get::<DateTime<_>, usize>(i).unwrap();
             let dt = OffsetDateTime::from_unix_timestamp_nanos((value.timestamp_nanos()) as i128)
@@ -78,82 +82,139 @@ fn field_to_cell(row: &types::Row<types::Complex>, i: usize) -> Option<Cell> {
 }
 
 #[wrappers_fdw(
-    version = "0.1.0",
+    version = "0.1.1",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/clickhouse_fdw"
 )]
 pub(crate) struct ClickHouseFdw {
     rt: Runtime,
+    conn_str: String,
     client: Option<ClientHandle>,
     table: String,
     rowid_col: String,
     tgt_cols: Vec<Column>,
     scan_blk: Option<Block<types::Complex>>,
     row_idx: usize,
+    params: Vec<Qual>,
 }
 
 impl ClickHouseFdw {
-    fn deparse(&self, quals: &[Qual], columns: &[Column]) -> String {
+    fn create_client(&mut self) {
+        let pool = Pool::new(self.conn_str.as_str());
+        self.client = self.rt.block_on(pool.get_handle()).map_or_else(
+            |err| {
+                report_error(
+                    PgSqlErrorCode::ERRCODE_FDW_UNABLE_TO_ESTABLISH_CONNECTION,
+                    &format!("connection failed: {}", err),
+                );
+                None
+            },
+            Some,
+        );
+    }
+
+    fn deparse(&mut self, quals: &[Qual], columns: &[Column]) -> String {
+        let table = if self.table.starts_with('(') {
+            let re = Regex::new(r"\$\{(\w+)\}").unwrap();
+            re.replace_all(&self.table, |caps: &Captures| {
+                let param = &caps[1];
+                match quals.iter().find(|&q| q.field == param) {
+                    Some(qual) => {
+                        self.params.push(qual.clone());
+                        match &qual.value {
+                            Value::Cell(cell) => cell.to_string(),
+                            Value::Array(_) => {
+                                report_error(
+                                    PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                                    "invalid query parameter",
+                                );
+                                String::default()
+                            }
+                        }
+                    }
+                    None => {
+                        report_error(
+                            PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                            &format!("unmatched query parameter: {}", param),
+                        );
+                        String::default()
+                    }
+                }
+            })
+            .into_owned()
+        } else {
+            self.table.clone()
+        };
+
         let tgts = if columns.is_empty() {
             "*".to_string()
         } else {
             columns
                 .iter()
+                .filter(|c| !self.params.iter().any(|p| p.field == c.name))
                 .map(|c| c.name.clone())
                 .collect::<Vec<String>>()
                 .join(", ")
         };
-        let sql = if quals.is_empty() {
-            format!("select {} from {}", tgts, &self.table)
+
+        let cond = quals
+            .iter()
+            .filter(|q| !self.params.iter().any(|p| p.field == q.field))
+            .map(|q| q.deparse())
+            .collect::<Vec<String>>();
+        if cond.is_empty() {
+            format!("select {} from {}", tgts, &table)
         } else {
-            let cond = quals
-                .iter()
-                .map(|q| q.deparse())
-                .collect::<Vec<String>>()
-                .join(" and ");
-            format!("select {} from {} where {}", tgts, &self.table, cond)
-        };
-        sql
+            format!(
+                "select {} from {} where {}",
+                tgts,
+                &table,
+                cond.join(" and ")
+            )
+        }
     }
 }
 
 impl ForeignDataWrapper for ClickHouseFdw {
     fn new(options: &HashMap<String, String>) -> Self {
         let rt = create_async_runtime();
-        let client = match options.get("conn_string") {
-            Some(conn_str) => create_client(&rt, conn_str),
+        let conn_str = match options.get("conn_string") {
+            Some(conn_str) => conn_str.to_owned(),
             None => require_option("conn_string_id", options)
                 .and_then(|conn_str_id| get_vault_secret(&conn_str_id))
-                .and_then(|conn_str| create_client(&rt, &conn_str)),
+                .unwrap_or_default(),
         };
 
         Self {
             rt,
-            client,
-            table: "".to_string(),
-            rowid_col: "".to_string(),
+            conn_str,
+            client: None,
+            table: String::default(),
+            rowid_col: String::default(),
             tgt_cols: Vec::new(),
             scan_blk: None,
             row_idx: 0,
+            params: Vec::new(),
         }
     }
 
-    fn get_rel_size(
+    fn begin_scan(
         &mut self,
         quals: &[Qual],
         columns: &[Column],
         _sorts: &[Sort],
         _limit: &Option<Limit>,
         options: &HashMap<String, String>,
-    ) -> (i64, i32) {
+    ) {
+        self.create_client();
+
         let table = require_option("table", options);
-        let rowid_col = require_option("rowid_column", options);
-        if table.is_none() || rowid_col.is_none() {
-            return (0, 0);
+        if table.is_none() {
+            return;
         }
         self.table = table.unwrap();
-        self.rowid_col = rowid_col.unwrap();
         self.tgt_cols = columns.to_vec();
+        self.row_idx = 0;
 
         let sql = self.deparse(quals, columns);
 
@@ -161,30 +222,13 @@ impl ForeignDataWrapper for ClickHouseFdw {
             // for simplicity purpose, we fetch whole query result to local,
             // may need optimization in the future.
             match self.rt.block_on(client.query(&sql).fetch_all()) {
-                Ok(block) => {
-                    let rows = block.row_count();
-                    let width = block.column_count() * 8;
-                    self.scan_blk = Some(block);
-                    return (rows as i64, width as i32);
-                }
+                Ok(block) => self.scan_blk = Some(block),
                 Err(err) => report_error(
                     PgSqlErrorCode::ERRCODE_FDW_ERROR,
                     &format!("query failed: {}", err),
                 ),
             }
         }
-        (0, 0)
-    }
-
-    fn begin_scan(
-        &mut self,
-        _quals: &[Qual],
-        _columns: &[Column],
-        _sorts: &[Sort],
-        _limit: &Option<Limit>,
-        _options: &HashMap<String, String>,
-    ) {
-        self.row_idx = 0;
     }
 
     fn iter_scan(&mut self, row: &mut Row) -> Option<()> {
@@ -193,14 +237,21 @@ impl ForeignDataWrapper for ClickHouseFdw {
 
             if let Some(src_row) = rows.nth(self.row_idx) {
                 for tgt_col in &self.tgt_cols {
+                    if let Some(param) = self.params.iter().find(|&p| p.field == tgt_col.name) {
+                        if let Value::Cell(cell) = &param.value {
+                            row.push(&tgt_col.name, Some(cell.clone()));
+                        }
+                        continue;
+                    }
+
                     let (i, _) = block
                         .columns()
                         .iter()
                         .enumerate()
                         .find(|(_, c)| c.name() == tgt_col.name)
                         .unwrap();
-                    let col_name = src_row.name(i).unwrap();
                     let cell = field_to_cell(&src_row, i);
+                    let col_name = src_row.name(i).unwrap();
                     cell.as_ref()?;
                     row.push(col_name, cell);
                 }
@@ -216,6 +267,8 @@ impl ForeignDataWrapper for ClickHouseFdw {
     }
 
     fn begin_modify(&mut self, options: &HashMap<String, String>) {
+        self.create_client();
+
         let table = require_option("table", options);
         let rowid_col = require_option("rowid_column", options);
         if table.is_none() || rowid_col.is_none() {
@@ -236,6 +289,32 @@ impl ForeignDataWrapper for ClickHouseFdw {
                         Cell::F64(v) => row.push((col_name, types::Value::from(*v))),
                         Cell::I64(v) => row.push((col_name, types::Value::from(*v))),
                         Cell::String(v) => row.push((col_name, types::Value::from(v.as_str()))),
+                        Cell::Date(_) => {
+                            let s = cell.to_string().replace('\'', "");
+                            if let Ok(tm) = NaiveDate::parse_from_str(&s, "%Y-%m-%d") {
+                                let epoch = NaiveDate::from_ymd(1970, 1, 1);
+                                let duration = tm - epoch;
+                                let dt = types::Value::Date(duration.num_days() as u16, Tz::UTC);
+                                row.push((col_name, dt));
+                            } else {
+                                report_error(
+                                    PgSqlErrorCode::ERRCODE_FDW_INVALID_STRING_FORMAT,
+                                    &format!("invalid date format {}", s),
+                                );
+                            }
+                        }
+                        Cell::Timestamp(_) => {
+                            let s = cell.to_string().replace('\'', "");
+                            if let Ok(tm) = NaiveDateTime::parse_from_str(&s, "%Y-%m-%d %H:%M:%S") {
+                                let tm: DateTime<Utc> = DateTime::from_utc(tm, Utc);
+                                row.push((col_name, types::Value::from(tm)));
+                            } else {
+                                report_error(
+                                    PgSqlErrorCode::ERRCODE_FDW_INVALID_STRING_FORMAT,
+                                    &format!("invalid timestamp format {}", s),
+                                );
+                            }
+                        }
                         _ => report_error(
                             PgSqlErrorCode::ERRCODE_FDW_INVALID_DATA_TYPE,
                             &format!("field type {:?} not supported", cell),
