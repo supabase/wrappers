@@ -617,7 +617,7 @@
 <span class="p">);</span><span class="w"></span>
 </code></pre></div></td></tr></table></div></p>
 <h4 id="auth-insecure">Auth (Insecure)</h4>
-<p>If the platform you are using does not support <code>pgsodium</code> and <code>Vault</code>, you can create a server by storing yourt <a href="https://firebase.google.com/docs/admin/setup#add_firebase_to_your_app">service account key</a> directly.</p>
+<p>If the platform you are using does not support <code>pgsodium</code> and <code>Vault</code>, you can create a server by storing your <a href="https://firebase.google.com/docs/admin/setup#add_firebase_to_your_app">service account key</a> directly.</p>
 <div class="admonition important">
 <p class="admonition-title">Important</p>
 <p>Credentials stored using this method can be viewed as plain text by anyone with access to <code>pg_catalog.pg_foreign_server</code></p>
@@ -647,7 +647,8 @@
 <span class="w">   </span><span class="p">);</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
 <h3 id="tables">Tables</h3>
-<p>Firebase collections are non-relational/documents. With the exception of metadata fields, all returned data are availble as a <code>attrs</code> jsonb column. </p>
+<p>Firebase collections are non-relational/documents. With the exception of metadata fields, all returned data are available as a <code>attrs</code> jsonb column. 
+s</p>
 <h4 id="firestore">Firestore</h4>
 <p>To map a Firestore collection provide its location using the format <code>firestore/&lt;collection_id&gt;</code> as the <code>object</code> option as shown below.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>

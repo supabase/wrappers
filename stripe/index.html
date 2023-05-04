@@ -488,6 +488,13 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#prices" class="md-nav__link">
+    Prices
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#products" class="md-nav__link">
     Products
   </a>
@@ -770,6 +777,13 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#prices" class="md-nav__link">
+    Prices
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#products" class="md-nav__link">
     Products
   </a>
@@ -886,7 +900,7 @@
 
   <h1>Stripe</h1>
 
-<p><a href="https://stripe.com">Stripe</a> is an API driven online payment processing utilty. <code>supabase/wrappers</code> exposes below endpoints.</p>
+<p><a href="https://stripe.com">Stripe</a> is an API driven online payment processing utility. <code>supabase/wrappers</code> exposes below endpoints.</p>
 <ol>
 <li><a href="https://stripe.com/docs/api/accounts/list">Accounts</a> (<em>read only</em>)</li>
 <li><a href="https://stripe.com/docs/api/balance">Balance</a> (<em>read only</em>)</li>
@@ -901,6 +915,7 @@
 <li><a href="https://stripe.com/docs/api/mandates">Mandates</a> (<em>read only</em>)</li>
 <li><a href="https://stripe.com/docs/api/payment_intents/list">PaymentIntents</a> (<em>read only</em>)</li>
 <li><a href="https://stripe.com/docs/api/payouts/list">Payouts</a> (<em>read only</em>)</li>
+<li><a href="https://stripe.com/docs/api/prices/list">Prices</a> (<em>read only</em>)</li>
 <li><a href="https://stripe.com/docs/api/products/list">Products</a> (<em>read and modify</em>)</li>
 <li><a href="https://stripe.com/docs/api/refunds/list">Refunds</a> (<em>read only</em>)</li>
 <li><a href="https://stripe.com/docs/api/setup_attempts/list">SetupAttempts</a> (<em>read only</em>)</li>
@@ -1437,6 +1452,43 @@
 <ul>
 <li>id</li>
 <li>status</li>
+</ul>
+<h5 id="prices">Prices</h5>
+<p><em>read only</em></p>
+<p>A <code>Price</code> object is needed for all of your products to facilitate multiple currencies and pricing options.</p>
+<p>Ref: <a href="https://stripe.com/docs/api/prices/list">Stripe docs</a> </p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">stripe</span><span class="p">.</span><span class="n">prices</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">active</span><span class="w"> </span><span class="n">bool</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">currency</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">product</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">unit_amount</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="k">type</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">created</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span><span class="w"></span>
+<span class="p">)</span><span class="w"></span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">stripe_server</span><span class="w"></span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;pricing&#39;</span><span class="w"></span>
+<span class="w">  </span><span class="p">);</span><span class="w"></span>
+</code></pre></div></td></tr></table></div>
+<p>While any column is allowed in a where clause, it is most efficient to filter by:</p>
+<ul>
+<li>id</li>
+<li>active</li>
 </ul>
 <h5 id="products">Products</h5>
 <p><em>read and modify</em></p>
