@@ -656,7 +656,7 @@ mod tests {
                 .collect::<Vec<_>>();
             assert_eq!(
                 results,
-                vec![(((("price_1LuN3DFkiV6mfx3cjGQZ2Xi6", true), "sgd"), "prod_MdeLuGwq6eNzfu"), "recurring")]
+                vec![(((("price_1Lb4lXDciZwYG8GPenVxKLUQ", true), "usd"), "prod_MJiB8qAdQc9hgR"), "recurring")]
             );
 
             let results = c
