@@ -36,7 +36,8 @@ mod tests {
                 )
                 SERVER my_stripe_server
                 OPTIONS (
-                    object 'accounts'    -- source object in stripe, required
+                    object 'accounts',    -- source object in stripe, required
+                    rowid_column 'id'
                   )
              "#,
                 None,
@@ -76,7 +77,8 @@ mod tests {
                 )
                 SERVER my_stripe_server
                 OPTIONS (
-                    object 'balance_transactions'    -- source object in stripe, required
+                    object 'balance_transactions',    -- source object in stripe, required
+                    rowid_column 'id'
                   )
              "#,
                 None,
@@ -99,7 +101,8 @@ mod tests {
                 )
                 SERVER my_stripe_server
                 OPTIONS (
-                    object 'charges'    -- source object in stripe, required
+                    object 'charges',    -- source object in stripe, required
+                    rowid_column 'id'
                   )
              "#,
                 None,
@@ -141,7 +144,8 @@ mod tests {
                 )
                 SERVER my_stripe_server
                 OPTIONS (
-                    object 'disputes'    -- source object in stripe, required
+                    object 'disputes',    -- source object in stripe, required
+                    rowid_column 'id'
                 )
              "#,
                 None,
@@ -159,7 +163,8 @@ mod tests {
                 )
                 SERVER my_stripe_server
                 OPTIONS (
-                    object 'events'    -- source object in stripe, required
+                    object 'events',    -- source object in stripe, required
+                    rowid_column 'id'
                 )
              "#,
                 None,
@@ -182,7 +187,8 @@ mod tests {
                 )
                 SERVER my_stripe_server
                 OPTIONS (
-                    object 'files'    -- source object in stripe, required
+                    object 'files',    -- source object in stripe, required
+                    rowid_column 'id'
                 )
              "#,
                 None,
@@ -202,7 +208,8 @@ mod tests {
                 )
                 SERVER my_stripe_server
                 OPTIONS (
-                    object 'file_links'    -- source object in stripe, required
+                    object 'file_links',    -- source object in stripe, required
+                    rowid_column 'id'
                 )
              "#,
                 None,
@@ -224,7 +231,8 @@ mod tests {
                 )
                 SERVER my_stripe_server
                 OPTIONS (
-                    object 'invoices'    -- source object in stripe, required
+                    object 'invoices',    -- source object in stripe, required
+                    rowid_column 'id'
                   )
              "#,
                 None,
@@ -244,7 +252,8 @@ mod tests {
                 )
                 SERVER my_stripe_server
                 OPTIONS (
-                    object 'payment_intents'    -- source object in stripe, required
+                    object 'payment_intents',    -- source object in stripe, required
+                    rowid_column 'id'
                   )
              "#,
                 None,
@@ -266,7 +275,8 @@ mod tests {
                 )
                 SERVER my_stripe_server
                 OPTIONS (
-                    object 'payouts'    -- source object in stripe, required
+                    object 'payouts',    -- source object in stripe, required
+                    rowid_column 'id'
                   )
              "#,
                 None,
@@ -287,7 +297,8 @@ mod tests {
                 )
                 SERVER my_stripe_server
                 OPTIONS (
-                    object 'prices'    -- source object in stripe, required
+                    object 'prices',    -- source object in stripe, required
+                    rowid_column 'id'
                   )
              "#,
                 None,
@@ -331,7 +342,8 @@ mod tests {
                 )
                 SERVER my_stripe_server
                 OPTIONS (
-                    object 'refunds'    -- source object in stripe, required
+                    object 'refunds',    -- source object in stripe, required
+                    rowid_column 'id'
                   )
              "#,
                 None,
@@ -354,7 +366,8 @@ mod tests {
                 )
                 SERVER my_stripe_server
                 OPTIONS (
-                    object 'setup_attempts'    -- source object in stripe, required
+                    object 'setup_attempts',    -- source object in stripe, required
+                    rowid_column 'id'
                   )
              "#,
                 None,
@@ -376,7 +389,8 @@ mod tests {
                 )
                 SERVER my_stripe_server
                 OPTIONS (
-                    object 'setup_intents'    -- source object in stripe, required
+                    object 'setup_intents',    -- source object in stripe, required
+                    rowid_column 'id'
                   )
              "#,
                 None,
@@ -416,7 +430,8 @@ mod tests {
                 )
                 SERVER my_stripe_server
                 OPTIONS (
-                  object 'topups'    -- source object in stripe, required
+                  object 'topups',    -- source object in stripe, required
+                  rowid_column 'id'
                 )
              "#,
                 None,
@@ -436,7 +451,8 @@ mod tests {
                 )
                 SERVER my_stripe_server
                 OPTIONS (
-                  object 'transfers'    -- source object in stripe, required
+                  object 'transfers',    -- source object in stripe, required
+                  rowid_column 'id'
                 )
              "#,
                 None,

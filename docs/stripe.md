@@ -112,7 +112,8 @@ create foreign table stripe.accounts (
 )
   server stripe_server
   options (
-    object 'accounts'
+    object 'accounts',
+    rowid_column 'id'
   );
 ```
 
@@ -162,7 +163,8 @@ create foreign table stripe.balance_transactions (
 )
   server stripe_server
   options (
-    object 'balance_transactions'
+    object 'balance_transactions',
+    rowid_column 'id'
   );
 ```
 
@@ -193,7 +195,8 @@ create foreign table stripe.charges (
 )
   server stripe_server
   options (
-    object 'charges'
+    object 'charges',
+    rowid_column 'id'
   );
 ```
 
@@ -251,7 +254,8 @@ create foreign table stripe.disputes (
 )
   server stripe_server
   options (
-    object 'disputes'
+    object 'disputes',
+    rowid_column 'id'
   );
 ```
 
@@ -278,7 +282,8 @@ create foreign table stripe.events (
 )
   server stripe_server
   options (
-    object 'events'
+    object 'events',
+    rowid_column 'id'
   );
 ```
 
@@ -309,7 +314,8 @@ create foreign table stripe.files (
 )
   server stripe_server
   options (
-    object 'files'
+    object 'files',
+    rowid_column 'id'
   );
 ```
 
@@ -337,7 +343,8 @@ create foreign table stripe.file_links (
 )
   server stripe_server
   options (
-    object 'file_links'
+    object 'file_links',
+    rowid_column 'id'
   );
 ```
 
@@ -362,7 +369,8 @@ create foreign table stripe.invoices (
 )
   server stripe_server
   options (
-    object 'invoices'
+    object 'invoices',
+    rowid_column 'id'
   );
 
 ```
@@ -391,7 +399,8 @@ create foreign table stripe.mandates (
 )
   server stripe_server
   options (
-    object 'mandates'
+    object 'mandates',
+    rowid_column 'id'
   );
 ```
 
@@ -419,7 +428,8 @@ create foreign table stripe.payment_intents (
 )
   server stripe_server
   options (
-    object 'payment_intents'
+    object 'payment_intents',
+    rowid_column 'id'
   );
 ```
 
@@ -449,7 +459,8 @@ create foreign table stripe.payouts (
 )
   server stripe_server
   options (
-    object 'payouts'
+    object 'payouts',
+    rowid_column 'id'
   );
 ```
 
@@ -478,7 +489,8 @@ create foreign table stripe.prices (
 )
   server stripe_server
   options (
-    object 'pricing'
+    object 'prices',
+    rowid_column 'id'
   );
 ```
 
@@ -538,7 +550,8 @@ create foreign table stripe.refunds (
 )
   server stripe_server
   options (
-    object 'refunds'
+    object 'refunds',
+    rowid_column 'id'
   );
 ```
 
@@ -570,7 +583,8 @@ create foreign table stripe.setup_attempts (
 )
   server stripe_server
   options (
-    object 'setup_attempts'
+    object 'setup_attempts',
+    rowid_column 'id'
   );
 ```
 
@@ -600,7 +614,8 @@ create foreign table stripe.setup_intents (
 )
   server stripe_server
   options (
-    object 'setup_intents'
+    object 'setup_intents',
+    rowid_column 'id'
   );
 ```
 
@@ -659,7 +674,8 @@ create foreign table stripe.tokens (
 )
   server stripe_server
   options (
-    object 'tokens'
+    object 'tokens',
+    rowid_column 'id'
   );
 ```
 
@@ -682,7 +698,8 @@ create foreign table stripe.topups (
 )
   server stripe_server
   options (
-    object 'topups'
+    object 'topups',
+    rowid_column 'id'
   );
 ```
 
@@ -710,7 +727,8 @@ create foreign table stripe.transfers (
 )
   server stripe_server
   options (
-    object 'transfers'
+    object 'transfers',
+    rowid_column 'id'
   );
 ```
 
@@ -761,3 +779,10 @@ update stripe.customers set attrs='{"metadata[foo]": "bar"}' where id ='cus_xxx'
 delete from stripe.customers where id ='cus_xxx';
 ```
 
+##### Removing foreign tables
+
+If you would like to remove a foreign table because you do not use it anymore this can be done easily with the following command
+
+```sql
+drop foreign table stripe.customers, stripe.invoices, stripe.subscriptions;
+```
