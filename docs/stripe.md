@@ -1,27 +1,36 @@
-[Stripe](https://stripe.com) is an API driven online payment processing utility. `supabase/wrappers` exposes below endpoints.
+[Stripe](https://stripe.com) is an API driven online payment processing utility. `supabase/wrappers` exposes below endpoints. If you are missing an endpoint feel free to open an issue or even add it yourself.
 
-1.  [Accounts](https://stripe.com/docs/api/accounts/list) (*read only*)
-2.  [Balance](https://stripe.com/docs/api/balance) (*read only*)
-3.  [Balance Transactions](https://stripe.com/docs/api/balance_transactions/list) (*read only*)
-4.  [Charges](https://stripe.com/docs/api/charges/list) (*read only*)
-5.  [Customers](https://stripe.com/docs/api/customers/list) (*read and modify*)
-6.  [Disputes](https://stripe.com/docs/api/disputes/list) (*read only*)
-7.  [Events](https://stripe.com/docs/api/events/list) (*read only*)
-8.  [Files](https://stripe.com/docs/api/files/list) (*read only*)
-9.  [File Links](https://stripe.com/docs/api/file_links/list) (*read only*)
-10. [Invoices](https://stripe.com/docs/api/invoices/list) (*read only*)
-11. [Mandates](https://stripe.com/docs/api/mandates) (*read only*)
-12. [PaymentIntents](https://stripe.com/docs/api/payment_intents/list) (*read only*)
-13. [Payouts](https://stripe.com/docs/api/payouts/list) (*read only*)
-14. [Prices](https://stripe.com/docs/api/prices/list) (*read only*)
-15. [Products](https://stripe.com/docs/api/products/list) (*read and modify*)
-16. [Refunds](https://stripe.com/docs/api/refunds/list) (*read only*)
-17. [SetupAttempts](https://stripe.com/docs/api/setup_attempts/list) (*read only*)
-18. [SetupIntents](https://stripe.com/docs/api/setup_intents/list) (*read only*)
-19. [Subscriptions](https://stripe.com/docs/api/subscriptions/list) (*read and modify*)
-20. [Tokens](https://stripe.com/docs/api/tokens) (*read only*)
-21. [Topups](https://stripe.com/docs/api/topups/list) (*read only*)
-22. [Transfers](https://stripe.com/docs/api/transfers/list) (*read only*)
+**Core resources**:
+  - [Balance](https://stripe.com/docs/api/balance) (*read only*)
+  - [Balance Transactions](https://stripe.com/docs/api/balance_transactions/list) (*read only*)
+  - [Charges](https://stripe.com/docs/api/charges/list) (*read only*)
+  - [Customers](https://stripe.com/docs/api/customers/list) (*read and modify*)
+  - [Disputes](https://stripe.com/docs/api/disputes/list) (*read only*)
+  - [Events](https://stripe.com/docs/api/events/list) (*read only*)
+  - [Files](https://stripe.com/docs/api/files/list) (*read only*)
+  - [File Links](https://stripe.com/docs/api/file_links/list) (*read only*)
+  - [Mandates](https://stripe.com/docs/api/mandates) (*read only*)
+  - [PaymentIntents](https://stripe.com/docs/api/payment_intents/list) (*read only*)
+  - [SetupAttempts](https://stripe.com/docs/api/setup_attempts/list) (*read only*)
+  - [SetupIntents](https://stripe.com/docs/api/setup_intents/list) (*read only*)
+  - [Payouts](https://stripe.com/docs/api/payouts/list) (*read only*)
+  - [Refunds](https://stripe.com/docs/api/refunds/list) (*read only*)
+  - [Tokens](https://stripe.com/docs/api/tokens) (*read only*)
+
+**Products**: 
+  - [Products](https://stripe.com/docs/api/products/list) (*read and modify*)
+  - [Prices](https://stripe.com/docs/api/prices/list) (*read only*)
+
+**Billing**:
+  - [Invoices](https://stripe.com/docs/api/invoices/list) (*read only*)
+  - [Subscriptions](https://stripe.com/docs/api/subscriptions/list) (*read and modify*)
+
+**Connect**:
+  - [Accounts](https://stripe.com/docs/api/accounts/list) (*read only*)
+  - [Top-ups](https://stripe.com/docs/api/topups/list) (*read only*)
+  - [Transfers](https://stripe.com/docs/api/transfers/list) (*read only*)
+
+
 
 ### Wrapper 
 To get started with the Stripe wrapper, create a foreign data wrapper specifying `handler` and `validator` as below.
@@ -93,32 +102,7 @@ The Stripe tables mirror Stripe's API.
 create schema stripe;
 ```
 
-##### Accounts
-*read only*
-
-This is an object representing a Stripe account.
-
-Ref: [Stripe docs](https://stripe.com/docs/api/accounts/list)
-
-```sql
-create foreign table stripe.accounts (
-  id text,
-  business_type text,
-  country text,
-  email text,
-  type text,
-  created timestamp,
-  attrs jsonb
-)
-  server stripe_server
-  options (
-    object 'accounts'
-  );
-```
-
-While any column is allowed in a where clause, it is most efficient to filter by:
-
-- id
+#### Core resources
 
 ##### Balance
 *read only*
@@ -341,39 +325,6 @@ create foreign table stripe.file_links (
   );
 ```
 
-##### Invoices
-*read only*
-
-Invoices are statements of amounts owed by a customer, and are either generated one-off, or generated periodically from a subscription.
-
-Ref: [Stripe docs](https://stripe.com/docs/api/invoices/list) 
-
-```sql
-create foreign table stripe.invoices (
-  id text,
-  customer text,
-  subscription text,
-  status text,
-  total bigint,
-  currency text,
-  period_start timestamp,
-  period_end timestamp,
-  attrs jsonb
-)
-  server stripe_server
-  options (
-    object 'invoices'
-  );
-
-```
-
-While any column is allowed in a where clause, it is most efficient to filter by:
-
-- id
-- customer
-- status
-- subscription
-
 ##### Mandates
 *read only*
 
@@ -400,7 +351,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - id
 
 
-##### Payment Intents
+##### PaymentIntents
 *read only*
 
 A payment intent guides you through the process of collecting a payment from your customer.
@@ -427,126 +378,6 @@ While any column is allowed in a where clause, it is most efficient to filter by
 
 - id
 - customer
-
-##### Payouts
-*read only*
-
-A `Payout` object is created when you receive funds from Stripe, or when you initiate a payout to either a bank account or debit card of a connected Stripe account.
-
-Ref: [Stripe docs](https://stripe.com/docs/api/payouts/list) 
-
-```sql
-create foreign table stripe.payouts (
-  id text,
-  amount bigint,
-  currency text,
-  arrival_date timestamp,
-  description text,
-  statement_descriptor text,
-  status text,
-  created timestamp,
-  attrs jsonb
-)
-  server stripe_server
-  options (
-    object 'payouts'
-  );
-```
-
-While any column is allowed in a where clause, it is most efficient to filter by:
-
-- id
-- status
-
-##### Prices
-*read only*
-
-A `Price` object is needed for all of your products to facilitate multiple currencies and pricing options.
-
-Ref: [Stripe docs](https://stripe.com/docs/api/prices/list) 
-
-```sql
-create foreign table stripe.prices (
-  id text,
-  active bool,
-  currency text,
-  product text,
-  unit_amount bigint,
-  type text,
-  created timestamp,
-  attrs jsonb
-)
-  server stripe_server
-  options (
-    object 'pricing'
-  );
-```
-
-While any column is allowed in a where clause, it is most efficient to filter by:
-
-- id
-- active
-
-##### Products
-*read and modify*
-
-All products available in Stripe.
-
-Ref: [Stripe docs](https://stripe.com/docs/api/products/list) 
-
-```sql
-create foreign table stripe.products (
-  id text,
-  name text,
-  active bool,
-  default_price text,
-  description text,
-  created timestamp,
-  updated timestamp,
-  attrs jsonb
-)
-  server stripe_server
-  options (
-    object 'products',
-    rowid_column 'id'
-  );
-```
-
-While any column is allowed in a where clause, it is most efficient to filter by:
-
-- id
-- active
-
-##### Refunds
-*read only*
-
-`Refund` objects allow you to refund a charge that has previously been created but not yet refunded.
-
-Ref: [Stripe docs](https://stripe.com/docs/api/refunds/list) 
-
-```sql
-create foreign table stripe.refunds (
-  id text,
-  amount bigint,
-  currency text,
-  charge text,
-  payment_intent text,
-  reason text,
-  status text,
-  created timestamp,
-  attrs jsonb
-)
-  server stripe_server
-  options (
-    object 'refunds'
-  );
-```
-
-While any column is allowed in a where clause, it is most efficient to filter by:
-
-- id
-- charge
-- payment_intent
 
 ##### SetupAttempts
 *read only*
@@ -610,6 +441,185 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - customer
 - payment_method
 
+##### Payouts
+*read only*
+
+A `Payout` object is created when you receive funds from Stripe, or when you initiate a payout to either a bank account or debit card of a connected Stripe account.
+
+Ref: [Stripe docs](https://stripe.com/docs/api/payouts/list) 
+
+```sql
+create foreign table stripe.payouts (
+  id text,
+  amount bigint,
+  currency text,
+  arrival_date timestamp,
+  description text,
+  statement_descriptor text,
+  status text,
+  created timestamp,
+  attrs jsonb
+)
+  server stripe_server
+  options (
+    object 'payouts'
+  );
+```
+
+While any column is allowed in a where clause, it is most efficient to filter by:
+
+- id
+- status
+
+##### Refunds
+*read only*
+
+`Refund` objects allow you to refund a charge that has previously been created but not yet refunded.
+
+Ref: [Stripe docs](https://stripe.com/docs/api/refunds/list) 
+
+```sql
+create foreign table stripe.refunds (
+  id text,
+  amount bigint,
+  currency text,
+  charge text,
+  payment_intent text,
+  reason text,
+  status text,
+  created timestamp,
+  attrs jsonb
+)
+  server stripe_server
+  options (
+    object 'refunds'
+  );
+```
+
+While any column is allowed in a where clause, it is most efficient to filter by:
+
+- id
+- charge
+- payment_intent
+
+##### Tokens
+*read only*
+
+Tokenization is the process Stripe uses to collect sensitive card or bank account details, or personally identifiable information (PII), directly from your customers in a secure manner.
+
+Ref: [Stripe docs](https://stripe.com/docs/api/tokens) 
+
+```sql
+create foreign table stripe.tokens (
+  id text,
+  customer text,
+  currency text,
+  current_period_start timestamp,
+  current_period_end timestamp,
+  attrs jsonb
+)
+  server stripe_server
+  options (
+    object 'tokens'
+  );
+```
+
+#### Products
+
+##### Products
+*read and modify*
+
+All products available in Stripe.
+
+Ref: [Stripe docs](https://stripe.com/docs/api/products/list) 
+
+```sql
+create foreign table stripe.products (
+  id text,
+  name text,
+  active bool,
+  default_price text,
+  description text,
+  created timestamp,
+  updated timestamp,
+  attrs jsonb
+)
+  server stripe_server
+  options (
+    object 'products',
+    rowid_column 'id'
+  );
+```
+
+While any column is allowed in a where clause, it is most efficient to filter by:
+
+- id
+- active
+
+##### Prices
+*read only*
+
+A `Price` object is needed for all of your products to facilitate multiple currencies and pricing options.
+
+Ref: [Stripe docs](https://stripe.com/docs/api/prices/list) 
+
+```sql
+create foreign table stripe.prices (
+  id text,
+  active bool,
+  currency text,
+  product text,
+  unit_amount bigint,
+  type text,
+  created timestamp,
+  attrs jsonb
+)
+  server stripe_server
+  options (
+    object 'pricing'
+  );
+```
+
+While any column is allowed in a where clause, it is most efficient to filter by:
+
+- id
+- active
+
+#### Billing
+
+##### Invoices
+*read only*
+
+Invoices are statements of amounts owed by a customer, and are either generated one-off, or generated periodically from a subscription.
+
+Ref: [Stripe docs](https://stripe.com/docs/api/invoices/list) 
+
+```sql
+create foreign table stripe.invoices (
+  id text,
+  customer text,
+  subscription text,
+  status text,
+  total bigint,
+  currency text,
+  period_start timestamp,
+  period_end timestamp,
+  attrs jsonb
+)
+  server stripe_server
+  options (
+    object 'invoices'
+  );
+
+```
+
+While any column is allowed in a where clause, it is most efficient to filter by:
+
+- id
+- customer
+- status
+- subscription
+
 ##### Subscriptions 
 *read and modify*
 
@@ -641,27 +651,34 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - price
 - status
 
-##### Tokens
+#### Connect
+
+##### Accounts
 *read only*
 
-Tokenization is the process Stripe uses to collect sensitive card or bank account details, or personally identifiable information (PII), directly from your customers in a secure manner.
+This is an object representing a Stripe account.
 
-Ref: [Stripe docs](https://stripe.com/docs/api/tokens) 
+Ref: [Stripe docs](https://stripe.com/docs/api/accounts/list)
 
 ```sql
-create foreign table stripe.tokens (
+create foreign table stripe.accounts (
   id text,
-  customer text,
-  currency text,
-  current_period_start timestamp,
-  current_period_end timestamp,
+  business_type text,
+  country text,
+  email text,
+  type text,
+  created timestamp,
   attrs jsonb
 )
   server stripe_server
   options (
-    object 'tokens'
+    object 'accounts'
   );
 ```
+
+While any column is allowed in a where clause, it is most efficient to filter by:
+
+- id
 
 ##### Top-ups
 *read only*
