@@ -234,7 +234,7 @@ macro_rules! report_request_error {
 }
 
 #[wrappers_fdw(
-    version = "0.1.7",
+    version = "0.1.6",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/stripe_fdw"
 )]

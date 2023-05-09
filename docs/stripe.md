@@ -576,7 +576,7 @@ create foreign table stripe.prices (
 )
   server stripe_server
   options (
-    object 'pricing'
+    object 'prices'
   );
 ```
 
@@ -778,3 +778,10 @@ update stripe.customers set attrs='{"metadata[foo]": "bar"}' where id ='cus_xxx'
 delete from stripe.customers where id ='cus_xxx';
 ```
 
+##### Removing foreign tables
+
+If you would like to remove a foreign table because you do not use it anymore this can be done easily with the following command
+
+```sql
+drop foreign table stripe.customers, stripe.invoices, stripe.subscriptions;
+```
