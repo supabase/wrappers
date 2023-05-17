@@ -532,7 +532,7 @@ mod tests {
                 )
                 .filter_map(|r| r.by_name("id").ok().and_then(|v| v.value::<&str>()))
                 .collect::<Vec<_>>();
-            assert_eq!(results, vec![]);
+            assert!(results.is_empty());
 
             let results = c
                 .select("SELECT * FROM stripe_disputes", None, None)
