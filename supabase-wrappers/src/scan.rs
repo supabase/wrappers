@@ -1,12 +1,17 @@
-use pgx::{debug2, memcxt::PgMemoryContexts, pg_sys::Datum, prelude::*, IntoDatum, PgSqlErrorCode};
+use pgx::FromDatum;
+use pgx::{
+    debug2, memcxt::PgMemoryContexts, pg_sys::Datum, pg_sys::Oid, prelude::*, IntoDatum,
+    PgSqlErrorCode,
+};
 use std::collections::HashMap;
 
 use std::os::raw::c_int;
 use std::ptr;
 
 use crate::instance;
-use crate::interface::{Column, Limit, Qual, Row, Sort};
+use crate::interface::{Cell, Column, Limit, Qual, Row, Sort, Value};
 use crate::limit::*;
+use crate::memctx;
 use crate::polyfill;
 use crate::prelude::ForeignDataWrapper;
 use crate::qual::*;
@@ -33,7 +38,8 @@ struct FdwState<W: ForeignDataWrapper> {
     // foreign table options
     opts: HashMap<String, String>,
 
-    // temporary memory context
+    // temporary memory context per foreign table, created under Wrappers root
+    // memory context
     tmp_ctx: PgMemoryContexts,
 
     // query result list
@@ -43,7 +49,7 @@ struct FdwState<W: ForeignDataWrapper> {
 }
 
 impl<W: ForeignDataWrapper> FdwState<W> {
-    unsafe fn new(foreigntableid: pg_sys::Oid) -> Self {
+    unsafe fn new(foreigntableid: Oid, tmp_ctx: PgMemoryContexts) -> Self {
         Self {
             instance: instance::create_fdw_instance(foreigntableid),
             quals: Vec::new(),
@@ -51,14 +57,14 @@ impl<W: ForeignDataWrapper> FdwState<W> {
             sorts: Vec::new(),
             limit: None,
             opts: HashMap::new(),
-            tmp_ctx: PgMemoryContexts::CurTransactionContext
-                .switch_to(|_| PgMemoryContexts::new("Wrappers temp data")),
+            tmp_ctx,
             values: Vec::new(),
             nulls: Vec::new(),
             row: Row::new(),
         }
     }
 
+    #[inline]
     fn get_rel_size(&mut self) -> (i64, i32) {
         self.instance.get_rel_size(
             &self.quals,
@@ -69,6 +75,7 @@ impl<W: ForeignDataWrapper> FdwState<W> {
         )
     }
 
+    #[inline]
     fn begin_scan(&mut self) {
         self.instance.begin_scan(
             &self.quals,
@@ -79,33 +86,19 @@ impl<W: ForeignDataWrapper> FdwState<W> {
         )
     }
 
+    #[inline]
     fn iter_scan(&mut self) -> Option<()> {
         self.instance.iter_scan(&mut self.row)
     }
 
+    #[inline]
     fn re_scan(&mut self) {
         self.instance.re_scan()
     }
 
+    #[inline]
     fn end_scan(&mut self) {
         self.instance.end_scan();
-    }
-
-    fn clear(&mut self) {
-        self.quals.clear();
-        self.quals.shrink_to_fit();
-        self.tgts.clear();
-        self.tgts.shrink_to_fit();
-        self.sorts.clear();
-        self.sorts.shrink_to_fit();
-        self.limit.take();
-        self.opts.clear();
-        self.opts.shrink_to_fit();
-        self.values.clear();
-        self.values.shrink_to_fit();
-        self.nulls.clear();
-        self.nulls.shrink_to_fit();
-        self.tmp_ctx.reset();
     }
 }
 
@@ -119,10 +112,12 @@ pub(super) extern "C" fn get_foreign_rel_size<W: ForeignDataWrapper>(
 ) {
     debug2!("---> get_foreign_rel_size");
     unsafe {
-        let mut state = FdwState::<W>::new(foreigntableid);
+        // refresh leftover memory context
+        let ctx_name = format!("Wrappers_scan_{}", foreigntableid);
+        let ctx = memctx::refresh_wrappers_memctx(&ctx_name);
 
-        state.tmp_ctx.reset();
-        let mut old_ctx = state.tmp_ctx.set_as_current();
+        // create scan state
+        let mut state = FdwState::<W>::new(foreigntableid, ctx);
 
         // extract qual list
         state.quals = extract_quals(root, baserel, foreigntableid);
@@ -145,10 +140,9 @@ pub(super) extern "C" fn get_foreign_rel_size<W: ForeignDataWrapper>(
         (*baserel).rows = rows as f64;
         (*(*baserel).reltarget).width = width;
 
-        old_ctx.set_as_current();
-
-        (*baserel).fdw_private =
-            PgBox::new_in_context(state, PgMemoryContexts::CurTransactionContext).into_pg() as _;
+        // install callback to drop the state when memory context is reset
+        let ctx = state.tmp_ctx.value();
+        (*baserel).fdw_private = PgMemoryContexts::For(ctx).leak_and_drop_on_delete(state) as _;
     }
 }
 
@@ -206,20 +200,25 @@ pub(super) extern "C" fn get_foreign_plan<W: ForeignDataWrapper>(
     unsafe {
         let state = PgBox::<FdwState<W>>::from_pg((*baserel).fdw_private as _);
 
-        // Plan and plan data (e.g. scan_clauses) must live for the entire duration of the query
-        // As such, it must be allocated in the caller's memory context
-
         // make foreign scan plan
         let scan_clauses = pg_sys::extract_actual_clauses(scan_clauses, false);
 
-        let fdw_private = FdwState::serialize_to_list(state);
+        // 'serialize' state to list, basically what we're doing here is to store
+        // the state pointer as an integer constant in the list, so it can be
+        // `deserialized` when executing the plan later.
+        // Note that the state itself is not serialized to any memory contexts,
+        // it just sits in Rust managed Box'ed memory and will be dropped when
+        // the state's temporary memory context (state.tmp_ctx) is reset at the
+        // beginning of next query run.
+        let ctx = PgMemoryContexts::For(state.tmp_ctx.value());
+        let fdw_private = FdwState::serialize_to_list(state, ctx);
 
         pg_sys::make_foreignscan(
             tlist,
             scan_clauses,
             (*baserel).relid,
             ptr::null_mut(),
-            fdw_private,
+            fdw_private as _,
             ptr::null_mut(),
             ptr::null_mut(),
             outer_plan,
@@ -239,32 +238,49 @@ pub(super) extern "C" fn explain_foreign_scan<W: ForeignDataWrapper>(
             return;
         }
 
-        let mut state = PgBox::<FdwState<W>>::from_rust(fdw_state);
+        let state = PgBox::<FdwState<W>>::from_pg(fdw_state);
 
-        state.tmp_ctx.reset();
-        let mut old_ctx = state.tmp_ctx.set_as_current();
+        let ctx = PgMemoryContexts::CurrentMemoryContext;
 
-        let label = PgMemoryContexts::CurrentMemoryContext.pstrdup("Wrappers");
+        let label = ctx.pstrdup("Wrappers");
 
-        let value =
-            PgMemoryContexts::CurrentMemoryContext.pstrdup(&format!("quals = {:?}", state.quals));
+        let value = ctx.pstrdup(&format!("quals = {:?}", state.quals));
         pg_sys::ExplainPropertyText(label, value, es);
 
-        let value =
-            PgMemoryContexts::CurrentMemoryContext.pstrdup(&format!("tgts = {:?}", state.tgts));
+        let value = ctx.pstrdup(&format!("tgts = {:?}", state.tgts));
         pg_sys::ExplainPropertyText(label, value, es);
 
-        let value =
-            PgMemoryContexts::CurrentMemoryContext.pstrdup(&format!("sorts = {:?}", state.sorts));
+        let value = ctx.pstrdup(&format!("sorts = {:?}", state.sorts));
         pg_sys::ExplainPropertyText(label, value, es);
 
-        let value =
-            PgMemoryContexts::CurrentMemoryContext.pstrdup(&format!("limit = {:?}", state.limit));
+        let value = ctx.pstrdup(&format!("limit = {:?}", state.limit));
         pg_sys::ExplainPropertyText(label, value, es);
+    }
+}
 
-        old_ctx.set_as_current();
+// extract paramter value and assign it to qual in scan state
+unsafe fn assign_paramenter_value<W: ForeignDataWrapper>(
+    node: *mut pg_sys::ForeignScanState,
+    state: &mut FdwState<W>,
+) {
+    // get parameter list in execution state
+    let estate = (*node).ss.ps.state as *mut pg_sys::EState;
+    let plist_info = (*estate).es_param_list_info;
+    if plist_info.is_null() {
+        return;
+    }
+    let params_cnt = (*plist_info).numParams as usize;
+    let plist = (*plist_info).params.as_slice(params_cnt);
+    assert!(state.quals.iter().filter(|q| q.param.is_some()).count() <= params_cnt);
 
-        (*node).fdw_state = state.into_pg() as _;
+    // assign parameter value to qual
+    for qual in &mut state.quals.iter_mut() {
+        if let Some(param) = &qual.param {
+            let p: pg_sys::ParamExternData = plist[param.id - 1];
+            if let Some(value) = Cell::from_polymorphic_datum(p.value, p.isnull, p.ptype) {
+                qual.value = Value::Cell(value);
+            }
+        }
     }
 }
 
@@ -278,6 +294,10 @@ pub(super) extern "C" fn begin_foreign_scan<W: ForeignDataWrapper>(
         let scan_state = (*node).ss;
         let plan = scan_state.ps.plan as *mut pg_sys::ForeignScan;
         let mut state = FdwState::<W>::deserialize_from_list((*plan).fdw_private as _);
+        assert!(!state.is_null());
+
+        // assign parameter values to qual
+        assign_paramenter_value(node, &mut state);
 
         // begin scan if it is not EXPLAIN statement
         if eflags & pg_sys::EXEC_FLAG_EXPLAIN_ONLY as c_int <= 0 {
@@ -311,9 +331,6 @@ pub(super) extern "C" fn iterate_foreign_scan<W: ForeignDataWrapper>(
         let slot = (*node).ss.ss_ScanTupleSlot;
         polyfill::exec_clear_tuple(slot);
 
-        state.tmp_ctx.reset();
-        let mut old_ctx = state.tmp_ctx.set_as_current();
-
         state.row.clear();
         if state.iter_scan().is_some() {
             if state.row.cols.len() != state.tgts.len() {
@@ -321,7 +338,6 @@ pub(super) extern "C" fn iterate_foreign_scan<W: ForeignDataWrapper>(
                     PgSqlErrorCode::ERRCODE_FDW_INVALID_COLUMN_NUMBER,
                     "target column number not match",
                 );
-                old_ctx.set_as_current();
                 return slot;
             }
 
@@ -341,8 +357,6 @@ pub(super) extern "C" fn iterate_foreign_scan<W: ForeignDataWrapper>(
             (*slot).tts_isnull = state.nulls.as_mut_ptr();
             pg_sys::ExecStoreVirtualTuple(slot);
         }
-
-        old_ctx.set_as_current();
 
         slot
     }
@@ -369,10 +383,11 @@ pub(super) extern "C" fn end_foreign_scan<W: ForeignDataWrapper>(
     debug2!("---> end_foreign_scan");
     unsafe {
         let fdw_state = (*node).fdw_state as *mut FdwState<W>;
-        if !fdw_state.is_null() {
-            let mut state = PgBox::<FdwState<W>>::from_rust(fdw_state);
-            state.end_scan();
-            state.clear();
+        if fdw_state.is_null() {
+            return;
         }
+
+        let mut state = PgBox::<FdwState<W>>::from_pg(fdw_state);
+        state.end_scan();
     }
 }

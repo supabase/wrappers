@@ -19,13 +19,13 @@ use std::slice::Iter;
 // https://doxygen.postgresql.org/pg__foreign__table_8h.html
 
 /// Constant can be used in [validator](ForeignDataWrapper::validator)
-pub const FOREIGN_DATA_WRAPPER_RELATION_ID: pg_sys::Oid = 2328;
+pub const FOREIGN_DATA_WRAPPER_RELATION_ID: Oid = 2328;
 
 /// Constant can be used in [validator](ForeignDataWrapper::validator)
-pub const FOREIGN_SERVER_RELATION_ID: pg_sys::Oid = 1417;
+pub const FOREIGN_SERVER_RELATION_ID: Oid = 1417;
 
 /// Constant can be used in [validator](ForeignDataWrapper::validator)
-pub const FOREIGN_TABLE_RELATION_ID: pg_sys::Oid = 3118;
+pub const FOREIGN_TABLE_RELATION_ID: Oid = 3118;
 
 /// A data cell in a data row
 #[derive(Debug)]
@@ -223,7 +223,7 @@ pub struct Column {
     pub num: usize,
 
     /// column type OID, can be used to match pg_sys::BuiltinOid
-    pub type_oid: pg_sys::Oid,
+    pub type_oid: Oid,
 }
 
 /// A restiction value used in [`Qual`], either a [`Cell`] or an array of [`Cell`]
@@ -231,6 +231,16 @@ pub struct Column {
 pub enum Value {
     Cell(Cell),
     Array(Vec<Cell>),
+}
+
+/// Query parameter
+#[derive(Debug, Clone)]
+pub struct Param {
+    /// 1-based parameter id
+    pub id: usize,
+
+    /// parameter type OID
+    pub type_oid: Oid,
 }
 
 /// Query restrictions, a.k.a conditions in `WHERE` clause
@@ -277,6 +287,7 @@ pub struct Qual {
     pub operator: String,
     pub value: Value,
     pub use_or: bool,
+    pub param: Option<Param>,
 }
 
 impl Qual {
@@ -583,7 +594,7 @@ pub trait ForeignDataWrapper {
     /// # Example
     ///
     /// ```rust,no_run
-    /// fn validator(opt_list: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) {
+    /// fn validator(opt_list: Vec<Option<String>>, catalog: Option<Oid>) {
     ///     if let Some(oid) = catalog {
     ///         match oid {
     ///             FOREIGN_DATA_WRAPPER_RELATION_ID => {
@@ -601,5 +612,5 @@ pub trait ForeignDataWrapper {
     ///     }
     /// }
     /// ```
-    fn validator(_options: Vec<Option<String>>, _catalog: Option<pg_sys::Oid>) {}
+    fn validator(_options: Vec<Option<String>>, _catalog: Option<Oid>) {}
 }

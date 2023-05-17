@@ -298,13 +298,15 @@ pub fn check_options_contain(opt_list: &[Option<String>], tgt: &str) {
     }
 }
 
-// trait for "serialize" and "deserialize" state, so that it is safe to be carried
-// between the plan and the execution
+// trait for "serialize" and "deserialize" state from specified memory context,
+// so that it is safe to be carried between the planning and the execution
 pub(super) trait SerdeList {
-    unsafe fn serialize_to_list(state: PgBox<Self>) -> *mut pg_sys::List
+    unsafe fn serialize_to_list(state: PgBox<Self>, mut ctx: PgMemoryContexts) -> *mut pg_sys::List
     where
         Self: Sized,
     {
+        let mut old_ctx = ctx.set_as_current();
+
         let mut ret = PgList::new();
         let val = state.into_pg() as i64;
         let cst = pg_sys::makeConst(
@@ -317,7 +319,11 @@ pub(super) trait SerdeList {
             true,
         );
         ret.push(cst);
-        ret.into_pg()
+        let ret = ret.into_pg();
+
+        old_ctx.set_as_current();
+
+        ret
     }
 
     unsafe fn deserialize_from_list(list: *mut pg_sys::List) -> PgBox<Self>
@@ -325,6 +331,10 @@ pub(super) trait SerdeList {
         Self: Sized,
     {
         let list = PgList::<pg_sys::Const>::from_pg(list);
+        if list.is_empty() {
+            return PgBox::<Self>::null();
+        }
+
         let cst = list.head().unwrap();
         let ptr = i64::from_datum((*cst).constvalue, (*cst).constisnull).unwrap();
         PgBox::<Self>::from_pg(ptr as _)
