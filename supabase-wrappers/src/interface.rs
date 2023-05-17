@@ -223,7 +223,7 @@ pub struct Column {
     pub num: usize,
 
     /// column type OID, can be used to match pg_sys::BuiltinOid
-    pub type_oid: pg_sys::Oid,
+    pub type_oid: Oid,
 }
 
 /// A restiction value used in [`Qual`], either a [`Cell`] or an array of [`Cell`]
@@ -231,6 +231,16 @@ pub struct Column {
 pub enum Value {
     Cell(Cell),
     Array(Vec<Cell>),
+}
+
+/// Query parameter
+#[derive(Debug, Clone)]
+pub struct Param {
+    /// 1-based parameter id
+    pub id: usize,
+
+    /// parameter type OID
+    pub type_oid: Oid,
 }
 
 /// Query restrictions, a.k.a conditions in `WHERE` clause
@@ -277,6 +287,7 @@ pub struct Qual {
     pub operator: String,
     pub value: Value,
     pub use_or: bool,
+    pub param: Option<Param>,
 }
 
 impl Qual {
