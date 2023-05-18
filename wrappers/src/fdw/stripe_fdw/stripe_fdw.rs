@@ -1,7 +1,7 @@
 use pgx::pg_sys;
 use pgx::prelude::{PgSqlErrorCode, Timestamp};
 use pgx::JsonB;
-use reqwest::{self, header, Url};
+use reqwest::{self, header, StatusCode, Url};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use serde_json::{Map as JsonMap, Number, Value as JsonValue};
@@ -273,7 +273,7 @@ impl StripeFdw {
             "mandates" => vec![],
             "payment_intents" => vec!["customer"],
             "payouts" => vec!["status"],
-            "prices" => vec!["active", "currency", "product", "type",],
+            "prices" => vec!["active", "currency", "product", "type"],
             "products" => vec!["active"],
             "refunds" => vec!["charge", "payment_intent"],
             "setup_attempts" => vec!["setup_intent"],
@@ -663,27 +663,34 @@ impl ForeignDataWrapper for StripeFdw {
 
                 // make api call
                 match self.rt.block_on(client.get(url).send()) {
-                    Ok(resp) => match resp.error_for_status() {
-                        Ok(resp) => {
-                            let body = self.rt.block_on(resp.text()).unwrap();
-                            let (rows, starting_after, has_more) =
-                                self.resp_to_rows(&obj, &body, columns);
-                            if rows.is_empty() {
-                                break;
-                            }
-                            result.extend(rows);
-                            match has_more {
-                                Some(has_more) => {
-                                    if !has_more {
-                                        break;
-                                    }
-                                }
-                                None => break,
-                            }
-                            cursor = starting_after;
+                    Ok(resp) => {
+                        if resp.status() == StatusCode::NOT_FOUND {
+                            // if it is 404 error, we should treat it as an empty
+                            // result rather than a request error
+                            break;
                         }
-                        Err(err) => report_request_error!(err),
-                    },
+                        match resp.error_for_status() {
+                            Ok(resp) => {
+                                let body = self.rt.block_on(resp.text()).unwrap();
+                                let (rows, starting_after, has_more) =
+                                    self.resp_to_rows(&obj, &body, columns);
+                                if rows.is_empty() {
+                                    break;
+                                }
+                                result.extend(rows);
+                                match has_more {
+                                    Some(has_more) => {
+                                        if !has_more {
+                                            break;
+                                        }
+                                    }
+                                    None => break,
+                                }
+                                cursor = starting_after;
+                            }
+                            Err(err) => report_request_error!(err),
+                        }
+                    }
                     Err(err) => report_request_error!(err),
                 }
 
