@@ -587,6 +587,10 @@
 </tr>
 <tr>
 <td>integer</td>
+<td>UInt16</td>
+</tr>
+<tr>
+<td>integer</td>
 <td>Int32</td>
 </tr>
 <tr>
@@ -612,6 +616,10 @@
 <tr>
 <td>text</td>
 <td>String</td>
+</tr>
+<tr>
+<td>date</td>
+<td>Date</td>
 </tr>
 <tr>
 <td>timestamp</td>
@@ -697,6 +705,38 @@
 <p>The full list of foreign table options are below:</p>
 <ul>
 <li><code>table</code> - Source table name in ClickHouse, required.</li>
+</ul>
+<p>This can also be a subquery enclosed in parentheses, for example,</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code>table &#39;(select * from my_table)&#39;
+</code></pre></div></td></tr></table></div>
+<p><a href="https://clickhouse.com/docs/en/sql-reference/statements/create/view#parameterized-view">Parametrized view</a> is also supported in the subquery. In this case, you need to define a column for each parameter and use <code>where</code> to pass values to them. For example,</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code> create foreign table test_vw (
+   id bigint,
+   col1 text,
+   col2 bigint,
+   _param1 text,
+   _param2 bigint
+ )
+   server clickhouse_server
+   options (
+     table &#39;(select * from my_view(column1=${_param1}, column2=${_param2}))&#39;
+   );
+
+ select * from test_vw where _param1=&#39;aaa&#39; and _param2=32;
+</code></pre></div></td></tr></table></div>
+<ul>
 <li><code>rowid_column</code> - Primary key column name, optional for data scan, required for data modify</li>
 </ul>
 <h4 id="examples">Examples</h4>

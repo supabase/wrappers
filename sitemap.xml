@@ -2,47 +2,47 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://supabase.github.io/wrappers/</loc>
-         <lastmod>2023-05-04</lastmod>
+         <lastmod>2023-05-18</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/bigquery/</loc>
-         <lastmod>2023-05-04</lastmod>
+         <lastmod>2023-05-18</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/clickhouse/</loc>
-         <lastmod>2023-05-04</lastmod>
+         <lastmod>2023-05-18</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/contributing/</loc>
-         <lastmod>2023-05-04</lastmod>
+         <lastmod>2023-05-18</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/firebase/</loc>
-         <lastmod>2023-05-04</lastmod>
+         <lastmod>2023-05-18</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/installation/</loc>
-         <lastmod>2023-05-04</lastmod>
+         <lastmod>2023-05-18</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/s3/</loc>
-         <lastmod>2023-05-04</lastmod>
+         <lastmod>2023-05-18</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/stripe/</loc>
-         <lastmod>2023-05-04</lastmod>
+         <lastmod>2023-05-18</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/usage/</loc>
-         <lastmod>2023-05-04</lastmod>
+         <lastmod>2023-05-18</lastmod>
          <changefreq>daily</changefreq>
     </url>
 </urlset>
