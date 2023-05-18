@@ -56,6 +56,20 @@ mod tests {
                 None,
                 None,
             );
+            c.update(
+                r#"
+                  CREATE FOREIGN TABLE test_cust_sql (
+                    id bigint,
+                    name text
+                  )
+                  SERVER my_clickhouse_server
+                  OPTIONS (
+                    table '(select * from test_table)'
+                  )
+             "#,
+                None,
+                None,
+            );
 
             assert_eq!(c.select("SELECT * FROM test_table", None, None).len(), 0);
             c.update(
@@ -68,6 +82,13 @@ mod tests {
             );
             assert_eq!(
                 c.select("SELECT name FROM test_table", None, None)
+                    .first()
+                    .get_one::<&str>()
+                    .unwrap(),
+                "test"
+            );
+            assert_eq!(
+                c.select("SELECT name FROM test_cust_sql", None, None)
                     .first()
                     .get_one::<&str>()
                     .unwrap(),

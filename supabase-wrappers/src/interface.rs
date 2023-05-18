@@ -4,10 +4,12 @@
 use crate::FdwRoutine;
 use pgx::prelude::{Date, Timestamp};
 use pgx::{
+    fcinfo,
     pg_sys::{self, Datum, Oid},
     AllocatedByRust, AnyNumeric, FromDatum, IntoDatum, JsonB, PgBuiltInOids, PgOid,
 };
 use std::collections::HashMap;
+use std::ffi::CStr;
 use std::fmt;
 use std::iter::Zip;
 use std::mem;
@@ -75,8 +77,24 @@ impl fmt::Display for Cell {
             Cell::I64(v) => write!(f, "{}", v),
             Cell::Numeric(v) => write!(f, "{:?}", v),
             Cell::String(v) => write!(f, "'{}'", v),
-            Cell::Date(v) => write!(f, "{:?}", v),
-            Cell::Timestamp(v) => write!(f, "{:?}", v),
+            Cell::Date(v) => unsafe {
+                let dt = fcinfo::direct_function_call_as_datum(
+                    pg_sys::date_out,
+                    vec![v.clone().into_datum()],
+                )
+                .unwrap();
+                let dt_cstr = CStr::from_ptr(dt.cast_mut_ptr());
+                write!(f, "'{}'", dt_cstr.to_str().unwrap())
+            },
+            Cell::Timestamp(v) => unsafe {
+                let ts = fcinfo::direct_function_call_as_datum(
+                    pg_sys::timestamp_out,
+                    vec![v.clone().into_datum()],
+                )
+                .unwrap();
+                let ts_cstr = CStr::from_ptr(ts.cast_mut_ptr());
+                write!(f, "'{}'", ts_cstr.to_str().unwrap())
+            },
             Cell::Json(v) => write!(f, "{:?}", v),
         }
     }
