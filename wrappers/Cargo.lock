@@ -3063,7 +3063,7 @@ checksum = "6bdef32e8150c2a081110b42772ffe7d7c9032b606bc226c8260fd97e0976601"
 
 [[package]]
 name = "supabase-wrappers"
-version = "0.1.10"
+version = "0.1.11"
 dependencies = [
  "pgx",
  "supabase-wrappers-macros",
@@ -3073,7 +3073,7 @@ dependencies = [
 
 [[package]]
 name = "supabase-wrappers-macros"
-version = "0.1.10"
+version = "0.1.11"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3870,7 +3870,7 @@ dependencies = [
 
 [[package]]
 name = "wrappers"
-version = "0.1.10"
+version = "0.1.11"
 dependencies = [
  "async-compression",
  "aws-config",
