@@ -10,4 +10,4 @@ This is a foreign data wrapper for [OpenAI](https://openai.com/) developed using
 
 | Version | Date       | Notes                                                |
 | ------- | ---------- | ---------------------------------------------------- |
-| 0.1.0   | 2022-12-01 | Initial version                                      |
+| 0.1.0   | 2023-05-21 | Initial version                                      |
