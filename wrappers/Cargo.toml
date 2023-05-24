@@ -22,6 +22,7 @@ clickhouse_fdw = ["clickhouse-rs", "chrono", "chrono-tz", "time", "regex"]
 stripe_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "time"]
 firebase_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "yup-oauth2", "regex", "time"]
 s3_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "aws-config", "aws-sdk-s3", "tokio", "tokio-util", "csv", "async-compression", "serde_json", "http"]
+openai_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "regex"]
 
 # TODO: audit dependencies
 airtable_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "serde", "url"]

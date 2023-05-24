@@ -41,3 +41,9 @@ cfg_if! {
         mod s3_fdw;
     }
 }
+
+cfg_if! {
+    if #[cfg(feature = "openai_fdw")] {
+        mod openai_fdw;
+    }
+}

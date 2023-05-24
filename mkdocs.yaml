@@ -14,6 +14,7 @@ nav:
       - Firebase: 'firebase.md'
       - S3: 's3.md'
       - Stripe: 'stripe.md'
+      - OpenAI: 'openai.md'
     - Contributing: 'contributing.md'
 
 theme:
