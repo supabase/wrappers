@@ -91,21 +91,22 @@ The full list of foreign table options are below:
 
    The subquery also needs to contain `id` and `input` columns.
 
-   Parameters are supported in the subquery. In this case, you need to define a column for each parameter and use query conditions to pass values to them. For example,
+   Parameters are supported in the subquery. In this case, you need to define a column for each parameter and use query conditions to pass values to them. Parameter must be `text` type. For example,
 
    ```
     create foreign table my_table (
       id bigint,
       embedding text,
       _param1 text,
-      _param2 bigint
+      _param2 text
     )
       server openai_server
       options (
-        source '(select id, input from my_source where column1=${_param1} and column2=${_param2})'
+        -- suppose 'column1' type is text and 'column2' type is bigint
+        source '(select id, input from my_source where column1='${_param1}' and column2=${_param2})'
       );
 
-    select * from my_table where _param1='aaa' and _param2=32;
+    select * from my_table where _param1='aaa' and _param2='32';
    ```
 
 
