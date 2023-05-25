@@ -34,6 +34,13 @@ macro_rules! report_error {
     }};
 }
 
+macro_rules! report_deparse_error {
+    ($expr:expr) => {{
+        report_error(PgSqlErrorCode::ERRCODE_FDW_ERROR, $expr);
+        String::default()
+    }};
+}
+
 #[wrappers_fdw(
     version = "0.1.0",
     author = "Supabase",
@@ -56,8 +63,10 @@ impl OpenaiFdw {
         source: &str,
         quals: &[Qual],
         columns: &[Column],
+        sorts: &[Sort],
         limit: &Option<Limit>,
     ) -> String {
+        // deparse source
         let source = if source.starts_with('(') {
             let re = Regex::new(r"\$\{([^}]+)\}").unwrap();
             re.replace_all(source, |caps: &Captures| {
@@ -68,30 +77,12 @@ impl OpenaiFdw {
                         match &qual.value {
                             Value::Cell(cell) => match cell {
                                 Cell::String(s) => s.clone(),
-                                _ => {
-                                    report_error(
-                                        PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                                        "query parameter must be a string",
-                                    );
-                                    String::default()
-                                }
+                                _ => report_deparse_error!("query parameter must be a string"),
                             },
-                            Value::Array(_) => {
-                                report_error(
-                                    PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                                    "invalid query parameter",
-                                );
-                                String::default()
-                            }
+                            Value::Array(_) => report_deparse_error!("invalid query parameter"),
                         }
                     }
-                    None => {
-                        report_error(
-                            PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                            &format!("unmatched query parameter: {}", param),
-                        );
-                        String::default()
-                    }
+                    None => report_deparse_error!(&format!("unmatched query parameter: {}", param)),
                 }
             })
             .into_owned()
@@ -100,6 +91,7 @@ impl OpenaiFdw {
         };
         let source = format!("{} _wrappers_src", source);
 
+        // deparse target columns
         let tgts = if columns.is_empty() {
             "*".to_string()
         } else {
@@ -118,6 +110,7 @@ impl OpenaiFdw {
             tgts
         };
 
+        // deparse where condition
         let cond = quals
             .iter()
             .filter(|q| !self.params.contains_key(&q.field))
@@ -135,6 +128,13 @@ impl OpenaiFdw {
             )
         };
 
+        // deparse sort
+        if !sorts.is_empty() {
+            let order_by = sorts.iter().map(|s| s.deparse()).collect::<Vec<_>>().join(", ");
+            sql.push_str(&format!(" order by {}", order_by));
+        }
+
+        // deparse limit
         if let Some(limit) = limit {
             let real_limit = limit.offset + limit.count;
             sql.push_str(&format!(" limit {}", real_limit));
@@ -166,7 +166,7 @@ impl ForeignDataWrapper for OpenaiFdw {
         &mut self,
         quals: &[Qual],
         columns: &[Column],
-        _sorts: &[Sort],
+        sorts: &[Sort],
         limit: &Option<Limit>,
         options: &HashMap<String, String>,
     ) {
@@ -179,7 +179,7 @@ impl ForeignDataWrapper for OpenaiFdw {
         self.tgt_cols = columns.to_vec();
 
         // read source data
-        let sql = self.deparse(&source, quals, columns, limit);
+        let sql = self.deparse(&source, quals, columns, sorts, limit);
         self.inputs = Spi::connect(|client| {
             let inputs = client
                 .select(&sql, None, None)
