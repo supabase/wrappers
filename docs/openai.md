@@ -33,7 +33,7 @@ insert into vault.secrets (secret, key_id) values (
 ) returning key_id;
 ```
 
-Then create the foreign server,
+Then create the foreign server:
 
 ```sql
 do $$
