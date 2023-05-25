@@ -72,7 +72,7 @@ create server openai_server
 
 ### Tables
 
-OpenAI wrapper currently only supports reading [embedding](https://platform.openai.com/docs/guides/embeddings/what-are-embeddings) data through OpenAI API. The foreign table must contain `id` and `embedding` column.
+OpenAI wrapper currently supports reading [embedding](https://platform.openai.com/docs/guides/embeddings/what-are-embeddings) data through OpenAI API. The foreign table must contain `id` and `embedding` column.
 
 
 #### Foreign Table Options
