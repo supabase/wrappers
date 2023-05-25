@@ -110,9 +110,11 @@ The full list of foreign table options are below:
    ```
 
 
-#### Examples
+### Examples
 
-A simple example,
+#### Example 1
+
+A simple example to fetch embeddings for all source rows.
 
 ```sql
 -- source table with column to store embedding
@@ -152,6 +154,8 @@ where s.id = t.id;
 select * from my_table;
 ```
 
+#### Example 2
+
 This is another more complex example with query parameters, it incrementally updates embedding for specific input.
 
 ```sql
@@ -178,8 +182,7 @@ create foreign table my_embedding2 (
 )
   server openai_server
   options (
-    -- Note: the source sub-query must have an 'id' and an 'input' column, and the
-    -- corresponding parameters.
+    -- Note: the source sub-query must have an 'id' and an 'input' column, and the corresponding parameters if any.
     source '(
       select id, content as input
       from my_table2
@@ -206,3 +209,54 @@ where s.id = t.id
 -- check if embedding has been saved
 select * from my_table2;
 ```
+
+#### Example 3
+
+This example allows the user to specify a limit for how many embeddings to fetch at once:
+
+```
+-- source table with an embedding column
+create table documents (
+  id serial primary key,
+  content text not null,
+  embedding vector(1536)
+);
+
+-- foreign table to fetch embedding
+-- Note: foreign table must have an 'id' and an 'embedding' column.
+create foreign table embeddings (
+  id bigint,
+  embedding text
+)
+  server openai_server
+  options (
+    -- Note: the source sub-query must have an 'id' and an 'input' column, and the corresponding parameters if any.
+    source '(
+      select id, content as input
+      from documents
+      where embedding is null
+    )'
+  );
+
+-- add some example data
+insert into documents(id, content) values (1, 'hello world');
+insert into documents(id, content) values (2, 'hello ai');
+insert into documents(id, content) values (3, 'hello wrappers');
+```
+
+then we can use this to "backfill" our `documents` table:
+
+```
+with new_embeddings as (
+  select *
+  from embeddings
+  order by id
+  limit 2
+)
+update documents
+set embedding = new_embeddings.embedding::vector
+from new_embeddings
+where documents.id = new_embeddings.id;
+```
+
+Run above sql for the first time will update embedding the first 2 rows in `documents`, then run it again will update embedding the 3rd row.
