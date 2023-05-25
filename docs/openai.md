@@ -1,4 +1,4 @@
-[OpenAI](https://openai.com/) is an American artificial intelligence research laboratory consisting of the non-profit OpenAI Incorporated and its for-profit subsidiary corporation OpenAI Limited Partnership. OpenAI conducts AI research with the declared intention of promoting and developing a friendly AI.
+[OpenAI](https://openai.com/) is an artificial intelligence research laboratory that conducts AI research with the intention of promoting and developing a friendly AI.
 
 OpenAI FDW supports reading embedding data based on [text-embedding-ada-002 model](https://platform.openai.com/docs/guides/embeddings/second-generation-models), the embedding is in `string` format which can be saved to a `vector` column created by [pgvector](https://github.com/pgvector/pgvector).
 
