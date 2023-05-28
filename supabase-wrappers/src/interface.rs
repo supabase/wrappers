@@ -2,8 +2,8 @@
 //!
 
 use crate::FdwRoutine;
-use pgx::prelude::{Date, Timestamp};
-use pgx::{
+use pgrx::prelude::{Date, Timestamp};
+use pgrx::{
     fcinfo,
     pg_sys::{self, Datum, Oid},
     AllocatedByRust, AnyNumeric, FromDatum, IntoDatum, JsonB, PgBuiltInOids, PgOid,
@@ -21,13 +21,13 @@ use std::slice::Iter;
 // https://doxygen.postgresql.org/pg__foreign__table_8h.html
 
 /// Constant can be used in [validator](ForeignDataWrapper::validator)
-pub const FOREIGN_DATA_WRAPPER_RELATION_ID: Oid = 2328;
+pub const FOREIGN_DATA_WRAPPER_RELATION_ID: Oid = unsafe { Oid::from_u32_unchecked(2328) };
 
 /// Constant can be used in [validator](ForeignDataWrapper::validator)
-pub const FOREIGN_SERVER_RELATION_ID: Oid = 1417;
+pub const FOREIGN_SERVER_RELATION_ID: Oid = unsafe { Oid::from_u32_unchecked(1417) };
 
 /// Constant can be used in [validator](ForeignDataWrapper::validator)
-pub const FOREIGN_TABLE_RELATION_ID: Oid = 3118;
+pub const FOREIGN_TABLE_RELATION_ID: Oid = unsafe { Oid::from_u32_unchecked(3118) };
 
 /// A data cell in a data row
 #[derive(Debug)]
@@ -80,7 +80,7 @@ impl fmt::Display for Cell {
             Cell::Date(v) => unsafe {
                 let dt = fcinfo::direct_function_call_as_datum(
                     pg_sys::date_out,
-                    vec![v.clone().into_datum()],
+                    &vec![v.clone().into_datum()],
                 )
                 .unwrap();
                 let dt_cstr = CStr::from_ptr(dt.cast_mut_ptr());
@@ -89,7 +89,7 @@ impl fmt::Display for Cell {
             Cell::Timestamp(v) => unsafe {
                 let ts = fcinfo::direct_function_call_as_datum(
                     pg_sys::timestamp_out,
-                    vec![v.clone().into_datum()],
+                    &vec![v.clone().into_datum()],
                 )
                 .unwrap();
                 let ts_cstr = CStr::from_ptr(ts.cast_mut_ptr());
@@ -119,7 +119,7 @@ impl IntoDatum for Cell {
     }
 
     fn type_oid() -> Oid {
-        0
+        Oid::INVALID
     }
 }
 
@@ -570,33 +570,35 @@ pub trait ForeignDataWrapper {
     where
         Self: Sized,
     {
-        use crate::{modify, scan};
-        let mut fdw_routine =
-            FdwRoutine::<AllocatedByRust>::alloc_node(pg_sys::NodeTag_T_FdwRoutine);
+        unsafe {
+            use crate::{modify, scan};
+            let mut fdw_routine =
+                FdwRoutine::<AllocatedByRust>::alloc_node(pg_sys::NodeTag_T_FdwRoutine);
 
-        // plan phase
-        fdw_routine.GetForeignRelSize = Some(scan::get_foreign_rel_size::<Self>);
-        fdw_routine.GetForeignPaths = Some(scan::get_foreign_paths::<Self>);
-        fdw_routine.GetForeignPlan = Some(scan::get_foreign_plan::<Self>);
-        fdw_routine.ExplainForeignScan = Some(scan::explain_foreign_scan::<Self>);
+            // plan phase
+            fdw_routine.GetForeignRelSize = Some(scan::get_foreign_rel_size::<Self>);
+            fdw_routine.GetForeignPaths = Some(scan::get_foreign_paths::<Self>);
+            fdw_routine.GetForeignPlan = Some(scan::get_foreign_plan::<Self>);
+            fdw_routine.ExplainForeignScan = Some(scan::explain_foreign_scan::<Self>);
 
-        // scan phase
-        fdw_routine.BeginForeignScan = Some(scan::begin_foreign_scan::<Self>);
-        fdw_routine.IterateForeignScan = Some(scan::iterate_foreign_scan::<Self>);
-        fdw_routine.ReScanForeignScan = Some(scan::re_scan_foreign_scan::<Self>);
-        fdw_routine.EndForeignScan = Some(scan::end_foreign_scan::<Self>);
+            // scan phase
+            fdw_routine.BeginForeignScan = Some(scan::begin_foreign_scan::<Self>);
+            fdw_routine.IterateForeignScan = Some(scan::iterate_foreign_scan::<Self>);
+            fdw_routine.ReScanForeignScan = Some(scan::re_scan_foreign_scan::<Self>);
+            fdw_routine.EndForeignScan = Some(scan::end_foreign_scan::<Self>);
 
-        // modify phase
-        fdw_routine.AddForeignUpdateTargets = Some(modify::add_foreign_update_targets);
-        fdw_routine.PlanForeignModify = Some(modify::plan_foreign_modify::<Self>);
-        fdw_routine.BeginForeignModify = Some(modify::begin_foreign_modify::<Self>);
-        fdw_routine.ExecForeignInsert = Some(modify::exec_foreign_insert::<Self>);
-        fdw_routine.ExecForeignDelete = Some(modify::exec_foreign_delete::<Self>);
-        fdw_routine.ExecForeignUpdate = Some(modify::exec_foreign_update::<Self>);
-        fdw_routine.EndForeignModify = Some(modify::end_foreign_modify::<Self>);
+            // modify phase
+            fdw_routine.AddForeignUpdateTargets = Some(modify::add_foreign_update_targets);
+            fdw_routine.PlanForeignModify = Some(modify::plan_foreign_modify::<Self>);
+            fdw_routine.BeginForeignModify = Some(modify::begin_foreign_modify::<Self>);
+            fdw_routine.ExecForeignInsert = Some(modify::exec_foreign_insert::<Self>);
+            fdw_routine.ExecForeignDelete = Some(modify::exec_foreign_delete::<Self>);
+            fdw_routine.ExecForeignUpdate = Some(modify::exec_foreign_update::<Self>);
+            fdw_routine.EndForeignModify = Some(modify::end_foreign_modify::<Self>);
 
-        Self::fdw_routine_hook(&mut fdw_routine);
-        fdw_routine.into_pg_boxed()
+            Self::fdw_routine_hook(&mut fdw_routine);
+            fdw_routine.into_pg_boxed()
+        }
     }
 
     /// Additional FwdRoutine setup, called by default `Self::fdw_routine()`

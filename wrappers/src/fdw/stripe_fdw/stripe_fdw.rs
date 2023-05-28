@@ -1,6 +1,6 @@
-use pgx::pg_sys;
-use pgx::prelude::{PgSqlErrorCode, Timestamp};
-use pgx::JsonB;
+use pgrx::pg_sys;
+use pgrx::prelude::{PgSqlErrorCode, Timestamp};
+use pgrx::JsonB;
 use reqwest::{self, header, StatusCode, Url};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};

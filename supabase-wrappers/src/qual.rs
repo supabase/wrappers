@@ -1,5 +1,6 @@
 use crate::prelude::*;
-use pgx::{is_a, pg_sys, pg_sys::Datum, FromDatum, PgBuiltInOids, PgList, PgOid};
+use pgrx::pg_sys::Oid;
+use pgrx::{is_a, pg_sys, pg_sys::Datum, FromDatum, PgBuiltInOids, PgList, PgOid};
 use std::ffi::CStr;
 use std::os::raw::c_int;
 
@@ -61,9 +62,9 @@ pub(crate) unsafe fn get_operator(opno: pg_sys::Oid) -> pg_sys::Form_pg_operator
     );
     if htup.is_null() {
         pg_sys::ReleaseSysCache(htup);
-        pgx::error!("cache lookup operator {} failed", opno);
+        pgrx::error!("cache lookup operator {} failed", opno);
     }
-    let op = pg_sys::pgx_GETSTRUCT(htup) as pg_sys::Form_pg_operator;
+    let op = pg_sys::GETSTRUCT(htup) as pg_sys::Form_pg_operator;
     pg_sys::ReleaseSysCache(htup);
     op
 }
@@ -106,7 +107,7 @@ pub(crate) unsafe fn extract_from_op_expr(
     // swap operands if needed
     if is_a(right, pg_sys::NodeTag_T_Var)
         && !is_a(left, pg_sys::NodeTag_T_Var)
-        && (*opr).oprcom != 0
+        && (*opr).oprcom != Oid::INVALID
     {
         std::mem::swap(&mut left, &mut right);
     }
@@ -143,7 +144,7 @@ pub(crate) unsafe fn extract_from_op_expr(
             if let Some(value) = value {
                 let qual = Qual {
                     field: CStr::from_ptr(field).to_str().unwrap().to_string(),
-                    operator: pgx::name_data_to_str(&(*opr).oprname).to_string(),
+                    operator: pgrx::name_data_to_str(&(*opr).oprname).to_string(),
                     value: Value::Cell(value),
                     use_or: false,
                     param,
@@ -153,7 +154,7 @@ pub(crate) unsafe fn extract_from_op_expr(
         }
     }
 
-    if let Some(stm) = pgx::nodes::node_to_string(expr as _) {
+    if let Some(stm) = pgrx::nodes::node_to_string(expr as _) {
         report_warning(&format!("unsupported operator expression in qual: {}", stm));
     }
 
@@ -226,7 +227,7 @@ pub(crate) unsafe fn extract_from_scalar_array_op_expr(
             if let Some(value) = value {
                 let qual = Qual {
                     field: CStr::from_ptr(field).to_str().unwrap().to_string(),
-                    operator: pgx::name_data_to_str(&(*opr).oprname).to_string(),
+                    operator: pgrx::name_data_to_str(&(*opr).oprname).to_string(),
                     value: Value::Array(value),
                     use_or: (*expr).useOr,
                     param: None,
@@ -236,7 +237,7 @@ pub(crate) unsafe fn extract_from_scalar_array_op_expr(
         }
     }
 
-    if let Some(stm) = pgx::nodes::node_to_string(expr as _) {
+    if let Some(stm) = pgrx::nodes::node_to_string(expr as _) {
         report_warning(&format!("only support const scalar array in qual: {}", stm));
     }
 
@@ -323,7 +324,7 @@ pub(crate) unsafe fn extract_quals(
         } else if is_a(expr, pg_sys::NodeTag_T_BoolExpr) {
             extract_from_bool_expr(root, baserel_id, (*baserel).relids, expr as _)
         } else {
-            if let Some(stm) = pgx::nodes::node_to_string(expr) {
+            if let Some(stm) = pgrx::nodes::node_to_string(expr) {
                 report_warning(&format!("unsupported qual: {}", stm));
             }
             None

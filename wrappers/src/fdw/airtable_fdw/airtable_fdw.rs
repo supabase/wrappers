@@ -1,5 +1,5 @@
-use pgx::pg_sys;
-use pgx::prelude::PgSqlErrorCode;
+use pgrx::pg_sys;
+use pgrx::prelude::PgSqlErrorCode;
 use reqwest::{self, header};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};

@@ -1,8 +1,8 @@
 #[cfg(any(test, feature = "pg_test"))]
-#[pgx::pg_schema]
+#[pgrx::pg_schema]
 mod tests {
-    use pgx::prelude::*;
-    use pgx::JsonB;
+    use pgrx::prelude::*;
+    use pgrx::JsonB;
 
     #[pg_test]
     fn firebase_smoketest() {

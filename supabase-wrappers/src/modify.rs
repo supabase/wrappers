@@ -1,4 +1,4 @@
-use pgx::{
+use pgrx::{
     debug2, memcxt::PgMemoryContexts, pg_sys::Oid, prelude::*, rel::PgRelation,
     tupdesc::PgTupleDesc, FromDatum, PgSqlErrorCode,
 };
@@ -37,7 +37,7 @@ impl<W: ForeignDataWrapper> FdwModifyState<W> {
             instance: instance::create_fdw_instance(foreigntableid),
             rowid_name: String::default(),
             rowid_attno: 0,
-            rowid_typid: 0,
+            rowid_typid: Oid::INVALID,
             opts: HashMap::new(),
             tmp_ctx,
         }
@@ -87,7 +87,7 @@ pub(super) extern "C" fn add_foreign_update_targets(
         // find rowid attribute
         let tup_desc = PgTupleDesc::from_pg_copy((*target_relation).rd_att);
         for attr in tup_desc.iter().filter(|a| !a.attisdropped) {
-            if pgx::name_data_to_str(&attr.attname) == rowid_name {
+            if pgrx::name_data_to_str(&attr.attname) == rowid_name {
                 // make a Var representing the desired value
                 let var = pg_sys::makeVar(
                     rtindex.try_into().unwrap(),
@@ -149,7 +149,7 @@ pub(super) extern "C" fn plan_foreign_modify<W: ForeignDataWrapper>(
         // search for rowid attribute in tuple descrition
         let tup_desc = PgTupleDesc::from_relation(&rel);
         for attr in tup_desc.iter().filter(|a| !a.attisdropped) {
-            let attname = pgx::name_data_to_str(&attr.attname);
+            let attname = pgrx::name_data_to_str(&attr.attname);
             if attname == rowid_name {
                 let ftable_id = rel.oid();
 
@@ -280,7 +280,7 @@ pub(super) extern "C" fn exec_foreign_update<W: ForeignDataWrapper>(
             let tup_desc = PgTupleDesc::from_pg_copy((*slot).tts_tupleDescriptor);
             new_row.retain(|(col, _)| {
                 tup_desc.iter().filter(|a| !a.attisdropped).any(|a| {
-                    let attr_name = pgx::name_data_to_str(&a.attname);
+                    let attr_name = pgrx::name_data_to_str(&a.attname);
                     attr_name == col.as_str()
                 }) && state.rowid_name != col.as_str()
             });

@@ -9,8 +9,8 @@ use gcp_bigquery_client::{
     },
     Client,
 };
-use pgx::prelude::PgSqlErrorCode;
-use pgx::prelude::{AnyNumeric, Date, Timestamp};
+use pgrx::prelude::PgSqlErrorCode;
+use pgrx::prelude::{AnyNumeric, Date, Timestamp};
 use serde_json::json;
 use std::collections::HashMap;
 use time::{format_description::well_known::Iso8601, OffsetDateTime, PrimitiveDateTime};

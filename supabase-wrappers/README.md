@@ -23,7 +23,7 @@
 - Minimum interface and easy to implement.
 - Support for rich data types.
 - Support both sync and async backends, such as RDBMS, RESTful APIs, flat files and etc.
-- Built on top of [pgx](https://github.com/tcdi/pgx), providing higher level interfaces, without hiding lower-level C APIs.
+- Built on top of [pgrx](https://github.com/tcdi/pgrx), providing higher level interfaces, without hiding lower-level C APIs.
 - `WHERE`, `ORDER BY`, `LIMIT` pushdown are supported.
 
 ## Documentation
@@ -32,12 +32,12 @@
 
 ## Installation
 
-`Wrappers` is a pgx extension, you can follow the [pgx installation steps](https://github.com/tcdi/pgx#system-requirements) to install Wrappers.
+`Wrappers` is a pgrx extension, you can follow the [pgrx installation steps](https://github.com/tcdi/pgrx#system-requirements) to install Wrappers.
 
-Basically, run below command to install FDW after `pgx` is installed. For example,
+Basically, run below command to install FDW after `pgrx` is installed. For example,
 
 ```bash
-cargo pgx install --pg-config [path_to_pg_config] --features stripe_fdw
+cargo pgrx install --pg-config [path_to_pg_config] --features stripe_fdw
 ```
 
 ## Developing a FDW
@@ -80,11 +80,11 @@ These steps outline how to use the a demo FDW [HelloWorldFdw](https://github.com
 git clone https://github.com/supabase/wrappers.git
 ```
 
-2. Run it using pgx with feature:
+2. Run it using pgrx with feature:
 
 ```bash
 cd wrappers/wrappers
-cargo pgx run --features helloworld_fdw
+cargo pgrx run --features helloworld_fdw
 ```
 
 3. Create the extension, foreign data wrapper and related objects:
@@ -128,7 +128,7 @@ wrappers=# select * from hello;
 
 ## Limitations
 
-- Windows is not supported, that limitation inherits from [pgx](https://github.com/tcdi/pgx).
+- Windows is not supported, that limitation inherits from [pgrx](https://github.com/tcdi/pgrx).
 - Currently only supports PostgreSQL v14 and v15.
 - Generated column is not supported.
 

@@ -1,8 +1,8 @@
 #[cfg(any(test, feature = "pg_test"))]
-#[pgx::pg_schema]
+#[pgrx::pg_schema]
 mod tests {
-    use pgx::pg_test;
-    use pgx::prelude::*;
+    use pgrx::pg_test;
+    use pgrx::prelude::*;
 
     #[pg_test]
     fn bigquery_smoketest() {

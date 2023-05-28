@@ -9,12 +9,12 @@ This FDW currently supports reading below data from Firebase:
 
 ## Installation
 
-This FDW requires [pgx](https://github.com/tcdi/pgx), please refer to its installation page to install it first.
+This FDW requires [pgrx](https://github.com/tcdi/pgrx), please refer to its installation page to install it first.
 
-After `pgx` is installed, run below command to install this FDW.
+After `pgrx` is installed, run below command to install this FDW.
 
 ```bash
-cargo pgx install --pg-config [path_to_pg_config] --features firebase_fdw
+cargo pgrx install --pg-config [path_to_pg_config] --features firebase_fdw
 ```
 
 ## Basic usage
@@ -27,11 +27,11 @@ These steps outline how to use the this FDW locally:
 git clone https://github.com/supabase/wrappers.git
 ```
 
-2. Run it using pgx with feature:
+2. Run it using pgrx with feature:
 
 ```bash
 cd wrappers/wrappers
-cargo pgx run --features firebase_fdw
+cargo pgrx run --features firebase_fdw
 ```
 
 3. Create the extension, foreign data wrapper and related objects:

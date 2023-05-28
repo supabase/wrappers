@@ -1,9 +1,9 @@
 #[cfg(any(test, feature = "pg_test"))]
-#[pgx::pg_schema]
+#[pgrx::pg_schema]
 mod tests {
     use clickhouse_rs as ch;
-    use pgx::prelude::*;
-    use pgx::{pg_test, IntoDatum};
+    use pgrx::prelude::*;
+    use pgrx::{pg_test, IntoDatum};
     use supabase_wrappers::prelude::create_async_runtime;
 
     #[pg_test]

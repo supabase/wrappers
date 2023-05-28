@@ -1,7 +1,7 @@
 //! Helper functions for Wrappers Memory Context management
 //!
 
-use pgx::{memcxt::PgMemoryContexts, pg_sys::AsPgCStr, prelude::*};
+use pgrx::{memcxt::PgMemoryContexts, pg_sys::AsPgCStr, prelude::*};
 
 // Wrappers root memory context name
 const ROOT_MEMCTX_NAME: &str = "WrappersRootMemCtx";

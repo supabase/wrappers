@@ -1,7 +1,7 @@
 use chrono::{Date, DateTime, NaiveDate, NaiveDateTime, Utc};
 use chrono_tz::Tz;
 use clickhouse_rs::{types, types::Block, types::SqlType, ClientHandle, Pool};
-use pgx::{
+use pgrx::{
     pg_sys,
     prelude::{PgSqlErrorCode, Timestamp},
 };
@@ -59,7 +59,7 @@ fn field_to_cell(row: &types::Row<types::Complex>, i: usize) -> Option<Cell> {
             let value = row.get::<Date<_>, usize>(i).unwrap();
             let epoch = NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
             let days_epoch = value.naive_utc().signed_duration_since(epoch).num_days() as i32;
-            let dt = pgx::datum::Date::from_pg_epoch_days(
+            let dt = pgrx::datum::Date::from_pg_epoch_days(
                 days_epoch + pg_sys::UNIX_EPOCH_JDATE as i32 - pg_sys::POSTGRES_EPOCH_JDATE as i32,
             );
             Some(Cell::Date(dt))
