@@ -443,6 +443,25 @@ mod tests {
                 None,
             );
 
+            c.update(
+                r#"
+                CREATE FOREIGN TABLE checkout_sessions (
+                  id text,
+                  customer text,
+                  payment_intent text,
+                  subscription text,
+                  attrs jsonb
+                )
+                SERVER my_stripe_server
+                OPTIONS (
+                  object 'checkout/sessions',
+                  rowid_column 'id'
+                )
+             "#,
+                None,
+                None,
+            );
+
             let results = c
                 .select("SELECT * FROM stripe_accounts", None, None)
                 .filter_map(|r| {
@@ -523,6 +542,19 @@ mod tests {
                 .filter_map(|r| r.by_name("id").ok().and_then(|v| v.value::<&str>()))
                 .collect::<Vec<_>>();
             assert_eq!(results, vec!["cus_MJiBgSUgeWFN0z"]);
+
+            let results = c
+                .select(
+                    "SELECT attrs->>'id' as id FROM checkout_sessions",
+                    None,
+                    None,
+                )
+                .filter_map(|r| r.by_name("id").ok().and_then(|v| v.value::<&str>()))
+                .collect::<Vec<_>>();
+            assert_eq!(
+                results,
+                vec!["cs_test_a1DmlfbOPqmbKHfpwpFQ0RM3pVXmKoESZbJxnKrPdMsLDPPMGYtEBcHGPR"]
+            );
 
             // Stripe mock service cannot return 404 error code correctly for
             // non-exists customer, so we have to disable this test case.
