@@ -113,7 +113,7 @@ pub(super) extern "C" fn get_foreign_rel_size<W: ForeignDataWrapper>(
     debug2!("---> get_foreign_rel_size");
     unsafe {
         // refresh leftover memory context
-        let ctx_name = format!("Wrappers_scan_{}", foreigntableid);
+        let ctx_name = format!("Wrappers_scan_{}", foreigntableid.as_u32());
         let ctx = memctx::refresh_wrappers_memctx(&ctx_name);
 
         // create scan state

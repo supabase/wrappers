@@ -154,7 +154,7 @@ pub(super) extern "C" fn plan_foreign_modify<W: ForeignDataWrapper>(
                 let ftable_id = rel.oid();
 
                 // refresh leftover memory context
-                let ctx_name = format!("Wrappers_modify_{}", ftable_id);
+                let ctx_name = format!("Wrappers_modify_{}", ftable_id.as_u32());
                 let ctx = memctx::refresh_wrappers_memctx(&ctx_name);
 
                 // create modify state

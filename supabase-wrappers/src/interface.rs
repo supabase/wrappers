@@ -80,7 +80,7 @@ impl fmt::Display for Cell {
             Cell::Date(v) => unsafe {
                 let dt = fcinfo::direct_function_call_as_datum(
                     pg_sys::date_out,
-                    &vec![v.clone().into_datum()],
+                    &[v.clone().into_datum()],
                 )
                 .unwrap();
                 let dt_cstr = CStr::from_ptr(dt.cast_mut_ptr());
@@ -89,7 +89,7 @@ impl fmt::Display for Cell {
             Cell::Timestamp(v) => unsafe {
                 let ts = fcinfo::direct_function_call_as_datum(
                     pg_sys::timestamp_out,
-                    &vec![v.clone().into_datum()],
+                    &[v.clone().into_datum()],
                 )
                 .unwrap();
                 let ts_cstr = CStr::from_ptr(ts.cast_mut_ptr());

@@ -292,7 +292,7 @@ impl ForeignDataWrapper for ClickHouseFdw {
                         Cell::Date(_) => {
                             let s = cell.to_string().replace('\'', "");
                             if let Ok(tm) = NaiveDate::parse_from_str(&s, "%Y-%m-%d") {
-                                let epoch = NaiveDate::from_ymd(1970, 1, 1);
+                                let epoch = NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
                                 let duration = tm - epoch;
                                 let dt = types::Value::Date(duration.num_days() as u16, Tz::UTC);
                                 row.push((col_name, dt));

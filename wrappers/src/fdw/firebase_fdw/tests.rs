@@ -6,13 +6,14 @@ mod tests {
 
     #[pg_test]
     fn firebase_smoketest() {
-        Spi::execute(|c| {
+        Spi::connect(|mut c| {
             c.update(
                 r#"CREATE FOREIGN DATA WRAPPER firebase_wrapper
                          HANDLER firebase_fdw_handler VALIDATOR firebase_fdw_validator"#,
                 None,
                 None,
-            );
+            )
+            .unwrap();
             c.update(
                 r#"CREATE SERVER my_firebase_server
                          FOREIGN DATA WRAPPER firebase_wrapper
@@ -22,7 +23,8 @@ mod tests {
                          )"#,
                 None,
                 None,
-            );
+            )
+            .unwrap();
 
             /*
              The tables below come from the code in docker-compose.yml that looks like this:
@@ -48,11 +50,13 @@ mod tests {
              "#,
                 None,
                 None,
-            );
+            )
+            .unwrap();
 
             let results = c
                 .select("SELECT email FROM firebase_users", None, None)
-                .filter_map(|r| r.by_name("email").ok().and_then(|v| v.value::<&str>()))
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("email").unwrap())
                 .collect::<Vec<_>>();
 
             assert_eq!(results, vec!["bo@supabase.io", "copple@supabase.io"]);
@@ -73,16 +77,16 @@ mod tests {
              "#,
                 None,
                 None,
-            );
+            )
+            .unwrap();
 
             let results = c
                 .select("SELECT name,fields FROM firebase_docs", None, None)
+                .unwrap()
                 .filter_map(|r| {
-                    r.by_name("name").ok().and_then(|v| v.value::<&str>()).zip(
-                        r.by_name("fields")
-                            .ok()
-                            .and_then(|v| v.value::<JsonB>().map(|j| j.0)),
-                    )
+                    r.get_by_name::<&str, _>("name")
+                        .unwrap()
+                        .zip(r.get_by_name::<JsonB, _>("fields").unwrap().map(|j| j.0))
                 })
                 .collect::<Vec<_>>();
 

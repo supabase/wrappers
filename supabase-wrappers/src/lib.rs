@@ -20,7 +20,7 @@
 //! ...
 //!
 //! [dependencies]
-//! pgrx = "=0.6.1"
+//! pgrx = "=0.8.3"
 //! supabase-wrappers = "0.1"
 //! ```
 //!
@@ -159,7 +159,7 @@
 //!     }
 //!
 //!     fn end_scan(&mut self) {
-//!         // we do nothing here, but you can things like resource cleanup and etc.
+//!         // we do nothing here, but you can do things like resource cleanup and etc.
 //!     }
 //! }
 //! ```
