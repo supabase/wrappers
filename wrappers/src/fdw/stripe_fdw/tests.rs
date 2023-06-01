@@ -481,7 +481,8 @@ mod tests {
              "#,
                 None,
                 None,
-            );
+            )
+            .unwrap();
 
             let results = c
                 .select("SELECT * FROM stripe_accounts", None, None)
@@ -577,7 +578,8 @@ mod tests {
                     None,
                     None,
                 )
-                .filter_map(|r| r.by_name("id").ok().and_then(|v| v.value::<&str>()))
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("id").unwrap())
                 .collect::<Vec<_>>();
             assert_eq!(
                 results,
