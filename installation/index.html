@@ -393,13 +393,13 @@
 
   <h1>Installation</h1>
 
-<p>First, install <a href="https://github.com/tcdi/pgx">pgx</a></p>
+<p>First, install <a href="https://github.com/tcdi/pgrx">pgrx</a></p>
 <p>Then clone the repo and install using</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code>git clone https://github.com/supabase/wrappers.git
 <span class="nb">cd</span> wrappers/wrappers 
-cargo pgx install --no-default-features --features pg14,&lt;some_integration&gt;_fdw --release
+cargo pgrx install --no-default-features --features pg14,&lt;some_integration&gt;_fdw --release
 </code></pre></div></td></tr></table></div>
 <p>To enable the extension in PostgreSQL we must execute a <code>create extension</code> statement.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">extension</span><span class="w"> </span><span class="n">wrappers</span><span class="p">;</span><span class="w"></span>

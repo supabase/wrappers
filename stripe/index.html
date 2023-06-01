@@ -425,6 +425,13 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#checkout-sessions" class="md-nav__link">
+    Checkout Sessions
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#customers" class="md-nav__link">
     Customers
   </a>
@@ -714,6 +721,13 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#checkout-sessions" class="md-nav__link">
+    Checkout Sessions
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#customers" class="md-nav__link">
     Customers
   </a>
@@ -906,6 +920,7 @@
 <li><a href="https://stripe.com/docs/api/balance">Balance</a> (<em>read only</em>)</li>
 <li><a href="https://stripe.com/docs/api/balance_transactions/list">Balance Transactions</a> (<em>read only</em>)</li>
 <li><a href="https://stripe.com/docs/api/charges/list">Charges</a> (<em>read only</em>)</li>
+<li><a href="https://stripe.com/docs/api/checkout/sessions/list">Checkout Sessions</a> (<em>read only</em>)</li>
 <li><a href="https://stripe.com/docs/api/customers/list">Customers</a> (<em>read and modify</em>)</li>
 <li><a href="https://stripe.com/docs/api/disputes/list">Disputes</a> (<em>read only</em>)</li>
 <li><a href="https://stripe.com/docs/api/events/list">Events</a> (<em>read only</em>)</li>
@@ -1088,7 +1103,7 @@
 <p>While any column is allowed in a where clause, it is most efficient to filter by:</p>
 <ul>
 <li>id</li>
-<li>type </li>
+<li>type</li>
 </ul>
 <h5 id="charges">Charges</h5>
 <p><em>read only</em></p>
@@ -1131,10 +1146,45 @@
 <li>id</li>
 <li>customer</li>
 </ul>
+<h5 id="checkout-sessions">Checkout Sessions</h5>
+<p><em>read only</em></p>
+<p>A Checkout Session represents your customer's session as they pay for one-time purchases or subscriptions through Checkout or Payment Links. We recommend creating a new Session each time your customer attempts to pay.</p>
+<p>Ref: <a href="https://stripe.com/docs/api/checkout/sessions/list">Stripe docs</a></p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">stripe</span><span class="p">.</span><span class="n">checkout_sessions</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">customer</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">payment_intent</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">subscription</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span><span class="w"></span>
+<span class="p">)</span><span class="w"></span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">stripe_server</span><span class="w"></span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;checkout/sessions&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="n">rowid_column</span><span class="w"> </span><span class="s1">&#39;id&#39;</span><span class="w"></span>
+<span class="w">  </span><span class="p">);</span><span class="w"></span>
+</code></pre></div></td></tr></table></div>
+<p>While any column is allowed in a where clause, it is most efficient to filter by:</p>
+<ul>
+<li>id</li>
+<li>customer</li>
+<li>payment_intent</li>
+<li>subscription</li>
+</ul>
 <h5 id="customers">Customers</h5>
 <p><em>read and modify</em></p>
 <p>Contains customers known to Stripe.</p>
-<p>Ref: <a href="https://stripe.com/docs/api/customers/list">Stripe docs</a> </p>
+<p>Ref: <a href="https://stripe.com/docs/api/customers/list">Stripe docs</a></p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -1169,7 +1219,7 @@
 <h5 id="disputes">Disputes</h5>
 <p><em>read only</em></p>
 <p>A dispute occurs when a customer questions your charge with their card issuer.</p>
-<p>Ref: <a href="https://stripe.com/docs/api/disputes/list">Stripe docs</a> </p>
+<p>Ref: <a href="https://stripe.com/docs/api/disputes/list">Stripe docs</a></p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -1209,7 +1259,7 @@
 <h5 id="events">Events</h5>
 <p><em>read only</em></p>
 <p>Events are our way of letting you know when something interesting happens in your account.</p>
-<p>Ref: <a href="https://stripe.com/docs/api/events/list">Stripe docs</a> </p>
+<p>Ref: <a href="https://stripe.com/docs/api/events/list">Stripe docs</a></p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -1240,7 +1290,7 @@
 <h5 id="files">Files</h5>
 <p><em>read only</em></p>
 <p>This is an object representing a file hosted on Stripe's servers.</p>
-<p>Ref: <a href="https://stripe.com/docs/api/files/list">Stripe docs</a> </p>
+<p>Ref: <a href="https://stripe.com/docs/api/files/list">Stripe docs</a></p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -1281,7 +1331,7 @@
 <h5 id="file-links">File Links</h5>
 <p><em>read only</em></p>
 <p>To share the contents of a <code>File</code> object with non-Stripe users, you can create a <code>FileLink</code>.</p>
-<p>Ref: <a href="https://stripe.com/docs/api/file_links/list">Stripe docs</a> </p>
+<p>Ref: <a href="https://stripe.com/docs/api/file_links/list">Stripe docs</a></p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -1311,7 +1361,7 @@
 <h5 id="invoices">Invoices</h5>
 <p><em>read only</em></p>
 <p>Invoices are statements of amounts owed by a customer, and are either generated one-off, or generated periodically from a subscription.</p>
-<p>Ref: <a href="https://stripe.com/docs/api/invoices/list">Stripe docs</a> </p>
+<p>Ref: <a href="https://stripe.com/docs/api/invoices/list">Stripe docs</a></p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -1352,7 +1402,7 @@
 <h5 id="mandates">Mandates</h5>
 <p><em>read only</em></p>
 <p>A Mandate is a record of the permission a customer has given you to debit their payment method.</p>
-<p>Ref: <a href="https://stripe.com/docs/api/mandates">Stripe docs</a> </p>
+<p>Ref: <a href="https://stripe.com/docs/api/mandates">Stripe docs</a></p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -1382,7 +1432,7 @@
 <h5 id="payment-intents">Payment Intents</h5>
 <p><em>read only</em></p>
 <p>A payment intent guides you through the process of collecting a payment from your customer.</p>
-<p>Ref: <a href="https://stripe.com/docs/api/payment_intents/list">Stripe docs</a> </p>
+<p>Ref: <a href="https://stripe.com/docs/api/payment_intents/list">Stripe docs</a></p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -1417,7 +1467,7 @@
 <h5 id="payouts">Payouts</h5>
 <p><em>read only</em></p>
 <p>A <code>Payout</code> object is created when you receive funds from Stripe, or when you initiate a payout to either a bank account or debit card of a connected Stripe account.</p>
-<p>Ref: <a href="https://stripe.com/docs/api/payouts/list">Stripe docs</a> </p>
+<p>Ref: <a href="https://stripe.com/docs/api/payouts/list">Stripe docs</a></p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -1456,7 +1506,7 @@
 <h5 id="prices">Prices</h5>
 <p><em>read only</em></p>
 <p>A <code>Price</code> object is needed for all of your products to facilitate multiple currencies and pricing options.</p>
-<p>Ref: <a href="https://stripe.com/docs/api/prices/list">Stripe docs</a> </p>
+<p>Ref: <a href="https://stripe.com/docs/api/prices/list">Stripe docs</a></p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -1493,7 +1543,7 @@
 <h5 id="products">Products</h5>
 <p><em>read and modify</em></p>
 <p>All products available in Stripe.</p>
-<p>Ref: <a href="https://stripe.com/docs/api/products/list">Stripe docs</a> </p>
+<p>Ref: <a href="https://stripe.com/docs/api/products/list">Stripe docs</a></p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -1532,7 +1582,7 @@
 <h5 id="refunds">Refunds</h5>
 <p><em>read only</em></p>
 <p><code>Refund</code> objects allow you to refund a charge that has previously been created but not yet refunded.</p>
-<p>Ref: <a href="https://stripe.com/docs/api/refunds/list">Stripe docs</a> </p>
+<p>Ref: <a href="https://stripe.com/docs/api/refunds/list">Stripe docs</a></p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -1572,7 +1622,7 @@
 <h5 id="setupattempts">SetupAttempts</h5>
 <p><em>read only</em></p>
 <p>A <code>SetupAttempt</code> describes one attempted confirmation of a SetupIntent, whether that confirmation was successful or unsuccessful.</p>
-<p>Ref: <a href="https://stripe.com/docs/api/setup_attempts/list">Stripe docs</a> </p>
+<p>Ref: <a href="https://stripe.com/docs/api/setup_attempts/list">Stripe docs</a></p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -1613,7 +1663,7 @@
 <h5 id="setupintents">SetupIntents</h5>
 <p><em>read only</em></p>
 <p>A <code>SetupIntent</code> guides you through the process of setting up and saving a customer's payment credentials for future payments.</p>
-<p>Ref: <a href="https://stripe.com/docs/api/setup_intents/list">Stripe docs</a> </p>
+<p>Ref: <a href="https://stripe.com/docs/api/setup_intents/list">Stripe docs</a></p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -1653,7 +1703,7 @@
 <h5 id="subscriptions">Subscriptions</h5>
 <p><em>read and modify</em></p>
 <p>Customer recurring payment schedules.</p>
-<p>Ref: <a href="https://stripe.com/docs/api/subscriptions/list">Stripe docs</a> </p>
+<p>Ref: <a href="https://stripe.com/docs/api/subscriptions/list">Stripe docs</a></p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -1690,7 +1740,7 @@
 <h5 id="tokens">Tokens</h5>
 <p><em>read only</em></p>
 <p>Tokenization is the process Stripe uses to collect sensitive card or bank account details, or personally identifiable information (PII), directly from your customers in a secure manner.</p>
-<p>Ref: <a href="https://stripe.com/docs/api/tokens">Stripe docs</a> </p>
+<p>Ref: <a href="https://stripe.com/docs/api/tokens">Stripe docs</a></p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
