@@ -282,6 +282,7 @@ impl StripeFdw {
             "tokens" => vec![],
             "topups" => vec!["status"],
             "transfers" => vec!["destination"],
+            "checkout/sessions" => vec!["customer", "payment_intent", "subscription"],
             _ => {
                 report_error(
                     PgSqlErrorCode::ERRCODE_FDW_TABLE_NOT_FOUND,
@@ -577,6 +578,17 @@ impl StripeFdw {
                     ("currency", "string"),
                     ("description", "string"),
                     ("destination", "string"),
+                    ("created", "timestamp"),
+                ],
+                tgt_cols,
+            ),
+            "checkout/sessions" => body_to_rows(
+                resp_body,
+                vec![
+                    ("id", "string"),
+                    ("customer", "string"),
+                    ("payment_intent", "string"),
+                    ("subscription", "string"),
                     ("created", "timestamp"),
                 ],
                 tgt_cols,
