@@ -11,6 +11,7 @@
 - [Firebase](./wrappers/src/fdw/firebase_fdw): A FDW for Google [Firebase](https://firebase.google.com/) which supports data read only.
 - [Airtable](./wrappers/src/fdw/airtable_fdw): A FDW for [Airtable](https://airtable.com/) API which supports data read only.
 - [S3](./wrappers/src/fdw/s3_fdw): A FDW for [AWS S3](https://aws.amazon.com/s3/). Currently read-only.
+- [OpenAI](./wrappers/src/fdw/openai_fdw): A FDW for [OpenAI](https://openai.com/) embedding. Currently read-only.
 
 ## Features
 

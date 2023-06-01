@@ -1,6 +1,6 @@
-use pgx::pg_sys;
-use pgx::prelude::PgSqlErrorCode;
-use pgx::spi::Spi;
+use pgrx::pg_sys;
+use pgrx::prelude::PgSqlErrorCode;
+use pgrx::spi::Spi;
 use regex::{Captures, Regex};
 use reqwest::{self, header};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
@@ -130,7 +130,11 @@ impl OpenaiFdw {
 
         // deparse sort
         if !sorts.is_empty() {
-            let order_by = sorts.iter().map(|s| s.deparse()).collect::<Vec<_>>().join(", ");
+            let order_by = sorts
+                .iter()
+                .map(|s| s.deparse())
+                .collect::<Vec<_>>()
+                .join(", ");
             sql.push_str(&format!(" order by {}", order_by));
         }
 
@@ -183,18 +187,22 @@ impl ForeignDataWrapper for OpenaiFdw {
         self.inputs = Spi::connect(|client| {
             let inputs = client
                 .select(&sql, None, None)
+                .unwrap()
                 .map(|src_row| {
-                    let mut row = HashMap::new();
-                    row.insert("id".to_string(), src_row["id"].value::<Cell>().unwrap());
+                    let mut row: HashMap<String, Cell> = HashMap::new();
+                    row.insert(
+                        "id".to_string(),
+                        src_row.get_by_name::<Cell, _>("id").unwrap().unwrap(),
+                    );
                     row.insert(
                         "input".to_string(),
-                        src_row["input"].value::<Cell>().unwrap(),
+                        src_row.get_by_name::<Cell, _>("input").unwrap().unwrap(),
                     );
                     row
                 })
                 .collect::<Vec<_>>()
                 .into_iter();
-            Ok(Some(inputs))
+            Some(inputs)
         });
     }
 
@@ -217,24 +225,32 @@ impl ForeignDataWrapper for OpenaiFdw {
                         .rt
                         .block_on(client.post(Self::BASE_URL).json(&body).send())
                     {
-                        Ok(resp) => match self.rt.block_on(resp.json::<JsonValue>()) {
-                            Ok(result) => result
-                                .as_object()
-                                .map(|map| map.get("data").unwrap())
-                                .map(|arr| &arr[0])
-                                .map(|map| map.get("embedding").unwrap())
-                                .map(|arr| arr.as_array().unwrap())
-                                .map(|arr| {
-                                    format!(
-                                        "{:?}",
-                                        arr.iter()
-                                            .map(|em| em.as_f64().unwrap())
-                                            .collect::<Vec<f64>>()
-                                    )
-                                })
-                                .unwrap(),
+                        Ok(resp) => match resp.error_for_status() {
+                            Ok(resp) => match self.rt.block_on(resp.json::<JsonValue>()) {
+                                Ok(result) => result
+                                    .as_object()
+                                    .map(|map| map.get("data").unwrap())
+                                    .map(|arr| &arr[0])
+                                    .map(|map| map.get("embedding").unwrap())
+                                    .map(|arr| arr.as_array().unwrap())
+                                    .map(|arr| {
+                                        format!(
+                                            "{:?}",
+                                            arr.iter()
+                                                .map(|em| em.as_f64().unwrap())
+                                                .collect::<Vec<f64>>()
+                                        )
+                                    })
+                                    .unwrap(),
+                                Err(err) => {
+                                    report_error!(&format!(
+                                        "parse response to JSON failed: {}",
+                                        err
+                                    ))
+                                }
+                            },
                             Err(err) => {
-                                report_error!(&format!("parse response to JSON failed: {}", err))
+                                report_error!(&format!("request OpenAI API failed: {}", err))
                             }
                         },
                         Err(err) => report_error!(&format!("request OpanAI API failed: {}", err)),
