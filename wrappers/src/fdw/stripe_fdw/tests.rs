@@ -1,17 +1,18 @@
 #[cfg(any(test, feature = "pg_test"))]
-#[pgx::pg_schema]
+#[pgrx::pg_schema]
 mod tests {
-    use pgx::prelude::*;
+    use pgrx::prelude::*;
 
     #[pg_test]
     fn stripe_smoketest() {
-        Spi::execute(|c| {
+        Spi::connect(|mut c| {
             c.update(
                 r#"CREATE FOREIGN DATA WRAPPER stripe_wrapper
                          HANDLER stripe_fdw_handler VALIDATOR stripe_fdw_validator"#,
                 None,
                 None,
-            );
+            )
+            .unwrap();
             c.update(
                 r#"CREATE SERVER my_stripe_server
                          FOREIGN DATA WRAPPER stripe_wrapper
@@ -21,7 +22,7 @@ mod tests {
                          )"#,
                 None,
                 None,
-            );
+            ).unwrap();
 
             c.update(
                 r#"
@@ -41,7 +42,8 @@ mod tests {
              "#,
                 None,
                 None,
-            );
+            )
+            .unwrap();
 
             c.update(
                 r#"
@@ -58,7 +60,8 @@ mod tests {
              "#,
                 None,
                 None,
-            );
+            )
+            .unwrap();
 
             c.update(
                 r#"
@@ -81,7 +84,8 @@ mod tests {
              "#,
                 None,
                 None,
-            );
+            )
+            .unwrap();
 
             c.update(
                 r#"
@@ -104,7 +108,8 @@ mod tests {
              "#,
                 None,
                 None,
-            );
+            )
+            .unwrap();
 
             c.update(
                 r#"
@@ -124,7 +129,8 @@ mod tests {
              "#,
                 None,
                 None,
-            );
+            )
+            .unwrap();
 
             c.update(
                 r#"
@@ -146,7 +152,8 @@ mod tests {
              "#,
                 None,
                 None,
-            );
+            )
+            .unwrap();
 
             c.update(
                 r#"
@@ -164,7 +171,8 @@ mod tests {
              "#,
                 None,
                 None,
-            );
+            )
+            .unwrap();
 
             c.update(
                 r#"
@@ -187,7 +195,8 @@ mod tests {
              "#,
                 None,
                 None,
-            );
+            )
+            .unwrap();
 
             c.update(
                 r#"
@@ -207,7 +216,8 @@ mod tests {
              "#,
                 None,
                 None,
-            );
+            )
+            .unwrap();
 
             c.update(
                 r#"
@@ -229,7 +239,8 @@ mod tests {
              "#,
                 None,
                 None,
-            );
+            )
+            .unwrap();
 
             c.update(
                 r#"
@@ -249,7 +260,8 @@ mod tests {
              "#,
                 None,
                 None,
-            );
+            )
+            .unwrap();
 
             c.update(
                 r#"
@@ -271,7 +283,8 @@ mod tests {
              "#,
                 None,
                 None,
-            );
+            )
+            .unwrap();
 
             c.update(
                 r#"
@@ -292,7 +305,8 @@ mod tests {
              "#,
                 None,
                 None,
-            );
+            )
+            .unwrap();
 
             c.update(
                 r#"
@@ -314,7 +328,8 @@ mod tests {
              "#,
                 None,
                 None,
-            );
+            )
+            .unwrap();
 
             c.update(
                 r#"
@@ -336,7 +351,8 @@ mod tests {
              "#,
                 None,
                 None,
-            );
+            )
+            .unwrap();
 
             c.update(
                 r#"
@@ -359,7 +375,8 @@ mod tests {
              "#,
                 None,
                 None,
-            );
+            )
+            .unwrap();
 
             c.update(
                 r#"
@@ -381,7 +398,8 @@ mod tests {
              "#,
                 None,
                 None,
-            );
+            )
+            .unwrap();
 
             c.update(
                 r#"
@@ -401,7 +419,8 @@ mod tests {
              "#,
                 None,
                 None,
-            );
+            )
+            .unwrap();
 
             c.update(
                 r#"
@@ -421,7 +440,8 @@ mod tests {
              "#,
                 None,
                 None,
-            );
+            )
+            .unwrap();
 
             c.update(
                 r#"
@@ -441,16 +461,17 @@ mod tests {
              "#,
                 None,
                 None,
-            );
+            )
+            .unwrap();
 
             let results = c
                 .select("SELECT * FROM stripe_accounts", None, None)
+                .unwrap()
                 .filter_map(|r| {
-                    r.by_name("email")
-                        .ok()
-                        .and_then(|v| v.value::<&str>())
-                        .zip(r.by_name("country").ok().and_then(|v| v.value::<&str>()))
-                        .zip(r.by_name("type").ok().and_then(|v| v.value::<&str>()))
+                    r.get_by_name::<&str, _>("email")
+                        .unwrap()
+                        .zip(r.get_by_name::<&str, _>("country").unwrap())
+                        .zip(r.get_by_name::<&str, _>("type").unwrap())
                 })
                 .collect::<Vec<_>>();
             assert_eq!(results, vec![(("site@stripe.com", "US"), "standard")]);
@@ -461,12 +482,12 @@ mod tests {
                     None,
                     None,
                 )
+                .unwrap()
                 .filter_map(|r| {
-                    r.by_name("balance_type")
-                        .ok()
-                        .and_then(|v| v.value::<&str>())
-                        .zip(r.by_name("amount").ok().and_then(|v| v.value::<i64>()))
-                        .zip(r.by_name("currency").ok().and_then(|v| v.value::<&str>()))
+                    r.get_by_name::<&str, _>("balance_type")
+                        .unwrap()
+                        .zip(r.get_by_name::<i64, _>("amount").unwrap())
+                        .zip(r.get_by_name::<&str, _>("currency").unwrap())
                 })
                 .collect::<Vec<_>>();
             assert_eq!(
@@ -476,14 +497,14 @@ mod tests {
 
             let results = c
                 .select("SELECT * FROM stripe_balance_transactions", None, None)
+                .unwrap()
                 .filter_map(|r| {
-                    r.by_name("amount")
-                        .ok()
-                        .and_then(|v| v.value::<i64>())
-                        .zip(r.by_name("currency").ok().and_then(|v| v.value::<&str>()))
-                        .zip(r.by_name("fee").ok().and_then(|v| v.value::<i64>()))
-                        .zip(r.by_name("status").ok().and_then(|v| v.value::<&str>()))
-                        .zip(r.by_name("type").ok().and_then(|v| v.value::<&str>()))
+                    r.get_by_name::<i64, _>("amount")
+                        .unwrap()
+                        .zip(r.get_by_name::<&str, _>("currency").unwrap())
+                        .zip(r.get_by_name::<i64, _>("fee").unwrap())
+                        .zip(r.get_by_name::<&str, _>("status").unwrap())
+                        .zip(r.get_by_name::<&str, _>("type").unwrap())
                 })
                 .collect::<Vec<_>>();
             assert_eq!(
@@ -493,26 +514,32 @@ mod tests {
 
             let results = c
                 .select("SELECT * FROM stripe_charges", None, None)
+                .unwrap()
                 .filter_map(|r| {
-                    r.by_name("amount")
-                        .ok()
-                        .and_then(|v| v.value::<i64>())
-                        .zip(r.by_name("currency").ok().and_then(|v| v.value::<&str>()))
-                        .zip(r.by_name("status").ok().and_then(|v| v.value::<&str>()))
+                    r.get_by_name::<i64, _>("amount")
+                        .unwrap()
+                        .zip(r.get_by_name::<&str, _>("currency").unwrap())
+                        .zip(r.get_by_name::<&str, _>("status").unwrap())
                 })
                 .collect::<Vec<_>>();
             assert_eq!(results, vec![(((100, "usd"), "succeeded"))]);
 
             let results = c
                 .select("SELECT * FROM stripe_customers", None, None)
+                .unwrap()
                 .filter_map(|r| {
-                    r.by_name("id")
-                        .ok()
-                        .and_then(|v| v.value::<&str>())
-                        .zip(r.by_name("created").ok().and_then(|v| v.value::<i64>()))
+                    r.get_by_name::<&str, _>("id")
+                        .unwrap()
+                        .zip(r.get_by_name::<Timestamp, _>("created").unwrap())
                 })
                 .collect::<Vec<_>>();
-            assert_eq!(results, vec![("cus_MJiBgSUgeWFN0z", 287883090000000)]);
+            assert_eq!(
+                results,
+                vec![(
+                    "cus_MJiBgSUgeWFN0z",
+                    Timestamp::try_from(287883090000000i64).unwrap()
+                )]
+            );
 
             let results = c
                 .select(
@@ -520,7 +547,8 @@ mod tests {
                     None,
                     None,
                 )
-                .filter_map(|r| r.by_name("id").ok().and_then(|v| v.value::<&str>()))
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("id").unwrap())
                 .collect::<Vec<_>>();
             assert_eq!(results, vec!["cus_MJiBgSUgeWFN0z"]);
 
@@ -532,19 +560,19 @@ mod tests {
             //         "SELECT * FROM stripe_customers where id = 'non_exists'",
             //         None,
             //         None,
-            //     )
-            //     .filter_map(|r| r.by_name("id").ok().and_then(|v| v.value::<&str>()))
+            //     ).unwrap()
+            //     .filter_map(|r| r.get_by_name::<&str, _>("id").unwrap())
             //     .collect::<Vec<_>>();
             // assert!(results.is_empty());
 
             let results = c
                 .select("SELECT * FROM stripe_disputes", None, None)
+                .unwrap()
                 .filter_map(|r| {
-                    r.by_name("id")
-                        .ok()
-                        .and_then(|v| v.value::<&str>())
-                        .zip(r.by_name("amount").ok().and_then(|v| v.value::<i64>()))
-                        .zip(r.by_name("currency").ok().and_then(|v| v.value::<&str>()))
+                    r.get_by_name::<&str, _>("id")
+                        .unwrap()
+                        .zip(r.get_by_name::<i64, _>("amount").unwrap())
+                        .zip(r.get_by_name::<&str, _>("currency").unwrap())
                 })
                 .collect::<Vec<_>>();
             assert_eq!(
@@ -554,11 +582,11 @@ mod tests {
 
             let results = c
                 .select("SELECT * FROM stripe_events", None, None)
+                .unwrap()
                 .filter_map(|r| {
-                    r.by_name("id")
-                        .ok()
-                        .and_then(|v| v.value::<&str>())
-                        .zip(r.by_name("type").ok().and_then(|v| v.value::<&str>()))
+                    r.get_by_name::<&str, _>("id")
+                        .unwrap()
+                        .zip(r.get_by_name::<&str, _>("type").unwrap())
                 })
                 .collect::<Vec<_>>();
             assert_eq!(
@@ -568,13 +596,13 @@ mod tests {
 
             let results = c
                 .select("SELECT * FROM stripe_files", None, None)
+                .unwrap()
                 .filter_map(|r| {
-                    r.by_name("id")
-                        .ok()
-                        .and_then(|v| v.value::<&str>())
-                        .zip(r.by_name("filename").ok().and_then(|v| v.value::<&str>()))
-                        .zip(r.by_name("purpose").ok().and_then(|v| v.value::<&str>()))
-                        .zip(r.by_name("size").ok().and_then(|v| v.value::<i64>()))
+                    r.get_by_name::<&str, _>("id")
+                        .unwrap()
+                        .zip(r.get_by_name::<&str, _>("filename").unwrap())
+                        .zip(r.get_by_name::<&str, _>("purpose").unwrap())
+                        .zip(r.get_by_name::<i64, _>("size").unwrap())
                 })
                 .collect::<Vec<_>>();
             assert_eq!(
@@ -593,12 +621,12 @@ mod tests {
 
             let results = c
                 .select("SELECT * FROM stripe_file_links", None, None)
+                .unwrap()
                 .filter_map(|r| {
-                    r.by_name("id")
-                        .ok()
-                        .and_then(|v| v.value::<&str>())
-                        .zip(r.by_name("file").ok().and_then(|v| v.value::<&str>()))
-                        .zip(r.by_name("url").ok().and_then(|v| v.value::<&str>()))
+                    r.get_by_name::<&str, _>("id")
+                        .unwrap()
+                        .zip(r.get_by_name::<&str, _>("file").unwrap())
+                        .zip(r.get_by_name::<&str, _>("url").unwrap())
                 })
                 .collect::<Vec<_>>();
             assert_eq!(
@@ -614,13 +642,13 @@ mod tests {
 
             let results = c
                 .select("SELECT * FROM stripe_invoices", None, None)
+                .unwrap()
                 .filter_map(|r| {
-                    r.by_name("customer")
-                        .ok()
-                        .and_then(|v| v.value::<&str>())
-                        .zip(r.by_name("total").ok().and_then(|v| v.value::<i64>()))
-                        .zip(r.by_name("currency").ok().and_then(|v| v.value::<&str>()))
-                        .zip(r.by_name("status").ok().and_then(|v| v.value::<&str>()))
+                    r.get_by_name::<&str, _>("customer")
+                        .unwrap()
+                        .zip(r.get_by_name::<i64, _>("total").unwrap())
+                        .zip(r.get_by_name::<&str, _>("currency").unwrap())
+                        .zip(r.get_by_name::<&str, _>("status").unwrap())
                 })
                 .collect::<Vec<_>>();
             assert_eq!(
@@ -630,24 +658,24 @@ mod tests {
 
             let results = c
                 .select("SELECT * FROM stripe_payment_intents", None, None)
+                .unwrap()
                 .filter_map(|r| {
-                    r.by_name("amount")
-                        .ok()
-                        .and_then(|v| v.value::<i64>())
-                        .zip(r.by_name("currency").ok().and_then(|v| v.value::<&str>()))
+                    r.get_by_name::<i64, _>("amount")
+                        .unwrap()
+                        .zip(r.get_by_name::<&str, _>("currency").unwrap())
                 })
                 .collect::<Vec<_>>();
             assert_eq!(results, vec![(1099, "usd")]);
 
             let results = c
                 .select("SELECT * FROM stripe_payouts", None, None)
+                .unwrap()
                 .filter_map(|r| {
-                    r.by_name("id")
-                        .ok()
-                        .and_then(|v| v.value::<&str>())
-                        .zip(r.by_name("amount").ok().and_then(|v| v.value::<i64>()))
-                        .zip(r.by_name("currency").ok().and_then(|v| v.value::<&str>()))
-                        .zip(r.by_name("status").ok().and_then(|v| v.value::<&str>()))
+                    r.get_by_name::<&str, _>("id")
+                        .unwrap()
+                        .zip(r.get_by_name::<i64, _>("amount").unwrap())
+                        .zip(r.get_by_name::<&str, _>("currency").unwrap())
+                        .zip(r.get_by_name::<&str, _>("status").unwrap())
                 })
                 .collect::<Vec<_>>();
             assert_eq!(
@@ -657,14 +685,14 @@ mod tests {
 
             let results = c
                 .select("SELECT * FROM stripe_prices", None, None)
+                .unwrap()
                 .filter_map(|r| {
-                    r.by_name("id")
-                        .ok()
-                        .and_then(|v| v.value::<&str>())
-                        .zip(r.by_name("active").ok().and_then(|v| v.value::<bool>()))
-                        .zip(r.by_name("currency").ok().and_then(|v| v.value::<&str>()))
-                        .zip(r.by_name("product").ok().and_then(|v| v.value::<&str>()))
-                        .zip(r.by_name("type").ok().and_then(|v| v.value::<&str>()))
+                    r.get_by_name::<&str, _>("id")
+                        .unwrap()
+                        .zip(r.get_by_name::<bool, _>("active").unwrap())
+                        .zip(r.get_by_name::<&str, _>("currency").unwrap())
+                        .zip(r.get_by_name::<&str, _>("product").unwrap())
+                        .zip(r.get_by_name::<&str, _>("type").unwrap())
                 })
                 .collect::<Vec<_>>();
             assert_eq!(
@@ -680,16 +708,12 @@ mod tests {
 
             let results = c
                 .select("SELECT * FROM stripe_products", None, None)
+                .unwrap()
                 .filter_map(|r| {
-                    r.by_name("name")
-                        .ok()
-                        .and_then(|v| v.value::<&str>())
-                        .zip(r.by_name("active").ok().and_then(|v| v.value::<bool>()))
-                        .zip(
-                            r.by_name("description")
-                                .ok()
-                                .and_then(|v| v.value::<&str>()),
-                        )
+                    r.get_by_name::<&str, _>("name")
+                        .unwrap()
+                        .zip(r.get_by_name::<bool, _>("active").unwrap())
+                        .zip(r.get_by_name::<&str, _>("description").unwrap())
                 })
                 .collect::<Vec<_>>();
             assert_eq!(
@@ -699,13 +723,13 @@ mod tests {
 
             let results = c
                 .select("SELECT * FROM stripe_refunds", None, None)
+                .unwrap()
                 .filter_map(|r| {
-                    r.by_name("id")
-                        .ok()
-                        .and_then(|v| v.value::<&str>())
-                        .zip(r.by_name("amount").ok().and_then(|v| v.value::<i64>()))
-                        .zip(r.by_name("currency").ok().and_then(|v| v.value::<&str>()))
-                        .zip(r.by_name("status").ok().and_then(|v| v.value::<&str>()))
+                    r.get_by_name::<&str, _>("id")
+                        .unwrap()
+                        .zip(r.get_by_name::<i64, _>("amount").unwrap())
+                        .zip(r.get_by_name::<&str, _>("currency").unwrap())
+                        .zip(r.get_by_name::<&str, _>("status").unwrap())
                 })
                 .collect::<Vec<_>>();
             assert_eq!(
@@ -714,13 +738,12 @@ mod tests {
             );
 
             let results = c
-                .select("SELECT * FROM stripe_setup_attempts where setup_intent='seti_1Lb4lgDciZwYG8GPdEjT5Ico'", None, None)
+                .select("SELECT * FROM stripe_setup_attempts where setup_intent='seti_1Lb4lgDciZwYG8GPdEjT5Ico'", None, None).unwrap()
                 .filter_map(|r| {
-                    r.by_name("id")
-                        .ok()
-                        .and_then(|v| v.value::<&str>())
-                        .zip(r.by_name("status").ok().and_then(|v| v.value::<&str>()))
-                        .zip(r.by_name("usage").ok().and_then(|v| v.value::<&str>()))
+                    r.get_by_name::<&str, _>("id")
+                        .unwrap()
+                        .zip(r.get_by_name::<&str, _>("status").unwrap())
+                        .zip(r.get_by_name::<&str, _>("usage").unwrap())
                 })
                 .collect::<Vec<_>>();
             assert_eq!(
@@ -733,12 +756,12 @@ mod tests {
 
             let results = c
                 .select("SELECT * FROM stripe_setup_intents", None, None)
+                .unwrap()
                 .filter_map(|r| {
-                    r.by_name("id")
-                        .ok()
-                        .and_then(|v| v.value::<&str>())
-                        .zip(r.by_name("status").ok().and_then(|v| v.value::<&str>()))
-                        .zip(r.by_name("usage").ok().and_then(|v| v.value::<&str>()))
+                    r.get_by_name::<&str, _>("id")
+                        .unwrap()
+                        .zip(r.get_by_name::<&str, _>("status").unwrap())
+                        .zip(r.get_by_name::<&str, _>("usage").unwrap())
                 })
                 .collect::<Vec<_>>();
             assert_eq!(
@@ -751,40 +774,38 @@ mod tests {
 
             let results = c
                 .select("SELECT * FROM stripe_subscriptions", None, None)
+                .unwrap()
                 .filter_map(|r| {
-                    r.by_name("customer")
-                        .ok()
-                        .and_then(|v| v.value::<&str>())
-                        .zip(r.by_name("currency").ok().and_then(|v| v.value::<&str>()))
+                    r.get_by_name::<&str, _>("customer")
+                        .unwrap()
+                        .zip(r.get_by_name::<&str, _>("currency").unwrap())
                         .zip(
-                            r.by_name("current_period_start")
-                                .ok()
-                                .and_then(|v| v.value::<i64>()),
+                            r.get_by_name::<Timestamp, _>("current_period_start")
+                                .unwrap(),
                         )
-                        .zip(
-                            r.by_name("current_period_end")
-                                .ok()
-                                .and_then(|v| v.value::<i64>()),
-                        )
+                        .zip(r.get_by_name::<Timestamp, _>("current_period_end").unwrap())
                 })
                 .collect::<Vec<_>>();
             assert_eq!(
                 results,
                 vec![(
-                    (("cus_MJiBtCqOF1Bb3F", "usd"), 287883090000000),
-                    287883090000000
+                    (
+                        ("cus_MJiBtCqOF1Bb3F", "usd"),
+                        Timestamp::try_from(287883090000000i64).unwrap()
+                    ),
+                    Timestamp::try_from(287883090000000i64).unwrap()
                 )]
             );
 
             let results = c
                 .select("SELECT * FROM stripe_topups", None, None)
+                .unwrap()
                 .filter_map(|r| {
-                    r.by_name("id")
-                        .ok()
-                        .and_then(|v| v.value::<&str>())
-                        .zip(r.by_name("amount").ok().and_then(|v| v.value::<i64>()))
-                        .zip(r.by_name("currency").ok().and_then(|v| v.value::<&str>()))
-                        .zip(r.by_name("status").ok().and_then(|v| v.value::<&str>()))
+                    r.get_by_name::<&str, _>("id")
+                        .unwrap()
+                        .zip(r.get_by_name::<i64, _>("amount").unwrap())
+                        .zip(r.get_by_name::<&str, _>("currency").unwrap())
+                        .zip(r.get_by_name::<&str, _>("status").unwrap())
                 })
                 .collect::<Vec<_>>();
             assert_eq!(
@@ -794,17 +815,13 @@ mod tests {
 
             let results = c
                 .select("SELECT * FROM stripe_transfers", None, None)
+                .unwrap()
                 .filter_map(|r| {
-                    r.by_name("id")
-                        .ok()
-                        .and_then(|v| v.value::<&str>())
-                        .zip(r.by_name("amount").ok().and_then(|v| v.value::<i64>()))
-                        .zip(r.by_name("currency").ok().and_then(|v| v.value::<&str>()))
-                        .zip(
-                            r.by_name("destination")
-                                .ok()
-                                .and_then(|v| v.value::<&str>()),
-                        )
+                    r.get_by_name::<&str, _>("id")
+                        .unwrap()
+                        .zip(r.get_by_name::<i64, _>("amount").unwrap())
+                        .zip(r.get_by_name::<&str, _>("currency").unwrap())
+                        .zip(r.get_by_name::<&str, _>("destination").unwrap())
                 })
                 .collect::<Vec<_>>();
             assert_eq!(
@@ -836,12 +853,12 @@ mod tests {
                     "SELECT * FROM stripe_customers WHERE email = 'test@test.com'",
                     None,
                     None,
-                )
+                ).unwrap()
                 .filter_map(|r| {
-                    r.by_name("email")
-                        .ok()
+                    r.get_by_name::<&str, _>("email")
+                        .unwrap()
                         .and_then(|v| v.value::<&str>())
-                        .zip(r.by_name("name").ok().and_then(|v| v.value::<&str>()))
+                        .zip(r.get_by_name::<&str, _>("name").unwrap().and_then(|v| v.value::<&str>()))
                 })
                 .collect::<Vec<_>>();
 
@@ -863,11 +880,11 @@ mod tests {
                     "SELECT * FROM stripe_customers WHERE email = 'test@test.com'",
                     None,
                     None,
-                )
+                ).unwrap()
                 .filter_map(|r| {
-                    r.by_name("email").ok().and_then(|v| v.value::<&str>()).zip(
-                        r.by_name("description")
-                            .ok()
+                    r.get_by_name::<&str, _>("email").unwrap().and_then(|v| v.value::<&str>()).zip(
+                        r.get_by_name::<&str, _>("description")
+                            .unwrap()
                             .and_then(|v| v.value::<&str>()),
                     )
                 })
@@ -889,11 +906,11 @@ mod tests {
                     "SELECT * FROM stripe_customers WHERE email = 'test@test.com'",
                     None,
                     None,
-                )
+                ).unwrap()
                 .filter_map(|r| {
-                    r.by_name("email").ok().and_then(|v| v.value::<&str>()).zip(
-                        r.by_name("description")
-                            .ok()
+                    r.get_by_name::<&str, _>("email").unwrap().and_then(|v| v.value::<&str>()).zip(
+                        r.get_by_name::<&str, _>("description")
+                            .unwrap()
                             .and_then(|v| v.value::<&str>()),
                     )
                 })

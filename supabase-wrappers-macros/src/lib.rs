@@ -57,7 +57,7 @@ pub fn wrappers_fdw(attr: TokenStream, item: TokenStream) -> TokenStream {
     let ident_str = ident.to_string();
     let ident_snake = to_snake_case(ident_str.as_str());
 
-    let module_ident = format_ident!("__{}_pgx", ident_snake);
+    let module_ident = format_ident!("__{}_pgrx", ident_snake);
     let fn_ident = format_ident!("{}_handler", ident_snake);
     let fn_validator_ident = format_ident!("{}_validator", ident_snake);
     let fn_meta_ident = format_ident!("{}_meta", ident_snake);
@@ -68,7 +68,7 @@ pub fn wrappers_fdw(attr: TokenStream, item: TokenStream) -> TokenStream {
         mod #module_ident {
             use super::#ident;
             use std::collections::HashMap;
-            use pgx::prelude::*;
+            use pgrx::prelude::*;
             use supabase_wrappers::prelude::*;
 
             #[pg_extern(create_or_replace)]

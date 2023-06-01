@@ -7,7 +7,7 @@ Requirements:
 - rust
 - cargo
 - docker-compose
-- [pgx](https://github.com/tcdi/pgx)
+- [pgrx](https://github.com/tcdi/pgrx)
 
 ### Testing
 
@@ -26,7 +26,7 @@ To reduce the iteration cycle, you may want to launch a psql prompt with `wrappe
 
 ```bash
 cd wrappers
-cargo pgx run pg14 --features clickhouse_fdw
+cargo pgrx run pg14 --features clickhouse_fdw
 ```
 
 Try out the commands below to spin up a database with the extension installed & query a table using GraphQL. Experiment with aliasing field/table names and filtering on different columns.

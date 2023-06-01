@@ -1,4 +1,4 @@
-use pgx::JsonB;
+use pgrx::JsonB;
 use serde::de::{MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;

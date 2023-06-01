@@ -1,5 +1,5 @@
-use pgx::FromDatum;
-use pgx::{
+use pgrx::FromDatum;
+use pgrx::{
     debug2, memcxt::PgMemoryContexts, pg_sys::Datum, pg_sys::Oid, prelude::*, IntoDatum,
     PgSqlErrorCode,
 };
@@ -113,7 +113,7 @@ pub(super) extern "C" fn get_foreign_rel_size<W: ForeignDataWrapper>(
     debug2!("---> get_foreign_rel_size");
     unsafe {
         // refresh leftover memory context
-        let ctx_name = format!("Wrappers_scan_{}", foreigntableid);
+        let ctx_name = format!("Wrappers_scan_{}", foreigntableid.as_u32());
         let ctx = memctx::refresh_wrappers_memctx(&ctx_name);
 
         // create scan state
@@ -163,7 +163,7 @@ pub(super) extern "C" fn get_foreign_paths<W: ForeignDataWrapper>(
             .map(|c| match c.parse::<f64>() {
                 Ok(v) => v,
                 Err(_) => {
-                    pgx::error!("invalid option startup_cost: {}", c);
+                    pgrx::error!("invalid option startup_cost: {}", c);
                 }
             })
             .unwrap_or(0.0);
