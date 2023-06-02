@@ -1,6 +1,6 @@
 [Stripe](https://stripe.com) is an API driven online payment processing utility. `supabase/wrappers` exposes below endpoints. If you are missing an endpoint feel free to open an issue or even add it yourself.
 
-**Core resources**:
+**Core resources (Complete)**:
   - [Balance](https://stripe.com/docs/api/balance) (*read only*)
   - [Balance Transactions](https://stripe.com/docs/api/balance_transactions/list) (*read only*)
   - [Charges](https://stripe.com/docs/api/charges/list) (*read only*)
@@ -17,18 +17,18 @@
   - [Refunds](https://stripe.com/docs/api/refunds/list) (*read only*)
   - [Tokens](https://stripe.com/docs/api/tokens) (*read only*)
 
-**Products**: 
+**Products (Incomplete)**: 
   - [Products](https://stripe.com/docs/api/products/list) (*read and modify*)
   - [Prices](https://stripe.com/docs/api/prices/list) (*read only*)
 
 **Checkout**: 
   - [Checkout Sessions](https://stripe.com/docs/api/checkout/sessions/list) (*read only*)
 
-**Billing**:
+**Billing (Incomplete)**:
   - [Invoices](https://stripe.com/docs/api/invoices/list) (*read only*)
   - [Subscriptions](https://stripe.com/docs/api/subscriptions/list) (*read and modify*)
 
-**Connect**:
+**Connect (Incomplete)**:
   - [Accounts](https://stripe.com/docs/api/accounts/list) (*read only*)
   - [Top-ups](https://stripe.com/docs/api/topups/list) (*read only*)
   - [Transfers](https://stripe.com/docs/api/transfers/list) (*read only*)
