@@ -21,6 +21,9 @@
   - [Products](https://stripe.com/docs/api/products/list) (*read and modify*)
   - [Prices](https://stripe.com/docs/api/prices/list) (*read only*)
 
+**Checkout**: 
+  - [Checkout Sessions](https://stripe.com/docs/api/checkout/sessions/list) (*read only*)
+
 **Billing**:
   - [Invoices](https://stripe.com/docs/api/invoices/list) (*read only*)
   - [Subscriptions](https://stripe.com/docs/api/subscriptions/list) (*read and modify*)
@@ -30,9 +33,7 @@
   - [Top-ups](https://stripe.com/docs/api/topups/list) (*read only*)
   - [Transfers](https://stripe.com/docs/api/transfers/list) (*read only*)
 
-
-
-### Wrapper 
+### Wrapper
 To get started with the Stripe wrapper, create a foreign data wrapper specifying `handler` and `validator` as below.
 
 ```sql
@@ -43,7 +44,7 @@ create foreign data wrapper stripe_wrapper
   validator stripe_fdw_validator;
 ```
 
-### Server 
+### Server
 
 Next, we need to create a server for the FDW to hold options and credentials.
 
@@ -153,7 +154,7 @@ create foreign table stripe.balance_transactions (
 While any column is allowed in a where clause, it is most efficient to filter by:
 
 - id
-- type 
+- type
 
 ##### Charges
 *read only*
@@ -191,7 +192,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 
 Contains customers known to Stripe.
 
-Ref: [Stripe docs](https://stripe.com/docs/api/customers/list) 
+Ref: [Stripe docs](https://stripe.com/docs/api/customers/list)
 
 ```sql
 create foreign table stripe.customers (
@@ -219,7 +220,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 
 A dispute occurs when a customer questions your charge with their card issuer.
 
-Ref: [Stripe docs](https://stripe.com/docs/api/disputes/list) 
+Ref: [Stripe docs](https://stripe.com/docs/api/disputes/list)
 
 ```sql
 create foreign table stripe.disputes (
@@ -250,7 +251,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 
 Events are our way of letting you know when something interesting happens in your account.
 
-Ref: [Stripe docs](https://stripe.com/docs/api/events/list) 
+Ref: [Stripe docs](https://stripe.com/docs/api/events/list)
 
 ```sql
 create foreign table stripe.events (
@@ -276,7 +277,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 
 This is an object representing a file hosted on Stripe's servers.
 
-Ref: [Stripe docs](https://stripe.com/docs/api/files/list) 
+Ref: [Stripe docs](https://stripe.com/docs/api/files/list)
 
 ```sql
 create foreign table stripe.files (
@@ -307,7 +308,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 
 To share the contents of a `File` object with non-Stripe users, you can create a `FileLink`.
 
-Ref: [Stripe docs](https://stripe.com/docs/api/file_links/list) 
+Ref: [Stripe docs](https://stripe.com/docs/api/file_links/list)
 
 ```sql
 create foreign table stripe.file_links (
@@ -330,7 +331,7 @@ create foreign table stripe.file_links (
 
 A Mandate is a record of the permission a customer has given you to debit their payment method.
 
-Ref: [Stripe docs](https://stripe.com/docs/api/mandates) 
+Ref: [Stripe docs](https://stripe.com/docs/api/mandates)
 
 ```sql
 create foreign table stripe.mandates (
@@ -356,7 +357,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 
 A payment intent guides you through the process of collecting a payment from your customer.
 
-Ref: [Stripe docs](https://stripe.com/docs/api/payment_intents/list) 
+Ref: [Stripe docs](https://stripe.com/docs/api/payment_intents/list)
 
 ```sql
 create foreign table stripe.payment_intents (
@@ -384,7 +385,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 
 A `SetupAttempt` describes one attempted confirmation of a SetupIntent, whether that confirmation was successful or unsuccessful.
 
-Ref: [Stripe docs](https://stripe.com/docs/api/setup_attempts/list) 
+Ref: [Stripe docs](https://stripe.com/docs/api/setup_attempts/list)
 
 ```sql
 create foreign table stripe.setup_attempts (
@@ -415,7 +416,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 
 A `SetupIntent` guides you through the process of setting up and saving a customer's payment credentials for future payments.
 
-Ref: [Stripe docs](https://stripe.com/docs/api/setup_intents/list) 
+Ref: [Stripe docs](https://stripe.com/docs/api/setup_intents/list)
 
 ```sql
 create foreign table stripe.setup_intents (
@@ -585,6 +586,38 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - id
 - active
 
+#### Checkout
+
+##### Checkout Sessions
+
+*read only*
+
+A Checkout Session represents your customer's session as they pay for one-time purchases or subscriptions through Checkout or Payment Links. We recommend creating a new Session each time your customer attempts to pay.
+
+Ref: [Stripe docs](https://stripe.com/docs/api/checkout/sessions/list)
+
+```sql
+create foreign table stripe.checkout_sessions (
+  id text,
+  customer text,
+  payment_intent text,
+  subscription text,
+  attrs jsonb
+)
+  server stripe_server
+  options (
+    object 'checkout/sessions',
+    rowid_column 'id'
+  );
+```
+
+While any column is allowed in a where clause, it is most efficient to filter by:
+
+- id
+- customer
+- payment_intent
+- subscription
+
 #### Billing
 
 ##### Invoices
@@ -625,7 +658,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 
 Customer recurring payment schedules.
 
-Ref: [Stripe docs](https://stripe.com/docs/api/subscriptions/list) 
+Ref: [Stripe docs](https://stripe.com/docs/api/subscriptions/list)
 
 
 ```sql

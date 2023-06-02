@@ -1,6 +1,6 @@
 [package]
 name = "supabase-wrappers"
-version = "0.1.10"
+version = "0.1.11"
 edition = "2021"
 authors = ["Supabase Inc. https://supabase.com/"]
 license = "Apache-2.0"
@@ -11,22 +11,23 @@ categories = ["database"]
 keywords = ["database", "postgres", "postgresql", "extension"]
 
 [features]
-default = ["pg15"]
-pg11 = ["pgx/pg11", "pgx-tests/pg11" ]
-pg12 = ["pgx/pg12", "pgx-tests/pg12" ]
-pg13 = ["pgx/pg13", "pgx-tests/pg13" ]
-pg14 = ["pgx/pg14", "pgx-tests/pg14" ]
-pg15 = ["pgx/pg15", "pgx-tests/pg15" ]
+default = [ "cshim", "pg15" ]
+cshim = [ "pgrx/cshim" ]
+pg11 = ["pgrx/pg11", "pgrx-tests/pg11" ]
+pg12 = ["pgrx/pg12", "pgrx-tests/pg12" ]
+pg13 = ["pgrx/pg13", "pgrx-tests/pg13" ]
+pg14 = ["pgrx/pg14", "pgrx-tests/pg14" ]
+pg15 = ["pgrx/pg15", "pgrx-tests/pg15" ]
 pg_test = []
 
 [dependencies]
-pgx = {version = "=0.6.1", default-features = false }
+pgrx = {version = "=0.8.3", default-features = false }
 tokio = { version = "1.24", features = ["rt"] }
 uuid = { version = "1.2.2" }
 supabase-wrappers-macros = { version = "0.1", path = "../supabase-wrappers-macros" }
 
 [dev-dependencies]
-pgx-tests = "=0.6.1"
+pgrx-tests = "=0.8.3"
 
 [package.metadata.docs.rs]
 features = ["pg15"]

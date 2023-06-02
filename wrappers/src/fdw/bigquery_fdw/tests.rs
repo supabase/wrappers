@@ -1,18 +1,19 @@
 #[cfg(any(test, feature = "pg_test"))]
-#[pgx::pg_schema]
+#[pgrx::pg_schema]
 mod tests {
-    use pgx::pg_test;
-    use pgx::prelude::*;
+    use pgrx::pg_test;
+    use pgrx::prelude::*;
 
     #[pg_test]
     fn bigquery_smoketest() {
-        Spi::execute(|c| {
+        Spi::connect(|mut c| {
             c.update(
                 r#"CREATE FOREIGN DATA WRAPPER bigquery_wrapper
                          HANDLER big_query_fdw_handler VALIDATOR big_query_fdw_validator"#,
                 None,
                 None,
-            );
+            )
+            .unwrap();
             c.update(
                 r#"CREATE SERVER my_bigquery_server
                          FOREIGN DATA WRAPPER bigquery_wrapper
@@ -24,7 +25,8 @@ mod tests {
                          )"#,
                 None,
                 None,
-            );
+            )
+            .unwrap();
             c.update(
                 r#"
                   CREATE FOREIGN TABLE test_table (
@@ -40,7 +42,8 @@ mod tests {
              "#,
                 None,
                 None,
-            );
+            )
+            .unwrap();
             c.update(
                 r#"
                   CREATE FOREIGN TABLE test_table_with_subquery (
@@ -54,7 +57,7 @@ mod tests {
              "#,
                 None,
                 None,
-            );
+            ).unwrap();
 
             /*
              The tables below come from the code in docker-compose.yml that looks like this:
@@ -67,7 +70,8 @@ mod tests {
 
             let results = c
                 .select("SELECT name FROM test_table", None, None)
-                .filter_map(|r| r.by_name("name").ok().and_then(|v| v.value::<&str>()))
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("name").unwrap())
                 .collect::<Vec<_>>();
 
             assert_eq!(results, vec!["foo", "bar"]);
@@ -78,21 +82,24 @@ mod tests {
                     None,
                     None,
                 )
-                .filter_map(|r| r.by_name("name").ok().and_then(|v| v.value::<&str>()))
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("name").unwrap())
                 .collect::<Vec<_>>();
 
             assert_eq!(results, vec!["bar"]);
 
             let results = c
                 .select("SELECT name FROM test_table_with_subquery", None, None)
-                .filter_map(|r| r.by_name("name").ok().and_then(|v| v.value::<&str>()))
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("name").unwrap())
                 .collect::<Vec<_>>();
 
             assert_eq!(results, vec!["FOO", "BAR"]);
 
             let results = c
                 .select("SELECT num::text FROM test_table ORDER BY num", None, None)
-                .filter_map(|r| r.by_name("num").ok().and_then(|v| v.value::<&str>()))
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("num").unwrap())
                 .collect::<Vec<_>>();
 
             assert_eq!(results, vec!["0.123", "1234.56789"]);
@@ -112,7 +119,7 @@ mod tests {
 
             let results = c
                 .select("SELECT name FROM test_table", None, None)
-                .filter_map(|r| r.by_name("name").ok().and_then(|v| v.value::<&str>()))
+                .filter_map(|r| r.get_by_name::<&str, _>("name").unwrap())
                 .collect::<Vec<_>>();
 
             assert_eq!(results, vec!["foo", "bar", "baz"]);

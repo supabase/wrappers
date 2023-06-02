@@ -1,14 +1,14 @@
 #[cfg(any(test, feature = "pg_test"))]
-#[pgx::pg_schema]
+#[pgrx::pg_schema]
 mod tests {
     use clickhouse_rs as ch;
-    use pgx::prelude::*;
-    use pgx::{pg_test, IntoDatum};
+    use pgrx::prelude::*;
+    use pgrx::{pg_test, IntoDatum};
     use supabase_wrappers::prelude::create_async_runtime;
 
     #[pg_test]
     fn clickhouse_smoketest() {
-        Spi::execute(|c| {
+        Spi::connect(|mut c| {
             let clickhouse_pool = ch::Pool::new("tcp://default:@localhost:9000/supa");
 
             let rt = create_async_runtime();
@@ -31,7 +31,8 @@ mod tests {
                          HANDLER click_house_fdw_handler VALIDATOR click_house_fdw_validator"#,
                 None,
                 None,
-            );
+            )
+            .unwrap();
             c.update(
                 r#"CREATE SERVER my_clickhouse_server
                          FOREIGN DATA WRAPPER clickhouse_wrapper
@@ -40,7 +41,8 @@ mod tests {
                          )"#,
                 None,
                 None,
-            );
+            )
+            .unwrap();
             c.update(
                 r#"
                   CREATE FOREIGN TABLE test_table (
@@ -55,9 +57,30 @@ mod tests {
              "#,
                 None,
                 None,
-            );
+            )
+            .unwrap();
+            c.update(
+                r#"
+                  CREATE FOREIGN TABLE test_cust_sql (
+                    id bigint,
+                    name text
+                  )
+                  SERVER my_clickhouse_server
+                  OPTIONS (
+                    table '(select * from test_table)'
+                  )
+             "#,
+                None,
+                None,
+            )
+            .unwrap();
 
-            assert_eq!(c.select("SELECT * FROM test_table", None, None).len(), 0);
+            assert_eq!(
+                c.select("SELECT * FROM test_table", None, None)
+                    .unwrap()
+                    .len(),
+                0
+            );
             c.update(
                 "INSERT INTO test_table (name) VALUES ($1)",
                 None,
@@ -65,11 +88,23 @@ mod tests {
                     PgOid::BuiltIn(PgBuiltInOids::TEXTOID),
                     "test".into_datum(),
                 )]),
-            );
+            )
+            .unwrap();
             assert_eq!(
                 c.select("SELECT name FROM test_table", None, None)
+                    .unwrap()
                     .first()
                     .get_one::<&str>()
+                    .unwrap()
+                    .unwrap(),
+                "test"
+            );
+            assert_eq!(
+                c.select("SELECT name FROM test_cust_sql", None, None)
+                    .unwrap()
+                    .first()
+                    .get_one::<&str>()
+                    .unwrap()
                     .unwrap(),
                 "test"
             );

@@ -1,6 +1,6 @@
-use pgx::pg_sys;
-use pgx::prelude::*;
-use pgx::JsonB;
+use pgrx::pg_sys;
+use pgrx::prelude::*;
+use pgrx::JsonB;
 use regex::Regex;
 use reqwest::{self, header};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};

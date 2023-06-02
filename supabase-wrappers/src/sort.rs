@@ -1,5 +1,5 @@
 use crate::interface::Sort;
-use pgx::{is_a, pg_sys, PgList};
+use pgrx::{is_a, pg_sys, PgList};
 use std::ffi::CStr;
 
 pub(crate) unsafe fn create_sort(

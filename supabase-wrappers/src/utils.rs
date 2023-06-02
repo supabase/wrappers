@@ -2,10 +2,10 @@
 //!
 
 use crate::interface::{Cell, Column, Row};
-use pgx::prelude::PgBuiltInOids;
-use pgx::spi::Spi;
-use pgx::IntoDatum;
-use pgx::*;
+use pgrx::prelude::PgBuiltInOids;
+use pgrx::spi::Spi;
+use pgrx::IntoDatum;
+use pgrx::*;
 use std::collections::HashMap;
 use std::ffi::CStr;
 use std::num::NonZeroUsize;
@@ -90,7 +90,7 @@ pub fn report_warning(msg: &str) {
 /// For example,
 ///
 /// ```rust,no_run
-/// use pgx::prelude::PgSqlErrorCode;
+/// use pgrx::prelude::PgSqlErrorCode;
 ///
 /// report_error(
 ///     PgSqlErrorCode::ERRCODE_FDW_INVALID_COLUMN_NUMBER,
@@ -172,13 +172,22 @@ pub fn get_vault_secret(secret_id: &str) -> Option<String> {
     match Uuid::try_parse(secret_id) {
         Ok(sid) => {
             let sid = sid.into_bytes();
-            Spi::get_one_with_args::<String>(
+            match Spi::get_one_with_args::<String>(
                 "select decrypted_secret from vault.decrypted_secrets where key_id = $1",
                 vec![(
                     PgBuiltInOids::UUIDOID.oid(),
-                    pgx::Uuid::from_bytes(sid).into_datum(),
+                    pgrx::Uuid::from_bytes(sid).into_datum(),
                 )],
-            )
+            ) {
+                Ok(sid) => sid,
+                Err(err) => {
+                    report_error(
+                        PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                        &format!("invalid secret id \"{}\": {}", secret_id, err),
+                    );
+                    None
+                }
+            }
         }
         Err(err) => {
             report_error(
@@ -214,9 +223,9 @@ pub(super) unsafe fn tuple_table_slot_to_row(slot: *mut pg_sys::TupleTableSlot) 
     let mut row = Row::new();
 
     for (att_idx, attr) in tup_desc.iter().filter(|a| !a.attisdropped).enumerate() {
-        let col = pgx::name_data_to_str(&attr.attname);
+        let col = pgrx::name_data_to_str(&attr.attname);
         let attno = NonZeroUsize::new(att_idx + 1).unwrap();
-        let cell: Option<Cell> = pgx::htup::heap_getattr(&htup, attno, &tup_desc);
+        let cell: Option<Cell> = pgrx::htup::heap_getattr(&htup, attno, &tup_desc);
         row.push(col, cell);
     }
 
@@ -298,13 +307,15 @@ pub fn check_options_contain(opt_list: &[Option<String>], tgt: &str) {
     }
 }
 
-// trait for "serialize" and "deserialize" state, so that it is safe to be carried
-// between the plan and the execution
+// trait for "serialize" and "deserialize" state from specified memory context,
+// so that it is safe to be carried between the planning and the execution
 pub(super) trait SerdeList {
-    unsafe fn serialize_to_list(state: PgBox<Self>) -> *mut pg_sys::List
+    unsafe fn serialize_to_list(state: PgBox<Self>, mut ctx: PgMemoryContexts) -> *mut pg_sys::List
     where
         Self: Sized,
     {
+        let mut old_ctx = ctx.set_as_current();
+
         let mut ret = PgList::new();
         let val = state.into_pg() as i64;
         let cst = pg_sys::makeConst(
@@ -317,7 +328,11 @@ pub(super) trait SerdeList {
             true,
         );
         ret.push(cst);
-        ret.into_pg()
+        let ret = ret.into_pg();
+
+        old_ctx.set_as_current();
+
+        ret
     }
 
     unsafe fn deserialize_from_list(list: *mut pg_sys::List) -> PgBox<Self>
@@ -325,6 +340,10 @@ pub(super) trait SerdeList {
         Self: Sized,
     {
         let list = PgList::<pg_sys::Const>::from_pg(list);
+        if list.is_empty() {
+            return PgBox::<Self>::null();
+        }
+
         let cst = list.head().unwrap();
         let ptr = i64::from_datum((*cst).constvalue, (*cst).constisnull).unwrap();
         PgBox::<Self>::from_pg(ptr as _)

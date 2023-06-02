@@ -1,17 +1,18 @@
 #[cfg(any(test, feature = "pg_test"))]
-#[pgx::pg_schema]
+#[pgrx::pg_schema]
 mod tests {
-    use pgx::prelude::*;
+    use pgrx::prelude::*;
 
     #[pg_test]
     fn s3_smoketest() {
-        Spi::execute(|c| {
+        Spi::connect(|mut c| {
             c.update(
                 r#"CREATE FOREIGN DATA WRAPPER s3_wrapper
                      HANDLER s3_fdw_handler VALIDATOR s3_fdw_validator"#,
                 None,
                 None,
-            );
+            )
+            .unwrap();
             c.update(
                 r#"CREATE SERVER s3_server
                      FOREIGN DATA WRAPPER s3_wrapper
@@ -23,7 +24,8 @@ mod tests {
                      )"#,
                 None,
                 None,
-            );
+            )
+            .unwrap();
 
             c.update(
                 r#"
@@ -43,7 +45,8 @@ mod tests {
              "#,
                 None,
                 None,
-            );
+            )
+            .unwrap();
 
             c.update(
                 r#"
@@ -64,7 +67,8 @@ mod tests {
              "#,
                 None,
                 None,
-            );
+            )
+            .unwrap();
 
             c.update(
                 r#"
@@ -83,7 +87,8 @@ mod tests {
              "#,
                 None,
                 None,
-            );
+            )
+            .unwrap();
 
             c.update(
                 r#"
@@ -103,18 +108,19 @@ mod tests {
              "#,
                 None,
                 None,
-            );
+            )
+            .unwrap();
 
             let check_test_table = |table| {
                 let sql = format!("SELECT * FROM {} ORDER BY name LIMIT 1", table);
                 let results = c
                     .select(&sql, None, None)
+                    .unwrap()
                     .filter_map(|r| {
-                        r.by_name("name")
-                            .ok()
-                            .and_then(|v| v.value::<&str>())
-                            .zip(r.by_name("age").ok().and_then(|v| v.value::<&str>()))
-                            .zip(r.by_name("height").ok().and_then(|v| v.value::<&str>()))
+                        r.get_by_name::<&str, _>("name")
+                            .unwrap()
+                            .zip(r.get_by_name::<&str, _>("age").unwrap())
+                            .zip(r.get_by_name::<&str, _>("height").unwrap())
                     })
                     .collect::<Vec<_>>();
                 assert_eq!(results, vec![(("Alex", "41"), "74")]);

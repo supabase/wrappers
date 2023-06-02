@@ -9,8 +9,8 @@ use gcp_bigquery_client::{
     },
     Client,
 };
-use pgx::prelude::PgSqlErrorCode;
-use pgx::prelude::{AnyNumeric, Date, Timestamp};
+use pgrx::prelude::PgSqlErrorCode;
+use pgrx::prelude::{AnyNumeric, Date, Timestamp};
 use serde_json::json;
 use std::collections::HashMap;
 use time::{format_description::well_known::Iso8601, OffsetDateTime, PrimitiveDateTime};
@@ -467,9 +467,7 @@ impl ForeignDataWrapper for BigQueryFdw {
                 rowid
             );
 
-            let query_job = client
-                .job()
-                .query(&self.project_id, QueryRequest::new(&sql));
+            let query_job = client.job().query(&self.project_id, QueryRequest::new(sql));
 
             // execute update on BigQuery
             if let Err(err) = self.rt.block_on(query_job) {
@@ -488,9 +486,7 @@ impl ForeignDataWrapper for BigQueryFdw {
                 self.project_id, self.dataset_id, self.table, self.rowid_col, rowid
             );
 
-            let query_job = client
-                .job()
-                .query(&self.project_id, QueryRequest::new(&sql));
+            let query_job = client.job().query(&self.project_id, QueryRequest::new(sql));
 
             // execute delete on BigQuery
             if let Err(err) = self.rt.block_on(query_job) {

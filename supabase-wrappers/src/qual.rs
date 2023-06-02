@@ -1,7 +1,10 @@
 use crate::prelude::*;
-use pgx::{is_a, pg_sys, pg_sys::Datum, FromDatum, PgBuiltInOids, PgList, PgOid};
+use pgrx::pg_sys::Oid;
+use pgrx::{is_a, pg_sys, pg_sys::Datum, FromDatum, PgBuiltInOids, PgList, PgOid};
 use std::ffi::CStr;
 use std::os::raw::c_int;
+
+use crate::interface::Param;
 
 // create array of Cell from constant datum array
 pub(crate) unsafe fn form_array_from_datum(
@@ -59,9 +62,9 @@ pub(crate) unsafe fn get_operator(opno: pg_sys::Oid) -> pg_sys::Form_pg_operator
     );
     if htup.is_null() {
         pg_sys::ReleaseSysCache(htup);
-        pgx::error!("cache lookup operator {} failed", opno);
+        pgrx::error!("cache lookup operator {} failed", opno);
     }
-    let op = pg_sys::pgx_GETSTRUCT(htup) as pg_sys::Form_pg_operator;
+    let op = pg_sys::GETSTRUCT(htup) as pg_sys::Form_pg_operator;
     pg_sys::ReleaseSysCache(htup);
     op
 }
@@ -86,6 +89,7 @@ pub(crate) unsafe fn extract_from_op_expr(
 
     // only deal with binary operator
     if args.len() != 2 {
+        report_warning("only support binary operator expression");
         return None;
     }
 
@@ -93,6 +97,7 @@ pub(crate) unsafe fn extract_from_op_expr(
     let opno = (*expr).opno;
     let opr = get_operator(opno);
     if opr.is_null() {
+        report_warning("operator is empty");
         return None;
     }
 
@@ -102,32 +107,55 @@ pub(crate) unsafe fn extract_from_op_expr(
     // swap operands if needed
     if is_a(right, pg_sys::NodeTag_T_Var)
         && !is_a(left, pg_sys::NodeTag_T_Var)
-        && (*opr).oprcom != 0
+        && (*opr).oprcom != Oid::INVALID
     {
         std::mem::swap(&mut left, &mut right);
     }
 
-    if is_a(left, pg_sys::NodeTag_T_Var) && is_a(right, pg_sys::NodeTag_T_Const) {
+    if is_a(left, pg_sys::NodeTag_T_Var) {
         let left = left as *mut pg_sys::Var;
-        let right = right as *mut pg_sys::Const;
 
         if pg_sys::bms_is_member((*left).varno as c_int, baserel_ids) && (*left).varattno >= 1 {
             let field = pg_sys::get_attname(baserel_id, (*left).varattno, false);
-            let value = Cell::from_polymorphic_datum(
-                (*right).constvalue,
-                (*right).constisnull,
-                (*right).consttype,
-            );
+
+            let (value, param) = if is_a(right, pg_sys::NodeTag_T_Const) {
+                let right = right as *mut pg_sys::Const;
+                (
+                    Cell::from_polymorphic_datum(
+                        (*right).constvalue,
+                        (*right).constisnull,
+                        (*right).consttype,
+                    ),
+                    None,
+                )
+            } else if is_a(right, pg_sys::NodeTag_T_Param) {
+                // add a dummy value if this is query parameter, the actual value
+                // will be extracted from execution state
+                let right = right as *mut pg_sys::Param;
+                let param = Param {
+                    id: (*right).paramid as _,
+                    type_oid: (*right).paramtype,
+                };
+                (Some(Cell::I64(0)), Some(param))
+            } else {
+                (None, None)
+            };
+
             if let Some(value) = value {
                 let qual = Qual {
                     field: CStr::from_ptr(field).to_str().unwrap().to_string(),
-                    operator: pgx::name_data_to_str(&(*opr).oprname).to_string(),
+                    operator: pgrx::name_data_to_str(&(*opr).oprname).to_string(),
                     value: Value::Cell(value),
                     use_or: false,
+                    param,
                 };
                 return Some(qual);
             }
         }
+    }
+
+    if let Some(stm) = pgrx::nodes::node_to_string(expr as _) {
+        report_warning(&format!("unsupported operator expression in qual: {}", stm));
     }
 
     None
@@ -155,6 +183,7 @@ pub(crate) unsafe fn extract_from_null_test(
         operator: opname,
         value: Value::Cell(Cell::String("null".to_string())),
         use_or: false,
+        param: None,
     };
 
     Some(qual)
@@ -198,13 +227,18 @@ pub(crate) unsafe fn extract_from_scalar_array_op_expr(
             if let Some(value) = value {
                 let qual = Qual {
                     field: CStr::from_ptr(field).to_str().unwrap().to_string(),
-                    operator: pgx::name_data_to_str(&(*opr).oprname).to_string(),
+                    operator: pgrx::name_data_to_str(&(*opr).oprname).to_string(),
                     value: Value::Array(value),
                     use_or: (*expr).useOr,
+                    param: None,
                 };
                 return Some(qual);
             }
         }
+    }
+
+    if let Some(stm) = pgrx::nodes::node_to_string(expr as _) {
+        report_warning(&format!("only support const scalar array in qual: {}", stm));
     }
 
     None
@@ -230,6 +264,7 @@ pub(crate) unsafe fn extract_from_var(
         operator: "=".to_string(),
         value: Value::Cell(Cell::Bool(true)),
         use_or: false,
+        param: None,
     };
 
     Some(qual)
@@ -262,6 +297,7 @@ pub(crate) unsafe fn extract_from_bool_expr(
         operator: "=".to_string(),
         value: Value::Cell(Cell::Bool(false)),
         use_or: false,
+        param: None,
     };
 
     Some(qual)
@@ -288,7 +324,7 @@ pub(crate) unsafe fn extract_quals(
         } else if is_a(expr, pg_sys::NodeTag_T_BoolExpr) {
             extract_from_bool_expr(root, baserel_id, (*baserel).relids, expr as _)
         } else {
-            if let Some(stm) = pgx::nodes::node_to_string(expr) {
+            if let Some(stm) = pgrx::nodes::node_to_string(expr) {
                 report_warning(&format!("unsupported qual: {}", stm));
             }
             None

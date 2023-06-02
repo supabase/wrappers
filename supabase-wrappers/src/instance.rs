@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use pgx::prelude::*;
+use pgrx::prelude::*;
 
 use super::utils;
 

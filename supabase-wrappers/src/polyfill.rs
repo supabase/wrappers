@@ -1,5 +1,5 @@
-use pgx::pg_sys::Datum;
-use pgx::prelude::*;
+use pgrx::pg_sys::Datum;
+use pgrx::prelude::*;
 use std::os::raw::c_int;
 use std::slice;
 

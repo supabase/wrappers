@@ -2,12 +2,14 @@
 //!
 
 use crate::FdwRoutine;
-use pgx::prelude::{Date, Timestamp};
-use pgx::{
+use pgrx::prelude::{Date, Timestamp};
+use pgrx::{
+    fcinfo,
     pg_sys::{self, Datum, Oid},
     AllocatedByRust, AnyNumeric, FromDatum, IntoDatum, JsonB, PgBuiltInOids, PgOid,
 };
 use std::collections::HashMap;
+use std::ffi::CStr;
 use std::fmt;
 use std::iter::Zip;
 use std::mem;
@@ -19,13 +21,13 @@ use std::slice::Iter;
 // https://doxygen.postgresql.org/pg__foreign__table_8h.html
 
 /// Constant can be used in [validator](ForeignDataWrapper::validator)
-pub const FOREIGN_DATA_WRAPPER_RELATION_ID: pg_sys::Oid = 2328;
+pub const FOREIGN_DATA_WRAPPER_RELATION_ID: Oid = unsafe { Oid::from_u32_unchecked(2328) };
 
 /// Constant can be used in [validator](ForeignDataWrapper::validator)
-pub const FOREIGN_SERVER_RELATION_ID: pg_sys::Oid = 1417;
+pub const FOREIGN_SERVER_RELATION_ID: Oid = unsafe { Oid::from_u32_unchecked(1417) };
 
 /// Constant can be used in [validator](ForeignDataWrapper::validator)
-pub const FOREIGN_TABLE_RELATION_ID: pg_sys::Oid = 3118;
+pub const FOREIGN_TABLE_RELATION_ID: Oid = unsafe { Oid::from_u32_unchecked(3118) };
 
 /// A data cell in a data row
 #[derive(Debug)]
@@ -75,8 +77,24 @@ impl fmt::Display for Cell {
             Cell::I64(v) => write!(f, "{}", v),
             Cell::Numeric(v) => write!(f, "{:?}", v),
             Cell::String(v) => write!(f, "'{}'", v),
-            Cell::Date(v) => write!(f, "{:?}", v),
-            Cell::Timestamp(v) => write!(f, "{:?}", v),
+            Cell::Date(v) => unsafe {
+                let dt = fcinfo::direct_function_call_as_datum(
+                    pg_sys::date_out,
+                    &[v.clone().into_datum()],
+                )
+                .unwrap();
+                let dt_cstr = CStr::from_ptr(dt.cast_mut_ptr());
+                write!(f, "'{}'", dt_cstr.to_str().unwrap())
+            },
+            Cell::Timestamp(v) => unsafe {
+                let ts = fcinfo::direct_function_call_as_datum(
+                    pg_sys::timestamp_out,
+                    &[v.clone().into_datum()],
+                )
+                .unwrap();
+                let ts_cstr = CStr::from_ptr(ts.cast_mut_ptr());
+                write!(f, "'{}'", ts_cstr.to_str().unwrap())
+            },
             Cell::Json(v) => write!(f, "{:?}", v),
         }
     }
@@ -101,7 +119,23 @@ impl IntoDatum for Cell {
     }
 
     fn type_oid() -> Oid {
-        0
+        Oid::INVALID
+    }
+
+    fn is_compatible_with(other: Oid) -> bool {
+        Self::type_oid() == other
+            || other == pg_sys::BOOLOID
+            || other == pg_sys::CHAROID
+            || other == pg_sys::INT2OID
+            || other == pg_sys::FLOAT4OID
+            || other == pg_sys::INT4OID
+            || other == pg_sys::FLOAT8OID
+            || other == pg_sys::INT8OID
+            || other == pg_sys::NUMERICOID
+            || other == pg_sys::TEXTOID
+            || other == pg_sys::DATEOID
+            || other == pg_sys::TIMESTAMPOID
+            || other == pg_sys::JSONBOID
     }
 }
 
@@ -223,7 +257,7 @@ pub struct Column {
     pub num: usize,
 
     /// column type OID, can be used to match pg_sys::BuiltinOid
-    pub type_oid: pg_sys::Oid,
+    pub type_oid: Oid,
 }
 
 /// A restiction value used in [`Qual`], either a [`Cell`] or an array of [`Cell`]
@@ -231,6 +265,16 @@ pub struct Column {
 pub enum Value {
     Cell(Cell),
     Array(Vec<Cell>),
+}
+
+/// Query parameter
+#[derive(Debug, Clone)]
+pub struct Param {
+    /// 1-based parameter id
+    pub id: usize,
+
+    /// parameter type OID
+    pub type_oid: Oid,
 }
 
 /// Query restrictions, a.k.a conditions in `WHERE` clause
@@ -277,6 +321,7 @@ pub struct Qual {
     pub operator: String,
     pub value: Value,
     pub use_or: bool,
+    pub param: Option<Param>,
 }
 
 impl Qual {
@@ -541,33 +586,35 @@ pub trait ForeignDataWrapper {
     where
         Self: Sized,
     {
-        use crate::{modify, scan};
-        let mut fdw_routine =
-            FdwRoutine::<AllocatedByRust>::alloc_node(pg_sys::NodeTag_T_FdwRoutine);
+        unsafe {
+            use crate::{modify, scan};
+            let mut fdw_routine =
+                FdwRoutine::<AllocatedByRust>::alloc_node(pg_sys::NodeTag_T_FdwRoutine);
 
-        // plan phase
-        fdw_routine.GetForeignRelSize = Some(scan::get_foreign_rel_size::<Self>);
-        fdw_routine.GetForeignPaths = Some(scan::get_foreign_paths::<Self>);
-        fdw_routine.GetForeignPlan = Some(scan::get_foreign_plan::<Self>);
-        fdw_routine.ExplainForeignScan = Some(scan::explain_foreign_scan::<Self>);
+            // plan phase
+            fdw_routine.GetForeignRelSize = Some(scan::get_foreign_rel_size::<Self>);
+            fdw_routine.GetForeignPaths = Some(scan::get_foreign_paths::<Self>);
+            fdw_routine.GetForeignPlan = Some(scan::get_foreign_plan::<Self>);
+            fdw_routine.ExplainForeignScan = Some(scan::explain_foreign_scan::<Self>);
 
-        // scan phase
-        fdw_routine.BeginForeignScan = Some(scan::begin_foreign_scan::<Self>);
-        fdw_routine.IterateForeignScan = Some(scan::iterate_foreign_scan::<Self>);
-        fdw_routine.ReScanForeignScan = Some(scan::re_scan_foreign_scan::<Self>);
-        fdw_routine.EndForeignScan = Some(scan::end_foreign_scan::<Self>);
+            // scan phase
+            fdw_routine.BeginForeignScan = Some(scan::begin_foreign_scan::<Self>);
+            fdw_routine.IterateForeignScan = Some(scan::iterate_foreign_scan::<Self>);
+            fdw_routine.ReScanForeignScan = Some(scan::re_scan_foreign_scan::<Self>);
+            fdw_routine.EndForeignScan = Some(scan::end_foreign_scan::<Self>);
 
-        // modify phase
-        fdw_routine.AddForeignUpdateTargets = Some(modify::add_foreign_update_targets);
-        fdw_routine.PlanForeignModify = Some(modify::plan_foreign_modify::<Self>);
-        fdw_routine.BeginForeignModify = Some(modify::begin_foreign_modify::<Self>);
-        fdw_routine.ExecForeignInsert = Some(modify::exec_foreign_insert::<Self>);
-        fdw_routine.ExecForeignDelete = Some(modify::exec_foreign_delete::<Self>);
-        fdw_routine.ExecForeignUpdate = Some(modify::exec_foreign_update::<Self>);
-        fdw_routine.EndForeignModify = Some(modify::end_foreign_modify::<Self>);
+            // modify phase
+            fdw_routine.AddForeignUpdateTargets = Some(modify::add_foreign_update_targets);
+            fdw_routine.PlanForeignModify = Some(modify::plan_foreign_modify::<Self>);
+            fdw_routine.BeginForeignModify = Some(modify::begin_foreign_modify::<Self>);
+            fdw_routine.ExecForeignInsert = Some(modify::exec_foreign_insert::<Self>);
+            fdw_routine.ExecForeignDelete = Some(modify::exec_foreign_delete::<Self>);
+            fdw_routine.ExecForeignUpdate = Some(modify::exec_foreign_update::<Self>);
+            fdw_routine.EndForeignModify = Some(modify::end_foreign_modify::<Self>);
 
-        Self::fdw_routine_hook(&mut fdw_routine);
-        fdw_routine.into_pg_boxed()
+            Self::fdw_routine_hook(&mut fdw_routine);
+            fdw_routine.into_pg_boxed()
+        }
     }
 
     /// Additional FwdRoutine setup, called by default `Self::fdw_routine()`
@@ -583,7 +630,7 @@ pub trait ForeignDataWrapper {
     /// # Example
     ///
     /// ```rust,no_run
-    /// fn validator(opt_list: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) {
+    /// fn validator(opt_list: Vec<Option<String>>, catalog: Option<Oid>) {
     ///     if let Some(oid) = catalog {
     ///         match oid {
     ///             FOREIGN_DATA_WRAPPER_RELATION_ID => {
@@ -601,5 +648,5 @@ pub trait ForeignDataWrapper {
     ///     }
     /// }
     /// ```
-    fn validator(_options: Vec<Option<String>>, _catalog: Option<pg_sys::Oid>) {}
+    fn validator(_options: Vec<Option<String>>, _catalog: Option<Oid>) {}
 }

@@ -1,8 +1,8 @@
 use async_compression::tokio::bufread::{BzDecoder, GzipDecoder, XzDecoder, ZlibDecoder};
 use aws_sdk_s3 as s3;
 use http::Uri;
-use pgx::pg_sys;
-use pgx::prelude::PgSqlErrorCode;
+use pgrx::pg_sys;
+use pgrx::prelude::PgSqlErrorCode;
 use serde_json::{self, Value as JsonValue};
 use std::collections::{HashMap, VecDeque};
 use std::env;

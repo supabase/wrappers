@@ -8,6 +8,7 @@ ClickHouse FDW supports both data read and modify.
 | ------------------ | ----------------- |
 | boolean            | UInt8             |
 | smallint           | Int16             |
+| integer            | UInt16            |
 | integer            | Int32             |
 | bigint             | UInt32            |
 | bigint             | Int64             |
@@ -15,6 +16,7 @@ ClickHouse FDW supports both data read and modify.
 | real               | Float32           |
 | double precision   | Float64           |
 | text               | String            |
+| date               | Date              |
 | timestamp          | DateTime          |
 
 ### Wrapper 
@@ -94,6 +96,31 @@ ClickHouse wrapper is implemented with [ELT](https://hevodata.com/learn/etl-vs-e
 The full list of foreign table options are below:
 
 - `table` - Source table name in ClickHouse, required.
+
+   This can also be a subquery enclosed in parentheses, for example,
+
+   ```
+   table '(select * from my_table)'
+   ```
+
+   [Parametrized view](https://clickhouse.com/docs/en/sql-reference/statements/create/view#parameterized-view) is also supported in the subquery. In this case, you need to define a column for each parameter and use `where` to pass values to them. For example,
+
+   ```
+    create foreign table test_vw (
+      id bigint,
+      col1 text,
+      col2 bigint,
+      _param1 text,
+      _param2 bigint
+    )
+      server clickhouse_server
+      options (
+        table '(select * from my_view(column1=${_param1}, column2=${_param2}))'
+      );
+
+    select * from test_vw where _param1='aaa' and _param2=32;
+   ```
+
 - `rowid_column` - Primary key column name, optional for data scan, required for data modify
 
 #### Examples

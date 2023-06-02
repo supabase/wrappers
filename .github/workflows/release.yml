@@ -37,8 +37,8 @@ jobs:
       matrix:
         extension_name:
           - wrappers
-        pgx_version:
-          - 0.6.1
+        pgrx_version:
+          - 0.8.3
         postgres: [14, 15]
         features:
           - "bigquery_fdw,clickhouse_fdw,stripe_fdw,firebase_fdw,s3_fdw"
@@ -77,12 +77,12 @@ jobs:
           # Ensure cargo/rust on path
           source "$HOME/.cargo/env"
 
-          cargo install cargo-pgx --version ${{ matrix.pgx_version }} --locked
-          cargo pgx init --pg${{ matrix.postgres }}=/usr/lib/postgresql/${{ matrix.postgres }}/bin/pg_config
+          cargo install cargo-pgrx --version ${{ matrix.pgrx_version }} --locked
+          cargo pgrx init --pg${{ matrix.postgres }}=/usr/lib/postgresql/${{ matrix.postgres }}/bin/pg_config
 
           # selects the pgVer from pg_config on path
-          # https://github.com/tcdi/pgx/issues/288
-          cargo pgx package --no-default-features --features pg${{ matrix.postgres }},${{ matrix.features }}
+          # https://github.com/tcdi/pgrx/issues/288
+          cargo pgrx package --no-default-features --features pg${{ matrix.postgres }},${{ matrix.features }}
 
           # Extension version and path
           extension_version=${{ github.ref_name }}
@@ -95,6 +95,7 @@ jobs:
           cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--0.1.7--${deb_version}.sql
           cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--0.1.8--${deb_version}.sql
           cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--0.1.9--${deb_version}.sql
+          cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--0.1.10--${deb_version}.sql
 
           # Create installable package
           mkdir archive

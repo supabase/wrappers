@@ -12,11 +12,11 @@ These steps outline how to use the this FDW:
 git clone https://github.com/supabase/wrappers.git
 ```
 
-2. Run it using pgx with feature:
+2. Run it using pgrx with feature:
 
 ```bash
 cd wrappers/wrappers
-cargo pgx run --features helloworld_fdw
+cargo pgrx run --features helloworld_fdw
 ```
 
 3. Create the extension, foreign data wrapper and related objects:

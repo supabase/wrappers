@@ -1,6 +1,6 @@
-use pgx::{
-    debug2, memcxt::PgMemoryContexts, prelude::*, rel::PgRelation, tupdesc::PgTupleDesc, FromDatum,
-    PgSqlErrorCode,
+use pgrx::{
+    debug2, memcxt::PgMemoryContexts, pg_sys::Oid, prelude::*, rel::PgRelation,
+    tupdesc::PgTupleDesc, FromDatum, PgSqlErrorCode,
 };
 use std::collections::HashMap;
 use std::os::raw::c_int;
@@ -9,6 +9,7 @@ use std::ptr;
 use crate::prelude::*;
 
 use super::instance;
+use super::memctx;
 use super::polyfill;
 use super::utils;
 
@@ -20,25 +21,25 @@ struct FdwModifyState<W: ForeignDataWrapper> {
     // row id attribute number and type id
     rowid_name: String,
     rowid_attno: pg_sys::AttrNumber,
-    rowid_typid: pg_sys::Oid,
+    rowid_typid: Oid,
 
     // foreign table options
     opts: HashMap<String, String>,
 
-    // temporary memory context
+    // temporary memory context per foreign table, created under Wrappers root
+    // memory context
     tmp_ctx: PgMemoryContexts,
 }
 
 impl<W: ForeignDataWrapper> FdwModifyState<W> {
-    unsafe fn new(foreigntableid: pg_sys::Oid) -> Self {
+    unsafe fn new(foreigntableid: Oid, tmp_ctx: PgMemoryContexts) -> Self {
         Self {
             instance: instance::create_fdw_instance(foreigntableid),
             rowid_name: String::default(),
             rowid_attno: 0,
-            rowid_typid: 0,
+            rowid_typid: Oid::INVALID,
             opts: HashMap::new(),
-            tmp_ctx: PgMemoryContexts::CurTransactionContext
-                .switch_to(|_| PgMemoryContexts::new("Wrappers temp modify data")),
+            tmp_ctx,
         }
     }
 
@@ -60,12 +61,6 @@ impl<W: ForeignDataWrapper> FdwModifyState<W> {
 
     fn end_modify(&mut self) {
         self.instance.end_modify();
-    }
-
-    fn clear(&mut self) {
-        self.opts.clear();
-        self.opts.shrink_to_fit();
-        self.tmp_ctx.reset();
     }
 }
 
@@ -92,7 +87,7 @@ pub(super) extern "C" fn add_foreign_update_targets(
         // find rowid attribute
         let tup_desc = PgTupleDesc::from_pg_copy((*target_relation).rd_att);
         for attr in tup_desc.iter().filter(|a| !a.attisdropped) {
-            if pgx::name_data_to_str(&attr.attname) == rowid_name {
+            if pgrx::name_data_to_str(&attr.attname) == rowid_name {
                 // make a Var representing the desired value
                 let var = pg_sys::makeVar(
                     rtindex.try_into().unwrap(),
@@ -154,19 +149,25 @@ pub(super) extern "C" fn plan_foreign_modify<W: ForeignDataWrapper>(
         // search for rowid attribute in tuple descrition
         let tup_desc = PgTupleDesc::from_relation(&rel);
         for attr in tup_desc.iter().filter(|a| !a.attisdropped) {
-            let attname = pgx::name_data_to_str(&attr.attname);
+            let attname = pgrx::name_data_to_str(&attr.attname);
             if attname == rowid_name {
+                let ftable_id = rel.oid();
+
+                // refresh leftover memory context
+                let ctx_name = format!("Wrappers_modify_{}", ftable_id.as_u32());
+                let ctx = memctx::refresh_wrappers_memctx(&ctx_name);
+
                 // create modify state
-                let mut state = FdwModifyState::<W>::new(rel.oid());
+                let mut state = FdwModifyState::<W>::new(ftable_id, ctx);
 
                 state.rowid_name = rowid_name.to_string();
                 state.rowid_typid = attr.atttypid;
                 state.opts = opts;
 
-                let boxed_state =
-                    PgBox::new_in_context(state, PgMemoryContexts::CurTransactionContext)
-                        .into_pg_boxed();
-                return FdwModifyState::serialize_to_list(boxed_state);
+                // install callback to drop the state when memory context is reset
+                let mut ctx = PgMemoryContexts::For(state.tmp_ctx.value());
+                let p = PgBox::from_pg(ctx.leak_and_drop_on_delete(state));
+                return FdwModifyState::serialize_to_list(p, ctx);
             }
         }
 
@@ -195,8 +196,7 @@ pub(super) extern "C" fn begin_foreign_modify<W: ForeignDataWrapper>(
 
     unsafe {
         let mut state = FdwModifyState::<W>::deserialize_from_list(fdw_private as _);
-
-        let mut old_ctx = state.tmp_ctx.set_as_current();
+        assert!(!state.is_null());
 
         // search for rowid attribute number
         let subplan = (*polyfill::outer_plan_state(&mut (*mtstate).ps)).plan;
@@ -207,8 +207,6 @@ pub(super) extern "C" fn begin_foreign_modify<W: ForeignDataWrapper>(
         state.begin_modify();
 
         (*rinfo).ri_FdwState = state.into_pg() as _;
-
-        old_ctx.set_as_current();
     }
 }
 
@@ -224,13 +222,8 @@ pub(super) extern "C" fn exec_foreign_insert<W: ForeignDataWrapper>(
         let mut state =
             PgBox::<FdwModifyState<W>>::from_pg((*rinfo).ri_FdwState as *mut FdwModifyState<W>);
 
-        state.tmp_ctx.reset();
-        let mut old_ctx = state.tmp_ctx.set_as_current();
-
         let row = utils::tuple_table_slot_to_row(slot);
         state.insert(&row);
-
-        old_ctx.set_as_current();
     }
 
     slot
@@ -257,15 +250,10 @@ pub(super) extern "C" fn exec_foreign_delete<W: ForeignDataWrapper>(
         let mut state =
             PgBox::<FdwModifyState<W>>::from_pg((*rinfo).ri_FdwState as *mut FdwModifyState<W>);
 
-        state.tmp_ctx.reset();
-        let mut old_ctx = state.tmp_ctx.set_as_current();
-
         let cell = get_rowid_cell(&state, plan_slot);
         if let Some(rowid) = cell {
             state.delete(&rowid);
         }
-
-        old_ctx.set_as_current();
     }
 
     slot
@@ -283,9 +271,6 @@ pub(super) extern "C" fn exec_foreign_update<W: ForeignDataWrapper>(
         let mut state =
             PgBox::<FdwModifyState<W>>::from_pg((*rinfo).ri_FdwState as *mut FdwModifyState<W>);
 
-        state.tmp_ctx.reset();
-        let mut old_ctx = state.tmp_ctx.set_as_current();
-
         let rowid_cell = get_rowid_cell(&state, plan_slot);
         if let Some(rowid) = rowid_cell {
             let mut new_row = utils::tuple_table_slot_to_row(plan_slot);
@@ -295,15 +280,13 @@ pub(super) extern "C" fn exec_foreign_update<W: ForeignDataWrapper>(
             let tup_desc = PgTupleDesc::from_pg_copy((*slot).tts_tupleDescriptor);
             new_row.retain(|(col, _)| {
                 tup_desc.iter().filter(|a| !a.attisdropped).any(|a| {
-                    let attr_name = pgx::name_data_to_str(&a.attname);
+                    let attr_name = pgrx::name_data_to_str(&a.attname);
                     attr_name == col.as_str()
                 }) && state.rowid_name != col.as_str()
             });
 
             state.update(&rowid, &new_row);
         }
-
-        old_ctx.set_as_current();
     }
 
     slot
@@ -318,9 +301,8 @@ pub(super) extern "C" fn end_foreign_modify<W: ForeignDataWrapper>(
     unsafe {
         let fdw_state = (*rinfo).ri_FdwState as *mut FdwModifyState<W>;
         if !fdw_state.is_null() {
-            let mut state = PgBox::<FdwModifyState<W>>::from_rust(fdw_state);
+            let mut state = PgBox::<FdwModifyState<W>>::from_pg(fdw_state);
             state.end_modify();
-            state.clear();
         }
     }
 }

@@ -1,15 +1,15 @@
-//! Wrappers is a development framework for Postgres Foreign Data Wrappers ([FDW](https://wiki.postgresql.org/wiki/Foreign_data_wrappers)) based on [pgx](https://github.com/tcdi/pgx).
+//! Wrappers is a development framework for Postgres Foreign Data Wrappers ([FDW](https://wiki.postgresql.org/wiki/Foreign_data_wrappers)) based on [pgrx](https://github.com/tcdi/pgrx).
 //!
 //! Its goal is to make Postgres FDW development easier while keeping Rust language's modern capabilities, such as high performance, strong types, and safety.
 //!
 //! # Usage
 //!
-//! Wrappers is a pgx extension, please follow the [installation steps](https://github.com/tcdi/pgx#system-requirements) to install `pgx` first.
+//! Wrappers is a pgrx extension, please follow the [installation steps](https://github.com/tcdi/pgrx#system-requirements) to install `pgrx` first.
 //!
-//! After pgx is installed, create your project using command like below,
+//! After pgrx is installed, create your project using command like below,
 //!
 //! ```bash
-//! $ cargo pgx new my_project
+//! $ cargo pgrx new my_project
 //! ```
 //!
 //! And then change default Postgres version to `pg14` or `pg15` and add below dependencies to your project's `Cargo.toml`,
@@ -20,13 +20,13 @@
 //! ...
 //!
 //! [dependencies]
-//! pgx = "=0.6.1"
+//! pgrx = "=0.8.3"
 //! supabase-wrappers = "0.1"
 //! ```
 //!
 //! # Supported Types
 //!
-//! For simplicity purpose, only a subset of [pgx types](https://github.com/tcdi/pgx#mapping-of-postgres-types-to-rust) are supported currently. For example,
+//! For simplicity purpose, only a subset of [pgrx types](https://github.com/tcdi/pgrx#mapping-of-postgres-types-to-rust) are supported currently. For example,
 //!
 //! - bool
 //! - f64
@@ -159,7 +159,7 @@
 //!     }
 //!
 //!     fn end_scan(&mut self) {
-//!         // we do nothing here, but you can things like resource cleanup and etc.
+//!         // we do nothing here, but you can do things like resource cleanup and etc.
 //!     }
 //! }
 //! ```
@@ -167,7 +167,7 @@
 //! And that's it. Now your FDW is ready to run,
 //!
 //! ```bash
-//! $ cargo pgx run
+//! $ cargo pgrx run
 //! ```
 //!
 //! Then create the FDW and foreign table, and make a query on it,
@@ -210,7 +210,7 @@
 //!          Sort Key: col
 //!          ->  Foreign Scan on hello  (cost=0.00..1.00 rows=1 width=0)
 //!                Filter: (id = 1)
-//!                Wrappers: quals = [Qual { field: "id", operator: "=", value: Cell(I32(1)), use_or: false }]
+//!                Wrappers: quals = [Qual { field: "id", operator: "=", value: Cell(I32(1)), use_or: false, param: None }]
 //!                Wrappers: tgts = [Column { name: "id", num: 1, type_oid: 20 }, Column { name: "col", num: 2, type_oid: 25 }]
 //!                Wrappers: sorts = [Sort { field: "col", field_no: 2, reversed: false, nulls_first: false, collate: None }]
 //!                Wrappers: limit = Some(Limit { count: 1, offset: 0 })
@@ -239,11 +239,12 @@ pub mod prelude {
     pub use ::tokio::runtime::Runtime;
 }
 
-use pgx::prelude::*;
-use pgx::AllocatedByPostgres;
+use pgrx::prelude::*;
+use pgrx::AllocatedByPostgres;
 
 mod instance;
 mod limit;
+mod memctx;
 mod modify;
 mod polyfill;
 mod qual;

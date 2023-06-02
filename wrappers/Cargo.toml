@@ -1,23 +1,24 @@
 [package]
 name = "wrappers"
-version = "0.1.10"
+version = "0.1.11"
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib"]
 
 [features]
-default = ["pg15"]
-pg11 = ["pgx/pg11", "pgx-tests/pg11", "supabase-wrappers/pg11" ]
-pg12 = ["pgx/pg12", "pgx-tests/pg12", "supabase-wrappers/pg12" ]
-pg13 = ["pgx/pg13", "pgx-tests/pg13", "supabase-wrappers/pg13" ]
-pg14 = ["pgx/pg14", "pgx-tests/pg14", "supabase-wrappers/pg14" ]
-pg15 = ["pgx/pg15", "pgx-tests/pg15", "supabase-wrappers/pg15" ]
+default = [ "cshim", "pg15" ]
+cshim = [ "pgrx/cshim" ]
+pg11 = ["pgrx/pg11", "pgrx-tests/pg11", "supabase-wrappers/pg11" ]
+pg12 = ["pgrx/pg12", "pgrx-tests/pg12", "supabase-wrappers/pg12" ]
+pg13 = ["pgrx/pg13", "pgrx-tests/pg13", "supabase-wrappers/pg13" ]
+pg14 = ["pgrx/pg14", "pgrx-tests/pg14", "supabase-wrappers/pg14" ]
+pg15 = ["pgrx/pg15", "pgrx-tests/pg15", "supabase-wrappers/pg15" ]
 pg_test = []
 
 helloworld_fdw = []
 bigquery_fdw = ["gcp-bigquery-client", "time", "serde_json", "serde", "wiremock", "futures", "yup-oauth2"]
-clickhouse_fdw = ["clickhouse-rs", "chrono", "time"]
+clickhouse_fdw = ["clickhouse-rs", "chrono", "chrono-tz", "time", "regex"]
 stripe_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "time"]
 firebase_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "yup-oauth2", "regex", "time"]
 s3_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "aws-config", "aws-sdk-s3", "tokio", "tokio-util", "csv", "async-compression", "serde_json", "http"]
@@ -29,7 +30,7 @@ airtable_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", 
 all_fdws = ["airtable_fdw", "bigquery_fdw", "clickhouse_fdw", "stripe_fdw", "firebase_fdw", "s3_fdw"]
 
 [dependencies]
-pgx = { version = "=0.6.1", features = ["time-crate"] }
+pgrx = { version = "=0.8.3", features = ["time-crate"] }
 cfg-if = "1.0"
 #supabase-wrappers = "0.1"
 supabase-wrappers = { path = "../supabase-wrappers", default-features = false }
@@ -37,6 +38,7 @@ supabase-wrappers = { path = "../supabase-wrappers", default-features = false }
 # for clickhouse_fdw
 clickhouse-rs = { git = "https://github.com/suharev7/clickhouse-rs", branch = "async-await", features = ["tls"], optional = true }
 chrono = { version = "0.4", optional = true }
+chrono-tz = { version = "0.6", optional = true }
 
 # for bigquery_fdw, firebase_fdw, airtable_fdw and etc.
 gcp-bigquery-client = { version = "0.16.5", optional = true }
@@ -68,7 +70,7 @@ async-compression = { version = "0.3.15", features = ["tokio", "bzip2", "gzip", 
 http = { version = "0.2", optional = true }
 
 [dev-dependencies]
-pgx-tests = "=0.6.1"
+pgrx-tests = "=0.8.3"
 
 [profile.dev]
 panic = "unwind"
