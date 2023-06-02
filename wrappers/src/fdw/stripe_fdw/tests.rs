@@ -422,6 +422,111 @@ mod tests {
 
             c.update(
                 r#"
+                CREATE FOREIGN TABLE stripe_refunds (
+                  id text,
+                  amount bigint,
+                  currency text,
+                  charge text,
+                  payment_intent text,
+                  reason text,
+                  status text,
+                  created timestamp,
+                  attrs jsonb
+                )
+                SERVER my_stripe_server
+                OPTIONS (
+                    object 'refunds'    -- source object in stripe, required
+                  )
+             "#,
+                None,
+                None,
+            )
+            .unwrap();
+
+            // TODO: Add tokens tests
+
+            // Products
+            c.update(
+                r#"
+                CREATE FOREIGN TABLE stripe_products (
+                  id text,
+                  name text,
+                  active bool,
+                  default_price text,
+                  description text,
+                  created timestamp,
+                  updated timestamp,
+                  attrs jsonb
+                )
+                SERVER my_stripe_server
+                OPTIONS (
+                    object 'products',    -- source object in stripe, required
+                    rowid_column 'id'
+                  )
+             "#,
+                None,
+                None,
+            )
+            .unwrap();
+
+            c.update(
+                r#"
+                CREATE FOREIGN TABLE stripe_prices (
+                  id text,
+                  active bool,
+                  currency text,
+                  product text,
+                  unit_amount bigint,
+                  type text,
+                  created timestamp,
+                  attrs jsonb
+                )
+                SERVER my_stripe_server
+                OPTIONS (
+                    object 'prices'    -- source object in stripe, required
+                  )
+             "#,
+                None,
+                None,
+            )
+            .unwrap();
+
+            // TODO: Add coupons tests
+
+            // TODO: Add promotion_codes tests
+            
+            // TODO: Add tax_codes tests
+            
+            // TODO: Add tax_rates tests
+
+            // TODO: Add shipping_rates tests
+
+            // Billing
+            c.update(
+                r#"
+                CREATE FOREIGN TABLE stripe_invoices (
+                  id text,
+                  customer text,
+                  subscription text,
+                  status text,
+                  total bigint,
+                  currency text,
+                  period_start timestamp,
+                  period_end timestamp,
+                  attrs jsonb
+                )
+                SERVER my_stripe_server
+                OPTIONS (
+                    object 'invoices'    -- source object in stripe, required
+                  )
+             "#,
+                None,
+                None,
+            )
+            .unwrap();
+
+            c.update(
+                r#"
                 CREATE FOREIGN TABLE stripe_subscriptions (
                   id text,
                   customer text,
@@ -435,6 +540,28 @@ mod tests {
                   object 'subscriptions',    -- source object in stripe, required
                   rowid_column 'id'
                 )
+             "#,
+                None,
+                None,
+            )
+            .unwrap();
+
+            // Connect
+            c.update(
+                r#"
+                CREATE FOREIGN TABLE stripe_accounts (
+                  id text,
+                  business_type text,
+                  country text,
+                  email text,
+                  type text,
+                  created timestamp,
+                  attrs jsonb
+                )
+                SERVER my_stripe_server
+                OPTIONS (
+                    object 'accounts'    -- source object in stripe, required
+                  )
              "#,
                 None,
                 None,
