@@ -121,6 +121,22 @@ impl IntoDatum for Cell {
     fn type_oid() -> Oid {
         Oid::INVALID
     }
+
+    fn is_compatible_with(other: Oid) -> bool {
+        Self::type_oid() == other
+            || other == pg_sys::BOOLOID
+            || other == pg_sys::CHAROID
+            || other == pg_sys::INT2OID
+            || other == pg_sys::FLOAT4OID
+            || other == pg_sys::INT4OID
+            || other == pg_sys::FLOAT8OID
+            || other == pg_sys::INT8OID
+            || other == pg_sys::NUMERICOID
+            || other == pg_sys::TEXTOID
+            || other == pg_sys::DATEOID
+            || other == pg_sys::TIMESTAMPOID
+            || other == pg_sys::JSONBOID
+    }
 }
 
 impl FromDatum for Cell {
