@@ -10,4 +10,5 @@ This is a foreign data wrapper for [AWS S3](https://aws.amazon.com/s3/). It is d
 
 | Version | Date       | Notes                                                |
 | ------- | ---------- | ---------------------------------------------------- |
+| 0.1.1   | 2023-06-05 | Added Parquet file support                           |
 | 0.1.0   | 2023-03-01 | Initial version                                      |
