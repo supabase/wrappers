@@ -22,7 +22,7 @@ enum Parser {
 }
 
 #[wrappers_fdw(
-    version = "0.1.0",
+    version = "0.1.1",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/s3_fdw"
 )]
