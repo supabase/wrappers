@@ -111,6 +111,49 @@ mod tests {
             )
             .unwrap();
 
+            c.update(
+                r#"
+                CREATE FOREIGN TABLE s3_test_table_parquet (
+                  id integer,
+                  bool_col boolean,
+                  bigint_col bigint,
+                  float_col real,
+                  date_string_col text,
+                  timestamp_col timestamp
+                )
+                SERVER s3_server
+                OPTIONS (
+                    uri 's3://test/test_data.parquet',
+                    format 'parquet'
+                  )
+             "#,
+                None,
+                None,
+            )
+            .unwrap();
+
+            c.update(
+                r#"
+                CREATE FOREIGN TABLE s3_test_table_parquet_gz (
+                  id integer,
+                  bool_col boolean,
+                  bigint_col bigint,
+                  float_col real,
+                  date_string_col text,
+                  timestamp_col timestamp
+                )
+                SERVER s3_server
+                OPTIONS (
+                    uri 's3://test/test_data.parquet.gz',
+                    format 'parquet',
+                    compress 'gzip'
+                  )
+             "#,
+                None,
+                None,
+            )
+            .unwrap();
+
             let check_test_table = |table| {
                 let sql = format!("SELECT * FROM {} ORDER BY name LIMIT 1", table);
                 let results = c
@@ -130,6 +173,23 @@ mod tests {
             check_test_table("s3_test_table_csv_gz");
             check_test_table("s3_test_table_jsonl");
             check_test_table("s3_test_table_jsonl_bz");
+
+            let check_parquet_table = |table| {
+                let sql = format!("SELECT * FROM {} ORDER BY id LIMIT 1", table);
+                let results = c
+                    .select(&sql, None, None)
+                    .unwrap()
+                    .filter_map(|r| {
+                        r.get_by_name::<i32, _>("id")
+                            .unwrap()
+                            .zip(r.get_by_name::<&str, _>("date_string_col").unwrap())
+                    })
+                    .collect::<Vec<_>>();
+                assert_eq!(results, vec![(0, "01/01/09")]);
+            };
+
+            check_parquet_table("s3_test_table_parquet");
+            check_parquet_table("s3_test_table_parquet_gz");
         });
     }
 }

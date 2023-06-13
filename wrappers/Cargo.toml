@@ -21,8 +21,11 @@ bigquery_fdw = ["gcp-bigquery-client", "time", "serde_json", "serde", "wiremock"
 clickhouse_fdw = ["clickhouse-rs", "chrono", "chrono-tz", "time", "regex"]
 stripe_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "time"]
 firebase_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "yup-oauth2", "regex", "time"]
-s3_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "aws-config", "aws-sdk-s3", "tokio", "tokio-util", "csv", "async-compression", "serde_json", "http"]
-openai_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "regex"]
+s3_fdw = [
+    "reqwest", "reqwest-middleware", "reqwest-retry", "aws-config", "aws-sdk-s3",
+    "tokio", "tokio-util", "csv", "async-compression", "serde_json",
+    "http", "parquet", "futures", "arrow-array", "chrono", "time"
+]
 
 # TODO: audit dependencies
 airtable_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "serde", "url"]
@@ -62,13 +65,15 @@ regex = { version = "1", optional = true }
 url = { version = "2.3", optional = true }
 
 # for s3_fdw
-aws-config = { version = "0.54.1", optional = true }
-aws-sdk-s3 = { version = "0.24.0", optional = true }
+aws-config = { version = "0.55.3", optional = true }
+aws-sdk-s3 = { version = "0.28.0", optional = true }
 csv = { version = "1.2", optional = true }
 tokio = { version = "1", features = ["full"], optional = true }
 tokio-util = { version = "0.7", optional = true }
 async-compression = { version = "0.3.15", features = ["tokio", "bzip2", "gzip", "xz", "zlib"], optional = true }
 http = { version = "0.2", optional = true }
+parquet = { version = "41.0.0", features = ["async"], optional = true }
+arrow-array = { version = "41.0.0", optional = true }
 
 [dev-dependencies]
 pgrx-tests = "=0.8.3"
