@@ -39,7 +39,7 @@ values
       ...
     }',
     (select id from pgsodium.valid_key where name = 'firebase')
-  );
+  )
 returning
   key_id;
 ```
