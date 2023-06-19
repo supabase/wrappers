@@ -70,7 +70,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#wrapper" class="md-skip">
+        <a href="#supported-data-types-for-parquet-file" class="md-skip">
           Skip to content
         </a>
       
@@ -341,6 +341,13 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#supported-data-types-for-parquet-file" class="md-nav__link">
+    Supported Data Types For Parquet File
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#wrapper" class="md-nav__link">
     Wrapper
   </a>
@@ -470,6 +477,13 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#supported-data-types-for-parquet-file" class="md-nav__link">
+    Supported Data Types For Parquet File
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#wrapper" class="md-nav__link">
     Wrapper
   </a>
@@ -552,10 +566,11 @@
 
   <h1>S3</h1>
 
-<p><a href="https://aws.amazon.com/s3/">AWS S3</a> is an object storage service offering industry-leading scalability, data availability, security, and performance. The S3 wrapper is under development. It is read-only and supports 2 file formats:</p>
+<p><a href="https://aws.amazon.com/s3/">AWS S3</a> is an object storage service offering industry-leading scalability, data availability, security, and performance. The S3 wrapper is under development. It is read-only and supports below file formats:</p>
 <ol>
 <li>CSV - with or without header line</li>
 <li><a href="https://jsonlines.org/">JSON Lines</a></li>
+<li><a href="https://parquet.apache.org/">Parquet</a></li>
 </ol>
 <p>The S3 FDW also supports below compression algorithms:</p>
 <ol>
@@ -564,7 +579,64 @@
 <li>xz</li>
 <li>zlib</li>
 </ol>
-<p><strong>Note: currently all columns in S3 files must be defined in the foreign table and their types must be <code>text</code> type</strong></p>
+<p><strong>Note for CSV and JSONL files: currently all columns in S3 files must be defined in the foreign table and their types must be <code>text</code> type</strong></p>
+<p><strong>Note for Parquet files: the whole Parquet file will be loaded into local memory if it is compressed, so keep its size small</strong></p>
+<h3 id="supported-data-types-for-parquet-file">Supported Data Types For Parquet File</h3>
+<p>The S3 FDW uses Parquet file data types from <a href="https://docs.rs/arrow-array/41.0.0/arrow_array/types/index.html">arrow_array::types</a>, below are their mappings to Postgres data types.</p>
+<table>
+<thead>
+<tr>
+<th>Postgres Type</th>
+<th>Parquet Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>boolean</td>
+<td>BooleanType</td>
+</tr>
+<tr>
+<td>char</td>
+<td>Int8Type</td>
+</tr>
+<tr>
+<td>smallint</td>
+<td>Int16Type</td>
+</tr>
+<tr>
+<td>real</td>
+<td>Float32Type</td>
+</tr>
+<tr>
+<td>integer</td>
+<td>Int32Type</td>
+</tr>
+<tr>
+<td>double precision</td>
+<td>Float64Type</td>
+</tr>
+<tr>
+<td>bigint</td>
+<td>Int64Type</td>
+</tr>
+<tr>
+<td>numeric</td>
+<td>Float64Type</td>
+</tr>
+<tr>
+<td>text</td>
+<td>ByteArrayType</td>
+</tr>
+<tr>
+<td>date</td>
+<td>Date64Type</td>
+</tr>
+<tr>
+<td>timestamp</td>
+<td>TimestampNanosecondType</td>
+</tr>
+</tbody>
+</table>
 <h3 id="wrapper">Wrapper</h3>
 <p>To get started with the S3 wrapper, create a foreign data wrapper specifying <code>handler</code> and <code>validator</code> as below.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
@@ -600,7 +672,7 @@
 <span class="w">  </span><span class="p">(</span><span class="w"></span>
 <span class="w">    </span><span class="s1">&#39;AKIAXXXXXX&#39;</span><span class="p">,</span><span class="w"></span>
 <span class="w">    </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">pgsodium</span><span class="p">.</span><span class="n">valid_key</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;vault_access_key_id&#39;</span><span class="p">)</span><span class="w"></span>
-<span class="w">  </span><span class="p">);</span><span class="w"></span>
+<span class="w">  </span><span class="p">)</span><span class="w"></span>
 <span class="n">returning</span><span class="w"></span>
 <span class="w">  </span><span class="n">key_id</span><span class="p">;</span><span class="w"></span>
 </code></pre></div></td></tr></table></div></p>
@@ -642,12 +714,13 @@
 </code></pre></div></td></tr></table></div>
 <h3 id="tables">Tables</h3>
 <p>S3 wrapper is implemented with <a href="https://hevodata.com/learn/etl-vs-elt/">ELT</a> approach, so the data transformation is encouraged to be performed locally after data is extracted from remote data source.</p>
-<p>One file in S3 corresponds a foreign table in Postgres, all columns must be present in the foreign table and type must be <code>text</code>. You can do custom transformations, like type conversion, by creating a view on top of the foreign table or using a subquery.</p>
+<p>One file in S3 corresponds a foreign table in Postgres. For CSV and JSONL file, all columns must be present in the foreign table and type must be <code>text</code>. You can do custom transformations, like type conversion, by creating a view on top of the foreign table or using a subquery.</p>
+<p>For Parquet file, no need to define all columns in the foreign table but column names must match between Parquet file and its foreign table.</p>
 <h4 id="foreign-table-options">Foreign Table Options</h4>
 <p>The full list of foreign table options are below:</p>
 <ul>
 <li><code>uri</code> - S3 URI, required. For example, <code>s3://bucket/s3_table.csv</code></li>
-<li><code>format</code> - File format, required. <code>csv</code> or <code>jsonl</code></li>
+<li><code>format</code> - File format, required. <code>csv</code>, <code>jsonl</code>, or <code>parquet</code></li>
 <li><code>has_header</code> - If the CSV file has header, optional. <code>true</code> or <code>false</code>, default is <code>false</code></li>
 <li><code>compress</code> - Compression algorithm, optional. One of <code>gzip</code>, <code>bzip2</code>, <code>xz</code>, <code>zlib</code>, default is no compression</li>
 </ul>
@@ -695,7 +768,38 @@
 <span class="normal">41</span>
 <span class="normal">42</span>
 <span class="normal">43</span>
-<span class="normal">44</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- CSV file, no compression</span>
+<span class="normal">44</span>
+<span class="normal">45</span>
+<span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span>
+<span class="normal">52</span>
+<span class="normal">53</span>
+<span class="normal">54</span>
+<span class="normal">55</span>
+<span class="normal">56</span>
+<span class="normal">57</span>
+<span class="normal">58</span>
+<span class="normal">59</span>
+<span class="normal">60</span>
+<span class="normal">61</span>
+<span class="normal">62</span>
+<span class="normal">63</span>
+<span class="normal">64</span>
+<span class="normal">65</span>
+<span class="normal">66</span>
+<span class="normal">67</span>
+<span class="normal">68</span>
+<span class="normal">69</span>
+<span class="normal">70</span>
+<span class="normal">71</span>
+<span class="normal">72</span>
+<span class="normal">73</span>
+<span class="normal">74</span>
+<span class="normal">75</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- CSV file, no compression</span>
 <span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">s3_table_csv</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
 <span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="n">sex</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
@@ -737,6 +841,37 @@
 <span class="w">    </span><span class="n">uri</span><span class="w"> </span><span class="s1">&#39;s3://bucket/s3_table.csv.gz&#39;</span><span class="p">,</span><span class="w"></span>
 <span class="w">    </span><span class="n">format</span><span class="w"> </span><span class="s1">&#39;csv&#39;</span><span class="p">,</span><span class="w"></span>
 <span class="w">    </span><span class="n">has_header</span><span class="w"> </span><span class="s1">&#39;true&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="n">compress</span><span class="w"> </span><span class="s1">&#39;gzip&#39;</span><span class="w"></span>
+<span class="w">  </span><span class="p">);</span><span class="w"></span>
+
+<span class="c1">-- Parquet file, no compression</span>
+<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">s3_table_parquet</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">integer</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">bool_col</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">bigint_col</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">float_col</span><span class="w"> </span><span class="nb">real</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">date_string_col</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">timestamp_col</span><span class="w"> </span><span class="k">timestamp</span><span class="w"></span>
+<span class="p">)</span><span class="w"></span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">s3_server</span><span class="w"></span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">    </span><span class="n">uri</span><span class="w"> </span><span class="s1">&#39;s3://bucket/s3_table.parquet&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="n">format</span><span class="w"> </span><span class="s1">&#39;parquet&#39;</span><span class="w"></span>
+<span class="w">  </span><span class="p">);</span><span class="w"></span>
+
+<span class="c1">-- GZIP compressed Parquet file</span>
+<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">s3_table_parquet_gz</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">integer</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">bool_col</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">bigint_col</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">float_col</span><span class="w"> </span><span class="nb">real</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">date_string_col</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">timestamp_col</span><span class="w"> </span><span class="k">timestamp</span><span class="w"></span>
+<span class="p">)</span><span class="w"></span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">s3_server</span><span class="w"></span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">    </span><span class="n">uri</span><span class="w"> </span><span class="s1">&#39;s3://bucket/s3_table.parquet.gz&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="n">format</span><span class="w"> </span><span class="s1">&#39;parquet&#39;</span><span class="p">,</span><span class="w"></span>
 <span class="w">    </span><span class="n">compress</span><span class="w"> </span><span class="s1">&#39;gzip&#39;</span><span class="w"></span>
 <span class="w">  </span><span class="p">);</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
