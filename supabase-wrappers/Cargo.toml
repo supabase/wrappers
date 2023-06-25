@@ -1,6 +1,6 @@
 [package]
 name = "supabase-wrappers"
-version = "0.1.13"
+version = "0.1.14"
 edition = "2021"
 authors = ["Supabase Inc. https://supabase.com/"]
 license = "Apache-2.0"
@@ -30,7 +30,7 @@ supabase-wrappers-macros = { version = "0.1", path = "../supabase-wrappers-macro
 pgrx-tests = "=0.8.3"
 
 [package.metadata.docs.rs]
-features = ["pg15"]
+features = ["pg15", "cshim"]
 no-default-features = true
 # Enable `#[cfg(docsrs)]` (https://docs.rs/about/builds#cross-compiling)
 rustc-args = ["--cfg", "docsrs"]
