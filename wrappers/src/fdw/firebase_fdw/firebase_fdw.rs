@@ -7,7 +7,7 @@ use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;
-use time::{format_description::well_known::Iso8601, OffsetDateTime, PrimitiveDateTime};
+use std::str::FromStr;
 use yup_oauth2::AccessToken;
 use yup_oauth2::ServiceAccountAuthenticator;
 
@@ -96,13 +96,11 @@ fn body_to_rows(
                         "string" => v.as_str().map(|a| Cell::String(a.to_owned())),
                         "timestamp" => v.as_str().map(|a| {
                             let secs = a.parse::<i64>().unwrap() / 1000;
-                            let dt = OffsetDateTime::from_unix_timestamp(secs).unwrap();
-                            let ts = Timestamp::try_from(dt).unwrap();
-                            Cell::Timestamp(ts)
+                            let ts = to_timestamp(secs as f64);
+                            Cell::Timestamp(ts.to_utc())
                         }),
                         "timestamp_iso" => v.as_str().map(|a| {
-                            let dt = PrimitiveDateTime::parse(a, &Iso8601::DEFAULT).unwrap();
-                            let ts = Timestamp::try_from(dt).unwrap();
+                            let ts = Timestamp::from_str(a).unwrap();
                             Cell::Timestamp(ts)
                         }),
                         "json" => Some(Cell::Json(JsonB(v.clone()))),

@@ -1,3 +1,4 @@
+use pgrx::datum::datetime_support::to_timestamp;
 use pgrx::pg_sys;
 use pgrx::prelude::{PgSqlErrorCode, Timestamp};
 use pgrx::JsonB;
@@ -6,7 +7,6 @@ use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use serde_json::{Map as JsonMap, Number, Value as JsonValue};
 use std::collections::HashMap;
-use time::OffsetDateTime;
 
 use supabase_wrappers::prelude::*;
 
@@ -99,9 +99,8 @@ fn body_to_rows(
                         "i64" => v.as_i64().map(Cell::I64),
                         "string" => v.as_str().map(|a| Cell::String(a.to_owned())),
                         "timestamp" => v.as_i64().map(|a| {
-                            let dt = OffsetDateTime::from_unix_timestamp(a).unwrap();
-                            let ts = Timestamp::try_from(dt).unwrap();
-                            Cell::Timestamp(ts)
+                            let ts = to_timestamp(a as f64);
+                            Cell::Timestamp(ts.to_utc())
                         }),
                         _ => None,
                     });

@@ -6,13 +6,13 @@ use parquet::arrow::async_reader::{
     AsyncFileReader, ParquetRecordBatchStream, ParquetRecordBatchStreamBuilder,
 };
 use parquet::arrow::ProjectionMask;
+use pgrx::datum::datetime_support::to_timestamp;
 use pgrx::pg_sys;
-use pgrx::prelude::PgSqlErrorCode;
+use pgrx::prelude::{Date, PgSqlErrorCode, Timestamp};
 use std::cmp::min;
 use std::io::{Cursor, Error as IoError, ErrorKind, Result as IoResult, SeekFrom};
 use std::pin::Pin;
 use std::task::{Context, Poll};
-use time::OffsetDateTime;
 use tokio::io::{AsyncRead, AsyncSeek, ReadBuf};
 use tokio::runtime::Handle;
 
@@ -310,12 +310,10 @@ impl S3Parquet {
                         } else {
                             arr.value_as_date(self.batch_idx).map(|dt| {
                                 let epoch = NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
-                                let days_epoch = dt.signed_duration_since(epoch).num_days() as i32;
-                                let dt = pgrx::Date::from_pg_epoch_days(
-                                    days_epoch + pg_sys::UNIX_EPOCH_JDATE as i32
-                                        - pg_sys::POSTGRES_EPOCH_JDATE as i32,
-                                );
-                                Cell::Date(dt)
+                                let seconds_from_epoch =
+                                    dt.signed_duration_since(epoch).num_seconds();
+                                let ts = to_timestamp(seconds_from_epoch as f64);
+                                Cell::Date(Date::from(ts))
                             })
                         }
                     }
@@ -330,12 +328,8 @@ impl S3Parquet {
                             None
                         } else {
                             arr.value_as_datetime(self.batch_idx).map(|ts| {
-                                let dt = OffsetDateTime::from_unix_timestamp_nanos(
-                                    ts.timestamp_nanos() as i128,
-                                )
-                                .unwrap();
-                                let ts = pgrx::Timestamp::try_from(dt).unwrap();
-                                Cell::Timestamp(ts)
+                                let ts = to_timestamp(ts.timestamp() as f64);
+                                Cell::Timestamp(ts.to_utc())
                             })
                         }
                     }

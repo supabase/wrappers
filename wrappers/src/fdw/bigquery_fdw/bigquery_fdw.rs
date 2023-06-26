@@ -13,7 +13,7 @@ use pgrx::prelude::PgSqlErrorCode;
 use pgrx::prelude::{AnyNumeric, Date, Timestamp};
 use serde_json::json;
 use std::collections::HashMap;
-use time::{format_description::well_known::Iso8601, OffsetDateTime, PrimitiveDateTime};
+use std::str::FromStr;
 
 use supabase_wrappers::prelude::*;
 
@@ -54,27 +54,22 @@ fn field_to_cell(rs: &ResultSet, field: &TableFieldSchema) -> Option<Cell> {
             .get_string_by_name(&field.name)
             .unwrap_or_else(|err| field_type_error!(field, err))
             .map(|v| {
-                let pg_epoch = time::Date::parse("2000-01-01", &Iso8601::DEFAULT).unwrap();
-                let dt = time::Date::parse(&v, &Iso8601::DEFAULT).unwrap();
-                let days = (dt - pg_epoch).whole_days();
-                let dt = Date::from_pg_epoch_days(days.try_into().unwrap());
+                let dt = Date::from_str(&v).unwrap();
                 Cell::Date(dt)
             }),
         FieldType::Datetime => rs
             .get_string_by_name(&field.name)
             .unwrap_or_else(|err| field_type_error!(field, err))
             .map(|v| {
-                let dt = PrimitiveDateTime::parse(&v, &Iso8601::DEFAULT).unwrap();
-                let ts = Timestamp::try_from(dt).unwrap();
+                let ts = Timestamp::from_str(&v).unwrap();
                 Cell::Timestamp(ts)
             }),
         FieldType::Timestamp => rs
             .get_f64_by_name(&field.name)
             .unwrap_or_else(|err| field_type_error!(field, err))
             .map(|v| {
-                let dt = OffsetDateTime::from_unix_timestamp_nanos((v * 1e9) as i128).unwrap();
-                let ts = Timestamp::try_from(dt).unwrap();
-                Cell::Timestamp(ts)
+                let ts = pgrx::to_timestamp(v);
+                Cell::Timestamp(ts.to_utc())
             }),
         _ => {
             report_error(
