@@ -2,12 +2,11 @@ use chrono::{Date, DateTime, NaiveDate, NaiveDateTime, Utc};
 use chrono_tz::Tz;
 use clickhouse_rs::{types, types::Block, types::SqlType, ClientHandle, Pool};
 use pgrx::{
-    pg_sys,
     prelude::{PgSqlErrorCode, Timestamp},
+    to_timestamp,
 };
 use regex::{Captures, Regex};
 use std::collections::HashMap;
-use time::OffsetDateTime;
 
 use supabase_wrappers::prelude::*;
 
@@ -58,18 +57,14 @@ fn field_to_cell(row: &types::Row<types::Complex>, i: usize) -> Option<Cell> {
         SqlType::Date => {
             let value = row.get::<Date<_>, usize>(i).unwrap();
             let epoch = NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
-            let days_epoch = value.naive_utc().signed_duration_since(epoch).num_days() as i32;
-            let dt = pgrx::datum::Date::from_pg_epoch_days(
-                days_epoch + pg_sys::UNIX_EPOCH_JDATE as i32 - pg_sys::POSTGRES_EPOCH_JDATE as i32,
-            );
-            Some(Cell::Date(dt))
+            let seconds_from_epoch = value.naive_utc().signed_duration_since(epoch).num_seconds();
+            let ts = to_timestamp(seconds_from_epoch as f64);
+            Some(Cell::Date(pgrx::Date::from(ts)))
         }
         SqlType::DateTime(_) => {
             let value = row.get::<DateTime<_>, usize>(i).unwrap();
-            let dt = OffsetDateTime::from_unix_timestamp_nanos((value.timestamp_nanos()) as i128)
-                .unwrap();
-            let ts = Timestamp::try_from(dt).unwrap();
-            Some(Cell::Timestamp(ts))
+            let ts = to_timestamp(value.timestamp() as f64);
+            Some(Cell::Timestamp(ts.to_utc()))
         }
         _ => {
             report_error(

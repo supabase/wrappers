@@ -58,8 +58,8 @@ impl Clone for Cell {
             Cell::I64(v) => Cell::I64(*v),
             Cell::Numeric(v) => Cell::Numeric(v.clone()),
             Cell::String(v) => Cell::String(v.clone()),
-            Cell::Date(v) => Cell::Date(v.clone()),
-            Cell::Timestamp(v) => Cell::Timestamp(v.clone()),
+            Cell::Date(v) => Cell::Date(*v),
+            Cell::Timestamp(v) => Cell::Timestamp(*v),
             Cell::Json(v) => Cell::Json(JsonB(v.0.clone())),
         }
     }
@@ -78,18 +78,16 @@ impl fmt::Display for Cell {
             Cell::Numeric(v) => write!(f, "{:?}", v),
             Cell::String(v) => write!(f, "'{}'", v),
             Cell::Date(v) => unsafe {
-                let dt = fcinfo::direct_function_call_as_datum(
-                    pg_sys::date_out,
-                    &[v.clone().into_datum()],
-                )
-                .unwrap();
+                let dt =
+                    fcinfo::direct_function_call_as_datum(pg_sys::date_out, &[(*v).into_datum()])
+                        .unwrap();
                 let dt_cstr = CStr::from_ptr(dt.cast_mut_ptr());
                 write!(f, "'{}'", dt_cstr.to_str().unwrap())
             },
             Cell::Timestamp(v) => unsafe {
                 let ts = fcinfo::direct_function_call_as_datum(
                     pg_sys::timestamp_out,
-                    &[v.clone().into_datum()],
+                    &[(*v).into_datum()],
                 )
                 .unwrap();
                 let ts_cstr = CStr::from_ptr(ts.cast_mut_ptr());

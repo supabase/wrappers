@@ -17,14 +17,14 @@ pg15 = ["pgrx/pg15", "pgrx-tests/pg15", "supabase-wrappers/pg15" ]
 pg_test = []
 
 helloworld_fdw = []
-bigquery_fdw = ["gcp-bigquery-client", "time", "serde_json", "serde", "wiremock", "futures", "yup-oauth2"]
-clickhouse_fdw = ["clickhouse-rs", "chrono", "chrono-tz", "time", "regex"]
-stripe_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "time"]
-firebase_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "yup-oauth2", "regex", "time"]
+bigquery_fdw = ["gcp-bigquery-client", "serde_json", "serde", "wiremock", "futures", "yup-oauth2"]
+clickhouse_fdw = ["clickhouse-rs", "chrono", "chrono-tz", "regex"]
+stripe_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json"]
+firebase_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "yup-oauth2", "regex"]
 s3_fdw = [
     "reqwest", "reqwest-middleware", "reqwest-retry", "aws-config", "aws-sdk-s3",
     "tokio", "tokio-util", "csv", "async-compression", "serde_json",
-    "http", "parquet", "futures", "arrow-array", "chrono", "time"
+    "http", "parquet", "futures", "arrow-array", "chrono"
 ]
 
 # TODO: audit dependencies
@@ -34,7 +34,7 @@ airtable_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", 
 all_fdws = ["airtable_fdw", "bigquery_fdw", "clickhouse_fdw", "stripe_fdw", "firebase_fdw", "s3_fdw"]
 
 [dependencies]
-pgrx = { version = "=0.8.3", features = ["time-crate"] }
+pgrx = { version = "=0.9.6" }
 cfg-if = "1.0"
 #supabase-wrappers = "0.1"
 supabase-wrappers = { path = "../supabase-wrappers", default-features = false }
@@ -46,7 +46,6 @@ chrono-tz = { version = "0.6", optional = true }
 
 # for bigquery_fdw, firebase_fdw, airtable_fdw and etc.
 gcp-bigquery-client = { version = "0.16.5", optional = true }
-time = { version = "0.3.17", features = ["parsing"], optional = true }
 serde = { version = "1", optional = true }
 serde_json = { version = "1.0.86", optional = true }
 wiremock = { version = "0.5", optional = true }
@@ -76,7 +75,7 @@ parquet = { version = "41.0.0", features = ["async"], optional = true }
 arrow-array = { version = "41.0.0", optional = true }
 
 [dev-dependencies]
-pgrx-tests = "=0.8.3"
+pgrx-tests = "=0.9.6"
 
 [profile.dev]
 panic = "unwind"
