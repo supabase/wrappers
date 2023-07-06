@@ -2,7 +2,11 @@ use pgrx::{
     pg_sys,
     prelude::{AnyNumeric, Date, PgSqlErrorCode, Timestamp},
 };
-use reqwest::{self, header, StatusCode, Url};
+use reqwest::{
+    self,
+    header::{HeaderMap, HeaderName, HeaderValue},
+    StatusCode, Url,
+};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use serde_json::value::Value as JsonValue;
@@ -12,9 +16,9 @@ use std::str::FromStr;
 use supabase_wrappers::prelude::*;
 
 fn create_client(api_key: &str) -> ClientWithMiddleware {
-    let mut headers = header::HeaderMap::new();
-    let header_name = header::HeaderName::from_static("x-api-key");
-    let mut auth_value = header::HeaderValue::from_str(api_key).unwrap();
+    let mut headers = HeaderMap::new();
+    let header_name = HeaderName::from_static("x-api-key");
+    let mut auth_value = HeaderValue::from_str(api_key).unwrap();
     auth_value.set_sensitive(true);
     headers.insert(header_name, auth_value);
     let client = reqwest::Client::builder()
@@ -37,10 +41,83 @@ macro_rules! report_request_error {
     }};
 }
 
-macro_rules! column_type_mismatch {
+fn extract_params(quals: &[Qual]) -> Option<Vec<Qual>> {
+    let params = quals
+        .iter()
+        .filter_map(|q| {
+            if q.field.starts_with("_param_") {
+                Some(q.clone())
+            } else {
+                None
+            }
+        })
+        .collect();
+    Some(params)
+}
+
+macro_rules! type_mismatch {
     ($col:ident) => {
         panic!("column '{}' data type not match", $col.name)
     };
+}
+
+fn json_value_to_cell(tgt_col: &Column, v: &JsonValue) -> Cell {
+    match tgt_col.type_oid {
+        pg_sys::BOOLOID => Cell::Bool(v.as_bool().unwrap_or_else(|| type_mismatch!(tgt_col))),
+        pg_sys::CHAROID => Cell::I8(
+            v.as_i64()
+                .map(|s| i8::try_from(s).unwrap_or_else(|_| type_mismatch!(tgt_col)))
+                .unwrap_or_else(|| type_mismatch!(tgt_col)),
+        ),
+        pg_sys::INT2OID => Cell::I16(
+            v.as_i64()
+                .map(|s| i16::try_from(s).unwrap_or_else(|_| type_mismatch!(tgt_col)))
+                .unwrap_or_else(|| type_mismatch!(tgt_col)),
+        ),
+        pg_sys::FLOAT4OID => Cell::F32(
+            v.as_f64()
+                .map(|s| s as f32)
+                .unwrap_or_else(|| type_mismatch!(tgt_col)),
+        ),
+        pg_sys::INT4OID => Cell::I32(
+            v.as_i64()
+                .map(|s| i32::try_from(s).unwrap_or_else(|_| type_mismatch!(tgt_col)))
+                .unwrap_or_else(|| type_mismatch!(tgt_col)),
+        ),
+        pg_sys::FLOAT8OID => Cell::F64(v.as_f64().unwrap_or_else(|| type_mismatch!(tgt_col))),
+        pg_sys::INT8OID => Cell::I64(v.as_i64().unwrap_or_else(|| type_mismatch!(tgt_col))),
+        pg_sys::NUMERICOID => Cell::Numeric(
+            v.as_f64()
+                .map(|s| AnyNumeric::try_from(s).unwrap_or_else(|_| type_mismatch!(tgt_col)))
+                .unwrap_or_else(|| type_mismatch!(tgt_col)),
+        ),
+        pg_sys::TEXTOID => Cell::String(
+            v.as_str()
+                .map(|s| s.to_owned())
+                .unwrap_or_else(|| type_mismatch!(tgt_col)),
+        ),
+        pg_sys::DATEOID => Cell::Date(
+            v.as_str()
+                .map(|s| Date::from_str(s).unwrap_or_else(|_| type_mismatch!(tgt_col)))
+                .unwrap_or_else(|| type_mismatch!(tgt_col)),
+        ),
+        pg_sys::TIMESTAMPOID => Cell::Timestamp(
+            v.as_str()
+                .map(|s| Timestamp::from_str(s).unwrap_or_else(|_| type_mismatch!(tgt_col)))
+                .unwrap_or_else(|| type_mismatch!(tgt_col)),
+        ),
+        _ => {
+            // report error and return a dummy cell
+            report_error(
+                PgSqlErrorCode::ERRCODE_FDW_INVALID_DATA_TYPE,
+                &format!(
+                    "column '{}' data type oid '{}' is not supported",
+                    tgt_col.name, tgt_col.type_oid
+                ),
+            );
+            Cell::Bool(false)
+        }
+    }
 }
 
 #[wrappers_fdw(
@@ -53,10 +130,46 @@ pub(crate) struct LogflareFdw {
     base_url: Url,
     client: Option<ClientWithMiddleware>,
     scan_result: Option<Vec<Row>>,
+    params: Vec<Qual>,
 }
 
 impl LogflareFdw {
     const BASE_URL: &str = "https://api.logflare.app/api/endpoints/query/";
+
+    fn build_url(&self, endpoint: &str) -> Option<Url> {
+        let mut url = self.base_url.join(endpoint).unwrap();
+        for param in &self.params {
+            // extract actual param name, e.g. "_param_foo" => "foo"
+            let param_name = &param.field[7..];
+
+            if param.operator != "=" {
+                report_error(
+                    PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                    &format!("Parameter '{}' only supports '=' operator", param_name),
+                );
+                return None;
+            }
+            match &param.value {
+                Value::Cell(cell) => {
+                    let value = match cell {
+                        Cell::String(s) => s.clone(),
+                        Cell::Date(d) => d.to_string().as_str().trim_matches('\'').to_owned(),
+                        Cell::Timestamp(t) => t.to_string().as_str().trim_matches('\'').to_owned(),
+                        _ => cell.to_string(),
+                    };
+                    url.query_pairs_mut().append_pair(param_name, &value);
+                }
+                Value::Array(_) => {
+                    report_error(
+                        PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                        &format!("Parameter '{}' doesn't supports array value", param_name),
+                    );
+                    return None;
+                }
+            }
+        }
+        Some(url)
+    }
 
     fn resp_to_rows(&mut self, body: &JsonValue, tgt_cols: &[Column]) {
         self.scan_result = body
@@ -70,90 +183,24 @@ impl LogflareFdw {
                         if let Some(r) = record.as_object() {
                             for tgt_col in tgt_cols {
                                 let cell = if tgt_col.name == "_attrs" {
+                                    // add _attrs meta cell
                                     Some(Cell::String(record.to_string()))
-                                } else {
-                                    r.get(&tgt_col.name).map(|v| {
-                                        match tgt_col.type_oid {
-                                            pg_sys::BOOLOID => Cell::Bool(
-                                                v.as_bool().unwrap_or_else(|| column_type_mismatch!(tgt_col)),
-                                            ),
-                                            pg_sys::CHAROID => Cell::I8(
-                                                v.as_i64()
-                                                    .map(|s| {
-                                                        i8::try_from(s)
-                                                            .unwrap_or_else(|_| column_type_mismatch!(tgt_col))
-                                                    })
-                                                    .unwrap_or_else(|| column_type_mismatch!(tgt_col)),
-                                            ),
-                                            pg_sys::INT2OID => Cell::I16(
-                                                v.as_i64()
-                                                    .map(|s| {
-                                                        i16::try_from(s)
-                                                            .unwrap_or_else(|_| column_type_mismatch!(tgt_col))
-                                                    })
-                                                    .unwrap_or_else(|| column_type_mismatch!(tgt_col)),
-                                            ),
-                                            pg_sys::FLOAT4OID => Cell::F32(
-                                                v.as_f64()
-                                                    .map(|s| s as f32)
-                                                    .unwrap_or_else(|| column_type_mismatch!(tgt_col)),
-                                            ),
-                                            pg_sys::INT4OID => Cell::I32(
-                                                v.as_i64()
-                                                    .map(|s| {
-                                                        i32::try_from(s)
-                                                            .unwrap_or_else(|_| column_type_mismatch!(tgt_col))
-                                                    })
-                                                    .unwrap_or_else(|| column_type_mismatch!(tgt_col)),
-                                            ),
-                                            pg_sys::FLOAT8OID => Cell::F64(
-                                                v.as_f64().unwrap_or_else(|| column_type_mismatch!(tgt_col)),
-                                            ),
-                                            pg_sys::INT8OID => Cell::I64(
-                                                v.as_i64().unwrap_or_else(|| column_type_mismatch!(tgt_col)),
-                                            ),
-                                            pg_sys::NUMERICOID => Cell::Numeric(
-                                                v.as_f64()
-                                                    .map(|s| {
-                                                        AnyNumeric::try_from(s)
-                                                            .unwrap_or_else(|_| column_type_mismatch!(tgt_col))
-                                                    })
-                                                    .unwrap_or_else(|| column_type_mismatch!(tgt_col)),
-                                            ),
-                                            pg_sys::TEXTOID => Cell::String(
-                                                v.as_str()
-                                                    .map(|s| s.to_owned())
-                                                    .unwrap_or_else(|| column_type_mismatch!(tgt_col)),
-                                            ),
-                                            pg_sys::DATEOID => Cell::Date(
-                                                v.as_str()
-                                                    .map(|s| {
-                                                        Date::from_str(s)
-                                                            .unwrap_or_else(|_| column_type_mismatch!(tgt_col))
-                                                    })
-                                                    .unwrap_or_else(|| column_type_mismatch!(tgt_col)),
-                                            ),
-                                            pg_sys::TIMESTAMPOID => Cell::Timestamp(
-                                                v.as_str()
-                                                    .map(|s| {
-                                                        Timestamp::from_str(s)
-                                                            .unwrap_or_else(|_| column_type_mismatch!(tgt_col))
-                                                    })
-                                                    .unwrap_or_else(|| column_type_mismatch!(tgt_col)),
-                                            ),
-                                            _ => {
-                                                // report error and return a dummy cell
-                                                report_error(
-                                                    PgSqlErrorCode::ERRCODE_FDW_INVALID_DATA_TYPE,
-                                                    &format!(
-                                                        "column '{}' data type oid '{}' is not supported",
-                                                        tgt_col.name, tgt_col.type_oid
-                                                    ),
-                                                );
-                                                Cell::Bool(false)
+                                } else if tgt_col.name.starts_with("_param_") {
+                                    // add param cell
+                                    self.params.iter().find_map(|p| {
+                                        if p.field == tgt_col.name {
+                                            if let Value::Cell(cell) = &p.value {
+                                                Some(cell.clone())
+                                            } else {
+                                                None
                                             }
+                                        } else {
+                                            None
                                         }
                                     })
+                                } else {
+                                    // add normal cell
+                                    r.get(&tgt_col.name).map(|v| json_value_to_cell(tgt_col, v))
                                 };
                                 row.push(&tgt_col.name, cell);
                             }
@@ -190,12 +237,13 @@ impl ForeignDataWrapper for LogflareFdw {
             base_url: Url::parse(&base_url).unwrap(),
             client,
             scan_result: None,
+            params: Vec::default(),
         }
     }
 
     fn begin_scan(
         &mut self,
-        _quals: &[Qual],
+        quals: &[Qual],
         columns: &[Column],
         _sorts: &[Sort],
         _limit: &Option<Limit>,
@@ -207,9 +255,20 @@ impl ForeignDataWrapper for LogflareFdw {
             return;
         };
 
+        // extract params
+        self.params = if let Some(params) = extract_params(quals) {
+            params
+        } else {
+            return;
+        };
+
         if let Some(client) = &self.client {
             // build url
-            let url = self.base_url.join(&endpoint).unwrap();
+            let url = self.build_url(&endpoint);
+            if url.is_none() {
+                return;
+            }
+            let url = url.unwrap();
 
             // make api call
             match self.rt.block_on(client.get(url).send()) {

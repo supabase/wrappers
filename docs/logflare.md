@@ -73,13 +73,38 @@ The full list of foreign table options are below:
 
 - `endpoint` - Logflare endpoint, required.
 
-#### Examples
+#### Meta Column
+
+You can define a specific meta column `_attrs` (data type: `text`) in the foreign table. It will store the whole record in JSON string format, so you can extract any fields from it using Postgres JSON queries like `_attrs::json->>'foo'`. See more examples below.
+
+#### Query Parameters
+
+Logflare endpoint query parameters can be passed using specific parameter columns like `_param_foo` and `_param_bar`. See more examples below.
+
+### Examples
+
+Some examples on how to use Logflare foreign tables.
+
+#### Simple Query
+
+Assume the Logflare endpoint response is like below:
+
+```json
+[
+  {
+    "id": 123,
+    "name": "foo"
+  }
+]
+```
+
+Then we can define foreign table like this:
 
 ```sql
 create foreign table people (
   id bigint,
   name text,
-  ts timestamp
+  _attrs text
 )
   server logflare_server
   options (
@@ -87,5 +112,60 @@ create foreign table people (
   );
 
 select * from people;
+```
+
+#### Query with parameters
+
+Suppose the Logflare endpoint accepts 3 parameters:
+
+1. org_id
+2. iso_timestamp_start
+3. iso_timestamp_end
+
+And its response is like below:
+
+```json
+[
+  {
+    "db_size": "large",
+    "org_id": "123",
+    "runtime_hours": 21.95,
+    "runtime_minutes": 1317
+  }
+]
+```
+
+We can define foreign table and parameter columns like this:
+
+```sql
+create foreign table runtime_hours (
+  db_size text,
+  org_id text,
+  runtime_hours numeric,
+  runtime_minutes bigint,
+  _param_org_id bigint,
+  _param_iso_timestamp_start text,
+  _param_iso_timestamp_end text,
+  _attrs text
+)
+  server logflare_server
+  options (
+    endpoint '07fff9cb-a020-198e-3e4e-a20114bb8c1c'
+  );
+```
+
+and query it with parameters like this:
+
+```sql
+select
+  db_size,
+  org_id,
+  runtime_hours,
+  runtime_minutes
+from
+  runtime_hours
+where _param_org_id = 123
+  and _param_iso_timestamp_start = '2023-07-01 02:03:04'
+  and _param_iso_timestamp_end = '2023-07-02';
 ```
 
