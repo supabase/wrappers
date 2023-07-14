@@ -1,11 +1,9 @@
-use pgrx::datum::datetime_support::to_timestamp;
-use pgrx::pg_sys;
-use pgrx::prelude::{PgSqlErrorCode, Timestamp};
-use pgrx::JsonB;
+use crate::stats;
+use pgrx::{datum::datetime_support::to_timestamp, pg_sys, prelude::PgSqlErrorCode, JsonB};
 use reqwest::{self, header, StatusCode, Url};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
-use serde_json::{Map as JsonMap, Number, Value as JsonValue};
+use serde_json::{json, Map as JsonMap, Number, Value as JsonValue};
 use std::collections::HashMap;
 
 use supabase_wrappers::prelude::*;
@@ -222,6 +220,28 @@ fn pushdown_quals(
     }
 }
 
+// get stats metadata
+#[inline]
+fn get_stats_metadata() -> JsonB {
+    stats::get_metadata(StripeFdw::FDW_NAME).unwrap_or(JsonB(json!({
+        "request_cnt": 0i64,
+    })))
+}
+
+// save stats metadata
+#[inline]
+fn set_stats_metadata(stats_metadata: JsonB) {
+    stats::set_metadata(StripeFdw::FDW_NAME, Some(stats_metadata));
+}
+
+// increase stats metadata 'request_cnt' by 1
+#[inline]
+fn inc_stats_request_cnt(stats_metadata: &mut JsonB) {
+    if let Some(v) = stats_metadata.0.get_mut("request_cnt") {
+        *v = (v.as_i64().unwrap() + 1).into();
+    };
+}
+
 macro_rules! report_request_error {
     ($err:ident) => {{
         report_error(
@@ -233,7 +253,7 @@ macro_rules! report_request_error {
 }
 
 #[wrappers_fdw(
-    version = "0.1.6",
+    version = "0.1.7",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/stripe_fdw"
 )]
@@ -247,6 +267,8 @@ pub(crate) struct StripeFdw {
 }
 
 impl StripeFdw {
+    const FDW_NAME: &str = "StripeFdw";
+
     fn build_url(
         &self,
         obj: &str,
@@ -625,6 +647,8 @@ impl ForeignDataWrapper for StripeFdw {
                 .map(|api_key| create_client(&api_key)),
         };
 
+        stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
+
         StripeFdw {
             rt: create_async_runtime(),
             base_url: Url::parse(&base_url).unwrap(),
@@ -663,6 +687,7 @@ impl ForeignDataWrapper for StripeFdw {
             let mut page = 0;
             let mut result = Vec::new();
             let mut cursor: Option<String> = None;
+            let mut stats_metadata = get_stats_metadata();
 
             while page < page_cnt {
                 // build url
@@ -673,13 +698,21 @@ impl ForeignDataWrapper for StripeFdw {
                 let url = url.unwrap();
 
                 // make api call
+                inc_stats_request_cnt(&mut stats_metadata);
                 match self.rt.block_on(client.get(url).send()) {
                     Ok(resp) => {
+                        stats::inc_stats(
+                            Self::FDW_NAME,
+                            stats::Metric::BytesIn,
+                            resp.content_length().unwrap_or(0) as i64,
+                        );
+
                         if resp.status() == StatusCode::NOT_FOUND {
                             // if it is 404 error, we should treat it as an empty
                             // result rather than a request error
                             break;
                         }
+
                         match resp.error_for_status() {
                             Ok(resp) => {
                                 let body = self.rt.block_on(resp.text()).unwrap();
@@ -707,6 +740,11 @@ impl ForeignDataWrapper for StripeFdw {
 
                 page += 1;
             }
+
+            // save stats
+            stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsIn, result.len() as i64);
+            stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsOut, result.len() as i64);
+            set_stats_metadata(stats_metadata);
 
             self.scan_result = Some(result);
         }
@@ -741,10 +779,18 @@ impl ForeignDataWrapper for StripeFdw {
                 return;
             }
 
+            let mut stats_metadata = get_stats_metadata();
+
             // call Stripe API
+            inc_stats_request_cnt(&mut stats_metadata);
             match self.rt.block_on(client.post(url).form(&body).send()) {
                 Ok(resp) => match resp.error_for_status() {
                     Ok(resp) => {
+                        stats::inc_stats(
+                            Self::FDW_NAME,
+                            stats::Metric::BytesIn,
+                            resp.content_length().unwrap_or(0) as i64,
+                        );
                         let body = self.rt.block_on(resp.text()).unwrap();
                         let json: JsonValue = serde_json::from_str(&body).unwrap();
                         if let Some(id) = json.get("id").and_then(|v| v.as_str()) {
@@ -755,11 +801,15 @@ impl ForeignDataWrapper for StripeFdw {
                 },
                 Err(err) => report_request_error!(err),
             }
+
+            set_stats_metadata(stats_metadata);
         }
     }
 
     fn update(&mut self, rowid: &Cell, new_row: &Row) {
         if let Some(ref mut client) = self.client {
+            let mut stats_metadata = get_stats_metadata();
+
             match rowid {
                 Cell::String(rowid) => {
                     let url = self
@@ -774,9 +824,15 @@ impl ForeignDataWrapper for StripeFdw {
                     }
 
                     // call Stripe API
+                    inc_stats_request_cnt(&mut stats_metadata);
                     match self.rt.block_on(client.post(url).form(&body).send()) {
                         Ok(resp) => match resp.error_for_status() {
                             Ok(resp) => {
+                                stats::inc_stats(
+                                    Self::FDW_NAME,
+                                    stats::Metric::BytesIn,
+                                    resp.content_length().unwrap_or(0) as i64,
+                                );
                                 let body = self.rt.block_on(resp.text()).unwrap();
                                 let json: JsonValue = serde_json::from_str(&body).unwrap();
                                 if let Some(id) = json.get("id").and_then(|v| v.as_str()) {
@@ -790,11 +846,15 @@ impl ForeignDataWrapper for StripeFdw {
                 }
                 _ => unreachable!(),
             }
+
+            set_stats_metadata(stats_metadata);
         }
     }
 
     fn delete(&mut self, rowid: &Cell) {
         if let Some(ref mut client) = self.client {
+            let mut stats_metadata = get_stats_metadata();
+
             match rowid {
                 Cell::String(rowid) => {
                     let url = self
@@ -805,9 +865,15 @@ impl ForeignDataWrapper for StripeFdw {
                         .unwrap();
 
                     // call Stripe API
+                    inc_stats_request_cnt(&mut stats_metadata);
                     match self.rt.block_on(client.delete(url).send()) {
                         Ok(resp) => match resp.error_for_status() {
                             Ok(resp) => {
+                                stats::inc_stats(
+                                    Self::FDW_NAME,
+                                    stats::Metric::BytesIn,
+                                    resp.content_length().unwrap_or(0) as i64,
+                                );
                                 let body = self.rt.block_on(resp.text()).unwrap();
                                 let json: JsonValue = serde_json::from_str(&body).unwrap();
                                 if let Some(id) = json.get("id").and_then(|v| v.as_str()) {
@@ -821,6 +887,8 @@ impl ForeignDataWrapper for StripeFdw {
                 }
                 _ => unreachable!(),
             }
+
+            set_stats_metadata(stats_metadata);
         }
     }
 

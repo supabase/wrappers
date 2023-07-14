@@ -1,10 +1,8 @@
+use crate::stats;
 use chrono::{Date, DateTime, NaiveDate, NaiveDateTime, Utc};
 use chrono_tz::Tz;
 use clickhouse_rs::{types, types::Block, types::SqlType, ClientHandle, Pool};
-use pgrx::{
-    prelude::{PgSqlErrorCode, Timestamp},
-    to_timestamp,
-};
+use pgrx::{prelude::PgSqlErrorCode, to_timestamp};
 use regex::{Captures, Regex};
 use std::collections::HashMap;
 
@@ -77,7 +75,7 @@ fn field_to_cell(row: &types::Row<types::Complex>, i: usize) -> Option<Cell> {
 }
 
 #[wrappers_fdw(
-    version = "0.1.1",
+    version = "0.1.2",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/clickhouse_fdw"
 )]
@@ -94,6 +92,8 @@ pub(crate) struct ClickHouseFdw {
 }
 
 impl ClickHouseFdw {
+    const FDW_NAME: &str = "ClickHouseFdw";
+
     fn create_client(&mut self) {
         let pool = Pool::new(self.conn_str.as_str());
         self.client = self.rt.block_on(pool.get_handle()).map_or_else(
@@ -180,6 +180,8 @@ impl ForeignDataWrapper for ClickHouseFdw {
                 .unwrap_or_default(),
         };
 
+        stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
+
         Self {
             rt,
             conn_str,
@@ -217,7 +219,19 @@ impl ForeignDataWrapper for ClickHouseFdw {
             // for simplicity purpose, we fetch whole query result to local,
             // may need optimization in the future.
             match self.rt.block_on(client.query(&sql).fetch_all()) {
-                Ok(block) => self.scan_blk = Some(block),
+                Ok(block) => {
+                    stats::inc_stats(
+                        Self::FDW_NAME,
+                        stats::Metric::RowsIn,
+                        block.row_count() as i64,
+                    );
+                    stats::inc_stats(
+                        Self::FDW_NAME,
+                        stats::Metric::RowsOut,
+                        block.row_count() as i64,
+                    );
+                    self.scan_blk = Some(block);
+                }
                 Err(err) => report_error(
                     PgSqlErrorCode::ERRCODE_FDW_ERROR,
                     &format!("query failed: {}", err),

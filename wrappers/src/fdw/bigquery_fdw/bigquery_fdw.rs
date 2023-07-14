@@ -1,3 +1,4 @@
+use crate::stats;
 use futures::executor;
 use gcp_bigquery_client::{
     client_builder::ClientBuilder,
@@ -82,7 +83,7 @@ fn field_to_cell(rs: &ResultSet, field: &TableFieldSchema) -> Option<Cell> {
 }
 
 #[wrappers_fdw(
-    version = "0.1.3",
+    version = "0.1.4",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/bigquery_fdw"
 )]
@@ -99,6 +100,8 @@ pub(crate) struct BigQueryFdw {
 }
 
 impl BigQueryFdw {
+    const FDW_NAME: &str = "BigQueryFdw";
+
     fn deparse(
         &self,
         quals: &[Qual],
@@ -248,6 +251,8 @@ impl ForeignDataWrapper for BigQueryFdw {
             }
         };
 
+        stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
+
         ret
     }
 
@@ -302,12 +307,37 @@ impl ForeignDataWrapper for BigQueryFdw {
             // execute query on BigQuery
             match self.rt.block_on(client.job().query(&self.project_id, req)) {
                 Ok(rs) => {
-                    if rs.query_response().job_complete == Some(false) {
+                    let resp = rs.query_response();
+                    if resp.job_complete == Some(false) {
                         report_error(
                             PgSqlErrorCode::ERRCODE_FDW_ERROR,
                             &format!("query timeout {}ms expired", timeout),
                         );
                     } else {
+                        stats::inc_stats(
+                            Self::FDW_NAME,
+                            stats::Metric::RowsIn,
+                            resp.total_rows
+                                .as_ref()
+                                .and_then(|v| v.parse::<i64>().ok())
+                                .unwrap_or(0i64),
+                        );
+                        stats::inc_stats(
+                            Self::FDW_NAME,
+                            stats::Metric::RowsOut,
+                            resp.total_rows
+                                .as_ref()
+                                .and_then(|v| v.parse::<i64>().ok())
+                                .unwrap_or(0i64),
+                        );
+                        stats::inc_stats(
+                            Self::FDW_NAME,
+                            stats::Metric::BytesIn,
+                            resp.total_bytes_processed
+                                .as_ref()
+                                .and_then(|v| v.parse::<i64>().ok())
+                                .unwrap_or(0i64),
+                        );
                         self.scan_result = Some(rs);
                     }
                 }
