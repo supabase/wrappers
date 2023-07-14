@@ -1,3 +1,4 @@
+use crate::stats;
 use async_compression::tokio::bufread::{BzDecoder, GzipDecoder, XzDecoder, ZlibDecoder};
 use aws_sdk_s3 as s3;
 use http::Uri;
@@ -22,7 +23,7 @@ enum Parser {
 }
 
 #[wrappers_fdw(
-    version = "0.1.1",
+    version = "0.1.2",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/s3_fdw"
 )]
@@ -32,12 +33,15 @@ pub(crate) struct S3Fdw {
     rdr: Option<BufReader<Pin<Box<dyn AsyncRead>>>>,
     parser: Parser,
     tgt_cols: Vec<Column>,
+    rows_out: i64,
 
     // local string buffer for CSV and JSONL
     buf: String,
 }
 
 impl S3Fdw {
+    const FDW_NAME: &str = "S3Fdw";
+
     // local string line buffer size, in bytes
     // Note: this is not a hard limit, just an indication of full buffer
     const BUF_SIZE: usize = 256 * 1024;
@@ -54,9 +58,13 @@ impl S3Fdw {
 
         if let Some(ref mut rdr) = self.rdr {
             // fetch remote data by lines and fill in local buffer
+            let mut total_lines = 0;
+            let mut total_bytes = 0;
             loop {
                 match self.rt.block_on(rdr.read_line(&mut self.buf)) {
                     Ok(num_bytes) => {
+                        total_lines += 1;
+                        total_bytes += num_bytes;
                         if num_bytes == 0 || self.buf.len() > Self::BUF_SIZE {
                             break;
                         }
@@ -70,6 +78,9 @@ impl S3Fdw {
                     }
                 }
             }
+
+            stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsIn, total_lines);
+            stats::inc_stats(Self::FDW_NAME, stats::Metric::BytesIn, total_bytes as i64);
         }
 
         if self.buf.is_empty() {
@@ -123,6 +134,7 @@ impl ForeignDataWrapper for S3Fdw {
             rdr: None,
             parser: Parser::JsonLine(VecDeque::new()),
             tgt_cols: Vec::new(),
+            rows_out: 0,
             buf: String::new(),
         };
 
@@ -172,6 +184,8 @@ impl ForeignDataWrapper for S3Fdw {
         env::set_var("AWS_SECRET_ACCESS_KEY", creds.1);
         env::set_var("AWS_REGION", region);
         let config = ret.rt.block_on(aws_config::load_from_env());
+
+        stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
 
         // create S3 client
         let client = if is_mock {
@@ -334,7 +348,13 @@ impl ForeignDataWrapper for S3Fdw {
         // read parquet record
         if let Parser::Parquet(ref mut s3parquet) = &mut self.parser {
             self.rt.block_on(s3parquet.refill())?;
-            return s3parquet.read_into_row(row, &self.tgt_cols);
+            let ret = s3parquet.read_into_row(row, &self.tgt_cols);
+            if ret.is_some() {
+                self.rows_out += 1;
+            } else {
+                stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsOut, self.rows_out);
+            }
+            return ret;
         }
 
         // read csv or jsonl record
@@ -355,6 +375,7 @@ impl ForeignDataWrapper for S3Fdw {
                                         record.get(col.num - 1).map(|s| Cell::String(s.to_owned()));
                                     row.push(&col.name, cell);
                                 }
+                                self.rows_out += 1;
                                 return Some(());
                             } else {
                                 // no more records left in the local buffer, refill from remote
@@ -397,6 +418,7 @@ impl ForeignDataWrapper for S3Fdw {
                                     row.push(&col.name, cell);
                                 }
                             }
+                            self.rows_out += 1;
                             return Some(());
                         }
                         None => {
@@ -408,6 +430,8 @@ impl ForeignDataWrapper for S3Fdw {
                 _ => unreachable!(),
             }
         }
+
+        stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsOut, self.rows_out);
 
         None
     }

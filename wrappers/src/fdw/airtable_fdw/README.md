@@ -63,4 +63,5 @@ select * from t1;
 
 | Version | Date       | Notes                                                |
 | ------- | ---------- | ---------------------------------------------------- |
+| 0.1.1   | 2023-07-13 | Added fdw stats collection                           |
 | 0.1.0   | 2022-11-30 | Initial version                                      |
