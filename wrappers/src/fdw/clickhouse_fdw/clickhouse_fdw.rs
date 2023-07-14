@@ -108,7 +108,7 @@ impl ClickHouseFdw {
         );
     }
 
-    fn deparse(&mut self, quals: &[Qual], columns: &[Column]) -> String {
+    fn deparse(&mut self, quals: &[Qual], columns: &[Column], sorts: &[Sort], limit: &Option<Limit>,) -> String {
         let table = if self.table.starts_with('(') {
             let re = Regex::new(r"\$\{(\w+)\}").unwrap();
             re.replace_all(&self.table, |caps: &Captures| {
@@ -152,23 +152,41 @@ impl ClickHouseFdw {
                 .join(", ")
         };
 
-        let cond = quals
-            .iter()
-            .filter(|q| !self.params.iter().any(|p| p.field == q.field))
-            .map(|q| q.deparse())
-            .collect::<Vec<String>>();
-        if cond.is_empty() {
+        let mut sql = if quals.is_empty() {
             format!("select {} from {}", tgts, &table)
         } else {
-            format!(
-                "select {} from {} where {}",
-                tgts,
-                &table,
-                cond.join(" and ")
-            )
+            let cond = quals
+                .iter()
+                .filter(|q| !self.params.iter().any(|p| p.field == q.field))
+                .map(|q| q.deparse())
+                .collect::<Vec<String>>()
+                .join(" and ");
+            format!( "select {} from {} where {}", tgts, &table, cond)
+        };
+
+        // push down sorts
+        if !sorts.is_empty() {
+            let order_by = sorts
+                .iter()
+                .map(|sort| sort.deparse())
+                .collect::<Vec<String>>()
+                .join(", ");
+            sql.push_str(&format!(" order by {}", order_by));
         }
+
+        // push down limits
+        // Note: Postgres will take limit and offset locally after reading rows
+        // from remote, so we calculate the real limit and only use it without
+        // pushing down offset.
+        if let Some(limit) = limit {
+            let real_limit = limit.offset + limit.count;
+            sql.push_str(&format!(" limit {}", real_limit));
+        }
+
+        sql
     }
 }
+
 
 impl ForeignDataWrapper for ClickHouseFdw {
     fn new(options: &HashMap<String, String>) -> Self {
@@ -197,8 +215,8 @@ impl ForeignDataWrapper for ClickHouseFdw {
         &mut self,
         quals: &[Qual],
         columns: &[Column],
-        _sorts: &[Sort],
-        _limit: &Option<Limit>,
+        sorts: &[Sort],
+        limit: &Option<Limit>,
         options: &HashMap<String, String>,
     ) {
         self.create_client();
@@ -211,7 +229,7 @@ impl ForeignDataWrapper for ClickHouseFdw {
         self.tgt_cols = columns.to_vec();
         self.row_idx = 0;
 
-        let sql = self.deparse(quals, columns);
+        let sql = self.deparse(quals, columns, sorts, limit);
 
         if let Some(ref mut client) = self.client {
             // for simplicity purpose, we fetch whole query result to local,
