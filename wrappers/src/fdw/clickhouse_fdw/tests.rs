@@ -137,21 +137,29 @@ mod tests {
             );
 
             assert_eq!(
-                c.select("SELECT name FROM test_table ORDER by name LIMIT 1 OFFSET 1", None, None)
-                    .unwrap()
-                    .first()
-                    .get_one::<&str>()
-                    .unwrap()
-                    .unwrap(),
+                c.select(
+                    "SELECT name FROM test_table ORDER by name LIMIT 1 OFFSET 1",
+                    None,
+                    None
+                )
+                .unwrap()
+                .first()
+                .get_one::<&str>()
+                .unwrap()
+                .unwrap(),
                 "test2"
             );
             assert_eq!(
-                c.select("SELECT name FROM test_cust_sql ORDER BY name LIMIT 2 OFFSET 2", None, None)
-                    .unwrap()
-                    .first()
-                    .get_one::<&str>()
-                    .unwrap()
-                    .unwrap(),
+                c.select(
+                    "SELECT name FROM test_cust_sql ORDER BY name LIMIT 2 OFFSET 2",
+                    None,
+                    None
+                )
+                .unwrap()
+                .first()
+                .get_one::<&str>()
+                .unwrap()
+                .unwrap(),
                 "test3"
             );
 

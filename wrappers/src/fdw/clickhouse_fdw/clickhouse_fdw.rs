@@ -75,7 +75,7 @@ fn field_to_cell(row: &types::Row<types::Complex>, i: usize) -> Option<Cell> {
 }
 
 #[wrappers_fdw(
-    version = "0.1.2",
+    version = "0.1.3",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/clickhouse_fdw"
 )]
@@ -108,7 +108,13 @@ impl ClickHouseFdw {
         );
     }
 
-    fn deparse(&mut self, quals: &[Qual], columns: &[Column], sorts: &[Sort], limit: &Option<Limit>,) -> String {
+    fn deparse(
+        &mut self,
+        quals: &[Qual],
+        columns: &[Column],
+        sorts: &[Sort],
+        limit: &Option<Limit>,
+    ) -> String {
         let table = if self.table.starts_with('(') {
             let re = Regex::new(r"\$\{(\w+)\}").unwrap();
             re.replace_all(&self.table, |caps: &Captures| {
@@ -161,7 +167,7 @@ impl ClickHouseFdw {
                 .map(|q| q.deparse())
                 .collect::<Vec<String>>()
                 .join(" and ");
-            format!( "select {} from {} where {}", tgts, &table, cond)
+            format!("select {} from {} where {}", tgts, &table, cond)
         };
 
         // push down sorts
@@ -186,7 +192,6 @@ impl ClickHouseFdw {
         sql
     }
 }
-
 
 impl ForeignDataWrapper for ClickHouseFdw {
     fn new(options: &HashMap<String, String>) -> Self {
