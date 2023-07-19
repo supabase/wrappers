@@ -32,7 +32,7 @@ values (
   (select id from pgsodium.valid_key where name = 'logflare')
 )
 returning
-	key_id;
+  key_id;
 ```
 
 Create the foreign server
