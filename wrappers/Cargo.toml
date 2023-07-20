@@ -26,8 +26,6 @@ s3_fdw = [
     "tokio", "tokio-util", "csv", "async-compression", "serde_json",
     "http", "parquet", "futures", "arrow-array", "chrono"
 ]
-
-# TODO: audit dependencies
 airtable_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "serde", "url"]
 
 # Does not include helloworld_fdw because of its general uselessness

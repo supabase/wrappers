@@ -9,6 +9,7 @@ nav:
     - Welcome: 'index.md'
     - Installation: 'installation.md'
     - Wrappers:
+      - Airtable: 'airtable.md'
       - BigQuery: 'bigquery.md'
       - ClickHouse: 'clickhouse.md'
       - Firebase: 'firebase.md'
