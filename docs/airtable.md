@@ -61,7 +61,8 @@ If the platform you are using does not support `pgsodium` and `Vault` you can cr
 create server airtable_server
    foreign data wrapper airtable_wrapper
    options (
-     api_key 'sk_test_xxx'
+     api_url 'https://api.airtable.com/v0',  -- Airtable API url, optional
+     api_key 'sk_test_xxx'  -- Airtable API key, required
    );
 ```
 
