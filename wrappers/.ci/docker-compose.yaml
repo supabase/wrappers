@@ -1,6 +1,18 @@
 version: '3'
 services:
 
+  airtable:
+    container_name: airtable-local
+    build:
+      context: ../dockerfiles/airtable
+    ports:
+      - "8086:8086"
+    healthcheck:
+      test: curl --fail http://0.0.0.0:8086/baseID/table-foo || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
   clickhouse:
     image: clickhouse/clickhouse-server
     container_name: clickhouse-wrapped

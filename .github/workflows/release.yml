@@ -41,7 +41,7 @@ jobs:
           - 0.9.7
         postgres: [14, 15]
         features:
-          - "bigquery_fdw,clickhouse_fdw,stripe_fdw,firebase_fdw,s3_fdw"
+          - "bigquery_fdw,clickhouse_fdw,stripe_fdw,firebase_fdw,s3_fdw,airtable_fdw"
         box:
           - { runner: ubuntu-20.04, arch: amd64 }
           - { runner: arm-runner, arch: arm64 }

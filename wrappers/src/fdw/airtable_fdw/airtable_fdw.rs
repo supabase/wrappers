@@ -12,14 +12,14 @@ use supabase_wrappers::prelude::*;
 use super::result::AirtableResponse;
 
 #[wrappers_fdw(
-    version = "0.1.1",
+    version = "0.1.2",
     author = "Ankur Goyal",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/airtable_fdw"
 )]
 pub(crate) struct AirtableFdw {
     rt: Runtime,
-    base_url: String,
     client: Option<ClientWithMiddleware>,
+    base_url: String,
     scan_result: Option<Vec<Row>>,
 }
 
@@ -27,8 +27,8 @@ impl AirtableFdw {
     const FDW_NAME: &str = "AirtableFdw";
 
     #[inline]
-    fn build_url(&self, base_id: &str, table_name: &str) -> String {
-        format!("{}/{}/{}", &self.base_url, base_id, table_name)
+    fn build_url(&self, base_id: &str, table_id: &str) -> String {
+        format!("{}/{}/{}", &self.base_url, base_id, table_id)
     }
 
     #[inline]
@@ -77,9 +77,7 @@ impl ForeignDataWrapper for AirtableFdw {
         let base_url = options
             .get("api_url")
             .map(|t| t.to_owned())
-            .unwrap_or_else(|| "https://api.airtable.com/v0/app4PDEzNrArJdQ5k".to_string())
-            .trim_end_matches('/')
-            .to_owned();
+            .unwrap_or_else(|| "https://api.airtable.com/v0".to_string());
 
         let client = require_option("api_key", options).map(|api_key| {
             let mut headers = header::HeaderMap::new();
@@ -101,8 +99,8 @@ impl ForeignDataWrapper for AirtableFdw {
 
         Self {
             rt: create_async_runtime(),
-            base_url,
             client,
+            base_url,
             scan_result: None,
         }
     }
@@ -117,7 +115,7 @@ impl ForeignDataWrapper for AirtableFdw {
     ) {
         // TODO: Support specifying other options (view)
         let url = if let Some(url) = require_option("base_id", options).and_then(|base_id| {
-            require_option("table", options).map(|table| self.build_url(&base_id, &table))
+            require_option("table_id", options).map(|table_id| self.build_url(&base_id, &table_id))
         }) {
             url
         } else {
@@ -199,7 +197,7 @@ impl ForeignDataWrapper for AirtableFdw {
                 }
                 FOREIGN_TABLE_RELATION_ID => {
                     check_options_contain(&options, "base_id");
-                    check_options_contain(&options, "table");
+                    check_options_contain(&options, "table_id");
                 }
                 _ => {}
             }
