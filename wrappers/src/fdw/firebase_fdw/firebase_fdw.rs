@@ -1,6 +1,5 @@
-use pgrx::pg_sys;
-use pgrx::prelude::*;
-use pgrx::JsonB;
+use crate::stats;
+use pgrx::{pg_sys, prelude::*, JsonB};
 use regex::Regex;
 use reqwest::{self, header};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
@@ -166,7 +165,7 @@ fn resp_to_rows(obj: &str, resp: &JsonValue, tgt_cols: &[Column]) -> Vec<Row> {
 }
 
 #[wrappers_fdw(
-    version = "0.1.1",
+    version = "0.1.2",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/firebase_fdw"
 )]
@@ -178,6 +177,8 @@ pub(crate) struct FirebaseFdw {
 }
 
 impl FirebaseFdw {
+    const FDW_NAME: &str = "FirebaseFdw";
+
     const DEFAULT_AUTH_BASE_URL: &'static str =
         "https://identitytoolkit.googleapis.com/v1/projects";
     const DEFAULT_FIRESTORE_BASE_URL: &'static str =
@@ -299,6 +300,8 @@ impl ForeignDataWrapper for FirebaseFdw {
             .build();
         ret.client = Some(client);
 
+        stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
+
         ret
     }
 
@@ -331,6 +334,12 @@ impl ForeignDataWrapper for FirebaseFdw {
                 match self.rt.block_on(client.get(&url).send()) {
                     Ok(resp) => match resp.error_for_status() {
                         Ok(resp) => {
+                            stats::inc_stats(
+                                Self::FDW_NAME,
+                                stats::Metric::BytesIn,
+                                resp.content_length().unwrap_or(0) as i64,
+                            );
+
                             let body = self.rt.block_on(resp.text()).unwrap();
                             let json: JsonValue = serde_json::from_str(&body).unwrap();
                             let mut rows = resp_to_rows(&obj, &json, columns);
@@ -359,6 +368,9 @@ impl ForeignDataWrapper for FirebaseFdw {
                     }
                 }
             }
+
+            stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsIn, result.len() as i64);
+            stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsOut, result.len() as i64);
 
             self.scan_result = Some(result);
         }

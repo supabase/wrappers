@@ -1,10 +1,8 @@
+use crate::stats;
 use chrono::{Date, DateTime, NaiveDate, NaiveDateTime, Utc};
 use chrono_tz::Tz;
 use clickhouse_rs::{types, types::Block, types::SqlType, ClientHandle, Pool};
-use pgrx::{
-    prelude::{PgSqlErrorCode, Timestamp},
-    to_timestamp,
-};
+use pgrx::{prelude::PgSqlErrorCode, to_timestamp};
 use regex::{Captures, Regex};
 use std::collections::HashMap;
 
@@ -77,7 +75,7 @@ fn field_to_cell(row: &types::Row<types::Complex>, i: usize) -> Option<Cell> {
 }
 
 #[wrappers_fdw(
-    version = "0.1.1",
+    version = "0.1.3",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/clickhouse_fdw"
 )]
@@ -94,6 +92,8 @@ pub(crate) struct ClickHouseFdw {
 }
 
 impl ClickHouseFdw {
+    const FDW_NAME: &str = "ClickHouseFdw";
+
     fn create_client(&mut self) {
         let pool = Pool::new(self.conn_str.as_str());
         self.client = self.rt.block_on(pool.get_handle()).map_or_else(
@@ -108,7 +108,13 @@ impl ClickHouseFdw {
         );
     }
 
-    fn deparse(&mut self, quals: &[Qual], columns: &[Column]) -> String {
+    fn deparse(
+        &mut self,
+        quals: &[Qual],
+        columns: &[Column],
+        sorts: &[Sort],
+        limit: &Option<Limit>,
+    ) -> String {
         let table = if self.table.starts_with('(') {
             let re = Regex::new(r"\$\{(\w+)\}").unwrap();
             re.replace_all(&self.table, |caps: &Captures| {
@@ -152,21 +158,38 @@ impl ClickHouseFdw {
                 .join(", ")
         };
 
-        let cond = quals
-            .iter()
-            .filter(|q| !self.params.iter().any(|p| p.field == q.field))
-            .map(|q| q.deparse())
-            .collect::<Vec<String>>();
-        if cond.is_empty() {
+        let mut sql = if quals.is_empty() {
             format!("select {} from {}", tgts, &table)
         } else {
-            format!(
-                "select {} from {} where {}",
-                tgts,
-                &table,
-                cond.join(" and ")
-            )
+            let cond = quals
+                .iter()
+                .filter(|q| !self.params.iter().any(|p| p.field == q.field))
+                .map(|q| q.deparse())
+                .collect::<Vec<String>>()
+                .join(" and ");
+            format!("select {} from {} where {}", tgts, &table, cond)
+        };
+
+        // push down sorts
+        if !sorts.is_empty() {
+            let order_by = sorts
+                .iter()
+                .map(|sort| sort.deparse())
+                .collect::<Vec<String>>()
+                .join(", ");
+            sql.push_str(&format!(" order by {}", order_by));
         }
+
+        // push down limits
+        // Note: Postgres will take limit and offset locally after reading rows
+        // from remote, so we calculate the real limit and only use it without
+        // pushing down offset.
+        if let Some(limit) = limit {
+            let real_limit = limit.offset + limit.count;
+            sql.push_str(&format!(" limit {}", real_limit));
+        }
+
+        sql
     }
 }
 
@@ -179,6 +202,8 @@ impl ForeignDataWrapper for ClickHouseFdw {
                 .and_then(|conn_str_id| get_vault_secret(&conn_str_id))
                 .unwrap_or_default(),
         };
+
+        stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
 
         Self {
             rt,
@@ -197,8 +222,8 @@ impl ForeignDataWrapper for ClickHouseFdw {
         &mut self,
         quals: &[Qual],
         columns: &[Column],
-        _sorts: &[Sort],
-        _limit: &Option<Limit>,
+        sorts: &[Sort],
+        limit: &Option<Limit>,
         options: &HashMap<String, String>,
     ) {
         self.create_client();
@@ -211,13 +236,25 @@ impl ForeignDataWrapper for ClickHouseFdw {
         self.tgt_cols = columns.to_vec();
         self.row_idx = 0;
 
-        let sql = self.deparse(quals, columns);
+        let sql = self.deparse(quals, columns, sorts, limit);
 
         if let Some(ref mut client) = self.client {
             // for simplicity purpose, we fetch whole query result to local,
             // may need optimization in the future.
             match self.rt.block_on(client.query(&sql).fetch_all()) {
-                Ok(block) => self.scan_blk = Some(block),
+                Ok(block) => {
+                    stats::inc_stats(
+                        Self::FDW_NAME,
+                        stats::Metric::RowsIn,
+                        block.row_count() as i64,
+                    );
+                    stats::inc_stats(
+                        Self::FDW_NAME,
+                        stats::Metric::RowsOut,
+                        block.row_count() as i64,
+                    );
+                    self.scan_blk = Some(block);
+                }
                 Err(err) => report_error(
                     PgSqlErrorCode::ERRCODE_FDW_ERROR,
                     &format!("query failed: {}", err),

@@ -1,3 +1,4 @@
+use crate::stats;
 use arrow_array::{array, Array, RecordBatch};
 use aws_sdk_s3 as s3;
 use chrono::NaiveDate;
@@ -8,7 +9,7 @@ use parquet::arrow::async_reader::{
 use parquet::arrow::ProjectionMask;
 use pgrx::datum::datetime_support::to_timestamp;
 use pgrx::pg_sys;
-use pgrx::prelude::{Date, PgSqlErrorCode, Timestamp};
+use pgrx::prelude::{Date, PgSqlErrorCode};
 use std::cmp::min;
 use std::io::{Cursor, Error as IoError, ErrorKind, Result as IoResult, SeekFrom};
 use std::pin::Pin;
@@ -139,6 +140,8 @@ pub(super) struct S3Parquet {
 }
 
 impl S3Parquet {
+    const FDW_NAME: &str = "S3Fdw";
+
     // open batch stream from local buffer
     pub(super) async fn open_local_stream(&mut self, buf: Vec<u8>) {
         let cursor: Box<dyn AsyncFileReader> = Box::new(Cursor::new(buf));
@@ -220,6 +223,17 @@ impl S3Parquet {
             match stream.try_next().await {
                 Ok(result) => {
                     return result.map(|batch| {
+                        stats::inc_stats(
+                            Self::FDW_NAME,
+                            stats::Metric::RowsIn,
+                            batch.num_rows() as i64,
+                        );
+                        stats::inc_stats(
+                            Self::FDW_NAME,
+                            stats::Metric::BytesIn,
+                            batch.get_array_memory_size() as i64,
+                        );
+
                         self.batch = Some(batch);
                         self.batch_idx = 0;
                     })

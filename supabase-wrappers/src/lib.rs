@@ -20,7 +20,7 @@
 //! ...
 //!
 //! [dependencies]
-//! pgrx = "=0.9.6"
+//! pgrx = "=0.9.7"
 //! supabase-wrappers = "0.1"
 //! ```
 //!

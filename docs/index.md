@@ -39,6 +39,7 @@ Currently `supabase/wrappers` supports:
 
 | Integration | Select            | Insert            | Update            | Delete            | Truncate          |
 | ----------- | :----:            | :----:            | :----:            | :----:            | :----:            |
+| Airtable    | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
 | BigQuery    | :white_check_mark:| :white_check_mark:| :white_check_mark:| :white_check_mark:| :x:               |
 | ClickHouse  | :white_check_mark:| :white_check_mark:| :white_check_mark:| :white_check_mark:| :x:               |
 | Firebase    | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
