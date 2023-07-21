@@ -10,14 +10,14 @@
       
       
       
-        <link rel="canonical" href="https://supabase.github.io/wrappers/firebase/">
+        <link rel="canonical" href="https://supabase.github.io/wrappers/airtable/">
       
       <link rel="icon" href="../assets/favicon.ico">
       <meta name="generator" content="mkdocs-1.4.2, mkdocs-material-8.5.10">
     
     
       
-        <title>Firebase - wrappers</title>
+        <title>Airtable - wrappers</title>
       
     
     
@@ -102,7 +102,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Firebase
+              Airtable
             
           </span>
         </div>
@@ -267,48 +267,6 @@
               
   
   
-  
-    <li class="md-nav__item">
-      <a href="../airtable/" class="md-nav__link">
-        Airtable
-      </a>
-    </li>
-  
-
-            
-          
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../bigquery/" class="md-nav__link">
-        BigQuery
-      </a>
-    </li>
-  
-
-            
-          
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../clickhouse/" class="md-nav__link">
-        ClickHouse
-      </a>
-    </li>
-  
-
-            
-          
-            
-              
-  
-  
     
   
   
@@ -319,12 +277,12 @@
       
       
         <label class="md-nav__link md-nav__link--active" for="__toc">
-          Firebase
+          Airtable
           <span class="md-nav__icon md-icon"></span>
         </label>
       
       <a href="./" class="md-nav__link md-nav__link--active">
-        Firebase
+        Airtable
       </a>
       
         
@@ -383,15 +341,8 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#firestore" class="md-nav__link">
-    Firestore
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#authusers" class="md-nav__link">
-    auth/users
+  <a href="#foreign-table-options" class="md-nav__link">
+    Foreign Table Options
   </a>
   
 </li>
@@ -401,10 +352,59 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    Examples
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
       
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bigquery/" class="md-nav__link">
+        BigQuery
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../clickhouse/" class="md-nav__link">
+        ClickHouse
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../firebase/" class="md-nav__link">
+        Firebase
+      </a>
     </li>
   
 
@@ -526,21 +526,21 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#firestore" class="md-nav__link">
-    Firestore
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#authusers" class="md-nav__link">
-    auth/users
+  <a href="#foreign-table-options" class="md-nav__link">
+    Foreign Table Options
   </a>
   
 </li>
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    Examples
+  </a>
   
 </li>
       
@@ -558,39 +558,92 @@
                 
                   
 
-  <a href="https://github.com/supabase/wrappers/edit/master/docs/firebase.md" title="Edit this page" class="md-content__button md-icon">
+  <a href="https://github.com/supabase/wrappers/edit/master/docs/airtable.md" title="Edit this page" class="md-content__button md-icon">
     
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25Z"/></svg>
   </a>
 
 
-  <h1>Firebase</h1>
+  <h1>Airtable</h1>
 
-<p><a href="https://firebase.google.com/">Firebase</a> is an app development platform built around non-relational technologies. The Firebase wrapper supports connecting to below objects.</p>
+<p><a href="https://www.airtable.com">Airtable</a> is an easy-to-use online platform for creating and sharing relational databases. <code>supabase/wrappers</code> exposes below endpoints.</p>
+<p>Airtable FDW supports data read from below objects:</p>
 <ol>
-<li><a href="https://firebase.google.com/docs/auth/users">Authentication Users</a> (<em>read only</em>)</li>
-<li><a href="https://firebase.google.com/docs/firestore">Firestore Database Documents</a> (<em>read only</em>)</li>
+<li><a href="https://airtable.com/developers/web/api/list-records">Records</a> (<em>read only</em>)</li>
 </ol>
 <h3 id="wrapper">Wrapper</h3>
-<p>To get started with the Firebase wrapper, create a foreign data wrapper specifying <code>handler</code> and <code>validator</code> as below.</p>
+<p>To get started with the Airtable wrapper, create a foreign data wrapper specifying <code>handler</code> and <code>validator</code> as below.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
 <span class="normal">4</span>
 <span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">extension</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">wrappers</span><span class="p">;</span><span class="w"></span>
 
-<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">firebase_wrapper</span><span class="w"></span>
-<span class="w">  </span><span class="k">handler</span><span class="w"> </span><span class="n">firebase_fdw_handler</span><span class="w"></span>
-<span class="w">  </span><span class="k">validator</span><span class="w"> </span><span class="n">firebase_fdw_validator</span><span class="p">;</span><span class="w"></span>
+<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">airtable_wrapper</span><span class="w"></span>
+<span class="w">  </span><span class="k">handler</span><span class="w"> </span><span class="n">airtable_fdw_handler</span><span class="w"></span>
+<span class="w">  </span><span class="k">validator</span><span class="w"> </span><span class="n">airtable_fdw_validator</span><span class="p">;</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
 <h3 id="server">Server</h3>
 <p>Next, we need to create a server for the FDW to hold options and credentials.</p>
 <h4 id="auth-supabase">Auth (Supabase)</h4>
-<p>If you are using the Supabase platform, this is the recommended approach for securing your Firebase service account credentials.</p>
+<p>If you are using the Supabase platform, this is the recommended approach for securing your Airtable API key.</p>
 <p>Create a secure key using pgsodium
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="n">pgsodium</span><span class="p">.</span><span class="n">create_key</span><span class="p">(</span><span class="n">name</span><span class="w"> </span><span class="p">:</span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;firebase&#39;</span><span class="p">);</span><span class="w"></span>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="n">pgsodium</span><span class="p">.</span><span class="n">create_key</span><span class="p">(</span><span class="n">name</span><span class="w"> </span><span class="p">:</span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;airtable&#39;</span><span class="p">);</span><span class="w"></span>
 </code></pre></div></td></tr></table></div></p>
-<p>Save your <a href="https://firebase.google.com/docs/admin/setup#add_firebase_to_your_app">Firebase service account key</a> in Vault and retrieve the <code>key_id</code>
+<p>Save your Airtable API key in Vault and retrieve the <code>key_id</code>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span>
+<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">secrets</span><span class="w"> </span><span class="p">(</span><span class="n">secret</span><span class="p">,</span><span class="w"> </span><span class="n">key_id</span><span class="p">)</span><span class="w"></span>
+<span class="k">values</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">  </span><span class="s1">&#39;xxx&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">pgsodium</span><span class="p">.</span><span class="n">valid_key</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;airtable&#39;</span><span class="p">)</span><span class="w"></span>
+<span class="p">)</span><span class="w"></span>
+<span class="n">returnin</span><span class="w"></span>
+<span class="w">  </span><span class="n">key_id</span><span class="p">;</span><span class="w"></span>
+</code></pre></div></td></tr></table></div></p>
+<p>Create the foreign server
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">airtable_server</span><span class="w"></span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">airtable_wrapper</span><span class="w"></span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">    </span><span class="n">api_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;your key_id from above&gt;&#39;</span><span class="w"></span>
+<span class="w">  </span><span class="p">);</span><span class="w"></span>
+</code></pre></div></td></tr></table></div></p>
+<h4 id="auth-insecure">Auth (Insecure)</h4>
+<p>If the platform you are using does not support <code>pgsodium</code> and <code>Vault</code> you can create a server by storing your API key directly.</p>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>Credentials stored using this method can be viewed as plain text by anyone with access to <code>pg_catalog.pg_foreign_server</code></p>
+</div>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">airtable_server</span><span class="w"></span>
+<span class="w">   </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">airtable_wrapper</span><span class="w"></span>
+<span class="w">   </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">     </span><span class="n">api_url</span><span class="w"> </span><span class="s1">&#39;https://api.airtable.com/v0&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- Airtable API url, optional</span>
+<span class="w">     </span><span class="n">api_key</span><span class="w"> </span><span class="s1">&#39;sk_test_xxx&#39;</span><span class="w">  </span><span class="c1">-- Airtable API key, required</span>
+<span class="w">   </span><span class="p">);</span><span class="w"></span>
+</code></pre></div></td></tr></table></div>
+<h3 id="tables">Tables</h3>
+<p>The Airtable foreign data wrapper supports data read from <a href="https://airtable.com/developers/web/api/list-records">Records</a> endpoint.</p>
+<h4 id="foreign-table-options">Foreign Table Options</h4>
+<p>The full list of foreign table options are below:</p>
+<ul>
+<li><code>base_id</code> - Airtable base id the table belongs to, required.</li>
+<li><code>table_id</code> - Airtable table id, required.</li>
+</ul>
+<h3 id="examples">Examples</h3>
+<p>Some examples on how to use Airtable foreign tables.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -603,110 +656,21 @@
 <span class="normal">10</span>
 <span class="normal">11</span>
 <span class="normal">12</span>
-<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"></span>
-<span class="w">  </span><span class="n">vault</span><span class="p">.</span><span class="n">secrets</span><span class="w"> </span><span class="p">(</span><span class="n">secret</span><span class="p">,</span><span class="w"> </span><span class="n">key_id</span><span class="p">)</span><span class="w"></span>
-<span class="k">values</span><span class="w"> </span>
-<span class="w">  </span><span class="p">(</span><span class="w"></span>
-<span class="w">    </span><span class="s1">&#39;{</span>
-<span class="s1">      &quot;type&quot;: &quot;service_account&quot;,</span>
-<span class="s1">      &quot;project_id&quot;: &quot;your_gcp_project_id&quot;,</span>
-<span class="s1">      ...</span>
-<span class="s1">    }&#39;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">pgsodium</span><span class="p">.</span><span class="n">valid_key</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;firebase&#39;</span><span class="p">)</span><span class="w"></span>
-<span class="w">  </span><span class="p">)</span><span class="w"></span>
-<span class="n">returning</span><span class="w"></span>
-<span class="w">  </span><span class="n">key_id</span><span class="p">;</span><span class="w"></span>
-</code></pre></div></td></tr></table></div></p>
-<p>Create the foreign server
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">firebase_server</span><span class="w"></span>
-<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">firebase_wrapper</span><span class="w"></span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
-<span class="w">    </span><span class="n">sa_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;your key_id from above&gt;&#39;</span><span class="w"></span>
-<span class="w">    </span><span class="n">project_id</span><span class="w"> </span><span class="s1">&#39;&lt;firebase_project_id&gt;&#39;</span><span class="w"></span>
-<span class="p">);</span><span class="w"></span>
-</code></pre></div></td></tr></table></div></p>
-<h4 id="auth-insecure">Auth (Insecure)</h4>
-<p>If the platform you are using does not support <code>pgsodium</code> and <code>Vault</code>, you can create a server by storing your <a href="https://firebase.google.com/docs/admin/setup#add_firebase_to_your_app">service account key</a> directly.</p>
-<div class="admonition important">
-<p class="admonition-title">Important</p>
-<p>Credentials stored using this method can be viewed as plain text by anyone with access to <code>pg_catalog.pg_foreign_server</code></p>
-</div>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">firebase_server</span><span class="w"></span>
-<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">firebase_wrapper</span><span class="w"></span>
-<span class="w">   </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
-<span class="w">     </span><span class="n">sa_key</span><span class="w"> </span><span class="s1">&#39;</span>
-<span class="s1">     {</span>
-<span class="s1">        &quot;type&quot;: &quot;service_account&quot;,</span>
-<span class="s1">        &quot;project_id&quot;: &quot;your_gcp_project_id&quot;,</span>
-<span class="s1">        ...</span>
-<span class="s1">     }</span>
-<span class="s1">    &#39;</span><span class="p">,</span><span class="w"></span>
-<span class="w">     </span><span class="n">project_id</span><span class="w"> </span><span class="s1">&#39;firebase_project_id&#39;</span><span class="p">,</span><span class="w"></span>
-<span class="w">   </span><span class="p">);</span><span class="w"></span>
-</code></pre></div></td></tr></table></div>
-<h3 id="tables">Tables</h3>
-<p>Firebase collections are non-relational/documents. With the exception of metadata fields, all returned data are available as a <code>attrs</code> jsonb column. 
-s</p>
-<h4 id="firestore">Firestore</h4>
-<p>To map a Firestore collection provide its location using the format <code>firestore/&lt;collection_id&gt;</code> as the <code>object</code> option as shown below.</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">firebase_docs</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="normal">13</span>
+<span class="normal">14</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">airtable_table</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
 <span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
-<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span><span class="w"></span>
-<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span><span class="w"></span>
-<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span><span class="w"></span>
+<span class="w">  </span><span class="n">notes</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">content</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">amount</span><span class="w"> </span><span class="nb">numeric</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="w"></span>
 <span class="p">)</span><span class="w"></span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">firebase_server</span><span class="w"></span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">airtable_server</span><span class="w"></span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;firestore/user-profiles&#39;</span><span class="w">  </span><span class="c1">-- format: &#39;firestore/[collection_id]&#39;</span>
+<span class="w">    </span><span class="n">base_id</span><span class="w"> </span><span class="s1">&#39;appTc3yI68KN6ukZc&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="n">table_id</span><span class="w"> </span><span class="s1">&#39;tbltiLinE56l3YKfn&#39;</span><span class="w"></span>
 <span class="w">  </span><span class="p">);</span><span class="w"></span>
-</code></pre></div></td></tr></table></div>
-<p>Note that <code>name</code>, <code>created_at</code>, and <code>updated_at</code>, are automatic metadata fields on all Firestore collections.</p>
-<h4 id="authusers">auth/users</h4>
-<p>The <code>auth/users</code> collection is a special case with unique metadata. The following shows how to map Firebase users to PostgreSQL table.</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">firebase_users</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
-<span class="w">  </span><span class="n">uid</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
-<span class="w">  </span><span class="n">email</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
-<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span><span class="w"></span>
-<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span><span class="w"></span>
-<span class="p">)</span><span class="w"></span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">firebase_server</span><span class="w"></span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;auth/users&#39;</span><span class="w"></span>
-<span class="w">  </span><span class="p">);</span><span class="w"></span>
+
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">airtable_table</span><span class="p">;</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
 
 
@@ -728,7 +692,7 @@ s</p>
     <nav class="md-footer__inner md-grid" aria-label="Footer" >
       
         
-        <a href="../clickhouse/" class="md-footer__link md-footer__link--prev" aria-label="Previous: ClickHouse" rel="prev">
+        <a href="../installation/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Installation" rel="prev">
           <div class="md-footer__button md-icon">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
           </div>
@@ -737,20 +701,20 @@ s</p>
               <span class="md-footer__direction">
                 Previous
               </span>
-              ClickHouse
+              Installation
             </div>
           </div>
         </a>
       
       
         
-        <a href="../s3/" class="md-footer__link md-footer__link--next" aria-label="Next: S3" rel="next">
+        <a href="../bigquery/" class="md-footer__link md-footer__link--next" aria-label="Next: BigQuery" rel="next">
           <div class="md-footer__title">
             <div class="md-ellipsis">
               <span class="md-footer__direction">
                 Next
               </span>
-              S3
+              BigQuery
             </div>
           </div>
           <div class="md-footer__button md-icon">
