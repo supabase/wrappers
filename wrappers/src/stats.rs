@@ -65,6 +65,7 @@ pub(crate) fn inc_stats(fdw_name: &str, metric: Metric, inc: i64) {
 }
 
 // get metadata
+#[allow(dead_code)]
 pub(crate) fn get_metadata(fdw_name: &str) -> Option<JsonB> {
     let sql = format!(
         "select metadata from {} where fdw_name = $1",
@@ -78,6 +79,7 @@ pub(crate) fn get_metadata(fdw_name: &str) -> Option<JsonB> {
 }
 
 // set metadata
+#[allow(dead_code)]
 pub(crate) fn set_metadata(fdw_name: &str, metadata: Option<JsonB>) {
     let sql = format!(
         "insert into {} as s (fdw_name, metadata) values($1, $2)
