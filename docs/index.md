@@ -43,5 +43,6 @@ Currently `supabase/wrappers` supports:
 | BigQuery    | :white_check_mark:| :white_check_mark:| :white_check_mark:| :white_check_mark:| :x:               |
 | ClickHouse  | :white_check_mark:| :white_check_mark:| :white_check_mark:| :white_check_mark:| :x:               |
 | Firebase    | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
+| Logflare    | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
 | S3          | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
 | Stripe      | :white_check_mark:| :white_check_mark:| :white_check_mark:| :white_check_mark:| :x:               |

@@ -13,6 +13,7 @@ nav:
       - BigQuery: 'bigquery.md'
       - ClickHouse: 'clickhouse.md'
       - Firebase: 'firebase.md'
+      - Logflare: 'logflare.md'
       - S3: 's3.md'
       - Stripe: 'stripe.md'
     - Contributing: 'contributing.md'
