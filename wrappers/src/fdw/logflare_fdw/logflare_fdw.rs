@@ -1,3 +1,4 @@
+use crate::stats;
 use pgrx::{
     pg_sys,
     prelude::{AnyNumeric, Date, PgSqlErrorCode, Timestamp},
@@ -134,6 +135,7 @@ pub(crate) struct LogflareFdw {
 }
 
 impl LogflareFdw {
+    const FDW_NAME: &str = "LogflareFdw";
     const BASE_URL: &str = "https://api.logflare.app/api/endpoints/query/";
 
     fn build_url(&self, endpoint: &str) -> Option<Url> {
@@ -171,9 +173,8 @@ impl LogflareFdw {
         Some(url)
     }
 
-    fn resp_to_rows(&mut self, body: &JsonValue, tgt_cols: &[Column]) {
-        self.scan_result = body
-            .as_object()
+    fn resp_to_rows(&mut self, body: &JsonValue, tgt_cols: &[Column]) -> Option<Vec<Row>> {
+        body.as_object()
             .and_then(|v| v.get("result"))
             .and_then(|v| v.as_array())
             .map(|arr| {
@@ -182,8 +183,8 @@ impl LogflareFdw {
                         let mut row = Row::new();
                         if let Some(r) = record.as_object() {
                             for tgt_col in tgt_cols {
-                                let cell = if tgt_col.name == "_attrs" {
-                                    // add _attrs meta cell
+                                let cell = if tgt_col.name == "_result" {
+                                    // add _result meta cell
                                     Some(Cell::String(record.to_string()))
                                 } else if tgt_col.name.starts_with("_param_") {
                                     // add param cell
@@ -208,7 +209,7 @@ impl LogflareFdw {
                         row
                     })
                     .collect::<Vec<Row>>()
-            });
+            })
     }
 }
 
@@ -231,6 +232,8 @@ impl ForeignDataWrapper for LogflareFdw {
                 .and_then(|key_id| get_vault_secret(&key_id))
                 .map(|api_key| create_client(&api_key)),
         };
+
+        stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
 
         LogflareFdw {
             rt: create_async_runtime(),
@@ -273,15 +276,35 @@ impl ForeignDataWrapper for LogflareFdw {
             // make api call
             match self.rt.block_on(client.get(url).send()) {
                 Ok(resp) => {
+                    stats::inc_stats(
+                        Self::FDW_NAME,
+                        stats::Metric::BytesIn,
+                        resp.content_length().unwrap_or(0) as i64,
+                    );
+
                     if resp.status() == StatusCode::NOT_FOUND {
                         // if it is 404 error, we should treat it as an empty
                         // result rather than a request error
                         return;
                     }
+
                     match resp.error_for_status() {
                         Ok(resp) => {
                             let body: JsonValue = self.rt.block_on(resp.json()).unwrap();
-                            self.resp_to_rows(&body, columns);
+                            let result = self.resp_to_rows(&body, columns);
+                            if let Some(result) = &result {
+                                stats::inc_stats(
+                                    Self::FDW_NAME,
+                                    stats::Metric::RowsIn,
+                                    result.len() as i64,
+                                );
+                                stats::inc_stats(
+                                    Self::FDW_NAME,
+                                    stats::Metric::RowsOut,
+                                    result.len() as i64,
+                                );
+                            }
+                            self.scan_result = result;
                         }
                         Err(err) => report_request_error!(err),
                     }
