@@ -71,11 +71,11 @@ Logflare wrapper is implemented with [ELT](https://hevodata.com/learn/etl-vs-elt
 
 The full list of foreign table options are below:
 
-- `endpoint` - Logflare endpoint, required.
+- `endpoint` - Logflare endpoint UUID or name, required.
 
 #### Meta Column
 
-You can define a specific meta column `_attrs` (data type: `text`) in the foreign table. It will store the whole record in JSON string format, so you can extract any fields from it using Postgres JSON queries like `_attrs::json->>'foo'`. See more examples below.
+You can define a specific meta column `_result` (data type: `text`) in the foreign table. It will store the whole result record in JSON string format, so you can extract any fields from it using Postgres JSON queries like `_result::json->>'foo'`. See more examples below.
 
 #### Query Parameters
 
@@ -104,7 +104,7 @@ Then we can define foreign table like this:
 create foreign table people (
   id bigint,
   name text,
-  _attrs text
+  _result text
 )
   server logflare_server
   options (
@@ -146,11 +146,11 @@ create foreign table runtime_hours (
   _param_org_id bigint,
   _param_iso_timestamp_start text,
   _param_iso_timestamp_end text,
-  _attrs text
+  _result text
 )
   server logflare_server
   options (
-    endpoint '07fff9cb-a020-198e-3e4e-a20114bb8c1c'
+    endpoint 'my.custom.endpoint'
   );
 ```
 
