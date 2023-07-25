@@ -10,14 +10,14 @@
       
       
       
-        <link rel="canonical" href="https://supabase.github.io/wrappers/firebase/">
+        <link rel="canonical" href="https://supabase.github.io/wrappers/logflare/">
       
       <link rel="icon" href="../assets/favicon.ico">
       <meta name="generator" content="mkdocs-1.4.2, mkdocs-material-8.5.10">
     
     
       
-        <title>Firebase - wrappers</title>
+        <title>Logflare - wrappers</title>
       
     
     
@@ -102,7 +102,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Firebase
+              Logflare
             
           </span>
         </div>
@@ -309,6 +309,20 @@
               
   
   
+  
+    <li class="md-nav__item">
+      <a href="../firebase/" class="md-nav__link">
+        Firebase
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
     
   
   
@@ -319,12 +333,12 @@
       
       
         <label class="md-nav__link md-nav__link--active" for="__toc">
-          Firebase
+          Logflare
           <span class="md-nav__icon md-icon"></span>
         </label>
       
       <a href="./" class="md-nav__link md-nav__link--active">
-        Firebase
+        Logflare
       </a>
       
         
@@ -383,15 +397,49 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#firestore" class="md-nav__link">
-    Firestore
+  <a href="#foreign-table-options" class="md-nav__link">
+    Foreign Table Options
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#authusers" class="md-nav__link">
-    auth/users
+  <a href="#meta-column" class="md-nav__link">
+    Meta Column
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#query-parameters" class="md-nav__link">
+    Query Parameters
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    Examples
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#simple-query" class="md-nav__link">
+    Simple Query
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#query-with-parameters" class="md-nav__link">
+    Query with parameters
   </a>
   
 </li>
@@ -405,20 +453,6 @@
   
 </nav>
       
-    </li>
-  
-
-            
-          
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../logflare/" class="md-nav__link">
-        Logflare
-      </a>
     </li>
   
 
@@ -540,15 +574,49 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#firestore" class="md-nav__link">
-    Firestore
+  <a href="#foreign-table-options" class="md-nav__link">
+    Foreign Table Options
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#authusers" class="md-nav__link">
-    auth/users
+  <a href="#meta-column" class="md-nav__link">
+    Meta Column
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#query-parameters" class="md-nav__link">
+    Query Parameters
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    Examples
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#simple-query" class="md-nav__link">
+    Simple Query
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#query-with-parameters" class="md-nav__link">
+    Query with parameters
   </a>
   
 </li>
@@ -572,39 +640,151 @@
                 
                   
 
-  <a href="https://github.com/supabase/wrappers/edit/master/docs/firebase.md" title="Edit this page" class="md-content__button md-icon">
+  <a href="https://github.com/supabase/wrappers/edit/master/docs/logflare.md" title="Edit this page" class="md-content__button md-icon">
     
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25Z"/></svg>
   </a>
 
 
-  <h1>Firebase</h1>
+  <h1>Logflare</h1>
 
-<p><a href="https://firebase.google.com/">Firebase</a> is an app development platform built around non-relational technologies. The Firebase wrapper supports connecting to below objects.</p>
-<ol>
-<li><a href="https://firebase.google.com/docs/auth/users">Authentication Users</a> (<em>read only</em>)</li>
-<li><a href="https://firebase.google.com/docs/firestore">Firestore Database Documents</a> (<em>read only</em>)</li>
-</ol>
+<p><a href="https://logflare.app">Logflare</a> is a centralized web-based log management solution to easily access Cloudflare, Vercel &amp; Elixir logs.</p>
 <h3 id="wrapper">Wrapper</h3>
-<p>To get started with the Firebase wrapper, create a foreign data wrapper specifying <code>handler</code> and <code>validator</code> as below.</p>
+<p>To get started with the Logflare wrapper, create a foreign data wrapper specifying <code>handler</code> and <code>validator</code> as below.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
 <span class="normal">4</span>
 <span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">extension</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">wrappers</span><span class="p">;</span><span class="w"></span>
 
-<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">firebase_wrapper</span><span class="w"></span>
-<span class="w">  </span><span class="k">handler</span><span class="w"> </span><span class="n">firebase_fdw_handler</span><span class="w"></span>
-<span class="w">  </span><span class="k">validator</span><span class="w"> </span><span class="n">firebase_fdw_validator</span><span class="p">;</span><span class="w"></span>
+<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">logflare_wrapper</span><span class="w"></span>
+<span class="w">  </span><span class="k">handler</span><span class="w"> </span><span class="n">logflare_fdw_handler</span><span class="w"></span>
+<span class="w">  </span><span class="k">validator</span><span class="w"> </span><span class="n">logflare_fdw_validator</span><span class="p">;</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
 <h3 id="server">Server</h3>
 <p>Next, we need to create a server for the FDW to hold options and credentials.</p>
 <h4 id="auth-supabase">Auth (Supabase)</h4>
-<p>If you are using the Supabase platform, this is the recommended approach for securing your Firebase service account credentials.</p>
+<p>If you are using the Supabase platform, this is the recommended approach for securing your <a href="https://docs.logflare.app/concepts/access-tokens/">Logflare access token</a>.</p>
 <p>Create a secure key using pgsodium
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="n">pgsodium</span><span class="p">.</span><span class="n">create_key</span><span class="p">(</span><span class="n">name</span><span class="w"> </span><span class="p">:</span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;firebase&#39;</span><span class="p">);</span><span class="w"></span>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="n">pgsodium</span><span class="p">.</span><span class="n">create_key</span><span class="p">(</span><span class="n">name</span><span class="w"> </span><span class="p">:</span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;logflare&#39;</span><span class="p">);</span><span class="w"></span>
 </code></pre></div></td></tr></table></div></p>
-<p>Save your <a href="https://firebase.google.com/docs/admin/setup#add_firebase_to_your_app">Firebase service account key</a> in Vault and retrieve the <code>key_id</code>
+<p>Save your Logflare access token in Vault and retrieve the <code>key_id</code>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span>
+<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">secrets</span><span class="w"> </span><span class="p">(</span><span class="n">secret</span><span class="p">,</span><span class="w"> </span><span class="n">key_id</span><span class="p">)</span><span class="w"></span>
+<span class="k">values</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">  </span><span class="s1">&#39;xxx&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">pgsodium</span><span class="p">.</span><span class="n">valid_key</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;logflare&#39;</span><span class="p">)</span><span class="w"></span>
+<span class="p">)</span><span class="w"></span>
+<span class="n">returning</span><span class="w"></span>
+<span class="w">  </span><span class="n">key_id</span><span class="p">;</span><span class="w"></span>
+</code></pre></div></td></tr></table></div></p>
+<p>Create the foreign server
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">logflare_server</span><span class="w"></span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">logflare_wrapper</span><span class="w"></span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">    </span><span class="n">api_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;your key_id from above&gt;&#39;</span><span class="w"></span>
+<span class="w">  </span><span class="p">);</span><span class="w"></span>
+</code></pre></div></td></tr></table></div></p>
+<h4 id="auth-insecure">Auth (Insecure)</h4>
+<p>If the platform you are using does not support <code>pgsodium</code> and <code>Vault</code> you can create a server by storing your <a href="https://docs.logflare.app/concepts/access-tokens/">Logflare Access Token</a> directly.</p>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>Credentials stored using this method can be viewed as plain text by anyone with access to <code>pg_catalog.pg_foreign_server</code></p>
+</div>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">logflare_server</span><span class="w"></span>
+<span class="w">   </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">logflare_wrapper</span><span class="w"></span>
+<span class="w">   </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">     </span><span class="n">api_key</span><span class="w"> </span><span class="s1">&#39;xxx&#39;</span><span class="w"></span>
+<span class="w">   </span><span class="p">);</span><span class="w"></span>
+</code></pre></div></td></tr></table></div>
+<h3 id="tables">Tables</h3>
+<p>Logflare wrapper is implemented with <a href="https://hevodata.com/learn/etl-vs-elt/">ELT</a> approach, so the data transformation is encouraged to be performed locally after data is extracted from remote data source.</p>
+<h4 id="foreign-table-options">Foreign Table Options</h4>
+<p>The full list of foreign table options are below:</p>
+<ul>
+<li><code>endpoint</code> - Logflare endpoint UUID or name, required.</li>
+</ul>
+<h4 id="meta-column">Meta Column</h4>
+<p>You can define a specific meta column <code>_result</code> (data type: <code>text</code>) in the foreign table. It will store the whole result record in JSON string format, so you can extract any fields from it using Postgres JSON queries like <code>_result::json-&gt;&gt;'foo'</code>. See more examples below.</p>
+<h4 id="query-parameters">Query Parameters</h4>
+<p>Logflare endpoint query parameters can be passed using specific parameter columns like <code>_param_foo</code> and <code>_param_bar</code>. See more examples below.</p>
+<h3 id="examples">Examples</h3>
+<p>Some examples on how to use Logflare foreign tables.</p>
+<h4 id="simple-query">Simple Query</h4>
+<p>Assume the Logflare endpoint response is like below:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="p">[</span><span class="w"></span>
+<span class="w">  </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">123</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;foo&quot;</span><span class="w"></span>
+<span class="w">  </span><span class="p">}</span><span class="w"></span>
+<span class="p">]</span><span class="w"></span>
+</code></pre></div></td></tr></table></div>
+<p>Then we can define foreign table like this:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">people</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">_result</span><span class="w"> </span><span class="nb">text</span><span class="w"></span>
+<span class="p">)</span><span class="w"></span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">logflare_server</span><span class="w"></span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">    </span><span class="n">endpoint</span><span class="w"> </span><span class="s1">&#39;9dd9a6f6-8e9b-4fa4-b682-4f2f5cd99da3&#39;</span><span class="w"></span>
+<span class="w">  </span><span class="p">);</span><span class="w"></span>
+
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">people</span><span class="p">;</span><span class="w"></span>
+</code></pre></div></td></tr></table></div>
+<h4 id="query-with-parameters">Query with parameters</h4>
+<p>Suppose the Logflare endpoint accepts 3 parameters:</p>
+<ol>
+<li>org_id</li>
+<li>iso_timestamp_start</li>
+<li>iso_timestamp_end</li>
+</ol>
+<p>And its response is like below:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span>
+<span class="normal">7</span>
+<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="p">[</span><span class="w"></span>
+<span class="w">  </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;db_size&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;large&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;org_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;123&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;runtime_hours&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">21.95</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;runtime_minutes&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1317</span><span class="w"></span>
+<span class="w">  </span><span class="p">}</span><span class="w"></span>
+<span class="p">]</span><span class="w"></span>
+</code></pre></div></td></tr></table></div>
+<p>We can define foreign table and parameter columns like this:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -617,91 +797,23 @@
 <span class="normal">10</span>
 <span class="normal">11</span>
 <span class="normal">12</span>
-<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"></span>
-<span class="w">  </span><span class="n">vault</span><span class="p">.</span><span class="n">secrets</span><span class="w"> </span><span class="p">(</span><span class="n">secret</span><span class="p">,</span><span class="w"> </span><span class="n">key_id</span><span class="p">)</span><span class="w"></span>
-<span class="k">values</span><span class="w"> </span>
-<span class="w">  </span><span class="p">(</span><span class="w"></span>
-<span class="w">    </span><span class="s1">&#39;{</span>
-<span class="s1">      &quot;type&quot;: &quot;service_account&quot;,</span>
-<span class="s1">      &quot;project_id&quot;: &quot;your_gcp_project_id&quot;,</span>
-<span class="s1">      ...</span>
-<span class="s1">    }&#39;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">pgsodium</span><span class="p">.</span><span class="n">valid_key</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;firebase&#39;</span><span class="p">)</span><span class="w"></span>
-<span class="w">  </span><span class="p">)</span><span class="w"></span>
-<span class="n">returning</span><span class="w"></span>
-<span class="w">  </span><span class="n">key_id</span><span class="p">;</span><span class="w"></span>
-</code></pre></div></td></tr></table></div></p>
-<p>Create the foreign server
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">firebase_server</span><span class="w"></span>
-<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">firebase_wrapper</span><span class="w"></span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
-<span class="w">    </span><span class="n">sa_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;your key_id from above&gt;&#39;</span><span class="w"></span>
-<span class="w">    </span><span class="n">project_id</span><span class="w"> </span><span class="s1">&#39;&lt;firebase_project_id&gt;&#39;</span><span class="w"></span>
-<span class="p">);</span><span class="w"></span>
-</code></pre></div></td></tr></table></div></p>
-<h4 id="auth-insecure">Auth (Insecure)</h4>
-<p>If the platform you are using does not support <code>pgsodium</code> and <code>Vault</code>, you can create a server by storing your <a href="https://firebase.google.com/docs/admin/setup#add_firebase_to_your_app">service account key</a> directly.</p>
-<div class="admonition important">
-<p class="admonition-title">Important</p>
-<p>Credentials stored using this method can be viewed as plain text by anyone with access to <code>pg_catalog.pg_foreign_server</code></p>
-</div>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">firebase_server</span><span class="w"></span>
-<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">firebase_wrapper</span><span class="w"></span>
-<span class="w">   </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
-<span class="w">     </span><span class="n">sa_key</span><span class="w"> </span><span class="s1">&#39;</span>
-<span class="s1">     {</span>
-<span class="s1">        &quot;type&quot;: &quot;service_account&quot;,</span>
-<span class="s1">        &quot;project_id&quot;: &quot;your_gcp_project_id&quot;,</span>
-<span class="s1">        ...</span>
-<span class="s1">     }</span>
-<span class="s1">    &#39;</span><span class="p">,</span><span class="w"></span>
-<span class="w">     </span><span class="n">project_id</span><span class="w"> </span><span class="s1">&#39;firebase_project_id&#39;</span><span class="p">,</span><span class="w"></span>
-<span class="w">   </span><span class="p">);</span><span class="w"></span>
-</code></pre></div></td></tr></table></div>
-<h3 id="tables">Tables</h3>
-<p>Firebase collections are non-relational/documents. With the exception of metadata fields, all returned data are available as a <code>attrs</code> jsonb column. 
-s</p>
-<h4 id="firestore">Firestore</h4>
-<p>To map a Firestore collection provide its location using the format <code>firestore/&lt;collection_id&gt;</code> as the <code>object</code> option as shown below.</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">firebase_docs</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
-<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
-<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span><span class="w"></span>
-<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span><span class="w"></span>
-<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span><span class="w"></span>
+<span class="normal">13</span>
+<span class="normal">14</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">runtime_hours</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">  </span><span class="n">db_size</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">org_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">runtime_hours</span><span class="w"> </span><span class="nb">numeric</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">runtime_minutes</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">_param_org_id</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">_param_iso_timestamp_start</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">_param_iso_timestamp_end</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">_result</span><span class="w"> </span><span class="nb">text</span><span class="w"></span>
 <span class="p">)</span><span class="w"></span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">firebase_server</span><span class="w"></span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">logflare_server</span><span class="w"></span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;firestore/user-profiles&#39;</span><span class="w">  </span><span class="c1">-- format: &#39;firestore/[collection_id]&#39;</span>
+<span class="w">    </span><span class="n">endpoint</span><span class="w"> </span><span class="s1">&#39;my.custom.endpoint&#39;</span><span class="w"></span>
 <span class="w">  </span><span class="p">);</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
-<p>Note that <code>name</code>, <code>created_at</code>, and <code>updated_at</code>, are automatic metadata fields on all Firestore collections.</p>
-<h4 id="authusers">auth/users</h4>
-<p>The <code>auth/users</code> collection is a special case with unique metadata. The following shows how to map Firebase users to PostgreSQL table.</p>
+<p>and query it with parameters like this:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -711,16 +823,16 @@ s</p>
 <span class="normal"> 7</span>
 <span class="normal"> 8</span>
 <span class="normal"> 9</span>
-<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">firebase_users</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
-<span class="w">  </span><span class="n">uid</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
-<span class="w">  </span><span class="n">email</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
-<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span><span class="w"></span>
-<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span><span class="w"></span>
-<span class="p">)</span><span class="w"></span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">firebase_server</span><span class="w"></span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;auth/users&#39;</span><span class="w"></span>
-<span class="w">  </span><span class="p">);</span><span class="w"></span>
+<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"></span>
+<span class="w">  </span><span class="n">db_size</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">org_id</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">runtime_hours</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">runtime_minutes</span><span class="w"></span>
+<span class="k">from</span><span class="w"></span>
+<span class="w">  </span><span class="n">runtime_hours</span><span class="w"></span>
+<span class="k">where</span><span class="w"> </span><span class="n">_param_org_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">123</span><span class="w"></span>
+<span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">_param_iso_timestamp_start</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;2023-07-01 02:03:04&#39;</span><span class="w"></span>
+<span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">_param_iso_timestamp_end</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;2023-07-02&#39;</span><span class="p">;</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
 
 
@@ -742,7 +854,7 @@ s</p>
     <nav class="md-footer__inner md-grid" aria-label="Footer" >
       
         
-        <a href="../clickhouse/" class="md-footer__link md-footer__link--prev" aria-label="Previous: ClickHouse" rel="prev">
+        <a href="../firebase/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Firebase" rel="prev">
           <div class="md-footer__button md-icon">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
           </div>
@@ -751,20 +863,20 @@ s</p>
               <span class="md-footer__direction">
                 Previous
               </span>
-              ClickHouse
+              Firebase
             </div>
           </div>
         </a>
       
       
         
-        <a href="../logflare/" class="md-footer__link md-footer__link--next" aria-label="Next: Logflare" rel="next">
+        <a href="../s3/" class="md-footer__link md-footer__link--next" aria-label="Next: S3" rel="next">
           <div class="md-footer__title">
             <div class="md-ellipsis">
               <span class="md-footer__direction">
                 Next
               </span>
-              Logflare
+              S3
             </div>
           </div>
           <div class="md-footer__button md-icon">

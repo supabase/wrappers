@@ -70,7 +70,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#wrapper" class="md-skip">
+        <a href="#preparation" class="md-skip">
           Skip to content
         </a>
       
@@ -299,30 +299,23 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#wrapper" class="md-nav__link">
-    Wrapper
+  <a href="#preparation" class="md-nav__link">
+    Preparation
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#server" class="md-nav__link">
-    Server
-  </a>
-  
-    <nav class="md-nav" aria-label="Server">
+    <nav class="md-nav" aria-label="Preparation">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#auth-supabase" class="md-nav__link">
-    Auth (Supabase)
+  <a href="#secure-your-credentials-optional" class="md-nav__link">
+    Secure your credentials (optional)
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#auth-insecure" class="md-nav__link">
-    Auth (Insecure)
+  <a href="#connecting-to-airtable" class="md-nav__link">
+    Connecting to Airtable
   </a>
   
 </li>
@@ -333,11 +326,11 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#tables" class="md-nav__link">
-    Tables
+  <a href="#creating-foreign-tables" class="md-nav__link">
+    Creating Foreign Tables
   </a>
   
-    <nav class="md-nav" aria-label="Tables">
+    <nav class="md-nav" aria-label="Creating Foreign Tables">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -356,6 +349,19 @@
   <a href="#examples" class="md-nav__link">
     Examples
   </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-example" class="md-nav__link">
+    Basic example
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -404,6 +410,20 @@
     <li class="md-nav__item">
       <a href="../firebase/" class="md-nav__link">
         Firebase
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../logflare/" class="md-nav__link">
+        Logflare
       </a>
     </li>
   
@@ -484,30 +504,23 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#wrapper" class="md-nav__link">
-    Wrapper
+  <a href="#preparation" class="md-nav__link">
+    Preparation
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#server" class="md-nav__link">
-    Server
-  </a>
-  
-    <nav class="md-nav" aria-label="Server">
+    <nav class="md-nav" aria-label="Preparation">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#auth-supabase" class="md-nav__link">
-    Auth (Supabase)
+  <a href="#secure-your-credentials-optional" class="md-nav__link">
+    Secure your credentials (optional)
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#auth-insecure" class="md-nav__link">
-    Auth (Insecure)
+  <a href="#connecting-to-airtable" class="md-nav__link">
+    Connecting to Airtable
   </a>
   
 </li>
@@ -518,11 +531,11 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#tables" class="md-nav__link">
-    Tables
+  <a href="#creating-foreign-tables" class="md-nav__link">
+    Creating Foreign Tables
   </a>
   
-    <nav class="md-nav" aria-label="Tables">
+    <nav class="md-nav" aria-label="Creating Foreign Tables">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -541,6 +554,19 @@
   <a href="#examples" class="md-nav__link">
     Examples
   </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-example" class="md-nav__link">
+    Basic example
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -566,84 +592,119 @@
 
   <h1>Airtable</h1>
 
-<p><a href="https://www.airtable.com">Airtable</a> is an easy-to-use online platform for creating and sharing relational databases. <code>supabase/wrappers</code> exposes below endpoints.</p>
-<p>Airtable FDW supports data read from below objects:</p>
-<ol>
-<li><a href="https://airtable.com/developers/web/api/list-records">Records</a> (<em>read only</em>)</li>
-</ol>
-<h3 id="wrapper">Wrapper</h3>
-<p>To get started with the Airtable wrapper, create a foreign data wrapper specifying <code>handler</code> and <code>validator</code> as below.</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">extension</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">wrappers</span><span class="p">;</span><span class="w"></span>
-
-<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">airtable_wrapper</span><span class="w"></span>
-<span class="w">  </span><span class="k">handler</span><span class="w"> </span><span class="n">airtable_fdw_handler</span><span class="w"></span>
-<span class="w">  </span><span class="k">validator</span><span class="w"> </span><span class="n">airtable_fdw_validator</span><span class="p">;</span><span class="w"></span>
+<p><a href="https://www.airtable.com">Airtable</a> is an easy-to-use online platform for creating and sharing relational databases. </p>
+<p>The Airtable Wrapper is allows you to read data from your Airtable bases/tables from within your Postgres database.</p>
+<h2 id="preparation">Preparation</h2>
+<p>Before you get started, make sure the <code>wrappers</code> extension is installed on your database:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">extension</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">wrappers</span><span class="p">;</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
-<h3 id="server">Server</h3>
-<p>Next, we need to create a server for the FDW to hold options and credentials.</p>
-<h4 id="auth-supabase">Auth (Supabase)</h4>
-<p>If you are using the Supabase platform, this is the recommended approach for securing your Airtable API key.</p>
-<p>Create a secure key using pgsodium
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="n">pgsodium</span><span class="p">.</span><span class="n">create_key</span><span class="p">(</span><span class="n">name</span><span class="w"> </span><span class="p">:</span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;airtable&#39;</span><span class="p">);</span><span class="w"></span>
-</code></pre></div></td></tr></table></div></p>
-<p>Save your Airtable API key in Vault and retrieve the <code>key_id</code>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span>
-<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">secrets</span><span class="w"> </span><span class="p">(</span><span class="n">secret</span><span class="p">,</span><span class="w"> </span><span class="n">key_id</span><span class="p">)</span><span class="w"></span>
+<h3 id="secure-your-credentials-optional">Secure your credentials (optional)</h3>
+<p>By default, Postgres stores FDW credentials inide <code>pg_catalog.pg_foreign_server</code> in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with <a href="https://supabase.com/docs/guides/database/vault">Vault</a>, which provides an additional level of security for storing credentials. We recommend using Vault to store your Airtable credentials.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Create a secure key using pgsodium:</span>
+<span class="k">select</span><span class="w"> </span><span class="n">pgsodium</span><span class="p">.</span><span class="n">create_key</span><span class="p">(</span><span class="n">name</span><span class="w"> </span><span class="p">:</span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;airtable&#39;</span><span class="p">);</span><span class="w"></span>
+
+<span class="c1">-- Save your Airtable API key in Vault and retrieve the `key_id`</span>
+<span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">secrets</span><span class="w"> </span><span class="p">(</span><span class="n">secret</span><span class="p">,</span><span class="w"> </span><span class="n">key_id</span><span class="p">)</span><span class="w"></span>
 <span class="k">values</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
-<span class="w">  </span><span class="s1">&#39;xxx&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="s1">&#39;YOUR_SECRET&#39;</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">pgsodium</span><span class="p">.</span><span class="n">valid_key</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;airtable&#39;</span><span class="p">)</span><span class="w"></span>
 <span class="p">)</span><span class="w"></span>
-<span class="n">returnin</span><span class="w"></span>
-<span class="w">  </span><span class="n">key_id</span><span class="p">;</span><span class="w"></span>
-</code></pre></div></td></tr></table></div></p>
-<p>Create the foreign server
+<span class="n">returning</span><span class="w"> </span><span class="n">key_id</span><span class="p">;</span><span class="w"></span>
+</code></pre></div></td></tr></table></div>
+<h3 id="connecting-to-airtable">Connecting to Airtable</h3>
+<p>We need to provide Postgres with the credentials to connect to Airtable, and any additional options. We can do this using the <code>create foreign data wrapper</code> command:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">With Vault</label><label for="__tabbed_1_2">Without Vault</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
 <span class="normal">4</span>
 <span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">airtable_server</span><span class="w"></span>
-<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">airtable_wrapper</span><span class="w"></span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
-<span class="w">    </span><span class="n">api_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;your key_id from above&gt;&#39;</span><span class="w"></span>
-<span class="w">  </span><span class="p">);</span><span class="w"></span>
-</code></pre></div></td></tr></table></div></p>
-<h4 id="auth-insecure">Auth (Insecure)</h4>
-<p>If the platform you are using does not support <code>pgsodium</code> and <code>Vault</code> you can create a server by storing your API key directly.</p>
-<div class="admonition important">
-<p class="admonition-title">Important</p>
-<p>Credentials stored using this method can be viewed as plain text by anyone with access to <code>pg_catalog.pg_foreign_server</code></p>
+<span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">airtable_wrapper</span><span class="w"></span>
+<span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">  </span><span class="n">api_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;key_ID&gt;&#39;</span><span class="w"> </span><span class="c1">-- The Key ID from above.</span>
+<span class="p">);</span><span class="w"></span>
+</code></pre></div></td></tr></table></div>
 </div>
+<div class="tabbed-block">
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
 <span class="normal">4</span>
 <span class="normal">5</span>
 <span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">airtable_server</span><span class="w"></span>
-<span class="w">   </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">airtable_wrapper</span><span class="w"></span>
-<span class="w">   </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
-<span class="w">     </span><span class="n">api_url</span><span class="w"> </span><span class="s1">&#39;https://api.airtable.com/v0&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- Airtable API url, optional</span>
-<span class="w">     </span><span class="n">api_key</span><span class="w"> </span><span class="s1">&#39;sk_test_xxx&#39;</span><span class="w">  </span><span class="c1">-- Airtable API key, required</span>
-<span class="w">   </span><span class="p">);</span><span class="w"></span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">airtable_wrapper</span><span class="w"></span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">    </span><span class="n">api_url</span><span class="w"> </span><span class="s1">&#39;https://api.airtable.com/v0&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- Airtable API url, optional</span>
+<span class="w">    </span><span class="n">api_key</span><span class="w"> </span><span class="s1">&#39;sk_test_xxx&#39;</span><span class="w">  </span><span class="c1">-- Airtable API key, required</span>
+<span class="w">  </span><span class="p">);</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
-<h3 id="tables">Tables</h3>
-<p>The Airtable foreign data wrapper supports data read from <a href="https://airtable.com/developers/web/api/list-records">Records</a> endpoint.</p>
+</div>
+</div>
+</div>
+<h2 id="creating-foreign-tables">Creating Foreign Tables</h2>
+<p>The Airtable Wrapper supports data reads from Airtable's <a href="https://airtable.com/developers/web/api/list-records">Records</a> endpoint (<em>read only</em>).</p>
+<table>
+<thead>
+<tr>
+<th>Airtable</th>
+<th align="center">Select</th>
+<th align="center">Insert</th>
+<th align="center">Update</th>
+<th align="center">Delete</th>
+<th align="center">Truncate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Records</td>
+<td align="center"><img alt="✅" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/svg/2705.svg" title=":white_check_mark:" /></td>
+<td align="center"><img alt="❌" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/svg/274c.svg" title=":x:" /></td>
+<td align="center"><img alt="❌" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/svg/274c.svg" title=":x:" /></td>
+<td align="center"><img alt="❌" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/svg/274c.svg" title=":x:" /></td>
+<td align="center"><img alt="❌" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/svg/274c.svg" title=":x:" /></td>
+</tr>
+</tbody>
+</table>
+<p>For example:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span>
+<span class="normal">7</span>
+<span class="normal">8</span>
+<span class="normal">9</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">my_foreign_table</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="c1">-- other fields</span>
+<span class="p">)</span><span class="w"></span>
+<span class="n">server</span><span class="w"> </span><span class="n">airtable_server</span><span class="w"></span>
+<span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">  </span><span class="n">base_id</span><span class="w"> </span><span class="s1">&#39;appXXXX&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">table_id</span><span class="w"> </span><span class="s1">&#39;tblXXXX&#39;</span><span class="w"></span>
+<span class="p">);</span><span class="w"></span>
+</code></pre></div></td></tr></table></div>
 <h4 id="foreign-table-options">Foreign Table Options</h4>
 <p>The full list of foreign table options are below:</p>
 <ul>
-<li><code>base_id</code> - Airtable base id the table belongs to, required.</li>
-<li><code>table_id</code> - Airtable table id, required.</li>
+<li><code>base_id</code> - Airtable Base ID the table belongs to, required.</li>
+<li><code>table_id</code> - Airtable table ID, required.</li>
 </ul>
-<h3 id="examples">Examples</h3>
+<h2 id="examples">Examples</h2>
 <p>Some examples on how to use Airtable foreign tables.</p>
+<h3 id="basic-example">Basic example</h3>
+<p>This will create a "foreign table" inside your Postgres database called <code>airtable_table</code>: </p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -655,22 +716,21 @@
 <span class="normal"> 9</span>
 <span class="normal">10</span>
 <span class="normal">11</span>
-<span class="normal">12</span>
-<span class="normal">13</span>
-<span class="normal">14</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">airtable_table</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">airtable_table</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
 <span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="n">notes</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="n">content</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="n">amount</span><span class="w"> </span><span class="nb">numeric</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="w"></span>
 <span class="p">)</span><span class="w"></span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">airtable_server</span><span class="w"></span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
-<span class="w">    </span><span class="n">base_id</span><span class="w"> </span><span class="s1">&#39;appTc3yI68KN6ukZc&#39;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="n">table_id</span><span class="w"> </span><span class="s1">&#39;tbltiLinE56l3YKfn&#39;</span><span class="w"></span>
-<span class="w">  </span><span class="p">);</span><span class="w"></span>
-
-<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">airtable_table</span><span class="p">;</span><span class="w"></span>
+<span class="n">server</span><span class="w"> </span><span class="n">airtable_server</span><span class="w"></span>
+<span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">  </span><span class="n">base_id</span><span class="w"> </span><span class="s1">&#39;appTc3yI68KN6ukZc&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">table_id</span><span class="w"> </span><span class="s1">&#39;tbltiLinE56l3YKfn&#39;</span><span class="w"></span>
+<span class="p">);</span><span class="w"></span>
+</code></pre></div></td></tr></table></div>
+<p>You can now fetch your Airtable data from within your Postgres database:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">airtable_table</span><span class="p">;</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
 
 
