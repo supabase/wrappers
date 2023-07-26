@@ -593,13 +593,20 @@
   <h1>Airtable</h1>
 
 <p><a href="https://www.airtable.com">Airtable</a> is an easy-to-use online platform for creating and sharing relational databases. </p>
-<p>The Airtable Wrapper is allows you to read data from your Airtable bases/tables from within your Postgres database.</p>
+<p>The Airtable Wrapper allows you to read data from your Airtable bases/tables within your Postgres database.</p>
 <h2 id="preparation">Preparation</h2>
 <p>Before you get started, make sure the <code>wrappers</code> extension is installed on your database:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">extension</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">wrappers</span><span class="p">;</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
+<p>and then create the foreign data wrapper:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">airtable_wrapper</span><span class="w"></span>
+<span class="w">  </span><span class="k">handler</span><span class="w"> </span><span class="n">airtable_fdw_handler</span><span class="w"></span>
+<span class="w">  </span><span class="k">validator</span><span class="w"> </span><span class="n">airtable_fdw_validator</span><span class="p">;</span><span class="w"></span>
+</code></pre></div></td></tr></table></div>
 <h3 id="secure-your-credentials-optional">Secure your credentials (optional)</h3>
-<p>By default, Postgres stores FDW credentials inide <code>pg_catalog.pg_foreign_server</code> in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with <a href="https://supabase.com/docs/guides/database/vault">Vault</a>, which provides an additional level of security for storing credentials. We recommend using Vault to store your Airtable credentials.</p>
+<p>By default, Postgres stores FDW credentials inide <code>pg_catalog.pg_foreign_server</code> in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with <a href="https://supabase.com/docs/guides/database/vault">Vault</a>, which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -621,7 +628,7 @@
 <span class="n">returning</span><span class="w"> </span><span class="n">key_id</span><span class="p">;</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
 <h3 id="connecting-to-airtable">Connecting to Airtable</h3>
-<p>We need to provide Postgres with the credentials to connect to Airtable, and any additional options. We can do this using the <code>create foreign data wrapper</code> command:</p>
+<p>We need to provide Postgres with the credentials to connect to Airtable, and any additional options. We can do this using the <code>create server</code> command:</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">With Vault</label><label for="__tabbed_1_2">Without Vault</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
@@ -646,7 +653,7 @@
 <span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">airtable_wrapper</span><span class="w"></span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
 <span class="w">    </span><span class="n">api_url</span><span class="w"> </span><span class="s1">&#39;https://api.airtable.com/v0&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- Airtable API url, optional</span>
-<span class="w">    </span><span class="n">api_key</span><span class="w"> </span><span class="s1">&#39;sk_test_xxx&#39;</span><span class="w">  </span><span class="c1">-- Airtable API key, required</span>
+<span class="w">    </span><span class="n">api_key</span><span class="w"> </span><span class="s1">&#39;&lt;Airtable API Key&gt;&#39;</span><span class="w">  </span><span class="c1">-- Airtable API key, required</span>
 <span class="w">  </span><span class="p">);</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
 </div>
@@ -695,7 +702,7 @@
 <span class="w">  </span><span class="n">table_id</span><span class="w"> </span><span class="s1">&#39;tblXXXX&#39;</span><span class="w"></span>
 <span class="p">);</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
-<h4 id="foreign-table-options">Foreign Table Options</h4>
+<h3 id="foreign-table-options">Foreign Table Options</h3>
 <p>The full list of foreign table options are below:</p>
 <ul>
 <li><code>base_id</code> - Airtable Base ID the table belongs to, required.</li>

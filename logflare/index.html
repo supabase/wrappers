@@ -70,7 +70,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#wrapper" class="md-skip">
+        <a href="#preparation" class="md-skip">
           Skip to content
         </a>
       
@@ -355,30 +355,23 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#wrapper" class="md-nav__link">
-    Wrapper
+  <a href="#preparation" class="md-nav__link">
+    Preparation
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#server" class="md-nav__link">
-    Server
-  </a>
-  
-    <nav class="md-nav" aria-label="Server">
+    <nav class="md-nav" aria-label="Preparation">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#auth-supabase" class="md-nav__link">
-    Auth (Supabase)
+  <a href="#secure-your-credentials-optional" class="md-nav__link">
+    Secure your credentials (optional)
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#auth-insecure" class="md-nav__link">
-    Auth (Insecure)
+  <a href="#connecting-to-logflare" class="md-nav__link">
+    Connecting to Logflare
   </a>
   
 </li>
@@ -389,19 +382,12 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#tables" class="md-nav__link">
-    Tables
+  <a href="#creating-foreign-tables" class="md-nav__link">
+    Creating Foreign Tables
   </a>
   
-    <nav class="md-nav" aria-label="Tables">
+    <nav class="md-nav" aria-label="Creating Foreign Tables">
       <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#foreign-table-options" class="md-nav__link">
-    Foreign Table Options
-  </a>
-  
-</li>
         
           <li class="md-nav__item">
   <a href="#meta-column" class="md-nav__link">
@@ -413,6 +399,13 @@
           <li class="md-nav__item">
   <a href="#query-parameters" class="md-nav__link">
     Query Parameters
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#foreign-table-options" class="md-nav__link">
+    Foreign Table Options
   </a>
   
 </li>
@@ -431,15 +424,15 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#simple-query" class="md-nav__link">
-    Simple Query
+  <a href="#basic-example" class="md-nav__link">
+    Basic example
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#query-with-parameters" class="md-nav__link">
-    Query with parameters
+  <a href="#example-of-query-parameters" class="md-nav__link">
+    Example of query parameters
   </a>
   
 </li>
@@ -532,30 +525,23 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#wrapper" class="md-nav__link">
-    Wrapper
+  <a href="#preparation" class="md-nav__link">
+    Preparation
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#server" class="md-nav__link">
-    Server
-  </a>
-  
-    <nav class="md-nav" aria-label="Server">
+    <nav class="md-nav" aria-label="Preparation">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#auth-supabase" class="md-nav__link">
-    Auth (Supabase)
+  <a href="#secure-your-credentials-optional" class="md-nav__link">
+    Secure your credentials (optional)
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#auth-insecure" class="md-nav__link">
-    Auth (Insecure)
+  <a href="#connecting-to-logflare" class="md-nav__link">
+    Connecting to Logflare
   </a>
   
 </li>
@@ -566,19 +552,12 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#tables" class="md-nav__link">
-    Tables
+  <a href="#creating-foreign-tables" class="md-nav__link">
+    Creating Foreign Tables
   </a>
   
-    <nav class="md-nav" aria-label="Tables">
+    <nav class="md-nav" aria-label="Creating Foreign Tables">
       <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#foreign-table-options" class="md-nav__link">
-    Foreign Table Options
-  </a>
-  
-</li>
         
           <li class="md-nav__item">
   <a href="#meta-column" class="md-nav__link">
@@ -590,6 +569,13 @@
           <li class="md-nav__item">
   <a href="#query-parameters" class="md-nav__link">
     Query Parameters
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#foreign-table-options" class="md-nav__link">
+    Foreign Table Options
   </a>
   
 </li>
@@ -608,15 +594,15 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#simple-query" class="md-nav__link">
-    Simple Query
+  <a href="#basic-example" class="md-nav__link">
+    Basic example
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#query-with-parameters" class="md-nav__link">
-    Query with parameters
+  <a href="#example-of-query-parameters" class="md-nav__link">
+    Example of query parameters
   </a>
   
 </li>
@@ -649,41 +635,45 @@
   <h1>Logflare</h1>
 
 <p><a href="https://logflare.app">Logflare</a> is a centralized web-based log management solution to easily access Cloudflare, Vercel &amp; Elixir logs.</p>
-<h3 id="wrapper">Wrapper</h3>
-<p>To get started with the Logflare wrapper, create a foreign data wrapper specifying <code>handler</code> and <code>validator</code> as below.</p>
+<p>The Logflare Wrapper allows you to read data from Logflare endpoints within your Postgres database.</p>
+<h2 id="preparation">Preparation</h2>
+<p>Before you get started, make sure the <code>wrappers</code> extension is installed on your database:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">extension</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">wrappers</span><span class="p">;</span><span class="w"></span>
+</code></pre></div></td></tr></table></div>
+<p>and then create the foreign data wrapper:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">extension</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">wrappers</span><span class="p">;</span><span class="w"></span>
-
-<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">logflare_wrapper</span><span class="w"></span>
+<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">logflare_wrapper</span><span class="w"></span>
 <span class="w">  </span><span class="k">handler</span><span class="w"> </span><span class="n">logflare_fdw_handler</span><span class="w"></span>
 <span class="w">  </span><span class="k">validator</span><span class="w"> </span><span class="n">logflare_fdw_validator</span><span class="p">;</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
-<h3 id="server">Server</h3>
-<p>Next, we need to create a server for the FDW to hold options and credentials.</p>
-<h4 id="auth-supabase">Auth (Supabase)</h4>
-<p>If you are using the Supabase platform, this is the recommended approach for securing your <a href="https://docs.logflare.app/concepts/access-tokens/">Logflare access token</a>.</p>
-<p>Create a secure key using pgsodium
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="n">pgsodium</span><span class="p">.</span><span class="n">create_key</span><span class="p">(</span><span class="n">name</span><span class="w"> </span><span class="p">:</span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;logflare&#39;</span><span class="p">);</span><span class="w"></span>
-</code></pre></div></td></tr></table></div></p>
-<p>Save your Logflare access token in Vault and retrieve the <code>key_id</code>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span>
-<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">secrets</span><span class="w"> </span><span class="p">(</span><span class="n">secret</span><span class="p">,</span><span class="w"> </span><span class="n">key_id</span><span class="p">)</span><span class="w"></span>
+<h3 id="secure-your-credentials-optional">Secure your credentials (optional)</h3>
+<p>By default, Postgres stores FDW credentials inide <code>pg_catalog.pg_foreign_server</code> in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with <a href="https://supabase.com/docs/guides/database/vault">Vault</a>, which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Create a secure key using pgsodium:</span>
+<span class="k">select</span><span class="w"> </span><span class="n">pgsodium</span><span class="p">.</span><span class="n">create_key</span><span class="p">(</span><span class="n">name</span><span class="w"> </span><span class="p">:</span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;logflare&#39;</span><span class="p">);</span><span class="w"></span>
+
+<span class="c1">-- Save your Logflare API key in Vault and retrieve the `key_id`</span>
+<span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">secrets</span><span class="w"> </span><span class="p">(</span><span class="n">secret</span><span class="p">,</span><span class="w"> </span><span class="n">key_id</span><span class="p">)</span><span class="w"></span>
 <span class="k">values</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
-<span class="w">  </span><span class="s1">&#39;xxx&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="s1">&#39;YOUR_SECRET&#39;</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">pgsodium</span><span class="p">.</span><span class="n">valid_key</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;logflare&#39;</span><span class="p">)</span><span class="w"></span>
 <span class="p">)</span><span class="w"></span>
-<span class="n">returning</span><span class="w"></span>
-<span class="w">  </span><span class="n">key_id</span><span class="p">;</span><span class="w"></span>
-</code></pre></div></td></tr></table></div></p>
-<p>Create the foreign server
+<span class="n">returning</span><span class="w"> </span><span class="n">key_id</span><span class="p">;</span><span class="w"></span>
+</code></pre></div></td></tr></table></div>
+<h3 id="connecting-to-logflare">Connecting to Logflare</h3>
+<p>We need to provide Postgres with the credentials to connect to Logflare, and any additional options. We can do this using the <code>create server</code> command:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">With Vault</label><label for="__tabbed_1_2">Without Vault</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
@@ -691,39 +681,79 @@
 <span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">logflare_server</span><span class="w"></span>
 <span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">logflare_wrapper</span><span class="w"></span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
-<span class="w">    </span><span class="n">api_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;your key_id from above&gt;&#39;</span><span class="w"></span>
+<span class="w">    </span><span class="n">api_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;key_ID&gt;&#39;</span><span class="w"> </span><span class="c1">-- The Key ID from above.</span>
 <span class="w">  </span><span class="p">);</span><span class="w"></span>
-</code></pre></div></td></tr></table></div></p>
-<h4 id="auth-insecure">Auth (Insecure)</h4>
-<p>If the platform you are using does not support <code>pgsodium</code> and <code>Vault</code> you can create a server by storing your <a href="https://docs.logflare.app/concepts/access-tokens/">Logflare Access Token</a> directly.</p>
-<div class="admonition important">
-<p class="admonition-title">Important</p>
-<p>Credentials stored using this method can be viewed as plain text by anyone with access to <code>pg_catalog.pg_foreign_server</code></p>
+</code></pre></div></td></tr></table></div>
 </div>
+<div class="tabbed-block">
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
 <span class="normal">4</span>
 <span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">logflare_server</span><span class="w"></span>
-<span class="w">   </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">logflare_wrapper</span><span class="w"></span>
-<span class="w">   </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
-<span class="w">     </span><span class="n">api_key</span><span class="w"> </span><span class="s1">&#39;xxx&#39;</span><span class="w"></span>
-<span class="w">   </span><span class="p">);</span><span class="w"></span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">logflare_wrapper</span><span class="w"></span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">    </span><span class="n">api_key</span><span class="w"> </span><span class="s1">&#39;&lt;Logflare API Key&gt;&#39;</span><span class="w"> </span><span class="c1">-- Logflare API key, required</span>
+<span class="w">  </span><span class="p">);</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
-<h3 id="tables">Tables</h3>
-<p>Logflare wrapper is implemented with <a href="https://hevodata.com/learn/etl-vs-elt/">ELT</a> approach, so the data transformation is encouraged to be performed locally after data is extracted from remote data source.</p>
-<h4 id="foreign-table-options">Foreign Table Options</h4>
+</div>
+</div>
+</div>
+<h2 id="creating-foreign-tables">Creating Foreign Tables</h2>
+<p>The Logflare Wrapper supports data reads from Logflare's endpoints.</p>
+<table>
+<thead>
+<tr>
+<th>Integration</th>
+<th align="center">Select</th>
+<th align="center">Insert</th>
+<th align="center">Update</th>
+<th align="center">Delete</th>
+<th align="center">Truncate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Logflare</td>
+<td align="center"><img alt="✅" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/svg/2705.svg" title=":white_check_mark:" /></td>
+<td align="center"><img alt="❌" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/svg/274c.svg" title=":x:" /></td>
+<td align="center"><img alt="❌" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/svg/274c.svg" title=":x:" /></td>
+<td align="center"><img alt="❌" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/svg/274c.svg" title=":x:" /></td>
+<td align="center"><img alt="❌" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/svg/274c.svg" title=":x:" /></td>
+</tr>
+</tbody>
+</table>
+<p>For example:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span>
+<span class="normal">7</span>
+<span class="normal">8</span>
+<span class="normal">9</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">my_logflare_table</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">_result</span><span class="w"> </span><span class="nb">text</span><span class="w"></span>
+<span class="p">)</span><span class="w"></span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">logflare_server</span><span class="w"></span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">    </span><span class="n">endpoint</span><span class="w"> </span><span class="s1">&#39;9dd9a6f6-8e9b-4fa4-b682-4f2f5cd99da3&#39;</span><span class="w"></span>
+<span class="w">  </span><span class="p">);</span><span class="w"></span>
+</code></pre></div></td></tr></table></div>
+<h3 id="meta-column">Meta Column</h3>
+<p>You can define a specific meta column <code>_result</code> (data type: <code>text</code>) in the foreign table. It will store the whole result record in JSON string format, so you can extract any fields from it using Postgres JSON queries like <code>_result::json-&gt;&gt;'foo'</code>. See more examples below.</p>
+<h3 id="query-parameters">Query Parameters</h3>
+<p>Logflare endpoint query parameters can be passed using specific parameter columns like <code>_param_foo</code> and <code>_param_bar</code>. See more examples below.</p>
+<h3 id="foreign-table-options">Foreign Table Options</h3>
 <p>The full list of foreign table options are below:</p>
 <ul>
 <li><code>endpoint</code> - Logflare endpoint UUID or name, required.</li>
 </ul>
-<h4 id="meta-column">Meta Column</h4>
-<p>You can define a specific meta column <code>_result</code> (data type: <code>text</code>) in the foreign table. It will store the whole result record in JSON string format, so you can extract any fields from it using Postgres JSON queries like <code>_result::json-&gt;&gt;'foo'</code>. See more examples below.</p>
-<h4 id="query-parameters">Query Parameters</h4>
-<p>Logflare endpoint query parameters can be passed using specific parameter columns like <code>_param_foo</code> and <code>_param_bar</code>. See more examples below.</p>
-<h3 id="examples">Examples</h3>
+<h2 id="examples">Examples</h2>
 <p>Some examples on how to use Logflare foreign tables.</p>
-<h4 id="simple-query">Simple Query</h4>
+<h3 id="basic-example">Basic example</h3>
 <p>Assume the Logflare endpoint response is like below:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
@@ -737,7 +767,7 @@
 <span class="w">  </span><span class="p">}</span><span class="w"></span>
 <span class="p">]</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
-<p>Then we can define foreign table like this:</p>
+<p>Then we can define a foreign table like this:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -760,7 +790,7 @@
 
 <span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">people</span><span class="p">;</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
-<h4 id="query-with-parameters">Query with parameters</h4>
+<h3 id="example-of-query-parameters">Example of query parameters</h3>
 <p>Suppose the Logflare endpoint accepts 3 parameters:</p>
 <ol>
 <li>org_id</li>
@@ -784,7 +814,7 @@
 <span class="w">  </span><span class="p">}</span><span class="w"></span>
 <span class="p">]</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
-<p>We can define foreign table and parameter columns like this:</p>
+<p>We can define a foreign table and parameter columns like this:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>

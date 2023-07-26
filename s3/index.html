@@ -376,30 +376,23 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#wrapper" class="md-nav__link">
-    Wrapper
+  <a href="#preparation" class="md-nav__link">
+    Preparation
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#server" class="md-nav__link">
-    Server
-  </a>
-  
-    <nav class="md-nav" aria-label="Server">
+    <nav class="md-nav" aria-label="Preparation">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#auth-supabase" class="md-nav__link">
-    Auth (Supabase)
+  <a href="#secure-your-credentials-optional" class="md-nav__link">
+    Secure your credentials (optional)
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#auth-non-supabase" class="md-nav__link">
-    Auth (Non-Supabase)
+  <a href="#connecting-to-s3" class="md-nav__link">
+    Connecting to S3
   </a>
   
 </li>
@@ -410,11 +403,11 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#tables" class="md-nav__link">
-    Tables
+  <a href="#creating-foreign-tables" class="md-nav__link">
+    Creating Foreign Tables
   </a>
   
-    <nav class="md-nav" aria-label="Tables">
+    <nav class="md-nav" aria-label="Creating Foreign Tables">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -424,9 +417,22 @@
   
 </li>
         
-          <li class="md-nav__item">
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#examples" class="md-nav__link">
     Examples
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-example" class="md-nav__link">
+    Basic example
   </a>
   
 </li>
@@ -512,30 +518,23 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#wrapper" class="md-nav__link">
-    Wrapper
+  <a href="#preparation" class="md-nav__link">
+    Preparation
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#server" class="md-nav__link">
-    Server
-  </a>
-  
-    <nav class="md-nav" aria-label="Server">
+    <nav class="md-nav" aria-label="Preparation">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#auth-supabase" class="md-nav__link">
-    Auth (Supabase)
+  <a href="#secure-your-credentials-optional" class="md-nav__link">
+    Secure your credentials (optional)
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#auth-non-supabase" class="md-nav__link">
-    Auth (Non-Supabase)
+  <a href="#connecting-to-s3" class="md-nav__link">
+    Connecting to S3
   </a>
   
 </li>
@@ -546,11 +545,11 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#tables" class="md-nav__link">
-    Tables
+  <a href="#creating-foreign-tables" class="md-nav__link">
+    Creating Foreign Tables
   </a>
   
-    <nav class="md-nav" aria-label="Tables">
+    <nav class="md-nav" aria-label="Creating Foreign Tables">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -560,9 +559,22 @@
   
 </li>
         
-          <li class="md-nav__item">
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#examples" class="md-nav__link">
     Examples
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-example" class="md-nav__link">
+    Basic example
   </a>
   
 </li>
@@ -594,23 +606,24 @@
 
   <h1>S3</h1>
 
-<p><a href="https://aws.amazon.com/s3/">AWS S3</a> is an object storage service offering industry-leading scalability, data availability, security, and performance. The S3 wrapper is under development. It is read-only and supports below file formats:</p>
+<p><a href="https://aws.amazon.com/s3/">AWS S3</a> is an object storage service offering industry-leading scalability, data availability, security, and performance. It is read-only and supports below file formats:</p>
+<p>The S3 Wrapper allows you to read data of below formats from S3 within your Postgres database.</p>
 <ol>
 <li>CSV - with or without header line</li>
 <li><a href="https://jsonlines.org/">JSON Lines</a></li>
 <li><a href="https://parquet.apache.org/">Parquet</a></li>
 </ol>
-<p>The S3 FDW also supports below compression algorithms:</p>
+<p>The S3 Wrapper also supports below compression algorithms:</p>
 <ol>
 <li>gzip</li>
 <li>bzip2</li>
 <li>xz</li>
 <li>zlib</li>
 </ol>
-<p><strong>Note for CSV and JSONL files: currently all columns in S3 files must be defined in the foreign table and their types must be <code>text</code> type</strong></p>
-<p><strong>Note for Parquet files: the whole Parquet file will be loaded into local memory if it is compressed, so keep its size small</strong></p>
+<p><strong>Note for CSV and JSONL files: currently all columns in S3 files must be defined in the foreign table and their types must be <code>text</code> type</strong>.</p>
+<p><strong>Note for Parquet files: the whole Parquet file will be loaded into local memory if it is compressed, so keep the file size as small as possible</strong>.</p>
 <h3 id="supported-data-types-for-parquet-file">Supported Data Types For Parquet File</h3>
-<p>The S3 FDW uses Parquet file data types from <a href="https://docs.rs/arrow-array/41.0.0/arrow_array/types/index.html">arrow_array::types</a>, below are their mappings to Postgres data types.</p>
+<p>The S3 Wrapper uses Parquet file data types from <a href="https://docs.rs/arrow-array/41.0.0/arrow_array/types/index.html">arrow_array::types</a>, below are their mappings to Postgres data types.</p>
 <table>
 <thead>
 <tr>
@@ -665,47 +678,60 @@
 </tr>
 </tbody>
 </table>
-<h3 id="wrapper">Wrapper</h3>
-<p>To get started with the S3 wrapper, create a foreign data wrapper specifying <code>handler</code> and <code>validator</code> as below.</p>
+<h2 id="preparation">Preparation</h2>
+<p>Before you get started, make sure the <code>wrappers</code> extension is installed on your database:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">extension</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">wrappers</span><span class="p">;</span><span class="w"></span>
+</code></pre></div></td></tr></table></div>
+<p>and then create the foreign data wrapper:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">extension</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">wrappers</span><span class="p">;</span><span class="w"></span>
-
-<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">s3_wrapper</span><span class="w"></span>
+<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">s3_wrapper</span><span class="w"></span>
 <span class="w">  </span><span class="k">handler</span><span class="w"> </span><span class="n">s3_fdw_handler</span><span class="w"></span>
 <span class="w">  </span><span class="k">validator</span><span class="w"> </span><span class="n">s3_fdw_validator</span><span class="p">;</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
-<h3 id="server">Server</h3>
-<p>Next, we need to create a server for the FDW to hold options and credentials.</p>
-<h4 id="auth-supabase">Auth (Supabase)</h4>
-<p>If you are using the Supabase platform, this is the recommended approach for securing your AWS credentials.</p>
-<p>For example, to store AWS access key id to <code>vault_access_key_id</code> in Vault:</p>
-<p>Create a secure key using pgsodium
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="n">pgsodium</span><span class="p">.</span><span class="n">create_key</span><span class="p">(</span><span class="n">name</span><span class="w"> </span><span class="p">:</span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;vault_access_key_id&#39;</span><span class="p">);</span><span class="w"></span>
-</code></pre></div></td></tr></table></div></p>
-<p>Save your credential in Vault and retrieve the <code>key_id</code>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span>
-<span class="normal">7</span>
-<span class="normal">8</span>
-<span class="normal">9</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"></span>
-<span class="w">  </span><span class="n">vault</span><span class="p">.</span><span class="n">secrets</span><span class="w"> </span><span class="p">(</span><span class="n">secret</span><span class="p">,</span><span class="w"> </span><span class="n">key_id</span><span class="p">)</span><span class="w"></span>
-<span class="k">values</span><span class="w"> </span>
-<span class="w">  </span><span class="p">(</span><span class="w"></span>
-<span class="w">    </span><span class="s1">&#39;AKIAXXXXXX&#39;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">pgsodium</span><span class="p">.</span><span class="n">valid_key</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;vault_access_key_id&#39;</span><span class="p">)</span><span class="w"></span>
-<span class="w">  </span><span class="p">)</span><span class="w"></span>
-<span class="n">returning</span><span class="w"></span>
-<span class="w">  </span><span class="n">key_id</span><span class="p">;</span><span class="w"></span>
-</code></pre></div></td></tr></table></div></p>
-<p>You can follow the same steps to store <code>vault_secret_access_key</code> in Vault.</p>
-<p>Then create the foreign server</p>
+<h3 id="secure-your-credentials-optional">Secure your credentials (optional)</h3>
+<p>By default, Postgres stores FDW credentials inide <code>pg_catalog.pg_foreign_server</code> in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with <a href="https://supabase.com/docs/guides/database/vault">Vault</a>, which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Create a secure key using pgsodium:</span>
+<span class="k">select</span><span class="w"> </span><span class="n">pgsodium</span><span class="p">.</span><span class="n">create_key</span><span class="p">(</span><span class="n">name</span><span class="w"> </span><span class="p">:</span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;vault_access_key_id&#39;</span><span class="p">);</span><span class="w"></span>
+<span class="k">select</span><span class="w"> </span><span class="n">pgsodium</span><span class="p">.</span><span class="n">create_key</span><span class="p">(</span><span class="n">name</span><span class="w"> </span><span class="p">:</span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;vault_secret_access_key&#39;</span><span class="p">);</span><span class="w"></span>
+
+<span class="c1">-- Save your AWS credential in Vault and retrieve the `key_id`</span>
+<span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">secrets</span><span class="w"> </span><span class="p">(</span><span class="n">secret</span><span class="p">,</span><span class="w"> </span><span class="n">key_id</span><span class="p">)</span><span class="w"></span>
+<span class="k">values</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">  </span><span class="s1">&#39;&lt;access key id&gt;&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">pgsodium</span><span class="p">.</span><span class="n">valid_key</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;vault_access_key_id&#39;</span><span class="p">)</span><span class="w"></span>
+<span class="p">)</span><span class="w"></span>
+<span class="n">returning</span><span class="w"> </span><span class="n">key_id</span><span class="p">;</span><span class="w"></span>
+
+<span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">secrets</span><span class="w"> </span><span class="p">(</span><span class="n">secret</span><span class="p">,</span><span class="w"> </span><span class="n">key_id</span><span class="p">)</span><span class="w"></span>
+<span class="k">values</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">  </span><span class="s1">&#39;&lt;secret access key&gt;&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">pgsodium</span><span class="p">.</span><span class="n">valid_key</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;vault_secret_access_key&#39;</span><span class="p">)</span><span class="w"></span>
+<span class="p">)</span><span class="w"></span>
+<span class="n">returning</span><span class="w"> </span><span class="n">key_id</span><span class="p">;</span><span class="w"></span>
+</code></pre></div></td></tr></table></div>
+<h3 id="connecting-to-s3">Connecting to S3</h3>
+<p>We need to provide Postgres with the credentials to connect to S3, and any additional options. We can do this using the <code>create server</code> command:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">With Vault</label><label for="__tabbed_1_2">Without Vault</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
@@ -720,12 +746,8 @@
 <span class="w">    </span><span class="n">aws_region</span><span class="w"> </span><span class="s1">&#39;us-east-1&#39;</span><span class="w"></span>
 <span class="w">  </span><span class="p">);</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
-<h4 id="auth-non-supabase">Auth (Non-Supabase)</h4>
-<p>If the platform you are using does not support <code>pgsodium</code> and <code>Vault</code>, you can create a server by storing your AWS credentials directly.</p>
-<div class="admonition important">
-<p class="admonition-title">Important</p>
-<p>Credentials stored using this method can be viewed as plain text by anyone with access to <code>pg_catalog.pg_foreign_server</code></p>
 </div>
+<div class="tabbed-block">
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
@@ -734,17 +756,69 @@
 <span class="normal">6</span>
 <span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">s3_server</span><span class="w"></span>
 <span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">s3_wrapper</span><span class="w"></span>
-<span class="w">   </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
 <span class="w">    </span><span class="n">aws_access_key_id</span><span class="w"> </span><span class="s1">&#39;your_aws_access_key_id&#39;</span><span class="p">,</span><span class="w"></span>
 <span class="w">    </span><span class="n">aws_secret_access_key</span><span class="w"> </span><span class="s1">&#39;your_aws_secret_access_key&#39;</span><span class="p">,</span><span class="w"></span>
 <span class="w">    </span><span class="n">aws_region</span><span class="w"> </span><span class="s1">&#39;us-east-1&#39;</span><span class="w"></span>
-<span class="w">   </span><span class="p">);</span><span class="w"></span>
+<span class="w">  </span><span class="p">);</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
-<h3 id="tables">Tables</h3>
-<p>S3 wrapper is implemented with <a href="https://hevodata.com/learn/etl-vs-elt/">ELT</a> approach, so the data transformation is encouraged to be performed locally after data is extracted from remote data source.</p>
+</div>
+</div>
+</div>
+<h2 id="creating-foreign-tables">Creating Foreign Tables</h2>
+<p>The S3 Wrapper supports data reads from S3.</p>
+<table>
+<thead>
+<tr>
+<th>Integration</th>
+<th align="center">Select</th>
+<th align="center">Insert</th>
+<th align="center">Update</th>
+<th align="center">Delete</th>
+<th align="center">Truncate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>S3</td>
+<td align="center"><img alt="✅" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/svg/2705.svg" title=":white_check_mark:" /></td>
+<td align="center"><img alt="❌" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/svg/274c.svg" title=":x:" /></td>
+<td align="center"><img alt="❌" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/svg/274c.svg" title=":x:" /></td>
+<td align="center"><img alt="❌" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/svg/274c.svg" title=":x:" /></td>
+<td align="center"><img alt="❌" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/svg/274c.svg" title=":x:" /></td>
+</tr>
+</tbody>
+</table>
+<p>For example:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">s3_table_csv</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">sex</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">age</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">height</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">weight</span><span class="w"> </span><span class="nb">text</span><span class="w"></span>
+<span class="p">)</span><span class="w"></span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">s3_server</span><span class="w"></span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">    </span><span class="n">uri</span><span class="w"> </span><span class="s1">&#39;s3://bucket/s3_table.csv&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="n">format</span><span class="w"> </span><span class="s1">&#39;csv&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="n">has_header</span><span class="w"> </span><span class="s1">&#39;true&#39;</span><span class="w"></span>
+<span class="w">  </span><span class="p">);</span><span class="w"></span>
+</code></pre></div></td></tr></table></div>
 <p>One file in S3 corresponds a foreign table in Postgres. For CSV and JSONL file, all columns must be present in the foreign table and type must be <code>text</code>. You can do custom transformations, like type conversion, by creating a view on top of the foreign table or using a subquery.</p>
 <p>For Parquet file, no need to define all columns in the foreign table but column names must match between Parquet file and its foreign table.</p>
-<h4 id="foreign-table-options">Foreign Table Options</h4>
+<h3 id="foreign-table-options">Foreign Table Options</h3>
 <p>The full list of foreign table options are below:</p>
 <ul>
 <li><code>uri</code> - S3 URI, required. For example, <code>s3://bucket/s3_table.csv</code></li>
@@ -752,7 +826,10 @@
 <li><code>has_header</code> - If the CSV file has header, optional. <code>true</code> or <code>false</code>, default is <code>false</code></li>
 <li><code>compress</code> - Compression algorithm, optional. One of <code>gzip</code>, <code>bzip2</code>, <code>xz</code>, <code>zlib</code>, default is no compression</li>
 </ul>
-<h4 id="examples">Examples</h4>
+<h2 id="examples">Examples</h2>
+<p>Some examples on how to use S3 foreign tables.</p>
+<h3 id="basic-example">Basic example</h3>
+<p>This will create some "foreign table" inside your Postgres database can read data from S3:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>

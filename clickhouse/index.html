@@ -334,30 +334,23 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#wrapper" class="md-nav__link">
-    Wrapper
+  <a href="#preparation" class="md-nav__link">
+    Preparation
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#server" class="md-nav__link">
-    Server
-  </a>
-  
-    <nav class="md-nav" aria-label="Server">
+    <nav class="md-nav" aria-label="Preparation">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#auth-supabase" class="md-nav__link">
-    Auth (Supabase)
+  <a href="#secure-your-credentials-optional" class="md-nav__link">
+    Secure your credentials (optional)
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#auth-non-supabase" class="md-nav__link">
-    Auth (Non-Supabase)
+  <a href="#connecting-to-clickhouse" class="md-nav__link">
+    Connecting to ClickHouse
   </a>
   
 </li>
@@ -368,11 +361,11 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#tables" class="md-nav__link">
-    Tables
+  <a href="#creating-foreign-tables" class="md-nav__link">
+    Creating Foreign Tables
   </a>
   
-    <nav class="md-nav" aria-label="Tables">
+    <nav class="md-nav" aria-label="Creating Foreign Tables">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -382,9 +375,22 @@
   
 </li>
         
-          <li class="md-nav__item">
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#examples" class="md-nav__link">
     Examples
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-example" class="md-nav__link">
+    Basic example
   </a>
   
 </li>
@@ -512,30 +518,23 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#wrapper" class="md-nav__link">
-    Wrapper
+  <a href="#preparation" class="md-nav__link">
+    Preparation
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#server" class="md-nav__link">
-    Server
-  </a>
-  
-    <nav class="md-nav" aria-label="Server">
+    <nav class="md-nav" aria-label="Preparation">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#auth-supabase" class="md-nav__link">
-    Auth (Supabase)
+  <a href="#secure-your-credentials-optional" class="md-nav__link">
+    Secure your credentials (optional)
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#auth-non-supabase" class="md-nav__link">
-    Auth (Non-Supabase)
+  <a href="#connecting-to-clickhouse" class="md-nav__link">
+    Connecting to ClickHouse
   </a>
   
 </li>
@@ -546,11 +545,11 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#tables" class="md-nav__link">
-    Tables
+  <a href="#creating-foreign-tables" class="md-nav__link">
+    Creating Foreign Tables
   </a>
   
-    <nav class="md-nav" aria-label="Tables">
+    <nav class="md-nav" aria-label="Creating Foreign Tables">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -560,9 +559,22 @@
   
 </li>
         
-          <li class="md-nav__item">
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#examples" class="md-nav__link">
     Examples
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-example" class="md-nav__link">
+    Basic example
   </a>
   
 </li>
@@ -595,8 +607,8 @@
   <h1>ClickHouse</h1>
 
 <p><a href="https://clickhouse.com/">ClickHouse</a> is a fast open-source column-oriented database management system that allows generating analytical data reports in real-time using SQL queries.</p>
-<p>ClickHouse FDW supports both data read and modify.</p>
-<h3 id="supported-data-types">Supported Data Types</h3>
+<p>The ClickHouse Wrapper allows you to read and write data from ClickHouse within your Postgres database.</p>
+<h2 id="supported-data-types">Supported Data Types</h2>
 <table>
 <thead>
 <tr>
@@ -655,36 +667,40 @@
 </tr>
 </tbody>
 </table>
-<h3 id="wrapper">Wrapper</h3>
-<p>To get started with the ClickHouse wrapper, create a foreign data wrapper specifying <code>handler</code> and <code>validator</code> as below.</p>
+<h2 id="preparation">Preparation</h2>
+<p>Before you get started, make sure the <code>wrappers</code> extension is installed on your database:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">extension</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">wrappers</span><span class="p">;</span><span class="w"></span>
+</code></pre></div></td></tr></table></div>
+<p>and then create the foreign data wrapper:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">extension</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">wrappers</span><span class="p">;</span><span class="w"></span>
-
-<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">clickhouse_wrapper</span><span class="w"></span>
+<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">clickhouse_wrapper</span><span class="w"></span>
 <span class="w">  </span><span class="k">handler</span><span class="w"> </span><span class="n">click_house_fdw_handler</span><span class="w"></span>
 <span class="w">  </span><span class="k">validator</span><span class="w"> </span><span class="n">click_house_fdw_validator</span><span class="p">;</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
-<h3 id="server">Server</h3>
-<p>Next, we need to create a server for the FDW to hold options and credentials.</p>
-<h4 id="auth-supabase">Auth (Supabase)</h4>
-<p>If you are using the Supabase platform, this is the recommended approach for securing your ClickHouse credentials.</p>
-<p>For example, to store ClickHouse connection string in Vault and retrieve the <code>key_id</code>,</p>
+<h3 id="secure-your-credentials-optional">Secure your credentials (optional)</h3>
+<p>By default, Postgres stores FDW credentials inide <code>pg_catalog.pg_foreign_server</code> in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with <a href="https://supabase.com/docs/guides/database/vault">Vault</a>, which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
 <span class="normal">4</span>
 <span class="normal">5</span>
-<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- save ClickHouse connection string in Vault and get its key id</span>
+<span class="normal">6</span>
+<span class="normal">7</span>
+<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Create a secure key using pgsodium:</span>
 <span class="k">select</span><span class="w"> </span><span class="n">pgsodium</span><span class="p">.</span><span class="n">create_key</span><span class="p">(</span><span class="n">name</span><span class="w"> </span><span class="p">:</span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;clickhouse&#39;</span><span class="p">);</span><span class="w"></span>
+
+<span class="c1">-- Save your ClickHouse credential in Vault and retrieve the `key_id`</span>
 <span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">secrets</span><span class="w"> </span><span class="p">(</span><span class="n">secret</span><span class="p">,</span><span class="w"> </span><span class="n">key_id</span><span class="p">)</span><span class="w"> </span><span class="k">values</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
 <span class="w">  </span><span class="s1">&#39;tcp://default:@localhost:9000/default&#39;</span><span class="p">,</span><span class="w"></span>
 <span class="w">  </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">pgsodium</span><span class="p">.</span><span class="n">valid_key</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;clickhouse&#39;</span><span class="p">)</span><span class="w"></span>
 <span class="p">)</span><span class="w"> </span><span class="n">returning</span><span class="w"> </span><span class="n">key_id</span><span class="p">;</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
-<p>Then create the foreign server,</p>
+<h3 id="connecting-to-clickhouse">Connecting to ClickHouse</h3>
+<p>We need to provide Postgres with the credentials to connect to ClickHouse, and any additional options. We can do this using the <code>create server</code> command:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">With Vault</label><label for="__tabbed_1_2">Without Vault</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -711,12 +727,8 @@
 <span class="w">  </span><span class="p">);</span><span class="w"></span>
 <span class="k">end</span><span class="w"> </span><span class="err">$$</span><span class="p">;</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
-<h4 id="auth-non-supabase">Auth (Non-Supabase)</h4>
-<p>If the platform you are using does not support <code>pgsodium</code> and <code>Vault</code>, you can create a server by storing your ClickHouse credentials directly.</p>
-<div class="admonition important">
-<p class="admonition-title">Important</p>
-<p>Credentials stored using this method can be viewed as plain text by anyone with access to <code>pg_catalog.pg_foreign_server</code></p>
 </div>
+<div class="tabbed-block">
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
@@ -727,15 +739,57 @@
 <span class="w">    </span><span class="n">conn_string</span><span class="w"> </span><span class="s1">&#39;tcp://default:@localhost:9000/default&#39;</span><span class="w"></span>
 <span class="w">  </span><span class="p">);</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
-<h3 id="tables">Tables</h3>
-<p>ClickHouse wrapper is implemented with <a href="https://hevodata.com/learn/etl-vs-elt/">ELT</a> approach, so the data transformation is encouraged to be performed locally after data is extracted from remote data source.</p>
-<h4 id="foreign-table-options">Foreign Table Options</h4>
+</div>
+</div>
+</div>
+<h2 id="creating-foreign-tables">Creating Foreign Tables</h2>
+<p>The ClickHouse Wrapper supports data reads and writes from ClickHouse.</p>
+<table>
+<thead>
+<tr>
+<th>Integration</th>
+<th align="center">Select</th>
+<th align="center">Insert</th>
+<th align="center">Update</th>
+<th align="center">Delete</th>
+<th align="center">Truncate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ClickHouse</td>
+<td align="center"><img alt="✅" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/svg/2705.svg" title=":white_check_mark:" /></td>
+<td align="center"><img alt="✅" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/svg/2705.svg" title=":white_check_mark:" /></td>
+<td align="center"><img alt="✅" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/svg/2705.svg" title=":white_check_mark:" /></td>
+<td align="center"><img alt="✅" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/svg/2705.svg" title=":white_check_mark:" /></td>
+<td align="center"><img alt="❌" class="twemoji" src="https://twemoji.maxcdn.com/v/latest/svg/274c.svg" title=":x:" /></td>
+</tr>
+</tbody>
+</table>
+<p>For example:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span>
+<span class="normal">7</span>
+<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">my_clickhouse_table</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="w"></span>
+<span class="p">)</span><span class="w"></span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">clickhouse_server</span><span class="w"></span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">    </span><span class="k">table</span><span class="w"> </span><span class="s1">&#39;people&#39;</span><span class="w"></span>
+<span class="w">  </span><span class="p">);</span><span class="w"></span>
+</code></pre></div></td></tr></table></div>
+<h3 id="foreign-table-options">Foreign Table Options</h3>
 <p>The full list of foreign table options are below:</p>
 <ul>
 <li><code>table</code> - Source table name in ClickHouse, required.</li>
 </ul>
 <p>This can also be a subquery enclosed in parentheses, for example,</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code>table &#39;(select * from my_table)&#39;
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">table</span><span class="w"> </span><span class="s1">&#39;(select * from my_table)&#39;</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
 <p><a href="https://clickhouse.com/docs/en/sql-reference/statements/create/view#parameterized-view">Parametrized view</a> is also supported in the subquery. In this case, you need to define a column for each parameter and use <code>where</code> to pass values to them. For example,</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
@@ -750,34 +804,39 @@
 <span class="normal">10</span>
 <span class="normal">11</span>
 <span class="normal">12</span>
-<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code> create foreign table test_vw (
-   id bigint,
-   col1 text,
-   col2 bigint,
-   _param1 text,
-   _param2 bigint
- )
-   server clickhouse_server
-   options (
-     table &#39;(select * from my_view(column1=${_param1}, column2=${_param2}))&#39;
-   );
+<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="w"> </span><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">test_vw</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">   </span><span class="n">id</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span><span class="w"></span>
+<span class="w">   </span><span class="n">col1</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">   </span><span class="n">col2</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span><span class="w"></span>
+<span class="w">   </span><span class="n">_param1</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">   </span><span class="n">_param2</span><span class="w"> </span><span class="nb">bigint</span><span class="w"></span>
+<span class="w"> </span><span class="p">)</span><span class="w"></span>
+<span class="w">   </span><span class="n">server</span><span class="w"> </span><span class="n">clickhouse_server</span><span class="w"></span>
+<span class="w">   </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">     </span><span class="k">table</span><span class="w"> </span><span class="s1">&#39;(select * from my_view(column1=${_param1}, column2=${_param2}))&#39;</span><span class="w"></span>
+<span class="w">   </span><span class="p">);</span><span class="w"></span>
 
- select * from test_vw where _param1=&#39;aaa&#39; and _param2=32;
+<span class="w"> </span><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">test_vw</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">_param1</span><span class="o">=</span><span class="s1">&#39;aaa&#39;</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">_param2</span><span class="o">=</span><span class="mi">32</span><span class="p">;</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
 <ul>
 <li><code>rowid_column</code> - Primary key column name, optional for data scan, required for data modify</li>
 </ul>
-<h4 id="examples">Examples</h4>
-<p>Create a source table on ClickHouse and insert some data,</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span>
-<span class="normal">7</span>
-<span class="normal">8</span>
-<span class="normal">9</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">drop</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">people</span><span class="p">;</span><span class="w"></span>
+<h2 id="examples">Examples</h2>
+<p>Some examples on how to use ClickHouse foreign tables.</p>
+<h3 id="basic-example">Basic example</h3>
+<p>This will create a "foreign table" inside your Postgres database called <code>people</code>: </p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Run below SQLs on ClickHouse to create source table</span>
+<span class="k">drop</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">people</span><span class="p">;</span><span class="w"></span>
 <span class="k">create</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">people</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
 <span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="n">Int64</span><span class="p">,</span><span class="w"> </span>
 <span class="w">    </span><span class="n">name</span><span class="w"> </span><span class="n">String</span><span class="w"></span>
@@ -785,9 +844,10 @@
 <span class="n">engine</span><span class="o">=</span><span class="n">MergeTree</span><span class="p">()</span><span class="w"></span>
 <span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">id</span><span class="p">;</span><span class="w"></span>
 
+<span class="c1">-- Add some test data</span>
 <span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">people</span><span class="w"> </span><span class="k">values</span><span class="w"> </span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Luke Skywalker&#39;</span><span class="p">),</span><span class="w"> </span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Leia Organa&#39;</span><span class="p">),</span><span class="w"> </span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Han Solo&#39;</span><span class="p">);</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
-<p>Create foreign table and run a query on Postgres to read ClickHouse table,</p>
+<p>Create foreign table on Postgres database:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
