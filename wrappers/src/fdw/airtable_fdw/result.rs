@@ -1,5 +1,5 @@
-use pgrx::prelude::{PgSqlErrorCode};
-use pgrx::{pg_sys};
+use pgrx::pg_sys;
+use pgrx::prelude::PgSqlErrorCode;
 use serde::de::{MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};
 use serde_json::{value::Number, Value};
@@ -119,12 +119,12 @@ impl AirtableRecord {
                 pg_sys::INT4OID => col_to_cell!(col, Number, |v: &Number| {
                     v.as_i64().map(|n| Cell::I32(n as i32))
                 }),
-                pg_sys::FLOAT8OID => col_to_cell!(col, Number, |v: &Number| {
-                    v.as_f64().map(Cell::F64)
-                }),
-                pg_sys::INT8OID => col_to_cell!(col, Number, |v: &Number| {
-                    v.as_i64().map(Cell::I64)
-                }),
+                pg_sys::FLOAT8OID => {
+                    col_to_cell!(col, Number, |v: &Number| { v.as_f64().map(Cell::F64) })
+                }
+                pg_sys::INT8OID => {
+                    col_to_cell!(col, Number, |v: &Number| { v.as_i64().map(Cell::I64) })
+                }
                 pg_sys::NUMERICOID => col_to_cell!(col, Number, |v: &Number| {
                     v.as_f64()
                         .map(|n| Cell::Numeric(pgrx::AnyNumeric::try_from(n).unwrap()))
@@ -133,9 +133,7 @@ impl AirtableRecord {
                     col_to_cell!(col, String, |v: &String| { Some(Cell::String(v.clone())) })
                 }
                 pg_sys::DATEOID => col_to_cell!(col, String, |v: &String| {
-                    pgrx::Date::from_str(v.as_str())
-                        .ok()
-                        .map(Cell::Date)
+                    pgrx::Date::from_str(v.as_str()).ok().map(Cell::Date)
                 }),
                 pg_sys::TIMESTAMPOID => col_to_cell!(col, String, |v: &String| {
                     pgrx::Timestamp::from_str(v.as_str())
