@@ -1,8 +1,8 @@
 [BigQuery](https://cloud.google.com/bigquery) is a completely serverless and cost-effective enterprise data warehouse that works across clouds and scales with your data, with BI, machine learning and AI built in.
 
-BigQuery FDW supports both data read and modify.
+The BigQuery Wrapper allows you to read and write data from BigQuery within your Postgres database.
 
-### Supported Data Types
+## Supported Data Types
 
 | Postgres Type      | BigQuery Type   |
 | ------------------ | --------------- |
@@ -16,30 +16,31 @@ BigQuery FDW supports both data read and modify.
 | timestamp          | DATETIME        |
 | timestamp          | TIMESTAMP       |
 
-### Wrapper 
-To get started with the BigQuery wrapper, create a foreign data wrapper specifying `handler` and `validator` as below.
+## Preparation
+
+Before you get started, make sure the `wrappers` extension is installed on your database:
 
 ```sql
 create extension if not exists wrappers;
+```
 
+and then create the foreign data wrapper:
+
+```sql
 create foreign data wrapper bigquery_wrapper
   handler big_query_fdw_handler
   validator big_query_fdw_validator;
 ```
 
-### Server 
+### Secure your credentials (optional)
 
-Next, we need to create a server for the FDW to hold options and credentials.
-
-#### Auth (Supabase)
-
-If you are using the Supabase platform, this is the recommended approach for securing your GCP credentials.
-
-For example, to store GCP credential JSON in Vault and retrieve the `key_id`,
+By default, Postgres stores FDW credentials inide `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
 
 ```sql
--- save BigQuery service account json in Vault and get its key id
+-- Create a secure key using pgsodium:
 select pgsodium.create_key(name := 'bigquery');
+
+-- Save your BigQuery service account json in Vault and retrieve the `key_id`
 insert into vault.secrets (secret, key_id) values ('
 {
   "type": "service_account",
@@ -50,64 +51,78 @@ insert into vault.secrets (secret, key_id) values ('
 }
 ',
 (select id from pgsodium.valid_key where name = 'bigquery')
-) returning key_id;
+)
+returning key_id;
 ```
 
-Then create the foreign server,
+### Connecting to BigQuery
+
+We need to provide Postgres with the credentials to connect to BigQuery, and any additional options. We can do this using the `create server` command:
+
+=== "With Vault"
+
+    ```sql
+    do $$
+    declare
+      key_id text;
+    begin
+      select id into key_id from pgsodium.valid_key where name = 'bigquery' limit 1;
+
+      execute format(
+        E'create server bigquery_server \n'
+        '   foreign data wrapper bigquery_wrapper \n'
+        '   options ( \n'
+        '     sa_key_id ''%s'', \n'
+        '     project_id ''your_gcp_project_id'', \n'
+        '     dataset_id ''your_gcp_dataset_id'' \n'
+        ' );',
+        key_id
+      );
+    end $$;
+    ```
+
+=== "Without Vault"
+
+    ```sql
+    create server bigquery_server
+      foreign data wrapper bigquery_wrapper
+      options (
+        sa_key '
+        {
+           "type": "service_account",
+           "project_id": "your_gcp_project_id",
+           ...
+        }
+       ',
+        project_id 'your_gcp_project_id',
+        dataset_id 'your_gcp_dataset_id'
+      );
+    ```
+
+## Creating Foreign Tables
+
+The BigQuery Wrapper supports data reads and writes from BigQuery.
+
+| Integration | Select            | Insert            | Update            | Delete            | Truncate          |
+| ----------- | :----:            | :----:            | :----:            | :----:            | :----:            |
+| BigQuery    | :white_check_mark:| :white_check_mark:| :white_check_mark:| :white_check_mark:| :x:               |
+
+For example:
 
 ```sql
-do $$
-declare
-  key_id text;
-begin
-  select id into key_id from pgsodium.valid_key where name = 'bigquery' limit 1;
-
-  execute format(
-    E'create server bigquery_server \n'
-    '   foreign data wrapper bigquery_wrapper \n'
-    '   options ( \n'
-    '     sa_key_id ''%s'', \n'
-    '     project_id ''your_gcp_project_id'', \n'
-    '     dataset_id ''your_gcp_dataset_id'' \n'
-    ' );',
-    key_id
-  );
-end $$;
-```
-
-#### Auth (Non-Supabase)
-
-If the platform you are using does not support `pgsodium` and `Vault`, you can create a server by storing your GCP credentials directly.
-
-
-!!! important
-
-    Credentials stored using this method can be viewed as plain text by anyone with access to `pg_catalog.pg_foreign_server`
-
-
-```sql
-create server bigquery_server
-  foreign data wrapper bigquery_wrapper
+create foreign table my_bigquery_table (
+  id bigint,
+  name text,
+  ts timestamp
+)
+  server bigquery_server
   options (
-    sa_key '
-    {
-       "type": "service_account",
-       "project_id": "your_gcp_project_id",
-       ...
-    }
-   ',
-    project_id 'your_gcp_project_id',
-    dataset_id 'your_gcp_dataset_id'
+    table 'people',
+    location 'EU'
   );
 ```
 
-
-### Tables
-
-BigQuery wrapper is implemented with [ELT](https://hevodata.com/learn/etl-vs-elt/) approach, so the data transformation is encouraged to be performed locally after data is extracted from remote data source.
-
-
-#### Foreign Table Options
+### Foreign Table Options
 
 The full list of foreign table options are below:
 
@@ -115,7 +130,7 @@ The full list of foreign table options are below:
 
    This can also be a subquery enclosed in parentheses, for example,
 
-   ```
+   ```sql
    table '(select * except(props), to_json_string(props) as props from `my_project.my_dataset.my_table`)'
    ```
 
@@ -125,24 +140,30 @@ The full list of foreign table options are below:
 - `timeout` - Query request timeout in milliseconds, optional. Default is '30000' (30 seconds).
 - `rowid_column` - Primary key column name, optional for data scan, required for data modify
 
-#### Examples
+## Examples
 
-Create a source table on BigQuery and insert some data,
+Some examples on how to use BigQuery foreign tables.
+
+### Basic example
+
+This will create a "foreign table" inside your Postgres database called `people`: 
 
 ```sql
+-- Run below SQLs on BigQuery to create source table
 create table your_project_id.your_dataset_id.people (
   id int64,
   name string,
   ts timestamp
 );
 
+-- Add some test data
 insert into your_project_id.your_dataset_id.people values
   (1, 'Luke Skywalker', current_timestamp()), 
   (2, 'Leia Organa', current_timestamp()), 
   (3, 'Han Solo', current_timestamp());
 ```
 
-Create foreign table and run a query on Postgres to read BigQuery table,
+Create foreign table on Postgres database:
 
 ```sql
 create foreign table people (

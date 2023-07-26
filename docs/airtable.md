@@ -1,6 +1,6 @@
 [Airtable](https://www.airtable.com) is an easy-to-use online platform for creating and sharing relational databases. 
 
-The Airtable Wrapper is allows you to read data from your Airtable bases/tables from within your Postgres database.
+The Airtable Wrapper allows you to read data from your Airtable bases/tables within your Postgres database.
 
 ## Preparation
 
@@ -10,9 +10,17 @@ Before you get started, make sure the `wrappers` extension is installed on your 
 create extension if not exists wrappers;
 ```
 
+and then create the foreign data wrapper:
+
+```sql
+create foreign data wrapper airtable_wrapper
+  handler airtable_fdw_handler
+  validator airtable_fdw_validator;
+```
+
 ### Secure your credentials (optional)
 
-By default, Postgres stores FDW credentials inide `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your Airtable credentials.
+By default, Postgres stores FDW credentials inide `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
 
 ```sql
 -- Create a secure key using pgsodium:
@@ -29,8 +37,7 @@ returning key_id;
 
 ### Connecting to Airtable
 
-We need to provide Postgres with the credentials to connect to Airtable, and any additional options. We can do this using the `create foreign data wrapper` command:
-
+We need to provide Postgres with the credentials to connect to Airtable, and any additional options. We can do this using the `create server` command:
 
 === "With Vault"
 
@@ -49,7 +56,7 @@ We need to provide Postgres with the credentials to connect to Airtable, and any
       foreign data wrapper airtable_wrapper
       options (
         api_url 'https://api.airtable.com/v0',  -- Airtable API url, optional
-        api_key 'sk_test_xxx'  -- Airtable API key, required
+        api_key '<Airtable API Key>'  -- Airtable API key, required
       );
     ```
 
@@ -75,7 +82,7 @@ options (
 );
 ```
 
-#### Foreign Table Options
+### Foreign Table Options
 
 The full list of foreign table options are below:
 

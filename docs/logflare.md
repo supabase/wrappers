@@ -1,91 +1,105 @@
 [Logflare](https://logflare.app) is a centralized web-based log management solution to easily access Cloudflare, Vercel & Elixir logs.
 
-### Wrapper 
-To get started with the Logflare wrapper, create a foreign data wrapper specifying `handler` and `validator` as below.
+The Logflare Wrapper allows you to read data from Logflare endpoints within your Postgres database.
+
+## Preparation
+
+Before you get started, make sure the `wrappers` extension is installed on your database:
 
 ```sql
 create extension if not exists wrappers;
+```
 
+and then create the foreign data wrapper:
+
+```sql
 create foreign data wrapper logflare_wrapper
   handler logflare_fdw_handler
   validator logflare_fdw_validator;
 ```
 
-### Server 
+### Secure your credentials (optional)
 
-Next, we need to create a server for the FDW to hold options and credentials.
+By default, Postgres stores FDW credentials inide `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
 
-#### Auth (Supabase)
-
-If you are using the Supabase platform, this is the recommended approach for securing your [Logflare access token](https://docs.logflare.app/concepts/access-tokens/).
-
-Create a secure key using pgsodium
 ```sql
+-- Create a secure key using pgsodium:
 select pgsodium.create_key(name := 'logflare');
-```
 
-Save your Logflare access token in Vault and retrieve the `key_id`
-```sql
+-- Save your Logflare API key in Vault and retrieve the `key_id`
 insert into vault.secrets (secret, key_id)
 values (
-  'xxx',
+  'YOUR_SECRET',
   (select id from pgsodium.valid_key where name = 'logflare')
 )
-returning
-  key_id;
+returning key_id;
 ```
 
-Create the foreign server
+### Connecting to Logflare
+
+We need to provide Postgres with the credentials to connect to Logflare, and any additional options. We can do this using the `create server` command:
+
+=== "With Vault"
+
+    ```sql
+    create server logflare_server
+      foreign data wrapper logflare_wrapper
+      options (
+        api_key_id '<key_ID>' -- The Key ID from above.
+      );
+    ```
+
+=== "Without Vault"
+
+    ```sql
+    create server logflare_server
+      foreign data wrapper logflare_wrapper
+      options (
+        api_key '<Logflare API Key>' -- Logflare API key, required
+      );
+    ```
+
+## Creating Foreign Tables
+
+The Logflare Wrapper supports data reads from Logflare's endpoints.
+
+| Integration | Select            | Insert            | Update            | Delete            | Truncate          |
+| ----------- | :----:            | :----:            | :----:            | :----:            | :----:            |
+| Logflare    | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
+
+For example:
+
 ```sql
-create server logflare_server
-  foreign data wrapper logflare_wrapper
+create foreign table my_logflare_table (
+  id bigint,
+  name text,
+  _result text
+)
+  server logflare_server
   options (
-    api_key_id '<your key_id from above>'
+    endpoint '9dd9a6f6-8e9b-4fa4-b682-4f2f5cd99da3'
   );
 ```
 
-#### Auth (Insecure)
+### Meta Column
 
-If the platform you are using does not support `pgsodium` and `Vault` you can create a server by storing your [Logflare Access Token](https://docs.logflare.app/concepts/access-tokens/) directly.
+You can define a specific meta column `_result` (data type: `text`) in the foreign table. It will store the whole result record in JSON string format, so you can extract any fields from it using Postgres JSON queries like `_result::json->>'foo'`. See more examples below.
 
+### Query Parameters
 
-!!! important
+Logflare endpoint query parameters can be passed using specific parameter columns like `_param_foo` and `_param_bar`. See more examples below.
 
-    Credentials stored using this method can be viewed as plain text by anyone with access to `pg_catalog.pg_foreign_server`
-
-```sql
-create server logflare_server
-   foreign data wrapper logflare_wrapper
-   options (
-     api_key 'xxx'
-   );
-```
-
-
-### Tables
-
-Logflare wrapper is implemented with [ELT](https://hevodata.com/learn/etl-vs-elt/) approach, so the data transformation is encouraged to be performed locally after data is extracted from remote data source.
-
-
-#### Foreign Table Options
+### Foreign Table Options
 
 The full list of foreign table options are below:
 
 - `endpoint` - Logflare endpoint UUID or name, required.
 
-#### Meta Column
-
-You can define a specific meta column `_result` (data type: `text`) in the foreign table. It will store the whole result record in JSON string format, so you can extract any fields from it using Postgres JSON queries like `_result::json->>'foo'`. See more examples below.
-
-#### Query Parameters
-
-Logflare endpoint query parameters can be passed using specific parameter columns like `_param_foo` and `_param_bar`. See more examples below.
-
-### Examples
+## Examples
 
 Some examples on how to use Logflare foreign tables.
 
-#### Simple Query
+### Basic example
 
 Assume the Logflare endpoint response is like below:
 
@@ -98,7 +112,7 @@ Assume the Logflare endpoint response is like below:
 ]
 ```
 
-Then we can define foreign table like this:
+Then we can define a foreign table like this:
 
 ```sql
 create foreign table people (
@@ -114,7 +128,7 @@ create foreign table people (
 select * from people;
 ```
 
-#### Query with parameters
+### Example of query parameters
 
 Suppose the Logflare endpoint accepts 3 parameters:
 
@@ -135,7 +149,7 @@ And its response is like below:
 ]
 ```
 
-We can define foreign table and parameter columns like this:
+We can define a foreign table and parameter columns like this:
 
 ```sql
 create foreign table runtime_hours (
