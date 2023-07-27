@@ -3365,7 +3365,7 @@ checksum = "81cdd64d312baedb58e21336b31bc043b77e01cc99033ce76ef539f78e965ebc"
 
 [[package]]
 name = "supabase-wrappers"
-version = "0.1.14"
+version = "0.1.15"
 dependencies = [
  "pgrx",
  "supabase-wrappers-macros",
@@ -3375,7 +3375,7 @@ dependencies = [
 
 [[package]]
 name = "supabase-wrappers-macros"
-version = "0.1.14"
+version = "0.1.15"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4232,7 +4232,7 @@ dependencies = [
 
 [[package]]
 name = "wrappers"
-version = "0.1.14"
+version = "0.1.15"
 dependencies = [
  "arrow-array",
  "async-compression",
