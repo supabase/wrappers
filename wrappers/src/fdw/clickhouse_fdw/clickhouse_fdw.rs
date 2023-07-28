@@ -167,7 +167,10 @@ impl ClickHouseFdw {
                 .map(|q| q.deparse())
                 .collect::<Vec<String>>()
                 .join(" and ");
-            sql.push_str(&format!(" where {}", cond));
+
+            if !cond.is_empty() {
+                sql.push_str(&format!(" where {}", cond));
+            }
         }
 
         // push down sorts
