@@ -158,17 +158,17 @@ impl ClickHouseFdw {
                 .join(", ")
         };
 
-        let mut sql = if quals.is_empty() {
-            format!("select {} from {}", tgts, &table)
-        } else {
+        let mut sql = format!("select {} from {}", tgts, &table);
+
+        if !quals.is_empty() {
             let cond = quals
                 .iter()
                 .filter(|q| !self.params.iter().any(|p| p.field == q.field))
                 .map(|q| q.deparse())
                 .collect::<Vec<String>>()
                 .join(" and ");
-            format!("select {} from {} where {}", tgts, &table, cond)
-        };
+            sql.push_str(&format!(" where {}", cond));
+        }
 
         // push down sorts
         if !sorts.is_empty() {
