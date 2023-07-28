@@ -138,6 +138,40 @@ mod tests {
 
             assert_eq!(
                 c.select(
+                    "SELECT name FROM test_table WHERE name = $1",
+                    None,
+                    Some(vec![(
+                        PgOid::BuiltIn(PgBuiltInOids::TEXTOID),
+                        "test2".into_datum()
+                    )])
+                )
+                .unwrap()
+                .first()
+                .get_one::<&str>()
+                .unwrap()
+                .unwrap(),
+                "test2"
+            );
+
+            assert_eq!(
+                c.select(
+                    "SELECT name FROM test_cust_sql WHERE name = $1",
+                    None,
+                    Some(vec![(
+                        PgOid::BuiltIn(PgBuiltInOids::TEXTOID),
+                        "test2".into_datum()
+                    )])
+                )
+                .unwrap()
+                .first()
+                .get_one::<&str>()
+                .unwrap()
+                .unwrap(),
+                "test2"
+            );
+
+            assert_eq!(
+                c.select(
                     "SELECT name FROM test_table ORDER by name LIMIT 1 OFFSET 1",
                     None,
                     None
