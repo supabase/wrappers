@@ -391,21 +391,21 @@
         
           <li class="md-nav__item">
   <a href="#meta-column" class="md-nav__link">
-    Meta Column
+    Meta column
   </a>
   
 </li>
         
           <li class="md-nav__item">
   <a href="#query-parameters" class="md-nav__link">
-    Query Parameters
+    Query parameters
   </a>
   
 </li>
         
           <li class="md-nav__item">
   <a href="#foreign-table-options" class="md-nav__link">
-    Foreign Table Options
+    Foreign table options
   </a>
   
 </li>
@@ -431,8 +431,8 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#example-of-query-parameters" class="md-nav__link">
-    Example of query parameters
+  <a href="#query-parameters-example" class="md-nav__link">
+    Query parameters example
   </a>
   
 </li>
@@ -561,21 +561,21 @@
         
           <li class="md-nav__item">
   <a href="#meta-column" class="md-nav__link">
-    Meta Column
+    Meta column
   </a>
   
 </li>
         
           <li class="md-nav__item">
   <a href="#query-parameters" class="md-nav__link">
-    Query Parameters
+    Query parameters
   </a>
   
 </li>
         
           <li class="md-nav__item">
   <a href="#foreign-table-options" class="md-nav__link">
-    Foreign Table Options
+    Foreign table options
   </a>
   
 </li>
@@ -601,8 +601,8 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#example-of-query-parameters" class="md-nav__link">
-    Example of query parameters
+  <a href="#query-parameters-example" class="md-nav__link">
+    Query parameters example
   </a>
   
 </li>
@@ -742,11 +742,11 @@
 <span class="w">    </span><span class="n">endpoint</span><span class="w"> </span><span class="s1">&#39;9dd9a6f6-8e9b-4fa4-b682-4f2f5cd99da3&#39;</span><span class="w"></span>
 <span class="w">  </span><span class="p">);</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
-<h3 id="meta-column">Meta Column</h3>
+<h3 id="meta-column">Meta column</h3>
 <p>You can define a specific meta column <code>_result</code> (data type: <code>text</code>) in the foreign table. It will store the whole result record in JSON string format, so you can extract any fields from it using Postgres JSON queries like <code>_result::json-&gt;&gt;'foo'</code>. See more examples below.</p>
-<h3 id="query-parameters">Query Parameters</h3>
+<h3 id="query-parameters">Query parameters</h3>
 <p>Logflare endpoint query parameters can be passed using specific parameter columns like <code>_param_foo</code> and <code>_param_bar</code>. See more examples below.</p>
-<h3 id="foreign-table-options">Foreign Table Options</h3>
+<h3 id="foreign-table-options">Foreign table options</h3>
 <p>The full list of foreign table options are below:</p>
 <ul>
 <li><code>endpoint</code> - Logflare endpoint UUID or name, required.</li>
@@ -790,7 +790,7 @@
 
 <span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">people</span><span class="p">;</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
-<h3 id="example-of-query-parameters">Example of query parameters</h3>
+<h3 id="query-parameters-example">Query parameters example</h3>
 <p>Suppose the Logflare endpoint accepts 3 parameters:</p>
 <ol>
 <li>org_id</li>

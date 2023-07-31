@@ -412,7 +412,7 @@
         
           <li class="md-nav__item">
   <a href="#foreign-table-options" class="md-nav__link">
-    Foreign Table Options
+    Foreign table options
   </a>
   
 </li>
@@ -554,7 +554,7 @@
         
           <li class="md-nav__item">
   <a href="#foreign-table-options" class="md-nav__link">
-    Foreign Table Options
+    Foreign table options
   </a>
   
 </li>
@@ -622,7 +622,7 @@
 </ol>
 <p><strong>Note for CSV and JSONL files: currently all columns in S3 files must be defined in the foreign table and their types must be <code>text</code> type</strong>.</p>
 <p><strong>Note for Parquet files: the whole Parquet file will be loaded into local memory if it is compressed, so keep the file size as small as possible</strong>.</p>
-<h3 id="supported-data-types-for-parquet-file">Supported Data Types For Parquet File</h3>
+<h2 id="supported-data-types-for-parquet-file">Supported Data Types For Parquet File</h2>
 <p>The S3 Wrapper uses Parquet file data types from <a href="https://docs.rs/arrow-array/41.0.0/arrow_array/types/index.html">arrow_array::types</a>, below are their mappings to Postgres data types.</p>
 <table>
 <thead>
@@ -818,7 +818,7 @@
 </code></pre></div></td></tr></table></div>
 <p>One file in S3 corresponds a foreign table in Postgres. For CSV and JSONL file, all columns must be present in the foreign table and type must be <code>text</code>. You can do custom transformations, like type conversion, by creating a view on top of the foreign table or using a subquery.</p>
 <p>For Parquet file, no need to define all columns in the foreign table but column names must match between Parquet file and its foreign table.</p>
-<h3 id="foreign-table-options">Foreign Table Options</h3>
+<h3 id="foreign-table-options">Foreign table options</h3>
 <p>The full list of foreign table options are below:</p>
 <ul>
 <li><code>uri</code> - S3 URI, required. For example, <code>s3://bucket/s3_table.csv</code></li>

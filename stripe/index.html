@@ -418,14 +418,6 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#tables" class="md-nav__link">
-    Tables
-  </a>
-  
-    <nav class="md-nav" aria-label="Tables">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
   <a href="#accounts" class="md-nav__link">
     Accounts
   </a>
@@ -590,11 +582,6 @@
     </nav>
   
 </li>
-        
-      </ul>
-    </nav>
-  
-</li>
       
         <li class="md-nav__item">
   <a href="#examples" class="md-nav__link">
@@ -613,14 +600,14 @@
         
           <li class="md-nav__item">
   <a href="#query-json-attributes" class="md-nav__link">
-    Query JSON Attributes
+    Query JSON attributes
   </a>
   
 </li>
         
           <li class="md-nav__item">
   <a href="#data-modify" class="md-nav__link">
-    Data Modify
+    Data modify
   </a>
   
 </li>
@@ -720,14 +707,6 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#tables" class="md-nav__link">
-    Tables
-  </a>
-  
-    <nav class="md-nav" aria-label="Tables">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
   <a href="#accounts" class="md-nav__link">
     Accounts
   </a>
@@ -892,11 +871,6 @@
     </nav>
   
 </li>
-        
-      </ul>
-    </nav>
-  
-</li>
       
         <li class="md-nav__item">
   <a href="#examples" class="md-nav__link">
@@ -915,14 +889,14 @@
         
           <li class="md-nav__item">
   <a href="#query-json-attributes" class="md-nav__link">
-    Query JSON Attributes
+    Query JSON attributes
   </a>
   
 </li>
         
           <li class="md-nav__item">
   <a href="#data-modify" class="md-nav__link">
-    Data Modify
+    Data modify
   </a>
   
 </li>
@@ -1249,8 +1223,7 @@
 <span class="w">  </span><span class="p">);</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
 <p><code>attrs</code> is a special column which stores all the object attributes in JSON format, you can extract any attributes needed or its associated sub objects from it. See more examples below.</p>
-<h3 id="tables">Tables</h3>
-<h4 id="accounts">Accounts</h4>
+<h3 id="accounts">Accounts</h3>
 <p><em>read only</em></p>
 <p>This is an object representing a Stripe account.</p>
 <p>Ref: <a href="https://stripe.com/docs/api/accounts/list">Stripe docs</a></p>
@@ -1284,7 +1257,7 @@
 <ul>
 <li>id</li>
 </ul>
-<h4 id="balance">Balance</h4>
+<h3 id="balance">Balance</h3>
 <p><em>read only</em></p>
 <p>Shows the balance currently on your Stripe account.</p>
 <p>Ref: <a href="https://stripe.com/docs/api/balance">Stripe docs</a></p>
@@ -1308,7 +1281,7 @@
 <span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;balance&#39;</span><span class="w"></span>
 <span class="w">  </span><span class="p">);</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
-<h4 id="balance-transactions">Balance Transactions</h4>
+<h3 id="balance-transactions">Balance Transactions</h3>
 <p><em>read only</em></p>
 <p>Balance transactions represent funds moving through your Stripe account. They're created for every type of transaction that comes into or flows out of your Stripe account balance.</p>
 <p>Ref: <a href="https://stripe.com/docs/api/balance_transactions/list">Stripe docs</a></p>
@@ -1349,7 +1322,7 @@
 <li>id</li>
 <li>type</li>
 </ul>
-<h4 id="charges">Charges</h4>
+<h3 id="charges">Charges</h3>
 <p><em>read only</em></p>
 <p>To charge a credit or a debit card, you create a Charge object. You can retrieve and refund individual charges as well as list all charges. Charges are identified by a unique, random ID.</p>
 <p>Ref: <a href="https://stripe.com/docs/api/charges/list">Stripe docs</a></p>
@@ -1390,7 +1363,7 @@
 <li>id</li>
 <li>customer</li>
 </ul>
-<h4 id="checkout-sessions">Checkout Sessions</h4>
+<h3 id="checkout-sessions">Checkout Sessions</h3>
 <p><em>read only</em></p>
 <p>A Checkout Session represents your customer's session as they pay for one-time purchases or subscriptions through Checkout or Payment Links. We recommend creating a new Session each time your customer attempts to pay.</p>
 <p>Ref: <a href="https://stripe.com/docs/api/checkout/sessions/list">Stripe docs</a></p>
@@ -1425,7 +1398,7 @@
 <li>payment_intent</li>
 <li>subscription</li>
 </ul>
-<h4 id="customers">Customers</h4>
+<h3 id="customers">Customers</h3>
 <p><em>read and modify</em></p>
 <p>Contains customers known to Stripe.</p>
 <p>Ref: <a href="https://stripe.com/docs/api/customers/list">Stripe docs</a></p>
@@ -1460,7 +1433,7 @@
 <li>id</li>
 <li>email</li>
 </ul>
-<h4 id="disputes">Disputes</h4>
+<h3 id="disputes">Disputes</h3>
 <p><em>read only</em></p>
 <p>A dispute occurs when a customer questions your charge with their card issuer.</p>
 <p>Ref: <a href="https://stripe.com/docs/api/disputes/list">Stripe docs</a></p>
@@ -1500,7 +1473,7 @@
 <li>charge</li>
 <li>payment_intent</li>
 </ul>
-<h4 id="events">Events</h4>
+<h3 id="events">Events</h3>
 <p><em>read only</em></p>
 <p>Events are our way of letting you know when something interesting happens in your account.</p>
 <p>Ref: <a href="https://stripe.com/docs/api/events/list">Stripe docs</a></p>
@@ -1531,7 +1504,7 @@
 <li>id</li>
 <li>type</li>
 </ul>
-<h4 id="files">Files</h4>
+<h3 id="files">Files</h3>
 <p><em>read only</em></p>
 <p>This is an object representing a file hosted on Stripe's servers.</p>
 <p>Ref: <a href="https://stripe.com/docs/api/files/list">Stripe docs</a></p>
@@ -1572,7 +1545,7 @@
 <li>id</li>
 <li>purpose</li>
 </ul>
-<h4 id="file-links">File Links</h4>
+<h3 id="file-links">File Links</h3>
 <p><em>read only</em></p>
 <p>To share the contents of a <code>File</code> object with non-Stripe users, you can create a <code>FileLink</code>.</p>
 <p>Ref: <a href="https://stripe.com/docs/api/file_links/list">Stripe docs</a></p>
@@ -1602,7 +1575,7 @@
 <span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;file_links&#39;</span><span class="w"></span>
 <span class="w">  </span><span class="p">);</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
-<h4 id="invoices">Invoices</h4>
+<h3 id="invoices">Invoices</h3>
 <p><em>read only</em></p>
 <p>Invoices are statements of amounts owed by a customer, and are either generated one-off, or generated periodically from a subscription.</p>
 <p>Ref: <a href="https://stripe.com/docs/api/invoices/list">Stripe docs</a></p>
@@ -1643,7 +1616,7 @@
 <li>status</li>
 <li>subscription</li>
 </ul>
-<h4 id="mandates">Mandates</h4>
+<h3 id="mandates">Mandates</h3>
 <p><em>read only</em></p>
 <p>A Mandate is a record of the permission a customer has given you to debit their payment method.</p>
 <p>Ref: <a href="https://stripe.com/docs/api/mandates">Stripe docs</a></p>
@@ -1673,7 +1646,7 @@
 <ul>
 <li>id</li>
 </ul>
-<h4 id="payment-intents">Payment Intents</h4>
+<h3 id="payment-intents">Payment Intents</h3>
 <p><em>read only</em></p>
 <p>A payment intent guides you through the process of collecting a payment from your customer.</p>
 <p>Ref: <a href="https://stripe.com/docs/api/payment_intents/list">Stripe docs</a></p>
@@ -1708,7 +1681,7 @@
 <li>id</li>
 <li>customer</li>
 </ul>
-<h4 id="payouts">Payouts</h4>
+<h3 id="payouts">Payouts</h3>
 <p><em>read only</em></p>
 <p>A <code>Payout</code> object is created when you receive funds from Stripe, or when you initiate a payout to either a bank account or debit card of a connected Stripe account.</p>
 <p>Ref: <a href="https://stripe.com/docs/api/payouts/list">Stripe docs</a></p>
@@ -1747,7 +1720,7 @@
 <li>id</li>
 <li>status</li>
 </ul>
-<h4 id="prices">Prices</h4>
+<h3 id="prices">Prices</h3>
 <p><em>read only</em></p>
 <p>A <code>Price</code> object is needed for all of your products to facilitate multiple currencies and pricing options.</p>
 <p>Ref: <a href="https://stripe.com/docs/api/prices/list">Stripe docs</a></p>
@@ -1784,7 +1757,7 @@
 <li>id</li>
 <li>active</li>
 </ul>
-<h4 id="products">Products</h4>
+<h3 id="products">Products</h3>
 <p><em>read and modify</em></p>
 <p>All products available in Stripe.</p>
 <p>Ref: <a href="https://stripe.com/docs/api/products/list">Stripe docs</a></p>
@@ -1823,7 +1796,7 @@
 <li>id</li>
 <li>active</li>
 </ul>
-<h4 id="refunds">Refunds</h4>
+<h3 id="refunds">Refunds</h3>
 <p><em>read only</em></p>
 <p><code>Refund</code> objects allow you to refund a charge that has previously been created but not yet refunded.</p>
 <p>Ref: <a href="https://stripe.com/docs/api/refunds/list">Stripe docs</a></p>
@@ -1863,7 +1836,7 @@
 <li>charge</li>
 <li>payment_intent</li>
 </ul>
-<h4 id="setupattempts">SetupAttempts</h4>
+<h3 id="setupattempts">SetupAttempts</h3>
 <p><em>read only</em></p>
 <p>A <code>SetupAttempt</code> describes one attempted confirmation of a SetupIntent, whether that confirmation was successful or unsuccessful.</p>
 <p>Ref: <a href="https://stripe.com/docs/api/setup_attempts/list">Stripe docs</a></p>
@@ -1904,7 +1877,7 @@
 <li>id</li>
 <li>setup_intent</li>
 </ul>
-<h4 id="setupintents">SetupIntents</h4>
+<h3 id="setupintents">SetupIntents</h3>
 <p><em>read only</em></p>
 <p>A <code>SetupIntent</code> guides you through the process of setting up and saving a customer's payment credentials for future payments.</p>
 <p>Ref: <a href="https://stripe.com/docs/api/setup_intents/list">Stripe docs</a></p>
@@ -1944,7 +1917,7 @@
 <li>customer</li>
 <li>payment_method</li>
 </ul>
-<h4 id="subscriptions">Subscriptions</h4>
+<h3 id="subscriptions">Subscriptions</h3>
 <p><em>read and modify</em></p>
 <p>Customer recurring payment schedules.</p>
 <p>Ref: <a href="https://stripe.com/docs/api/subscriptions/list">Stripe docs</a></p>
@@ -1981,7 +1954,7 @@
 <li>price</li>
 <li>status</li>
 </ul>
-<h4 id="tokens">Tokens</h4>
+<h3 id="tokens">Tokens</h3>
 <p><em>read only</em></p>
 <p>Tokenization is the process Stripe uses to collect sensitive card or bank account details, or personally identifiable information (PII), directly from your customers in a secure manner.</p>
 <p>Ref: <a href="https://stripe.com/docs/api/tokens">Stripe docs</a></p>
@@ -2009,7 +1982,7 @@
 <span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;tokens&#39;</span><span class="w"></span>
 <span class="w">  </span><span class="p">);</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
-<h4 id="top-ups">Top-ups</h4>
+<h3 id="top-ups">Top-ups</h3>
 <p><em>read only</em></p>
 <p>To top up your Stripe balance, you create a top-up object.</p>
 <p>Ref: <a href="https://stripe.com/docs/api/topups/list">Stripe docs</a></p>
@@ -2044,7 +2017,7 @@
 <li>id</li>
 <li>status</li>
 </ul>
-<h4 id="transfers">Transfers</h4>
+<h3 id="transfers">Transfers</h3>
 <p><em>read only</em></p>
 <p>A Transfer object is created when you move funds between Stripe accounts as part of Connect.</p>
 <p>Ref: <a href="https://stripe.com/docs/api/transfers/list">Stripe docs</a></p>
@@ -2090,7 +2063,7 @@
 <span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">stripe</span><span class="p">.</span><span class="n">invoices</span><span class="w"> </span><span class="k">limit</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span><span class="w"></span>
 <span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">stripe</span><span class="p">.</span><span class="n">subscriptions</span><span class="w"> </span><span class="k">limit</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
-<h3 id="query-json-attributes">Query JSON Attributes</h3>
+<h3 id="query-json-attributes">Query JSON attributes</h3>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -2113,7 +2086,7 @@
 <span class="k">select</span><span class="w"> </span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">attrs</span><span class="o">#&gt;</span><span class="s1">&#39;{items,data}&#39;</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">items</span><span class="w"></span>
 <span class="k">from</span><span class="w"> </span><span class="n">stripe</span><span class="p">.</span><span class="n">subscriptions</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;sub_xxx&#39;</span><span class="p">;</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
-<h3 id="data-modify">Data Modify</h3>
+<h3 id="data-modify">Data modify</h3>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
