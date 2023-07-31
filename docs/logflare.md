@@ -81,15 +81,15 @@ create foreign table my_logflare_table (
   );
 ```
 
-### Meta Column
+### Meta column
 
 You can define a specific meta column `_result` (data type: `text`) in the foreign table. It will store the whole result record in JSON string format, so you can extract any fields from it using Postgres JSON queries like `_result::json->>'foo'`. See more examples below.
 
-### Query Parameters
+### Query parameters
 
 Logflare endpoint query parameters can be passed using specific parameter columns like `_param_foo` and `_param_bar`. See more examples below.
 
-### Foreign Table Options
+### Foreign table options
 
 The full list of foreign table options are below:
 
@@ -128,7 +128,7 @@ create foreign table people (
 select * from people;
 ```
 
-### Example of query parameters
+### Query parameters example
 
 Suppose the Logflare endpoint accepts 3 parameters:
 

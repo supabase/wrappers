@@ -82,7 +82,7 @@ options (
 );
 ```
 
-### Foreign Table Options
+### Foreign table options
 
 The full list of foreign table options are below:
 

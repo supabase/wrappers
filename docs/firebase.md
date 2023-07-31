@@ -100,7 +100,7 @@ create foreign table firebase_users (
 
 Note there is a meta column `attrs` in the foreign table, which contains all the returned data from Firebase as json format. 
 
-### Foreign Table Options
+### Foreign table options
 
 The full list of foreign table options are below:
 

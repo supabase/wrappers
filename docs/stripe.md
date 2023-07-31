@@ -113,9 +113,7 @@ create foreign table stripe.accounts (
 
 `attrs` is a special column which stores all the object attributes in JSON format, you can extract any attributes needed or its associated sub objects from it. See more examples below.
 
-### Tables
-
-#### Accounts
+### Accounts
 *read only*
 
 This is an object representing a Stripe account.
@@ -142,7 +140,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 
 - id
 
-#### Balance
+### Balance
 *read only*
 
 Shows the balance currently on your Stripe account.
@@ -162,7 +160,7 @@ create foreign table stripe.balance (
   );
 ```
 
-#### Balance Transactions
+### Balance Transactions
 *read only*
 
 Balance transactions represent funds moving through your Stripe account. They're created for every type of transaction that comes into or flows out of your Stripe account balance.
@@ -193,7 +191,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - id
 - type
 
-#### Charges
+### Charges
 *read only*
 
 To charge a credit or a debit card, you create a Charge object. You can retrieve and refund individual charges as well as list all charges. Charges are identified by a unique, random ID.
@@ -224,7 +222,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - id
 - customer
 
-#### Checkout Sessions
+### Checkout Sessions
 
 *read only*
 
@@ -254,7 +252,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - payment_intent
 - subscription
 
-#### Customers
+### Customers
 *read and modify*
 
 Contains customers known to Stripe.
@@ -282,7 +280,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - id
 - email
 
-#### Disputes
+### Disputes
 *read only*
 
 A dispute occurs when a customer questions your charge with their card issuer.
@@ -313,7 +311,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - charge
 - payment_intent
 
-#### Events
+### Events
 *read only*
 
 Events are our way of letting you know when something interesting happens in your account.
@@ -339,7 +337,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - id
 - type
 
-#### Files
+### Files
 *read only*
 
 This is an object representing a file hosted on Stripe's servers.
@@ -370,7 +368,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - id
 - purpose
 
-#### File Links
+### File Links
 *read only*
 
 To share the contents of a `File` object with non-Stripe users, you can create a `FileLink`.
@@ -393,7 +391,7 @@ create foreign table stripe.file_links (
   );
 ```
 
-#### Invoices
+### Invoices
 *read only*
 
 Invoices are statements of amounts owed by a customer, and are either generated one-off, or generated periodically from a subscription.
@@ -426,7 +424,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - status
 - subscription
 
-#### Mandates
+### Mandates
 *read only*
 
 A Mandate is a record of the permission a customer has given you to debit their payment method.
@@ -452,7 +450,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - id
 
 
-#### Payment Intents
+### Payment Intents
 *read only*
 
 A payment intent guides you through the process of collecting a payment from your customer.
@@ -480,7 +478,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - id
 - customer
 
-#### Payouts
+### Payouts
 *read only*
 
 A `Payout` object is created when you receive funds from Stripe, or when you initiate a payout to either a bank account or debit card of a connected Stripe account.
@@ -510,7 +508,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - id
 - status
 
-#### Prices
+### Prices
 *read only*
 
 A `Price` object is needed for all of your products to facilitate multiple currencies and pricing options.
@@ -539,7 +537,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - id
 - active
 
-#### Products
+### Products
 *read and modify*
 
 All products available in Stripe.
@@ -569,7 +567,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - id
 - active
 
-#### Refunds
+### Refunds
 *read only*
 
 `Refund` objects allow you to refund a charge that has previously been created but not yet refunded.
@@ -600,7 +598,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - charge
 - payment_intent
 
-#### SetupAttempts
+### SetupAttempts
 *read only*
 
 A `SetupAttempt` describes one attempted confirmation of a SetupIntent, whether that confirmation was successful or unsuccessful.
@@ -631,7 +629,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - id
 - setup_intent
 
-#### SetupIntents
+### SetupIntents
 *read only*
 
 A `SetupIntent` guides you through the process of setting up and saving a customer's payment credentials for future payments.
@@ -662,7 +660,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - customer
 - payment_method
 
-#### Subscriptions
+### Subscriptions
 *read and modify*
 
 Customer recurring payment schedules.
@@ -693,7 +691,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - price
 - status
 
-#### Tokens
+### Tokens
 *read only*
 
 Tokenization is the process Stripe uses to collect sensitive card or bank account details, or personally identifiable information (PII), directly from your customers in a secure manner.
@@ -715,7 +713,7 @@ create foreign table stripe.tokens (
   );
 ```
 
-#### Top-ups
+### Top-ups
 *read only*
 
 To top up your Stripe balance, you create a top-up object.
@@ -743,7 +741,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - id
 - status
 
-#### Transfers
+### Transfers
 *read only*
 
 A Transfer object is created when you move funds between Stripe accounts as part of Connect.
@@ -784,7 +782,7 @@ select * from stripe.invoices limit 10;
 select * from stripe.subscriptions limit 10;
 ```
 
-### Query JSON Attributes
+### Query JSON attributes
 
 ```sql
 -- extract account name for an invoice
@@ -800,7 +798,7 @@ select id, attrs#>'{items,data}' as items
 from stripe.subscriptions where id = 'sub_xxx';
 ```
 
-### Data Modify
+### Data modify
 
 ```sql
 insert into stripe.customers(email,name,description) values ('test@test.com', 'test name', null);
