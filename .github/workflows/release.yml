@@ -99,6 +99,7 @@ jobs:
           cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--0.1.10--${deb_version}.sql
           cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--0.1.11--${deb_version}.sql
           cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--0.1.14--${deb_version}.sql
+          cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--0.1.15--${deb_version}.sql
 
           # Create installable package
           mkdir archive

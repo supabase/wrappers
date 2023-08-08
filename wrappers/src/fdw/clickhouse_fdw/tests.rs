@@ -205,7 +205,6 @@ mod tests {
                 "test2"
             );
 
-
             assert_eq!(
                 c.select(
                     "SELECT name FROM test_table ORDER by name LIMIT 1 OFFSET 1",
