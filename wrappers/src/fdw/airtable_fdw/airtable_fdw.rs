@@ -11,6 +11,22 @@ use supabase_wrappers::prelude::*;
 
 use super::result::AirtableResponse;
 
+fn create_client(api_key: &str) -> ClientWithMiddleware {
+    let mut headers = header::HeaderMap::new();
+    let value = format!("Bearer {}", api_key);
+    let mut auth_value = header::HeaderValue::from_str(&value).unwrap();
+    auth_value.set_sensitive(true);
+    headers.insert(header::AUTHORIZATION, auth_value);
+    let client = reqwest::Client::builder()
+        .default_headers(headers)
+        .build()
+        .unwrap();
+    let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
+    ClientBuilder::new(client)
+        .with(RetryTransientMiddleware::new_with_policy(retry_policy))
+        .build()
+}
+
 #[wrappers_fdw(
     version = "0.1.2",
     author = "Ankur Goyal",
@@ -79,21 +95,12 @@ impl ForeignDataWrapper for AirtableFdw {
             .map(|t| t.to_owned())
             .unwrap_or_else(|| "https://api.airtable.com/v0".to_string());
 
-        let client = require_option("api_key", options).map(|api_key| {
-            let mut headers = header::HeaderMap::new();
-            let value = format!("Bearer {}", api_key);
-            let mut auth_value = header::HeaderValue::from_str(&value).unwrap();
-            auth_value.set_sensitive(true);
-            headers.insert(header::AUTHORIZATION, auth_value);
-            let client = reqwest::Client::builder()
-                .default_headers(headers)
-                .build()
-                .unwrap();
-            let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
-            ClientBuilder::new(client)
-                .with(RetryTransientMiddleware::new_with_policy(retry_policy))
-                .build()
-        });
+        let client = match options.get("api_key") {
+            Some(api_key) => Some(create_client(api_key)),
+            None => require_option("api_key_id", options)
+                .and_then(|key_id| get_vault_secret(&key_id))
+                .map(|api_key| create_client(&api_key)),
+        };
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
 
@@ -190,16 +197,9 @@ impl ForeignDataWrapper for AirtableFdw {
 
     fn validator(options: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) {
         if let Some(oid) = catalog {
-            match oid {
-                FOREIGN_DATA_WRAPPER_RELATION_ID => {}
-                FOREIGN_SERVER_RELATION_ID => {
-                    check_options_contain(&options, "api_key");
-                }
-                FOREIGN_TABLE_RELATION_ID => {
-                    check_options_contain(&options, "base_id");
-                    check_options_contain(&options, "table_id");
-                }
-                _ => {}
+            if oid == FOREIGN_TABLE_RELATION_ID {
+                check_options_contain(&options, "base_id");
+                check_options_contain(&options, "table_id");
             }
         }
     }
