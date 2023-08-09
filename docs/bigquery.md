@@ -37,20 +37,19 @@ create foreign data wrapper bigquery_wrapper
 By default, Postgres stores FDW credentials inide `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
 
 ```sql
--- Create a secure key using pgsodium:
-select pgsodium.create_key(name := 'bigquery');
-
 -- Save your BigQuery service account json in Vault and retrieve the `key_id`
-insert into vault.secrets (secret, key_id) values ('
-{
-  "type": "service_account",
-  "project_id": "your_gcp_project_id",
-  "private_key_id": "your_private_key_id",
-  "private_key": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n",
-  ...
-}
-',
-(select id from pgsodium.valid_key where name = 'bigquery')
+insert into vault.secrets (name, secret)
+values (
+  'bigquery',
+  '
+    {
+      "type": "service_account",
+      "project_id": "your_gcp_project_id",
+      "private_key_id": "your_private_key_id",
+      "private_key": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n",
+      ...
+    }
+  '
 )
 returning key_id;
 ```
@@ -62,23 +61,13 @@ We need to provide Postgres with the credentials to connect to BigQuery, and any
 === "With Vault"
 
     ```sql
-    do $$
-    declare
-      key_id text;
-    begin
-      select id into key_id from pgsodium.valid_key where name = 'bigquery' limit 1;
-
-      execute format(
-        E'create server bigquery_server \n'
-        '   foreign data wrapper bigquery_wrapper \n'
-        '   options ( \n'
-        '     sa_key_id ''%s'', \n'
-        '     project_id ''your_gcp_project_id'', \n'
-        '     dataset_id ''your_gcp_dataset_id'' \n'
-        ' );',
-        key_id
+    create server bigquery_server
+      foreign data wrapper bigquery_wrapper
+      options (
+        sa_key_id '<key_ID>', -- The Key ID from above.
+        project_id 'your_gcp_project_id',
+        dataset_id 'your_gcp_dataset_id'
       );
-    end $$;
     ```
 
 === "Without Vault"

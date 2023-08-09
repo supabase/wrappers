@@ -40,14 +40,13 @@ create foreign data wrapper clickhouse_wrapper
 By default, Postgres stores FDW credentials inide `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
 
 ```sql
--- Create a secure key using pgsodium:
-select pgsodium.create_key(name := 'clickhouse');
-
 -- Save your ClickHouse credential in Vault and retrieve the `key_id`
-insert into vault.secrets (secret, key_id) values (
-  'tcp://default:@localhost:9000/default',
-  (select id from pgsodium.valid_key where name = 'clickhouse')
-) returning key_id;
+insert into vault.secrets (name, secret)
+values (
+  'clickhouse',
+  'tcp://default:@localhost:9000/default'
+)
+returning key_id;
 ```
 
 ### Connecting to ClickHouse
@@ -57,19 +56,11 @@ We need to provide Postgres with the credentials to connect to ClickHouse, and a
 === "With Vault"
 
     ```sql
-    do $$
-    declare
-      key_id text;
-    begin
-      select id into key_id from pgsodium.valid_key where name = 'clickhouse' limit 1;
-
-      execute format(
-        E'create server clickhouse_server \n'
-        '   foreign data wrapper clickhouse_server \n'
-        '   options (conn_string_id ''%s'');',
-        key_id
+    create server clickhouse_server
+      foreign data wrapper clickhouse_wrapper
+      options (
+        conn_string_id '<key_ID>' -- The Key ID from above.
       );
-    end $$;
     ```
 
 === "Without Vault"
