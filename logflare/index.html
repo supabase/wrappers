@@ -649,23 +649,17 @@
 </code></pre></div></td></tr></table></div>
 <h3 id="secure-your-credentials-optional">Secure your credentials (optional)</h3>
 <p>By default, Postgres stores FDW credentials inide <code>pg_catalog.pg_foreign_server</code> in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with <a href="https://supabase.com/docs/guides/database/vault">Vault</a>, which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Create a secure key using pgsodium:</span>
-<span class="k">select</span><span class="w"> </span><span class="n">pgsodium</span><span class="p">.</span><span class="n">create_key</span><span class="p">(</span><span class="n">name</span><span class="w"> </span><span class="p">:</span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;logflare&#39;</span><span class="p">);</span><span class="w"></span>
-
-<span class="c1">-- Save your Logflare API key in Vault and retrieve the `key_id`</span>
-<span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">secrets</span><span class="w"> </span><span class="p">(</span><span class="n">secret</span><span class="p">,</span><span class="w"> </span><span class="n">key_id</span><span class="p">)</span><span class="w"></span>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span>
+<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Save your Logflare API key in Vault and retrieve the `key_id`</span>
+<span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">secrets</span><span class="w"> </span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">secret</span><span class="p">)</span><span class="w"></span>
 <span class="k">values</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
-<span class="w">  </span><span class="s1">&#39;YOUR_SECRET&#39;</span><span class="p">,</span><span class="w"></span>
-<span class="w">  </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">pgsodium</span><span class="p">.</span><span class="n">valid_key</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;logflare&#39;</span><span class="p">)</span><span class="w"></span>
+<span class="w">  </span><span class="s1">&#39;logflare&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="s1">&#39;YOUR_SECRET&#39;</span><span class="w"></span>
 <span class="p">)</span><span class="w"></span>
 <span class="n">returning</span><span class="w"> </span><span class="n">key_id</span><span class="p">;</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>

@@ -704,26 +704,18 @@
 <span class="normal">11</span>
 <span class="normal">12</span>
 <span class="normal">13</span>
-<span class="normal">14</span>
-<span class="normal">15</span>
-<span class="normal">16</span>
-<span class="normal">17</span>
-<span class="normal">18</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Create a secure key using pgsodium:</span>
-<span class="k">select</span><span class="w"> </span><span class="n">pgsodium</span><span class="p">.</span><span class="n">create_key</span><span class="p">(</span><span class="n">name</span><span class="w"> </span><span class="p">:</span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;vault_access_key_id&#39;</span><span class="p">);</span><span class="w"></span>
-<span class="k">select</span><span class="w"> </span><span class="n">pgsodium</span><span class="p">.</span><span class="n">create_key</span><span class="p">(</span><span class="n">name</span><span class="w"> </span><span class="p">:</span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;vault_secret_access_key&#39;</span><span class="p">);</span><span class="w"></span>
-
-<span class="c1">-- Save your AWS credential in Vault and retrieve the `key_id`</span>
-<span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">secrets</span><span class="w"> </span><span class="p">(</span><span class="n">secret</span><span class="p">,</span><span class="w"> </span><span class="n">key_id</span><span class="p">)</span><span class="w"></span>
+<span class="normal">14</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Save your AWS credential in Vault and retrieve the `key_id`</span>
+<span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">secrets</span><span class="w"> </span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">secret</span><span class="p">)</span><span class="w"></span>
 <span class="k">values</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
-<span class="w">  </span><span class="s1">&#39;&lt;access key id&gt;&#39;</span><span class="p">,</span><span class="w"></span>
-<span class="w">  </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">pgsodium</span><span class="p">.</span><span class="n">valid_key</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;vault_access_key_id&#39;</span><span class="p">)</span><span class="w"></span>
+<span class="w">  </span><span class="s1">&#39;vault_access_key_id&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="s1">&#39;&lt;access key id&gt;&#39;</span><span class="w"></span>
 <span class="p">)</span><span class="w"></span>
 <span class="n">returning</span><span class="w"> </span><span class="n">key_id</span><span class="p">;</span><span class="w"></span>
 
-<span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">secrets</span><span class="w"> </span><span class="p">(</span><span class="n">secret</span><span class="p">,</span><span class="w"> </span><span class="n">key_id</span><span class="p">)</span><span class="w"></span>
+<span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">secrets</span><span class="w"> </span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">secret</span><span class="p">)</span><span class="w"></span>
 <span class="k">values</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
-<span class="w">  </span><span class="s1">&#39;&lt;secret access key&gt;&#39;</span><span class="p">,</span><span class="w"></span>
-<span class="w">  </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">pgsodium</span><span class="p">.</span><span class="n">valid_key</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;vault_secret_access_key&#39;</span><span class="p">)</span><span class="w"></span>
+<span class="w">  </span><span class="s1">&#39;vault_secret_access_key&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="s1">&#39;&lt;secret access key&gt;&#39;</span><span class="w"></span>
 <span class="p">)</span><span class="w"></span>
 <span class="n">returning</span><span class="w"> </span><span class="n">key_id</span><span class="p">;</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
@@ -742,7 +734,7 @@
 <span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">s3_wrapper</span><span class="w"></span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
 <span class="w">    </span><span class="n">vault_access_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;your vault_access_key_id from above&gt;&#39;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="n">vault_secret_access_key</span><span class="w"> </span><span class="s1">&#39;&lt;your vault_secret_access_key_id from above&gt;&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="n">vault_secret_access_key</span><span class="w"> </span><span class="s1">&#39;&lt;your vault_secret_access_key from above&gt;&#39;</span><span class="p">,</span><span class="w"></span>
 <span class="w">    </span><span class="n">aws_region</span><span class="w"> </span><span class="s1">&#39;us-east-1&#39;</span><span class="w"></span>
 <span class="w">  </span><span class="p">);</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>

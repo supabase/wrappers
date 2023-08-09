@@ -686,46 +686,28 @@
 <span class="normal">4</span>
 <span class="normal">5</span>
 <span class="normal">6</span>
-<span class="normal">7</span>
-<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Create a secure key using pgsodium:</span>
-<span class="k">select</span><span class="w"> </span><span class="n">pgsodium</span><span class="p">.</span><span class="n">create_key</span><span class="p">(</span><span class="n">name</span><span class="w"> </span><span class="p">:</span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;clickhouse&#39;</span><span class="p">);</span><span class="w"></span>
-
-<span class="c1">-- Save your ClickHouse credential in Vault and retrieve the `key_id`</span>
-<span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">secrets</span><span class="w"> </span><span class="p">(</span><span class="n">secret</span><span class="p">,</span><span class="w"> </span><span class="n">key_id</span><span class="p">)</span><span class="w"> </span><span class="k">values</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
-<span class="w">  </span><span class="s1">&#39;tcp://default:@localhost:9000/default&#39;</span><span class="p">,</span><span class="w"></span>
-<span class="w">  </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">pgsodium</span><span class="p">.</span><span class="n">valid_key</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;clickhouse&#39;</span><span class="p">)</span><span class="w"></span>
-<span class="p">)</span><span class="w"> </span><span class="n">returning</span><span class="w"> </span><span class="n">key_id</span><span class="p">;</span><span class="w"></span>
+<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Save your ClickHouse credential in Vault and retrieve the `key_id`</span>
+<span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">secrets</span><span class="w"> </span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">secret</span><span class="p">)</span><span class="w"></span>
+<span class="k">values</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">  </span><span class="s1">&#39;clickhouse&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="s1">&#39;tcp://default:@localhost:9000/default&#39;</span><span class="w"></span>
+<span class="p">)</span><span class="w"></span>
+<span class="n">returning</span><span class="w"> </span><span class="n">key_id</span><span class="p">;</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
 <h3 id="connecting-to-clickhouse">Connecting to ClickHouse</h3>
 <p>We need to provide Postgres with the credentials to connect to ClickHouse, and any additional options. We can do this using the <code>create server</code> command:</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">With Vault</label><label for="__tabbed_1_2">Without Vault</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span>
-<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">do</span><span class="w"> </span><span class="err">$$</span><span class="w"></span>
-<span class="k">declare</span><span class="w"></span>
-<span class="w">  </span><span class="n">key_id</span><span class="w"> </span><span class="nb">text</span><span class="p">;</span><span class="w"></span>
-<span class="k">begin</span><span class="w"></span>
-<span class="w">  </span><span class="k">select</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">key_id</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">pgsodium</span><span class="p">.</span><span class="n">valid_key</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;clickhouse&#39;</span><span class="w"> </span><span class="k">limit</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"></span>
-
-<span class="w">  </span><span class="k">execute</span><span class="w"> </span><span class="n">format</span><span class="p">(</span><span class="w"></span>
-<span class="w">    </span><span class="n">E</span><span class="s1">&#39;create server clickhouse_server \n&#39;</span><span class="w"></span>
-<span class="w">    </span><span class="s1">&#39;   foreign data wrapper clickhouse_server \n&#39;</span><span class="w"></span>
-<span class="w">    </span><span class="s1">&#39;   options (conn_string_id &#39;&#39;%s&#39;&#39;);&#39;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="n">key_id</span><span class="w"></span>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">clickhouse_server</span><span class="w"></span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">clickhouse_wrapper</span><span class="w"></span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">    </span><span class="n">conn_string_id</span><span class="w"> </span><span class="s1">&#39;&lt;key_ID&gt;&#39;</span><span class="w"> </span><span class="c1">-- The Key ID from above.</span>
 <span class="w">  </span><span class="p">);</span><span class="w"></span>
-<span class="k">end</span><span class="w"> </span><span class="err">$$</span><span class="p">;</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
 </div>
 <div class="tabbed-block">
@@ -742,6 +724,12 @@
 </div>
 </div>
 </div>
+<p>Some connection string examples:</p>
+<ul>
+<li><code>tcp://user:password@host:9000/clicks?compression=lz4&amp;ping_timeout=42ms</code></li>
+<li><code>tcp://default:PASSWORD@abc.eu-west-1.aws.clickhouse.cloud:9440/default?connection_timeout=30s&amp;ping_before_query=false</code></li>
+</ul>
+<p>Check <a href="https://github.com/suharev7/clickhouse-rs#dns">more connection string parameters</a>.</p>
 <h2 id="creating-foreign-tables">Creating Foreign Tables</h2>
 <p>The ClickHouse Wrapper supports data reads and writes from ClickHouse.</p>
 <table>
