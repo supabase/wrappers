@@ -4,14 +4,16 @@
 
 `Wrappers` is also a collection of FDWs built by [Supabase](https://www.supabase.com). We currently support the following FDWs, with more are under development:
 
-- [HelloWorld](./wrappers/src/fdw/helloworld_fdw): A demo FDW to show how to develop a basic FDW.
-- [BigQuery](./wrappers/src/fdw/bigquery_fdw): A FDW for Google [BigQuery](https://cloud.google.com/bigquery) which supports data read and modify.
-- [Clickhouse](./wrappers/src/fdw/clickhouse_fdw): A FDW for [ClickHouse](https://clickhouse.com/) which supports data read and modify.
-- [Stripe](./wrappers/src/fdw/stripe_fdw): A FDW for [Stripe](https://stripe.com/) API which supports data read and modify.
-- [Firebase](./wrappers/src/fdw/firebase_fdw): A FDW for Google [Firebase](https://firebase.google.com/) which supports data read only.
-- [Airtable](./wrappers/src/fdw/airtable_fdw): A FDW for [Airtable](https://airtable.com/) API which supports data read only.
-- [S3](./wrappers/src/fdw/s3_fdw): A FDW for [AWS S3](https://aws.amazon.com/s3/). Currently read-only.
-- [Logflare](./wrappers/src/fdw/logflare_fdw): A FDW for [Logflare](https://logflare.app/) which supports data read only.
+| FDW | Description | Data Read | Data Modify | 
+|----------------|---------------|---------------|----------------|
+| [HelloWorld](./wrappers/src/fdw/helloworld_fdw) | A demo FDW to show how to develop a basic FDW. | | | 
+| [BigQuery](./wrappers/src/fdw/bigquery_fdw) | A FDW for Google [BigQuery](https://cloud.google.com/bigquery) | :white_check_mark: | :white_check_mark: | 
+| [Clickhouse](./wrappers/src/fdw/clickhouse_fdw)  | A FDW for [ClickHouse](https://clickhouse.com/) | :white_check_mark: | :white_check_mark: | 
+| [Stripe](./wrappers/src/fdw/stripe_fdw) | A FDW for [Stripe](https://stripe.com/) API | :white_check_mark: | :white_check_mark: |
+| [Firebase](./wrappers/src/fdw/firebase_fdw) | A FDW for Google [Firebase](https://firebase.google.com/) | :white_check_mark: | :x: |
+| [Airtable](./wrappers/src/fdw/airtable_fdw) | A FDW for [Airtable](https://airtable.com/) API | :white_check_mark: | :x: |
+| [S3](./wrappers/src/fdw/s3_fdw) | A FDW for [AWS S3](https://aws.amazon.com/s3/) | :white_check_mark: | :x: |
+| [Logflare](./wrappers/src/fdw/logflare_fdw) | A FDW for [Logflare](https://logflare.app/) | :white_check_mark: | :x: |
 
 ## Features
 
