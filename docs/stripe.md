@@ -525,7 +525,7 @@ create foreign table stripe.prices (
 )
   server stripe_server
   options (
-    object 'pricing'
+    object 'prices'
   );
 ```
 
