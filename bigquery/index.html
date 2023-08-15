@@ -367,6 +367,13 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#inserting-rows-the-streaming-buffer" class="md-nav__link">
+    Inserting Rows &amp; the Streaming Buffer
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#examples" class="md-nav__link">
     Examples
   </a>
@@ -377,6 +384,13 @@
           <li class="md-nav__item">
   <a href="#basic-example" class="md-nav__link">
     Basic example
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#data-modify-example" class="md-nav__link">
+    Data modify example
   </a>
   
 </li>
@@ -565,6 +579,13 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#inserting-rows-the-streaming-buffer" class="md-nav__link">
+    Inserting Rows &amp; the Streaming Buffer
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#examples" class="md-nav__link">
     Examples
   </a>
@@ -575,6 +596,13 @@
           <li class="md-nav__item">
   <a href="#basic-example" class="md-nav__link">
     Basic example
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#data-modify-example" class="md-nav__link">
+    Data modify example
   </a>
   
 </li>
@@ -807,10 +835,12 @@
 <li><code>timeout</code> - Query request timeout in milliseconds, optional. Default is '30000' (30 seconds).</li>
 <li><code>rowid_column</code> - Primary key column name, optional for data scan, required for data modify</li>
 </ul>
+<h2 id="inserting-rows-the-streaming-buffer">Inserting Rows &amp; the Streaming Buffer</h2>
+<p>This foreign data wrapper uses BigQuery’s <code>insertAll</code> API method to create a <code>streamingBuffer</code> with an associated partition time. <strong>Within that partition time, the data cannot be updated, deleted, or fully exported</strong>. Only after the time has elapsed (up to 90 minutes according to <a href="https://cloud.google.com/bigquery/docs/streaming-data-into-bigquery">BigQuery’s documentation</a>); can you perform operations.</p>
+<p>If you attempt an <code>UPDATE</code> or <code>DELETE</code> statement on rows while in the streamingBuffer, you will get an error of <code>UPDATE</code> or <code>DELETE</code> statement over table datasetName - note that tableName would affect rows in the streaming buffer, which is not supported.</p>
 <h2 id="examples">Examples</h2>
 <p>Some examples on how to use BigQuery foreign tables.</p>
-<h3 id="basic-example">Basic example</h3>
-<p>This will create a "foreign table" inside your Postgres database called <code>people</code>: </p>
+<p>Let's prepare the source table in BigQuery first:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -835,7 +865,8 @@
 <span class="w">  </span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Leia Organa&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">current_timestamp</span><span class="p">()),</span><span class="w"> </span>
 <span class="w">  </span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Han Solo&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">current_timestamp</span><span class="p">());</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
-<p>Create foreign table on Postgres database:</p>
+<h3 id="basic-example">Basic example</h3>
+<p>This example will create a "foreign table" inside your Postgres database called <code>people</code> and query its data:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -859,6 +890,56 @@
 <span class="w">  </span><span class="p">);</span><span class="w"></span>
 
 <span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">people</span><span class="p">;</span><span class="w"></span>
+</code></pre></div></td></tr></table></div>
+<h3 id="data-modify-example">Data modify example</h3>
+<p>This example will modify data in a "foreign table" inside your Postgres database called <code>people</code>, note that <code>rowid_column</code> option is mandatory:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">people</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">ts</span><span class="w"> </span><span class="k">timestamp</span><span class="w"></span>
+<span class="p">)</span><span class="w"></span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">bigquery_server</span><span class="w"></span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">    </span><span class="k">table</span><span class="w"> </span><span class="s1">&#39;people&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="k">location</span><span class="w"> </span><span class="s1">&#39;EU&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="n">rowid_column</span><span class="w"> </span><span class="s1">&#39;id&#39;</span><span class="w"></span>
+<span class="w">  </span><span class="p">);</span><span class="w"></span>
+
+<span class="c1">-- insert new data</span>
+<span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">people</span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">ts</span><span class="p">)</span><span class="w"></span>
+<span class="k">values</span><span class="w"> </span><span class="p">(</span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Yoda&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;2023-01-01 12:34:56&#39;</span><span class="p">);</span><span class="w"></span>
+
+<span class="c1">-- update existing data</span>
+<span class="k">update</span><span class="w"> </span><span class="n">people</span><span class="w"></span>
+<span class="k">set</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;Anakin Skywalker&#39;</span><span class="w"></span>
+<span class="k">where</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"></span>
+
+<span class="c1">-- delete data</span>
+<span class="k">delete</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">people</span><span class="w"></span>
+<span class="k">where</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
 
 
