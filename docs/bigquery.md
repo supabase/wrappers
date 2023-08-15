@@ -129,13 +129,17 @@ The full list of foreign table options are below:
 - `timeout` - Query request timeout in milliseconds, optional. Default is '30000' (30 seconds).
 - `rowid_column` - Primary key column name, optional for data scan, required for data modify
 
+## Inserting Rows & the Streaming Buffer
+
+This foreign data wrapper uses BigQuery’s `insertAll` API method to create a `streamingBuffer` with an associated partition time. **Within that partition time, the data cannot be updated, deleted, or fully exported**. Only after the time has elapsed (up to 90 minutes according to [BigQuery’s documentation](https://cloud.google.com/bigquery/docs/streaming-data-into-bigquery)); can you perform operations.
+
+If you attempt an `UPDATE` or `DELETE` statement on rows while in the streamingBuffer, you will get an error of `UPDATE` or `DELETE` statement over table datasetName - note that tableName would affect rows in the streaming buffer, which is not supported.
+
 ## Examples
 
 Some examples on how to use BigQuery foreign tables.
 
-### Basic example
-
-This will create a "foreign table" inside your Postgres database called `people`: 
+Let's prepare the source table in BigQuery first:
 
 ```sql
 -- Run below SQLs on BigQuery to create source table
@@ -152,7 +156,9 @@ insert into your_project_id.your_dataset_id.people values
   (3, 'Han Solo', current_timestamp());
 ```
 
-Create foreign table on Postgres database:
+### Basic example
+
+This example will create a "foreign table" inside your Postgres database called `people` and query its data:
 
 ```sql
 create foreign table people (
@@ -167,4 +173,35 @@ create foreign table people (
   );
 
 select * from people;
+```
+
+### Data modify example
+
+This example will modify data in a "foreign table" inside your Postgres database called `people`, note that `rowid_column` option is mandatory:
+
+```sql
+create foreign table people (
+  id bigint,
+  name text,
+  ts timestamp
+)
+  server bigquery_server
+  options (
+    table 'people',
+    location 'EU',
+    rowid_column 'id'
+  );
+
+-- insert new data
+insert into people(id, name, ts)
+values (4, 'Yoda', '2023-01-01 12:34:56');
+
+-- update existing data
+update people
+set name = 'Anakin Skywalker'
+where id = 1;
+
+-- delete data
+delete from people
+where id = 2;
 ```
