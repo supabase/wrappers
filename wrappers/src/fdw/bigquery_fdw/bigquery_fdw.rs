@@ -1,6 +1,7 @@
 use crate::stats;
 use futures::executor;
 use gcp_bigquery_client::{
+    client_builder::ClientBuilder,
     model::{
         field_type::FieldType, get_query_results_parameters::GetQueryResultsParameters,
         query_request::QueryRequest, query_response::QueryResponse, query_response::ResultSet,
@@ -187,6 +188,11 @@ impl ForeignDataWrapper for BigQueryFdw {
             .unwrap_or_else(|| "false".to_string())
             == *"true";
 
+        let api_endpoint = options
+            .get("api_endpoint")
+            .map(|t| t.to_owned())
+            .unwrap_or_else(|| "https://bigquery.googleapis.com/bigquery/v2".to_string());
+
         let sa_key_json = match mock_auth {
             true => {
                 // Key file is not required if we're mocking auth
@@ -223,10 +229,11 @@ impl ForeignDataWrapper for BigQueryFdw {
             }
         };
 
-        ret.client = match ret
-            .rt
-            .block_on(Client::from_service_account_key(sa_key, false))
-        {
+        ret.client = match ret.rt.block_on(
+            ClientBuilder::new()
+                .with_v2_base_url(api_endpoint)
+                .build_from_service_account_key(sa_key, false),
+        ) {
             Ok(client) => Some(client),
             Err(err) => {
                 report_error(
