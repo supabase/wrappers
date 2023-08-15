@@ -1,7 +1,6 @@
 use crate::stats;
 use futures::executor;
 use gcp_bigquery_client::{
-    client_builder::ClientBuilder,
     model::{
         field_type::FieldType, get_query_results_parameters::GetQueryResultsParameters,
         query_request::QueryRequest, query_response::QueryResponse, query_response::ResultSet,
@@ -188,12 +187,7 @@ impl ForeignDataWrapper for BigQueryFdw {
             .unwrap_or_else(|| "false".to_string())
             == *"true";
 
-        let api_endpoint = options
-            .get("api_endpoint")
-            .map(|t| t.to_owned())
-            .unwrap_or_else(|| "https://bigquery.googleapis.com/bigquery/v2".to_string());
-
-        let (auth_endpoint, sa_key_json) = match mock_auth {
+        let sa_key_json = match mock_auth {
             true => {
                 // Key file is not required if we're mocking auth
                 let auth_mock = executor::block_on(GoogleAuthMock::start());
@@ -201,26 +195,21 @@ impl ForeignDataWrapper for BigQueryFdw {
                 let auth_mock_uri = auth_mock.uri();
                 let dummy_auth_config = dummy_configuration(&auth_mock_uri);
                 ret.auth_mock = Some(auth_mock);
-                let sa_key_json = serde_json::to_string_pretty(&dummy_auth_config).unwrap();
-                (auth_mock_uri, sa_key_json)
+                serde_json::to_string_pretty(&dummy_auth_config).unwrap()
             }
-            false => {
-                let uri = "https://www.googleapis.com/auth/bigquery".to_string();
-                match options.get("sa_key") {
-                    Some(sa_key) => (uri, sa_key.to_owned()),
-                    None => {
-                        let sa_key_id = match require_option("sa_key_id", options) {
-                            Some(sa_key_id) => sa_key_id,
-                            None => return ret,
-                        };
-                        let sa_key_json = match get_vault_secret(&sa_key_id) {
-                            Some(sa_key) => sa_key,
-                            None => return ret,
-                        };
-                        (uri, sa_key_json)
+            false => match options.get("sa_key") {
+                Some(sa_key) => sa_key.to_owned(),
+                None => {
+                    let sa_key_id = match require_option("sa_key_id", options) {
+                        Some(sa_key_id) => sa_key_id,
+                        None => return ret,
+                    };
+                    match get_vault_secret(&sa_key_id) {
+                        Some(sa_key) => sa_key,
+                        None => return ret,
                     }
                 }
-            }
+            },
         };
 
         let sa_key = match yup_oauth2::parse_service_account_key(sa_key_json.as_bytes()) {
@@ -234,13 +223,10 @@ impl ForeignDataWrapper for BigQueryFdw {
             }
         };
 
-        ret.client = match ret.rt.block_on(
-            ClientBuilder::new()
-                .with_auth_base_url(auth_endpoint)
-                // Url of the BigQuery emulator docker image.
-                .with_v2_base_url(api_endpoint)
-                .build_from_service_account_key(sa_key, true),
-        ) {
+        ret.client = match ret
+            .rt
+            .block_on(Client::from_service_account_key(sa_key, false))
+        {
             Ok(client) => Some(client),
             Err(err) => {
                 report_error(

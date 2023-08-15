@@ -44,7 +44,7 @@ chrono = { version = "0.4", optional = true }
 chrono-tz = { version = "0.6", optional = true }
 
 # for bigquery_fdw, firebase_fdw, airtable_fdw and etc.
-gcp-bigquery-client = { version = "0.16.5", optional = true }
+gcp-bigquery-client = { version = "0.17.0", optional = true }
 serde = { version = "1", optional = true }
 serde_json = { version = "1.0.86", optional = true }
 wiremock = { version = "0.5", optional = true }
