@@ -43,8 +43,14 @@ impl AirtableFdw {
     const FDW_NAME: &str = "AirtableFdw";
 
     #[inline]
-    fn build_url(&self, base_id: &str, table_id: &str) -> String {
-        format!("{}/{}/{}", &self.base_url, base_id, table_id)
+    fn build_url(&self, base_id: &str, table_id: &str, view_id: Option<&String>) -> String {
+        match view_id {
+            Some(view_id) => format!(
+                "{}/{}/{}?view={}",
+                &self.base_url, base_id, table_id, view_id
+            ),
+            None => format!("{}/{}/{}", &self.base_url, base_id, table_id),
+        }
     }
 
     #[inline]
@@ -120,9 +126,9 @@ impl ForeignDataWrapper for AirtableFdw {
         _limit: &Option<Limit>, // TODO: maxRecords
         options: &HashMap<String, String>,
     ) {
-        // TODO: Support specifying other options (view)
         let url = if let Some(url) = require_option("base_id", options).and_then(|base_id| {
-            require_option("table_id", options).map(|table_id| self.build_url(&base_id, &table_id))
+            require_option("table_id", options)
+                .map(|table_id| self.build_url(&base_id, &table_id, options.get("view_id")))
         }) {
             url
         } else {

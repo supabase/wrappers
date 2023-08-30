@@ -85,6 +85,7 @@ The full list of foreign table options are below:
 
 - `base_id` - Airtable Base ID the table belongs to, required.
 - `table_id` - Airtable table ID, required.
+- `view_id` - Airtable view ID, optional.
 
 ## Examples
 
@@ -113,4 +114,24 @@ You can now fetch your Airtable data from within your Postgres database:
 
 ```sql
 select * from airtable_table;
+```
+
+We can also create a foreign table from an Airtable View called `airtable_view`:
+
+```sql
+create foreign table airtable_view (
+  name text,
+  notes text,
+  content text,
+  amount numeric,
+  updated_at timestamp
+)
+server airtable_server
+options (
+  base_id 'appTc3yI68KN6ukZc',
+  table_id 'tbltiLinE56l3YKfn',
+  view_id 'viwY8si0zcEzw3ntZ'
+);
+
+select * from airtable_view;
 ```
