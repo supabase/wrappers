@@ -701,6 +701,7 @@
 <ul>
 <li><code>base_id</code> - Airtable Base ID the table belongs to, required.</li>
 <li><code>table_id</code> - Airtable table ID, required.</li>
+<li><code>view_id</code> - Airtable view ID, optional.</li>
 </ul>
 <h2 id="examples">Examples</h2>
 <p>Some examples on how to use Airtable foreign tables.</p>
@@ -732,6 +733,37 @@
 </code></pre></div></td></tr></table></div>
 <p>You can now fetch your Airtable data from within your Postgres database:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">airtable_table</span><span class="p">;</span><span class="w"></span>
+</code></pre></div></td></tr></table></div>
+<p>We can also create a foreign table from an Airtable View called <code>airtable_view</code>:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">airtable_view</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">notes</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">content</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">amount</span><span class="w"> </span><span class="nb">numeric</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="w"></span>
+<span class="p">)</span><span class="w"></span>
+<span class="n">server</span><span class="w"> </span><span class="n">airtable_server</span><span class="w"></span>
+<span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
+<span class="w">  </span><span class="n">base_id</span><span class="w"> </span><span class="s1">&#39;appTc3yI68KN6ukZc&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">table_id</span><span class="w"> </span><span class="s1">&#39;tbltiLinE56l3YKfn&#39;</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">view_id</span><span class="w"> </span><span class="s1">&#39;viwY8si0zcEzw3ntZ&#39;</span><span class="w"></span>
+<span class="p">);</span><span class="w"></span>
+
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">airtable_view</span><span class="p">;</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
 
 
