@@ -33,7 +33,7 @@ logflare_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json"]
 all_fdws = ["airtable_fdw", "bigquery_fdw", "clickhouse_fdw", "stripe_fdw", "firebase_fdw", "s3_fdw", "logflare_fdw"]
 
 [dependencies]
-pgrx = { version = "=0.9.7" }
+pgrx = { version = "=0.9.8" }
 cfg-if = "1.0"
 #supabase-wrappers = "0.1"
 supabase-wrappers = { path = "../supabase-wrappers", default-features = false }
@@ -74,7 +74,7 @@ parquet = { version = "41.0.0", features = ["async"], optional = true }
 arrow-array = { version = "41.0.0", optional = true }
 
 [dev-dependencies]
-pgrx-tests = "=0.9.7"
+pgrx-tests = "=0.9.8"
 
 [profile.dev]
 panic = "unwind"
