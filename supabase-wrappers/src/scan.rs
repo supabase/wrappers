@@ -264,7 +264,7 @@ unsafe fn assign_paramenter_value<W: ForeignDataWrapper>(
     state: &mut FdwState<W>,
 ) {
     // get parameter list in execution state
-    let estate = (*node).ss.ps.state as *mut pg_sys::EState;
+    let estate = (*node).ss.ps.state;
     let plist_info = (*estate).es_param_list_info;
     if plist_info.is_null() {
         return;
