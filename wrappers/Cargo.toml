@@ -40,7 +40,7 @@ cfg-if = "1.0"
 supabase-wrappers = { path = "../supabase-wrappers", default-features = false }
 
 # for clickhouse_fdw
-clickhouse-rs = { git = "https://github.com/suharev7/clickhouse-rs", branch = "async-await", features = ["tls"], optional = true }
+clickhouse-rs = { git = "https://github.com/suharev7/clickhouse-rs", rev="ecf28f46774773f39c74ee5213ad1e3ea240739b", features = ["tls"], optional = true }
 chrono = { version = "0.4", optional = true }
 chrono-tz = { version = "0.6", optional = true }
 
