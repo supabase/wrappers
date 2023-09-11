@@ -2,6 +2,7 @@
 name = "wrappers"
 version = "0.1.16"
 edition = "2021"
+publish = false
 
 [lib]
 crate-type = ["cdylib"]

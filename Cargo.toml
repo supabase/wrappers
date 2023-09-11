@@ -1,4 +1,3 @@
 [workspace]
-members = ["supabase-wrappers"]
-exclude = ["wrappers"]
+members = ["supabase-wrappers", "wrappers"]
 resolver = "2"
