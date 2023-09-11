@@ -1,4 +1,5 @@
 use crate::stats;
+use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::{pg_sys, prelude::*, JsonB};
 use regex::Regex;
 use reqwest::{self, header};
@@ -245,8 +246,16 @@ impl FirebaseFdw {
     }
 }
 
-impl ForeignDataWrapper for FirebaseFdw {
-    fn new(options: &HashMap<String, String>) -> Self {
+enum FirebaseFdwError {}
+
+impl From<FirebaseFdwError> for ErrorReport {
+    fn from(_value: FirebaseFdwError) -> Self {
+        ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, "", "")
+    }
+}
+
+impl ForeignDataWrapper<FirebaseFdwError> for FirebaseFdw {
+    fn new(options: &HashMap<String, String>) -> Result<Self, FirebaseFdwError> {
         let mut ret = Self {
             rt: create_async_runtime(),
             project_id: "".to_string(),
@@ -256,7 +265,7 @@ impl ForeignDataWrapper for FirebaseFdw {
 
         ret.project_id = match require_option("project_id", options) {
             Some(project_id) => project_id,
-            None => return ret,
+            None => return Ok(ret),
         };
 
         // get oauth2 access token if it is directly defined in options
@@ -269,18 +278,18 @@ impl ForeignDataWrapper for FirebaseFdw {
                 None => {
                     let sa_key_id = match require_option("sa_key_id", options) {
                         Some(sa_key_id) => sa_key_id,
-                        None => return ret,
+                        None => return Ok(ret),
                     };
                     match get_vault_secret(&sa_key_id) {
                         Some(sa_key) => sa_key,
-                        None => return ret,
+                        None => return Ok(ret),
                     }
                 }
             };
             if let Some(access_token) = get_oauth2_token(&sa_key, &ret.rt) {
                 access_token.token().map(|t| t.to_owned()).unwrap()
             } else {
-                return ret;
+                return Ok(ret);
             }
         };
 
@@ -302,7 +311,7 @@ impl ForeignDataWrapper for FirebaseFdw {
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
 
-        ret
+        Ok(ret)
     }
 
     fn begin_scan(

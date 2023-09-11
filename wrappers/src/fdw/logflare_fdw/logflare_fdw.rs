@@ -1,4 +1,5 @@
 use crate::stats;
+use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::{
     pg_sys,
     prelude::{AnyNumeric, Date, PgSqlErrorCode, Timestamp},
@@ -213,8 +214,16 @@ impl LogflareFdw {
     }
 }
 
-impl ForeignDataWrapper for LogflareFdw {
-    fn new(options: &HashMap<String, String>) -> Self {
+enum LogflareFdwError {}
+
+impl From<LogflareFdwError> for ErrorReport {
+    fn from(_value: LogflareFdwError) -> Self {
+        ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, "", "")
+    }
+}
+
+impl ForeignDataWrapper<LogflareFdwError> for LogflareFdw {
+    fn new(options: &HashMap<String, String>) -> Result<Self, LogflareFdwError> {
         let base_url = options
             .get("api_url")
             .map(|t| t.to_owned())
@@ -235,13 +244,13 @@ impl ForeignDataWrapper for LogflareFdw {
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
 
-        LogflareFdw {
+        Ok(LogflareFdw {
             rt: create_async_runtime(),
             base_url: Url::parse(&base_url).unwrap(),
             client,
             scan_result: None,
             params: Vec::default(),
-        }
+        })
     }
 
     fn begin_scan(

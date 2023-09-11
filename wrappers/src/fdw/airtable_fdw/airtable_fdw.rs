@@ -1,5 +1,6 @@
 use crate::stats;
 use pgrx::pg_sys;
+use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::PgSqlErrorCode;
 use reqwest::{self, header};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
@@ -93,9 +94,17 @@ macro_rules! report_fetch_error {
     };
 }
 
+enum AirtableFdwError {}
+
+impl From<AirtableFdwError> for ErrorReport {
+    fn from(_value: AirtableFdwError) -> Self {
+        ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, "", "")
+    }
+}
+
 // TODO Add support for INSERT, UPDATE, DELETE
-impl ForeignDataWrapper for AirtableFdw {
-    fn new(options: &HashMap<String, String>) -> Self {
+impl ForeignDataWrapper<AirtableFdwError> for AirtableFdw {
+    fn new(options: &HashMap<String, String>) -> Result<Self, AirtableFdwError> {
         let base_url = options
             .get("api_url")
             .map(|t| t.to_owned())
@@ -110,12 +119,12 @@ impl ForeignDataWrapper for AirtableFdw {
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
 
-        Self {
+        Ok(Self {
             rt: create_async_runtime(),
             client,
             base_url,
             scan_result: None,
-        }
+        })
     }
 
     fn begin_scan(

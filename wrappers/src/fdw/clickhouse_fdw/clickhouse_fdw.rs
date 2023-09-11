@@ -2,6 +2,7 @@ use crate::stats;
 use chrono::{Date, DateTime, NaiveDate, NaiveDateTime, Utc};
 use chrono_tz::Tz;
 use clickhouse_rs::{types, types::Block, types::SqlType, ClientHandle, Pool};
+use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::{prelude::PgSqlErrorCode, to_timestamp};
 use regex::{Captures, Regex};
 use std::collections::HashMap;
@@ -196,8 +197,16 @@ impl ClickHouseFdw {
     }
 }
 
-impl ForeignDataWrapper for ClickHouseFdw {
-    fn new(options: &HashMap<String, String>) -> Self {
+enum ClickhouseFdwError {}
+
+impl From<ClickhouseFdwError> for ErrorReport {
+    fn from(_value: ClickhouseFdwError) -> Self {
+        ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, "", "")
+    }
+}
+
+impl ForeignDataWrapper<ClickhouseFdwError> for ClickHouseFdw {
+    fn new(options: &HashMap<String, String>) -> Result<Self, ClickhouseFdwError> {
         let rt = create_async_runtime();
         let conn_str = match options.get("conn_string") {
             Some(conn_str) => conn_str.to_owned(),
@@ -208,7 +217,7 @@ impl ForeignDataWrapper for ClickHouseFdw {
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
 
-        Self {
+        Ok(Self {
             rt,
             conn_str,
             client: None,
@@ -218,7 +227,7 @@ impl ForeignDataWrapper for ClickHouseFdw {
             scan_blk: None,
             row_idx: 0,
             params: Vec::new(),
-        }
+        })
     }
 
     fn begin_scan(

@@ -2,6 +2,7 @@
 //!
 
 use crate::FdwRoutine;
+use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::{Date, Timestamp};
 use pgrx::{
     fcinfo,
@@ -454,7 +455,7 @@ impl Limit {
 ///
 /// See the module-level document for more details.
 ///
-pub trait ForeignDataWrapper {
+pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     /// Create a FDW instance
     ///
     /// `options` is the key-value pairs defined in `CREATE SERVER` SQL. For example,
@@ -472,7 +473,9 @@ pub trait ForeignDataWrapper {
     /// You can do any initalization in this function, like saving connection
     /// info or API url in an variable, but don't do heavy works like database
     /// connection or API call.
-    fn new(options: &HashMap<String, String>) -> Self;
+    fn new(options: &HashMap<String, String>) -> Result<Self, E>
+    where
+        Self: Sized;
 
     /// Obtain relation size estimates for a foreign table
     ///
@@ -590,25 +593,25 @@ pub trait ForeignDataWrapper {
                 FdwRoutine::<AllocatedByRust>::alloc_node(pg_sys::NodeTag_T_FdwRoutine);
 
             // plan phase
-            fdw_routine.GetForeignRelSize = Some(scan::get_foreign_rel_size::<Self>);
-            fdw_routine.GetForeignPaths = Some(scan::get_foreign_paths::<Self>);
-            fdw_routine.GetForeignPlan = Some(scan::get_foreign_plan::<Self>);
-            fdw_routine.ExplainForeignScan = Some(scan::explain_foreign_scan::<Self>);
+            fdw_routine.GetForeignRelSize = Some(scan::get_foreign_rel_size::<E, Self>);
+            fdw_routine.GetForeignPaths = Some(scan::get_foreign_paths::<E, Self>);
+            fdw_routine.GetForeignPlan = Some(scan::get_foreign_plan::<E, Self>);
+            fdw_routine.ExplainForeignScan = Some(scan::explain_foreign_scan::<E, Self>);
 
             // scan phase
-            fdw_routine.BeginForeignScan = Some(scan::begin_foreign_scan::<Self>);
-            fdw_routine.IterateForeignScan = Some(scan::iterate_foreign_scan::<Self>);
-            fdw_routine.ReScanForeignScan = Some(scan::re_scan_foreign_scan::<Self>);
-            fdw_routine.EndForeignScan = Some(scan::end_foreign_scan::<Self>);
+            fdw_routine.BeginForeignScan = Some(scan::begin_foreign_scan::<E, Self>);
+            fdw_routine.IterateForeignScan = Some(scan::iterate_foreign_scan::<E, Self>);
+            fdw_routine.ReScanForeignScan = Some(scan::re_scan_foreign_scan::<E, Self>);
+            fdw_routine.EndForeignScan = Some(scan::end_foreign_scan::<E, Self>);
 
             // modify phase
             fdw_routine.AddForeignUpdateTargets = Some(modify::add_foreign_update_targets);
-            fdw_routine.PlanForeignModify = Some(modify::plan_foreign_modify::<Self>);
-            fdw_routine.BeginForeignModify = Some(modify::begin_foreign_modify::<Self>);
-            fdw_routine.ExecForeignInsert = Some(modify::exec_foreign_insert::<Self>);
-            fdw_routine.ExecForeignDelete = Some(modify::exec_foreign_delete::<Self>);
-            fdw_routine.ExecForeignUpdate = Some(modify::exec_foreign_update::<Self>);
-            fdw_routine.EndForeignModify = Some(modify::end_foreign_modify::<Self>);
+            fdw_routine.PlanForeignModify = Some(modify::plan_foreign_modify::<E, Self>);
+            fdw_routine.BeginForeignModify = Some(modify::begin_foreign_modify::<E, Self>);
+            fdw_routine.ExecForeignInsert = Some(modify::exec_foreign_insert::<E, Self>);
+            fdw_routine.ExecForeignDelete = Some(modify::exec_foreign_delete::<E, Self>);
+            fdw_routine.ExecForeignUpdate = Some(modify::exec_foreign_update::<E, Self>);
+            fdw_routine.EndForeignModify = Some(modify::end_foreign_modify::<E, Self>);
 
             Self::fdw_routine_hook(&mut fdw_routine);
             fdw_routine.into_pg_boxed()

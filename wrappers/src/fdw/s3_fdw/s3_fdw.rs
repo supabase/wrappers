@@ -3,6 +3,7 @@ use async_compression::tokio::bufread::{BzDecoder, GzipDecoder, XzDecoder, ZlibD
 use aws_sdk_s3 as s3;
 use http::Uri;
 use pgrx::pg_sys;
+use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::PgSqlErrorCode;
 use serde_json::{self, Value as JsonValue};
 use std::collections::{HashMap, VecDeque};
@@ -125,8 +126,16 @@ impl S3Fdw {
     }
 }
 
-impl ForeignDataWrapper for S3Fdw {
-    fn new(options: &HashMap<String, String>) -> Self {
+enum S3FdwError {}
+
+impl From<S3FdwError> for ErrorReport {
+    fn from(_value: S3FdwError) -> Self {
+        ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, "", "")
+    }
+}
+
+impl ForeignDataWrapper<S3FdwError> for S3Fdw {
+    fn new(options: &HashMap<String, String>) -> Result<Self, S3FdwError> {
         let rt = tokio::runtime::Runtime::new().unwrap();
         let mut ret = S3Fdw {
             rt,
@@ -164,7 +173,7 @@ impl ForeignDataWrapper for S3Fdw {
             }
         };
         if creds.is_none() {
-            return ret;
+            return Ok(ret);
         }
         let creds = creds.unwrap();
 
@@ -199,7 +208,7 @@ impl ForeignDataWrapper for S3Fdw {
         };
         ret.client = Some(client);
 
-        ret
+        Ok(ret)
     }
 
     fn begin_scan(

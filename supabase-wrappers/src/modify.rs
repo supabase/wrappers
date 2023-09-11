@@ -1,8 +1,10 @@
+use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::{
     debug2, memcxt::PgMemoryContexts, pg_sys::Oid, prelude::*, rel::PgRelation,
     tupdesc::PgTupleDesc, FromDatum, PgSqlErrorCode,
 };
 use std::collections::HashMap;
+use std::marker::PhantomData;
 use std::os::raw::c_int;
 use std::ptr;
 
@@ -14,7 +16,7 @@ use super::polyfill;
 use super::utils;
 
 // Fdw private state for modify
-struct FdwModifyState<W: ForeignDataWrapper> {
+struct FdwModifyState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
     // foreign data wrapper instance
     instance: W,
 
@@ -29,9 +31,10 @@ struct FdwModifyState<W: ForeignDataWrapper> {
     // temporary memory context per foreign table, created under Wrappers root
     // memory context
     tmp_ctx: PgMemoryContexts,
+    _phantom: PhantomData<E>,
 }
 
-impl<W: ForeignDataWrapper> FdwModifyState<W> {
+impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwModifyState<E, W> {
     unsafe fn new(foreigntableid: Oid, tmp_ctx: PgMemoryContexts) -> Self {
         Self {
             instance: instance::create_fdw_instance(foreigntableid),
@@ -40,6 +43,7 @@ impl<W: ForeignDataWrapper> FdwModifyState<W> {
             rowid_typid: Oid::INVALID,
             opts: HashMap::new(),
             tmp_ctx,
+            _phantom: PhantomData,
         }
     }
 
@@ -64,7 +68,7 @@ impl<W: ForeignDataWrapper> FdwModifyState<W> {
     }
 }
 
-impl<W: ForeignDataWrapper> utils::SerdeList for FdwModifyState<W> {}
+impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> utils::SerdeList for FdwModifyState<E, W> {}
 
 #[pg_guard]
 pub(super) extern "C" fn add_foreign_update_targets(
@@ -112,7 +116,7 @@ pub(super) extern "C" fn add_foreign_update_targets(
 }
 
 #[pg_guard]
-pub(super) extern "C" fn plan_foreign_modify<W: ForeignDataWrapper>(
+pub(super) extern "C" fn plan_foreign_modify<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     root: *mut pg_sys::PlannerInfo,
     plan: *mut pg_sys::ModifyTable,
     result_relation: pg_sys::Index,
@@ -158,7 +162,7 @@ pub(super) extern "C" fn plan_foreign_modify<W: ForeignDataWrapper>(
                 let ctx = memctx::refresh_wrappers_memctx(&ctx_name);
 
                 // create modify state
-                let mut state = FdwModifyState::<W>::new(ftable_id, ctx);
+                let mut state = FdwModifyState::<E, W>::new(ftable_id, ctx);
 
                 state.rowid_name = rowid_name.to_string();
                 state.rowid_typid = attr.atttypid;
@@ -181,7 +185,7 @@ pub(super) extern "C" fn plan_foreign_modify<W: ForeignDataWrapper>(
 }
 
 #[pg_guard]
-pub(super) extern "C" fn begin_foreign_modify<W: ForeignDataWrapper>(
+pub(super) extern "C" fn begin_foreign_modify<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     mtstate: *mut pg_sys::ModifyTableState,
     rinfo: *mut pg_sys::ResultRelInfo,
     fdw_private: *mut pg_sys::List,
@@ -195,7 +199,7 @@ pub(super) extern "C" fn begin_foreign_modify<W: ForeignDataWrapper>(
     }
 
     unsafe {
-        let mut state = FdwModifyState::<W>::deserialize_from_list(fdw_private as _);
+        let mut state = FdwModifyState::<E, W>::deserialize_from_list(fdw_private as _);
         assert!(!state.is_null());
 
         // search for rowid attribute number
@@ -211,7 +215,7 @@ pub(super) extern "C" fn begin_foreign_modify<W: ForeignDataWrapper>(
 }
 
 #[pg_guard]
-pub(super) extern "C" fn exec_foreign_insert<W: ForeignDataWrapper>(
+pub(super) extern "C" fn exec_foreign_insert<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     _estate: *mut pg_sys::EState,
     rinfo: *mut pg_sys::ResultRelInfo,
     slot: *mut pg_sys::TupleTableSlot,
@@ -219,8 +223,9 @@ pub(super) extern "C" fn exec_foreign_insert<W: ForeignDataWrapper>(
 ) -> *mut pg_sys::TupleTableSlot {
     debug2!("---> exec_foreign_insert");
     unsafe {
-        let mut state =
-            PgBox::<FdwModifyState<W>>::from_pg((*rinfo).ri_FdwState as *mut FdwModifyState<W>);
+        let mut state = PgBox::<FdwModifyState<E, W>>::from_pg(
+            (*rinfo).ri_FdwState as *mut FdwModifyState<E, W>,
+        );
 
         let row = utils::tuple_table_slot_to_row(slot);
         state.insert(&row);
@@ -229,8 +234,8 @@ pub(super) extern "C" fn exec_foreign_insert<W: ForeignDataWrapper>(
     slot
 }
 
-unsafe fn get_rowid_cell<W: ForeignDataWrapper>(
-    state: &FdwModifyState<W>,
+unsafe fn get_rowid_cell<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
+    state: &FdwModifyState<E, W>,
     plan_slot: *mut pg_sys::TupleTableSlot,
 ) -> Option<Cell> {
     let mut is_null: bool = true;
@@ -239,7 +244,7 @@ unsafe fn get_rowid_cell<W: ForeignDataWrapper>(
 }
 
 #[pg_guard]
-pub(super) extern "C" fn exec_foreign_delete<W: ForeignDataWrapper>(
+pub(super) extern "C" fn exec_foreign_delete<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     _estate: *mut pg_sys::EState,
     rinfo: *mut pg_sys::ResultRelInfo,
     slot: *mut pg_sys::TupleTableSlot,
@@ -247,8 +252,9 @@ pub(super) extern "C" fn exec_foreign_delete<W: ForeignDataWrapper>(
 ) -> *mut pg_sys::TupleTableSlot {
     debug2!("---> exec_foreign_delete");
     unsafe {
-        let mut state =
-            PgBox::<FdwModifyState<W>>::from_pg((*rinfo).ri_FdwState as *mut FdwModifyState<W>);
+        let mut state = PgBox::<FdwModifyState<E, W>>::from_pg(
+            (*rinfo).ri_FdwState as *mut FdwModifyState<E, W>,
+        );
 
         let cell = get_rowid_cell(&state, plan_slot);
         if let Some(rowid) = cell {
@@ -260,7 +266,7 @@ pub(super) extern "C" fn exec_foreign_delete<W: ForeignDataWrapper>(
 }
 
 #[pg_guard]
-pub(super) extern "C" fn exec_foreign_update<W: ForeignDataWrapper>(
+pub(super) extern "C" fn exec_foreign_update<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     _estate: *mut pg_sys::EState,
     rinfo: *mut pg_sys::ResultRelInfo,
     slot: *mut pg_sys::TupleTableSlot,
@@ -268,8 +274,9 @@ pub(super) extern "C" fn exec_foreign_update<W: ForeignDataWrapper>(
 ) -> *mut pg_sys::TupleTableSlot {
     debug2!("---> exec_foreign_update");
     unsafe {
-        let mut state =
-            PgBox::<FdwModifyState<W>>::from_pg((*rinfo).ri_FdwState as *mut FdwModifyState<W>);
+        let mut state = PgBox::<FdwModifyState<E, W>>::from_pg(
+            (*rinfo).ri_FdwState as *mut FdwModifyState<E, W>,
+        );
 
         let rowid_cell = get_rowid_cell(&state, plan_slot);
         if let Some(rowid) = rowid_cell {
@@ -293,15 +300,15 @@ pub(super) extern "C" fn exec_foreign_update<W: ForeignDataWrapper>(
 }
 
 #[pg_guard]
-pub(super) extern "C" fn end_foreign_modify<W: ForeignDataWrapper>(
+pub(super) extern "C" fn end_foreign_modify<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     _estate: *mut pg_sys::EState,
     rinfo: *mut pg_sys::ResultRelInfo,
 ) {
     debug2!("---> end_foreign_modify");
     unsafe {
-        let fdw_state = (*rinfo).ri_FdwState as *mut FdwModifyState<W>;
+        let fdw_state = (*rinfo).ri_FdwState as *mut FdwModifyState<E, W>;
         if !fdw_state.is_null() {
-            let mut state = PgBox::<FdwModifyState<W>>::from_pg(fdw_state);
+            let mut state = PgBox::<FdwModifyState<E, W>>::from_pg(fdw_state);
             state.end_modify();
         }
     }

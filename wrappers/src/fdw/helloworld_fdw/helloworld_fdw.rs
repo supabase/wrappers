@@ -1,3 +1,5 @@
+use pgrx::pg_sys::panic::ErrorReport;
+use pgrx::PgSqlErrorCode;
 use std::collections::HashMap;
 use supabase_wrappers::prelude::*;
 
@@ -15,7 +17,15 @@ pub(crate) struct HelloWorldFdw {
     tgt_cols: Vec<Column>,
 }
 
-impl ForeignDataWrapper for HelloWorldFdw {
+enum HelloWorldFdwError {}
+
+impl From<HelloWorldFdwError> for ErrorReport {
+    fn from(_value: HelloWorldFdwError) -> Self {
+        ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, "", "")
+    }
+}
+
+impl ForeignDataWrapper<HelloWorldFdwError> for HelloWorldFdw {
     // 'options' is the key-value pairs defined in `CREATE SERVER` SQL, for example,
     //
     // create server my_helloworld_server
@@ -29,11 +39,11 @@ impl ForeignDataWrapper for HelloWorldFdw {
     // You can do any initalization in this new() function, like saving connection
     // info or API url in an variable, but don't do any heavy works like making a
     // database connection or API call.
-    fn new(_options: &HashMap<String, String>) -> Self {
-        Self {
+    fn new(_options: &HashMap<String, String>) -> Result<Self, HelloWorldFdwError> {
+        Ok(Self {
             row_cnt: 0,
             tgt_cols: Vec::new(),
-        }
+        })
     }
 
     fn begin_scan(

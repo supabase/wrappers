@@ -1,4 +1,5 @@
 use crate::stats;
+use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::{datum::datetime_support::to_timestamp, pg_sys, prelude::PgSqlErrorCode, JsonB};
 use reqwest::{self, header, StatusCode, Url};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
@@ -625,8 +626,16 @@ impl StripeFdw {
     }
 }
 
-impl ForeignDataWrapper for StripeFdw {
-    fn new(options: &HashMap<String, String>) -> Self {
+enum StripeFdwError {}
+
+impl From<StripeFdwError> for ErrorReport {
+    fn from(_value: StripeFdwError) -> Self {
+        ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, "", "")
+    }
+}
+
+impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
+    fn new(options: &HashMap<String, String>) -> Result<Self, StripeFdwError> {
         let base_url = options
             .get("api_url")
             .map(|t| t.to_owned())
@@ -649,14 +658,14 @@ impl ForeignDataWrapper for StripeFdw {
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
 
-        StripeFdw {
+        Ok(StripeFdw {
             rt: create_async_runtime(),
             base_url: Url::parse(&base_url).unwrap(),
             client,
             scan_result: None,
             obj: String::default(),
             rowid_col: String::default(),
-        }
+        })
     }
 
     fn begin_scan(

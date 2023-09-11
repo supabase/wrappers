@@ -10,6 +10,7 @@ use gcp_bigquery_client::{
     },
     Client,
 };
+use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::PgSqlErrorCode;
 use pgrx::prelude::{AnyNumeric, Date, Timestamp};
 use serde_json::json;
@@ -158,8 +159,16 @@ impl BigQueryFdw {
     }
 }
 
-impl ForeignDataWrapper for BigQueryFdw {
-    fn new(options: &HashMap<String, String>) -> Self {
+enum BigQueryFdwError {}
+
+impl From<BigQueryFdwError> for ErrorReport {
+    fn from(_value: BigQueryFdwError) -> Self {
+        ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, "", "")
+    }
+}
+
+impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
+    fn new(options: &HashMap<String, String>) -> Result<Self, BigQueryFdwError> {
         let mut ret = BigQueryFdw {
             rt: create_async_runtime(),
             client: None,
@@ -176,7 +185,7 @@ impl ForeignDataWrapper for BigQueryFdw {
         let dataset_id = require_option("dataset_id", options);
 
         if project_id.is_none() || dataset_id.is_none() {
-            return ret;
+            return Ok(ret);
         }
         ret.project_id = project_id.unwrap();
         ret.dataset_id = dataset_id.unwrap();
@@ -208,11 +217,11 @@ impl ForeignDataWrapper for BigQueryFdw {
                 None => {
                     let sa_key_id = match require_option("sa_key_id", options) {
                         Some(sa_key_id) => sa_key_id,
-                        None => return ret,
+                        None => return Ok(ret),
                     };
                     match get_vault_secret(&sa_key_id) {
                         Some(sa_key) => sa_key,
-                        None => return ret,
+                        None => return Ok(ret),
                     }
                 }
             },
@@ -225,7 +234,7 @@ impl ForeignDataWrapper for BigQueryFdw {
                     PgSqlErrorCode::ERRCODE_FDW_ERROR,
                     &format!("parse service account key JSON failed: {}", err),
                 );
-                return ret;
+                return Ok(ret);
             }
         };
 
@@ -246,7 +255,7 @@ impl ForeignDataWrapper for BigQueryFdw {
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
 
-        ret
+        Ok(ret)
     }
 
     fn get_rel_size(
