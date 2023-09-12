@@ -60,8 +60,9 @@
 //! The FDW implements [`interface::ForeignDataWrapper`] trait must use [`wrappers_fdw`] macro and implement a `new()` initialization function. For example,
 //!
 //! ```rust,no_run
+//! # mod wrapper {
+//! use std::collections::HashMap;
 //! use supabase_wrappers::prelude::*;
-//!
 //! #[wrappers_fdw(
 //!    version = "0.1.0",
 //!    author = "Supabase",
@@ -76,7 +77,7 @@
 //! }
 //!
 //! impl ForeignDataWrapper for HelloWorldFdw {
-//!     pub fn new(options: &HashMap<String, String>) -> Self {
+//!     fn new(options: &HashMap<String, String>) -> Self {
 //!         // 'options' is the key-value pairs defined in `CREATE SERVER` SQL, for example,
 //!         //
 //!         // create server my_helloworld_server
@@ -95,7 +96,21 @@
 //!             tgt_cols: Vec::new(),
 //!         }
 //!     }
+//!
+//!     fn begin_scan(&mut self, quals: &[Qual], columns: &[Column], sorts: &[Sort], limit: &Option<Limit>, options: &HashMap<String, String>) {
+//!         // Do any initilization
+//!     }
+//!
+//!     fn iter_scan(&mut self, row: &mut Row) -> Option<()> {
+//!         // Return None when done
+//!         None
+//!     }
+//!
+//!     fn end_scan(&mut self) {
+//!         // Cleanup any resources
+//!     }
 //! }
+//! # }
 //! ```
 //!
 //! To develop a simple FDW supports basic query `SELECT`, you need to implement `begin_scan`, `iter_scan` and `end_scan`.
@@ -120,7 +135,24 @@
 //! Then we can implement [`interface::ForeignDataWrapper`] trait like below,
 //!
 //! ```rust,no_run
+//! use std::collections::HashMap;
+//! use supabase_wrappers::prelude::*;
+//!
+//! pub(crate) struct HelloWorldFdw {
+//!     // row counter
+//!     row_cnt: i64,
+//!
+//!     // target column name list
+//!     tgt_cols: Vec<Column>,
+//! }
 //! impl ForeignDataWrapper for HelloWorldFdw {
+//!     fn new(options: &HashMap<String, String>) -> Self {
+//!         Self {
+//!             row_cnt: 0,
+//!             tgt_cols: Vec::new(),
+//!         }
+//!     }
+//!
 //!     fn begin_scan(
 //!         &mut self,
 //!         _quals: &[Qual],
@@ -141,7 +173,7 @@
 //!         if self.row_cnt < 1 {
 //!             // add values to row if they are in target column list
 //!             for tgt_col in &self.tgt_cols {
-//!                 match tgt_col.as_str() {
+//!                 match tgt_col.name.as_str() {
 //!                     "id" => row.push("id", Some(Cell::I64(self.row_cnt))),
 //!                     "col" => row.push("col", Some(Cell::String("Hello world".to_string()))),
 //!                     _ => {}
