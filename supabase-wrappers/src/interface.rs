@@ -562,7 +562,9 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     /// - row - the new row to be inserted
     ///
     /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-UPDATE).
-    fn insert(&mut self, _row: &Row) {}
+    fn insert(&mut self, _row: &Row) -> Result<(), E> {
+        Ok(())
+    }
 
     /// Called when update one row into the foreign table
     ///

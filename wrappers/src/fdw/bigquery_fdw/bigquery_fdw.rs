@@ -435,7 +435,7 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
         Ok(())
     }
 
-    fn insert(&mut self, src: &Row) {
+    fn insert(&mut self, src: &Row) -> Result<(), BigQueryFdwError> {
         if let Some(ref mut client) = self.client {
             let mut insert_request = TableDataInsertAllRequest::new();
             let mut row_json = json!({});
@@ -474,6 +474,8 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
                 );
             }
         }
+
+        Ok(())
     }
 
     fn update(&mut self, rowid: &Cell, new_row: &Row) {

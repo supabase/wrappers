@@ -51,8 +51,8 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwModifyState<E, W> {
         self.instance.begin_modify(&self.opts)
     }
 
-    fn insert(&mut self, row: &Row) {
-        self.instance.insert(row);
+    fn insert(&mut self, row: &Row) -> Result<(), E> {
+        self.instance.insert(row)
     }
 
     fn update(&mut self, rowid: &Cell, new_row: &Row) {
@@ -228,7 +228,7 @@ pub(super) extern "C" fn exec_foreign_insert<E: Into<ErrorReport>, W: ForeignDat
         );
 
         let row = utils::tuple_table_slot_to_row(slot);
-        state.insert(&row);
+        state.insert(&row).map_err(|e| e.into()).report();
     }
 
     slot

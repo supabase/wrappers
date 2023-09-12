@@ -789,12 +789,12 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
         Ok(())
     }
 
-    fn insert(&mut self, src: &Row) {
+    fn insert(&mut self, src: &Row) -> Result<(), StripeFdwError> {
         if let Some(ref mut client) = self.client {
             let url = self.base_url.join(&self.obj).unwrap();
             let body = row_to_body(src);
             if body.is_null() {
-                return;
+                return Ok(());
             }
 
             let mut stats_metadata = get_stats_metadata();
@@ -817,17 +817,18 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
                     }
                     Err(err) => {
                         report_request_error!(err);
-                        return;
+                        return Ok(());
                     }
                 },
                 Err(err) => {
                     report_request_error!(err);
-                    return;
+                    return Ok(());
                 }
             }
 
             set_stats_metadata(stats_metadata);
         }
+        Ok(())
     }
 
     fn update(&mut self, rowid: &Cell, new_row: &Row) {
