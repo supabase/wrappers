@@ -1,4 +1,4 @@
-use pgrx::pg_sys::panic::ErrorReport;
+use pgrx::pg_sys::panic::{ErrorReport, ErrorReportable};
 use pgrx::{
     debug2, memcxt::PgMemoryContexts, pg_sys::Oid, prelude::*, rel::PgRelation,
     tupdesc::PgTupleDesc, FromDatum, PgSqlErrorCode,
@@ -47,8 +47,8 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwModifyState<E, W> {
         }
     }
 
-    fn begin_modify(&mut self) {
-        self.instance.begin_modify(&self.opts);
+    fn begin_modify(&mut self) -> Result<(), E> {
+        self.instance.begin_modify(&self.opts)
     }
 
     fn insert(&mut self, row: &Row) {
@@ -208,7 +208,7 @@ pub(super) extern "C" fn begin_foreign_modify<E: Into<ErrorReport>, W: ForeignDa
         state.rowid_attno =
             pg_sys::ExecFindJunkAttributeInTlist((*subplan).targetlist, rowid_name_c);
 
-        state.begin_modify();
+        state.begin_modify().map_err(|e| e.into()).report();
 
         (*rinfo).ri_FdwState = state.into_pg() as _;
     }

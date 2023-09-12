@@ -553,7 +553,9 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     /// ```
     ///
     /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-UPDATE).
-    fn begin_modify(&mut self, _options: &HashMap<String, String>) {}
+    fn begin_modify(&mut self, _options: &HashMap<String, String>) -> Result<(), E> {
+        Ok(())
+    }
 
     /// Called when insert one row into the foreign table
     ///

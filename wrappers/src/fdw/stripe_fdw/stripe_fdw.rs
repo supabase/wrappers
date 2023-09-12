@@ -783,9 +783,10 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
         Ok(())
     }
 
-    fn begin_modify(&mut self, options: &HashMap<String, String>) {
+    fn begin_modify(&mut self, options: &HashMap<String, String>) -> Result<(), StripeFdwError> {
         self.obj = require_option("object", options).unwrap_or_default();
         self.rowid_col = require_option("rowid_column", options).unwrap_or_default();
+        Ok(())
     }
 
     fn insert(&mut self, src: &Row) {

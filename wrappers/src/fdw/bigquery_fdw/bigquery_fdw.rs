@@ -423,14 +423,16 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
         Ok(())
     }
 
-    fn begin_modify(&mut self, options: &HashMap<String, String>) {
+    fn begin_modify(&mut self, options: &HashMap<String, String>) -> Result<(), BigQueryFdwError> {
         let table = require_option("table", options);
         let rowid_col = require_option("rowid_column", options);
         if table.is_none() || rowid_col.is_none() {
-            return;
+            return Ok(());
         }
         self.table = table.unwrap();
         self.rowid_col = rowid_col.unwrap();
+
+        Ok(())
     }
 
     fn insert(&mut self, src: &Row) {
