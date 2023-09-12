@@ -628,18 +628,23 @@ pub trait ForeignDataWrapper {
     /// # Example
     ///
     /// ```rust,no_run
+    /// use pgrx::pg_sys::Oid;
+    /// use supabase_wrappers::prelude::check_options_contain;
+    ///
     /// fn validator(opt_list: Vec<Option<String>>, catalog: Option<Oid>) {
     ///     if let Some(oid) = catalog {
     ///         match oid {
     ///             FOREIGN_DATA_WRAPPER_RELATION_ID => {
     ///                 // check a required option when create foreign data wrapper
-    ///                 check_options_contain(&opt_list, "required_option");
+    ///                 check_options_contain(&opt_list, "foreign_data_wrapper_required_option");
     ///             }
     ///             FOREIGN_SERVER_RELATION_ID => {
     ///                 // check option here when create server
+    ///                 check_options_contain(&opt_list, "foreign_server_required_option");
     ///             }
     ///             FOREIGN_TABLE_RELATION_ID => {
     ///                 // check option here when create foreign table
+    ///                 check_options_contain(&opt_list, "foreign_table_required_option");
     ///             }
     ///             _ => {}
     ///         }

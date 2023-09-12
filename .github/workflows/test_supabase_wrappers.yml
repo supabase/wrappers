@@ -7,16 +7,12 @@ on:
 
 jobs:
   test:
-    name: Run wrappers tests
+    name: Run supabase_wrappers tests
     runs-on: ubuntu-20.04
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
-
-    - name: Build docker images
-      run: |
-        docker-compose -f wrappers/.ci/docker-compose.yaml up -d
 
     - uses: actions-rs/toolchain@v1
       with:
@@ -46,4 +42,4 @@ jobs:
 
     - run: cargo install cargo-pgrx --version 0.9.8
     - run: cargo pgrx init --pg15 /usr/lib/postgresql/15/bin/pg_config
-    - run: cd wrappers && cargo pgrx test --features all_fdws,pg15
+    - run: cd supabase-wrappers && cargo test
