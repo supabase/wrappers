@@ -6,7 +6,7 @@ use pgrx::{
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
-use pgrx::pg_sys::panic::ErrorReport;
+use pgrx::pg_sys::panic::{ErrorReport, ErrorReportable};
 use std::os::raw::c_int;
 use std::ptr;
 
@@ -69,7 +69,7 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwState<E, W> {
     }
 
     #[inline]
-    fn get_rel_size(&mut self) -> (i64, i32) {
+    fn get_rel_size(&mut self) -> Result<(i64, i32), E> {
         self.instance.get_rel_size(
             &self.quals,
             &self.tgts,
@@ -140,7 +140,7 @@ pub(super) extern "C" fn get_foreign_rel_size<E: Into<ErrorReport>, W: ForeignDa
         state.opts = utils::options_to_hashmap((*ftable).options);
 
         // get estimate row count and mean row width
-        let (rows, width) = state.get_rel_size();
+        let (rows, width) = state.get_rel_size().map_err(|e| e.into()).report();
         (*baserel).rows = rows as f64;
         (*(*baserel).reltarget).width = width;
 

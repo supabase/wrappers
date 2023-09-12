@@ -265,8 +265,8 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
         _sorts: &[Sort],
         _limit: &Option<Limit>,
         _options: &HashMap<String, String>,
-    ) -> (i64, i32) {
-        (0, 0)
+    ) -> Result<(i64, i32), BigQueryFdwError> {
+        Ok((0, 0))
     }
 
     fn begin_scan(

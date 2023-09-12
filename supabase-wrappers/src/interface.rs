@@ -490,8 +490,8 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
         _sorts: &[Sort],
         _limit: &Option<Limit>,
         _options: &HashMap<String, String>,
-    ) -> (i64, i32) {
-        (0, 0)
+    ) -> Result<(i64, i32), E> {
+        Ok((0, 0))
     }
 
     /// Called when begin executing a foreign scan
