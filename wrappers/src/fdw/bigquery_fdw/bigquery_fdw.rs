@@ -478,7 +478,7 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
         Ok(())
     }
 
-    fn update(&mut self, rowid: &Cell, new_row: &Row) {
+    fn update(&mut self, rowid: &Cell, new_row: &Row) -> Result<(), BigQueryFdwError> {
         if let Some(ref mut client) = self.client {
             let mut sets = Vec::new();
             for (col, cell) in new_row.iter() {
@@ -511,6 +511,7 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
                 );
             }
         }
+        Ok(())
     }
 
     fn delete(&mut self, rowid: &Cell) {

@@ -389,7 +389,7 @@ impl ForeignDataWrapper<ClickhouseFdwError> for ClickHouseFdw {
         Ok(())
     }
 
-    fn update(&mut self, rowid: &Cell, new_row: &Row) {
+    fn update(&mut self, rowid: &Cell, new_row: &Row) -> Result<(), ClickhouseFdwError> {
         if let Some(ref mut client) = self.client {
             let mut sets = Vec::new();
             for (col, cell) in new_row.iter() {
@@ -418,6 +418,7 @@ impl ForeignDataWrapper<ClickhouseFdwError> for ClickHouseFdw {
                 );
             }
         }
+        Ok(())
     }
 
     fn delete(&mut self, rowid: &Cell) {

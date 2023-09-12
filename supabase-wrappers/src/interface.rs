@@ -572,7 +572,9 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     /// - new_row - the new row with updated cells
     ///
     /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-UPDATE).
-    fn update(&mut self, _rowid: &Cell, _new_row: &Row) {}
+    fn update(&mut self, _rowid: &Cell, _new_row: &Row) -> Result<(), E> {
+        Ok(())
+    }
 
     /// Called when delete one row into the foreign table
     ///

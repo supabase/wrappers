@@ -55,8 +55,8 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwModifyState<E, W> {
         self.instance.insert(row)
     }
 
-    fn update(&mut self, rowid: &Cell, new_row: &Row) {
-        self.instance.update(rowid, new_row);
+    fn update(&mut self, rowid: &Cell, new_row: &Row) -> Result<(), E> {
+        self.instance.update(rowid, new_row)
     }
 
     fn delete(&mut self, rowid: &Cell) {
@@ -292,7 +292,10 @@ pub(super) extern "C" fn exec_foreign_update<E: Into<ErrorReport>, W: ForeignDat
                 }) && state.rowid_name != col.as_str()
             });
 
-            state.update(&rowid, &new_row);
+            state
+                .update(&rowid, &new_row)
+                .map_err(|e| e.into())
+                .report();
         }
     }
 
