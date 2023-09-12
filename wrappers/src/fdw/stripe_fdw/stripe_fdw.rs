@@ -778,8 +778,9 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
         Ok(None)
     }
 
-    fn end_scan(&mut self) {
+    fn end_scan(&mut self) -> Result<(), StripeFdwError> {
         self.scan_result.take();
+        Ok(())
     }
 
     fn begin_modify(&mut self, options: &HashMap<String, String>) {

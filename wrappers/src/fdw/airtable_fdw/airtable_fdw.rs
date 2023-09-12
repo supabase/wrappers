@@ -207,8 +207,9 @@ impl ForeignDataWrapper<AirtableFdwError> for AirtableFdw {
         Ok(None)
     }
 
-    fn end_scan(&mut self) {
+    fn end_scan(&mut self) -> Result<(), AirtableFdwError> {
         self.scan_result.take();
+        Ok(())
     }
 
     fn validator(options: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) {

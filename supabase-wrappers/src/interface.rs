@@ -529,7 +529,7 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     /// Called when end the scan
     ///
     /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-SCAN).
-    fn end_scan(&mut self);
+    fn end_scan(&mut self) -> Result<(), E>;
 
     /// Called when begin executing a foreign table modification operation.
     ///

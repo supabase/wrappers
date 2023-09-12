@@ -449,10 +449,11 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
         Ok(None)
     }
 
-    fn end_scan(&mut self) {
+    fn end_scan(&mut self) -> Result<(), S3FdwError> {
         // release local resources
         self.rdr.take();
         self.parser = Parser::JsonLine(VecDeque::new());
+        Ok(())
     }
 
     fn validator(options: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) {

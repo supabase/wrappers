@@ -399,8 +399,9 @@ impl ForeignDataWrapper<FirebaseFdwError> for FirebaseFdw {
         Ok(None)
     }
 
-    fn end_scan(&mut self) {
+    fn end_scan(&mut self) -> Result<(), FirebaseFdwError> {
         self.scan_result.take();
+        Ok(())
     }
 
     fn validator(options: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) {

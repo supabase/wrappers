@@ -418,8 +418,9 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
         Ok(None)
     }
 
-    fn end_scan(&mut self) {
+    fn end_scan(&mut self) -> Result<(), BigQueryFdwError> {
         self.scan_result.take();
+        Ok(())
     }
 
     fn begin_modify(&mut self, options: &HashMap<String, String>) {

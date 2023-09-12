@@ -101,8 +101,8 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwState<E, W> {
     }
 
     #[inline]
-    fn end_scan(&mut self) {
-        self.instance.end_scan();
+    fn end_scan(&mut self) -> Result<(), E> {
+        self.instance.end_scan()
     }
 }
 
@@ -392,6 +392,6 @@ pub(super) extern "C" fn end_foreign_scan<E: Into<ErrorReport>, W: ForeignDataWr
         }
 
         let mut state = PgBox::<FdwState<E, W>>::from_pg(fdw_state);
-        state.end_scan();
+        state.end_scan().map_err(|e| e.into()).report();
     }
 }

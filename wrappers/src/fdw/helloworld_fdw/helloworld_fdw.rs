@@ -85,7 +85,8 @@ impl ForeignDataWrapper<HelloWorldFdwError> for HelloWorldFdw {
         Ok(None)
     }
 
-    fn end_scan(&mut self) {
+    fn end_scan(&mut self) -> Result<(), HelloWorldFdwError> {
         // we do nothing here, but you can do things like resource cleanup and etc.
+        Ok(())
     }
 }

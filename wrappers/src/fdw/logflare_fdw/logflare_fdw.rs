@@ -337,8 +337,9 @@ impl ForeignDataWrapper<LogflareFdwError> for LogflareFdw {
         Ok(None)
     }
 
-    fn end_scan(&mut self) {
+    fn end_scan(&mut self) -> Result<(), LogflareFdwError> {
         self.scan_result.take();
+        Ok(())
     }
 
     fn validator(options: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) {
