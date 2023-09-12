@@ -355,17 +355,19 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
         Ok(())
     }
 
-    fn iter_scan(&mut self, row: &mut Row) -> Option<()> {
+    fn iter_scan(&mut self, row: &mut Row) -> Result<Option<()>, S3FdwError> {
         // read parquet record
         if let Parser::Parquet(ref mut s3parquet) = &mut self.parser {
-            self.rt.block_on(s3parquet.refill())?;
+            if self.rt.block_on(s3parquet.refill()).is_none() {
+                return Ok(None);
+            }
             let ret = s3parquet.read_into_row(row, &self.tgt_cols);
             if ret.is_some() {
                 self.rows_out += 1;
             } else {
                 stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsOut, self.rows_out);
             }
-            return ret;
+            return Ok(ret);
         }
 
         // read csv or jsonl record
@@ -387,7 +389,7 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
                                     row.push(&col.name, cell);
                                 }
                                 self.rows_out += 1;
-                                return Some(());
+                                return Ok(Some(()));
                             } else {
                                 // no more records left in the local buffer, refill from remote
                                 self.buf.clear();
@@ -430,7 +432,7 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
                                 }
                             }
                             self.rows_out += 1;
-                            return Some(());
+                            return Ok(Some(()));
                         }
                         None => {
                             // no more records left in the local buffer, refill from remote
@@ -444,7 +446,7 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsOut, self.rows_out);
 
-        None
+        Ok(None)
     }
 
     fn end_scan(&mut self) {

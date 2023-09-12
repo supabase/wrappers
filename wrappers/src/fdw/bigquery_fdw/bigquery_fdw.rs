@@ -356,7 +356,7 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
         Ok(())
     }
 
-    fn iter_scan(&mut self, row: &mut Row) -> Option<()> {
+    fn iter_scan(&mut self, row: &mut Row) -> Result<Option<()>, BigQueryFdwError> {
         if let Some(client) = &self.client {
             if let Some(ref mut rs) = self.scan_result {
                 let mut extract_row = |rs: &mut ResultSet| {
@@ -379,7 +379,7 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
                 };
 
                 if extract_row(rs) {
-                    return Some(());
+                    return Ok(Some(()));
                 }
 
                 // deal with pagination
@@ -399,7 +399,7 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
                                     // replace result set with data from the new page
                                     *rs = ResultSet::new(QueryResponse::from(resp));
                                     if extract_row(rs) {
-                                        return Some(());
+                                        return Ok(Some(()));
                                     }
                                 }
                                 Err(err) => {
@@ -415,7 +415,7 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
                 }
             }
         }
-        None
+        Ok(None)
     }
 
     fn end_scan(&mut self) {

@@ -91,7 +91,7 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwState<E, W> {
     }
 
     #[inline]
-    fn iter_scan(&mut self) -> Option<()> {
+    fn iter_scan(&mut self) -> Result<Option<()>, E> {
         self.instance.iter_scan(&mut self.row)
     }
 
@@ -336,7 +336,7 @@ pub(super) extern "C" fn iterate_foreign_scan<E: Into<ErrorReport>, W: ForeignDa
         polyfill::exec_clear_tuple(slot);
 
         state.row.clear();
-        if state.iter_scan().is_some() {
+        if state.iter_scan().map_err(|e| e.into()).report().is_some() {
             if state.row.cols.len() != state.tgts.len() {
                 report_error(
                     PgSqlErrorCode::ERRCODE_FDW_INVALID_COLUMN_NUMBER,

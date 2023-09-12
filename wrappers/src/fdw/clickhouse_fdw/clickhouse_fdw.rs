@@ -277,7 +277,7 @@ impl ForeignDataWrapper<ClickhouseFdwError> for ClickHouseFdw {
         Ok(())
     }
 
-    fn iter_scan(&mut self, row: &mut Row) -> Option<()> {
+    fn iter_scan(&mut self, row: &mut Row) -> Result<Option<()>, ClickhouseFdwError> {
         if let Some(block) = &self.scan_blk {
             let mut rows = block.rows();
 
@@ -298,14 +298,16 @@ impl ForeignDataWrapper<ClickhouseFdwError> for ClickHouseFdw {
                         .unwrap();
                     let cell = field_to_cell(&src_row, i);
                     let col_name = src_row.name(i).unwrap();
-                    cell.as_ref()?;
+                    if cell.as_ref().is_none() {
+                        return Ok(None);
+                    }
                     row.push(col_name, cell);
                 }
                 self.row_idx += 1;
-                return Some(());
+                return Ok(Some(()));
             }
         }
-        None
+        Ok(None)
     }
 
     fn end_scan(&mut self) {

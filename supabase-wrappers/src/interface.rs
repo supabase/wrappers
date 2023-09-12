@@ -517,7 +517,7 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     /// FDW must save fetched foreign data into the [`Row`], or return `None` if no more rows to read.
     ///
     /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-SCAN).
-    fn iter_scan(&mut self, row: &mut Row) -> Option<()>;
+    fn iter_scan(&mut self, row: &mut Row) -> Result<Option<()>, E>;
 
     /// Called when restart the scan from the beginning.
     ///
