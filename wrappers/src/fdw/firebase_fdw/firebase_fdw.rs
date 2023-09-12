@@ -321,10 +321,10 @@ impl ForeignDataWrapper<FirebaseFdwError> for FirebaseFdw {
         _sorts: &[Sort],
         _limit: &Option<Limit>,
         options: &HashMap<String, String>,
-    ) {
+    ) -> Result<(), FirebaseFdwError> {
         let obj = match require_option("object", options) {
             Some(obj) => obj,
-            None => return,
+            None => return Ok(()),
         };
         let row_cnt_limit = options
             .get("limit")
@@ -383,6 +383,8 @@ impl ForeignDataWrapper<FirebaseFdwError> for FirebaseFdw {
 
             self.scan_result = Some(result);
         }
+
+        Ok(())
     }
 
     fn iter_scan(&mut self, row: &mut Row) -> Option<()> {

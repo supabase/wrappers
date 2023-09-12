@@ -39,7 +39,7 @@ macro_rules! report_request_error {
             PgSqlErrorCode::ERRCODE_FDW_ERROR,
             &format!("request failed: {}", $err),
         );
-        return;
+        return Ok(());
     }};
 }
 
@@ -260,25 +260,25 @@ impl ForeignDataWrapper<LogflareFdwError> for LogflareFdw {
         _sorts: &[Sort],
         _limit: &Option<Limit>,
         options: &HashMap<String, String>,
-    ) {
+    ) -> Result<(), LogflareFdwError> {
         let endpoint = if let Some(name) = require_option("endpoint", options) {
             name
         } else {
-            return;
+            return Ok(());
         };
 
         // extract params
         self.params = if let Some(params) = extract_params(quals) {
             params
         } else {
-            return;
+            return Ok(());
         };
 
         if let Some(client) = &self.client {
             // build url
             let url = self.build_url(&endpoint);
             if url.is_none() {
-                return;
+                return Ok(());
             }
             let url = url.unwrap();
 
@@ -294,7 +294,7 @@ impl ForeignDataWrapper<LogflareFdwError> for LogflareFdw {
                     if resp.status() == StatusCode::NOT_FOUND {
                         // if it is 404 error, we should treat it as an empty
                         // result rather than a request error
-                        return;
+                        return Ok(());
                     }
 
                     match resp.error_for_status() {
@@ -321,6 +321,8 @@ impl ForeignDataWrapper<LogflareFdwError> for LogflareFdw {
                 Err(err) => report_request_error!(err),
             }
         }
+
+        Ok(())
     }
 
     fn iter_scan(&mut self, row: &mut Row) -> Option<()> {

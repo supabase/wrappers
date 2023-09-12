@@ -53,12 +53,14 @@ impl ForeignDataWrapper<HelloWorldFdwError> for HelloWorldFdw {
         _sorts: &[Sort],
         _limit: &Option<Limit>,
         _options: &HashMap<String, String>,
-    ) {
+    ) -> Result<(), HelloWorldFdwError> {
         // reset row counter
         self.row_cnt = 0;
 
         // save a copy of target columns
         self.tgt_cols = columns.to_vec();
+
+        Ok(())
     }
 
     fn iter_scan(&mut self, row: &mut Row) -> Option<()> {

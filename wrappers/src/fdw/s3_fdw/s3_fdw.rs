@@ -218,7 +218,7 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
         _sorts: &[Sort],
         _limit: &Option<Limit>,
         options: &HashMap<String, String>,
-    ) {
+    ) -> Result<(), S3FdwError> {
         // extract s3 bucket and object path from uri option
         let (bucket, object) = if let Some(uri) = require_option("uri", options) {
             match uri.parse::<Uri>() {
@@ -231,7 +231,7 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
                             PgSqlErrorCode::ERRCODE_FDW_ERROR,
                             &format!("invalid s3 uri: {}", uri),
                         );
-                        return;
+                        return Ok(());
                     }
                     // exclude 1st "/" char in the path as s3 object path doesn't like it
                     (uri.host().unwrap().to_owned(), uri.path()[1..].to_string())
@@ -241,11 +241,11 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
                         PgSqlErrorCode::ERRCODE_FDW_ERROR,
                         &format!("parse s3 uri failed: {}", err),
                     );
-                    return;
+                    return Ok(());
                 }
             }
         } else {
-            return;
+            return Ok(());
         };
 
         let has_header: bool = options.get("has_header") == Some(&"true".to_string());
@@ -270,11 +270,11 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
                                 format
                             ),
                         );
-                        return;
+                        return Ok(());
                     }
                 }
             } else {
-                return;
+                return Ok(());
             };
 
             let stream = match self
@@ -287,7 +287,7 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
                         PgSqlErrorCode::ERRCODE_FDW_ERROR,
                         &format!("request s3 failed: {}", err),
                     );
-                    return;
+                    return Ok(());
                 }
             };
 
@@ -304,7 +304,7 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
                                 PgSqlErrorCode::ERRCODE_FDW_ERROR,
                                 &format!("invalid compression option: {}", compress),
                             );
-                            return;
+                            return Ok(());
                         }
                     }
                 } else {
@@ -330,7 +330,7 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
                         &self.tgt_cols,
                     ));
                 }
-                return;
+                return Ok(());
             }
 
             let mut rdr: BufReader<Pin<Box<dyn AsyncRead>>> = BufReader::new(boxed_stream);
@@ -344,13 +344,15 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
                             PgSqlErrorCode::ERRCODE_FDW_ERROR,
                             &format!("fetch csv file failed: {}", err),
                         );
-                        return;
+                        return Ok(());
                     }
                 }
             }
 
             self.rdr = Some(rdr);
         }
+
+        Ok(())
     }
 
     fn iter_scan(&mut self, row: &mut Row) -> Option<()> {

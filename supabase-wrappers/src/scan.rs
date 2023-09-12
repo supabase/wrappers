@@ -80,7 +80,7 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwState<E, W> {
     }
 
     #[inline]
-    fn begin_scan(&mut self) {
+    fn begin_scan(&mut self) -> Result<(), E> {
         self.instance.begin_scan(
             &self.quals,
             &self.tgts,
@@ -305,7 +305,7 @@ pub(super) extern "C" fn begin_foreign_scan<E: Into<ErrorReport>, W: ForeignData
 
         // begin scan if it is not EXPLAIN statement
         if eflags & pg_sys::EXEC_FLAG_EXPLAIN_ONLY as c_int <= 0 {
-            state.begin_scan();
+            state.begin_scan().map_err(|e| e.into()).report();
 
             let rel = scan_state.ss_currentRelation;
             let tup_desc = (*rel).rd_att;

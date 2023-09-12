@@ -249,7 +249,6 @@ macro_rules! report_request_error {
             PgSqlErrorCode::ERRCODE_FDW_ERROR,
             &format!("request failed: {}", $err),
         );
-        return;
     }};
 }
 
@@ -675,18 +674,18 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
         _sorts: &[Sort],
         limit: &Option<Limit>,
         options: &HashMap<String, String>,
-    ) {
+    ) -> Result<(), StripeFdwError> {
         let obj = if let Some(name) = require_option("object", options) {
             name
         } else {
-            return;
+            return Ok(());
         };
 
         if let Some(client) = &self.client {
             let page_size = 100; // maximum page size limit for Stripe API
             let page_cnt = if let Some(limit) = limit {
                 if limit.count == 0 {
-                    return;
+                    return Ok(());
                 }
                 (limit.offset + limit.count) / page_size + 1
             } else {
@@ -702,7 +701,7 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
                 // build url
                 let url = self.build_url(&obj, quals, page_size, &cursor);
                 if url.is_none() {
-                    return;
+                    return Ok(());
                 }
                 let url = url.unwrap();
 
@@ -741,10 +740,16 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
                                 }
                                 cursor = starting_after;
                             }
-                            Err(err) => report_request_error!(err),
+                            Err(err) => {
+                                report_request_error!(err);
+                                return Ok(());
+                            }
                         }
                     }
-                    Err(err) => report_request_error!(err),
+                    Err(err) => {
+                        report_request_error!(err);
+                        return Ok(());
+                    }
                 }
 
                 page += 1;
@@ -757,6 +762,8 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
 
             self.scan_result = Some(result);
         }
+
+        Ok(())
     }
 
     fn iter_scan(&mut self, row: &mut Row) -> Option<()> {
@@ -806,9 +813,15 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
                             report_info(&format!("inserted {} {}", self.obj, id));
                         }
                     }
-                    Err(err) => report_request_error!(err),
+                    Err(err) => {
+                        report_request_error!(err);
+                        return;
+                    }
                 },
-                Err(err) => report_request_error!(err),
+                Err(err) => {
+                    report_request_error!(err);
+                    return;
+                }
             }
 
             set_stats_metadata(stats_metadata);
@@ -848,9 +861,15 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
                                     report_info(&format!("updated {} {}", self.obj, id));
                                 }
                             }
-                            Err(err) => report_request_error!(err),
+                            Err(err) => {
+                                report_request_error!(err);
+                                return;
+                            }
                         },
-                        Err(err) => report_request_error!(err),
+                        Err(err) => {
+                            report_request_error!(err);
+                            return;
+                        }
                     }
                 }
                 _ => unreachable!(),
@@ -889,9 +908,15 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
                                     report_info(&format!("deleted {} {}", self.obj, id));
                                 }
                             }
-                            Err(err) => report_request_error!(err),
+                            Err(err) => {
+                                report_request_error!(err);
+                                return;
+                            }
                         },
-                        Err(err) => report_request_error!(err),
+                        Err(err) => {
+                            report_request_error!(err);
+                            return;
+                        }
                     }
                 }
                 _ => unreachable!(),

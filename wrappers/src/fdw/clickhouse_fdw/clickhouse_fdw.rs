@@ -237,12 +237,12 @@ impl ForeignDataWrapper<ClickhouseFdwError> for ClickHouseFdw {
         sorts: &[Sort],
         limit: &Option<Limit>,
         options: &HashMap<String, String>,
-    ) {
+    ) -> Result<(), ClickhouseFdwError> {
         self.create_client();
 
         let table = require_option("table", options);
         if table.is_none() {
-            return;
+            return Ok(());
         }
         self.table = table.unwrap();
         self.tgt_cols = columns.to_vec();
@@ -273,6 +273,8 @@ impl ForeignDataWrapper<ClickhouseFdwError> for ClickHouseFdw {
                 ),
             }
         }
+
+        Ok(())
     }
 
     fn iter_scan(&mut self, row: &mut Row) -> Option<()> {

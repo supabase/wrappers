@@ -276,10 +276,10 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
         sorts: &[Sort],
         limit: &Option<Limit>,
         options: &HashMap<String, String>,
-    ) {
+    ) -> Result<(), BigQueryFdwError> {
         let table = require_option("table", options);
         if table.is_none() {
-            return;
+            return Ok(());
         }
         self.table = table.unwrap();
         self.tgt_cols = columns.to_vec();
@@ -352,6 +352,8 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
                 }
             }
         }
+
+        Ok(())
     }
 
     fn iter_scan(&mut self, row: &mut Row) -> Option<()> {

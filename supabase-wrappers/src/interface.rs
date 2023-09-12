@@ -510,7 +510,7 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
         sorts: &[Sort],
         limit: &Option<Limit>,
         options: &HashMap<String, String>,
-    );
+    ) -> Result<(), E>;
 
     /// Called when fetch one row from the foreign source
     ///

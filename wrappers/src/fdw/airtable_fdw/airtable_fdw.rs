@@ -134,14 +134,14 @@ impl ForeignDataWrapper<AirtableFdwError> for AirtableFdw {
         _sorts: &[Sort],        // TODO: Propagate sort
         _limit: &Option<Limit>, // TODO: maxRecords
         options: &HashMap<String, String>,
-    ) {
+    ) -> Result<(), AirtableFdwError> {
         let url = if let Some(url) = require_option("base_id", options).and_then(|base_id| {
             require_option("table_id", options)
                 .map(|table_id| self.build_url(&base_id, &table_id, options.get("view_id")))
         }) {
             url
         } else {
-            return;
+            return Ok(());
         };
 
         let mut rows = Vec::new();
@@ -159,7 +159,7 @@ impl ForeignDataWrapper<AirtableFdwError> for AirtableFdw {
                             PgSqlErrorCode::ERRCODE_FDW_ERROR,
                             &format!("internal error: {}", err),
                         );
-                        return;
+                        return Ok(());
                     }
                 };
 
@@ -192,6 +192,7 @@ impl ForeignDataWrapper<AirtableFdwError> for AirtableFdw {
         stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsOut, rows.len() as i64);
 
         self.scan_result = Some(rows);
+        Ok(())
     }
 
     fn iter_scan(&mut self, row: &mut Row) -> Option<()> {
