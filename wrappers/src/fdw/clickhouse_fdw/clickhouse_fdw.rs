@@ -421,7 +421,7 @@ impl ForeignDataWrapper<ClickhouseFdwError> for ClickHouseFdw {
         Ok(())
     }
 
-    fn delete(&mut self, rowid: &Cell) {
+    fn delete(&mut self, rowid: &Cell) -> Result<(), ClickhouseFdwError> {
         if let Some(ref mut client) = self.client {
             let sql = format!(
                 "alter table {} delete where {} = {}",
@@ -436,6 +436,7 @@ impl ForeignDataWrapper<ClickhouseFdwError> for ClickHouseFdw {
                 );
             }
         }
+        Ok(())
     }
 
     fn end_modify(&mut self) {}

@@ -514,7 +514,7 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
         Ok(())
     }
 
-    fn delete(&mut self, rowid: &Cell) {
+    fn delete(&mut self, rowid: &Cell) -> Result<(), BigQueryFdwError> {
         if let Some(ref mut client) = self.client {
             let sql = format!(
                 "delete from `{}.{}.{}` where {} = {}",
@@ -531,6 +531,7 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
                 );
             }
         }
+        Ok(())
     }
 
     fn end_modify(&mut self) {}

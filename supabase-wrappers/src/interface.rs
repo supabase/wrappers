@@ -581,7 +581,9 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     /// - rowid - the `rowid_column` cell
     ///
     /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-UPDATE).
-    fn delete(&mut self, _rowid: &Cell) {}
+    fn delete(&mut self, _rowid: &Cell) -> Result<(), E> {
+        Ok(())
+    }
 
     /// Called when end the table update
     ///

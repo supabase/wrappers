@@ -59,8 +59,8 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwModifyState<E, W> {
         self.instance.update(rowid, new_row)
     }
 
-    fn delete(&mut self, rowid: &Cell) {
-        self.instance.delete(rowid);
+    fn delete(&mut self, rowid: &Cell) -> Result<(), E> {
+        self.instance.delete(rowid)
     }
 
     fn end_modify(&mut self) {
@@ -258,7 +258,7 @@ pub(super) extern "C" fn exec_foreign_delete<E: Into<ErrorReport>, W: ForeignDat
 
         let cell = get_rowid_cell(&state, plan_slot);
         if let Some(rowid) = cell {
-            state.delete(&rowid);
+            state.delete(&rowid).map_err(|e| e.into()).report();
         }
     }
 
