@@ -7,7 +7,8 @@ use supabase_wrappers::prelude::*;
 #[wrappers_fdw(
     version = "0.1.0",
     author = "Supabase",
-    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/helloworld_fdw"
+    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/helloworld_fdw",
+    error_type = "HelloWorldFdwError"
 )]
 pub(crate) struct HelloWorldFdw {
     // row counter

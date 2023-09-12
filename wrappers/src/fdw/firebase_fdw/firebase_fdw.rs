@@ -168,7 +168,8 @@ fn resp_to_rows(obj: &str, resp: &JsonValue, tgt_cols: &[Column]) -> Vec<Row> {
 #[wrappers_fdw(
     version = "0.1.2",
     author = "Supabase",
-    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/firebase_fdw"
+    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/firebase_fdw",
+    error_type = "FirebaseFdwError"
 )]
 pub(crate) struct FirebaseFdw {
     rt: Runtime,
@@ -404,11 +405,16 @@ impl ForeignDataWrapper<FirebaseFdwError> for FirebaseFdw {
         Ok(())
     }
 
-    fn validator(options: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) {
+    fn validator(
+        options: Vec<Option<String>>,
+        catalog: Option<pg_sys::Oid>,
+    ) -> Result<(), FirebaseFdwError> {
         if let Some(oid) = catalog {
             if oid == FOREIGN_TABLE_RELATION_ID {
                 check_options_contain(&options, "object");
             }
         }
+
+        Ok(())
     }
 }

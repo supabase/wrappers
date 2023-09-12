@@ -255,7 +255,8 @@ macro_rules! report_request_error {
 #[wrappers_fdw(
     version = "0.1.7",
     author = "Supabase",
-    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/stripe_fdw"
+    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/stripe_fdw",
+    error_type = "StripeFdwError"
 )]
 pub(crate) struct StripeFdw {
     rt: Runtime,
@@ -931,11 +932,16 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
         Ok(())
     }
 
-    fn validator(options: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) {
+    fn validator(
+        options: Vec<Option<String>>,
+        catalog: Option<pg_sys::Oid>,
+    ) -> Result<(), StripeFdwError> {
         if let Some(oid) = catalog {
             if oid == FOREIGN_TABLE_RELATION_ID {
                 check_options_contain(&options, "object");
             }
         }
+
+        Ok(())
     }
 }

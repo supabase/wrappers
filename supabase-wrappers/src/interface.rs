@@ -646,7 +646,27 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     /// use pgrx::pg_sys::Oid;
     /// use supabase_wrappers::prelude::check_options_contain;
     ///
-    /// fn validator(opt_list: Vec<Option<String>>, catalog: Option<Oid>) {
+    /// use pgrx::pg_sys::panic::ErrorReport;
+    /// use pgrx::PgSqlErrorCode;
+    ///
+    /// enum FdwError {
+    ///     InvalidFdwOption,
+    ///     InvalidServerOption,
+    ///     InvalidTableOption,
+    /// }
+    ///
+    /// impl From<FdwError> for ErrorReport {
+    ///     fn from(value: FdwError) -> Self {
+    ///         let error_message = match value {
+    ///             FdwError::InvalidFdwOption => "invalid foreign data wrapper option",
+    ///             FdwError::InvalidServerOption => "invalid foreign server option",
+    ///             FdwError::InvalidTableOption => "invalid foreign table option",
+    ///         };
+    ///         ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, error_message, "")
+    ///     }
+    /// }
+    ///
+    /// fn validator(opt_list: Vec<Option<String>>, catalog: Option<Oid>) -> Result<(), FdwError> {
     ///     if let Some(oid) = catalog {
     ///         match oid {
     ///             FOREIGN_DATA_WRAPPER_RELATION_ID => {
@@ -664,7 +684,11 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     ///             _ => {}
     ///         }
     ///     }
+    ///
+    ///     Ok(())
     /// }
     /// ```
-    fn validator(_options: Vec<Option<String>>, _catalog: Option<Oid>) {}
+    fn validator(_options: Vec<Option<String>>, _catalog: Option<Oid>) -> Result<(), E> {
+        Ok(())
+    }
 }

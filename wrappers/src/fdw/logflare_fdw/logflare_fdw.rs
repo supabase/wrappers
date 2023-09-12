@@ -125,7 +125,8 @@ fn json_value_to_cell(tgt_col: &Column, v: &JsonValue) -> Cell {
 #[wrappers_fdw(
     version = "0.1.0",
     author = "Supabase",
-    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/logflare_fdw"
+    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/logflare_fdw",
+    error_type = "LogflareFdwError"
 )]
 pub(crate) struct LogflareFdw {
     rt: Runtime,
@@ -342,11 +343,16 @@ impl ForeignDataWrapper<LogflareFdwError> for LogflareFdw {
         Ok(())
     }
 
-    fn validator(options: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) {
+    fn validator(
+        options: Vec<Option<String>>,
+        catalog: Option<pg_sys::Oid>,
+    ) -> Result<(), LogflareFdwError> {
         if let Some(oid) = catalog {
             if oid == FOREIGN_TABLE_RELATION_ID {
                 check_options_contain(&options, "endpoint");
             }
         }
+
+        Ok(())
     }
 }

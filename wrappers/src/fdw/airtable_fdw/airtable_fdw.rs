@@ -31,7 +31,8 @@ fn create_client(api_key: &str) -> ClientWithMiddleware {
 #[wrappers_fdw(
     version = "0.1.2",
     author = "Ankur Goyal",
-    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/airtable_fdw"
+    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/airtable_fdw",
+    error_type = "AirtableFdwError"
 )]
 pub(crate) struct AirtableFdw {
     rt: Runtime,
@@ -212,12 +213,17 @@ impl ForeignDataWrapper<AirtableFdwError> for AirtableFdw {
         Ok(())
     }
 
-    fn validator(options: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) {
+    fn validator(
+        options: Vec<Option<String>>,
+        catalog: Option<pg_sys::Oid>,
+    ) -> Result<(), AirtableFdwError> {
         if let Some(oid) = catalog {
             if oid == FOREIGN_TABLE_RELATION_ID {
                 check_options_contain(&options, "base_id");
                 check_options_contain(&options, "table_id");
             }
         }
+
+        Ok(())
     }
 }

@@ -86,7 +86,8 @@ fn field_to_cell(rs: &ResultSet, field: &TableFieldSchema) -> Option<Cell> {
 #[wrappers_fdw(
     version = "0.1.4",
     author = "Supabase",
-    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/bigquery_fdw"
+    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/bigquery_fdw",
+    error_type = "BigQueryFdwError"
 )]
 pub(crate) struct BigQueryFdw {
     rt: Runtime,
