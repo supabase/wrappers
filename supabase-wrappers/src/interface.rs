@@ -522,7 +522,9 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     /// Called when restart the scan from the beginning.
     ///
     /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-SCAN).
-    fn re_scan(&mut self) {}
+    fn re_scan(&mut self) -> Result<(), E> {
+        Ok(())
+    }
 
     /// Called when end the scan
     ///
