@@ -42,4 +42,4 @@ jobs:
 
     - run: cargo install cargo-pgrx --version 0.9.8
     - run: cargo pgrx init --pg15 /usr/lib/postgresql/15/bin/pg_config
-    - run: cd supabase_wrappers && cargo test
+    - run: cd supabase-wrappers && cargo test
