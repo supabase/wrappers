@@ -63,8 +63,8 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwModifyState<E, W> {
         self.instance.delete(rowid)
     }
 
-    fn end_modify(&mut self) {
-        self.instance.end_modify();
+    fn end_modify(&mut self) -> Result<(), E> {
+        self.instance.end_modify()
     }
 }
 
@@ -312,7 +312,7 @@ pub(super) extern "C" fn end_foreign_modify<E: Into<ErrorReport>, W: ForeignData
         let fdw_state = (*rinfo).ri_FdwState as *mut FdwModifyState<E, W>;
         if !fdw_state.is_null() {
             let mut state = PgBox::<FdwModifyState<E, W>>::from_pg(fdw_state);
-            state.end_modify();
+            state.end_modify().map_err(|e| e.into()).report();
         }
     }
 }

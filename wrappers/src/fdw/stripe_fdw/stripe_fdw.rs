@@ -931,8 +931,6 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
         Ok(())
     }
 
-    fn end_modify(&mut self) {}
-
     fn validator(options: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) {
         if let Some(oid) = catalog {
             if oid == FOREIGN_TABLE_RELATION_ID {

@@ -533,8 +533,6 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
         }
         Ok(())
     }
-
-    fn end_modify(&mut self) {}
 }
 
 use auth_mock::GoogleAuthMock;

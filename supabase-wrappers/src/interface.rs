@@ -588,7 +588,9 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     /// Called when end the table update
     ///
     /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-UPDATE).
-    fn end_modify(&mut self) {}
+    fn end_modify(&mut self) -> Result<(), E> {
+        Ok(())
+    }
 
     /// Returns a FdwRoutine for the FDW
     ///

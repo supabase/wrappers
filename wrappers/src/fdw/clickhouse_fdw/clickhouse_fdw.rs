@@ -438,6 +438,4 @@ impl ForeignDataWrapper<ClickhouseFdwError> for ClickHouseFdw {
         }
         Ok(())
     }
-
-    fn end_modify(&mut self) {}
 }
