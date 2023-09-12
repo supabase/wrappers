@@ -56,14 +56,14 @@ pub fn wrappers_fdw(attr: TokenStream, item: TokenStream) -> TokenStream {
         }
     }
 
-    if error_type.is_none() {
+    let error_type_ident = if let Some(error_type) = error_type {
+        format_ident!("{}", error_type)
+    } else {
         let quoted = quote! {
             compile_error!("Missing `error_type` in the `wrappers_fdw` attribute");
         };
         return quoted.into();
-    }
-
-    let error_type_ident = format_ident!("{}", error_type.unwrap());
+    };
 
     let item: ItemStruct = parse_macro_input!(item as ItemStruct);
     let item_tokens = item.to_token_stream();
