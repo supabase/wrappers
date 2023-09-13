@@ -110,8 +110,8 @@ pub fn report_error(code: PgSqlErrorCode, msg: &str) {
 
 #[derive(Error, Debug)]
 pub enum CreateRuntimeError {
-    #[error("failed to create async runtime")]
-    FailedToCreateAsyncRuntime,
+    #[error("failed to create async runtime: {0}")]
+    FailedToCreateAsyncRuntime(#[from] std::io::Error),
 }
 
 impl From<CreateRuntimeError> for ErrorReport {
@@ -148,10 +148,7 @@ impl From<CreateRuntimeError> for ErrorReport {
 /// ```
 #[inline]
 pub fn create_async_runtime() -> Result<Runtime, CreateRuntimeError> {
-    Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .map_err(|_| CreateRuntimeError::FailedToCreateAsyncRuntime)
+    Ok(Builder::new_current_thread().enable_all().build()?)
 }
 
 /// Get required option value from the `options` map
