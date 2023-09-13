@@ -34,7 +34,6 @@ all_fdws = ["airtable_fdw", "bigquery_fdw", "clickhouse_fdw", "stripe_fdw", "fir
 
 [dependencies]
 pgrx = { version = "=0.9.8" }
-cfg-if = "1.0"
 #supabase-wrappers = "0.1"
 supabase-wrappers = { path = "../supabase-wrappers", default-features = false }
 

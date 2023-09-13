@@ -4242,7 +4242,6 @@ dependencies = [
  "async-compression",
  "aws-config",
  "aws-sdk-s3",
- "cfg-if",
  "chrono",
  "chrono-tz",
  "clickhouse-rs",
