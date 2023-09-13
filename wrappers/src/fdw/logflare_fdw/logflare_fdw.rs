@@ -1,4 +1,5 @@
 use crate::stats;
+use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::{
     pg_sys,
     prelude::{AnyNumeric, Date, PgSqlErrorCode, Timestamp},
@@ -38,7 +39,7 @@ macro_rules! report_request_error {
             PgSqlErrorCode::ERRCODE_FDW_ERROR,
             &format!("request failed: {}", $err),
         );
-        return;
+        return Ok(());
     }};
 }
 
@@ -124,7 +125,8 @@ fn json_value_to_cell(tgt_col: &Column, v: &JsonValue) -> Cell {
 #[wrappers_fdw(
     version = "0.1.0",
     author = "Supabase",
-    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/logflare_fdw"
+    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/logflare_fdw",
+    error_type = "LogflareFdwError"
 )]
 pub(crate) struct LogflareFdw {
     rt: Runtime,
@@ -213,8 +215,16 @@ impl LogflareFdw {
     }
 }
 
-impl ForeignDataWrapper for LogflareFdw {
-    fn new(options: &HashMap<String, String>) -> Self {
+enum LogflareFdwError {}
+
+impl From<LogflareFdwError> for ErrorReport {
+    fn from(_value: LogflareFdwError) -> Self {
+        ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, "", "")
+    }
+}
+
+impl ForeignDataWrapper<LogflareFdwError> for LogflareFdw {
+    fn new(options: &HashMap<String, String>) -> Result<Self, LogflareFdwError> {
         let base_url = options
             .get("api_url")
             .map(|t| t.to_owned())
@@ -235,13 +245,13 @@ impl ForeignDataWrapper for LogflareFdw {
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
 
-        LogflareFdw {
+        Ok(LogflareFdw {
             rt: create_async_runtime(),
             base_url: Url::parse(&base_url).unwrap(),
             client,
             scan_result: None,
             params: Vec::default(),
-        }
+        })
     }
 
     fn begin_scan(
@@ -251,25 +261,25 @@ impl ForeignDataWrapper for LogflareFdw {
         _sorts: &[Sort],
         _limit: &Option<Limit>,
         options: &HashMap<String, String>,
-    ) {
+    ) -> Result<(), LogflareFdwError> {
         let endpoint = if let Some(name) = require_option("endpoint", options) {
             name
         } else {
-            return;
+            return Ok(());
         };
 
         // extract params
         self.params = if let Some(params) = extract_params(quals) {
             params
         } else {
-            return;
+            return Ok(());
         };
 
         if let Some(client) = &self.client {
             // build url
             let url = self.build_url(&endpoint);
             if url.is_none() {
-                return;
+                return Ok(());
             }
             let url = url.unwrap();
 
@@ -285,7 +295,7 @@ impl ForeignDataWrapper for LogflareFdw {
                     if resp.status() == StatusCode::NOT_FOUND {
                         // if it is 404 error, we should treat it as an empty
                         // result rather than a request error
-                        return;
+                        return Ok(());
                     }
 
                     match resp.error_for_status() {
@@ -312,29 +322,37 @@ impl ForeignDataWrapper for LogflareFdw {
                 Err(err) => report_request_error!(err),
             }
         }
+
+        Ok(())
     }
 
-    fn iter_scan(&mut self, row: &mut Row) -> Option<()> {
+    fn iter_scan(&mut self, row: &mut Row) -> Result<Option<()>, LogflareFdwError> {
         if let Some(ref mut result) = self.scan_result {
             if !result.is_empty() {
-                return result
+                return Ok(result
                     .drain(0..1)
                     .last()
-                    .map(|src_row| row.replace_with(src_row));
+                    .map(|src_row| row.replace_with(src_row)));
             }
         }
-        None
+        Ok(None)
     }
 
-    fn end_scan(&mut self) {
+    fn end_scan(&mut self) -> Result<(), LogflareFdwError> {
         self.scan_result.take();
+        Ok(())
     }
 
-    fn validator(options: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) {
+    fn validator(
+        options: Vec<Option<String>>,
+        catalog: Option<pg_sys::Oid>,
+    ) -> Result<(), LogflareFdwError> {
         if let Some(oid) = catalog {
             if oid == FOREIGN_TABLE_RELATION_ID {
                 check_options_contain(&options, "endpoint");
             }
         }
+
+        Ok(())
     }
 }

@@ -1,5 +1,6 @@
 use crate::stats;
 use pgrx::pg_sys;
+use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::PgSqlErrorCode;
 use reqwest::{self, header};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
@@ -30,7 +31,8 @@ fn create_client(api_key: &str) -> ClientWithMiddleware {
 #[wrappers_fdw(
     version = "0.1.2",
     author = "Ankur Goyal",
-    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/airtable_fdw"
+    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/airtable_fdw",
+    error_type = "AirtableFdwError"
 )]
 pub(crate) struct AirtableFdw {
     rt: Runtime,
@@ -43,8 +45,14 @@ impl AirtableFdw {
     const FDW_NAME: &str = "AirtableFdw";
 
     #[inline]
-    fn build_url(&self, base_id: &str, table_id: &str) -> String {
-        format!("{}/{}/{}", &self.base_url, base_id, table_id)
+    fn build_url(&self, base_id: &str, table_id: &str, view_id: Option<&String>) -> String {
+        match view_id {
+            Some(view_id) => format!(
+                "{}/{}/{}?view={}",
+                &self.base_url, base_id, table_id, view_id
+            ),
+            None => format!("{}/{}/{}", &self.base_url, base_id, table_id),
+        }
     }
 
     #[inline]
@@ -87,9 +95,17 @@ macro_rules! report_fetch_error {
     };
 }
 
+enum AirtableFdwError {}
+
+impl From<AirtableFdwError> for ErrorReport {
+    fn from(_value: AirtableFdwError) -> Self {
+        ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, "", "")
+    }
+}
+
 // TODO Add support for INSERT, UPDATE, DELETE
-impl ForeignDataWrapper for AirtableFdw {
-    fn new(options: &HashMap<String, String>) -> Self {
+impl ForeignDataWrapper<AirtableFdwError> for AirtableFdw {
+    fn new(options: &HashMap<String, String>) -> Result<Self, AirtableFdwError> {
         let base_url = options
             .get("api_url")
             .map(|t| t.to_owned())
@@ -104,12 +120,12 @@ impl ForeignDataWrapper for AirtableFdw {
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
 
-        Self {
+        Ok(Self {
             rt: create_async_runtime(),
             client,
             base_url,
             scan_result: None,
-        }
+        })
     }
 
     fn begin_scan(
@@ -119,14 +135,14 @@ impl ForeignDataWrapper for AirtableFdw {
         _sorts: &[Sort],        // TODO: Propagate sort
         _limit: &Option<Limit>, // TODO: maxRecords
         options: &HashMap<String, String>,
-    ) {
-        // TODO: Support specifying other options (view)
+    ) -> Result<(), AirtableFdwError> {
         let url = if let Some(url) = require_option("base_id", options).and_then(|base_id| {
-            require_option("table_id", options).map(|table_id| self.build_url(&base_id, &table_id))
+            require_option("table_id", options)
+                .map(|table_id| self.build_url(&base_id, &table_id, options.get("view_id")))
         }) {
             url
         } else {
-            return;
+            return Ok(());
         };
 
         let mut rows = Vec::new();
@@ -144,7 +160,7 @@ impl ForeignDataWrapper for AirtableFdw {
                             PgSqlErrorCode::ERRCODE_FDW_ERROR,
                             &format!("internal error: {}", err),
                         );
-                        return;
+                        return Ok(());
                     }
                 };
 
@@ -177,30 +193,37 @@ impl ForeignDataWrapper for AirtableFdw {
         stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsOut, rows.len() as i64);
 
         self.scan_result = Some(rows);
+        Ok(())
     }
 
-    fn iter_scan(&mut self, row: &mut Row) -> Option<()> {
+    fn iter_scan(&mut self, row: &mut Row) -> Result<Option<()>, AirtableFdwError> {
         if let Some(ref mut result) = self.scan_result {
             if !result.is_empty() {
-                return result
+                return Ok(result
                     .drain(0..1)
                     .last()
-                    .map(|src_row| row.replace_with(src_row));
+                    .map(|src_row| row.replace_with(src_row)));
             }
         }
-        None
+        Ok(None)
     }
 
-    fn end_scan(&mut self) {
+    fn end_scan(&mut self) -> Result<(), AirtableFdwError> {
         self.scan_result.take();
+        Ok(())
     }
 
-    fn validator(options: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) {
+    fn validator(
+        options: Vec<Option<String>>,
+        catalog: Option<pg_sys::Oid>,
+    ) -> Result<(), AirtableFdwError> {
         if let Some(oid) = catalog {
             if oid == FOREIGN_TABLE_RELATION_ID {
                 check_options_contain(&options, "base_id");
                 check_options_contain(&options, "table_id");
             }
         }
+
+        Ok(())
     }
 }

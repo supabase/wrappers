@@ -1,4 +1,5 @@
 use crate::stats;
+use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::{datum::datetime_support::to_timestamp, pg_sys, prelude::PgSqlErrorCode, JsonB};
 use reqwest::{self, header, StatusCode, Url};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
@@ -255,14 +256,14 @@ macro_rules! report_request_error {
             PgSqlErrorCode::ERRCODE_FDW_ERROR,
             &format!("request failed: {}", $err),
         );
-        return;
     }};
 }
 
 #[wrappers_fdw(
     version = "0.1.8",
     author = "Supabase",
-    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/stripe_fdw"
+    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/stripe_fdw",
+    error_type = "StripeFdwError"
 )]
 pub(crate) struct StripeFdw {
     rt: Runtime,
@@ -716,8 +717,16 @@ impl StripeFdw {
     }
 }
 
-impl ForeignDataWrapper for StripeFdw {
-    fn new(options: &HashMap<String, String>) -> Self {
+enum StripeFdwError {}
+
+impl From<StripeFdwError> for ErrorReport {
+    fn from(_value: StripeFdwError) -> Self {
+        ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, "", "")
+    }
+}
+
+impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
+    fn new(options: &HashMap<String, String>) -> Result<Self, StripeFdwError> {
         let base_url = options
             .get("api_url")
             .map(|t| t.to_owned())
@@ -740,14 +749,14 @@ impl ForeignDataWrapper for StripeFdw {
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
 
-        StripeFdw {
+        Ok(StripeFdw {
             rt: create_async_runtime(),
             base_url: Url::parse(&base_url).unwrap(),
             client,
             scan_result: None,
             obj: String::default(),
             rowid_col: String::default(),
-        }
+        })
     }
 
     fn begin_scan(
@@ -757,18 +766,18 @@ impl ForeignDataWrapper for StripeFdw {
         _sorts: &[Sort],
         limit: &Option<Limit>,
         options: &HashMap<String, String>,
-    ) {
+    ) -> Result<(), StripeFdwError> {
         let obj = if let Some(name) = require_option("object", options) {
             name
         } else {
-            return;
+            return Ok(());
         };
 
         if let Some(client) = &self.client {
             let page_size = 100; // maximum page size limit for Stripe API
             let page_cnt = if let Some(limit) = limit {
                 if limit.count == 0 {
-                    return;
+                    return Ok(());
                 }
                 (limit.offset + limit.count) / page_size + 1
             } else {
@@ -784,7 +793,7 @@ impl ForeignDataWrapper for StripeFdw {
                 // build url
                 let url = self.build_url(&obj, quals, page_size, &cursor);
                 if url.is_none() {
-                    return;
+                    return Ok(());
                 }
                 let url = url.unwrap();
 
@@ -823,10 +832,16 @@ impl ForeignDataWrapper for StripeFdw {
                                 }
                                 cursor = starting_after;
                             }
-                            Err(err) => report_request_error!(err),
+                            Err(err) => {
+                                report_request_error!(err);
+                                return Ok(());
+                            }
                         }
                     }
-                    Err(err) => report_request_error!(err),
+                    Err(err) => {
+                        report_request_error!(err);
+                        return Ok(());
+                    }
                 }
 
                 page += 1;
@@ -839,35 +854,39 @@ impl ForeignDataWrapper for StripeFdw {
 
             self.scan_result = Some(result);
         }
+
+        Ok(())
     }
 
-    fn iter_scan(&mut self, row: &mut Row) -> Option<()> {
+    fn iter_scan(&mut self, row: &mut Row) -> Result<Option<()>, StripeFdwError> {
         if let Some(ref mut result) = self.scan_result {
             if !result.is_empty() {
-                return result
+                return Ok(result
                     .drain(0..1)
                     .last()
-                    .map(|src_row| row.replace_with(src_row));
+                    .map(|src_row| row.replace_with(src_row)));
             }
         }
-        None
+        Ok(None)
     }
 
-    fn end_scan(&mut self) {
+    fn end_scan(&mut self) -> Result<(), StripeFdwError> {
         self.scan_result.take();
+        Ok(())
     }
 
-    fn begin_modify(&mut self, options: &HashMap<String, String>) {
+    fn begin_modify(&mut self, options: &HashMap<String, String>) -> Result<(), StripeFdwError> {
         self.obj = require_option("object", options).unwrap_or_default();
         self.rowid_col = require_option("rowid_column", options).unwrap_or_default();
+        Ok(())
     }
 
-    fn insert(&mut self, src: &Row) {
+    fn insert(&mut self, src: &Row) -> Result<(), StripeFdwError> {
         if let Some(ref mut client) = self.client {
             let url = self.base_url.join(&self.obj).unwrap();
             let body = row_to_body(src);
             if body.is_null() {
-                return;
+                return Ok(());
             }
 
             let mut stats_metadata = get_stats_metadata();
@@ -888,16 +907,23 @@ impl ForeignDataWrapper for StripeFdw {
                             report_info(&format!("inserted {} {}", self.obj, id));
                         }
                     }
-                    Err(err) => report_request_error!(err),
+                    Err(err) => {
+                        report_request_error!(err);
+                        return Ok(());
+                    }
                 },
-                Err(err) => report_request_error!(err),
+                Err(err) => {
+                    report_request_error!(err);
+                    return Ok(());
+                }
             }
 
             set_stats_metadata(stats_metadata);
         }
+        Ok(())
     }
 
-    fn update(&mut self, rowid: &Cell, new_row: &Row) {
+    fn update(&mut self, rowid: &Cell, new_row: &Row) -> Result<(), StripeFdwError> {
         if let Some(ref mut client) = self.client {
             let mut stats_metadata = get_stats_metadata();
 
@@ -911,7 +937,7 @@ impl ForeignDataWrapper for StripeFdw {
                         .unwrap();
                     let body = row_to_body(new_row);
                     if body.is_null() {
-                        return;
+                        return Ok(());
                     }
 
                     // call Stripe API
@@ -930,9 +956,15 @@ impl ForeignDataWrapper for StripeFdw {
                                     report_info(&format!("updated {} {}", self.obj, id));
                                 }
                             }
-                            Err(err) => report_request_error!(err),
+                            Err(err) => {
+                                report_request_error!(err);
+                                return Ok(());
+                            }
                         },
-                        Err(err) => report_request_error!(err),
+                        Err(err) => {
+                            report_request_error!(err);
+                            return Ok(());
+                        }
                     }
                 }
                 _ => unreachable!(),
@@ -940,9 +972,10 @@ impl ForeignDataWrapper for StripeFdw {
 
             set_stats_metadata(stats_metadata);
         }
+        Ok(())
     }
 
-    fn delete(&mut self, rowid: &Cell) {
+    fn delete(&mut self, rowid: &Cell) -> Result<(), StripeFdwError> {
         if let Some(ref mut client) = self.client {
             let mut stats_metadata = get_stats_metadata();
 
@@ -971,9 +1004,15 @@ impl ForeignDataWrapper for StripeFdw {
                                     report_info(&format!("deleted {} {}", self.obj, id));
                                 }
                             }
-                            Err(err) => report_request_error!(err),
+                            Err(err) => {
+                                report_request_error!(err);
+                                return Ok(());
+                            }
                         },
-                        Err(err) => report_request_error!(err),
+                        Err(err) => {
+                            report_request_error!(err);
+                            return Ok(());
+                        }
                     }
                 }
                 _ => unreachable!(),
@@ -981,15 +1020,19 @@ impl ForeignDataWrapper for StripeFdw {
 
             set_stats_metadata(stats_metadata);
         }
+        Ok(())
     }
 
-    fn end_modify(&mut self) {}
-
-    fn validator(options: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) {
+    fn validator(
+        options: Vec<Option<String>>,
+        catalog: Option<pg_sys::Oid>,
+    ) -> Result<(), StripeFdwError> {
         if let Some(oid) = catalog {
             if oid == FOREIGN_TABLE_RELATION_ID {
                 check_options_contain(&options, "object");
             }
         }
+
+        Ok(())
     }
 }

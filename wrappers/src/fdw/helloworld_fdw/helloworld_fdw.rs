@@ -1,3 +1,5 @@
+use pgrx::pg_sys::panic::ErrorReport;
+use pgrx::PgSqlErrorCode;
 use std::collections::HashMap;
 use supabase_wrappers::prelude::*;
 
@@ -5,7 +7,8 @@ use supabase_wrappers::prelude::*;
 #[wrappers_fdw(
     version = "0.1.0",
     author = "Supabase",
-    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/helloworld_fdw"
+    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/helloworld_fdw",
+    error_type = "HelloWorldFdwError"
 )]
 pub(crate) struct HelloWorldFdw {
     // row counter
@@ -15,7 +18,15 @@ pub(crate) struct HelloWorldFdw {
     tgt_cols: Vec<Column>,
 }
 
-impl ForeignDataWrapper for HelloWorldFdw {
+enum HelloWorldFdwError {}
+
+impl From<HelloWorldFdwError> for ErrorReport {
+    fn from(_value: HelloWorldFdwError) -> Self {
+        ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, "", "")
+    }
+}
+
+impl ForeignDataWrapper<HelloWorldFdwError> for HelloWorldFdw {
     // 'options' is the key-value pairs defined in `CREATE SERVER` SQL, for example,
     //
     // create server my_helloworld_server
@@ -29,11 +40,11 @@ impl ForeignDataWrapper for HelloWorldFdw {
     // You can do any initalization in this new() function, like saving connection
     // info or API url in an variable, but don't do any heavy works like making a
     // database connection or API call.
-    fn new(_options: &HashMap<String, String>) -> Self {
-        Self {
+    fn new(_options: &HashMap<String, String>) -> Result<Self, HelloWorldFdwError> {
+        Ok(Self {
             row_cnt: 0,
             tgt_cols: Vec::new(),
-        }
+        })
     }
 
     fn begin_scan(
@@ -43,15 +54,17 @@ impl ForeignDataWrapper for HelloWorldFdw {
         _sorts: &[Sort],
         _limit: &Option<Limit>,
         _options: &HashMap<String, String>,
-    ) {
+    ) -> Result<(), HelloWorldFdwError> {
         // reset row counter
         self.row_cnt = 0;
 
         // save a copy of target columns
         self.tgt_cols = columns.to_vec();
+
+        Ok(())
     }
 
-    fn iter_scan(&mut self, row: &mut Row) -> Option<()> {
+    fn iter_scan(&mut self, row: &mut Row) -> Result<Option<()>, HelloWorldFdwError> {
         // this is called on each row and we only return one row here
         if self.row_cnt < 1 {
             // add values to row if they are in target column list
@@ -66,14 +79,15 @@ impl ForeignDataWrapper for HelloWorldFdw {
             self.row_cnt += 1;
 
             // return Some(()) to Postgres and continue data scan
-            return Some(());
+            return Ok(Some(()));
         }
 
         // return 'None' to stop data scan
-        None
+        Ok(None)
     }
 
-    fn end_scan(&mut self) {
+    fn end_scan(&mut self) -> Result<(), HelloWorldFdwError> {
         // we do nothing here, but you can do things like resource cleanup and etc.
+        Ok(())
     }
 }

@@ -33,8 +33,7 @@ logflare_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json"]
 all_fdws = ["airtable_fdw", "bigquery_fdw", "clickhouse_fdw", "stripe_fdw", "firebase_fdw", "s3_fdw", "logflare_fdw"]
 
 [dependencies]
-pgrx = { version = "=0.9.7" }
-cfg-if = "1.0"
+pgrx = { version = "=0.9.8" }
 #supabase-wrappers = "0.1"
 supabase-wrappers = { path = "../supabase-wrappers", default-features = false }
 
@@ -44,16 +43,16 @@ chrono = { version = "0.4", optional = true }
 chrono-tz = { version = "0.6", optional = true }
 
 # for bigquery_fdw, firebase_fdw, airtable_fdw and etc.
-gcp-bigquery-client = { version = "0.16.5", optional = true }
+gcp-bigquery-client = { version = "0.17.0", optional = true }
 serde = { version = "1", optional = true }
 serde_json = { version = "1.0.86", optional = true }
 wiremock = { version = "0.5", optional = true }
 futures = { version = "0.3", optional = true }
 
 # for stripe_fdw, firebase_fdw, logflare_fdw and etc.
-reqwest = { version = "0.11.12", features = ["json"], optional = true }
-reqwest-middleware = { version = "0.1.6", optional = true }
-reqwest-retry = { version = "0.1.5", optional = true }
+reqwest = { version = "0.11.20", features = ["json"], optional = true }
+reqwest-middleware = { version = "0.2.3", optional = true }
+reqwest-retry = { version = "0.2.2", optional = true }
 
 # for firebase_fdw
 yup-oauth2 = { version = "8.0.0", optional = true }
@@ -63,8 +62,8 @@ regex = { version = "1", optional = true }
 url = { version = "2.3", optional = true }
 
 # for s3_fdw
-aws-config = { version = "0.55.3", optional = true }
-aws-sdk-s3 = { version = "0.28.0", optional = true }
+aws-config = { version = "0.56.1", optional = true }
+aws-sdk-s3 = { version = "0.30.0", optional = true }
 csv = { version = "1.2", optional = true }
 tokio = { version = "1", features = ["full"], optional = true }
 tokio-util = { version = "0.7", optional = true }
@@ -74,7 +73,7 @@ parquet = { version = "41.0.0", features = ["async"], optional = true }
 arrow-array = { version = "41.0.0", optional = true }
 
 [dev-dependencies]
-pgrx-tests = "=0.9.7"
+pgrx-tests = "=0.9.8"
 
 [profile.dev]
 panic = "unwind"

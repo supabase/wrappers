@@ -32,6 +32,7 @@ pub fn log_debug1(msg: &str) {
 /// For example,
 ///
 /// ```rust,no_run
+/// # use supabase_wrappers::prelude::report_info;
 /// report_info(&format!("this is an info"));
 /// ```
 #[inline]
@@ -51,6 +52,7 @@ pub fn report_info(msg: &str) {
 /// For example,
 ///
 /// ```rust,no_run
+/// # use supabase_wrappers::prelude::report_notice;
 /// report_notice(&format!("this is a notice"));
 /// ```
 #[inline]
@@ -70,6 +72,7 @@ pub fn report_notice(msg: &str) {
 /// For example,
 ///
 /// ```rust,no_run
+/// # use supabase_wrappers::prelude::report_warning;
 /// report_warning(&format!("this is a warning"));
 /// ```
 #[inline]
@@ -90,6 +93,7 @@ pub fn report_warning(msg: &str) {
 /// For example,
 ///
 /// ```rust,no_run
+/// # use supabase_wrappers::prelude::report_error;
 /// use pgrx::prelude::PgSqlErrorCode;
 ///
 /// report_error(
@@ -111,12 +115,20 @@ pub fn report_error(code: PgSqlErrorCode, msg: &str) {
 /// For example,
 ///
 /// ```rust,no_run
+/// # use supabase_wrappers::prelude::create_async_runtime;
+/// # struct Client {
+/// # }
+/// # impl Client {
+/// #     async fn query(&self, _sql: &str) -> Result<(), ()> { Ok(()) }
+/// # }
+/// # let client = Client {};
+/// # let sql = "";
 /// let rt = create_async_runtime();
 ///
-/// // client.query() is an async function
+/// // client.query() is an async function returning a Result
 /// match rt.block_on(client.query(&sql)) {
-///     Ok(result) => {...}
-///     Err(err) => {...}
+///     Ok(result) => { }
+///     Err(err) => { }
 /// }
 /// ```
 #[inline]
@@ -132,6 +144,9 @@ pub fn create_async_runtime() -> Runtime {
 /// For example,
 ///
 /// ```rust,no_run
+/// # use supabase_wrappers::prelude::require_option;
+/// # use std::collections::HashMap;
+/// # let options = &HashMap::new();
 /// require_option("my_option", options);
 /// ```
 pub fn require_option(opt_name: &str, options: &HashMap<String, String>) -> Option<String> {
@@ -151,7 +166,10 @@ pub fn require_option(opt_name: &str, options: &HashMap<String, String>) -> Opti
 /// For example,
 ///
 /// ```rust,no_run
-/// require_option_or("my_option", options, "default value");
+/// # use supabase_wrappers::prelude::require_option_or;
+/// # use std::collections::HashMap;
+/// # let options = &HashMap::new();
+/// require_option_or("my_option", options, "default value".to_string());
 /// ```
 pub fn require_option_or(
     opt_name: &str,

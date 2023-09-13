@@ -422,7 +422,127 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - id
 - customer
 
-##### Mandates
+### Payouts
+*read only*
+
+A `Payout` object is created when you receive funds from Stripe, or when you initiate a payout to either a bank account or debit card of a connected Stripe account.
+
+Ref: [Stripe docs](https://stripe.com/docs/api/payouts/list)
+
+```sql
+create foreign table stripe.payouts (
+  id text,
+  amount bigint,
+  currency text,
+  arrival_date timestamp,
+  description text,
+  statement_descriptor text,
+  status text,
+  created timestamp,
+  attrs jsonb
+)
+  server stripe_server
+  options (
+    object 'payouts'
+  );
+```
+
+While any column is allowed in a where clause, it is most efficient to filter by:
+
+- id
+- status
+
+### Prices
+*read only*
+
+A `Price` object is needed for all of your products to facilitate multiple currencies and pricing options.
+
+Ref: [Stripe docs](https://stripe.com/docs/api/prices/list)
+
+```sql
+create foreign table stripe.prices (
+  id text,
+  active bool,
+  currency text,
+  product text,
+  unit_amount bigint,
+  type text,
+  created timestamp,
+  attrs jsonb
+)
+  server stripe_server
+  options (
+    object 'prices'
+  );
+```
+
+While any column is allowed in a where clause, it is most efficient to filter by:
+
+- id
+- active
+
+### Products
+*read and modify*
+
+All products available in Stripe.
+
+Ref: [Stripe docs](https://stripe.com/docs/api/products/list)
+
+```sql
+create foreign table stripe.products (
+  id text,
+  name text,
+  active bool,
+  default_price text,
+  description text,
+  created timestamp,
+  updated timestamp,
+  attrs jsonb
+)
+  server stripe_server
+  options (
+    object 'products',
+    rowid_column 'id'
+  );
+```
+
+While any column is allowed in a where clause, it is most efficient to filter by:
+
+- id
+- active
+
+### Refunds
+*read only*
+
+`Refund` objects allow you to refund a charge that has previously been created but not yet refunded.
+
+Ref: [Stripe docs](https://stripe.com/docs/api/refunds/list)
+
+```sql
+create foreign table stripe.refunds (
+  id text,
+  amount bigint,
+  currency text,
+  charge text,
+  payment_intent text,
+  reason text,
+  status text,
+  created timestamp,
+  attrs jsonb
+)
+  server stripe_server
+  options (
+    object 'refunds'
+  );
+```
+
+While any column is allowed in a where clause, it is most efficient to filter by:
+
+- id
+- charge
+- payment_intent
+
+### SetupAttempts
 *read only*
 
 A `SetupAttempt` describes one attempted confirmation of a SetupIntent, whether that confirmation was successful or unsuccessful.

@@ -2,6 +2,7 @@
 //!
 
 use crate::FdwRoutine;
+use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::{Date, Timestamp};
 use pgrx::{
     fcinfo,
@@ -454,7 +455,7 @@ impl Limit {
 ///
 /// See the module-level document for more details.
 ///
-pub trait ForeignDataWrapper {
+pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     /// Create a FDW instance
     ///
     /// `options` is the key-value pairs defined in `CREATE SERVER` SQL. For example,
@@ -472,7 +473,9 @@ pub trait ForeignDataWrapper {
     /// You can do any initalization in this function, like saving connection
     /// info or API url in an variable, but don't do heavy works like database
     /// connection or API call.
-    fn new(options: &HashMap<String, String>) -> Self;
+    fn new(options: &HashMap<String, String>) -> Result<Self, E>
+    where
+        Self: Sized;
 
     /// Obtain relation size estimates for a foreign table
     ///
@@ -487,8 +490,8 @@ pub trait ForeignDataWrapper {
         _sorts: &[Sort],
         _limit: &Option<Limit>,
         _options: &HashMap<String, String>,
-    ) -> (i64, i32) {
-        (0, 0)
+    ) -> Result<(i64, i32), E> {
+        Ok((0, 0))
     }
 
     /// Called when begin executing a foreign scan
@@ -507,24 +510,26 @@ pub trait ForeignDataWrapper {
         sorts: &[Sort],
         limit: &Option<Limit>,
         options: &HashMap<String, String>,
-    );
+    ) -> Result<(), E>;
 
     /// Called when fetch one row from the foreign source
     ///
     /// FDW must save fetched foreign data into the [`Row`], or return `None` if no more rows to read.
     ///
     /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-SCAN).
-    fn iter_scan(&mut self, row: &mut Row) -> Option<()>;
+    fn iter_scan(&mut self, row: &mut Row) -> Result<Option<()>, E>;
 
     /// Called when restart the scan from the beginning.
     ///
     /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-SCAN).
-    fn re_scan(&mut self) {}
+    fn re_scan(&mut self) -> Result<(), E> {
+        Ok(())
+    }
 
     /// Called when end the scan
     ///
     /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-SCAN).
-    fn end_scan(&mut self);
+    fn end_scan(&mut self) -> Result<(), E>;
 
     /// Called when begin executing a foreign table modification operation.
     ///
@@ -548,14 +553,18 @@ pub trait ForeignDataWrapper {
     /// ```
     ///
     /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-UPDATE).
-    fn begin_modify(&mut self, _options: &HashMap<String, String>) {}
+    fn begin_modify(&mut self, _options: &HashMap<String, String>) -> Result<(), E> {
+        Ok(())
+    }
 
     /// Called when insert one row into the foreign table
     ///
     /// - row - the new row to be inserted
     ///
     /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-UPDATE).
-    fn insert(&mut self, _row: &Row) {}
+    fn insert(&mut self, _row: &Row) -> Result<(), E> {
+        Ok(())
+    }
 
     /// Called when update one row into the foreign table
     ///
@@ -563,19 +572,25 @@ pub trait ForeignDataWrapper {
     /// - new_row - the new row with updated cells
     ///
     /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-UPDATE).
-    fn update(&mut self, _rowid: &Cell, _new_row: &Row) {}
+    fn update(&mut self, _rowid: &Cell, _new_row: &Row) -> Result<(), E> {
+        Ok(())
+    }
 
     /// Called when delete one row into the foreign table
     ///
     /// - rowid - the `rowid_column` cell
     ///
     /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-UPDATE).
-    fn delete(&mut self, _rowid: &Cell) {}
+    fn delete(&mut self, _rowid: &Cell) -> Result<(), E> {
+        Ok(())
+    }
 
     /// Called when end the table update
     ///
     /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-UPDATE).
-    fn end_modify(&mut self) {}
+    fn end_modify(&mut self) -> Result<(), E> {
+        Ok(())
+    }
 
     /// Returns a FdwRoutine for the FDW
     ///
@@ -590,25 +605,25 @@ pub trait ForeignDataWrapper {
                 FdwRoutine::<AllocatedByRust>::alloc_node(pg_sys::NodeTag_T_FdwRoutine);
 
             // plan phase
-            fdw_routine.GetForeignRelSize = Some(scan::get_foreign_rel_size::<Self>);
-            fdw_routine.GetForeignPaths = Some(scan::get_foreign_paths::<Self>);
-            fdw_routine.GetForeignPlan = Some(scan::get_foreign_plan::<Self>);
-            fdw_routine.ExplainForeignScan = Some(scan::explain_foreign_scan::<Self>);
+            fdw_routine.GetForeignRelSize = Some(scan::get_foreign_rel_size::<E, Self>);
+            fdw_routine.GetForeignPaths = Some(scan::get_foreign_paths::<E, Self>);
+            fdw_routine.GetForeignPlan = Some(scan::get_foreign_plan::<E, Self>);
+            fdw_routine.ExplainForeignScan = Some(scan::explain_foreign_scan::<E, Self>);
 
             // scan phase
-            fdw_routine.BeginForeignScan = Some(scan::begin_foreign_scan::<Self>);
-            fdw_routine.IterateForeignScan = Some(scan::iterate_foreign_scan::<Self>);
-            fdw_routine.ReScanForeignScan = Some(scan::re_scan_foreign_scan::<Self>);
-            fdw_routine.EndForeignScan = Some(scan::end_foreign_scan::<Self>);
+            fdw_routine.BeginForeignScan = Some(scan::begin_foreign_scan::<E, Self>);
+            fdw_routine.IterateForeignScan = Some(scan::iterate_foreign_scan::<E, Self>);
+            fdw_routine.ReScanForeignScan = Some(scan::re_scan_foreign_scan::<E, Self>);
+            fdw_routine.EndForeignScan = Some(scan::end_foreign_scan::<E, Self>);
 
             // modify phase
             fdw_routine.AddForeignUpdateTargets = Some(modify::add_foreign_update_targets);
-            fdw_routine.PlanForeignModify = Some(modify::plan_foreign_modify::<Self>);
-            fdw_routine.BeginForeignModify = Some(modify::begin_foreign_modify::<Self>);
-            fdw_routine.ExecForeignInsert = Some(modify::exec_foreign_insert::<Self>);
-            fdw_routine.ExecForeignDelete = Some(modify::exec_foreign_delete::<Self>);
-            fdw_routine.ExecForeignUpdate = Some(modify::exec_foreign_update::<Self>);
-            fdw_routine.EndForeignModify = Some(modify::end_foreign_modify::<Self>);
+            fdw_routine.PlanForeignModify = Some(modify::plan_foreign_modify::<E, Self>);
+            fdw_routine.BeginForeignModify = Some(modify::begin_foreign_modify::<E, Self>);
+            fdw_routine.ExecForeignInsert = Some(modify::exec_foreign_insert::<E, Self>);
+            fdw_routine.ExecForeignDelete = Some(modify::exec_foreign_delete::<E, Self>);
+            fdw_routine.ExecForeignUpdate = Some(modify::exec_foreign_update::<E, Self>);
+            fdw_routine.EndForeignModify = Some(modify::end_foreign_modify::<E, Self>);
 
             Self::fdw_routine_hook(&mut fdw_routine);
             fdw_routine.into_pg_boxed()
@@ -628,23 +643,52 @@ pub trait ForeignDataWrapper {
     /// # Example
     ///
     /// ```rust,no_run
-    /// fn validator(opt_list: Vec<Option<String>>, catalog: Option<Oid>) {
+    /// use pgrx::pg_sys::Oid;
+    /// use supabase_wrappers::prelude::check_options_contain;
+    ///
+    /// use pgrx::pg_sys::panic::ErrorReport;
+    /// use pgrx::PgSqlErrorCode;
+    ///
+    /// enum FdwError {
+    ///     InvalidFdwOption,
+    ///     InvalidServerOption,
+    ///     InvalidTableOption,
+    /// }
+    ///
+    /// impl From<FdwError> for ErrorReport {
+    ///     fn from(value: FdwError) -> Self {
+    ///         let error_message = match value {
+    ///             FdwError::InvalidFdwOption => "invalid foreign data wrapper option",
+    ///             FdwError::InvalidServerOption => "invalid foreign server option",
+    ///             FdwError::InvalidTableOption => "invalid foreign table option",
+    ///         };
+    ///         ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, error_message, "")
+    ///     }
+    /// }
+    ///
+    /// fn validator(opt_list: Vec<Option<String>>, catalog: Option<Oid>) -> Result<(), FdwError> {
     ///     if let Some(oid) = catalog {
     ///         match oid {
     ///             FOREIGN_DATA_WRAPPER_RELATION_ID => {
     ///                 // check a required option when create foreign data wrapper
-    ///                 check_options_contain(&opt_list, "required_option");
+    ///                 check_options_contain(&opt_list, "foreign_data_wrapper_required_option");
     ///             }
     ///             FOREIGN_SERVER_RELATION_ID => {
     ///                 // check option here when create server
+    ///                 check_options_contain(&opt_list, "foreign_server_required_option");
     ///             }
     ///             FOREIGN_TABLE_RELATION_ID => {
     ///                 // check option here when create foreign table
+    ///                 check_options_contain(&opt_list, "foreign_table_required_option");
     ///             }
     ///             _ => {}
     ///         }
     ///     }
+    ///
+    ///     Ok(())
     /// }
     /// ```
-    fn validator(_options: Vec<Option<String>>, _catalog: Option<Oid>) {}
+    fn validator(_options: Vec<Option<String>>, _catalog: Option<Oid>) -> Result<(), E> {
+        Ok(())
+    }
 }

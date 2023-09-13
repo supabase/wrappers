@@ -10,6 +10,7 @@ use gcp_bigquery_client::{
     },
     Client,
 };
+use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::PgSqlErrorCode;
 use pgrx::prelude::{AnyNumeric, Date, Timestamp};
 use serde_json::json;
@@ -85,7 +86,8 @@ fn field_to_cell(rs: &ResultSet, field: &TableFieldSchema) -> Option<Cell> {
 #[wrappers_fdw(
     version = "0.1.4",
     author = "Supabase",
-    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/bigquery_fdw"
+    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/bigquery_fdw",
+    error_type = "BigQueryFdwError"
 )]
 pub(crate) struct BigQueryFdw {
     rt: Runtime,
@@ -158,8 +160,16 @@ impl BigQueryFdw {
     }
 }
 
-impl ForeignDataWrapper for BigQueryFdw {
-    fn new(options: &HashMap<String, String>) -> Self {
+enum BigQueryFdwError {}
+
+impl From<BigQueryFdwError> for ErrorReport {
+    fn from(_value: BigQueryFdwError) -> Self {
+        ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, "", "")
+    }
+}
+
+impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
+    fn new(options: &HashMap<String, String>) -> Result<Self, BigQueryFdwError> {
         let mut ret = BigQueryFdw {
             rt: create_async_runtime(),
             client: None,
@@ -176,7 +186,7 @@ impl ForeignDataWrapper for BigQueryFdw {
         let dataset_id = require_option("dataset_id", options);
 
         if project_id.is_none() || dataset_id.is_none() {
-            return ret;
+            return Ok(ret);
         }
         ret.project_id = project_id.unwrap();
         ret.dataset_id = dataset_id.unwrap();
@@ -193,7 +203,7 @@ impl ForeignDataWrapper for BigQueryFdw {
             .map(|t| t.to_owned())
             .unwrap_or_else(|| "https://bigquery.googleapis.com/bigquery/v2".to_string());
 
-        let (auth_endpoint, sa_key_json) = match mock_auth {
+        let sa_key_json = match mock_auth {
             true => {
                 // Key file is not required if we're mocking auth
                 let auth_mock = executor::block_on(GoogleAuthMock::start());
@@ -201,26 +211,21 @@ impl ForeignDataWrapper for BigQueryFdw {
                 let auth_mock_uri = auth_mock.uri();
                 let dummy_auth_config = dummy_configuration(&auth_mock_uri);
                 ret.auth_mock = Some(auth_mock);
-                let sa_key_json = serde_json::to_string_pretty(&dummy_auth_config).unwrap();
-                (auth_mock_uri, sa_key_json)
+                serde_json::to_string_pretty(&dummy_auth_config).unwrap()
             }
-            false => {
-                let uri = "https://www.googleapis.com/auth/bigquery".to_string();
-                match options.get("sa_key") {
-                    Some(sa_key) => (uri, sa_key.to_owned()),
-                    None => {
-                        let sa_key_id = match require_option("sa_key_id", options) {
-                            Some(sa_key_id) => sa_key_id,
-                            None => return ret,
-                        };
-                        let sa_key_json = match get_vault_secret(&sa_key_id) {
-                            Some(sa_key) => sa_key,
-                            None => return ret,
-                        };
-                        (uri, sa_key_json)
+            false => match options.get("sa_key") {
+                Some(sa_key) => sa_key.to_owned(),
+                None => {
+                    let sa_key_id = match require_option("sa_key_id", options) {
+                        Some(sa_key_id) => sa_key_id,
+                        None => return Ok(ret),
+                    };
+                    match get_vault_secret(&sa_key_id) {
+                        Some(sa_key) => sa_key,
+                        None => return Ok(ret),
                     }
                 }
-            }
+            },
         };
 
         let sa_key = match yup_oauth2::parse_service_account_key(sa_key_json.as_bytes()) {
@@ -230,16 +235,14 @@ impl ForeignDataWrapper for BigQueryFdw {
                     PgSqlErrorCode::ERRCODE_FDW_ERROR,
                     &format!("parse service account key JSON failed: {}", err),
                 );
-                return ret;
+                return Ok(ret);
             }
         };
 
         ret.client = match ret.rt.block_on(
             ClientBuilder::new()
-                .with_auth_base_url(auth_endpoint)
-                // Url of the BigQuery emulator docker image.
                 .with_v2_base_url(api_endpoint)
-                .build_from_service_account_key(sa_key, true),
+                .build_from_service_account_key(sa_key, false),
         ) {
             Ok(client) => Some(client),
             Err(err) => {
@@ -253,7 +256,7 @@ impl ForeignDataWrapper for BigQueryFdw {
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
 
-        ret
+        Ok(ret)
     }
 
     fn get_rel_size(
@@ -263,8 +266,8 @@ impl ForeignDataWrapper for BigQueryFdw {
         _sorts: &[Sort],
         _limit: &Option<Limit>,
         _options: &HashMap<String, String>,
-    ) -> (i64, i32) {
-        (0, 0)
+    ) -> Result<(i64, i32), BigQueryFdwError> {
+        Ok((0, 0))
     }
 
     fn begin_scan(
@@ -274,10 +277,10 @@ impl ForeignDataWrapper for BigQueryFdw {
         sorts: &[Sort],
         limit: &Option<Limit>,
         options: &HashMap<String, String>,
-    ) {
+    ) -> Result<(), BigQueryFdwError> {
         let table = require_option("table", options);
         if table.is_none() {
-            return;
+            return Ok(());
         }
         self.table = table.unwrap();
         self.tgt_cols = columns.to_vec();
@@ -350,9 +353,11 @@ impl ForeignDataWrapper for BigQueryFdw {
                 }
             }
         }
+
+        Ok(())
     }
 
-    fn iter_scan(&mut self, row: &mut Row) -> Option<()> {
+    fn iter_scan(&mut self, row: &mut Row) -> Result<Option<()>, BigQueryFdwError> {
         if let Some(client) = &self.client {
             if let Some(ref mut rs) = self.scan_result {
                 let mut extract_row = |rs: &mut ResultSet| {
@@ -375,7 +380,7 @@ impl ForeignDataWrapper for BigQueryFdw {
                 };
 
                 if extract_row(rs) {
-                    return Some(());
+                    return Ok(Some(()));
                 }
 
                 // deal with pagination
@@ -395,7 +400,7 @@ impl ForeignDataWrapper for BigQueryFdw {
                                     // replace result set with data from the new page
                                     *rs = ResultSet::new(QueryResponse::from(resp));
                                     if extract_row(rs) {
-                                        return Some(());
+                                        return Ok(Some(()));
                                     }
                                 }
                                 Err(err) => {
@@ -411,24 +416,27 @@ impl ForeignDataWrapper for BigQueryFdw {
                 }
             }
         }
-        None
+        Ok(None)
     }
 
-    fn end_scan(&mut self) {
+    fn end_scan(&mut self) -> Result<(), BigQueryFdwError> {
         self.scan_result.take();
+        Ok(())
     }
 
-    fn begin_modify(&mut self, options: &HashMap<String, String>) {
+    fn begin_modify(&mut self, options: &HashMap<String, String>) -> Result<(), BigQueryFdwError> {
         let table = require_option("table", options);
         let rowid_col = require_option("rowid_column", options);
         if table.is_none() || rowid_col.is_none() {
-            return;
+            return Ok(());
         }
         self.table = table.unwrap();
         self.rowid_col = rowid_col.unwrap();
+
+        Ok(())
     }
 
-    fn insert(&mut self, src: &Row) {
+    fn insert(&mut self, src: &Row) -> Result<(), BigQueryFdwError> {
         if let Some(ref mut client) = self.client {
             let mut insert_request = TableDataInsertAllRequest::new();
             let mut row_json = json!({});
@@ -467,9 +475,11 @@ impl ForeignDataWrapper for BigQueryFdw {
                 );
             }
         }
+
+        Ok(())
     }
 
-    fn update(&mut self, rowid: &Cell, new_row: &Row) {
+    fn update(&mut self, rowid: &Cell, new_row: &Row) -> Result<(), BigQueryFdwError> {
         if let Some(ref mut client) = self.client {
             let mut sets = Vec::new();
             for (col, cell) in new_row.iter() {
@@ -502,9 +512,10 @@ impl ForeignDataWrapper for BigQueryFdw {
                 );
             }
         }
+        Ok(())
     }
 
-    fn delete(&mut self, rowid: &Cell) {
+    fn delete(&mut self, rowid: &Cell) -> Result<(), BigQueryFdwError> {
         if let Some(ref mut client) = self.client {
             let sql = format!(
                 "delete from `{}.{}.{}` where {} = {}",
@@ -521,9 +532,8 @@ impl ForeignDataWrapper for BigQueryFdw {
                 );
             }
         }
+        Ok(())
     }
-
-    fn end_modify(&mut self) {}
 }
 
 use auth_mock::GoogleAuthMock;

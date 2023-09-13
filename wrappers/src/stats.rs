@@ -41,6 +41,7 @@ fn get_stats_table() -> String {
 }
 
 // increase stats value
+#[allow(dead_code)]
 pub(crate) fn inc_stats(fdw_name: &str, metric: Metric, inc: i64) {
     let sql = format!(
         "insert into {} as s (fdw_name, {}) values($1, $2)

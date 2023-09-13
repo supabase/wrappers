@@ -4,7 +4,9 @@ use pgrx::{
     PgSqlErrorCode,
 };
 use std::collections::HashMap;
+use std::marker::PhantomData;
 
+use pgrx::pg_sys::panic::{ErrorReport, ErrorReportable};
 use std::os::raw::c_int;
 use std::ptr;
 
@@ -19,7 +21,7 @@ use crate::sort::*;
 use crate::utils::{self, report_error, SerdeList};
 
 // Fdw private state for scan
-struct FdwState<W: ForeignDataWrapper> {
+struct FdwState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
     // foreign data wrapper instance
     instance: W,
 
@@ -46,9 +48,10 @@ struct FdwState<W: ForeignDataWrapper> {
     values: Vec<Datum>,
     nulls: Vec<bool>,
     row: Row,
+    _phantom: PhantomData<E>,
 }
 
-impl<W: ForeignDataWrapper> FdwState<W> {
+impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwState<E, W> {
     unsafe fn new(foreigntableid: Oid, tmp_ctx: PgMemoryContexts) -> Self {
         Self {
             instance: instance::create_fdw_instance(foreigntableid),
@@ -61,11 +64,12 @@ impl<W: ForeignDataWrapper> FdwState<W> {
             values: Vec::new(),
             nulls: Vec::new(),
             row: Row::new(),
+            _phantom: PhantomData,
         }
     }
 
     #[inline]
-    fn get_rel_size(&mut self) -> (i64, i32) {
+    fn get_rel_size(&mut self) -> Result<(i64, i32), E> {
         self.instance.get_rel_size(
             &self.quals,
             &self.tgts,
@@ -76,7 +80,7 @@ impl<W: ForeignDataWrapper> FdwState<W> {
     }
 
     #[inline]
-    fn begin_scan(&mut self) {
+    fn begin_scan(&mut self) -> Result<(), E> {
         self.instance.begin_scan(
             &self.quals,
             &self.tgts,
@@ -87,25 +91,25 @@ impl<W: ForeignDataWrapper> FdwState<W> {
     }
 
     #[inline]
-    fn iter_scan(&mut self) -> Option<()> {
+    fn iter_scan(&mut self) -> Result<Option<()>, E> {
         self.instance.iter_scan(&mut self.row)
     }
 
     #[inline]
-    fn re_scan(&mut self) {
+    fn re_scan(&mut self) -> Result<(), E> {
         self.instance.re_scan()
     }
 
     #[inline]
-    fn end_scan(&mut self) {
-        self.instance.end_scan();
+    fn end_scan(&mut self) -> Result<(), E> {
+        self.instance.end_scan()
     }
 }
 
-impl<W: ForeignDataWrapper> utils::SerdeList for FdwState<W> {}
+impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> utils::SerdeList for FdwState<E, W> {}
 
 #[pg_guard]
-pub(super) extern "C" fn get_foreign_rel_size<W: ForeignDataWrapper>(
+pub(super) extern "C" fn get_foreign_rel_size<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     root: *mut pg_sys::PlannerInfo,
     baserel: *mut pg_sys::RelOptInfo,
     foreigntableid: pg_sys::Oid,
@@ -117,7 +121,7 @@ pub(super) extern "C" fn get_foreign_rel_size<W: ForeignDataWrapper>(
         let ctx = memctx::refresh_wrappers_memctx(&ctx_name);
 
         // create scan state
-        let mut state = FdwState::<W>::new(foreigntableid, ctx);
+        let mut state = FdwState::<E, W>::new(foreigntableid, ctx);
 
         // extract qual list
         state.quals = extract_quals(root, baserel, foreigntableid);
@@ -136,7 +140,7 @@ pub(super) extern "C" fn get_foreign_rel_size<W: ForeignDataWrapper>(
         state.opts = utils::options_to_hashmap((*ftable).options);
 
         // get estimate row count and mean row width
-        let (rows, width) = state.get_rel_size();
+        let (rows, width) = state.get_rel_size().map_err(|e| e.into()).report();
         (*baserel).rows = rows as f64;
         (*(*baserel).reltarget).width = width;
 
@@ -147,14 +151,14 @@ pub(super) extern "C" fn get_foreign_rel_size<W: ForeignDataWrapper>(
 }
 
 #[pg_guard]
-pub(super) extern "C" fn get_foreign_paths<W: ForeignDataWrapper>(
+pub(super) extern "C" fn get_foreign_paths<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     root: *mut pg_sys::PlannerInfo,
     baserel: *mut pg_sys::RelOptInfo,
     _foreigntableid: pg_sys::Oid,
 ) {
     debug2!("---> get_foreign_paths");
     unsafe {
-        let state = PgBox::<FdwState<W>>::from_pg((*baserel).fdw_private as _);
+        let state = PgBox::<FdwState<E, W>>::from_pg((*baserel).fdw_private as _);
 
         // get startup cost from foreign table options
         let startup_cost = state
@@ -187,7 +191,7 @@ pub(super) extern "C" fn get_foreign_paths<W: ForeignDataWrapper>(
 }
 
 #[pg_guard]
-pub(super) extern "C" fn get_foreign_plan<W: ForeignDataWrapper>(
+pub(super) extern "C" fn get_foreign_plan<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     _root: *mut pg_sys::PlannerInfo,
     baserel: *mut pg_sys::RelOptInfo,
     _foreigntableid: pg_sys::Oid,
@@ -198,7 +202,7 @@ pub(super) extern "C" fn get_foreign_plan<W: ForeignDataWrapper>(
 ) -> *mut pg_sys::ForeignScan {
     debug2!("---> get_foreign_plan");
     unsafe {
-        let state = PgBox::<FdwState<W>>::from_pg((*baserel).fdw_private as _);
+        let state = PgBox::<FdwState<E, W>>::from_pg((*baserel).fdw_private as _);
 
         // make foreign scan plan
         let scan_clauses = pg_sys::extract_actual_clauses(scan_clauses, false);
@@ -227,18 +231,18 @@ pub(super) extern "C" fn get_foreign_plan<W: ForeignDataWrapper>(
 }
 
 #[pg_guard]
-pub(super) extern "C" fn explain_foreign_scan<W: ForeignDataWrapper>(
+pub(super) extern "C" fn explain_foreign_scan<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     node: *mut pg_sys::ForeignScanState,
     es: *mut pg_sys::ExplainState,
 ) {
     debug2!("---> explain_foreign_scan");
     unsafe {
-        let fdw_state = (*node).fdw_state as *mut FdwState<W>;
+        let fdw_state = (*node).fdw_state as *mut FdwState<E, W>;
         if fdw_state.is_null() {
             return;
         }
 
-        let state = PgBox::<FdwState<W>>::from_pg(fdw_state);
+        let state = PgBox::<FdwState<E, W>>::from_pg(fdw_state);
 
         let ctx = PgMemoryContexts::CurrentMemoryContext;
 
@@ -259,12 +263,12 @@ pub(super) extern "C" fn explain_foreign_scan<W: ForeignDataWrapper>(
 }
 
 // extract paramter value and assign it to qual in scan state
-unsafe fn assign_paramenter_value<W: ForeignDataWrapper>(
+unsafe fn assign_paramenter_value<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     node: *mut pg_sys::ForeignScanState,
-    state: &mut FdwState<W>,
+    state: &mut FdwState<E, W>,
 ) {
     // get parameter list in execution state
-    let estate = (*node).ss.ps.state as *mut pg_sys::EState;
+    let estate = (*node).ss.ps.state;
     let plist_info = (*estate).es_param_list_info;
     if plist_info.is_null() {
         return;
@@ -285,7 +289,7 @@ unsafe fn assign_paramenter_value<W: ForeignDataWrapper>(
 }
 
 #[pg_guard]
-pub(super) extern "C" fn begin_foreign_scan<W: ForeignDataWrapper>(
+pub(super) extern "C" fn begin_foreign_scan<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     node: *mut pg_sys::ForeignScanState,
     eflags: c_int,
 ) {
@@ -293,7 +297,7 @@ pub(super) extern "C" fn begin_foreign_scan<W: ForeignDataWrapper>(
     unsafe {
         let scan_state = (*node).ss;
         let plan = scan_state.ps.plan as *mut pg_sys::ForeignScan;
-        let mut state = FdwState::<W>::deserialize_from_list((*plan).fdw_private as _);
+        let mut state = FdwState::<E, W>::deserialize_from_list((*plan).fdw_private as _);
         assert!(!state.is_null());
 
         // assign parameter values to qual
@@ -301,7 +305,7 @@ pub(super) extern "C" fn begin_foreign_scan<W: ForeignDataWrapper>(
 
         // begin scan if it is not EXPLAIN statement
         if eflags & pg_sys::EXEC_FLAG_EXPLAIN_ONLY as c_int <= 0 {
-            state.begin_scan();
+            state.begin_scan().map_err(|e| e.into()).report();
 
             let rel = scan_state.ss_currentRelation;
             let tup_desc = (*rel).rd_att;
@@ -319,20 +323,20 @@ pub(super) extern "C" fn begin_foreign_scan<W: ForeignDataWrapper>(
 }
 
 #[pg_guard]
-pub(super) extern "C" fn iterate_foreign_scan<W: ForeignDataWrapper>(
+pub(super) extern "C" fn iterate_foreign_scan<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     node: *mut pg_sys::ForeignScanState,
 ) -> *mut pg_sys::TupleTableSlot {
     // `debug!` macros are quite expensive at the moment, so avoid logging in the inner loop
     // debug2!("---> iterate_foreign_scan");
     unsafe {
-        let mut state = PgBox::<FdwState<W>>::from_pg((*node).fdw_state as _);
+        let mut state = PgBox::<FdwState<E, W>>::from_pg((*node).fdw_state as _);
 
         // clear slot
         let slot = (*node).ss.ss_ScanTupleSlot;
         polyfill::exec_clear_tuple(slot);
 
         state.row.clear();
-        if state.iter_scan().is_some() {
+        if state.iter_scan().map_err(|e| e.into()).report().is_some() {
             if state.row.cols.len() != state.tgts.len() {
                 report_error(
                     PgSqlErrorCode::ERRCODE_FDW_INVALID_COLUMN_NUMBER,
@@ -363,31 +367,31 @@ pub(super) extern "C" fn iterate_foreign_scan<W: ForeignDataWrapper>(
 }
 
 #[pg_guard]
-pub(super) extern "C" fn re_scan_foreign_scan<W: ForeignDataWrapper>(
+pub(super) extern "C" fn re_scan_foreign_scan<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     node: *mut pg_sys::ForeignScanState,
 ) {
     debug2!("---> re_scan_foreign_scan");
     unsafe {
-        let fdw_state = (*node).fdw_state as *mut FdwState<W>;
+        let fdw_state = (*node).fdw_state as *mut FdwState<E, W>;
         if !fdw_state.is_null() {
-            let mut state = PgBox::<FdwState<W>>::from_pg(fdw_state);
-            state.re_scan();
+            let mut state = PgBox::<FdwState<E, W>>::from_pg(fdw_state);
+            state.re_scan().map_err(|e| e.into()).report();
         }
     }
 }
 
 #[pg_guard]
-pub(super) extern "C" fn end_foreign_scan<W: ForeignDataWrapper>(
+pub(super) extern "C" fn end_foreign_scan<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     node: *mut pg_sys::ForeignScanState,
 ) {
     debug2!("---> end_foreign_scan");
     unsafe {
-        let fdw_state = (*node).fdw_state as *mut FdwState<W>;
+        let fdw_state = (*node).fdw_state as *mut FdwState<E, W>;
         if fdw_state.is_null() {
             return;
         }
 
-        let mut state = PgBox::<FdwState<W>>::from_pg(fdw_state);
-        state.end_scan();
+        let mut state = PgBox::<FdwState<E, W>>::from_pg(fdw_state);
+        state.end_scan().map_err(|e| e.into()).report();
     }
 }

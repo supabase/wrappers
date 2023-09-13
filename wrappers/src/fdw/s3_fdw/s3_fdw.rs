@@ -3,6 +3,7 @@ use async_compression::tokio::bufread::{BzDecoder, GzipDecoder, XzDecoder, ZlibD
 use aws_sdk_s3 as s3;
 use http::Uri;
 use pgrx::pg_sys;
+use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::PgSqlErrorCode;
 use serde_json::{self, Value as JsonValue};
 use std::collections::{HashMap, VecDeque};
@@ -25,7 +26,8 @@ enum Parser {
 #[wrappers_fdw(
     version = "0.1.2",
     author = "Supabase",
-    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/s3_fdw"
+    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/s3_fdw",
+    error_type = "S3FdwError"
 )]
 pub(crate) struct S3Fdw {
     rt: Runtime,
@@ -125,8 +127,16 @@ impl S3Fdw {
     }
 }
 
-impl ForeignDataWrapper for S3Fdw {
-    fn new(options: &HashMap<String, String>) -> Self {
+enum S3FdwError {}
+
+impl From<S3FdwError> for ErrorReport {
+    fn from(_value: S3FdwError) -> Self {
+        ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, "", "")
+    }
+}
+
+impl ForeignDataWrapper<S3FdwError> for S3Fdw {
+    fn new(options: &HashMap<String, String>) -> Result<Self, S3FdwError> {
         let rt = tokio::runtime::Runtime::new().unwrap();
         let mut ret = S3Fdw {
             rt,
@@ -164,7 +174,7 @@ impl ForeignDataWrapper for S3Fdw {
             }
         };
         if creds.is_none() {
-            return ret;
+            return Ok(ret);
         }
         let creds = creds.unwrap();
 
@@ -199,7 +209,7 @@ impl ForeignDataWrapper for S3Fdw {
         };
         ret.client = Some(client);
 
-        ret
+        Ok(ret)
     }
 
     fn begin_scan(
@@ -209,7 +219,7 @@ impl ForeignDataWrapper for S3Fdw {
         _sorts: &[Sort],
         _limit: &Option<Limit>,
         options: &HashMap<String, String>,
-    ) {
+    ) -> Result<(), S3FdwError> {
         // extract s3 bucket and object path from uri option
         let (bucket, object) = if let Some(uri) = require_option("uri", options) {
             match uri.parse::<Uri>() {
@@ -222,7 +232,7 @@ impl ForeignDataWrapper for S3Fdw {
                             PgSqlErrorCode::ERRCODE_FDW_ERROR,
                             &format!("invalid s3 uri: {}", uri),
                         );
-                        return;
+                        return Ok(());
                     }
                     // exclude 1st "/" char in the path as s3 object path doesn't like it
                     (uri.host().unwrap().to_owned(), uri.path()[1..].to_string())
@@ -232,11 +242,11 @@ impl ForeignDataWrapper for S3Fdw {
                         PgSqlErrorCode::ERRCODE_FDW_ERROR,
                         &format!("parse s3 uri failed: {}", err),
                     );
-                    return;
+                    return Ok(());
                 }
             }
         } else {
-            return;
+            return Ok(());
         };
 
         let has_header: bool = options.get("has_header") == Some(&"true".to_string());
@@ -261,11 +271,11 @@ impl ForeignDataWrapper for S3Fdw {
                                 format
                             ),
                         );
-                        return;
+                        return Ok(());
                     }
                 }
             } else {
-                return;
+                return Ok(());
             };
 
             let stream = match self
@@ -278,7 +288,7 @@ impl ForeignDataWrapper for S3Fdw {
                         PgSqlErrorCode::ERRCODE_FDW_ERROR,
                         &format!("request s3 failed: {}", err),
                     );
-                    return;
+                    return Ok(());
                 }
             };
 
@@ -295,7 +305,7 @@ impl ForeignDataWrapper for S3Fdw {
                                 PgSqlErrorCode::ERRCODE_FDW_ERROR,
                                 &format!("invalid compression option: {}", compress),
                             );
-                            return;
+                            return Ok(());
                         }
                     }
                 } else {
@@ -321,7 +331,7 @@ impl ForeignDataWrapper for S3Fdw {
                         &self.tgt_cols,
                     ));
                 }
-                return;
+                return Ok(());
             }
 
             let mut rdr: BufReader<Pin<Box<dyn AsyncRead>>> = BufReader::new(boxed_stream);
@@ -335,26 +345,30 @@ impl ForeignDataWrapper for S3Fdw {
                             PgSqlErrorCode::ERRCODE_FDW_ERROR,
                             &format!("fetch csv file failed: {}", err),
                         );
-                        return;
+                        return Ok(());
                     }
                 }
             }
 
             self.rdr = Some(rdr);
         }
+
+        Ok(())
     }
 
-    fn iter_scan(&mut self, row: &mut Row) -> Option<()> {
+    fn iter_scan(&mut self, row: &mut Row) -> Result<Option<()>, S3FdwError> {
         // read parquet record
         if let Parser::Parquet(ref mut s3parquet) = &mut self.parser {
-            self.rt.block_on(s3parquet.refill())?;
+            if self.rt.block_on(s3parquet.refill()).is_none() {
+                return Ok(None);
+            }
             let ret = s3parquet.read_into_row(row, &self.tgt_cols);
             if ret.is_some() {
                 self.rows_out += 1;
             } else {
                 stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsOut, self.rows_out);
             }
-            return ret;
+            return Ok(ret);
         }
 
         // read csv or jsonl record
@@ -376,7 +390,7 @@ impl ForeignDataWrapper for S3Fdw {
                                     row.push(&col.name, cell);
                                 }
                                 self.rows_out += 1;
-                                return Some(());
+                                return Ok(Some(()));
                             } else {
                                 // no more records left in the local buffer, refill from remote
                                 self.buf.clear();
@@ -419,7 +433,7 @@ impl ForeignDataWrapper for S3Fdw {
                                 }
                             }
                             self.rows_out += 1;
-                            return Some(());
+                            return Ok(Some(()));
                         }
                         None => {
                             // no more records left in the local buffer, refill from remote
@@ -433,21 +447,27 @@ impl ForeignDataWrapper for S3Fdw {
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsOut, self.rows_out);
 
-        None
+        Ok(None)
     }
 
-    fn end_scan(&mut self) {
+    fn end_scan(&mut self) -> Result<(), S3FdwError> {
         // release local resources
         self.rdr.take();
         self.parser = Parser::JsonLine(VecDeque::new());
+        Ok(())
     }
 
-    fn validator(options: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) {
+    fn validator(
+        options: Vec<Option<String>>,
+        catalog: Option<pg_sys::Oid>,
+    ) -> Result<(), S3FdwError> {
         if let Some(oid) = catalog {
             if oid == FOREIGN_TABLE_RELATION_ID {
                 check_options_contain(&options, "uri");
                 check_options_contain(&options, "format");
             }
         }
+
+        Ok(())
     }
 }
