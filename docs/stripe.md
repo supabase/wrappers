@@ -65,6 +65,7 @@ The Stripe Wrapper supports data read and modify from Stripe API.
 | [Balance Transactions](https://stripe.com/docs/api/balance_transactions/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
 | [Charges](https://stripe.com/docs/api/charges/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
 | [Checkout Sessions](https://stripe.com/docs/api/checkout/sessions/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
+| [Coupons](https://stripe.com/docs/api/coupons/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
 | [Customers](https://stripe.com/docs/api/customers/list)     | :white_check_mark:| :white_check_mark:| :white_check_mark:| :white_check_mark:| :x:               |
 | [Disputes](https://stripe.com/docs/api/disputes/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
 | [Events](https://stripe.com/docs/api/events/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
@@ -76,10 +77,14 @@ The Stripe Wrapper supports data read and modify from Stripe API.
 | [Payouts](https://stripe.com/docs/api/payouts/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
 | [Prices](https://stripe.com/docs/api/prices/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
 | [Products](https://stripe.com/docs/api/products/list)     | :white_check_mark:| :white_check_mark:| :white_check_mark:| :white_check_mark:| :x:               |
+| [Promotion Codes](https://stripe.com/docs/api/promotion_codes/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
 | [Refunds](https://stripe.com/docs/api/refunds/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
 | [SetupAttempts](https://stripe.com/docs/api/setup_attempts/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
 | [SetupIntents](https://stripe.com/docs/api/setup_intents/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
+| [Shipping Rates](https://stripe.com/docs/api/shipping_rates/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
 | [Subscriptions](https://stripe.com/docs/api/subscriptions/list)     | :white_check_mark:| :white_check_mark:| :white_check_mark:| :white_check_mark:| :x:               |
+| [Tax Codes](https://stripe.com/docs/api/tax_codes/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
+| [Tax Rates](https://stripe.com/docs/api/tax_rates/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
 | [Tokens](https://stripe.com/docs/api/tokens)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
 | [Topups](https://stripe.com/docs/api/topups/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
 | [Transfers](https://stripe.com/docs/api/transfers/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
@@ -248,6 +253,8 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - customer
 - payment_intent
 - subscription
+
+// TODO: Add coupons docs
 
 ### Customers
 *read and modify*
@@ -564,6 +571,8 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - id
 - active
 
+// TODO: Add promotion_codes docs
+
 ### Refunds
 *read only*
 
@@ -657,6 +666,8 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - customer
 - payment_method
 
+// TODO: Add shipping_rates docs
+
 ### Subscriptions
 *read and modify*
 
@@ -687,6 +698,10 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - customer
 - price
 - status
+
+// TODO: Add tax_codes docs
+
+// TODO: Add tax_rates docs
 
 ### Tokens
 *read only*

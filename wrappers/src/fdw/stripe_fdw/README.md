@@ -10,7 +10,7 @@ This is a foreign data wrapper for [Stripe](https://stripe.com/) developed using
 
 | Version | Date       | Notes                                                                                                |
 | ------- | ---------- | ---------------------------------------------------------------------------------------------------- |
-| 0.1.8   | 2023-09-13 | Added objects for coupons, promotion_codes, tax_codes, tax_rates and shipping rates                  |
+| 0.1.8   | 2023-09-13 | Added objects for Coupons, Promotion Codes, Tax codes, Tax rates and Shipping rates                  |
 | 0.1.7   | 2023-07-13 | Added fdw stats collection                                                                           |
 | 0.1.6   | 2023-05-30 | Added Checkout Session object                                                                        |
 | 0.1.5   | 2023-05-01 | Added 'prices' object and empty result improvement                                                   |
