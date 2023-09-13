@@ -6,7 +6,7 @@ use pgrx::{
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
-use pgrx::pg_sys::panic::{ErrorReport, ErrorReportable};
+use pgrx::pg_sys::panic::ErrorReport;
 use std::os::raw::c_int;
 use std::ptr;
 
@@ -14,11 +14,12 @@ use crate::instance;
 use crate::interface::{Cell, Column, Limit, Qual, Row, Sort, Value};
 use crate::limit::*;
 use crate::memctx;
+use crate::options::options_to_hashmap;
 use crate::polyfill;
 use crate::prelude::ForeignDataWrapper;
 use crate::qual::*;
 use crate::sort::*;
-use crate::utils::{self, report_error, SerdeList};
+use crate::utils::{self, report_error, ReportableError, SerdeList};
 
 // Fdw private state for scan
 struct FdwState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
@@ -137,10 +138,10 @@ pub(super) extern "C" fn get_foreign_rel_size<E: Into<ErrorReport>, W: ForeignDa
 
         // get foreign table options
         let ftable = pg_sys::GetForeignTable(foreigntableid);
-        state.opts = utils::options_to_hashmap((*ftable).options);
+        state.opts = options_to_hashmap((*ftable).options);
 
         // get estimate row count and mean row width
-        let (rows, width) = state.get_rel_size().map_err(|e| e.into()).report();
+        let (rows, width) = state.get_rel_size().report_unwrap();
         (*baserel).rows = rows as f64;
         (*(*baserel).reltarget).width = width;
 
@@ -305,7 +306,7 @@ pub(super) extern "C" fn begin_foreign_scan<E: Into<ErrorReport>, W: ForeignData
 
         // begin scan if it is not EXPLAIN statement
         if eflags & pg_sys::EXEC_FLAG_EXPLAIN_ONLY as c_int <= 0 {
-            state.begin_scan().map_err(|e| e.into()).report();
+            state.begin_scan().report_unwrap();
 
             let rel = scan_state.ss_currentRelation;
             let tup_desc = (*rel).rd_att;
@@ -336,7 +337,7 @@ pub(super) extern "C" fn iterate_foreign_scan<E: Into<ErrorReport>, W: ForeignDa
         polyfill::exec_clear_tuple(slot);
 
         state.row.clear();
-        if state.iter_scan().map_err(|e| e.into()).report().is_some() {
+        if state.iter_scan().report_unwrap().is_some() {
             if state.row.cols.len() != state.tgts.len() {
                 report_error(
                     PgSqlErrorCode::ERRCODE_FDW_INVALID_COLUMN_NUMBER,
@@ -375,7 +376,7 @@ pub(super) extern "C" fn re_scan_foreign_scan<E: Into<ErrorReport>, W: ForeignDa
         let fdw_state = (*node).fdw_state as *mut FdwState<E, W>;
         if !fdw_state.is_null() {
             let mut state = PgBox::<FdwState<E, W>>::from_pg(fdw_state);
-            state.re_scan().map_err(|e| e.into()).report();
+            state.re_scan().report_unwrap();
         }
     }
 }
@@ -392,6 +393,6 @@ pub(super) extern "C" fn end_foreign_scan<E: Into<ErrorReport>, W: ForeignDataWr
         }
 
         let mut state = PgBox::<FdwState<E, W>>::from_pg(fdw_state);
-        state.end_scan().map_err(|e| e.into()).report();
+        state.end_scan().report_unwrap();
     }
 }

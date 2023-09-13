@@ -215,7 +215,11 @@ impl LogflareFdw {
     }
 }
 
-enum LogflareFdwError {}
+#[derive(Error, Debug)]
+enum LogflareFdwError {
+    #[error("{0}")]
+    Options(#[from] OptionsError),
+}
 
 impl From<LogflareFdwError> for ErrorReport {
     fn from(_value: LogflareFdwError) -> Self {
@@ -238,7 +242,7 @@ impl ForeignDataWrapper<LogflareFdwError> for LogflareFdw {
             .unwrap_or_else(|| LogflareFdw::BASE_URL.to_string());
         let client = match options.get("api_key") {
             Some(api_key) => Some(create_client(api_key)),
-            None => require_option("api_key_id", options)
+            None => require_option("api_key_id", options)?
                 .and_then(|key_id| get_vault_secret(&key_id))
                 .map(|api_key| create_client(&api_key)),
         };
@@ -262,11 +266,7 @@ impl ForeignDataWrapper<LogflareFdwError> for LogflareFdw {
         _limit: &Option<Limit>,
         options: &HashMap<String, String>,
     ) -> Result<(), LogflareFdwError> {
-        let endpoint = if let Some(name) = require_option("endpoint", options) {
-            name
-        } else {
-            return Ok(());
-        };
+        let endpoint = require_option("endpoint", options)?;
 
         // extract params
         self.params = if let Some(params) = extract_params(quals) {

@@ -288,11 +288,13 @@
 //! - [Logflare](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/logflare_fdw): A FDW for [Logflare](https://logflare.app/) which supports data read only.
 
 pub mod interface;
+pub mod options;
 pub mod utils;
 
 /// The prelude includes all necessary imports to make Wrappers work
 pub mod prelude {
     pub use crate::interface::*;
+    pub use crate::options::*;
     pub use crate::utils::*;
     pub use crate::wrappers_fdw;
     pub use ::tokio::runtime::Runtime;
