@@ -2,6 +2,7 @@ use crate::stats;
 use chrono::{Date, DateTime, NaiveDate, NaiveDateTime, Utc};
 use chrono_tz::Tz;
 use clickhouse_rs::{types, types::Block, types::SqlType, ClientHandle, Pool};
+use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::{prelude::PgSqlErrorCode, to_timestamp};
 use regex::{Captures, Regex};
 use std::collections::HashMap;
@@ -77,7 +78,8 @@ fn field_to_cell(row: &types::Row<types::Complex>, i: usize) -> Option<Cell> {
 #[wrappers_fdw(
     version = "0.1.3",
     author = "Supabase",
-    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/clickhouse_fdw"
+    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/clickhouse_fdw",
+    error_type = "ClickHouseFdwError"
 )]
 pub(crate) struct ClickHouseFdw {
     rt: Runtime,
@@ -196,8 +198,16 @@ impl ClickHouseFdw {
     }
 }
 
-impl ForeignDataWrapper for ClickHouseFdw {
-    fn new(options: &HashMap<String, String>) -> Self {
+enum ClickHouseFdwError {}
+
+impl From<ClickHouseFdwError> for ErrorReport {
+    fn from(_value: ClickHouseFdwError) -> Self {
+        ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, "", "")
+    }
+}
+
+impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
+    fn new(options: &HashMap<String, String>) -> Result<Self, ClickHouseFdwError> {
         let rt = create_async_runtime();
         let conn_str = match options.get("conn_string") {
             Some(conn_str) => conn_str.to_owned(),
@@ -208,7 +218,7 @@ impl ForeignDataWrapper for ClickHouseFdw {
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
 
-        Self {
+        Ok(Self {
             rt,
             conn_str,
             client: None,
@@ -218,7 +228,7 @@ impl ForeignDataWrapper for ClickHouseFdw {
             scan_blk: None,
             row_idx: 0,
             params: Vec::new(),
-        }
+        })
     }
 
     fn begin_scan(
@@ -228,12 +238,12 @@ impl ForeignDataWrapper for ClickHouseFdw {
         sorts: &[Sort],
         limit: &Option<Limit>,
         options: &HashMap<String, String>,
-    ) {
+    ) -> Result<(), ClickHouseFdwError> {
         self.create_client();
 
         let table = require_option("table", options);
         if table.is_none() {
-            return;
+            return Ok(());
         }
         self.table = table.unwrap();
         self.tgt_cols = columns.to_vec();
@@ -264,9 +274,11 @@ impl ForeignDataWrapper for ClickHouseFdw {
                 ),
             }
         }
+
+        Ok(())
     }
 
-    fn iter_scan(&mut self, row: &mut Row) -> Option<()> {
+    fn iter_scan(&mut self, row: &mut Row) -> Result<Option<()>, ClickHouseFdwError> {
         if let Some(block) = &self.scan_blk {
             let mut rows = block.rows();
 
@@ -287,33 +299,40 @@ impl ForeignDataWrapper for ClickHouseFdw {
                         .unwrap();
                     let cell = field_to_cell(&src_row, i);
                     let col_name = src_row.name(i).unwrap();
-                    cell.as_ref()?;
+                    if cell.as_ref().is_none() {
+                        return Ok(None);
+                    }
                     row.push(col_name, cell);
                 }
                 self.row_idx += 1;
-                return Some(());
+                return Ok(Some(()));
             }
         }
-        None
+        Ok(None)
     }
 
-    fn end_scan(&mut self) {
+    fn end_scan(&mut self) -> Result<(), ClickHouseFdwError> {
         self.scan_blk.take();
+        Ok(())
     }
 
-    fn begin_modify(&mut self, options: &HashMap<String, String>) {
+    fn begin_modify(
+        &mut self,
+        options: &HashMap<String, String>,
+    ) -> Result<(), ClickHouseFdwError> {
         self.create_client();
 
         let table = require_option("table", options);
         let rowid_col = require_option("rowid_column", options);
         if table.is_none() || rowid_col.is_none() {
-            return;
+            return Ok(());
         }
         self.table = table.unwrap();
         self.rowid_col = rowid_col.unwrap();
+        Ok(())
     }
 
-    fn insert(&mut self, src: &Row) {
+    fn insert(&mut self, src: &Row) -> Result<(), ClickHouseFdwError> {
         if let Some(ref mut client) = self.client {
             let mut row = Vec::new();
             for (col_name, cell) in src.iter() {
@@ -368,9 +387,10 @@ impl ForeignDataWrapper for ClickHouseFdw {
                 );
             }
         }
+        Ok(())
     }
 
-    fn update(&mut self, rowid: &Cell, new_row: &Row) {
+    fn update(&mut self, rowid: &Cell, new_row: &Row) -> Result<(), ClickHouseFdwError> {
         if let Some(ref mut client) = self.client {
             let mut sets = Vec::new();
             for (col, cell) in new_row.iter() {
@@ -399,9 +419,10 @@ impl ForeignDataWrapper for ClickHouseFdw {
                 );
             }
         }
+        Ok(())
     }
 
-    fn delete(&mut self, rowid: &Cell) {
+    fn delete(&mut self, rowid: &Cell) -> Result<(), ClickHouseFdwError> {
         if let Some(ref mut client) = self.client {
             let sql = format!(
                 "alter table {} delete where {} = {}",
@@ -416,7 +437,6 @@ impl ForeignDataWrapper for ClickHouseFdw {
                 );
             }
         }
+        Ok(())
     }
-
-    fn end_modify(&mut self) {}
 }
