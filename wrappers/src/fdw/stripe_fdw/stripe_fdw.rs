@@ -8,6 +8,7 @@ use serde_json::{json, Map as JsonMap, Number, Value as JsonValue};
 use std::collections::HashMap;
 
 use supabase_wrappers::prelude::*;
+use thiserror::Error;
 
 fn create_client(api_key: &str) -> ClientWithMiddleware {
     let mut headers = header::HeaderMap::new();
@@ -626,11 +627,17 @@ impl StripeFdw {
     }
 }
 
-enum StripeFdwError {}
+#[derive(Error, Debug)]
+enum StripeFdwError {
+    #[error("{0}")]
+    CreateRuntimeError(#[from] CreateRuntimeError),
+}
 
 impl From<StripeFdwError> for ErrorReport {
-    fn from(_value: StripeFdwError) -> Self {
-        ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, "", "")
+    fn from(value: StripeFdwError) -> Self {
+        match value {
+            StripeFdwError::CreateRuntimeError(e) => e.into(),
+        }
     }
 }
 
@@ -659,7 +666,7 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
 
         Ok(StripeFdw {
-            rt: create_async_runtime(),
+            rt: create_async_runtime()?,
             base_url: Url::parse(&base_url).unwrap(),
             client,
             scan_result: None,

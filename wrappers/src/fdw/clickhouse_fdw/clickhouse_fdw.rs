@@ -8,6 +8,7 @@ use regex::{Captures, Regex};
 use std::collections::HashMap;
 
 use supabase_wrappers::prelude::*;
+use thiserror::Error;
 
 fn field_to_cell(row: &types::Row<types::Complex>, i: usize) -> Option<Cell> {
     let sql_type = row.sql_type(i).unwrap();
@@ -198,17 +199,23 @@ impl ClickHouseFdw {
     }
 }
 
-enum ClickHouseFdwError {}
+#[derive(Error, Debug)]
+enum ClickHouseFdwError {
+    #[error("{0}")]
+    CreateRuntimeError(#[from] CreateRuntimeError),
+}
 
 impl From<ClickHouseFdwError> for ErrorReport {
-    fn from(_value: ClickHouseFdwError) -> Self {
-        ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, "", "")
+    fn from(value: ClickHouseFdwError) -> Self {
+        match value {
+            ClickHouseFdwError::CreateRuntimeError(e) => e.into(),
+        }
     }
 }
 
 impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
     fn new(options: &HashMap<String, String>) -> Result<Self, ClickHouseFdwError> {
-        let rt = create_async_runtime();
+        let rt = create_async_runtime()?;
         let conn_str = match options.get("conn_string") {
             Some(conn_str) => conn_str.to_owned(),
             None => require_option("conn_string_id", options)

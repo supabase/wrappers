@@ -17,17 +17,17 @@ pg15 = ["pgrx/pg15", "pgrx-tests/pg15", "supabase-wrappers/pg15" ]
 pg_test = []
 
 helloworld_fdw = []
-bigquery_fdw = ["gcp-bigquery-client", "serde_json", "serde", "wiremock", "futures", "yup-oauth2"]
-clickhouse_fdw = ["clickhouse-rs", "chrono", "chrono-tz", "regex"]
-stripe_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json"]
-firebase_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "yup-oauth2", "regex"]
+bigquery_fdw = ["gcp-bigquery-client", "serde_json", "serde", "wiremock", "futures", "yup-oauth2", "thiserror"]
+clickhouse_fdw = ["clickhouse-rs", "chrono", "chrono-tz", "regex", "thiserror"]
+stripe_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "thiserror"]
+firebase_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "yup-oauth2", "regex", "thiserror"]
 s3_fdw = [
     "reqwest", "reqwest-middleware", "reqwest-retry", "aws-config", "aws-sdk-s3",
     "tokio", "tokio-util", "csv", "async-compression", "serde_json",
     "http", "parquet", "futures", "arrow-array", "chrono"
 ]
-airtable_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "serde", "url"]
-logflare_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json"]
+airtable_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "serde", "url", "thiserror"]
+logflare_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "thiserror"]
 
 # Does not include helloworld_fdw because of its general uselessness
 all_fdws = ["airtable_fdw", "bigquery_fdw", "clickhouse_fdw", "stripe_fdw", "firebase_fdw", "s3_fdw", "logflare_fdw"]
@@ -71,6 +71,8 @@ async-compression = { version = "0.3.15", features = ["tokio", "bzip2", "gzip", 
 http = { version = "0.2", optional = true }
 parquet = { version = "41.0.0", features = ["async"], optional = true }
 arrow-array = { version = "41.0.0", optional = true }
+
+thiserror = { version = "1.0.48", optional = true }
 
 [dev-dependencies]
 pgrx-tests = "=0.9.8"

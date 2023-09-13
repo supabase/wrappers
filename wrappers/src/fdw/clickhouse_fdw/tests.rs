@@ -11,7 +11,7 @@ mod tests {
         Spi::connect(|mut c| {
             let clickhouse_pool = ch::Pool::new("tcp://default:@localhost:9000/supa");
 
-            let rt = create_async_runtime();
+            let rt = create_async_runtime().expect("failed to create runtime");
             let mut handle = rt
                 .block_on(async { clickhouse_pool.get_handle().await })
                 .expect("handle");
