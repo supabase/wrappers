@@ -58,36 +58,37 @@ We need to provide Postgres with the credentials to connect to Stripe, and any a
 
 The Stripe Wrapper supports data read and modify from Stripe API.
 
-| Object      | Select            | Insert            | Update            | Delete            | Truncate          |
-| ----------- | :----:            | :----:            | :----:            | :----:            | :----:            |
-| [Accounts](https://stripe.com/docs/api/accounts/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [Balance](https://stripe.com/docs/api/balance)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [Balance Transactions](https://stripe.com/docs/api/balance_transactions/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [Charges](https://stripe.com/docs/api/charges/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [Checkout Sessions](https://stripe.com/docs/api/checkout/sessions/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [Coupons](https://stripe.com/docs/api/coupons/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [Customers](https://stripe.com/docs/api/customers/list)     | :white_check_mark:| :white_check_mark:| :white_check_mark:| :white_check_mark:| :x:               |
-| [Disputes](https://stripe.com/docs/api/disputes/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [Events](https://stripe.com/docs/api/events/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [Files](https://stripe.com/docs/api/files/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [File Links](https://stripe.com/docs/api/file_links/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [Invoices](https://stripe.com/docs/api/invoices/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [Mandates](https://stripe.com/docs/api/mandates)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [PaymentIntents](https://stripe.com/docs/api/payment_intents/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [Payouts](https://stripe.com/docs/api/payouts/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [Prices](https://stripe.com/docs/api/prices/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [Products](https://stripe.com/docs/api/products/list)     | :white_check_mark:| :white_check_mark:| :white_check_mark:| :white_check_mark:| :x:               |
-| [Promotion Codes](https://stripe.com/docs/api/promotion_codes/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [Refunds](https://stripe.com/docs/api/refunds/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [SetupAttempts](https://stripe.com/docs/api/setup_attempts/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [SetupIntents](https://stripe.com/docs/api/setup_intents/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [Shipping Rates](https://stripe.com/docs/api/shipping_rates/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [Subscriptions](https://stripe.com/docs/api/subscriptions/list)     | :white_check_mark:| :white_check_mark:| :white_check_mark:| :white_check_mark:| :x:               |
-| [Tax Codes](https://stripe.com/docs/api/tax_codes/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [Tax Rates](https://stripe.com/docs/api/tax_rates/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [Tokens](https://stripe.com/docs/api/tokens)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [Topups](https://stripe.com/docs/api/topups/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [Transfers](https://stripe.com/docs/api/transfers/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
+| Object                                                                        | Select             | Insert             | Update             | Delete             | Truncate |
+|-------------------------------------------------------------------------------|-:-:----------------|-:-:----------------|-:-:----------------|-:-:----------------|-:-:------|
+| [Accounts](https://stripe.com/docs/api/accounts/list)                         | :white_check_mark: | :x:                | :x:                | :x:                | :x:      |
+| [Balance](https://stripe.com/docs/api/balance)                                | :white_check_mark: | :x:                | :x:                | :x:                | :x:      |
+| [Balance Transactions](https://stripe.com/docs/api/balance_transactions/list) | :white_check_mark: | :x:                | :x:                | :x:                | :x:      |
+| [Charges](https://stripe.com/docs/api/charges/list)                           | :white_check_mark: | :x:                | :x:                | :x:                | :x:      |
+| [Checkout Sessions](https://stripe.com/docs/api/checkout/sessions/list)       | :white_check_mark: | :x:                | :x:                | :x:                | :x:      |
+| [Coupons](https://stripe.com/docs/api/coupons/list)                           | :white_check_mark: | :x:                | :x:                | :x:                | :x:      |
+| [Customers](https://stripe.com/docs/api/customers/list)                       | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:      |
+| [Disputes](https://stripe.com/docs/api/disputes/list)                         | :white_check_mark: | :x:                | :x:                | :x:                | :x:      |
+| [Events](https://stripe.com/docs/api/events/list)                             | :white_check_mark: | :x:                | :x:                | :x:                | :x:      |
+| [Files](https://stripe.com/docs/api/files/list)                               | :white_check_mark: | :x:                | :x:                | :x:                | :x:      |
+| [File Links](https://stripe.com/docs/api/file_links/list)                     | :white_check_mark: | :x:                | :x:                | :x:                | :x:      |
+| [Invoices](https://stripe.com/docs/api/invoices/list)                         | :white_check_mark: | :x:                | :x:                | :x:                | :x:      |
+| [Mandates](https://stripe.com/docs/api/mandates)                              | :white_check_mark: | :x:                | :x:                | :x:                | :x:      |
+| [PaymentIntents](https://stripe.com/docs/api/payment_intents/list)            | :white_check_mark: | :x:                | :x:                | :x:                | :x:      |
+| [Payouts](https://stripe.com/docs/api/payouts/list)                           | :white_check_mark: | :x:                | :x:                | :x:                | :x:      |
+| [Prices](https://stripe.com/docs/api/prices/list)                             | :white_check_mark: | :x:                | :x:                | :x:                | :x:      |
+| [Products](https://stripe.com/docs/api/products/list)                         | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:      |
+| [Promotion Codes](https://stripe.com/docs/api/promotion_codes/list)           | :white_check_mark: | :x:                | :x:                | :x:                | :x:      |
+| [Refunds](https://stripe.com/docs/api/refunds/list)                           | :white_check_mark: | :x:                | :x:                | :x:                | :x:      |
+| [SetupAttempts](https://stripe.com/docs/api/setup_attempts/list)              | :white_check_mark: | :x:                | :x:                | :x:                | :x:      |
+| [SetupIntents](https://stripe.com/docs/api/setup_intents/list)                | :white_check_mark: | :x:                | :x:                | :x:                | :x:      |
+| [Shipping Rates](https://stripe.com/docs/api/shipping_rates/list)             | :white_check_mark: | :x:                | :x:                | :x:                | :x:      |
+| [Subscriptions](https://stripe.com/docs/api/subscriptions/list)               | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :x:      |
+| [Tax Codes](https://stripe.com/docs/api/tax_codes/list)                       | :white_check_mark: | :x:                | :x:                | :x:                | :x:      |
+| [Tax Rates](https://stripe.com/docs/api/tax_rates/list)                       | :white_check_mark: | :x:                | :x:                | :x:                | :x:      |
+| [Tokens](https://stripe.com/docs/api/tokens)                                  | :white_check_mark: | :x:                | :x:                | :x:                | :x:      |
+| [Topups](https://stripe.com/docs/api/topups/list)                             | :white_check_mark: | :x:                | :x:                | :x:                | :x:      |
+| [Transfers](https://stripe.com/docs/api/transfers/list)                       | :white_check_mark: | :x:                | :x:                | :x:                | :x:      |
+
 
 The Stripe foreign tables mirror Stripe's API. We can create a schema to hold all the Stripe tables.
 
