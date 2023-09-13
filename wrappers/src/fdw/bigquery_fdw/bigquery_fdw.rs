@@ -165,12 +165,15 @@ impl BigQueryFdw {
 enum BigQueryFdwError {
     #[error("{0}")]
     CreateRuntimeError(#[from] CreateRuntimeError),
+    #[error("{0}")]
+    Options(#[from] OptionsError),
 }
 
 impl From<BigQueryFdwError> for ErrorReport {
     fn from(value: BigQueryFdwError) -> Self {
         match value {
             BigQueryFdwError::CreateRuntimeError(e) => e.into(),
+            BigQueryFdwError::Options(e) => e.into(),
         }
     }
 }
@@ -180,23 +183,14 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
         let mut ret = BigQueryFdw {
             rt: create_async_runtime()?,
             client: None,
-            project_id: "".to_string(),
-            dataset_id: "".to_string(),
+            project_id: require_option("project_id", options)?.to_string(),
+            dataset_id: require_option("dataset_id", options)?.to_string(),
             table: "".to_string(),
             rowid_col: "".to_string(),
             tgt_cols: Vec::new(),
             scan_result: None,
             auth_mock: None,
         };
-
-        let project_id = require_option("project_id", options);
-        let dataset_id = require_option("dataset_id", options);
-
-        if project_id.is_none() || dataset_id.is_none() {
-            return Ok(ret);
-        }
-        ret.project_id = project_id.unwrap();
-        ret.dataset_id = dataset_id.unwrap();
 
         // Is authentication mocked
         let mock_auth: bool = options
@@ -223,10 +217,7 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
             false => match options.get("sa_key") {
                 Some(sa_key) => sa_key.to_owned(),
                 None => {
-                    let sa_key_id = match require_option("sa_key_id", options) {
-                        Some(sa_key_id) => sa_key_id,
-                        None => return Ok(ret),
-                    };
+                    let sa_key_id = require_option("sa_key_id", options)?;
                     match get_vault_secret(&sa_key_id) {
                         Some(sa_key) => sa_key,
                         None => return Ok(ret),
@@ -285,11 +276,7 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
         limit: &Option<Limit>,
         options: &HashMap<String, String>,
     ) -> Result<(), BigQueryFdwError> {
-        let table = require_option("table", options);
-        if table.is_none() {
-            return Ok(());
-        }
-        self.table = table.unwrap();
+        self.table = require_option("table", options)?.to_string();
         self.tgt_cols = columns.to_vec();
 
         let location = options
@@ -432,13 +419,8 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
     }
 
     fn begin_modify(&mut self, options: &HashMap<String, String>) -> Result<(), BigQueryFdwError> {
-        let table = require_option("table", options);
-        let rowid_col = require_option("rowid_column", options);
-        if table.is_none() || rowid_col.is_none() {
-            return Ok(());
-        }
-        self.table = table.unwrap();
-        self.rowid_col = rowid_col.unwrap();
+        self.table = require_option("table", options)?.to_string();
+        self.rowid_col = require_option("rowid_column", options)?.to_string();
 
         Ok(())
     }

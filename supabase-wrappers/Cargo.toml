@@ -26,7 +26,6 @@ thiserror = "1.0.48"
 tokio = { version = "1.24", features = ["rt"] }
 uuid = { version = "1.2.2" }
 supabase-wrappers-macros = { version = "0.1", path = "../supabase-wrappers-macros" }
-thiserror = "1.0.48"
 
 [dev-dependencies]
 pgrx-tests = "=0.9.8"

@@ -203,12 +203,15 @@ impl ClickHouseFdw {
 enum ClickHouseFdwError {
     #[error("{0}")]
     CreateRuntimeError(#[from] CreateRuntimeError),
+    #[error("{0}")]
+    Options(#[from] OptionsError),
 }
 
 impl From<ClickHouseFdwError> for ErrorReport {
     fn from(value: ClickHouseFdwError) -> Self {
         match value {
             ClickHouseFdwError::CreateRuntimeError(e) => e.into(),
+            ClickHouseFdwError::Options(e) => e.into(),
         }
     }
 }
@@ -218,9 +221,10 @@ impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
         let rt = create_async_runtime()?;
         let conn_str = match options.get("conn_string") {
             Some(conn_str) => conn_str.to_owned(),
-            None => require_option("conn_string_id", options)
-                .and_then(|conn_str_id| get_vault_secret(&conn_str_id))
-                .unwrap_or_default(),
+            None => {
+                let conn_str_id = require_option("conn_string_id", options)?;
+                get_vault_secret(&conn_str_id).unwrap_or_default()
+            }
         };
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
@@ -248,11 +252,7 @@ impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
     ) -> Result<(), ClickHouseFdwError> {
         self.create_client();
 
-        let table = require_option("table", options);
-        if table.is_none() {
-            return Ok(());
-        }
-        self.table = table.unwrap();
+        self.table = require_option("table", options)?.to_string();
         self.tgt_cols = columns.to_vec();
         self.row_idx = 0;
 
@@ -329,13 +329,8 @@ impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
     ) -> Result<(), ClickHouseFdwError> {
         self.create_client();
 
-        let table = require_option("table", options);
-        let rowid_col = require_option("rowid_column", options);
-        if table.is_none() || rowid_col.is_none() {
-            return Ok(());
-        }
-        self.table = table.unwrap();
-        self.rowid_col = rowid_col.unwrap();
+        self.table = require_option("table", options)?.to_string();
+        self.rowid_col = require_option("rowid_column", options)?.to_string();
         Ok(())
     }
 

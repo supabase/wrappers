@@ -24,7 +24,7 @@ firebase_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", 
 s3_fdw = [
     "reqwest", "reqwest-middleware", "reqwest-retry", "aws-config", "aws-sdk-s3",
     "tokio", "tokio-util", "csv", "async-compression", "serde_json",
-    "http", "parquet", "futures", "arrow-array", "chrono"
+    "http", "parquet", "futures", "arrow-array", "chrono", "thiserror"
 ]
 airtable_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "serde", "url", "thiserror"]
 logflare_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "thiserror"]

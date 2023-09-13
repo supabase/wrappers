@@ -631,12 +631,15 @@ impl StripeFdw {
 enum StripeFdwError {
     #[error("{0}")]
     CreateRuntimeError(#[from] CreateRuntimeError),
+    #[error("{0}")]
+    Options(#[from] OptionsError),
 }
 
 impl From<StripeFdwError> for ErrorReport {
     fn from(value: StripeFdwError) -> Self {
         match value {
             StripeFdwError::CreateRuntimeError(e) => e.into(),
+            StripeFdwError::Options(e) => e.into(),
         }
     }
 }
@@ -658,9 +661,10 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
             .unwrap_or_else(|| "https://api.stripe.com/v1/".to_string());
         let client = match options.get("api_key") {
             Some(api_key) => Some(create_client(api_key)),
-            None => require_option("api_key_id", options)
-                .and_then(|key_id| get_vault_secret(&key_id))
-                .map(|api_key| create_client(&api_key)),
+            None => {
+                let key_id = require_option("api_key_id", options)?;
+                get_vault_secret(&key_id).map(|api_key| create_client(&api_key))
+            }
         };
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
@@ -683,11 +687,7 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
         limit: &Option<Limit>,
         options: &HashMap<String, String>,
     ) -> Result<(), StripeFdwError> {
-        let obj = if let Some(name) = require_option("object", options) {
-            name
-        } else {
-            return Ok(());
-        };
+        let obj = require_option("object", options)?;
 
         if let Some(client) = &self.client {
             let page_size = 100; // maximum page size limit for Stripe API
@@ -792,8 +792,8 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
     }
 
     fn begin_modify(&mut self, options: &HashMap<String, String>) -> Result<(), StripeFdwError> {
-        self.obj = require_option("object", options).unwrap_or_default();
-        self.rowid_col = require_option("rowid_column", options).unwrap_or_default();
+        self.obj = require_option("object", options)?.to_string();
+        self.rowid_col = require_option("rowid_column", options)?.to_string();
         Ok(())
     }
 

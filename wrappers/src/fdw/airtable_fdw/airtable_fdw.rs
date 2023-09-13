@@ -100,12 +100,15 @@ macro_rules! report_fetch_error {
 enum AirtableFdwError {
     #[error("{0}")]
     CreateRuntimeError(#[from] CreateRuntimeError),
+    #[error("{0}")]
+    Options(#[from] OptionsError),
 }
 
 impl From<AirtableFdwError> for ErrorReport {
     fn from(value: AirtableFdwError) -> Self {
         match value {
             AirtableFdwError::CreateRuntimeError(e) => e.into(),
+            AirtableFdwError::Options(e) => e.into(),
         }
     }
 }
@@ -120,9 +123,10 @@ impl ForeignDataWrapper<AirtableFdwError> for AirtableFdw {
 
         let client = match options.get("api_key") {
             Some(api_key) => Some(create_client(api_key)),
-            None => require_option("api_key_id", options)
-                .and_then(|key_id| get_vault_secret(&key_id))
-                .map(|api_key| create_client(&api_key)),
+            None => {
+                let key_id = require_option("api_key_id", options)?;
+                get_vault_secret(&key_id).map(|api_key| create_client(&api_key))
+            }
         };
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
@@ -143,14 +147,10 @@ impl ForeignDataWrapper<AirtableFdwError> for AirtableFdw {
         _limit: &Option<Limit>, // TODO: maxRecords
         options: &HashMap<String, String>,
     ) -> Result<(), AirtableFdwError> {
-        let url = if let Some(url) = require_option("base_id", options).and_then(|base_id| {
-            require_option("table_id", options)
-                .map(|table_id| self.build_url(&base_id, &table_id, options.get("view_id")))
-        }) {
-            url
-        } else {
-            return Ok(());
-        };
+        let base_id = require_option("base_id", options)?;
+        let table_id = require_option("table_id", options)?;
+        let view_id = options.get("view_id");
+        let url = self.build_url(&base_id, &table_id, view_id);
 
         let mut rows = Vec::new();
         if let Some(client) = &self.client {

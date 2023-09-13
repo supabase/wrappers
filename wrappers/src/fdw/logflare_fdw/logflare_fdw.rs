@@ -219,15 +219,16 @@ impl LogflareFdw {
 #[derive(Error, Debug)]
 enum LogflareFdwError {
     #[error("{0}")]
-    Options(#[from] OptionsError),
-    #[error("{0}")]
     CreateRuntimeError(#[from] CreateRuntimeError),
+    #[error("{0}")]
+    Options(#[from] OptionsError),
 }
 
 impl From<LogflareFdwError> for ErrorReport {
     fn from(value: LogflareFdwError) -> Self {
         match value {
             LogflareFdwError::CreateRuntimeError(e) => e.into(),
+            LogflareFdwError::Options(e) => e.into(),
         }
     }
 }
@@ -247,9 +248,10 @@ impl ForeignDataWrapper<LogflareFdwError> for LogflareFdw {
             .unwrap_or_else(|| LogflareFdw::BASE_URL.to_string());
         let client = match options.get("api_key") {
             Some(api_key) => Some(create_client(api_key)),
-            None => require_option("api_key_id", options)?
-                .and_then(|key_id| get_vault_secret(&key_id))
-                .map(|api_key| create_client(&api_key)),
+            None => {
+                let key_id = require_option("api_key_id", options)?;
+                get_vault_secret(&key_id).map(|api_key| create_client(&api_key))
+            }
         };
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
