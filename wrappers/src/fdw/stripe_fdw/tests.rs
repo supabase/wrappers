@@ -22,10 +22,29 @@ mod tests {
                          )"#,
                 None,
                 None,
+            ).unwrap();
+
+            c.update(
+                r#"
+                CREATE FOREIGN TABLE stripe_accounts (
+                  id text,
+                  business_type text,
+                  country text,
+                  email text,
+                  type text,
+                  created timestamp,
+                  attrs jsonb
+                )
+                SERVER my_stripe_server
+                OPTIONS (
+                    object 'accounts'    -- source object in stripe, required
+                  )
+             "#,
+                None,
+                None,
             )
             .unwrap();
 
-            // Core resources            
             c.update(
                 r#"
                 CREATE FOREIGN TABLE stripe_balance (
@@ -91,6 +110,28 @@ mod tests {
                 None,
             )
             .unwrap();
+
+            c.update(
+                r#"
+                CREATE FOREIGN TABLE checkout_sessions (
+                  id text,
+                  customer text,
+                  payment_intent text,
+                  subscription text,
+                  attrs jsonb
+                )
+                SERVER my_stripe_server
+                OPTIONS (
+                  object 'checkout/sessions',
+                  rowid_column 'id'
+                )
+             "#,
+                None,
+                None,
+            )
+            .unwrap();
+
+             // TODO: Add coupons test setup
 
             c.update(
                 r#"
@@ -200,7 +241,28 @@ mod tests {
             )
             .unwrap();
 
-            // TODO: Add mandates test
+            c.update(
+                r#"
+                CREATE FOREIGN TABLE stripe_invoices (
+                  id text,
+                  customer text,
+                  subscription text,
+                  status text,
+                  total bigint,
+                  currency text,
+                  period_start timestamp,
+                  period_end timestamp,
+                  attrs jsonb
+                )
+                SERVER my_stripe_server
+                OPTIONS (
+                    object 'invoices'    -- source object in stripe, required
+                  )
+             "#,
+                None,
+                None,
+            )
+            .unwrap();
 
             c.update(
                 r#"
@@ -216,6 +278,99 @@ mod tests {
                 SERVER my_stripe_server
                 OPTIONS (
                     object 'payment_intents'    -- source object in stripe, required
+                  )
+             "#,
+                None,
+                None,
+            )
+            .unwrap();
+
+            c.update(
+                r#"
+                CREATE FOREIGN TABLE stripe_payouts (
+                  id text,
+                  amount bigint,
+                  currency text,
+                  arrival_date timestamp,
+                  description text,
+                  statement_descriptor text,
+                  status text,
+                  created timestamp,
+                  attrs jsonb
+                )
+                SERVER my_stripe_server
+                OPTIONS (
+                    object 'payouts'    -- source object in stripe, required
+                  )
+             "#,
+                None,
+                None,
+            )
+            .unwrap();
+
+            c.update(
+                r#"
+                CREATE FOREIGN TABLE stripe_prices (
+                  id text,
+                  active bool,
+                  currency text,
+                  product text,
+                  unit_amount bigint,
+                  type text,
+                  created timestamp,
+                  attrs jsonb
+                )
+                SERVER my_stripe_server
+                OPTIONS (
+                    object 'prices'    -- source object in stripe, required
+                  )
+             "#,
+                None,
+                None,
+            )
+            .unwrap();
+
+            c.update(
+                r#"
+                CREATE FOREIGN TABLE stripe_products (
+                  id text,
+                  name text,
+                  active bool,
+                  default_price text,
+                  description text,
+                  created timestamp,
+                  updated timestamp,
+                  attrs jsonb
+                )
+                SERVER my_stripe_server
+                OPTIONS (
+                    object 'products',    -- source object in stripe, required
+                    rowid_column 'id'
+                  )
+             "#,
+                None,
+                None,
+            )
+            .unwrap();
+
+            // TODO: Add promotion_codes test setup
+
+            c.update(
+                r#"
+                CREATE FOREIGN TABLE stripe_refunds (
+                  id text,
+                  amount bigint,
+                  currency text,
+                  charge text,
+                  payment_intent text,
+                  reason text,
+                  status text,
+                  created timestamp,
+                  attrs jsonb
+                )
+                SERVER my_stripe_server
+                OPTIONS (
+                    object 'refunds'    -- source object in stripe, required
                   )
              "#,
                 None,
@@ -270,260 +425,7 @@ mod tests {
             )
             .unwrap();
 
-            c.update(
-                r#"
-                CREATE FOREIGN TABLE stripe_payouts (
-                  id text,
-                  amount bigint,
-                  currency text,
-                  arrival_date timestamp,
-                  description text,
-                  statement_descriptor text,
-                  status text,
-                  created timestamp,
-                  attrs jsonb
-                )
-                SERVER my_stripe_server
-                OPTIONS (
-                    object 'payouts'    -- source object in stripe, required
-                  )
-             "#,
-                None,
-                None,
-            )
-            .unwrap();
-
-            c.update(
-                r#"
-                CREATE FOREIGN TABLE stripe_refunds (
-                  id text,
-                  amount bigint,
-                  currency text,
-                  charge text,
-                  payment_intent text,
-                  reason text,
-                  status text,
-                  created timestamp,
-                  attrs jsonb
-                )
-                SERVER my_stripe_server
-                OPTIONS (
-                    object 'refunds'    -- source object in stripe, required
-                  )
-             "#,
-                None,
-                None,
-            )
-            .unwrap();
-
-            // TODO: Add tokens tests
-
-            // Products
-            c.update(
-                r#"
-                CREATE FOREIGN TABLE stripe_products (
-                  id text,
-                  name text,
-                  active bool,
-                  default_price text,
-                  description text,
-                  created timestamp,
-                  updated timestamp,
-                  attrs jsonb
-                )
-                SERVER my_stripe_server
-                OPTIONS (
-                    object 'products',    -- source object in stripe, required
-                    rowid_column 'id'
-                  )
-             "#,
-                None,
-                None,
-            )
-            .unwrap();
-
-            c.update(
-                r#"
-                CREATE FOREIGN TABLE stripe_prices (
-                  id text,
-                  active bool,
-                  currency text,
-                  product text,
-                  unit_amount bigint,
-                  type text,
-                  created timestamp,
-                  attrs jsonb
-                )
-                SERVER my_stripe_server
-                OPTIONS (
-                    object 'prices'    -- source object in stripe, required
-                  )
-             "#,
-                None,
-                None,
-            )
-            .unwrap();
-
-            // TODO: Add coupons tests
-
-            // TODO: Add promotion_codes tests
-            
-            // TODO: Add tax_codes tests
-            
-            // TODO: Add tax_rates tests
-
-            // TODO: Add shipping_rates tests
-
-            // Checkout
-            c.update(
-                r#"
-                CREATE FOREIGN TABLE checkout_sessions (
-                  id text,
-                  customer text,
-                  payment_intent text,
-                  subscription text,
-                  attrs jsonb
-                )
-                SERVER my_stripe_server
-                OPTIONS (
-                  object 'checkout/sessions',
-                  rowid_column 'id'
-                )
-             "#,
-                None,
-                None,
-            )
-            .unwrap();
-
-
-            // Billing
-            c.update(
-                r#"
-                CREATE FOREIGN TABLE stripe_invoices (
-                  id text,
-                  customer text,
-                  subscription text,
-                  status text,
-                  total bigint,
-                  currency text,
-                  period_start timestamp,
-                  period_end timestamp,
-                  attrs jsonb
-                )
-                SERVER my_stripe_server
-                OPTIONS (
-                    object 'invoices'    -- source object in stripe, required
-                  )
-             "#,
-                None,
-                None,
-            )
-            .unwrap();
-
-            c.update(
-                r#"
-                CREATE FOREIGN TABLE stripe_refunds (
-                  id text,
-                  amount bigint,
-                  currency text,
-                  charge text,
-                  payment_intent text,
-                  reason text,
-                  status text,
-                  created timestamp,
-                  attrs jsonb
-                )
-                SERVER my_stripe_server
-                OPTIONS (
-                    object 'refunds'    -- source object in stripe, required
-                  )
-             "#,
-                None,
-                None,
-            )
-            .unwrap();
-
-            // TODO: Add tokens tests
-
-            // Products
-            c.update(
-                r#"
-                CREATE FOREIGN TABLE stripe_products (
-                  id text,
-                  name text,
-                  active bool,
-                  default_price text,
-                  description text,
-                  created timestamp,
-                  updated timestamp,
-                  attrs jsonb
-                )
-                SERVER my_stripe_server
-                OPTIONS (
-                    object 'products',    -- source object in stripe, required
-                    rowid_column 'id'
-                  )
-             "#,
-                None,
-                None,
-            )
-            .unwrap();
-
-            c.update(
-                r#"
-                CREATE FOREIGN TABLE stripe_prices (
-                  id text,
-                  active bool,
-                  currency text,
-                  product text,
-                  unit_amount bigint,
-                  type text,
-                  created timestamp,
-                  attrs jsonb
-                )
-                SERVER my_stripe_server
-                OPTIONS (
-                    object 'prices'    -- source object in stripe, required
-                  )
-             "#,
-                None,
-                None,
-            )
-            .unwrap();
-
-            // TODO: Add coupons tests
-
-            // TODO: Add promotion_codes tests
-            
-            // TODO: Add tax_codes tests
-            
-            // TODO: Add tax_rates tests
-
-            // TODO: Add shipping_rates tests
-
-            // Billing
-            c.update(
-                r#"
-                CREATE FOREIGN TABLE stripe_invoices (
-                  id text,
-                  customer text,
-                  subscription text,
-                  status text,
-                  total bigint,
-                  currency text,
-                  period_start timestamp,
-                  period_end timestamp,
-                  attrs jsonb
-                )
-                SERVER my_stripe_server
-                OPTIONS (
-                    object 'invoices'    -- source object in stripe, required
-                  )
-             "#,
-                None,
-                None,
-            )
-            .unwrap();
+            // TODO: Add shipping_rates test setup
 
             c.update(
                 r#"
@@ -546,49 +448,11 @@ mod tests {
             )
             .unwrap();
 
-            // Connect
-            c.update(
-                r#"
-                CREATE FOREIGN TABLE stripe_accounts (
-                  id text,
-                  business_type text,
-                  country text,
-                  email text,
-                  type text,
-                  created timestamp,
-                  attrs jsonb
-                )
-                SERVER my_stripe_server
-                OPTIONS (
-                    object 'accounts'    -- source object in stripe, required
-                  )
-             "#,
-                None,
-                None,
-            )
-            .unwrap();
+            // TODO: Add tax_codes test setup
 
-            // Connect
-            c.update(
-                r#"
-                CREATE FOREIGN TABLE stripe_accounts (
-                  id text,
-                  business_type text,
-                  country text,
-                  email text,
-                  type text,
-                  created timestamp,
-                  attrs jsonb
-                )
-                SERVER my_stripe_server
-                OPTIONS (
-                    object 'accounts'    -- source object in stripe, required
-                  )
-             "#,
-                None,
-                None,
-            )
-            .unwrap();
+            // TODO: Add tax_rates test setup
+
+            // TODO: Check why there is no tokens test setup
 
             c.update(
                 r#"
@@ -692,6 +556,22 @@ mod tests {
                 .collect::<Vec<_>>();
             assert_eq!(results, vec![(((100, "usd"), "succeeded"))]);
 
+            // TODO: Add coupons test
+
+            let results = c
+                .select(
+                    "SELECT attrs->>'id' as id FROM checkout_sessions",
+                    None,
+                    None,
+                )
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("id").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(
+                results,
+                vec!["cs_test_a1DmlfbOPqmbKHfpwpFQ0RM3pVXmKoESZbJxnKrPdMsLDPPMGYtEBcHGPR"]
+            );
+
             let results = c
                 .select("SELECT * FROM stripe_customers", None, None)
                 .unwrap()
@@ -719,20 +599,6 @@ mod tests {
                 .filter_map(|r| r.get_by_name::<&str, _>("id").unwrap())
                 .collect::<Vec<_>>();
             assert_eq!(results, vec!["cus_MJiBgSUgeWFN0z"]);
-
-            let results = c
-                .select(
-                    "SELECT attrs->>'id' as id FROM checkout_sessions",
-                    None,
-                    None,
-                )
-                .unwrap()
-                .filter_map(|r| r.get_by_name::<&str, _>("id").unwrap())
-                .collect::<Vec<_>>();
-            assert_eq!(
-                results,
-                vec!["cs_test_a1DmlfbOPqmbKHfpwpFQ0RM3pVXmKoESZbJxnKrPdMsLDPPMGYtEBcHGPR"]
-            );
 
             // Stripe mock service cannot return 404 error code correctly for
             // non-exists customer, so we have to disable this test case.
@@ -903,6 +769,8 @@ mod tests {
                 vec![(("T-shirt", true), "Comfortable gray cotton t-shirt")]
             );
 
+            // TODO: Add promotion_codes test
+
             let results = c
                 .select("SELECT * FROM stripe_refunds", None, None)
                 .unwrap()
@@ -954,6 +822,8 @@ mod tests {
                 )]
             );
 
+            // TODO: Add shipping_rates test
+
             let results = c
                 .select("SELECT * FROM stripe_subscriptions", None, None)
                 .unwrap()
@@ -978,6 +848,12 @@ mod tests {
                     Timestamp::try_from(287883090000000i64).unwrap()
                 )]
             );
+
+            // TODO: Add tax_codes test
+
+            // TODO: Add tax_rates test
+
+            // TODO: Check why there is no tokens test
 
             let results = c
                 .select("SELECT * FROM stripe_topups", None, None)
