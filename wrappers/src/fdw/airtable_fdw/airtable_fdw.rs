@@ -1,7 +1,5 @@
 use crate::stats;
 use pgrx::pg_sys;
-use pgrx::pg_sys::panic::ErrorReport;
-use pgrx::prelude::PgSqlErrorCode;
 use reqwest::{self, header};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
@@ -11,6 +9,7 @@ use url::Url;
 use supabase_wrappers::prelude::*;
 
 use super::result::AirtableResponse;
+use super::{AirtableFdwError, AirtableFdwResult};
 
 fn create_client(api_key: &str) -> ClientWithMiddleware {
     let mut headers = header::HeaderMap::new();
@@ -55,13 +54,12 @@ impl AirtableFdw {
         }
     }
 
-    #[inline]
     fn set_limit_offset(
         &self,
         url: &str,
         page_size: Option<usize>,
         offset: Option<&str>,
-    ) -> Result<String, url::ParseError> {
+    ) -> AirtableFdwResult<String> {
         let mut params = Vec::new();
         if let Some(page_size) = page_size {
             params.push(("pageSize", format!("{}", page_size)));
@@ -70,42 +68,29 @@ impl AirtableFdw {
             params.push(("offset", offset.to_string()));
         }
 
-        Url::parse_with_params(url, &params).map(|x| x.into())
+        Ok(Url::parse_with_params(url, &params).map(|x| x.into())?)
     }
 
     // convert response body text to rows
-    fn parse_resp(&self, resp_body: &str, columns: &[Column]) -> (Vec<Row>, Option<String>) {
+    fn parse_resp(
+        &self,
+        resp_body: &str,
+        columns: &[Column],
+    ) -> AirtableFdwResult<(Vec<Row>, Option<String>)> {
         let response: AirtableResponse = serde_json::from_str(resp_body).unwrap();
         let mut result = Vec::new();
 
         for record in response.records.iter() {
-            result.push(record.to_row(columns));
+            result.push(record.to_row(columns)?);
         }
 
-        (result, response.offset)
-    }
-}
-
-macro_rules! report_fetch_error {
-    ($url:ident, $err:ident) => {
-        report_error(
-            PgSqlErrorCode::ERRCODE_FDW_ERROR,
-            &format!("fetch {} failed: {}", $url, $err),
-        )
-    };
-}
-
-enum AirtableFdwError {}
-
-impl From<AirtableFdwError> for ErrorReport {
-    fn from(_value: AirtableFdwError) -> Self {
-        ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, "", "")
+        Ok((result, response.offset))
     }
 }
 
 // TODO Add support for INSERT, UPDATE, DELETE
 impl ForeignDataWrapper<AirtableFdwError> for AirtableFdw {
-    fn new(options: &HashMap<String, String>) -> Result<Self, AirtableFdwError> {
+    fn new(options: &HashMap<String, String>) -> AirtableFdwResult<Self> {
         let base_url = options
             .get("api_url")
             .map(|t| t.to_owned())
@@ -135,7 +120,7 @@ impl ForeignDataWrapper<AirtableFdwError> for AirtableFdw {
         _sorts: &[Sort],        // TODO: Propagate sort
         _limit: &Option<Limit>, // TODO: maxRecords
         options: &HashMap<String, String>,
-    ) -> Result<(), AirtableFdwError> {
+    ) -> AirtableFdwResult<()> {
         let url = if let Some(url) = require_option("base_id", options).and_then(|base_id| {
             require_option("table_id", options)
                 .map(|table_id| self.build_url(&base_id, &table_id, options.get("view_id")))
@@ -153,38 +138,23 @@ impl ForeignDataWrapper<AirtableFdwError> for AirtableFdw {
                 // Fetch all of the rows upfront. Arguably, this could be done in batches (and invoked each
                 // time iter_scan() runs out of rows) to pipeline the I/O, but we'd have to manage more
                 // state so starting with the simpler solution.
-                let url = match self.set_limit_offset(&url, None, offset.as_deref()) {
-                    Ok(url) => url,
-                    Err(err) => {
-                        report_error(
-                            PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                            &format!("internal error: {}", err),
-                        );
-                        return Ok(());
-                    }
-                };
+                let url = self.set_limit_offset(&url, None, offset.as_deref())?;
 
-                match self.rt.block_on(client.get(&url).send()) {
-                    Ok(resp) => match resp.error_for_status() {
-                        Ok(resp) => {
-                            stats::inc_stats(
-                                Self::FDW_NAME,
-                                stats::Metric::BytesIn,
-                                resp.content_length().unwrap_or(0) as i64,
-                            );
-                            let body = self.rt.block_on(resp.text()).unwrap();
-                            let (new_rows, new_offset) = self.parse_resp(&body, columns);
-                            rows.extend(new_rows.into_iter());
+                let body = self.rt.block_on(client.get(&url).send()).and_then(|resp| {
+                    resp.error_for_status()
+                        .and_then(|resp| self.rt.block_on(resp.text()))
+                        .map_err(reqwest_middleware::Error::from)
+                })?;
 
-                            if let Some(new_offset) = new_offset {
-                                offset = Some(new_offset);
-                            } else {
-                                break;
-                            }
-                        }
-                        Err(err) => report_fetch_error!(url, err),
-                    },
-                    Err(err) => report_fetch_error!(url, err),
+                let (new_rows, new_offset) = self.parse_resp(&body, columns)?;
+                rows.extend(new_rows);
+
+                stats::inc_stats(Self::FDW_NAME, stats::Metric::BytesIn, body.len() as i64);
+
+                if let Some(new_offset) = new_offset {
+                    offset = Some(new_offset);
+                } else {
+                    break;
                 }
             }
         }
@@ -196,7 +166,7 @@ impl ForeignDataWrapper<AirtableFdwError> for AirtableFdw {
         Ok(())
     }
 
-    fn iter_scan(&mut self, row: &mut Row) -> Result<Option<()>, AirtableFdwError> {
+    fn iter_scan(&mut self, row: &mut Row) -> AirtableFdwResult<Option<()>> {
         if let Some(ref mut result) = self.scan_result {
             if !result.is_empty() {
                 return Ok(result
@@ -208,7 +178,7 @@ impl ForeignDataWrapper<AirtableFdwError> for AirtableFdw {
         Ok(None)
     }
 
-    fn end_scan(&mut self) -> Result<(), AirtableFdwError> {
+    fn end_scan(&mut self) -> AirtableFdwResult<()> {
         self.scan_result.take();
         Ok(())
     }
@@ -216,7 +186,7 @@ impl ForeignDataWrapper<AirtableFdwError> for AirtableFdw {
     fn validator(
         options: Vec<Option<String>>,
         catalog: Option<pg_sys::Oid>,
-    ) -> Result<(), AirtableFdwError> {
+    ) -> AirtableFdwResult<()> {
         if let Some(oid) = catalog {
             if oid == FOREIGN_TABLE_RELATION_ID {
                 check_options_contain(&options, "base_id");
