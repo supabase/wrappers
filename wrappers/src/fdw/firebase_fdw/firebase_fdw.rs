@@ -12,6 +12,7 @@ use yup_oauth2::AccessToken;
 use yup_oauth2::ServiceAccountAuthenticator;
 
 use supabase_wrappers::prelude::*;
+use thiserror::Error;
 
 macro_rules! report_request_error {
     ($url:ident, $err:ident) => {
@@ -247,18 +248,24 @@ impl FirebaseFdw {
     }
 }
 
-enum FirebaseFdwError {}
+#[derive(Error, Debug)]
+enum FirebaseFdwError {
+    #[error("{0}")]
+    CreateRuntimeError(#[from] CreateRuntimeError),
+}
 
 impl From<FirebaseFdwError> for ErrorReport {
-    fn from(_value: FirebaseFdwError) -> Self {
-        ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, "", "")
+    fn from(value: FirebaseFdwError) -> Self {
+        match value {
+            FirebaseFdwError::CreateRuntimeError(e) => e.into(),
+        }
     }
 }
 
 impl ForeignDataWrapper<FirebaseFdwError> for FirebaseFdw {
     fn new(options: &HashMap<String, String>) -> Result<Self, FirebaseFdwError> {
         let mut ret = Self {
-            rt: create_async_runtime(),
+            rt: create_async_runtime()?,
             project_id: "".to_string(),
             client: None,
             scan_result: None,

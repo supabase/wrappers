@@ -18,6 +18,7 @@ use std::collections::HashMap;
 use std::str::FromStr;
 
 use supabase_wrappers::prelude::*;
+use thiserror::Error;
 
 macro_rules! field_type_error {
     ($field:ident, $err:ident) => {{
@@ -160,18 +161,24 @@ impl BigQueryFdw {
     }
 }
 
-enum BigQueryFdwError {}
+#[derive(Error, Debug)]
+enum BigQueryFdwError {
+    #[error("{0}")]
+    CreateRuntimeError(#[from] CreateRuntimeError),
+}
 
 impl From<BigQueryFdwError> for ErrorReport {
-    fn from(_value: BigQueryFdwError) -> Self {
-        ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, "", "")
+    fn from(value: BigQueryFdwError) -> Self {
+        match value {
+            BigQueryFdwError::CreateRuntimeError(e) => e.into(),
+        }
     }
 }
 
 impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
     fn new(options: &HashMap<String, String>) -> Result<Self, BigQueryFdwError> {
         let mut ret = BigQueryFdw {
-            rt: create_async_runtime(),
+            rt: create_async_runtime()?,
             client: None,
             project_id: "".to_string(),
             dataset_id: "".to_string(),
