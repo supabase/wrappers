@@ -130,6 +130,8 @@ impl From<CreateRuntimeError> for ErrorReport {
 /// For example,
 ///
 /// ```rust,no_run
+/// # use supabase_wrappers::utils::CreateRuntimeError;
+/// # fn main() -> Result<(), CreateRuntimeError> {
 /// # use supabase_wrappers::prelude::create_async_runtime;
 /// # struct Client {
 /// # }
@@ -138,13 +140,15 @@ impl From<CreateRuntimeError> for ErrorReport {
 /// # }
 /// # let client = Client {};
 /// # let sql = "";
-/// let rt = create_async_runtime();
+/// let rt = create_async_runtime()?;
 ///
 /// // client.query() is an async function returning a Result
 /// match rt.block_on(client.query(&sql)) {
 ///     Ok(result) => { }
 ///     Err(err) => { }
 /// }
+/// # Ok(())
+/// # }
 /// ```
 #[inline]
 pub fn create_async_runtime() -> Result<Runtime, CreateRuntimeError> {
