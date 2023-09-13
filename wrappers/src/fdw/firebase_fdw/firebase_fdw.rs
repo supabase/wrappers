@@ -1,13 +1,12 @@
-use pgrx::pg_sys;
-use pgrx::prelude::*;
-use pgrx::JsonB;
+use crate::stats;
+use pgrx::{pg_sys, prelude::*, JsonB};
 use regex::Regex;
 use reqwest::{self, header};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;
-use time::{format_description::well_known::Iso8601, OffsetDateTime, PrimitiveDateTime};
+use std::str::FromStr;
 use yup_oauth2::AccessToken;
 use yup_oauth2::ServiceAccountAuthenticator;
 
@@ -96,13 +95,11 @@ fn body_to_rows(
                         "string" => v.as_str().map(|a| Cell::String(a.to_owned())),
                         "timestamp" => v.as_str().map(|a| {
                             let secs = a.parse::<i64>().unwrap() / 1000;
-                            let dt = OffsetDateTime::from_unix_timestamp(secs).unwrap();
-                            let ts = Timestamp::try_from(dt).unwrap();
-                            Cell::Timestamp(ts)
+                            let ts = to_timestamp(secs as f64);
+                            Cell::Timestamp(ts.to_utc())
                         }),
                         "timestamp_iso" => v.as_str().map(|a| {
-                            let dt = PrimitiveDateTime::parse(a, &Iso8601::DEFAULT).unwrap();
-                            let ts = Timestamp::try_from(dt).unwrap();
+                            let ts = Timestamp::from_str(a).unwrap();
                             Cell::Timestamp(ts)
                         }),
                         "json" => Some(Cell::Json(JsonB(v.clone()))),
@@ -168,7 +165,7 @@ fn resp_to_rows(obj: &str, resp: &JsonValue, tgt_cols: &[Column]) -> Vec<Row> {
 }
 
 #[wrappers_fdw(
-    version = "0.1.1",
+    version = "0.1.2",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/firebase_fdw"
 )]
@@ -180,6 +177,8 @@ pub(crate) struct FirebaseFdw {
 }
 
 impl FirebaseFdw {
+    const FDW_NAME: &str = "FirebaseFdw";
+
     const DEFAULT_AUTH_BASE_URL: &'static str =
         "https://identitytoolkit.googleapis.com/v1/projects";
     const DEFAULT_FIRESTORE_BASE_URL: &'static str =
@@ -301,6 +300,8 @@ impl ForeignDataWrapper for FirebaseFdw {
             .build();
         ret.client = Some(client);
 
+        stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
+
         ret
     }
 
@@ -333,6 +334,12 @@ impl ForeignDataWrapper for FirebaseFdw {
                 match self.rt.block_on(client.get(&url).send()) {
                     Ok(resp) => match resp.error_for_status() {
                         Ok(resp) => {
+                            stats::inc_stats(
+                                Self::FDW_NAME,
+                                stats::Metric::BytesIn,
+                                resp.content_length().unwrap_or(0) as i64,
+                            );
+
                             let body = self.rt.block_on(resp.text()).unwrap();
                             let json: JsonValue = serde_json::from_str(&body).unwrap();
                             let mut rows = resp_to_rows(&obj, &json, columns);
@@ -361,6 +368,9 @@ impl ForeignDataWrapper for FirebaseFdw {
                     }
                 }
             }
+
+            stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsIn, result.len() as i64);
+            stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsOut, result.len() as i64);
 
             self.scan_result = Some(result);
         }

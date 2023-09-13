@@ -1,111 +1,123 @@
 [Stripe](https://stripe.com) is an API driven online payment processing utility. `supabase/wrappers` exposes below endpoints. If you are missing an endpoint feel free to open an issue or even add it yourself.
 
-**Core resources (Complete)**:
-  - [Balance](https://stripe.com/docs/api/balance) (*read only*)
-  - [Balance Transactions](https://stripe.com/docs/api/balance_transactions/list) (*read only*)
-  - [Charges](https://stripe.com/docs/api/charges/list) (*read only*)
-  - [Customers](https://stripe.com/docs/api/customers/list) (*read and modify*)
-  - [Disputes](https://stripe.com/docs/api/disputes/list) (*read only*)
-  - [Events](https://stripe.com/docs/api/events/list) (*read only*)
-  - [Files](https://stripe.com/docs/api/files/list) (*read only*)
-  - [File Links](https://stripe.com/docs/api/file_links/list) (*read only*)
-  - [Mandates](https://stripe.com/docs/api/mandates) (*read only*)
-  - [PaymentIntents](https://stripe.com/docs/api/payment_intents/list) (*read only*)
-  - [SetupAttempts](https://stripe.com/docs/api/setup_attempts/list) (*read only*)
-  - [SetupIntents](https://stripe.com/docs/api/setup_intents/list) (*read only*)
-  - [Payouts](https://stripe.com/docs/api/payouts/list) (*read only*)
-  - [Refunds](https://stripe.com/docs/api/refunds/list) (*read only*)
-  - [Tokens](https://stripe.com/docs/api/tokens) (*read only*)
+## Preparation
 
-**Products (Incomplete)**: 
-  - [Products](https://stripe.com/docs/api/products/list) (*read and modify*)
-  - [Prices](https://stripe.com/docs/api/prices/list) (*read only*)
-
-**Checkout**: 
-  - [Checkout Sessions](https://stripe.com/docs/api/checkout/sessions/list) (*read only*)
-
-**Billing (Incomplete)**:
-  - [Invoices](https://stripe.com/docs/api/invoices/list) (*read only*)
-  - [Subscriptions](https://stripe.com/docs/api/subscriptions/list) (*read and modify*)
-
-**Connect (Incomplete)**:
-  - [Accounts](https://stripe.com/docs/api/accounts/list) (*read only*)
-  - [Top-ups](https://stripe.com/docs/api/topups/list) (*read only*)
-  - [Transfers](https://stripe.com/docs/api/transfers/list) (*read only*)
-
-### Wrapper
-To get started with the Stripe wrapper, create a foreign data wrapper specifying `handler` and `validator` as below.
+Before you get started, make sure the `wrappers` extension is installed on your database:
 
 ```sql
 create extension if not exists wrappers;
+```
 
+and then create the foreign data wrapper:
+
+```sql
 create foreign data wrapper stripe_wrapper
   handler stripe_fdw_handler
   validator stripe_fdw_validator;
 ```
 
-### Server
+### Secure your credentials (optional)
 
-Next, we need to create a server for the FDW to hold options and credentials.
+By default, Postgres stores FDW credentials inide `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
 
-#### Auth (Supabase)
-
-If you are using the Supabase platform, this is the recommended approach for securing your [Stripe API key](https://stripe.com/docs/keys).
-
-Create a secure key using pgsodium
 ```sql
-select pgsodium.create_key(name := 'stripe');
-```
-
-Save your Stripe API key in Vault and retrieve the `key_id`
-```sql
-insert into vault.secrets (secret, key_id)
+-- Save your Stripe API key in Vault and retrieve the `key_id`
+insert into vault.secrets (name, secret)
 values (
-  'sk_test_xxx',
-  (select id from pgsodium.valid_key where name = 'stripe')
+  'stripe',
+  'YOUR_SECRET'
 )
-returning
-	key_id;
+returning key_id;
 ```
 
-Create the foreign server
-```sql
-create server stripe_server
-  foreign data wrapper stripe_wrapper
-  options (
-    api_key_id '<your key_id from above>'
-  );
-```
+### Connecting to Stripe
 
-#### Auth (Insecure)
+We need to provide Postgres with the credentials to connect to Stripe, and any additional options. We can do this using the `create server` command:
 
-If the platform you are using does not support `pgsodium` and `Vault` you can create a server by storing your [Stripe API key](https://stripe.com/docs/keys) directly.
+=== "With Vault"
 
+    ```sql
+    create server stripe_server
+      foreign data wrapper stripe_wrapper
+      options (
+        api_key_id '<key_ID>' -- The Key ID from above.
+      );
+    ```
 
-!!! important
+=== "Without Vault"
 
-    Credentials stored using this method can be viewed as plain text by anyone with access to `pg_catalog.pg_foreign_server`
+    ```sql
+    create server stripe_server
+      foreign data wrapper stripe_wrapper
+      options (
+        api_key '<Stripe API Key>'  -- Stripe API key, required
+      );
+    ```
 
-```sql
-create server stripe_server
-   foreign data wrapper stripe_wrapper
-   options (
-     api_key 'sk_test_xxx'
-   );
-```
+## Creating Foreign Tables
 
-### Tables
+The Stripe Wrapper supports data read and modify from Stripe API.
 
-The Stripe tables mirror Stripe's API.
+| Object      | Select            | Insert            | Update            | Delete            | Truncate          |
+| ----------- | :----:            | :----:            | :----:            | :----:            | :----:            |
+| [Accounts](https://stripe.com/docs/api/accounts/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
+| [Balance](https://stripe.com/docs/api/balance)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
+| [Balance Transactions](https://stripe.com/docs/api/balance_transactions/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
+| [Charges](https://stripe.com/docs/api/charges/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
+| [Checkout Sessions](https://stripe.com/docs/api/checkout/sessions/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
+| [Customers](https://stripe.com/docs/api/customers/list)     | :white_check_mark:| :white_check_mark:| :white_check_mark:| :white_check_mark:| :x:               |
+| [Disputes](https://stripe.com/docs/api/disputes/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
+| [Events](https://stripe.com/docs/api/events/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
+| [Files](https://stripe.com/docs/api/files/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
+| [File Links](https://stripe.com/docs/api/file_links/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
+| [Invoices](https://stripe.com/docs/api/invoices/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
+| [Mandates](https://stripe.com/docs/api/mandates)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
+| [PaymentIntents](https://stripe.com/docs/api/payment_intents/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
+| [Payouts](https://stripe.com/docs/api/payouts/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
+| [Prices](https://stripe.com/docs/api/prices/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
+| [Products](https://stripe.com/docs/api/products/list)     | :white_check_mark:| :white_check_mark:| :white_check_mark:| :white_check_mark:| :x:               |
+| [Refunds](https://stripe.com/docs/api/refunds/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
+| [SetupAttempts](https://stripe.com/docs/api/setup_attempts/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
+| [SetupIntents](https://stripe.com/docs/api/setup_intents/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
+| [Subscriptions](https://stripe.com/docs/api/subscriptions/list)     | :white_check_mark:| :white_check_mark:| :white_check_mark:| :white_check_mark:| :x:               |
+| [Tokens](https://stripe.com/docs/api/tokens)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
+| [Topups](https://stripe.com/docs/api/topups/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
+| [Transfers](https://stripe.com/docs/api/transfers/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
 
-(Optional) Create a schema to hold the Stripe tables.
+The Stripe foreign tables mirror Stripe's API. We can create a schema to hold all the Stripe tables.
+
 ```sql
 create schema stripe;
 ```
 
-#### Core resources
+##### Accounts
+*read only*
 
-##### Balance
+This is an object representing a Stripe account.
+
+Ref: [Stripe docs](https://stripe.com/docs/api/accounts/list)
+
+```sql
+create foreign table stripe.accounts (
+  id text,
+  business_type text,
+  country text,
+  email text,
+  type text,
+  created timestamp,
+  attrs jsonb
+)
+  server stripe_server
+  options (
+    object 'accounts'
+  );
+```
+
+While any column is allowed in a where clause, it is most efficient to filter by:
+
+- id
+
+### Balance
 *read only*
 
 Shows the balance currently on your Stripe account.
@@ -125,7 +137,7 @@ create foreign table stripe.balance (
   );
 ```
 
-##### Balance Transactions
+### Balance Transactions
 *read only*
 
 Balance transactions represent funds moving through your Stripe account. They're created for every type of transaction that comes into or flows out of your Stripe account balance.
@@ -156,7 +168,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - id
 - type
 
-##### Charges
+### Charges
 *read only*
 
 To charge a credit or a debit card, you create a Charge object. You can retrieve and refund individual charges as well as list all charges. Charges are identified by a unique, random ID.
@@ -187,7 +199,37 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - id
 - customer
 
-##### Customers
+##### Checkout Sessions
+
+*read only*
+
+A Checkout Session represents your customer's session as they pay for one-time purchases or subscriptions through Checkout or Payment Links. We recommend creating a new Session each time your customer attempts to pay.
+
+Ref: [Stripe docs](https://stripe.com/docs/api/checkout/sessions/list)
+
+```sql
+create foreign table stripe.checkout_sessions (
+  id text,
+  customer text,
+  payment_intent text,
+  subscription text,
+  attrs jsonb
+)
+  server stripe_server
+  options (
+    object 'checkout/sessions',
+    rowid_column 'id'
+  );
+```
+
+While any column is allowed in a where clause, it is most efficient to filter by:
+
+- id
+- customer
+- payment_intent
+- subscription
+
+### Customers
 *read and modify*
 
 Contains customers known to Stripe.
@@ -215,7 +257,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - id
 - email
 
-##### Disputes
+### Disputes
 *read only*
 
 A dispute occurs when a customer questions your charge with their card issuer.
@@ -246,7 +288,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - charge
 - payment_intent
 
-##### Events
+### Events
 *read only*
 
 Events are our way of letting you know when something interesting happens in your account.
@@ -272,7 +314,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - id
 - type
 
-##### Files
+### Files
 *read only*
 
 This is an object representing a file hosted on Stripe's servers.
@@ -303,7 +345,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - id
 - purpose
 
-##### File Links
+### File Links
 *read only*
 
 To share the contents of a `File` object with non-Stripe users, you can create a `FileLink`.
@@ -326,7 +368,7 @@ create foreign table stripe.file_links (
   );
 ```
 
-##### Mandates
+##### Invoices
 *read only*
 
 A Mandate is a record of the permission a customer has given you to debit their payment method.
@@ -380,7 +422,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - id
 - customer
 
-##### SetupAttempts
+##### Mandates
 *read only*
 
 A `SetupAttempt` describes one attempted confirmation of a SetupIntent, whether that confirmation was successful or unsuccessful.
@@ -411,7 +453,8 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - id
 - setup_intent
 
-##### SetupIntents
+
+##### Payment Intents
 *read only*
 
 A `SetupIntent` guides you through the process of setting up and saving a customer's payment credentials for future payments.
@@ -442,7 +485,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - customer
 - payment_method
 
-##### Payouts
+### Payouts
 *read only*
 
 A `Payout` object is created when you receive funds from Stripe, or when you initiate a payout to either a bank account or debit card of a connected Stripe account.
@@ -472,7 +515,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - id
 - status
 
-##### Refunds
+##### Prices
 *read only*
 
 `Refund` objects allow you to refund a charge that has previously been created but not yet refunded.
@@ -527,7 +570,7 @@ create foreign table stripe.tokens (
 
 #### Products
 
-##### Products
+### Products
 *read and modify*
 
 All products available in Stripe.
@@ -557,7 +600,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - id
 - active
 
-##### Prices
+##### Refunds
 *read only*
 
 A `Price` object is needed for all of your products to facilitate multiple currencies and pricing options.
@@ -586,10 +629,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - id
 - active
 
-#### Checkout
-
-##### Checkout Sessions
-
+##### SetupAttempts
 *read only*
 
 A Checkout Session represents your customer's session as they pay for one-time purchases or subscriptions through Checkout or Payment Links. We recommend creating a new Session each time your customer attempts to pay.
@@ -618,9 +658,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - payment_intent
 - subscription
 
-#### Billing
-
-##### Invoices
+##### SetupIntents
 *read only*
 
 Invoices are statements of amounts owed by a customer, and are either generated one-off, or generated periodically from a subscription.
@@ -653,7 +691,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - status
 - subscription
 
-##### Subscriptions 
+##### Subscriptions
 *read and modify*
 
 Customer recurring payment schedules.
@@ -684,9 +722,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - price
 - status
 
-#### Connect
-
-##### Accounts
+##### Tokens
 *read only*
 
 This is an object representing a Stripe account.
@@ -713,7 +749,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 
 - id
 
-##### Top-ups
+### Top-ups
 *read only*
 
 To top up your Stripe balance, you create a top-up object.
@@ -741,7 +777,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - id
 - status
 
-##### Transfers
+### Transfers
 *read only*
 
 A Transfer object is created when you move funds between Stripe accounts as part of Connect.
@@ -769,11 +805,11 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - id
 - destination
 
-### Examples
+## Examples
 
 Some examples on how to use Stripe foreign tables.
 
-##### Simple Query
+### Basic example
 
 ```sql
 -- always limit records to reduce API calls to Stripe
@@ -782,11 +818,7 @@ select * from stripe.invoices limit 10;
 select * from stripe.subscriptions limit 10;
 ```
 
-##### Query JSON Attributes
-
-`attrs` is a common column which stores all the object attributes in JSON format,
-you can extract any attributes needed or its associated sub objects from it.
-For example,
+### Query JSON attributes
 
 ```sql
 -- extract account name for an invoice
@@ -802,7 +834,7 @@ select id, attrs#>'{items,data}' as items
 from stripe.subscriptions where id = 'sub_xxx';
 ```
 
-##### Data Modify
+### Data modify
 
 ```sql
 insert into stripe.customers(email,name,description) values ('test@test.com', 'test name', null);

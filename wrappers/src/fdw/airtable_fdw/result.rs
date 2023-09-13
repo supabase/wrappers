@@ -1,11 +1,13 @@
-use pgrx::JsonB;
+use pgrx::pg_sys;
+use pgrx::prelude::PgSqlErrorCode;
 use serde::de::{MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};
-use serde_json::Value;
+use serde_json::{value::Number, Value};
 use std::collections::HashMap;
 use std::fmt;
 use std::marker::PhantomData;
-use supabase_wrappers::interface::{Cell, Column, Row};
+use std::str::FromStr;
+use supabase_wrappers::prelude::*;
 
 #[derive(Deserialize, Debug)]
 pub struct AirtableResponse {
@@ -82,37 +84,74 @@ impl<'de> Deserialize<'de> for AirtableFields {
 }
 
 impl AirtableRecord {
-    fn value_to_cell(value: &Value) -> Option<Cell> {
-        use serde_json::Value::*;
-
-        match value {
-            Null => None,
-            Bool(v) => Some(Cell::Bool(*v)),
-            Number(n) => n
-                .as_i64()
-                .map_or_else(|| n.as_f64().map(Cell::F64), |v| Some(Cell::I64(v))),
-            String(v) => Some(Cell::String(v.clone())),
-            Array(v) => Some(Cell::Json(JsonB(serde_json::Value::Array(v.clone())))),
-            Object(v) => Some(Cell::Json(JsonB(serde_json::Value::Object(v.clone())))),
-            // XXX Handle timestamps somehow...
-        }
-    }
-
     pub fn to_row(&self, columns: &[Column]) -> Row {
         let mut row = Row::new();
+
+        macro_rules! col_to_cell {
+            ($col:ident, $src_type:ident, $conv:expr) => {{
+                self.fields.0.get(&$col.name).and_then(|val| {
+                    if let Value::$src_type(v) = val {
+                        $conv(v)
+                    } else {
+                        panic!("column '{}' data type not match", $col.name)
+                    }
+                })
+            }};
+        }
+
         for col in columns.iter() {
             if col.name == "id" {
                 row.push("id", Some(Cell::String(self.id.clone())));
-            } else {
-                row.push(
-                    &col.name,
-                    match self.fields.0.get(&col.name) {
-                        Some(val) => AirtableRecord::value_to_cell(val),
-                        None => None,
-                    },
-                );
+                continue;
             }
+
+            let cell = match col.type_oid {
+                pg_sys::BOOLOID => col_to_cell!(col, Bool, |v: &bool| Some(Cell::Bool(*v))),
+                pg_sys::CHAROID => col_to_cell!(col, Number, |v: &Number| {
+                    v.as_i64().map(|n| Cell::I8(n as i8))
+                }),
+                pg_sys::INT2OID => col_to_cell!(col, Number, |v: &Number| {
+                    v.as_i64().map(|n| Cell::I16(n as i16))
+                }),
+                pg_sys::FLOAT4OID => col_to_cell!(col, Number, |v: &Number| {
+                    v.as_f64().map(|n| Cell::F32(n as f32))
+                }),
+                pg_sys::INT4OID => col_to_cell!(col, Number, |v: &Number| {
+                    v.as_i64().map(|n| Cell::I32(n as i32))
+                }),
+                pg_sys::FLOAT8OID => {
+                    col_to_cell!(col, Number, |v: &Number| { v.as_f64().map(Cell::F64) })
+                }
+                pg_sys::INT8OID => {
+                    col_to_cell!(col, Number, |v: &Number| { v.as_i64().map(Cell::I64) })
+                }
+                pg_sys::NUMERICOID => col_to_cell!(col, Number, |v: &Number| {
+                    v.as_f64()
+                        .map(|n| Cell::Numeric(pgrx::AnyNumeric::try_from(n).unwrap()))
+                }),
+                pg_sys::TEXTOID => {
+                    col_to_cell!(col, String, |v: &String| { Some(Cell::String(v.clone())) })
+                }
+                pg_sys::DATEOID => col_to_cell!(col, String, |v: &String| {
+                    pgrx::Date::from_str(v.as_str()).ok().map(Cell::Date)
+                }),
+                pg_sys::TIMESTAMPOID => col_to_cell!(col, String, |v: &String| {
+                    pgrx::Timestamp::from_str(v.as_str())
+                        .ok()
+                        .map(Cell::Timestamp)
+                }),
+                _ => {
+                    report_error(
+                        PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                        &format!("column '{}' data type not supported", col.name),
+                    );
+                    None
+                }
+            };
+
+            row.push(&col.name, cell);
         }
+
         row
     }
 }

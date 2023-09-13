@@ -38,10 +38,10 @@ jobs:
         extension_name:
           - wrappers
         pgrx_version:
-          - 0.8.3
+          - 0.9.7
         postgres: [14, 15]
         features:
-          - "bigquery_fdw,clickhouse_fdw,stripe_fdw,firebase_fdw,s3_fdw"
+          - "all_fdws"
         box:
           - { runner: ubuntu-20.04, arch: amd64 }
           - { runner: arm-runner, arch: arm64 }
@@ -55,7 +55,7 @@ jobs:
           cd wrappers
 
           # Add postgres package repo
-          sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          sudo sh -c 'echo "deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
           wget -qO- https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo tee /etc/apt/trusted.gpg.d/pgdg.asc &>/dev/null
 
           sudo apt-get update
@@ -91,11 +91,15 @@ jobs:
           deb_version=${extension_version:1}
 
           # copy schema file to version update sql files
+          # Note: some version numbers may be skipped
           cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--0.1.6--${deb_version}.sql
           cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--0.1.7--${deb_version}.sql
           cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--0.1.8--${deb_version}.sql
           cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--0.1.9--${deb_version}.sql
           cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--0.1.10--${deb_version}.sql
+          cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--0.1.11--${deb_version}.sql
+          cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--0.1.14--${deb_version}.sql
+          cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--0.1.15--${deb_version}.sql
 
           # Create installable package
           mkdir archive

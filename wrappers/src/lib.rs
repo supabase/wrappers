@@ -1,8 +1,12 @@
-use pgrx::pg_module_magic;
+use pgrx::prelude::*;
 
 pg_module_magic!();
 
+extension_sql_file!("../sql/bootstrap.sql", bootstrap);
+extension_sql_file!("../sql/finalize.sql", finalize);
+
 mod fdw;
+mod stats;
 
 #[cfg(test)]
 pub mod pg_test {

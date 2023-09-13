@@ -75,6 +75,24 @@ mod tests {
             )
             .unwrap();
 
+            c.update(
+                r#"
+                  CREATE FOREIGN TABLE test_param_sql (
+                    id bigint,
+                    name text,
+                    _name text
+                  )
+                  SERVER my_clickhouse_server
+                  OPTIONS (
+                    table '(select *, name as _name from test_table where name = ${_name})',
+                    rowid_column 'id'
+                  )
+             "#,
+                None,
+                None,
+            )
+            .unwrap();
+
             assert_eq!(
                 c.select("SELECT * FROM test_table", None, None)
                     .unwrap()
@@ -90,8 +108,35 @@ mod tests {
                 )]),
             )
             .unwrap();
+            c.update(
+                "INSERT INTO test_table (name) VALUES ($1)",
+                None,
+                Some(vec![(
+                    PgOid::BuiltIn(PgBuiltInOids::TEXTOID),
+                    "test2".into_datum(),
+                )]),
+            )
+            .unwrap();
+            c.update(
+                "INSERT INTO test_table (name) VALUES ($1)",
+                None,
+                Some(vec![(
+                    PgOid::BuiltIn(PgBuiltInOids::TEXTOID),
+                    "test3".into_datum(),
+                )]),
+            )
+            .unwrap();
+            c.update(
+                "INSERT INTO test_table (name) VALUES ($1)",
+                None,
+                Some(vec![(
+                    PgOid::BuiltIn(PgBuiltInOids::TEXTOID),
+                    "test4".into_datum(),
+                )]),
+            )
+            .unwrap();
             assert_eq!(
-                c.select("SELECT name FROM test_table", None, None)
+                c.select("SELECT name FROM test_table ORDER BY name", None, None)
                     .unwrap()
                     .first()
                     .get_one::<&str>()
@@ -100,7 +145,7 @@ mod tests {
                 "test"
             );
             assert_eq!(
-                c.select("SELECT name FROM test_cust_sql", None, None)
+                c.select("SELECT name FROM test_cust_sql ORDER BY name", None, None)
                     .unwrap()
                     .first()
                     .get_one::<&str>()
@@ -109,10 +154,88 @@ mod tests {
                 "test"
             );
 
+            assert_eq!(
+                c.select(
+                    "SELECT name FROM test_table WHERE name = $1",
+                    None,
+                    Some(vec![(
+                        PgOid::BuiltIn(PgBuiltInOids::TEXTOID),
+                        "test2".into_datum()
+                    )])
+                )
+                .unwrap()
+                .first()
+                .get_one::<&str>()
+                .unwrap()
+                .unwrap(),
+                "test2"
+            );
+
+            assert_eq!(
+                c.select(
+                    "SELECT name FROM test_cust_sql WHERE name = $1",
+                    None,
+                    Some(vec![(
+                        PgOid::BuiltIn(PgBuiltInOids::TEXTOID),
+                        "test2".into_datum()
+                    )])
+                )
+                .unwrap()
+                .first()
+                .get_one::<&str>()
+                .unwrap()
+                .unwrap(),
+                "test2"
+            );
+
+            assert_eq!(
+                c.select(
+                    "SELECT name FROM test_param_sql WHERE _name = $1",
+                    None,
+                    Some(vec![(
+                        PgOid::BuiltIn(PgBuiltInOids::TEXTOID),
+                        "test2".into_datum()
+                    )])
+                )
+                .unwrap()
+                .first()
+                .get_one::<&str>()
+                .unwrap()
+                .unwrap(),
+                "test2"
+            );
+
+            assert_eq!(
+                c.select(
+                    "SELECT name FROM test_table ORDER by name LIMIT 1 OFFSET 1",
+                    None,
+                    None
+                )
+                .unwrap()
+                .first()
+                .get_one::<&str>()
+                .unwrap()
+                .unwrap(),
+                "test2"
+            );
+            assert_eq!(
+                c.select(
+                    "SELECT name FROM test_cust_sql ORDER BY name LIMIT 2 OFFSET 2",
+                    None,
+                    None
+                )
+                .unwrap()
+                .first()
+                .get_one::<&str>()
+                .unwrap()
+                .unwrap(),
+                "test3"
+            );
+
             let remote_value: String = rt
                 .block_on(async {
                     handle
-                        .query("SELECT name FROM supa.test_table")
+                        .query("SELECT name FROM supa.test_table ORDER BY name LIMIT 1")
                         .fetch_all()
                         .await?
                         .rows()

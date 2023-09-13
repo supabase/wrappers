@@ -1,3 +1,4 @@
+use crate::stats;
 use futures::executor;
 use gcp_bigquery_client::{
     client_builder::ClientBuilder,
@@ -13,7 +14,7 @@ use pgrx::prelude::PgSqlErrorCode;
 use pgrx::prelude::{AnyNumeric, Date, Timestamp};
 use serde_json::json;
 use std::collections::HashMap;
-use time::{format_description::well_known::Iso8601, OffsetDateTime, PrimitiveDateTime};
+use std::str::FromStr;
 
 use supabase_wrappers::prelude::*;
 
@@ -54,27 +55,22 @@ fn field_to_cell(rs: &ResultSet, field: &TableFieldSchema) -> Option<Cell> {
             .get_string_by_name(&field.name)
             .unwrap_or_else(|err| field_type_error!(field, err))
             .map(|v| {
-                let pg_epoch = time::Date::parse("2000-01-01", &Iso8601::DEFAULT).unwrap();
-                let dt = time::Date::parse(&v, &Iso8601::DEFAULT).unwrap();
-                let days = (dt - pg_epoch).whole_days();
-                let dt = Date::from_pg_epoch_days(days.try_into().unwrap());
+                let dt = Date::from_str(&v).unwrap();
                 Cell::Date(dt)
             }),
         FieldType::Datetime => rs
             .get_string_by_name(&field.name)
             .unwrap_or_else(|err| field_type_error!(field, err))
             .map(|v| {
-                let dt = PrimitiveDateTime::parse(&v, &Iso8601::DEFAULT).unwrap();
-                let ts = Timestamp::try_from(dt).unwrap();
+                let ts = Timestamp::from_str(&v).unwrap();
                 Cell::Timestamp(ts)
             }),
         FieldType::Timestamp => rs
             .get_f64_by_name(&field.name)
             .unwrap_or_else(|err| field_type_error!(field, err))
             .map(|v| {
-                let dt = OffsetDateTime::from_unix_timestamp_nanos((v * 1e9) as i128).unwrap();
-                let ts = Timestamp::try_from(dt).unwrap();
-                Cell::Timestamp(ts)
+                let ts = pgrx::to_timestamp(v);
+                Cell::Timestamp(ts.to_utc())
             }),
         _ => {
             report_error(
@@ -87,7 +83,7 @@ fn field_to_cell(rs: &ResultSet, field: &TableFieldSchema) -> Option<Cell> {
 }
 
 #[wrappers_fdw(
-    version = "0.1.3",
+    version = "0.1.4",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/bigquery_fdw"
 )]
@@ -104,6 +100,8 @@ pub(crate) struct BigQueryFdw {
 }
 
 impl BigQueryFdw {
+    const FDW_NAME: &str = "BigQueryFdw";
+
     fn deparse(
         &self,
         quals: &[Qual],
@@ -253,6 +251,8 @@ impl ForeignDataWrapper for BigQueryFdw {
             }
         };
 
+        stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
+
         ret
     }
 
@@ -307,12 +307,37 @@ impl ForeignDataWrapper for BigQueryFdw {
             // execute query on BigQuery
             match self.rt.block_on(client.job().query(&self.project_id, req)) {
                 Ok(rs) => {
-                    if rs.query_response().job_complete == Some(false) {
+                    let resp = rs.query_response();
+                    if resp.job_complete == Some(false) {
                         report_error(
                             PgSqlErrorCode::ERRCODE_FDW_ERROR,
                             &format!("query timeout {}ms expired", timeout),
                         );
                     } else {
+                        stats::inc_stats(
+                            Self::FDW_NAME,
+                            stats::Metric::RowsIn,
+                            resp.total_rows
+                                .as_ref()
+                                .and_then(|v| v.parse::<i64>().ok())
+                                .unwrap_or(0i64),
+                        );
+                        stats::inc_stats(
+                            Self::FDW_NAME,
+                            stats::Metric::RowsOut,
+                            resp.total_rows
+                                .as_ref()
+                                .and_then(|v| v.parse::<i64>().ok())
+                                .unwrap_or(0i64),
+                        );
+                        stats::inc_stats(
+                            Self::FDW_NAME,
+                            stats::Metric::BytesIn,
+                            resp.total_bytes_processed
+                                .as_ref()
+                                .and_then(|v| v.parse::<i64>().ok())
+                                .unwrap_or(0i64),
+                        );
                         self.scan_result = Some(rs);
                     }
                 }

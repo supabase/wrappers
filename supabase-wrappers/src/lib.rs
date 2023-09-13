@@ -20,7 +20,7 @@
 //! ...
 //!
 //! [dependencies]
-//! pgrx = "=0.8.3"
+//! pgrx = "=0.9.7"
 //! supabase-wrappers = "0.1"
 //! ```
 //!
@@ -227,6 +227,7 @@
 //! - [Firebase](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/firebase_fdw): A FDW for Google [Firebase](https://firebase.google.com/) which supports data read only.
 //! - [Airtable](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/airtable_fdw): A FDW for [Airtable](https://airtable.com/) API which supports data read only.
 //! - [S3](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/s3_fdw): A FDW for [AWS S3](https://aws.amazon.com/s3/) which supports data read only.
+//! - [Logflare](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/logflare_fdw): A FDW for [Logflare](https://logflare.app/) which supports data read only.
 
 pub mod interface;
 pub mod utils;

@@ -1,3 +1,4 @@
+use crate::stats;
 use async_compression::tokio::bufread::{BzDecoder, GzipDecoder, XzDecoder, ZlibDecoder};
 use aws_sdk_s3 as s3;
 use http::Uri;
@@ -8,19 +9,21 @@ use std::collections::{HashMap, VecDeque};
 use std::env;
 use std::io::Cursor;
 use std::pin::Pin;
-use tokio::io::{AsyncBufReadExt, AsyncRead, BufReader};
+use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, BufReader};
 
+use super::parquet::*;
 use supabase_wrappers::prelude::*;
 
-// record parser for S3 text file
+// record parser for a S3 file
 enum Parser {
     Csv(csv::Reader<Cursor<Vec<u8>>>),
     // JSON lines text file format: https://jsonlines.org/
     JsonLine(VecDeque<JsonValue>),
+    Parquet(S3Parquet),
 }
 
 #[wrappers_fdw(
-    version = "0.1.0",
+    version = "0.1.2",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/s3_fdw"
 )]
@@ -30,10 +33,15 @@ pub(crate) struct S3Fdw {
     rdr: Option<BufReader<Pin<Box<dyn AsyncRead>>>>,
     parser: Parser,
     tgt_cols: Vec<Column>,
+    rows_out: i64,
+
+    // local string buffer for CSV and JSONL
     buf: String,
 }
 
 impl S3Fdw {
+    const FDW_NAME: &str = "S3Fdw";
+
     // local string line buffer size, in bytes
     // Note: this is not a hard limit, just an indication of full buffer
     const BUF_SIZE: usize = 256 * 1024;
@@ -50,9 +58,13 @@ impl S3Fdw {
 
         if let Some(ref mut rdr) = self.rdr {
             // fetch remote data by lines and fill in local buffer
+            let mut total_lines = 0;
+            let mut total_bytes = 0;
             loop {
                 match self.rt.block_on(rdr.read_line(&mut self.buf)) {
                     Ok(num_bytes) => {
+                        total_lines += 1;
+                        total_bytes += num_bytes;
                         if num_bytes == 0 || self.buf.len() > Self::BUF_SIZE {
                             break;
                         }
@@ -66,6 +78,9 @@ impl S3Fdw {
                     }
                 }
             }
+
+            stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsIn, total_lines);
+            stats::inc_stats(Self::FDW_NAME, stats::Metric::BytesIn, total_bytes as i64);
         }
 
         if self.buf.is_empty() {
@@ -103,6 +118,7 @@ impl S3Fdw {
                     }
                 }
             }
+            _ => unreachable!(),
         }
 
         Some(())
@@ -111,12 +127,14 @@ impl S3Fdw {
 
 impl ForeignDataWrapper for S3Fdw {
     fn new(options: &HashMap<String, String>) -> Self {
+        let rt = tokio::runtime::Runtime::new().unwrap();
         let mut ret = S3Fdw {
-            rt: create_async_runtime(),
+            rt,
             client: None,
             rdr: None,
             parser: Parser::JsonLine(VecDeque::new()),
             tgt_cols: Vec::new(),
+            rows_out: 0,
             buf: String::new(),
         };
 
@@ -166,6 +184,8 @@ impl ForeignDataWrapper for S3Fdw {
         env::set_var("AWS_SECRET_ACCESS_KEY", creds.1);
         env::set_var("AWS_REGION", region);
         let config = ret.rt.block_on(aws_config::load_from_env());
+
+        stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
 
         // create S3 client
         let client = if is_mock {
@@ -219,87 +239,125 @@ impl ForeignDataWrapper for S3Fdw {
             return;
         };
 
-        // initialise parser according to format option
-        if let Some(format) = require_option("format", options) {
-            // create dummy parser
-            match format.as_str() {
-                "csv" => self.parser = Parser::Csv(csv::Reader::from_reader(Cursor::new(vec![0]))),
-                "jsonl" => self.parser = Parser::JsonLine(VecDeque::new()),
-                _ => {
+        let has_header: bool = options.get("has_header") == Some(&"true".to_string());
+
+        self.tgt_cols = columns.to_vec();
+
+        if let Some(client) = &self.client {
+            // initialise parser according to format option
+            if let Some(format) = require_option("format", options) {
+                // create dummy parser
+                match format.as_str() {
+                    "csv" => {
+                        self.parser = Parser::Csv(csv::Reader::from_reader(Cursor::new(vec![0])))
+                    }
+                    "jsonl" => self.parser = Parser::JsonLine(VecDeque::new()),
+                    "parquet" => self.parser = Parser::Parquet(S3Parquet::default()),
+                    _ => {
+                        report_error(
+                            PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                            &format!(
+                                "invalid format option: {}, it can only be 'csv', 'jsonl' or 'parquet'",
+                                format
+                            ),
+                        );
+                        return;
+                    }
+                }
+            } else {
+                return;
+            };
+
+            let stream = match self
+                .rt
+                .block_on(client.get_object().bucket(&bucket).key(&object).send())
+            {
+                Ok(resp) => resp.body.into_async_read(),
+                Err(err) => {
                     report_error(
                         PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                        &format!(
-                            "invalid format option: {}, it can only be 'csv' or 'jsonl'",
-                            format
-                        ),
+                        &format!("request s3 failed: {}", err),
                     );
                     return;
                 }
-            }
-        } else {
-            return;
-        };
+            };
 
-        let has_header: bool = options.get("has_header") == Some(&"true".to_string());
-
-        if let Some(client) = &self.client {
-            self.tgt_cols = columns.to_vec();
-
-            match self
-                .rt
-                .block_on(client.get_object().bucket(bucket).key(object).send())
-            {
-                Ok(resp) => {
-                    let stream = resp.body.into_async_read();
-
-                    let boxed_stream: Pin<Box<dyn AsyncRead>> =
-                        // deal with compression
-                        if let Some(compress) = options.get("compress") {
-                            let buf_rdr = BufReader::new(stream);
-                            match compress.as_str() {
-                                "bzip2" => Box::pin(BzDecoder::new(buf_rdr)),
-                                "gzip" => Box::pin(GzipDecoder::new(buf_rdr)),
-                                "xz" => Box::pin(XzDecoder::new(buf_rdr)),
-                                "zlib" => Box::pin(ZlibDecoder::new(buf_rdr)),
-                                _ => {
-                                    report_error(
-                                        PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                                        &format!("invalid compression option: {}", compress),
-                                    );
-                                    return;
-                                }
-                            }
-                        } else {
-                            Box::pin(stream)
-                        };
-
-                    let mut rdr: BufReader<Pin<Box<dyn AsyncRead>>> = BufReader::new(boxed_stream);
-
-                    // skip csv header line if needed
-                    if let Parser::Csv(_) = self.parser {
-                        if has_header {
-                            let mut header = String::new();
-                            if let Err(err) = self.rt.block_on(rdr.read_line(&mut header)) {
-                                report_error(
-                                    PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                                    &format!("fetch csv file failed: {}", err),
-                                );
-                                return;
-                            }
+            let mut boxed_stream: Pin<Box<dyn AsyncRead>> =
+                if let Some(compress) = options.get("compress") {
+                    let buf_rdr = BufReader::new(stream);
+                    match compress.as_str() {
+                        "bzip2" => Box::pin(BzDecoder::new(buf_rdr)),
+                        "gzip" => Box::pin(GzipDecoder::new(buf_rdr)),
+                        "xz" => Box::pin(XzDecoder::new(buf_rdr)),
+                        "zlib" => Box::pin(ZlibDecoder::new(buf_rdr)),
+                        _ => {
+                            report_error(
+                                PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                                &format!("invalid compression option: {}", compress),
+                            );
+                            return;
                         }
                     }
+                } else {
+                    Box::pin(stream)
+                };
 
-                    self.rdr = Some(rdr);
+            // deal with parquet file, read all its content to local buffer if it is
+            // compressed, otherwise open async read stream for it
+            if let Parser::Parquet(ref mut s3parquet) = &mut self.parser {
+                if options.get("compress").is_some() {
+                    // read all contents to local
+                    let mut buf = Vec::new();
+                    self.rt
+                        .block_on(boxed_stream.read_to_end(&mut buf))
+                        .expect("read compressed parquet file failed");
+                    self.rt.block_on(s3parquet.open_local_stream(buf));
+                } else {
+                    // open async read stream
+                    self.rt.block_on(s3parquet.open_async_stream(
+                        client,
+                        &bucket,
+                        &object,
+                        &self.tgt_cols,
+                    ));
                 }
-                Err(err) => report_error(
-                    PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                    &format!("request s3 failed: {}", err),
-                ),
+                return;
             }
+
+            let mut rdr: BufReader<Pin<Box<dyn AsyncRead>>> = BufReader::new(boxed_stream);
+
+            // skip csv header line if needed
+            if let Parser::Csv(_) = self.parser {
+                if has_header {
+                    let mut header = String::new();
+                    if let Err(err) = self.rt.block_on(rdr.read_line(&mut header)) {
+                        report_error(
+                            PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                            &format!("fetch csv file failed: {}", err),
+                        );
+                        return;
+                    }
+                }
+            }
+
+            self.rdr = Some(rdr);
         }
     }
 
     fn iter_scan(&mut self, row: &mut Row) -> Option<()> {
+        // read parquet record
+        if let Parser::Parquet(ref mut s3parquet) = &mut self.parser {
+            self.rt.block_on(s3parquet.refill())?;
+            let ret = s3parquet.read_into_row(row, &self.tgt_cols);
+            if ret.is_some() {
+                self.rows_out += 1;
+            } else {
+                stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsOut, self.rows_out);
+            }
+            return ret;
+        }
+
+        // read csv or jsonl record
         loop {
             if self.refill().is_none() {
                 break;
@@ -317,6 +375,7 @@ impl ForeignDataWrapper for S3Fdw {
                                         record.get(col.num - 1).map(|s| Cell::String(s.to_owned()));
                                     row.push(&col.name, cell);
                                 }
+                                self.rows_out += 1;
                                 return Some(());
                             } else {
                                 // no more records left in the local buffer, refill from remote
@@ -359,6 +418,7 @@ impl ForeignDataWrapper for S3Fdw {
                                     row.push(&col.name, cell);
                                 }
                             }
+                            self.rows_out += 1;
                             return Some(());
                         }
                         None => {
@@ -367,14 +427,19 @@ impl ForeignDataWrapper for S3Fdw {
                         }
                     }
                 }
+                _ => unreachable!(),
             }
         }
+
+        stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsOut, self.rows_out);
 
         None
     }
 
     fn end_scan(&mut self) {
+        // release local resources
         self.rdr.take();
+        self.parser = Parser::JsonLine(VecDeque::new());
     }
 
     fn validator(options: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) {

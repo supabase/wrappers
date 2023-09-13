@@ -1,6 +1,6 @@
 use crate::prelude::*;
 use pgrx::pg_sys::Oid;
-use pgrx::{is_a, pg_sys, pg_sys::Datum, FromDatum, PgBuiltInOids, PgList, PgOid};
+use pgrx::{is_a, list::PgList, pg_sys, pg_sys::Datum, FromDatum, PgBuiltInOids, PgOid};
 use std::ffi::CStr;
 use std::os::raw::c_int;
 

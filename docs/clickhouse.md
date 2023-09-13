@@ -1,8 +1,8 @@
 [ClickHouse](https://clickhouse.com/) is a fast open-source column-oriented database management system that allows generating analytical data reports in real-time using SQL queries.
 
-ClickHouse FDW supports both data read and modify.
+The ClickHouse Wrapper allows you to read and write data from ClickHouse within your Postgres database.
 
-### Supported Data Types
+## Supported Data Types
 
 | Postgres Type      | ClickHouse Type   |
 | ------------------ | ----------------- |
@@ -19,79 +19,89 @@ ClickHouse FDW supports both data read and modify.
 | date               | Date              |
 | timestamp          | DateTime          |
 
-### Wrapper 
-To get started with the ClickHouse wrapper, create a foreign data wrapper specifying `handler` and `validator` as below.
+## Preparation
+
+Before you get started, make sure the `wrappers` extension is installed on your database:
 
 ```sql
 create extension if not exists wrappers;
+```
 
+and then create the foreign data wrapper:
+
+```sql
 create foreign data wrapper clickhouse_wrapper
   handler click_house_fdw_handler
   validator click_house_fdw_validator;
 ```
 
-### Server 
+### Secure your credentials (optional)
 
-Next, we need to create a server for the FDW to hold options and credentials.
-
-#### Auth (Supabase)
-
-If you are using the Supabase platform, this is the recommended approach for securing your ClickHouse credentials.
-
-For example, to store ClickHouse connection string in Vault and retrieve the `key_id`,
+By default, Postgres stores FDW credentials inide `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
 
 ```sql
--- save ClickHouse connection string in Vault and get its key id
-select pgsodium.create_key(name := 'clickhouse');
-insert into vault.secrets (secret, key_id) values (
-  'tcp://default:@localhost:9000/default',
-  (select id from pgsodium.valid_key where name = 'clickhouse')
-) returning key_id;
+-- Save your ClickHouse credential in Vault and retrieve the `key_id`
+insert into vault.secrets (name, secret)
+values (
+  'clickhouse',
+  'tcp://default:@localhost:9000/default'
+)
+returning key_id;
 ```
 
-Then create the foreign server,
+### Connecting to ClickHouse
+
+We need to provide Postgres with the credentials to connect to ClickHouse, and any additional options. We can do this using the `create server` command:
+
+=== "With Vault"
+
+    ```sql
+    create server clickhouse_server
+      foreign data wrapper clickhouse_wrapper
+      options (
+        conn_string_id '<key_ID>' -- The Key ID from above.
+      );
+    ```
+
+=== "Without Vault"
+
+    ```sql
+    create server clickhouse_server
+      foreign data wrapper clickhouse_wrapper
+      options (
+        conn_string 'tcp://default:@localhost:9000/default'
+      );
+    ```
+
+Some connection string examples:
+
+- `tcp://user:password@host:9000/clicks?compression=lz4&ping_timeout=42ms`
+- `tcp://default:PASSWORD@abc.eu-west-1.aws.clickhouse.cloud:9440/default?connection_timeout=30s&ping_before_query=false`
+
+Check [more connection string parameters](https://github.com/suharev7/clickhouse-rs#dns).
+
+## Creating Foreign Tables
+
+The ClickHouse Wrapper supports data reads and writes from ClickHouse.
+
+| Integration | Select            | Insert            | Update            | Delete            | Truncate          |
+| ----------- | :----:            | :----:            | :----:            | :----:            | :----:            |
+| ClickHouse  | :white_check_mark:| :white_check_mark:| :white_check_mark:| :white_check_mark:| :x:               |
+
+For example:
 
 ```sql
-do $$
-declare
-  key_id text;
-begin
-  select id into key_id from pgsodium.valid_key where name = 'clickhouse' limit 1;
-
-  execute format(
-    E'create server clickhouse_server \n'
-    '   foreign data wrapper clickhouse_server \n'
-    '   options (conn_string_id ''%s'');',
-    key_id
-  );
-end $$;
-```
-
-#### Auth (Non-Supabase)
-
-If the platform you are using does not support `pgsodium` and `Vault`, you can create a server by storing your ClickHouse credentials directly.
-
-
-!!! important
-
-    Credentials stored using this method can be viewed as plain text by anyone with access to `pg_catalog.pg_foreign_server`
-
-
-```sql
-create server clickhouse_server
-  foreign data wrapper clickhouse_wrapper
+create foreign table my_clickhouse_table (
+  id bigint,
+  name text
+)
+  server clickhouse_server
   options (
-    conn_string 'tcp://default:@localhost:9000/default'
+    table 'people'
   );
 ```
 
-
-### Tables
-
-ClickHouse wrapper is implemented with [ELT](https://hevodata.com/learn/etl-vs-elt/) approach, so the data transformation is encouraged to be performed locally after data is extracted from remote data source.
-
-
-#### Foreign Table Options
+### Foreign table options
 
 The full list of foreign table options are below:
 
@@ -99,13 +109,13 @@ The full list of foreign table options are below:
 
    This can also be a subquery enclosed in parentheses, for example,
 
-   ```
+   ```sql
    table '(select * from my_table)'
    ```
 
    [Parametrized view](https://clickhouse.com/docs/en/sql-reference/statements/create/view#parameterized-view) is also supported in the subquery. In this case, you need to define a column for each parameter and use `where` to pass values to them. For example,
 
-   ```
+   ```sql
     create foreign table test_vw (
       id bigint,
       col1 text,
@@ -123,11 +133,16 @@ The full list of foreign table options are below:
 
 - `rowid_column` - Primary key column name, optional for data scan, required for data modify
 
-#### Examples
+## Examples
 
-Create a source table on ClickHouse and insert some data,
+Some examples on how to use ClickHouse foreign tables.
+
+### Basic example
+
+This will create a "foreign table" inside your Postgres database called `people`: 
 
 ```sql
+-- Run below SQLs on ClickHouse to create source table
 drop table if exists people;
 create table people (
     id Int64, 
@@ -136,10 +151,11 @@ create table people (
 engine=MergeTree()
 order by id;
 
+-- Add some test data
 insert into people values (1, 'Luke Skywalker'), (2, 'Leia Organa'), (3, 'Han Solo');
 ```
 
-Create foreign table and run a query on Postgres to read ClickHouse table,
+Create foreign table on Postgres database:
 
 ```sql
 create foreign table people (

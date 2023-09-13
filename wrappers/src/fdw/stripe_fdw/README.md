@@ -10,7 +10,8 @@ This is a foreign data wrapper for [Stripe](https://stripe.com/) developed using
 
 | Version | Date       | Notes                                                |
 | ------- | ---------- | ---------------------------------------------------- |
-| 0.1.7   | 2023-06-02 | Updated docs and added more objects                  |
+| 0.1.8   | 2023-08-11 | Updated docs and added more objects                  |
+| 0.1.7   | 2023-07-13 | Added fdw stats collection                           |
 | 0.1.6   | 2023-05-30 | Added Checkout Session object                        |
 | 0.1.5   | 2023-05-01 | Added 'prices' object and empty result improvement   |
 | 0.1.4   | 2023-02-21 | Added Connect objects                                |
