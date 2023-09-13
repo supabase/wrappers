@@ -10,6 +10,7 @@ use pgrx::*;
 use std::ffi::CStr;
 use std::num::NonZeroUsize;
 use std::ptr;
+use thiserror::Error;
 use tokio::runtime::{Builder, Runtime};
 use uuid::Uuid;
 
@@ -106,6 +107,19 @@ pub fn report_error(code: PgSqlErrorCode, msg: &str) {
     ereport!(PgLogLevel::ERROR, code, msg, "Wrappers");
 }
 
+#[derive(Error, Debug)]
+pub enum CreateRuntimeError {
+    #[error("failed to create async runtime")]
+    FailedToCreateAsyncRuntime,
+}
+
+impl From<CreateRuntimeError> for ErrorReport {
+    fn from(value: CreateRuntimeError) -> Self {
+        let error_message = format!("{value}");
+        ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, error_message, "")
+    }
+}
+
 /// Create a Tokio async runtime
 ///
 /// Use this runtime to run async code in `block` mode. Run blocked code is
@@ -132,8 +146,11 @@ pub fn report_error(code: PgSqlErrorCode, msg: &str) {
 /// }
 /// ```
 #[inline]
-pub fn create_async_runtime() -> Runtime {
-    Builder::new_current_thread().enable_all().build().unwrap()
+pub fn create_async_runtime() -> Result<Runtime, CreateRuntimeError> {
+    Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .map_err(|_| CreateRuntimeError::FailedToCreateAsyncRuntime)
 }
 
 /// Get decrypted secret from Vault

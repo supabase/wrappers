@@ -16,6 +16,7 @@ use std::collections::HashMap;
 use std::str::FromStr;
 
 use supabase_wrappers::prelude::*;
+use thiserror::Error;
 
 fn create_client(api_key: &str) -> ClientWithMiddleware {
     let mut headers = HeaderMap::new();
@@ -219,11 +220,15 @@ impl LogflareFdw {
 enum LogflareFdwError {
     #[error("{0}")]
     Options(#[from] OptionsError),
+    #[error("{0}")]
+    CreateRuntimeError(#[from] CreateRuntimeError),
 }
 
 impl From<LogflareFdwError> for ErrorReport {
-    fn from(_value: LogflareFdwError) -> Self {
-        ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, "", "")
+    fn from(value: LogflareFdwError) -> Self {
+        match value {
+            LogflareFdwError::CreateRuntimeError(e) => e.into(),
+        }
     }
 }
 
@@ -250,7 +255,7 @@ impl ForeignDataWrapper<LogflareFdwError> for LogflareFdw {
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
 
         Ok(LogflareFdw {
-            rt: create_async_runtime(),
+            rt: create_async_runtime()?,
             base_url: Url::parse(&base_url).unwrap(),
             client,
             scan_result: None,

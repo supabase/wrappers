@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use url::Url;
 
 use supabase_wrappers::prelude::*;
+use thiserror::Error;
 
 use super::result::AirtableResponse;
 
@@ -95,11 +96,17 @@ macro_rules! report_fetch_error {
     };
 }
 
-enum AirtableFdwError {}
+#[derive(Error, Debug)]
+enum AirtableFdwError {
+    #[error("{0}")]
+    CreateRuntimeError(#[from] CreateRuntimeError),
+}
 
 impl From<AirtableFdwError> for ErrorReport {
-    fn from(_value: AirtableFdwError) -> Self {
-        ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, "", "")
+    fn from(value: AirtableFdwError) -> Self {
+        match value {
+            AirtableFdwError::CreateRuntimeError(e) => e.into(),
+        }
     }
 }
 
@@ -121,7 +128,7 @@ impl ForeignDataWrapper<AirtableFdwError> for AirtableFdw {
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
 
         Ok(Self {
-            rt: create_async_runtime(),
+            rt: create_async_runtime()?,
             client,
             base_url,
             scan_result: None,
