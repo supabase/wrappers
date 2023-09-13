@@ -264,6 +264,8 @@ mod tests {
             )
             .unwrap();
 
+            // TODO: Add mandates test setup 
+
             c.update(
                 r#"
                 CREATE FOREIGN TABLE stripe_payment_intents (
@@ -703,6 +705,8 @@ mod tests {
                 results,
                 vec![((("cus_MJiBgSUgeWFN0z", 1000), "usd"), "draft")]
             );
+
+            // TODO: Add mandates test
 
             let results = c
                 .select("SELECT * FROM stripe_payment_intents", None, None)
