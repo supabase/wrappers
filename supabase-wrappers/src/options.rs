@@ -45,8 +45,11 @@ impl From<OptionsError> for ErrorReport {
 /// ```rust,no_run
 /// # use supabase_wrappers::prelude::require_option;
 /// # use std::collections::HashMap;
+/// # fn main() -> Result<(), OptionsError> {
 /// # let options = &HashMap::new();
-/// require_option("my_option", options);
+/// require_option("my_option", options)?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn require_option<'map>(
     opt_name: &str,
@@ -58,31 +61,8 @@ pub fn require_option<'map>(
         .ok_or(OptionsError::OptionNameNotFound(opt_name.to_string()))
 }
 
-/// Get required option value from the `options` map or a provided default
-///
-/// Get the required option's value from `options` map, return default if it does not exist.
-///
-/// For example,
-///
-/// ```rust,no_run
-/// # use supabase_wrappers::prelude::require_option_or;
-/// # use std::collections::HashMap;
-/// # let options = &HashMap::new();
-/// require_option_or("my_option", options, "default value".to_string());
-/// ```
-pub fn require_option_or(
-    opt_name: &str,
-    options: &HashMap<String, String>,
-    default: String,
-) -> String {
-    options
-        .get(opt_name)
-        .map(|t| t.to_owned())
-        .unwrap_or(default)
-}
-
 /// Check if the option list contains a specific option, used in [validator](crate::interface::ForeignDataWrapper::validator)
-pub fn check_options_contain(opt_list: &[Option<String>], tgt: &str) {
+pub fn check_options_contain(opt_list: &[Option<String>], tgt: &str) -> Result<bool, OptionsError> {
     let search_key = tgt.to_owned() + "=";
     if !opt_list.iter().any(|opt| {
         if let Some(s) = opt {
@@ -91,11 +71,10 @@ pub fn check_options_contain(opt_list: &[Option<String>], tgt: &str) {
             false
         }
     }) {
-        report_error(
-            PgSqlErrorCode::ERRCODE_FDW_OPTION_NAME_NOT_FOUND,
-            &format!("required option \"{}\" is not specified", tgt),
-        );
+        Err(OptionsError::OptionNameNotFound(tgt.to_string()))
     }
+
+    Ok(true)
 }
 
 // convert options definition to hashmap
