@@ -26,14 +26,14 @@ enum AirtableFdwError {
     RequestError(#[from] reqwest_middleware::Error),
 
     #[error("{0}")]
-    Options(#[from] OptionsError),
+    OptionsError(#[from] OptionsError),
 }
 
 impl From<AirtableFdwError> for ErrorReport {
     fn from(value: AirtableFdwError) -> Self {
         match value {
             AirtableFdwError::CreateRuntimeError(e) => e.into(),
-            AirtableFdwError::Options(e) => e.into(),
+            AirtableFdwError::OptionsError(e) => e.into(),
             _ => ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, format!("{value}"), ""),
         }
     }

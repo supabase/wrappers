@@ -221,14 +221,14 @@ enum LogflareFdwError {
     #[error("{0}")]
     CreateRuntimeError(#[from] CreateRuntimeError),
     #[error("{0}")]
-    Options(#[from] OptionsError),
+    OptionsError(#[from] OptionsError),
 }
 
 impl From<LogflareFdwError> for ErrorReport {
     fn from(value: LogflareFdwError) -> Self {
         match value {
             LogflareFdwError::CreateRuntimeError(e) => e.into(),
-            LogflareFdwError::Options(e) => e.into(),
+            LogflareFdwError::OptionsError(e) => e.into(),
         }
     }
 }

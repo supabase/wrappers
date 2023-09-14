@@ -632,14 +632,14 @@ enum StripeFdwError {
     #[error("{0}")]
     CreateRuntimeError(#[from] CreateRuntimeError),
     #[error("{0}")]
-    Options(#[from] OptionsError),
+    OptionsError(#[from] OptionsError),
 }
 
 impl From<StripeFdwError> for ErrorReport {
     fn from(value: StripeFdwError) -> Self {
         match value {
             StripeFdwError::CreateRuntimeError(e) => e.into(),
-            StripeFdwError::Options(e) => e.into(),
+            StripeFdwError::OptionsError(e) => e.into(),
         }
     }
 }

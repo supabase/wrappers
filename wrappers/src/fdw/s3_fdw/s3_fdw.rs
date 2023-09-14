@@ -131,13 +131,13 @@ impl S3Fdw {
 #[derive(Error, Debug)]
 enum S3FdwError {
     #[error("{0}")]
-    Options(#[from] OptionsError),
+    OptionsError(#[from] OptionsError),
 }
 
 impl From<S3FdwError> for ErrorReport {
     fn from(value: S3FdwError) -> Self {
         match value {
-            S3FdwError::Options(e) => e.into(),
+            S3FdwError::OptionsError(e) => e.into(),
         }
     }
 }

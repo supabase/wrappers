@@ -204,14 +204,14 @@ enum ClickHouseFdwError {
     #[error("{0}")]
     CreateRuntimeError(#[from] CreateRuntimeError),
     #[error("{0}")]
-    Options(#[from] OptionsError),
+    OptionsError(#[from] OptionsError),
 }
 
 impl From<ClickHouseFdwError> for ErrorReport {
     fn from(value: ClickHouseFdwError) -> Self {
         match value {
             ClickHouseFdwError::CreateRuntimeError(e) => e.into(),
-            ClickHouseFdwError::Options(e) => e.into(),
+            ClickHouseFdwError::OptionsError(e) => e.into(),
         }
     }
 }

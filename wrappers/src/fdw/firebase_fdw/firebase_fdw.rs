@@ -250,14 +250,14 @@ enum FirebaseFdwError {
     #[error("{0}")]
     CreateRuntimeError(#[from] CreateRuntimeError),
     #[error("{0}")]
-    Options(#[from] OptionsError),
+    OptionsError(#[from] OptionsError),
 }
 
 impl From<FirebaseFdwError> for ErrorReport {
     fn from(value: FirebaseFdwError) -> Self {
         match value {
             FirebaseFdwError::CreateRuntimeError(e) => e.into(),
-            FirebaseFdwError::Options(e) => e.into(),
+            FirebaseFdwError::OptionsError(e) => e.into(),
         }
     }
 }

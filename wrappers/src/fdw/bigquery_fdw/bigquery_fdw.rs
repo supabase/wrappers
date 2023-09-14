@@ -166,14 +166,14 @@ enum BigQueryFdwError {
     #[error("{0}")]
     CreateRuntimeError(#[from] CreateRuntimeError),
     #[error("{0}")]
-    Options(#[from] OptionsError),
+    OptionsError(#[from] OptionsError),
 }
 
 impl From<BigQueryFdwError> for ErrorReport {
     fn from(value: BigQueryFdwError) -> Self {
         match value {
             BigQueryFdwError::CreateRuntimeError(e) => e.into(),
-            BigQueryFdwError::Options(e) => e.into(),
+            BigQueryFdwError::OptionsError(e) => e.into(),
         }
     }
 }
