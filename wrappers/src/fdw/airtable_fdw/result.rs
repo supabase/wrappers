@@ -1,13 +1,14 @@
 use pgrx::pg_sys;
-use pgrx::prelude::PgSqlErrorCode;
 use serde::de::{MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};
-use serde_json::{value::Number, Value};
+use serde_json::Value;
 use std::collections::HashMap;
 use std::fmt;
 use std::marker::PhantomData;
 use std::str::FromStr;
 use supabase_wrappers::prelude::*;
+
+use super::{AirtableFdwError, AirtableFdwResult};
 
 #[derive(Deserialize, Debug)]
 pub struct AirtableResponse {
@@ -84,20 +85,8 @@ impl<'de> Deserialize<'de> for AirtableFields {
 }
 
 impl AirtableRecord {
-    pub fn to_row(&self, columns: &[Column]) -> Row {
+    pub(super) fn to_row(&self, columns: &[Column]) -> AirtableFdwResult<Row> {
         let mut row = Row::new();
-
-        macro_rules! col_to_cell {
-            ($col:ident, $src_type:ident, $conv:expr) => {{
-                self.fields.0.get(&$col.name).and_then(|val| {
-                    if let Value::$src_type(v) = val {
-                        $conv(v)
-                    } else {
-                        panic!("column '{}' data type not match", $col.name)
-                    }
-                })
-            }};
-        }
 
         for col in columns.iter() {
             if col.name == "id" {
@@ -106,52 +95,129 @@ impl AirtableRecord {
             }
 
             let cell = match col.type_oid {
-                pg_sys::BOOLOID => col_to_cell!(col, Bool, |v: &bool| Some(Cell::Bool(*v))),
-                pg_sys::CHAROID => col_to_cell!(col, Number, |v: &Number| {
-                    v.as_i64().map(|n| Cell::I8(n as i8))
-                }),
-                pg_sys::INT2OID => col_to_cell!(col, Number, |v: &Number| {
-                    v.as_i64().map(|n| Cell::I16(n as i16))
-                }),
-                pg_sys::FLOAT4OID => col_to_cell!(col, Number, |v: &Number| {
-                    v.as_f64().map(|n| Cell::F32(n as f32))
-                }),
-                pg_sys::INT4OID => col_to_cell!(col, Number, |v: &Number| {
-                    v.as_i64().map(|n| Cell::I32(n as i32))
-                }),
-                pg_sys::FLOAT8OID => {
-                    col_to_cell!(col, Number, |v: &Number| { v.as_f64().map(Cell::F64) })
-                }
-                pg_sys::INT8OID => {
-                    col_to_cell!(col, Number, |v: &Number| { v.as_i64().map(Cell::I64) })
-                }
-                pg_sys::NUMERICOID => col_to_cell!(col, Number, |v: &Number| {
-                    v.as_f64()
-                        .map(|n| Cell::Numeric(pgrx::AnyNumeric::try_from(n).unwrap()))
-                }),
-                pg_sys::TEXTOID => {
-                    col_to_cell!(col, String, |v: &String| { Some(Cell::String(v.clone())) })
-                }
-                pg_sys::DATEOID => col_to_cell!(col, String, |v: &String| {
-                    pgrx::Date::from_str(v.as_str()).ok().map(Cell::Date)
-                }),
-                pg_sys::TIMESTAMPOID => col_to_cell!(col, String, |v: &String| {
-                    pgrx::Timestamp::from_str(v.as_str())
-                        .ok()
-                        .map(Cell::Timestamp)
-                }),
-                _ => {
-                    report_error(
-                        PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                        &format!("column '{}' data type not supported", col.name),
-                    );
-                    None
-                }
-            };
+                pg_sys::BOOLOID => self.fields.0.get(&col.name).map_or_else(
+                    || Ok(None),
+                    |val| {
+                        if let Value::Bool(v) = val {
+                            Ok(Some(Cell::Bool(*v)))
+                        } else {
+                            Err(())
+                        }
+                    },
+                ),
+                pg_sys::CHAROID => self.fields.0.get(&col.name).map_or_else(
+                    || Ok(None),
+                    |val| {
+                        if let Value::Number(v) = val {
+                            Ok(v.as_i64().map(|n| Cell::I8(n as i8)))
+                        } else {
+                            Err(())
+                        }
+                    },
+                ),
+                pg_sys::INT2OID => self.fields.0.get(&col.name).map_or_else(
+                    || Ok(None),
+                    |val| {
+                        if let Value::Number(v) = val {
+                            Ok(v.as_i64().map(|n| Cell::I16(n as i16)))
+                        } else {
+                            Err(())
+                        }
+                    },
+                ),
+                pg_sys::FLOAT4OID => self.fields.0.get(&col.name).map_or_else(
+                    || Ok(None),
+                    |val| {
+                        if let Value::Number(v) = val {
+                            Ok(v.as_f64().map(|n| Cell::F32(n as f32)))
+                        } else {
+                            Err(())
+                        }
+                    },
+                ),
+                pg_sys::INT4OID => self.fields.0.get(&col.name).map_or_else(
+                    || Ok(None),
+                    |val| {
+                        if let Value::Number(v) = val {
+                            Ok(v.as_i64().map(|n| Cell::I32(n as i32)))
+                        } else {
+                            Err(())
+                        }
+                    },
+                ),
+                pg_sys::FLOAT8OID => self.fields.0.get(&col.name).map_or_else(
+                    || Ok(None),
+                    |val| {
+                        if let Value::Number(v) = val {
+                            Ok(v.as_f64().map(Cell::F64))
+                        } else {
+                            Err(())
+                        }
+                    },
+                ),
+                pg_sys::INT8OID => self.fields.0.get(&col.name).map_or_else(
+                    || Ok(None),
+                    |val| {
+                        if let Value::Number(v) = val {
+                            Ok(v.as_i64().map(Cell::I64))
+                        } else {
+                            Err(())
+                        }
+                    },
+                ),
+                pg_sys::NUMERICOID => self.fields.0.get(&col.name).map_or_else(
+                    || Ok(None),
+                    |val| {
+                        if let Value::Number(v) = val {
+                            let n = v
+                                .as_f64()
+                                .map(|n| Cell::Numeric(pgrx::AnyNumeric::try_from(n).unwrap()));
+                            Ok(n)
+                        } else {
+                            Err(())
+                        }
+                    },
+                ),
+                pg_sys::TEXTOID => self.fields.0.get(&col.name).map_or_else(
+                    || Ok(None),
+                    |val| {
+                        if let Value::String(v) = val {
+                            Ok(Some(Cell::String(v.clone())))
+                        } else {
+                            Err(())
+                        }
+                    },
+                ),
+                pg_sys::DATEOID => self.fields.0.get(&col.name).map_or_else(
+                    || Ok(None),
+                    |val| {
+                        if let Value::String(v) = val {
+                            Ok(pgrx::Date::from_str(v.as_str()).ok().map(Cell::Date))
+                        } else {
+                            Err(())
+                        }
+                    },
+                ),
+                pg_sys::TIMESTAMPOID => self.fields.0.get(&col.name).map_or_else(
+                    || Ok(None),
+                    |val| {
+                        if let Value::String(v) = val {
+                            let n = pgrx::Timestamp::from_str(v.as_str())
+                                .ok()
+                                .map(Cell::Timestamp);
+                            Ok(n)
+                        } else {
+                            Err(())
+                        }
+                    },
+                ),
+                _ => return Err(AirtableFdwError::UnsupportedColumnType(col.name.clone())),
+            }
+            .map_err(|_| AirtableFdwError::ColumnTypeNotMatch(col.name.clone()))?;
 
             row.push(&col.name, cell);
         }
 
-        row
+        Ok(row)
     }
 }
