@@ -465,8 +465,8 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
     ) -> Result<(), S3FdwError> {
         if let Some(oid) = catalog {
             if oid == FOREIGN_TABLE_RELATION_ID {
-                check_options_contain(&options, "uri");
-                check_options_contain(&options, "format");
+                check_options_contain(&options, "uri")?;
+                check_options_contain(&options, "format")?;
             }
         }
 

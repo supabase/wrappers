@@ -138,7 +138,7 @@ pub(super) extern "C" fn get_foreign_rel_size<E: Into<ErrorReport>, W: ForeignDa
 
         // get foreign table options
         let ftable = pg_sys::GetForeignTable(foreigntableid);
-        state.opts = options_to_hashmap((*ftable).options);
+        state.opts = options_to_hashmap((*ftable).options).report_unwrap();
 
         // get estimate row count and mean row width
         let (rows, width) = state.get_rel_size().report_unwrap();

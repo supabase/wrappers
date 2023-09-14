@@ -223,10 +223,8 @@ impl FirebaseFdw {
                 // ref: https://firebase.google.com/docs/firestore/reference/rest/v1beta1/projects.databases.documents/listDocuments
                 let re = Regex::new(r"^firestore/(?P<collection>[^/]+)").unwrap();
                 if let Some(caps) = re.captures(obj) {
-                    let base_url = options
-                        .get("base_url")
-                        .map(|v| v.as_ref())
-                        .unwrap_or(Self::DEFAULT_FIRESTORE_BASE_URL);
+                    let base_url =
+                        require_option_or("base_url", options, Self::DEFAULT_FIRESTORE_BASE_URL);
                     let collection = caps.name("collection").unwrap().as_str();
                     let mut ret = format!(
                         "{}/{}/databases/(default)/documents/{}?pageSize={}",
@@ -409,7 +407,7 @@ impl ForeignDataWrapper<FirebaseFdwError> for FirebaseFdw {
     ) -> Result<(), FirebaseFdwError> {
         if let Some(oid) = catalog {
             if oid == FOREIGN_TABLE_RELATION_ID {
-                check_options_contain(&options, "object");
+                check_options_contain(&options, "object")?;
             }
         }
 

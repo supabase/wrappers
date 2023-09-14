@@ -356,7 +356,7 @@ impl ForeignDataWrapper<LogflareFdwError> for LogflareFdw {
     ) -> Result<(), LogflareFdwError> {
         if let Some(oid) = catalog {
             if oid == FOREIGN_TABLE_RELATION_ID {
-                check_options_contain(&options, "endpoint");
+                check_options_contain(&options, "endpoint")?;
             }
         }
 

@@ -81,7 +81,7 @@ pub(super) extern "C" fn add_foreign_update_targets(
     unsafe {
         // get rowid column name from table options
         let ftable = pg_sys::GetForeignTable((*target_relation).rd_id);
-        let opts = options_to_hashmap((*ftable).options);
+        let opts = options_to_hashmap((*ftable).options).report_unwrap();
         let rowid_name = require_option("rowid_column", &opts).report_unwrap();
 
         // find rowid attribute
@@ -135,7 +135,7 @@ pub(super) extern "C" fn plan_foreign_modify<E: Into<ErrorReport>, W: ForeignDat
 
         // get rowid column name from table options
         let ftable = pg_sys::GetForeignTable(rel.oid());
-        let opts = options_to_hashmap((*ftable).options);
+        let opts = options_to_hashmap((*ftable).options).report_unwrap();
         let rowid_name = opts.get("rowid_column");
         if rowid_name.is_none() {
             report_error(
