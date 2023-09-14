@@ -111,7 +111,7 @@ pub(super) unsafe fn options_to_hashmap(
             )
         })?;
         let value = value.to_str().map_err(|_| {
-            OptionsError::OptionNameIsInvalidUtf8(
+            OptionsError::OptionValueIsInvalidUtf8(
                 String::from_utf8_lossy(value.to_bytes()).to_string(),
             )
         })?;
