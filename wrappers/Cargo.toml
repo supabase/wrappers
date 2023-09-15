@@ -28,7 +28,7 @@ s3_fdw = [
 ]
 airtable_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "serde", "url", "thiserror"]
 logflare_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "thiserror"]
-qdrant_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "thiserror", "http", "tokio", "url"]
+qdrant_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "thiserror", "http", "tokio", "url", "serde", "serde_json"]
 
 # Does not include helloworld_fdw because of its general uselessness
 all_fdws = ["airtable_fdw", "bigquery_fdw", "clickhouse_fdw", "stripe_fdw", "firebase_fdw", "s3_fdw", "logflare_fdw", "qdrant_fdw"]

@@ -1,6 +1,6 @@
 use crate::fdw::qdrant_fdw::qdrant_client::{QdrantClient, QdrantClientError};
-use pgrx::pg_sys;
 use pgrx::pg_sys::panic::ErrorReport;
+use pgrx::{notice, pg_sys};
 use std::collections::HashMap;
 use supabase_wrappers::interface::{Column, Limit, Qual, Row, Sort};
 use supabase_wrappers::prelude::*;
@@ -57,7 +57,8 @@ impl ForeignDataWrapper<QdrantFdwError> for QdrantFdw {
         options: &HashMap<String, String>,
     ) -> Result<(), QdrantFdwError> {
         let collection_name = require_option("collection_name", options)?;
-        let _response = self.qdrant_client.fetch_collection(collection_name)?;
+        let response = self.qdrant_client.fetch_points(collection_name)?;
+        notice!("Response is : {response:?}");
         Ok(())
     }
 

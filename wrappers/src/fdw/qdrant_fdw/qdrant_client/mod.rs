@@ -1,7 +1,7 @@
+use crate::fdw::qdrant_fdw::qdrant_client::points::{PointsRequestBuilder, ScrollPointsResponse};
 use http::{HeaderMap, HeaderName, HeaderValue};
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::PgSqlErrorCode;
-use reqwest::Response;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::policies::ExponentialBackoff;
 use reqwest_retry::RetryTransientMiddleware;
@@ -9,6 +9,8 @@ use supabase_wrappers::prelude::*;
 use thiserror::Error;
 use tokio::runtime::Runtime;
 use url::{ParseError, Url};
+
+mod points;
 
 pub(crate) struct QdrantClient {
     api_url: Url,
@@ -25,15 +27,18 @@ impl QdrantClient {
         })
     }
 
-    pub(crate) fn fetch_collection(
+    pub(crate) fn fetch_points(
         &self,
         collection_name: &str,
-    ) -> Result<Response, QdrantClientError> {
+    ) -> Result<ScrollPointsResponse, QdrantClientError> {
         let endpoint_url = Self::create_scroll_endpoint_url(&self.api_url, collection_name)?;
-        let response = self
-            .runtime
-            .block_on(self.client.get(endpoint_url).send())?;
-        Ok(response)
+        self.runtime.block_on(async {
+            let request = PointsRequestBuilder::new().fetch_vectors(true).build();
+            let response = self.client.post(endpoint_url).json(&request).send().await?;
+            let response = response.error_for_status()?;
+            let json_response = response.json::<ScrollPointsResponse>().await?;
+            Ok(json_response)
+        })
     }
 
     fn create_scroll_endpoint_url(
