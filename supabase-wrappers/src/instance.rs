@@ -1,8 +1,6 @@
 use crate::prelude::*;
-use pgrx::pg_sys::panic::{ErrorReport, ErrorReportable};
+use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::*;
-
-use super::utils;
 
 // create a fdw instance
 pub(super) unsafe fn create_fdw_instance<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
@@ -10,7 +8,7 @@ pub(super) unsafe fn create_fdw_instance<E: Into<ErrorReport>, W: ForeignDataWra
 ) -> W {
     let ftable = pg_sys::GetForeignTable(ftable_id);
     let fserver = pg_sys::GetForeignServer((*ftable).serverid);
-    let fserver_opts = utils::options_to_hashmap((*fserver).options);
+    let fserver_opts = options_to_hashmap((*fserver).options).report_unwrap();
     let wrapper = W::new(&fserver_opts);
-    wrapper.map_err(|e| e.into()).report()
+    wrapper.report_unwrap()
 }

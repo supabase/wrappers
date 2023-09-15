@@ -1,4 +1,4 @@
-use pgrx::pg_sys::panic::{ErrorReport, ErrorReportable};
+use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::{
     debug2, memcxt::PgMemoryContexts, pg_sys::Oid, prelude::*, rel::PgRelation,
     tupdesc::PgTupleDesc, FromDatum, PgSqlErrorCode,
@@ -81,12 +81,8 @@ pub(super) extern "C" fn add_foreign_update_targets(
     unsafe {
         // get rowid column name from table options
         let ftable = pg_sys::GetForeignTable((*target_relation).rd_id);
-        let opts = utils::options_to_hashmap((*ftable).options);
-        let rowid_name = if let Some(name) = require_option("rowid_column", &opts) {
-            name
-        } else {
-            return;
-        };
+        let opts = options_to_hashmap((*ftable).options).report_unwrap();
+        let rowid_name = require_option("rowid_column", &opts).report_unwrap();
 
         // find rowid attribute
         let tup_desc = PgTupleDesc::from_pg_copy((*target_relation).rd_att);
@@ -139,7 +135,7 @@ pub(super) extern "C" fn plan_foreign_modify<E: Into<ErrorReport>, W: ForeignDat
 
         // get rowid column name from table options
         let ftable = pg_sys::GetForeignTable(rel.oid());
-        let opts = utils::options_to_hashmap((*ftable).options);
+        let opts = options_to_hashmap((*ftable).options).report_unwrap();
         let rowid_name = opts.get("rowid_column");
         if rowid_name.is_none() {
             report_error(
@@ -208,7 +204,7 @@ pub(super) extern "C" fn begin_foreign_modify<E: Into<ErrorReport>, W: ForeignDa
         state.rowid_attno =
             pg_sys::ExecFindJunkAttributeInTlist((*subplan).targetlist, rowid_name_c);
 
-        state.begin_modify().map_err(|e| e.into()).report();
+        state.begin_modify().report_unwrap();
 
         (*rinfo).ri_FdwState = state.into_pg() as _;
     }
@@ -228,7 +224,7 @@ pub(super) extern "C" fn exec_foreign_insert<E: Into<ErrorReport>, W: ForeignDat
         );
 
         let row = utils::tuple_table_slot_to_row(slot);
-        state.insert(&row).map_err(|e| e.into()).report();
+        state.insert(&row).report_unwrap();
     }
 
     slot
@@ -258,7 +254,7 @@ pub(super) extern "C" fn exec_foreign_delete<E: Into<ErrorReport>, W: ForeignDat
 
         let cell = get_rowid_cell(&state, plan_slot);
         if let Some(rowid) = cell {
-            state.delete(&rowid).map_err(|e| e.into()).report();
+            state.delete(&rowid).report_unwrap();
         }
     }
 
@@ -292,10 +288,7 @@ pub(super) extern "C" fn exec_foreign_update<E: Into<ErrorReport>, W: ForeignDat
                 }) && state.rowid_name != col.as_str()
             });
 
-            state
-                .update(&rowid, &new_row)
-                .map_err(|e| e.into())
-                .report();
+            state.update(&rowid, &new_row).report_unwrap();
         }
     }
 
@@ -312,7 +305,7 @@ pub(super) extern "C" fn end_foreign_modify<E: Into<ErrorReport>, W: ForeignData
         let fdw_state = (*rinfo).ri_FdwState as *mut FdwModifyState<E, W>;
         if !fdw_state.is_null() {
             let mut state = PgBox::<FdwModifyState<E, W>>::from_pg(fdw_state);
-            state.end_modify().map_err(|e| e.into()).report();
+            state.end_modify().report_unwrap();
         }
     }
 }

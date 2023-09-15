@@ -223,11 +223,8 @@ impl FirebaseFdw {
                 // ref: https://firebase.google.com/docs/firestore/reference/rest/v1beta1/projects.databases.documents/listDocuments
                 let re = Regex::new(r"^firestore/(?P<collection>[^/]+)").unwrap();
                 if let Some(caps) = re.captures(obj) {
-                    let base_url = require_option_or(
-                        "base_url",
-                        options,
-                        Self::DEFAULT_FIRESTORE_BASE_URL.to_owned(),
-                    );
+                    let base_url =
+                        require_option_or("base_url", options, Self::DEFAULT_FIRESTORE_BASE_URL);
                     let collection = caps.name("collection").unwrap().as_str();
                     let mut ret = format!(
                         "{}/{}/databases/(default)/documents/{}?pageSize={}",
@@ -252,12 +249,15 @@ impl FirebaseFdw {
 enum FirebaseFdwError {
     #[error("{0}")]
     CreateRuntimeError(#[from] CreateRuntimeError),
+    #[error("{0}")]
+    OptionsError(#[from] OptionsError),
 }
 
 impl From<FirebaseFdwError> for ErrorReport {
     fn from(value: FirebaseFdwError) -> Self {
         match value {
             FirebaseFdwError::CreateRuntimeError(e) => e.into(),
+            FirebaseFdwError::OptionsError(e) => e.into(),
         }
     }
 }
@@ -266,14 +266,9 @@ impl ForeignDataWrapper<FirebaseFdwError> for FirebaseFdw {
     fn new(options: &HashMap<String, String>) -> Result<Self, FirebaseFdwError> {
         let mut ret = Self {
             rt: create_async_runtime()?,
-            project_id: "".to_string(),
+            project_id: require_option("project_id", options)?.to_string(),
             client: None,
             scan_result: None,
-        };
-
-        ret.project_id = match require_option("project_id", options) {
-            Some(project_id) => project_id,
-            None => return Ok(ret),
         };
 
         // get oauth2 access token if it is directly defined in options
@@ -284,10 +279,7 @@ impl ForeignDataWrapper<FirebaseFdwError> for FirebaseFdw {
             let sa_key = match options.get("sa_key") {
                 Some(sa_key) => sa_key.to_owned(),
                 None => {
-                    let sa_key_id = match require_option("sa_key_id", options) {
-                        Some(sa_key_id) => sa_key_id,
-                        None => return Ok(ret),
-                    };
+                    let sa_key_id = require_option("sa_key_id", options)?;
                     match get_vault_secret(&sa_key_id) {
                         Some(sa_key) => sa_key,
                         None => return Ok(ret),
@@ -330,10 +322,7 @@ impl ForeignDataWrapper<FirebaseFdwError> for FirebaseFdw {
         _limit: &Option<Limit>,
         options: &HashMap<String, String>,
     ) -> Result<(), FirebaseFdwError> {
-        let obj = match require_option("object", options) {
-            Some(obj) => obj,
-            None => return Ok(()),
-        };
+        let obj = require_option("object", options)?;
         let row_cnt_limit = options
             .get("limit")
             .map(|n| n.parse::<usize>().unwrap())
@@ -418,7 +407,7 @@ impl ForeignDataWrapper<FirebaseFdwError> for FirebaseFdw {
     ) -> Result<(), FirebaseFdwError> {
         if let Some(oid) = catalog {
             if oid == FOREIGN_TABLE_RELATION_ID {
-                check_options_contain(&options, "object");
+                check_options_contain(&options, "object")?;
             }
         }
 

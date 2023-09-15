@@ -6,7 +6,7 @@ use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::PgSqlErrorCode;
 use thiserror::Error;
 
-use supabase_wrappers::prelude::CreateRuntimeError;
+use supabase_wrappers::prelude::{CreateRuntimeError, OptionsError};
 
 #[derive(Error, Debug)]
 enum AirtableFdwError {
@@ -24,11 +24,18 @@ enum AirtableFdwError {
 
     #[error("request failed: {0}")]
     RequestError(#[from] reqwest_middleware::Error),
+
+    #[error("{0}")]
+    OptionsError(#[from] OptionsError),
 }
 
 impl From<AirtableFdwError> for ErrorReport {
     fn from(value: AirtableFdwError) -> Self {
-        ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, format!("{value}"), "")
+        match value {
+            AirtableFdwError::CreateRuntimeError(e) => e.into(),
+            AirtableFdwError::OptionsError(e) => e.into(),
+            _ => ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, format!("{value}"), ""),
+        }
     }
 }
 

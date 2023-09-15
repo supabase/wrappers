@@ -10,6 +10,7 @@ use std::collections::{HashMap, VecDeque};
 use std::env;
 use std::io::Cursor;
 use std::pin::Pin;
+use thiserror::Error;
 use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, BufReader};
 
 use super::parquet::*;
@@ -127,11 +128,17 @@ impl S3Fdw {
     }
 }
 
-enum S3FdwError {}
+#[derive(Error, Debug)]
+enum S3FdwError {
+    #[error("{0}")]
+    OptionsError(#[from] OptionsError),
+}
 
 impl From<S3FdwError> for ErrorReport {
-    fn from(_value: S3FdwError) -> Self {
-        ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, "", "")
+    fn from(value: S3FdwError) -> Self {
+        match value {
+            S3FdwError::OptionsError(e) => e.into(),
+        }
     }
 }
 
@@ -159,17 +166,18 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
             match options.get("vault_access_key_id") {
                 Some(vault_access_key_id) => {
                     // if using credentials stored in Vault
-                    require_option("vault_secret_access_key", options).and_then(
-                        |vault_secret_access_key| {
-                            get_vault_secret(vault_access_key_id)
-                                .zip(get_vault_secret(&vault_secret_access_key))
-                        },
-                    )
+                    let vault_secret_access_key =
+                        require_option("vault_secret_access_key", options)?;
+                    get_vault_secret(vault_access_key_id)
+                        .zip(get_vault_secret(&vault_secret_access_key))
                 }
                 None => {
                     // if using credentials directly specified
-                    require_option("aws_access_key_id", options)
-                        .zip(require_option("aws_secret_access_key", options))
+                    let aws_access_key_id =
+                        require_option("aws_access_key_id", options)?.to_string();
+                    let aws_secret_access_key =
+                        require_option("aws_secret_access_key", options)?.to_string();
+                    Some((aws_access_key_id, aws_secret_access_key))
                 }
             }
         };
@@ -221,7 +229,8 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
         options: &HashMap<String, String>,
     ) -> Result<(), S3FdwError> {
         // extract s3 bucket and object path from uri option
-        let (bucket, object) = if let Some(uri) = require_option("uri", options) {
+        let (bucket, object) = {
+            let uri = require_option("uri", options)?;
             match uri.parse::<Uri>() {
                 Ok(uri) => {
                     if uri.scheme_str() != Option::Some("s3")
@@ -245,8 +254,6 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
                     return Ok(());
                 }
             }
-        } else {
-            return Ok(());
         };
 
         let has_header: bool = options.get("has_header") == Some(&"true".to_string());
@@ -255,28 +262,23 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
 
         if let Some(client) = &self.client {
             // initialise parser according to format option
-            if let Some(format) = require_option("format", options) {
-                // create dummy parser
-                match format.as_str() {
-                    "csv" => {
-                        self.parser = Parser::Csv(csv::Reader::from_reader(Cursor::new(vec![0])))
-                    }
-                    "jsonl" => self.parser = Parser::JsonLine(VecDeque::new()),
-                    "parquet" => self.parser = Parser::Parquet(S3Parquet::default()),
-                    _ => {
-                        report_error(
-                            PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                            &format!(
-                                "invalid format option: {}, it can only be 'csv', 'jsonl' or 'parquet'",
-                                format
-                            ),
-                        );
-                        return Ok(());
-                    }
+            let format = require_option("format", options)?;
+            // create dummy parser
+            match format {
+                "csv" => self.parser = Parser::Csv(csv::Reader::from_reader(Cursor::new(vec![0]))),
+                "jsonl" => self.parser = Parser::JsonLine(VecDeque::new()),
+                "parquet" => self.parser = Parser::Parquet(S3Parquet::default()),
+                _ => {
+                    report_error(
+                        PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                        &format!(
+                            "invalid format option: {}, it can only be 'csv', 'jsonl' or 'parquet'",
+                            format
+                        ),
+                    );
+                    return Ok(());
                 }
-            } else {
-                return Ok(());
-            };
+            }
 
             let stream = match self
                 .rt
@@ -463,8 +465,8 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
     ) -> Result<(), S3FdwError> {
         if let Some(oid) = catalog {
             if oid == FOREIGN_TABLE_RELATION_ID {
-                check_options_contain(&options, "uri");
-                check_options_contain(&options, "format");
+                check_options_contain(&options, "uri")?;
+                check_options_contain(&options, "format")?;
             }
         }
 
