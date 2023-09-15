@@ -7,7 +7,6 @@ use std::collections::HashMap;
 use url::Url;
 
 use supabase_wrappers::prelude::*;
-use thiserror::Error;
 
 use super::result::AirtableResponse;
 use super::{AirtableFdwError, AirtableFdwResult};
