@@ -113,6 +113,28 @@ mod tests {
 
             c.update(
                 r#"
+                CREATE FOREIGN TABLE checkout_sessions (
+                  id text,
+                  customer text,
+                  payment_intent text,
+                  subscription text,
+                  attrs jsonb
+                )
+                SERVER my_stripe_server
+                OPTIONS (
+                  object 'checkout/sessions',
+                  rowid_column 'id'
+                )
+             "#,
+                None,
+                None,
+            )
+            .unwrap();
+
+             // TODO: Add coupons test setup
+
+            c.update(
+                r#"
                 CREATE FOREIGN TABLE stripe_customers (
                   id text,
                   email text,
@@ -242,6 +264,8 @@ mod tests {
             )
             .unwrap();
 
+            // TODO: Add mandates test setup 
+
             c.update(
                 r#"
                 CREATE FOREIGN TABLE stripe_payment_intents (
@@ -331,6 +355,8 @@ mod tests {
             )
             .unwrap();
 
+            // TODO: Add promotion_codes test setup
+
             c.update(
                 r#"
                 CREATE FOREIGN TABLE stripe_refunds (
@@ -401,6 +427,8 @@ mod tests {
             )
             .unwrap();
 
+            // TODO: Add shipping_rates test setup
+
             c.update(
                 r#"
                 CREATE FOREIGN TABLE stripe_subscriptions (
@@ -421,6 +449,12 @@ mod tests {
                 None,
             )
             .unwrap();
+
+            // TODO: Add tax_codes test setup
+
+            // TODO: Add tax_rates test setup
+
+            // TODO: Check why there is no tokens test setup
 
             c.update(
                 r#"
@@ -457,26 +491,6 @@ mod tests {
                 SERVER my_stripe_server
                 OPTIONS (
                   object 'transfers'    -- source object in stripe, required
-                )
-             "#,
-                None,
-                None,
-            )
-            .unwrap();
-
-            c.update(
-                r#"
-                CREATE FOREIGN TABLE checkout_sessions (
-                  id text,
-                  customer text,
-                  payment_intent text,
-                  subscription text,
-                  attrs jsonb
-                )
-                SERVER my_stripe_server
-                OPTIONS (
-                  object 'checkout/sessions',
-                  rowid_column 'id'
                 )
              "#,
                 None,
@@ -544,6 +558,22 @@ mod tests {
                 .collect::<Vec<_>>();
             assert_eq!(results, vec![(((100, "usd"), "succeeded"))]);
 
+            // TODO: Add coupons test
+
+            let results = c
+                .select(
+                    "SELECT attrs->>'id' as id FROM checkout_sessions",
+                    None,
+                    None,
+                )
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("id").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(
+                results,
+                vec!["cs_test_a1DmlfbOPqmbKHfpwpFQ0RM3pVXmKoESZbJxnKrPdMsLDPPMGYtEBcHGPR"]
+            );
+
             let results = c
                 .select("SELECT * FROM stripe_customers", None, None)
                 .unwrap()
@@ -571,20 +601,6 @@ mod tests {
                 .filter_map(|r| r.get_by_name::<&str, _>("id").unwrap())
                 .collect::<Vec<_>>();
             assert_eq!(results, vec!["cus_MJiBgSUgeWFN0z"]);
-
-            let results = c
-                .select(
-                    "SELECT attrs->>'id' as id FROM checkout_sessions",
-                    None,
-                    None,
-                )
-                .unwrap()
-                .filter_map(|r| r.get_by_name::<&str, _>("id").unwrap())
-                .collect::<Vec<_>>();
-            assert_eq!(
-                results,
-                vec!["cs_test_a1DmlfbOPqmbKHfpwpFQ0RM3pVXmKoESZbJxnKrPdMsLDPPMGYtEBcHGPR"]
-            );
 
             // Stripe mock service cannot return 404 error code correctly for
             // non-exists customer, so we have to disable this test case.
@@ -690,6 +706,8 @@ mod tests {
                 vec![((("cus_MJiBgSUgeWFN0z", 1000), "usd"), "draft")]
             );
 
+            // TODO: Add mandates test
+
             let results = c
                 .select("SELECT * FROM stripe_payment_intents", None, None)
                 .unwrap()
@@ -755,6 +773,8 @@ mod tests {
                 vec![(("T-shirt", true), "Comfortable gray cotton t-shirt")]
             );
 
+            // TODO: Add promotion_codes test
+
             let results = c
                 .select("SELECT * FROM stripe_refunds", None, None)
                 .unwrap()
@@ -806,6 +826,8 @@ mod tests {
                 )]
             );
 
+            // TODO: Add shipping_rates test
+
             let results = c
                 .select("SELECT * FROM stripe_subscriptions", None, None)
                 .unwrap()
@@ -830,6 +852,12 @@ mod tests {
                     Timestamp::try_from(287883090000000i64).unwrap()
                 )]
             );
+
+            // TODO: Add tax_codes test
+
+            // TODO: Add tax_rates test
+
+            // TODO: Check why there is no tokens test
 
             let results = c
                 .select("SELECT * FROM stripe_topups", None, None)
