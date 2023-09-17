@@ -19,7 +19,7 @@ pg_test = []
 helloworld_fdw = []
 bigquery_fdw = ["gcp-bigquery-client", "serde_json", "serde", "wiremock", "futures", "yup-oauth2", "thiserror"]
 clickhouse_fdw = ["clickhouse-rs", "chrono", "chrono-tz", "regex", "thiserror"]
-stripe_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "thiserror"]
+stripe_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "thiserror", "url"]
 firebase_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "yup-oauth2", "regex", "thiserror"]
 s3_fdw = [
     "reqwest", "reqwest-middleware", "reqwest-retry", "aws-config", "aws-sdk-s3",
@@ -58,7 +58,7 @@ reqwest-retry = { version = "0.2.2", optional = true }
 yup-oauth2 = { version = "8.0.0", optional = true }
 regex = { version = "1", optional = true }
 
-# for airtable_fdw
+# for airtable_fdw, stripe_fdw
 url = { version = "2.3", optional = true }
 
 # for s3_fdw
