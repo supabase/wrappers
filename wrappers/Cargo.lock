@@ -4243,6 +4243,8 @@ dependencies = [
  "async-compression",
  "aws-config",
  "aws-sdk-s3",
+ "aws-smithy-http",
+ "aws-smithy-runtime-api",
  "chrono",
  "chrono-tz",
  "clickhouse-rs",
