@@ -22,7 +22,7 @@ clickhouse_fdw = ["clickhouse-rs", "chrono", "chrono-tz", "regex", "thiserror"]
 stripe_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "thiserror", "url"]
 firebase_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "yup-oauth2", "regex", "thiserror"]
 s3_fdw = [
-    "reqwest", "reqwest-middleware", "reqwest-retry", "aws-config", "aws-sdk-s3",
+    "reqwest", "reqwest-middleware", "reqwest-retry", "aws-config", "aws-sdk-s3", "aws-smithy-http", "aws-smithy-runtime-api",
     "tokio", "tokio-util", "csv", "async-compression", "serde_json",
     "http", "parquet", "futures", "arrow-array", "chrono", "thiserror"
 ]
@@ -64,6 +64,8 @@ url = { version = "2.3", optional = true }
 # for s3_fdw
 aws-config = { version = "0.56.1", optional = true }
 aws-sdk-s3 = { version = "0.30.0", optional = true }
+aws-smithy-http = { version = "0.56.1", optional = true }
+aws-smithy-runtime-api = { version = "0.56.1", optional = true }
 csv = { version = "1.2", optional = true }
 tokio = { version = "1", features = ["full"], optional = true }
 tokio-util = { version = "0.7", optional = true }
