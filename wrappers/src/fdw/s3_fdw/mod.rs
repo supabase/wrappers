@@ -29,6 +29,9 @@ enum S3FdwError {
     #[error("read csv record failed: {0}")]
     ReadCsvError(#[from] csv::Error),
 
+    #[error("read jsonl record failed: {0}")]
+    ReadJsonlError(String),
+
     #[error("read parquet failed: {0}")]
     ReadParquetError(#[from] ::parquet::errors::ParquetError),
 

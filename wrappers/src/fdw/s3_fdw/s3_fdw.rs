@@ -97,7 +97,11 @@ impl S3Fdw {
                     .join(",");
                 let json_str = format!("{{ \"rows\": [{}] }}", s.trim_end_matches(','));
                 let rows = serde_json::from_str::<JsonValue>(&json_str)?;
-                *records = VecDeque::from(rows.get("rows").unwrap().as_array().unwrap().to_vec());
+                let rows = rows
+                    .get("rows")
+                    .and_then(|arr| arr.as_array())
+                    .ok_or(S3FdwError::ReadJsonlError(json_str))?;
+                *records = VecDeque::from(rows.to_vec());
             }
             _ => unreachable!(),
         }
@@ -108,7 +112,8 @@ impl S3Fdw {
 
 impl ForeignDataWrapper<S3FdwError> for S3Fdw {
     fn new(options: &HashMap<String, String>) -> S3FdwResult<Self> {
-        let rt = tokio::runtime::Runtime::new().unwrap();
+        let rt = tokio::runtime::Runtime::new()
+            .map_err(CreateRuntimeError::FailedToCreateAsyncRuntime)?;
         let mut ret = S3Fdw {
             rt,
             client: None,
