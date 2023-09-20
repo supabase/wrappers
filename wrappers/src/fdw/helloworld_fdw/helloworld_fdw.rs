@@ -66,7 +66,8 @@ impl ForeignDataWrapper<HelloWorldFdwError> for HelloWorldFdw {
         Ok(())
     }
 
-    fn iter_scan(&mut self, row: &mut Row) -> HelloWorldFdwResult<Option<()>> {
+    fn iter_scan(&mut self) -> HelloWorldFdwResult<Option<Row>> {
+        let mut row = Row::new();
         // this is called on each row and we only return one row here
         if self.row_cnt < 1 {
             // add values to row if they are in target column list
@@ -81,7 +82,7 @@ impl ForeignDataWrapper<HelloWorldFdwError> for HelloWorldFdw {
             self.row_cnt += 1;
 
             // return Some(()) to Postgres and continue data scan
-            return Ok(Some(()));
+            return Ok(Some(row));
         }
 
         // return 'None' to stop data scan

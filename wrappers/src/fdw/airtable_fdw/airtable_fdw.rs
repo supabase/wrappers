@@ -7,7 +7,6 @@ use std::collections::HashMap;
 use url::Url;
 
 use supabase_wrappers::prelude::*;
-use thiserror::Error;
 
 use super::result::AirtableResponse;
 use super::{AirtableFdwError, AirtableFdwResult};
@@ -164,13 +163,10 @@ impl ForeignDataWrapper<AirtableFdwError> for AirtableFdw {
         Ok(())
     }
 
-    fn iter_scan(&mut self, row: &mut Row) -> AirtableFdwResult<Option<()>> {
+    fn iter_scan(&mut self) -> AirtableFdwResult<Option<Row>> {
         if let Some(ref mut result) = self.scan_result {
             if !result.is_empty() {
-                return Ok(result
-                    .drain(0..1)
-                    .last()
-                    .map(|src_row| row.replace_with(src_row)));
+                return Ok(result.drain(0..1).last());
             }
         }
         Ok(None)

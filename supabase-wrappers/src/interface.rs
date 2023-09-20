@@ -13,7 +13,6 @@ use std::collections::HashMap;
 use std::ffi::CStr;
 use std::fmt;
 use std::iter::Zip;
-use std::mem;
 use std::slice::Iter;
 
 // fdw system catalog oids
@@ -229,12 +228,6 @@ impl Row {
         self.cols.retain(|_| *iter.next().unwrap());
         iter = keep.iter();
         self.cells.retain(|_| *iter.next().unwrap());
-    }
-
-    /// Replace `self` with the source row
-    #[inline]
-    pub fn replace_with(&mut self, src: Row) {
-        let _ = mem::replace(self, src);
     }
 
     /// Clear the row, removing all column names and cells
@@ -517,7 +510,7 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     /// FDW must save fetched foreign data into the [`Row`], or return `None` if no more rows to read.
     ///
     /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-SCAN).
-    fn iter_scan(&mut self, row: &mut Row) -> Result<Option<()>, E>;
+    fn iter_scan(&mut self) -> Result<Option<Row>, E>;
 
     /// Called when restart the scan from the beginning.
     ///

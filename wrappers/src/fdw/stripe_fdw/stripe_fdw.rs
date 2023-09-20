@@ -730,13 +730,10 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
         Ok(())
     }
 
-    fn iter_scan(&mut self, row: &mut Row) -> StripeFdwResult<Option<()>> {
+    fn iter_scan(&mut self) -> StripeFdwResult<Option<Row>> {
         if let Some(ref mut result) = self.scan_result {
             if !result.is_empty() {
-                return Ok(result
-                    .drain(0..1)
-                    .last()
-                    .map(|src_row| row.replace_with(src_row)));
+                return Ok(result.drain(0..1).last());
             }
         }
         Ok(None)

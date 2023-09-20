@@ -276,15 +276,11 @@ impl ForeignDataWrapper<LogflareFdwError> for LogflareFdw {
         Ok(())
     }
 
-    fn iter_scan(&mut self, row: &mut Row) -> LogflareFdwResult<Option<()>> {
+    fn iter_scan(&mut self) -> LogflareFdwResult<Option<Row>> {
         if self.scan_result.is_empty() {
             Ok(None)
         } else {
-            Ok(self
-                .scan_result
-                .drain(0..1)
-                .last()
-                .map(|src_row| row.replace_with(src_row)))
+            Ok(self.scan_result.drain(0..1).last())
         }
     }
 
