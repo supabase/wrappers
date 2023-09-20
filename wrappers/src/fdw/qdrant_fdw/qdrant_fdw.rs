@@ -1,6 +1,6 @@
 use crate::fdw::qdrant_fdw::qdrant_client::{QdrantClient, QdrantClientError};
 use pgrx::pg_sys::panic::ErrorReport;
-use pgrx::{pg_sys, PgSqlErrorCode};
+use pgrx::{pg_sys, PgBuiltInOids, PgSqlErrorCode};
 use std::collections::{HashMap, VecDeque};
 use supabase_wrappers::interface::{Column, Limit, Qual, Row, Sort};
 use supabase_wrappers::prelude::*;
@@ -27,8 +27,25 @@ impl QdrantFdw {
                     "Only columns named `id`, `payload`, or `vector` are allowed.".to_string(),
                 ));
             }
-            //TODO: validate types
+
+            if column.name == "id" && column.type_oid != PgBuiltInOids::INT8OID.into() {
+                return Err(QdrantFdwError::QdrantColumnsError(
+                    "Column `id` can only be defined as `bigint`".to_string(),
+                ));
+            } else if column.name == "payload" && column.type_oid != PgBuiltInOids::JSONBOID.into()
+            {
+                return Err(QdrantFdwError::QdrantColumnsError(
+                    "Column `payload` can only be defined as `jsonb`".to_string(),
+                ));
+            } else if column.name == "vector"
+                && column.type_oid != PgBuiltInOids::FLOAT4ARRAYOID.into()
+            {
+                return Err(QdrantFdwError::QdrantColumnsError(
+                    "Column `vector` can only be defined as `real[]`".to_string(),
+                ));
+            }
         }
+
         Ok(())
     }
 }
