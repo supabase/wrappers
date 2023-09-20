@@ -5,7 +5,7 @@ use supabase_wrappers::prelude::*;
 
 // A simple demo FDW
 #[wrappers_fdw(
-    version = "0.1.0",
+    version = "0.1.1",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/helloworld_fdw",
     error_type = "HelloWorldFdwError"
@@ -14,7 +14,7 @@ pub(crate) struct HelloWorldFdw {
     // row counter
     row_cnt: i64,
 
-    // target column name list
+    // target column list
     tgt_cols: Vec<Column>,
 }
 
@@ -25,6 +25,8 @@ impl From<HelloWorldFdwError> for ErrorReport {
         ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, "", "")
     }
 }
+
+type HelloWorldFdwResult<T> = Result<T, HelloWorldFdwError>;
 
 impl ForeignDataWrapper<HelloWorldFdwError> for HelloWorldFdw {
     // 'options' is the key-value pairs defined in `CREATE SERVER` SQL, for example,
@@ -40,7 +42,7 @@ impl ForeignDataWrapper<HelloWorldFdwError> for HelloWorldFdw {
     // You can do any initalization in this new() function, like saving connection
     // info or API url in an variable, but don't do any heavy works like making a
     // database connection or API call.
-    fn new(_options: &HashMap<String, String>) -> Result<Self, HelloWorldFdwError> {
+    fn new(_options: &HashMap<String, String>) -> HelloWorldFdwResult<Self> {
         Ok(Self {
             row_cnt: 0,
             tgt_cols: Vec::new(),
@@ -54,7 +56,7 @@ impl ForeignDataWrapper<HelloWorldFdwError> for HelloWorldFdw {
         _sorts: &[Sort],
         _limit: &Option<Limit>,
         _options: &HashMap<String, String>,
-    ) -> Result<(), HelloWorldFdwError> {
+    ) -> HelloWorldFdwResult<()> {
         // reset row counter
         self.row_cnt = 0;
 
@@ -64,7 +66,7 @@ impl ForeignDataWrapper<HelloWorldFdwError> for HelloWorldFdw {
         Ok(())
     }
 
-    fn iter_scan(&mut self, row: &mut Row) -> Result<Option<()>, HelloWorldFdwError> {
+    fn iter_scan(&mut self, row: &mut Row) -> HelloWorldFdwResult<Option<()>> {
         // this is called on each row and we only return one row here
         if self.row_cnt < 1 {
             // add values to row if they are in target column list
@@ -86,7 +88,7 @@ impl ForeignDataWrapper<HelloWorldFdwError> for HelloWorldFdw {
         Ok(None)
     }
 
-    fn end_scan(&mut self) -> Result<(), HelloWorldFdwError> {
+    fn end_scan(&mut self) -> HelloWorldFdwResult<()> {
         // we do nothing here, but you can do things like resource cleanup and etc.
         Ok(())
     }

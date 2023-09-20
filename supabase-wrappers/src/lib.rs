@@ -66,7 +66,7 @@
 //! use pgrx::PgSqlErrorCode;
 //! use supabase_wrappers::prelude::*;
 //! #[wrappers_fdw(
-//!    version = "0.1.0",
+//!    version = "0.1.1",
 //!    author = "Supabase",
 //!    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/helloworld_fdw",
 //!    error_type = "HelloWorldFdwError"
@@ -75,7 +75,7 @@
 //!     //row counter
 //!     row_cnt: i64,
 //!
-//!     // target column name list
+//!     // target column list
 //!     tgt_cols: Vec<Column>,
 //! }
 //!
@@ -87,8 +87,10 @@
 //!     }
 //! }
 //!
+//! type HelloWorldFdwResult<T> = Result<T, HelloWorldFdwError>;
+//!
 //! impl ForeignDataWrapper<HelloWorldFdwError> for HelloWorldFdw {
-//!     fn new(options: &HashMap<String, String>) -> Result<Self, HelloWorldFdwError> {
+//!     fn new(options: &HashMap<String, String>) -> HelloWorldFdwResult<Self> {
 //!         // 'options' is the key-value pairs defined in `CREATE SERVER` SQL, for example,
 //!         //
 //!         // create server my_helloworld_server
@@ -108,17 +110,17 @@
 //!         })
 //!     }
 //!
-//!     fn begin_scan(&mut self, quals: &[Qual], columns: &[Column], sorts: &[Sort], limit: &Option<Limit>, options: &HashMap<String, String>) -> Result<(), HelloWorldFdwError> {
+//!     fn begin_scan(&mut self, quals: &[Qual], columns: &[Column], sorts: &[Sort], limit: &Option<Limit>, options: &HashMap<String, String>) -> HelloWorldFdwResult<()> {
 //!         // Do any initilization
 //!         Ok(())
 //!     }
 //!
-//!     fn iter_scan(&mut self, row: &mut Row) -> Result<Option<()>, HelloWorldFdwError> {
+//!     fn iter_scan(&mut self, row: &mut Row) -> HelloWorldFdwResult<Option<()>> {
 //!         // Return None when done
 //!         Ok(None)
 //!     }
 //!
-//!     fn end_scan(&mut self) -> Result<(), HelloWorldFdwError> {
+//!     fn end_scan(&mut self) -> HelloWorldFdwResult<()> {
 //!         // Cleanup any resources
 //!         Ok(())
 //!     }
