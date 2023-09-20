@@ -1,11 +1,13 @@
+use crate::fdw::qdrant_fdw::qdrant_client::points::PointsResponseError::{ApiError, MissingResult};
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 #[derive(Debug, Serialize, PartialEq)]
 pub(crate) struct PointsRequest {
     limit: Option<u64>,
     offset: Option<u64>,
     with_payload: Option<bool>,
-    with_vectors: Option<bool>,
+    with_vector: Option<bool>,
 }
 
 pub(crate) struct PointsRequestBuilder {
@@ -19,7 +21,7 @@ impl PointsRequestBuilder {
                 limit: None,
                 offset: None,
                 with_payload: Some(false),
-                with_vectors: Some(false),
+                with_vector: Some(false),
             },
         }
     }
@@ -39,8 +41,8 @@ impl PointsRequestBuilder {
         self
     }
 
-    pub(crate) fn fetch_vectors(mut self, fetch: bool) -> Self {
-        self.request.with_vectors = Some(fetch);
+    pub(crate) fn fetch_vector(mut self, fetch: bool) -> Self {
+        self.request.with_vector = Some(fetch);
         self
     }
 
@@ -51,9 +53,9 @@ impl PointsRequestBuilder {
 
 #[derive(Debug, Deserialize, PartialEq)]
 pub(crate) struct Point {
-    id: u64,
-    payload: Option<serde_json::Value>,
-    vector: Option<Vec<f64>>,
+    pub(crate) id: i64,
+    pub(crate) payload: Option<serde_json::Value>,
+    pub(crate) vector: Option<Vec<f64>>,
 }
 
 #[derive(Debug, Deserialize, PartialEq)]
@@ -70,18 +72,41 @@ pub(crate) struct Success {
 }
 
 #[derive(Debug, Deserialize, PartialEq)]
-pub(crate) struct ScrollPointsResponse {
+pub(crate) struct PointsResponse {
     error: Option<String>,
     status: Option<String>,
     result: Option<ResultPayload>,
     time: Option<f64>,
 }
 
+#[derive(Error, Debug)]
+pub(crate) enum PointsResponseError {
+    #[error("api response error: {0}")]
+    ApiError(String),
+
+    #[error("{0}")]
+    MissingResult(String),
+}
+
+impl PointsResponse {
+    pub(crate) fn get_points(self) -> Result<Vec<Point>, PointsResponseError> {
+        if let Some(e) = self.error {
+            return Err(ApiError(e));
+        }
+
+        let Some(result) = self.result else {
+            return Err(MissingResult(
+                "`result` key missing in response".to_string(),
+            ));
+        };
+
+        Ok(result.points)
+    }
+}
+
 #[cfg(test)]
 mod test {
-    use crate::fdw::qdrant_fdw::qdrant_client::points::{
-        Point, ResultPayload, ScrollPointsResponse,
-    };
+    use crate::fdw::qdrant_fdw::qdrant_client::points::{Point, PointsResponse, ResultPayload};
     use serde_json::json;
 
     #[test]
@@ -91,10 +116,10 @@ mod test {
           "error": "Not found: Collection `test_collection1` doesn't exist!"
         }
         "#;
-        let response: ScrollPointsResponse = serde_json::from_str(response_str).unwrap();
+        let response: PointsResponse = serde_json::from_str(response_str).unwrap();
         assert_eq!(
             response,
-            ScrollPointsResponse {
+            PointsResponse {
                 error: Some("Not found: Collection `test_collection1` doesn't exist!".to_string()),
                 status: None,
                 result: None,
@@ -140,10 +165,10 @@ mod test {
           "time": 0.001017542
         }        
         "#;
-        let response: ScrollPointsResponse = serde_json::from_str(response_str).unwrap();
+        let response: PointsResponse = serde_json::from_str(response_str).unwrap();
         assert_eq!(
             response,
-            ScrollPointsResponse {
+            PointsResponse {
                 error: None,
                 status: Some("ok".to_string()),
                 result: Some(ResultPayload {

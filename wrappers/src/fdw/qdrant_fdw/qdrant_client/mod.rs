@@ -1,4 +1,6 @@
-use crate::fdw::qdrant_fdw::qdrant_client::points::{PointsRequestBuilder, ScrollPointsResponse};
+use crate::fdw::qdrant_fdw::qdrant_client::points::{
+    Point, PointsRequestBuilder, PointsResponse, PointsResponseError,
+};
 use http::{HeaderMap, HeaderName, HeaderValue};
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::PgSqlErrorCode;
@@ -10,7 +12,7 @@ use thiserror::Error;
 use tokio::runtime::Runtime;
 use url::{ParseError, Url};
 
-mod points;
+pub(crate) mod points;
 
 pub(crate) struct QdrantClient {
     api_url: Url,
@@ -30,18 +32,24 @@ impl QdrantClient {
     pub(crate) fn fetch_points(
         &self,
         collection_name: &str,
-    ) -> Result<ScrollPointsResponse, QdrantClientError> {
-        let endpoint_url = Self::create_scroll_endpoint_url(&self.api_url, collection_name)?;
+        fetch_payload: bool,
+        fetch_vector: bool,
+    ) -> Result<Vec<Point>, QdrantClientError> {
+        let endpoint_url = Self::create_points_endpoint_url(&self.api_url, collection_name)?;
         self.runtime.block_on(async {
-            let request = PointsRequestBuilder::new().fetch_vectors(true).build();
+            let request = PointsRequestBuilder::new()
+                .fetch_payload(fetch_payload)
+                .fetch_vector(fetch_vector)
+                .build();
             let response = self.client.post(endpoint_url).json(&request).send().await?;
             let response = response.error_for_status()?;
-            let json_response = response.json::<ScrollPointsResponse>().await?;
-            Ok(json_response)
+            let points_response = response.json::<PointsResponse>().await?;
+            let points = points_response.get_points()?;
+            Ok(points)
         })
     }
 
-    fn create_scroll_endpoint_url(
+    fn create_points_endpoint_url(
         api_url: &Url,
         collection_name: &str,
     ) -> Result<Url, QdrantClientError> {
@@ -86,13 +94,22 @@ pub(crate) enum QdrantClientError {
 
     #[error("reqwest middleware error: {0}")]
     ReqwestMiddlewareError(#[from] reqwest_middleware::Error),
+
+    #[error("{0}")]
+    PointsResponseError(#[from] PointsResponseError),
 }
 
 impl From<QdrantClientError> for ErrorReport {
     fn from(value: QdrantClientError) -> Self {
         match value {
             QdrantClientError::CreateRuntimeError(e) => e.into(),
-            _ => ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, format!("{value}"), ""),
+            QdrantClientError::UrlParseError(_)
+            | QdrantClientError::InvalidApiKeyHeader
+            | QdrantClientError::ReqwestError(_)
+            | QdrantClientError::ReqwestMiddlewareError(_)
+            | QdrantClientError::PointsResponseError(_) => {
+                ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, format!("{value}"), "")
+            }
         }
     }
 }
