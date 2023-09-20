@@ -1,13 +1,11 @@
 use crate::fdw::qdrant_fdw::qdrant_client::points::Point;
-use pgrx::{notice, JsonB};
+use pgrx::JsonB;
 use supabase_wrappers::prelude::{Cell, Column, Row};
-use thiserror::Error;
 
 impl Point {
     pub(crate) fn into_row(mut self, columns: &[Column]) -> Row {
         let mut row = Row::new();
         for column in columns {
-            notice!("Column: {}", column.name);
             if column.name == "id" {
                 row.push("id", Some(Cell::I64(self.id)));
             } else if column.name == "payload" {
