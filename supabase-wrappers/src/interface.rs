@@ -188,6 +188,9 @@ impl FromDatum for Cell {
             PgOid::BuiltIn(PgBuiltInOids::JSONBOID) => {
                 Some(Cell::Json(JsonB::from_datum(datum, false).unwrap()))
             }
+            PgOid::BuiltIn(PgBuiltInOids::FLOAT4ARRAYOID) => Some(Cell::RealsArray(
+                Vec::<f32>::from_datum(datum, false).unwrap(),
+            )),
             _ => None,
         }
     }
