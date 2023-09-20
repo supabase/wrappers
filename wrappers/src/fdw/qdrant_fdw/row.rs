@@ -19,8 +19,7 @@ impl Point {
                     .vector
                     .take()
                     .expect("Column `vector` missing in response");
-                let slice: Vec<String> = vector.iter().map(|v| v.to_string()).collect();
-                row.push("vector", Some(Cell::String(slice.join(", "))));
+                row.push("vector", Some(Cell::RealsArray(vector)));
             }
         }
         row

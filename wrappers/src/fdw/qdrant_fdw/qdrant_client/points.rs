@@ -55,7 +55,7 @@ impl PointsRequestBuilder {
 pub(crate) struct Point {
     pub(crate) id: i64,
     pub(crate) payload: Option<serde_json::Value>,
-    pub(crate) vector: Option<Vec<f64>>,
+    pub(crate) vector: Option<Vec<f32>>,
 }
 
 #[derive(Debug, Deserialize, PartialEq)]

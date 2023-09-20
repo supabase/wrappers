@@ -45,6 +45,7 @@ pub enum Cell {
     Date(Date),
     Timestamp(Timestamp),
     Json(JsonB),
+    RealsArray(Vec<f32>),
 }
 
 impl Clone for Cell {
@@ -62,6 +63,7 @@ impl Clone for Cell {
             Cell::Date(v) => Cell::Date(*v),
             Cell::Timestamp(v) => Cell::Timestamp(*v),
             Cell::Json(v) => Cell::Json(JsonB(v.0.clone())),
+            Cell::RealsArray(v) => Cell::RealsArray(v.clone()),
         }
     }
 }
@@ -95,6 +97,7 @@ impl fmt::Display for Cell {
                 write!(f, "'{}'", ts_cstr.to_str().unwrap())
             },
             Cell::Json(v) => write!(f, "{:?}", v),
+            Cell::RealsArray(v) => write!(f, "{:?}", v.as_slice()),
         }
     }
 }
@@ -114,6 +117,7 @@ impl IntoDatum for Cell {
             Cell::Date(v) => v.into_datum(),
             Cell::Timestamp(v) => v.into_datum(),
             Cell::Json(v) => v.into_datum(),
+            Cell::RealsArray(v) => v.into_datum(),
         }
     }
 
