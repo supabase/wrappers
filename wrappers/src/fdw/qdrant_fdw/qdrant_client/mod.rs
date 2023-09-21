@@ -13,6 +13,7 @@ use tokio::runtime::Runtime;
 use url::{ParseError, Url};
 
 pub(crate) mod points;
+mod row;
 
 pub(crate) struct QdrantClient {
     api_url: Url,

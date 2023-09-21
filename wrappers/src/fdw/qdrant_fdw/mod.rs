@@ -2,4 +2,3 @@
 
 mod qdrant_client;
 mod qdrant_fdw;
-mod row;
