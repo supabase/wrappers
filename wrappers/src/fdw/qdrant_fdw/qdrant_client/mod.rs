@@ -1,5 +1,5 @@
 use crate::fdw::qdrant_fdw::qdrant_client::points::{
-    Point, PointsRequestBuilder, PointsResponse, PointsResponseError,
+    PointsRequestBuilder, PointsResponse, PointsResponseError, ResultPayload,
 };
 use http::{HeaderMap, HeaderName, HeaderValue};
 use pgrx::pg_sys::panic::ErrorReport;
@@ -14,6 +14,7 @@ use url::{ParseError, Url};
 
 pub(crate) mod points;
 mod row;
+pub(crate) mod rows_iterator;
 
 pub(crate) struct QdrantClient {
     api_url: Url,
@@ -35,17 +36,21 @@ impl QdrantClient {
         collection_name: &str,
         fetch_payload: bool,
         fetch_vector: bool,
-    ) -> Result<Vec<Point>, QdrantClientError> {
+        limit: Option<u64>,
+        offset: Option<u64>,
+    ) -> Result<ResultPayload, QdrantClientError> {
         let endpoint_url = Self::create_points_endpoint_url(&self.api_url, collection_name)?;
         self.runtime.block_on(async {
             let request = PointsRequestBuilder::new()
                 .fetch_payload(fetch_payload)
                 .fetch_vector(fetch_vector)
+                .limit(limit)
+                .offset(offset)
                 .build();
             let response = self.client.post(endpoint_url).json(&request).send().await?;
             let response = response.error_for_status()?;
             let points_response = response.json::<PointsResponse>().await?;
-            let points = points_response.get_points()?;
+            let points = points_response.get_points_result()?;
             Ok(points)
         })
     }

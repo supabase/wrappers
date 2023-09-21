@@ -60,8 +60,8 @@ pub(crate) struct Point {
 
 #[derive(Debug, Deserialize, PartialEq)]
 pub(crate) struct ResultPayload {
-    points: Vec<Point>,
-    next_page_offset: Option<u64>,
+    pub(crate) points: Vec<Point>,
+    pub(crate) next_page_offset: Option<u64>,
 }
 
 #[derive(Debug, Deserialize, PartialEq)]
@@ -89,7 +89,7 @@ pub(crate) enum PointsResponseError {
 }
 
 impl PointsResponse {
-    pub(crate) fn get_points(self) -> Result<Vec<Point>, PointsResponseError> {
+    pub(crate) fn get_points_result(self) -> Result<ResultPayload, PointsResponseError> {
         if let Some(e) = self.error {
             return Err(ApiError(e));
         }
@@ -100,7 +100,7 @@ impl PointsResponse {
             ));
         };
 
-        Ok(result.points)
+        Ok(result)
     }
 }
 

@@ -1,7 +1,8 @@
+use crate::fdw::qdrant_fdw::qdrant_client::rows_iterator::RowsIterator;
 use crate::fdw::qdrant_fdw::qdrant_client::{QdrantClient, QdrantClientError};
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::{pg_sys, PgBuiltInOids, PgSqlErrorCode};
-use std::collections::{HashMap, VecDeque};
+use std::collections::HashMap;
 use supabase_wrappers::interface::{Column, Limit, Qual, Row, Sort};
 use supabase_wrappers::prelude::*;
 use supabase_wrappers::wrappers_fdw;
@@ -14,8 +15,9 @@ use thiserror::Error;
     error_type = "QdrantFdwError"
 )]
 pub(crate) struct QdrantFdw {
-    qdrant_client: QdrantClient,
-    rows: VecDeque<Row>,
+    api_url: String,
+    api_key: String,
+    rows_iterator: Option<RowsIterator>,
 }
 
 impl QdrantFdw {
@@ -79,12 +81,12 @@ impl ForeignDataWrapper<QdrantFdwError> for QdrantFdw {
     where
         Self: Sized,
     {
-        let api_url = require_option("api_url", options)?;
-        let api_key = require_option("api_key", options)?;
-
+        let api_url = require_option("api_url", options)?.to_string();
+        let api_key = require_option("api_key", options)?.to_string();
         Ok(Self {
-            qdrant_client: QdrantClient::new(api_url, api_key)?,
-            rows: VecDeque::with_capacity(0),
+            api_url,
+            api_key,
+            rows_iterator: None,
         })
     }
 
@@ -98,18 +100,25 @@ impl ForeignDataWrapper<QdrantFdwError> for QdrantFdw {
     ) -> Result<(), QdrantFdwError> {
         Self::validate_columns(columns)?;
         let collection_name = require_option("collection_name", options)?;
-        let has_payload_col = columns.iter().any(|col| col.name == "payload");
-        let has_vector_col = columns.iter().any(|col| col.name == "vector");
-        let points =
-            self.qdrant_client
-                .fetch_points(collection_name, has_payload_col, has_vector_col)?;
-        self.rows = points.into_iter().map(|p| p.into_row(columns)).collect();
+
+        let qdrant_client = QdrantClient::new(&self.api_url, &self.api_key)?;
+        self.rows_iterator = Some(RowsIterator::new(
+            collection_name.to_string(),
+            columns.to_vec(),
+            1000,
+            qdrant_client,
+        ));
         Ok(())
     }
 
     fn iter_scan(&mut self, row: &mut Row) -> Result<Option<()>, QdrantFdwError> {
-        if let Some(r) = self.rows.pop_front() {
-            row.replace_with(r);
+        let rows_iterator = self
+            .rows_iterator
+            .as_mut()
+            .expect("Can't be None as rows_iterator is initialized in begin_scan");
+        if let Some(new_row_result) = rows_iterator.next() {
+            let new_row = new_row_result?;
+            row.replace_with(new_row);
             Ok(Some(()))
         } else {
             Ok(None)
