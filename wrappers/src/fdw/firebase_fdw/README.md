@@ -159,6 +159,7 @@ Below are the options can be used in `CREATE FOREIGN TABLE`:
 
 | Version | Date       | Notes                                                |
 | ------- | ---------- | ---------------------------------------------------- |
+| 0.1.3   | 2023-09-20 | Error reporting refactoring                          |
 | 0.1.2   | 2023-07-13 | Added fdw stats collection                           |
 | 0.1.1   | 2022-12-07 | Added validator function                             |
 | 0.1.0   | 2022-11-30 | Initial version                                      |

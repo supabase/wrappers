@@ -62,4 +62,5 @@ wrappers=# select * from hello;
 
 | Version | Date       | Notes                                                |
 | ------- | ---------- | ---------------------------------------------------- |
+| 0.1.1   | 2023-09-20 | Error reporting refactoring                          |
 | 0.1.0   | 2022-11-30 | Initial version                                      |
