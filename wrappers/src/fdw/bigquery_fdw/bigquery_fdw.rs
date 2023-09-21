@@ -445,6 +445,7 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
                         Cell::Date(v) => row_json[col_name] = json!(v),
                         Cell::Timestamp(v) => row_json[col_name] = json!(v),
                         Cell::Json(v) => row_json[col_name] = json!(v),
+                        Cell::RealsArray(v) => row_json[col_name] = json!(v),
                     }
                 }
             }
