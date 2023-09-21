@@ -20,7 +20,7 @@
 //! ...
 //!
 //! [dependencies]
-//! pgrx = "=0.9.8"
+//! pgrx = "=0.10.2"
 //! supabase-wrappers = "0.1"
 //! ```
 //!
@@ -299,7 +299,7 @@ pub mod prelude {
     pub use crate::options::*;
     pub use crate::utils::*;
     pub use crate::wrappers_fdw;
-    pub use ::tokio::runtime::Runtime;
+    pub use tokio::runtime::Runtime;
 }
 
 use pgrx::prelude::*;

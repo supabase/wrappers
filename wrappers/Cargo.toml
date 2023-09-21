@@ -14,6 +14,7 @@ pg12 = ["pgrx/pg12", "pgrx-tests/pg12", "supabase-wrappers/pg12" ]
 pg13 = ["pgrx/pg13", "pgrx-tests/pg13", "supabase-wrappers/pg13" ]
 pg14 = ["pgrx/pg14", "pgrx-tests/pg14", "supabase-wrappers/pg14" ]
 pg15 = ["pgrx/pg15", "pgrx-tests/pg15", "supabase-wrappers/pg15" ]
+pg16 = ["pgrx/pg16", "pgrx-tests/pg16", "supabase-wrappers/pg16" ]
 pg_test = []
 
 helloworld_fdw = []
@@ -33,7 +34,7 @@ logflare_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", 
 all_fdws = ["airtable_fdw", "bigquery_fdw", "clickhouse_fdw", "stripe_fdw", "firebase_fdw", "s3_fdw", "logflare_fdw"]
 
 [dependencies]
-pgrx = { version = "=0.9.8" }
+pgrx = { version = "=0.10.2" }
 #supabase-wrappers = "0.1"
 supabase-wrappers = { path = "../supabase-wrappers", default-features = false }
 
@@ -77,7 +78,7 @@ arrow-array = { version = "41.0.0", optional = true }
 thiserror = { version = "1.0.48", optional = true }
 
 [dev-dependencies]
-pgrx-tests = "=0.9.8"
+pgrx-tests = "=0.10.2"
 
 [profile.dev]
 panic = "unwind"
