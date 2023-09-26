@@ -15,7 +15,7 @@ pg13 = ["pgrx/pg13", "pgrx-tests/pg13", "supabase-wrappers/pg13" ]
 pg14 = ["pgrx/pg14", "pgrx-tests/pg14", "supabase-wrappers/pg14" ]
 pg15 = ["pgrx/pg15", "pgrx-tests/pg15", "supabase-wrappers/pg15" ]
 pg16 = ["pgrx/pg16", "pgrx-tests/pg16", "supabase-wrappers/pg16" ]
-pg_test = []
+pg_test = ["reqwest/blocking"]
 
 helloworld_fdw = []
 bigquery_fdw = ["gcp-bigquery-client", "serde_json", "serde", "wiremock", "futures", "yup-oauth2", "thiserror"]
