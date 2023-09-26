@@ -66,7 +66,7 @@ impl QdrantClient {
     fn create_client(api_key: &str) -> Result<ClientWithMiddleware, QdrantClientError> {
         let mut headers = HeaderMap::new();
 
-        let header_name = HeaderName::from_static("api_key");
+        let header_name = HeaderName::from_static("api-key");
         let mut api_key_value =
             HeaderValue::from_str(api_key).map_err(|_| QdrantClientError::InvalidApiKeyHeader)?;
         api_key_value.set_sensitive(true);
