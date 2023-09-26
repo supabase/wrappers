@@ -15,7 +15,7 @@ use thiserror::Error;
     error_type = "QdrantFdwError"
 )]
 pub(crate) struct QdrantFdw {
-    api_url: String,
+    cluster_url: String,
     api_key: String,
     rows_iterator: Option<RowsIterator>,
 }
@@ -81,10 +81,10 @@ impl ForeignDataWrapper<QdrantFdwError> for QdrantFdw {
     where
         Self: Sized,
     {
-        let api_url = require_option("api_url", options)?.to_string();
+        let cluster_url = require_option("cluster_url", options)?.to_string();
         let api_key = require_option("api_key", options)?.to_string();
         Ok(Self {
-            api_url,
+            cluster_url,
             api_key,
             rows_iterator: None,
         })
@@ -101,7 +101,7 @@ impl ForeignDataWrapper<QdrantFdwError> for QdrantFdw {
         Self::validate_columns(columns)?;
         let collection_name = require_option("collection_name", options)?;
 
-        let qdrant_client = QdrantClient::new(&self.api_url, &self.api_key)?;
+        let qdrant_client = QdrantClient::new(&self.cluster_url, &self.api_key)?;
         self.rows_iterator = Some(RowsIterator::new(
             collection_name.to_string(),
             columns.to_vec(),
@@ -135,7 +135,7 @@ impl ForeignDataWrapper<QdrantFdwError> for QdrantFdw {
     ) -> Result<(), QdrantFdwError> {
         if let Some(oid) = catalog {
             if oid == FOREIGN_SERVER_RELATION_ID {
-                check_options_contain(&options, "api_url")?;
+                check_options_contain(&options, "cluster_url")?;
                 check_options_contain(&options, "api_key")?;
             } else if oid == FOREIGN_TABLE_RELATION_ID {
                 check_options_contain(&options, "collection_name")?;

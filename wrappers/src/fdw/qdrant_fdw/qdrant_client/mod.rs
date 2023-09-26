@@ -17,15 +17,15 @@ mod row;
 pub(crate) mod rows_iterator;
 
 pub(crate) struct QdrantClient {
-    api_url: Url,
+    cluster_url: Url,
     client: ClientWithMiddleware,
     runtime: Runtime,
 }
 
 impl QdrantClient {
-    pub(crate) fn new(api_url: &str, api_key: &str) -> Result<Self, QdrantClientError> {
+    pub(crate) fn new(cluster_url: &str, api_key: &str) -> Result<Self, QdrantClientError> {
         Ok(Self {
-            api_url: Url::parse(api_url)?,
+            cluster_url: Url::parse(cluster_url)?,
             client: Self::create_client(api_key)?,
             runtime: create_async_runtime()?,
         })
@@ -39,7 +39,7 @@ impl QdrantClient {
         limit: Option<u64>,
         offset: Option<u64>,
     ) -> Result<ResultPayload, QdrantClientError> {
-        let endpoint_url = Self::create_points_endpoint_url(&self.api_url, collection_name)?;
+        let endpoint_url = Self::create_points_endpoint_url(&self.cluster_url, collection_name)?;
         self.runtime.block_on(async {
             let request = PointsRequestBuilder::new()
                 .fetch_payload(fetch_payload)
@@ -56,11 +56,11 @@ impl QdrantClient {
     }
 
     fn create_points_endpoint_url(
-        api_url: &Url,
+        cluster_url: &Url,
         collection_name: &str,
     ) -> Result<Url, QdrantClientError> {
         // TODO: url encode collection_name
-        Ok(api_url.join(&format!("collections/{collection_name}/points/scroll"))?)
+        Ok(cluster_url.join(&format!("collections/{collection_name}/points/scroll"))?)
     }
 
     fn create_client(api_key: &str) -> Result<ClientWithMiddleware, QdrantClientError> {
@@ -89,7 +89,7 @@ pub(crate) enum QdrantClientError {
     #[error("{0}")]
     CreateRuntimeError(#[from] CreateRuntimeError),
 
-    #[error("failed to parse api_url: {0}")]
+    #[error("failed to parse cluster_url: {0}")]
     UrlParseError(#[from] ParseError),
 
     #[error("invalid api_key header")]

@@ -24,7 +24,7 @@ mod tests {
                 r#"create server qdrant_server
                          foreign data wrapper qdrant_wrapper
                          options (
-                            api_url 'http://localhost:6333',
+                            cluster_url 'http://localhost:6333',
                             api_key ''
                          )"#,
                 None,
