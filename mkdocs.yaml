@@ -16,6 +16,7 @@ nav:
       - Logflare: 'logflare.md'
       - S3: 's3.md'
       - Stripe: 'stripe.md'
+      - Qdrant: 'qdrant.md'
     - Contributing: 'contributing.md'
 
 theme:
