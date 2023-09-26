@@ -1,8 +1,8 @@
 #[cfg(any(test, feature = "pg_test"))]
 #[pgrx::pg_schema]
 mod tests {
-    use pgrx::pg_test;
     use pgrx::prelude::*;
+    use pgrx::{pg_test, JsonB};
     use reqwest::blocking::Client;
     use serde_json::json;
 
@@ -60,15 +60,19 @@ mod tests {
                         r.get_by_name::<Vec<f32>, _>("vector")
                             .expect("failed to get `vector` field")
                             .expect("`vector` field is missing"),
+                        r.get_by_name::<JsonB, _>("payload")
+                            .expect("failed to get `payload` field")
+                            .expect("`payload` field is missing")
+                            .0,
                     ))
                 })
                 .collect::<Vec<_>>();
             assert_eq!(
                 results,
                 vec![
-                    (1, vec![0.123, 0.456, 0.789]),
-                    (2, vec![0.456, 0.789, 0.123]),
-                    (3, vec![0.789, 0.123, 0.456])
+                    (1, vec![0.123, 0.456, 0.789], json!({ "color": "red" })),
+                    (2, vec![0.456, 0.789, 0.123], json!({ "color": "green" })),
+                    (3, vec![0.789, 0.123, 0.456], json!({ "color": "blue" }))
                 ]
             );
         });
