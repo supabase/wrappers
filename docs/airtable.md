@@ -27,7 +27,7 @@ By default, Postgres stores FDW credentials inide `pg_catalog.pg_foreign_server`
 insert into vault.secrets (name, secret)
 values (
   'airtable',
-  'YOUR_SECRET'
+  '<Airtable API Key or PAT>' -- Airtable API key or Personal Access Token (PAT)
 )
 returning key_id;
 ```
@@ -53,7 +53,7 @@ We need to provide Postgres with the credentials to connect to Airtable, and any
       foreign data wrapper airtable_wrapper
       options (
         api_url 'https://api.airtable.com/v0',  -- Airtable API url, optional
-        api_key '<Airtable API Key>'  -- Airtable API key, required
+        api_key '<Airtable API Key or PAT>'  -- Airtable API key or Personal Access Token (PAT), required
       );
     ```
 
