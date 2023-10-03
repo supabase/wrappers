@@ -22,8 +22,17 @@ enum AirtableFdwError {
     #[error("parse url failed: {0}")]
     UrlParseError(#[from] url::ParseError),
 
+    #[error("invalid api_key header")]
+    InvalidApiKeyHeader,
+
     #[error("request failed: {0}")]
-    RequestError(#[from] reqwest_middleware::Error),
+    RequestError(#[from] reqwest::Error),
+
+    #[error("request middleware failed: {0}")]
+    RequestMiddlewareError(#[from] reqwest_middleware::Error),
+
+    #[error("invalid json response: {0}")]
+    SerdeError(#[from] serde_json::Error),
 
     #[error("{0}")]
     OptionsError(#[from] OptionsError),
