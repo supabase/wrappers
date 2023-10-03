@@ -62,6 +62,12 @@ enum QdrantFdwError {
 
     #[error("{0}")]
     QdrantColumnsError(String),
+
+    #[error("exactly one of `api_key` or `api_key_id` options must be set")]
+    SetOneOfApiKeyAndApiKeyIdSet,
+
+    #[error("no secret found in vault with id {0}")]
+    SecretNotFound(String),
 }
 
 impl From<QdrantFdwError> for ErrorReport {
@@ -69,7 +75,9 @@ impl From<QdrantFdwError> for ErrorReport {
         match value {
             QdrantFdwError::OptionsError(e) => e.into(),
             QdrantFdwError::QdrantClientError(e) => e.into(),
-            QdrantFdwError::QdrantColumnsError(_) => {
+            QdrantFdwError::QdrantColumnsError(_)
+            | QdrantFdwError::SetOneOfApiKeyAndApiKeyIdSet
+            | QdrantFdwError::SecretNotFound(_) => {
                 ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, format!("{value}"), "")
             }
         }
@@ -82,7 +90,15 @@ impl ForeignDataWrapper<QdrantFdwError> for QdrantFdw {
         Self: Sized,
     {
         let cluster_url = require_option("cluster_url", options)?.to_string();
-        let api_key = require_option("api_key", options)?.to_string();
+        let api_key = if let Some(api_key) = options.get("api_key") {
+            api_key.clone()
+        } else {
+            let api_key_id = options
+                .get("api_key_id")
+                .expect("`api_key_id` must be set if `api_key` is not");
+            get_vault_secret(api_key_id)
+                .ok_or(QdrantFdwError::SecretNotFound(api_key_id.clone()))?
+        };
         Ok(Self {
             cluster_url,
             api_key,
@@ -136,7 +152,13 @@ impl ForeignDataWrapper<QdrantFdwError> for QdrantFdw {
         if let Some(oid) = catalog {
             if oid == FOREIGN_SERVER_RELATION_ID {
                 check_options_contain(&options, "cluster_url")?;
-                check_options_contain(&options, "api_key")?;
+                let api_key_exists = check_options_contain(&options, "api_key").is_ok();
+                let api_key_id_exists = check_options_contain(&options, "api_key_id").is_ok();
+                if (api_key_exists && api_key_id_exists)
+                    || (!api_key_id_exists && !api_key_id_exists)
+                {
+                    return Err(QdrantFdwError::SetOneOfApiKeyAndApiKeyIdSet);
+                }
             } else if oid == FOREIGN_TABLE_RELATION_ID {
                 check_options_contain(&options, "collection_name")?;
             }
