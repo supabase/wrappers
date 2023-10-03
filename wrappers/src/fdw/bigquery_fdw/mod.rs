@@ -3,7 +3,7 @@
 use gcp_bigquery_client::error::BQError;
 use gcp_bigquery_client::model::field_type::FieldType;
 use pgrx::pg_sys::panic::ErrorReport;
-use pgrx::PgSqlErrorCode;
+use pgrx::{DateTimeConversionError, PgSqlErrorCode};
 use supabase_wrappers::prelude::{CreateRuntimeError, OptionsError};
 use thiserror::Error;
 
@@ -23,6 +23,12 @@ enum BigQueryFdwError {
 
     #[error("field type {0:?} not supported")]
     UnsupportedFieldType(FieldType),
+
+    #[error("{0}")]
+    NumericConversionError(#[from] pgrx::numeric::Error),
+
+    #[error("{0}")]
+    DateTimeConversionError(#[from] DateTimeConversionError),
 }
 
 impl From<BigQueryFdwError> for ErrorReport {

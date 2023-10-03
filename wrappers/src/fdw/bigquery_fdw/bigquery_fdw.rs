@@ -24,18 +24,19 @@ fn field_to_cell(rs: &ResultSet, field: &TableFieldSchema) -> BigQueryFdwResult<
         FieldType::Boolean => rs.get_bool_by_name(&field.name)?.map(Cell::Bool),
         FieldType::Int64 | FieldType::Integer => rs.get_i64_by_name(&field.name)?.map(Cell::I64),
         FieldType::Float64 | FieldType::Float => rs.get_f64_by_name(&field.name)?.map(Cell::F64),
-        FieldType::Numeric => rs
-            .get_f64_by_name(&field.name)?
-            .map(|v| Cell::Numeric(AnyNumeric::try_from(v).unwrap())),
+        FieldType::Numeric => match rs.get_f64_by_name(&field.name)? {
+            Some(v) => Some(Cell::Numeric(AnyNumeric::try_from(v)?)),
+            None => None,
+        },
         FieldType::String => rs.get_string_by_name(&field.name)?.map(Cell::String),
-        FieldType::Date => rs.get_string_by_name(&field.name)?.map(|v| {
-            let dt = Date::from_str(&v).unwrap();
-            Cell::Date(dt)
-        }),
-        FieldType::Datetime => rs.get_string_by_name(&field.name)?.map(|v| {
-            let ts = Timestamp::from_str(&v).unwrap();
-            Cell::Timestamp(ts)
-        }),
+        FieldType::Date => match rs.get_string_by_name(&field.name)? {
+            Some(v) => Some(Cell::Date(Date::from_str(&v)?)),
+            None => None,
+        },
+        FieldType::Datetime => match rs.get_string_by_name(&field.name)? {
+            Some(v) => Some(Cell::Timestamp(Timestamp::from_str(&v)?)),
+            None => None,
+        },
         FieldType::Timestamp => rs.get_f64_by_name(&field.name)?.map(|v| {
             let ts = pgrx::to_timestamp(v);
             Cell::Timestamp(ts.to_utc())
@@ -178,7 +179,8 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
                 let auth_mock_uri = auth_mock.uri();
                 let dummy_auth_config = dummy_configuration(&auth_mock_uri);
                 ret.auth_mock = Some(auth_mock);
-                serde_json::to_string_pretty(&dummy_auth_config).unwrap()
+                serde_json::to_string_pretty(&dummy_auth_config)
+                    .expect("dummy auth config should not fail to serialize")
             }
             false => match options.get("sa_key") {
                 Some(sa_key) => sa_key.to_owned(),
@@ -396,7 +398,7 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
                 }
             }
 
-            insert_request.add_row(None, row_json).unwrap();
+            insert_request.add_row(None, row_json)?;
 
             // execute insert job on BigQuery
             if let Err(err) = self.rt.block_on(client.tabledata().insert_all(
