@@ -36,6 +36,9 @@ enum AirtableFdwError {
 
     #[error("{0}")]
     OptionsError(#[from] OptionsError),
+
+    #[error("{0}")]
+    NumericConversionError(#[from] pgrx::numeric::Error),
 }
 
 impl From<AirtableFdwError> for ErrorReport {
