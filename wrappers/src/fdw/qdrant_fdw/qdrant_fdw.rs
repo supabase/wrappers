@@ -154,8 +154,7 @@ impl ForeignDataWrapper<QdrantFdwError> for QdrantFdw {
                 check_options_contain(&options, "cluster_url")?;
                 let api_key_exists = check_options_contain(&options, "api_key").is_ok();
                 let api_key_id_exists = check_options_contain(&options, "api_key_id").is_ok();
-                if (api_key_exists && api_key_id_exists)
-                    || (!api_key_id_exists && !api_key_id_exists)
+                if (api_key_exists && api_key_id_exists) || (!api_key_exists && !api_key_id_exists)
                 {
                     return Err(QdrantFdwError::SetOneOfApiKeyAndApiKeyIdSet);
                 }
