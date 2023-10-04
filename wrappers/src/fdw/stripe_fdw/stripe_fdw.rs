@@ -10,20 +10,19 @@ use supabase_wrappers::prelude::*;
 
 use super::{StripeFdwError, StripeFdwResult};
 
-fn create_client(api_key: &str) -> ClientWithMiddleware {
+fn create_client(api_key: &str) -> StripeFdwResult<ClientWithMiddleware> {
     let mut headers = header::HeaderMap::new();
     let value = format!("Bearer {}", api_key);
-    let mut auth_value = header::HeaderValue::from_str(&value).unwrap();
+    let mut auth_value = header::HeaderValue::from_str(&value)?;
     auth_value.set_sensitive(true);
     headers.insert(header::AUTHORIZATION, auth_value);
     let client = reqwest::Client::builder()
         .default_headers(headers)
-        .build()
-        .unwrap();
+        .build()?;
     let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
-    ClientBuilder::new(client)
+    Ok(ClientBuilder::new(client)
         .with(RetryTransientMiddleware::new_with_policy(retry_policy))
-        .build()
+        .build())
 }
 
 fn body_to_rows(
@@ -57,8 +56,10 @@ fn body_to_rows(
                 .as_object()
                 .and_then(|v| v.get(*bal_type))
                 .and_then(|v| v.as_array())
-                .map(|v| v[0].as_object().unwrap().clone())
-                .unwrap();
+                .map(|v| v[0].as_object().ok_or(StripeFdwError::InvalidResponse))
+                .transpose()?
+                .ok_or(StripeFdwError::InvalidResponse)?
+                .clone();
             obj.insert(
                 "balance_type".to_string(),
                 JsonValue::String(bal_type.to_string()),
@@ -71,14 +72,14 @@ fn body_to_rows(
         value
             .as_object()
             .map(|v| vec![JsonValue::Object(v.clone())])
-            .unwrap()
+            .ok_or(StripeFdwError::InvalidResponse)?
     };
     let objs = if is_list {
         value
             .as_object()
             .and_then(|v| v.get("data"))
             .and_then(|v| v.as_array())
-            .unwrap()
+            .ok_or(StripeFdwError::InvalidResponse)?
     } else {
         &single_wrapped
     };
@@ -237,10 +238,14 @@ fn set_stats_metadata(stats_metadata: JsonB) {
 
 // increase stats metadata 'request_cnt' by 1
 #[inline]
-fn inc_stats_request_cnt(stats_metadata: &mut JsonB) {
+fn inc_stats_request_cnt(stats_metadata: &mut JsonB) -> StripeFdwResult<()> {
     if let Some(v) = stats_metadata.0.get_mut("request_cnt") {
-        *v = (v.as_i64().unwrap() + 1).into();
+        *v = (v.as_i64().ok_or(StripeFdwError::InvalidStats(
+            "`request_cnt` is not a number".to_string(),
+        ))? + 1)
+            .into();
     };
+    Ok(())
 }
 
 #[wrappers_fdw(
@@ -628,7 +633,8 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
                 let key_id = require_option("api_key_id", options)?;
                 get_vault_secret(key_id).map(|api_key| create_client(&api_key))
             }
-        };
+        }
+        .transpose()?;
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
 
@@ -671,12 +677,11 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
             while page < page_cnt {
                 // build url
                 let url = self.build_url(obj, quals, page_size, &cursor)?;
-                if url.is_none() {
+                let Some(url) = url else {
                     return Ok(());
-                }
-                let url = url.unwrap();
+                };
 
-                inc_stats_request_cnt(&mut stats_metadata);
+                inc_stats_request_cnt(&mut stats_metadata)?;
 
                 // make api call
                 let body = self.rt.block_on(client.get(url).send()).and_then(|resp| {
@@ -755,7 +760,7 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
 
     fn insert(&mut self, src: &Row) -> StripeFdwResult<()> {
         if let Some(ref mut client) = self.client {
-            let url = self.base_url.join(&self.obj).unwrap();
+            let url = self.base_url.join(&self.obj)?;
             let body = row_to_body(src)?;
             if body.is_null() {
                 return Ok(());
@@ -763,7 +768,7 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
 
             let mut stats_metadata = get_stats_metadata();
 
-            inc_stats_request_cnt(&mut stats_metadata);
+            inc_stats_request_cnt(&mut stats_metadata)?;
 
             // call Stripe API
             let body = self
@@ -798,18 +803,13 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
 
             match rowid {
                 Cell::String(rowid) => {
-                    let url = self
-                        .base_url
-                        .join(&format!("{}/", self.obj))
-                        .unwrap()
-                        .join(rowid)
-                        .unwrap();
+                    let url = self.base_url.join(&format!("{}/", self.obj))?.join(rowid)?;
                     let body = row_to_body(new_row)?;
                     if body.is_null() {
                         return Ok(());
                     }
 
-                    inc_stats_request_cnt(&mut stats_metadata);
+                    inc_stats_request_cnt(&mut stats_metadata)?;
 
                     // call Stripe API
                     let body = self
@@ -847,14 +847,9 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
 
             match rowid {
                 Cell::String(rowid) => {
-                    let url = self
-                        .base_url
-                        .join(&format!("{}/", self.obj))
-                        .unwrap()
-                        .join(rowid)
-                        .unwrap();
+                    let url = self.base_url.join(&format!("{}/", self.obj))?.join(rowid)?;
 
-                    inc_stats_request_cnt(&mut stats_metadata);
+                    inc_stats_request_cnt(&mut stats_metadata)?;
 
                     // call Stripe API
                     let body = self
