@@ -148,7 +148,7 @@ impl S3Parquet {
     pub(super) async fn open_local_stream(&mut self, buf: Vec<u8>) -> S3FdwResult<()> {
         let cursor: Box<dyn AsyncFileReader> = Box::new(Cursor::new(buf));
         let builder = ParquetRecordBatchStreamBuilder::new(cursor).await?;
-        let stream = builder.build().unwrap();
+        let stream = builder.build()?;
         self.stream = Some(stream);
         Ok(())
     }
@@ -288,7 +288,7 @@ impl S3Parquet {
                             None
                         } else {
                             let value = arr.value(self.batch_idx);
-                            let num = pgrx::AnyNumeric::try_from(value).unwrap();
+                            let num = pgrx::AnyNumeric::try_from(value)?;
                             Some(Cell::Numeric(num))
                         }
                     }
@@ -313,7 +313,8 @@ impl S3Parquet {
                             None
                         } else {
                             arr.value_as_date(self.batch_idx).map(|dt| {
-                                let epoch = NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
+                                let epoch = NaiveDate::from_ymd_opt(1970, 1, 1)
+                                    .expect("1/1/1970 is a valid NaiveDate");
                                 let seconds_from_epoch =
                                     dt.signed_duration_since(epoch).num_seconds();
                                 let ts = to_timestamp(seconds_from_epoch as f64);

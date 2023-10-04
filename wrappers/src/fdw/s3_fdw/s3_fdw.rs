@@ -150,10 +150,10 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
                 }
             }
         };
-        if creds.is_none() {
+
+        let Some(creds) = creds else {
             return Ok(ret);
-        }
-        let creds = creds.unwrap();
+        };
 
         // get region
         let default_region = "us-east-1".to_string();
@@ -207,7 +207,12 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
                 return Err(S3FdwError::InvalidS3Uri(uri.to_string()));
             }
             // exclude 1st "/" char in the path as s3 object path doesn't like it
-            (uri.host().unwrap().to_owned(), uri.path()[1..].to_string())
+            (
+                uri.host()
+                    .expect("host is not None as tested in if condition above")
+                    .to_owned(),
+                uri.path()[1..].to_string(),
+            )
         };
 
         let has_header: bool = options.get("has_header") == Some(&"true".to_string());
