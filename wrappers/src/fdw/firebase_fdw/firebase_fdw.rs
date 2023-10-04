@@ -183,11 +183,14 @@ impl FirebaseFdw {
             _ => {
                 // match for firestore documents
                 // ref: https://firebase.google.com/docs/firestore/reference/rest/v1beta1/projects.databases.documents/listDocuments
-                let re = Regex::new(r"^firestore/(?P<collection>[^/]+)").unwrap();
+                let re = Regex::new(r"^firestore/(?P<collection>[^/]+)").expect("regex is valid");
                 if let Some(caps) = re.captures(obj) {
                     let base_url =
                         require_option_or("base_url", options, Self::DEFAULT_FIRESTORE_BASE_URL);
-                    let collection = caps.name("collection").unwrap().as_str();
+                    let collection = caps
+                        .name("collection")
+                        .expect("`collection` capture group always exists in a match")
+                        .as_str();
                     let mut ret = format!(
                         "{}/{}/databases/(default)/documents/{}?pageSize={}",
                         base_url,
@@ -241,13 +244,13 @@ impl ForeignDataWrapper<FirebaseFdwError> for FirebaseFdw {
         // create client
         let mut headers = header::HeaderMap::new();
         let value = format!("Bearer {}", token);
-        let mut auth_value = header::HeaderValue::from_str(&value).unwrap();
+        let mut auth_value = header::HeaderValue::from_str(&value)
+            .map_err(|_| FirebaseFdwError::InvalidApiKeyHeader)?;
         auth_value.set_sensitive(true);
         headers.insert(header::AUTHORIZATION, auth_value);
         let client = reqwest::Client::builder()
             .default_headers(headers)
-            .build()
-            .unwrap();
+            .build()?;
         let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
         let client = ClientBuilder::new(client)
             .with(RetryTransientMiddleware::new_with_policy(retry_policy))
@@ -270,7 +273,8 @@ impl ForeignDataWrapper<FirebaseFdwError> for FirebaseFdw {
         let obj = require_option("object", options)?;
         let row_cnt_limit = options
             .get("limit")
-            .map(|n| n.parse::<usize>().unwrap())
+            .map(|n| n.parse::<usize>())
+            .transpose()?
             .unwrap_or(Self::DEFAULT_ROWS_LIMIT);
 
         self.scan_result = Vec::new();
