@@ -18,20 +18,19 @@ use supabase_wrappers::prelude::*;
 
 use super::{LogflareFdwError, LogflareFdwResult};
 
-fn create_client(api_key: &str) -> ClientWithMiddleware {
+fn create_client(api_key: &str) -> LogflareFdwResult<ClientWithMiddleware> {
     let mut headers = HeaderMap::new();
     let header_name = HeaderName::from_static("x-api-key");
-    let mut auth_value = HeaderValue::from_str(api_key).unwrap();
+    let mut auth_value = HeaderValue::from_str(api_key)?;
     auth_value.set_sensitive(true);
     headers.insert(header_name, auth_value);
     let client = reqwest::Client::builder()
         .default_headers(headers)
-        .build()
-        .unwrap();
+        .build()?;
     let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
-    ClientBuilder::new(client)
+    Ok(ClientBuilder::new(client)
         .with(RetryTransientMiddleware::new_with_policy(retry_policy))
-        .build()
+        .build())
 }
 
 fn extract_params(quals: &[Qual]) -> Option<Vec<Qual>> {
@@ -205,7 +204,8 @@ impl ForeignDataWrapper<LogflareFdwError> for LogflareFdw {
                 let key_id = require_option("api_key_id", options)?;
                 get_vault_secret(key_id).map(|api_key| create_client(&api_key))
             }
-        };
+        }
+        .transpose()?;
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
 
