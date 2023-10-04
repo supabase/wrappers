@@ -58,6 +58,9 @@ enum S3FdwError {
 
     #[error("parse JSON response failed: {0}")]
     JsonParseError(#[from] serde_json::Error),
+
+    #[error("{0}")]
+    NumericConversionError(#[from] pgrx::numeric::Error),
 }
 
 impl From<S3FdwError> for ErrorReport {
