@@ -7,25 +7,24 @@ use std::collections::HashMap;
 use url::Url;
 
 use supabase_wrappers::prelude::*;
-use thiserror::Error;
 
 use super::result::AirtableResponse;
 use super::{AirtableFdwError, AirtableFdwResult};
 
-fn create_client(api_key: &str) -> ClientWithMiddleware {
+fn create_client(api_key: &str) -> Result<ClientWithMiddleware, AirtableFdwError> {
     let mut headers = header::HeaderMap::new();
     let value = format!("Bearer {}", api_key);
-    let mut auth_value = header::HeaderValue::from_str(&value).unwrap();
+    let mut auth_value =
+        header::HeaderValue::from_str(&value).map_err(|_| AirtableFdwError::InvalidApiKeyHeader)?;
     auth_value.set_sensitive(true);
     headers.insert(header::AUTHORIZATION, auth_value);
     let client = reqwest::Client::builder()
         .default_headers(headers)
-        .build()
-        .unwrap();
+        .build()?;
     let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
-    ClientBuilder::new(client)
+    Ok(ClientBuilder::new(client)
         .with(RetryTransientMiddleware::new_with_policy(retry_policy))
-        .build()
+        .build())
 }
 
 #[wrappers_fdw(
@@ -78,7 +77,7 @@ impl AirtableFdw {
         resp_body: &str,
         columns: &[Column],
     ) -> AirtableFdwResult<(Vec<Row>, Option<String>)> {
-        let response: AirtableResponse = serde_json::from_str(resp_body).unwrap();
+        let response: AirtableResponse = serde_json::from_str(resp_body)?;
         let mut result = Vec::new();
 
         for record in response.records.iter() {
@@ -98,10 +97,14 @@ impl ForeignDataWrapper<AirtableFdwError> for AirtableFdw {
             .unwrap_or_else(|| "https://api.airtable.com/v0".to_string());
 
         let client = match options.get("api_key") {
-            Some(api_key) => Some(create_client(api_key)),
+            Some(api_key) => Some(create_client(api_key)?),
             None => {
                 let key_id = require_option("api_key_id", options)?;
-                get_vault_secret(&key_id).map(|api_key| create_client(&api_key))
+                if let Some(api_key) = get_vault_secret(&key_id) {
+                    Some(create_client(&api_key)?)
+                } else {
+                    None
+                }
             }
         };
 

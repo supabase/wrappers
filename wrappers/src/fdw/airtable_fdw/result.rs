@@ -165,19 +165,20 @@ impl AirtableRecord {
                         }
                     },
                 ),
-                pg_sys::NUMERICOID => self.fields.0.get(&col.name).map_or_else(
-                    || Ok(None),
-                    |val| {
+                pg_sys::NUMERICOID => match self.fields.0.get(&col.name) {
+                    Some(val) => {
                         if let Value::Number(v) = val {
-                            let n = v
-                                .as_f64()
-                                .map(|n| Cell::Numeric(pgrx::AnyNumeric::try_from(n).unwrap()));
+                            let n = match v.as_f64() {
+                                Some(n) => Some(Cell::Numeric(pgrx::AnyNumeric::try_from(n)?)),
+                                None => None,
+                            };
                             Ok(n)
                         } else {
                             Err(())
                         }
-                    },
-                ),
+                    }
+                    None => Ok(None),
+                },
                 pg_sys::TEXTOID => self.fields.0.get(&col.name).map_or_else(
                     || Ok(None),
                     |val| {
