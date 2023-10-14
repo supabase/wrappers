@@ -766,6 +766,10 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - id
 - destination
 
+## Limitations
+
+Joining local data against a Stripe FDW returns incomplete or empty results. We're tracking the [issue on GitHub](https://github.com/supabase/wrappers/issues/113) and working towards a fix.
+
 ## Examples
 
 Some examples on how to use Stripe foreign tables.
