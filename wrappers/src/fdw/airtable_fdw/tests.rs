@@ -61,13 +61,15 @@ mod tests {
             )
             .unwrap();
 
-
             /*
              The table data below comes from the code in wrappers/dockerfiles/airtable/server.py
             */
-
             let results = c
-                .select("SELECT field2 FROM airtable_table WHERE field = 1", None, None)
+                .select(
+                    "SELECT field2 FROM airtable_table WHERE field1 = 1",
+                    None,
+                    None,
+                )
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("field2").unwrap())
                 .collect::<Vec<_>>();

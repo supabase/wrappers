@@ -69,7 +69,7 @@ For example:
 
 ```sql
 create foreign table my_foreign_table (
-  name text,
+  name text
   -- other fields
 )
 server airtable_server
