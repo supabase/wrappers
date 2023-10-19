@@ -28,7 +28,7 @@ fn create_client(api_key: &str) -> Result<ClientWithMiddleware, AirtableFdwError
 }
 
 #[wrappers_fdw(
-    version = "0.1.2",
+    version = "0.1.3",
     author = "Ankur Goyal",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/airtable_fdw",
     error_type = "AirtableFdwError"
@@ -100,7 +100,7 @@ impl ForeignDataWrapper<AirtableFdwError> for AirtableFdw {
             Some(api_key) => Some(create_client(api_key)?),
             None => {
                 let key_id = require_option("api_key_id", options)?;
-                if let Some(api_key) = get_vault_secret(&key_id) {
+                if let Some(api_key) = get_vault_secret(key_id) {
                     Some(create_client(&api_key)?)
                 } else {
                     None
@@ -129,7 +129,7 @@ impl ForeignDataWrapper<AirtableFdwError> for AirtableFdw {
         let base_id = require_option("base_id", options)?;
         let table_id = require_option("table_id", options)?;
         let view_id = options.get("view_id");
-        let url = self.build_url(&base_id, &table_id, view_id);
+        let url = self.build_url(base_id, table_id, view_id);
 
         let mut rows = Vec::new();
         if let Some(client) = &self.client {

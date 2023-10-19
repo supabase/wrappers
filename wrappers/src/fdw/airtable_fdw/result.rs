@@ -84,6 +84,7 @@ impl<'de> Deserialize<'de> for AirtableFields {
     }
 }
 
+// Available Airtable field types: https://airtable.com/developers/web/api/field-model
 impl AirtableRecord {
     pub(super) fn to_row(&self, columns: &[Column]) -> AirtableFdwResult<Row> {
         let mut row = Row::new();
@@ -212,7 +213,19 @@ impl AirtableRecord {
                         }
                     },
                 ),
-                _ => return Err(AirtableFdwError::UnsupportedColumnType(col.name.clone())),
+                pg_sys::JSONBOID => self.fields.0.get(&col.name).map_or_else(
+                    || Ok(None),
+                    |val| {
+                        if val.is_array() || val.is_object() {
+                            Ok(Some(Cell::Json(pgrx::JsonB(val.clone()))))
+                        } else {
+                            Err(())
+                        }
+                    },
+                ),
+                _ => {
+                    return Err(AirtableFdwError::UnsupportedColumnType(col.name.clone()));
+                }
             }
             .map_err(|_| AirtableFdwError::ColumnTypeNotMatch(col.name.clone()))?;
 
