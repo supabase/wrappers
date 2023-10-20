@@ -41,21 +41,29 @@ if __name__ == "__main__":
     client.create(
         test_table,
         {
+            "bool_field": True,
             "numeric_field": 1,
             "string_field": "two",
             "timestamp_field": "2023-07-19T06:39:15.000Z",
-            "strings_array_field": ["foo", "bar"],
             "object_field": {"foo": "bar"},
+            "strings_array_field": ["foo", "bar"],
+            "numerics_array_field": [1, 2],
+            "bools_array_field": [False],
+            "objects_array_field": [{"foo": "bar"}, {"foo": "baz"}]
         },
     )
     client.create(
         test_table,
         {
+            "bool_field": False,
             "numeric_field": 2,
             "string_field": "three",
             "timestamp_field": "2023-07-20T06:39:15.000Z",
-            "strings_array_field": ["baz", "qux"],
             "object_field": {"foo": "baz"},
+            "strings_array_field": ["baz", "qux"],
+            "numerics_array_field": [3, 4],
+            "bools_array_field": [True, False, True],
+            "objects_array_field": [{"foo": "qux"}]
         },
     )
 

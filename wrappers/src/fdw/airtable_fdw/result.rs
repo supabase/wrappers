@@ -213,15 +213,10 @@ impl AirtableRecord {
                         }
                     },
                 ),
+                // TODO: Think about adding support for BOOLARRAYOID, NUMERICARRAYOID, TEXTARRAYOID and rest of array types.
                 pg_sys::JSONBOID => self.fields.0.get(&col.name).map_or_else(
                     || Ok(None),
-                    |val| {
-                        if val.is_array() || val.is_object() {
-                            Ok(Some(Cell::Json(pgrx::JsonB(val.clone()))))
-                        } else {
-                            Err(())
-                        }
-                    },
+                    |val| Ok(Some(Cell::Json(pgrx::JsonB(val.clone())))),
                 ),
                 _ => {
                     return Err(AirtableFdwError::UnsupportedColumnType(col.name.clone()));
