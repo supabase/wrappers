@@ -81,7 +81,7 @@ git clone https://github.com/supabase/wrappers.git
 
 ```bash
 cd wrappers/wrappers
-cargo pgrx run pg14 --features helloworld_fdw
+cargo pgrx run pg15 --features helloworld_fdw
 ```
 
 3. Create the extension, foreign data wrapper and related objects:
@@ -135,7 +135,7 @@ cargo pgrx test --features all_fdws,pg15
 ## Limitations
 
 - Windows is not supported, that limitation inherits from [pgrx](https://github.com/tcdi/pgrx).
-- Currently only supports PostgreSQL v14 and v15.
+- Currently only supports PostgreSQL v14, v15 and v16.
 - Generated column is not supported.
 
 ## Contribution

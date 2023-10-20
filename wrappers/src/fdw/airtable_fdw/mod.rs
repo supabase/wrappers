@@ -1,6 +1,7 @@
 #![allow(clippy::module_inception)]
 mod airtable_fdw;
 mod result;
+mod tests;
 
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::PgSqlErrorCode;

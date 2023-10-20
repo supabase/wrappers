@@ -1,8 +1,7 @@
 #[cfg(any(test, feature = "pg_test"))]
 #[pgrx::pg_schema]
 mod tests {
-    use pgrx::pg_test;
-    use pgrx::prelude::*;
+    use pgrx::{prelude::*, JsonB};
 
     #[pg_test]
     fn airtable_smoketest() {
@@ -28,9 +27,11 @@ mod tests {
             c.update(
                 r#"
                   CREATE FOREIGN TABLE airtable_table (
-                    field1 numeric,
-                    field2 text,
-                    field3 timestamp
+                    numeric_field numeric,
+                    string_field text,
+                    timestamp_field timestamp,
+                    strings_array_field jsonb,
+                    object_field jsonb
                   )
                   SERVER airtable_server
                   OPTIONS (
@@ -45,9 +46,11 @@ mod tests {
             c.update(
                 r#"
                   CREATE FOREIGN TABLE airtable_view (
-                    field1 numeric,
-                    field2 text,
-                    field3 timestamp
+                    numeric_field numeric,
+                    string_field text,
+                    timestamp_field timestamp,
+                    strings_array_field jsonb,
+                    object_field jsonb
                   )
                   SERVER airtable_server
                   OPTIONS (
@@ -61,22 +64,60 @@ mod tests {
             )
             .unwrap();
 
-
             /*
              The table data below comes from the code in wrappers/dockerfiles/airtable/server.py
             */
-
             let results = c
-                .select("SELECT field2 FROM airtable_table WHERE field = 1", None, None)
+                .select(
+                    "SELECT string_field FROM airtable_table WHERE numeric_field = 1",
+                    None,
+                    None,
+                )
                 .unwrap()
-                .filter_map(|r| r.get_by_name::<&str, _>("field2").unwrap())
+                .filter_map(|r| r.get_by_name::<&str, _>("string_field").unwrap())
                 .collect::<Vec<_>>();
             assert_eq!(results, vec!["two"]);
 
             let results = c
-                .select("SELECT field2 FROM airtable_view", None, None)
+                .select(
+                    "SELECT strings_array_field FROM airtable_table WHERE numeric_field = 1",
+                    None,
+                    None,
+                )
                 .unwrap()
-                .filter_map(|r| r.get_by_name::<&str, _>("field2").unwrap())
+                .filter_map(|r| {
+                    r.get_by_name::<JsonB, _>("strings_array_field")
+                        .expect("strings_array_field is missing")
+                        .and_then(|v| serde_json::from_value::<Vec<String>>(v.0.to_owned()).ok())
+                })
+                .collect::<Vec<_>>();
+
+            assert_eq!(results, vec![vec!["foo", "bar"]]);
+
+            #[derive(serde::Deserialize)]
+            struct Foo {
+                foo: String,
+            }
+
+            let results = c
+                .select(
+                    "SELECT object_field FROM airtable_table WHERE numeric_field = 1",
+                    None,
+                    None,
+                )
+                .unwrap()
+                .filter_map(|r| {
+                    r.get_by_name::<JsonB, _>("object_field")
+                        .expect("object_field is missing")
+                        .and_then(|v| serde_json::from_value::<Foo>(v.0.to_owned()).ok())
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(results[0].foo, "bar");
+
+            let results = c
+                .select("SELECT string_field FROM airtable_view", None, None)
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("string_field").unwrap())
                 .collect::<Vec<_>>();
             assert_eq!(results, vec!["three"]);
         });
