@@ -5,6 +5,8 @@
 
 ## Preparation
 
+Create a service account on [google cloud platform](https://console.cloud.google.com/iam-admin/serviceaccounts) with `Firebase Admin` role
+
 Before you get started, make sure the `wrappers` extension is installed on your database:
 
 ```sql

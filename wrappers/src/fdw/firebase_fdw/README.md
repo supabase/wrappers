@@ -34,7 +34,9 @@ cd wrappers/wrappers
 cargo pgrx run --features firebase_fdw
 ```
 
-3. Create the extension, foreign data wrapper and related objects:
+3. Create a service account on [google cloud platform](https://console.cloud.google.com/iam-admin/serviceaccounts) with `Firebase Admin` role
+
+4. Create the extension, foreign data wrapper and related objects:
 
 ```sql
 -- create extension
@@ -116,7 +118,7 @@ create foreign table firebase_docs (
   );
 ```
 
-4. Run a query to check if it is working:
+5. Run a query to check if it is working:
 
 ```sql
 select * from firebase_users;
