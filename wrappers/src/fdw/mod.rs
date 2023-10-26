@@ -21,3 +21,6 @@ mod s3_fdw;
 
 #[cfg(feature = "logflare_fdw")]
 mod logflare_fdw;
+
+#[cfg(feature = "auth0_fdw")]
+mod auth0_fdw;

@@ -79,7 +79,15 @@ logflare_fdw = [
     "thiserror",
     "url",
 ]
-
+auth0_fdw = [
+    "reqwest",
+    "reqwest-middleware",
+    "reqwest-retry",
+    "serde_json",
+    "serde",
+    "url",
+    "thiserror",
+]
 # Does not include helloworld_fdw because of its general uselessness
 all_fdws = [
     "airtable_fdw",
@@ -89,6 +97,7 @@ all_fdws = [
     "firebase_fdw",
     "s3_fdw",
     "logflare_fdw",
+    "auth0_fdw",
 ]
 
 [dependencies]
