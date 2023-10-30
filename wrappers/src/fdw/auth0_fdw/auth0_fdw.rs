@@ -53,24 +53,24 @@ impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {
     // info or API url in an variable, but don't do any heavy works like making a
     // database connection or API call.
 
-    fn new(_options: &HashMap<String, String>) -> Auth0FdwResult<Self> {
-        // let base_url = options
-        //     .get("api_url")
-        //     .map(|t| t.to_owned())
-        //     // TODO: Find a way to pass through tenant
-        //     .unwrap_or_else(|| "https://@@TENANT@@.auth0.com/api/v2/users".to_string());
+    fn new(options: &HashMap<String, String>) -> Auth0FdwResult<Self> {
+        let base_url = options
+            .get("api_url")
+            .map(|t| t.to_owned())
+            // TODO: Find a way to pass through tenant
+            .unwrap_or_else(|| "https://@@TENANT@@.auth0.com/api/v2/users".to_string());
 
-        // let client = match options.get("api_key") {
-        //     Some(api_key) => Some(create_client(api_key)?),
-        //     None => {
-        //         let key_id = require_option("api_key_id", options)?;
-        //         if let Some(api_key) = get_vault_secret(key_id) {
-        //             Some(create_client(&api_key)?)
-        //         } else {
-        //             None
-        //         }
-        //     }
-        // };
+        let client = match options.get("api_key") {
+            Some(api_key) => Some(create_client(api_key)?),
+            None => {
+                let key_id = require_option("api_key_id", options)?;
+                if let Some(api_key) = get_vault_secret(key_id) {
+                    Some(create_client(&api_key)?)
+                } else {
+                    None
+                }
+            }
+        };
         Ok(Self {
             base_url: "".to_string(),
             row_cnt: 5,
