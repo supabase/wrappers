@@ -25,7 +25,7 @@ cargo pgrx run --features auth0_fdw
 -- create extension
 create extension wrappers;
 
--- create foreign data wrapper and enable 'HelloWorldFdw'
+-- create foreign data wrapper and enable 'Auth0Fdw'
 create foreign data wrapper auth0_wrapper
   handler auth0_fdw_handler
   validator auth0_fdw_validator;

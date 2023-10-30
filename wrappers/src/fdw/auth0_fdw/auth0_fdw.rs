@@ -1,11 +1,11 @@
+use super::{Auth0FdwError, Auth0FdwResult};
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::PgSqlErrorCode;
+use reqwest::{self, header};
+use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
+use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use std::collections::HashMap;
 use supabase_wrappers::prelude::*;
-use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
-use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
-use reqwest::{self, header};
-
 // A simple demo FDW
 #[wrappers_fdw(
     version = "0.1.1",
@@ -23,31 +23,19 @@ pub(crate) struct Auth0Fdw {
     tgt_cols: Vec<Column>,
 }
 
-// fn create_client(api_key: &str) -> Auth0FdwResult<T> {
-//     let mut headers = header::HeaderMap::new();
-//     let client = reqwest::Client::builder()
-//         .default_headers(headers)
-//         .build()?;
-//     let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
-//     Ok(ClientBuilder::new(client)
-//         .with(RetryTransientMiddleware::new_with_policy(retry_policy))
-//         .build())
-// }
-
-enum Auth0FdwError {}
-
-impl From<Auth0FdwError> for ErrorReport {
-    fn from(_value: Auth0FdwError) -> Self {
-        ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, "", "")
-    }
+fn create_client(api_key: &str) -> Result<ClientWithMiddleware, Auth0FdwError> {
+    let mut headers = header::HeaderMap::new();
+    let client = reqwest::Client::builder()
+        .default_headers(headers)
+        .build()?;
+    let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
+    Ok(ClientBuilder::new(client)
+        .with(RetryTransientMiddleware::new_with_policy(retry_policy))
+        .build())
 }
 
-type Auth0FdwResult<T> = Result<T, Auth0FdwError>;
-
 impl Auth0Fdw {
-        const FDW_NAME: &str = "Auth0Fdw";
-
-
+    const FDW_NAME: &str = "Auth0Fdw";
 }
 
 impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {
@@ -64,9 +52,6 @@ impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {
     // You can do any initalization in this new() function, like saving connection
     // info or API url in an variable, but don't do any heavy works like making a
     // database connection or API call.
-
-
-
 
     fn new(_options: &HashMap<String, String>) -> Auth0FdwResult<Self> {
         // let base_url = options
