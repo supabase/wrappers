@@ -96,7 +96,8 @@ impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {
             .get("api_url")
             .map(|t| t.to_owned())
             // TODO: Find a way to pass through tenant
-            .unwrap_or_else(|| "https://@@TENANT@@.auth0.com/api/v2/users".to_string());
+            // TODO: Replace this with tenant string
+            .unwrap_or_else(|| "https://dev-rtoursnfpxmjl0hz.auth0.com/api/v2/users".to_string());
 
         let client = match options.get("api_key") {
             Some(api_key) => Some(create_client(api_key)?),
@@ -109,6 +110,7 @@ impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {
                 }
             }
         };
+        stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
         Ok(Self {
             rt: create_async_runtime()?,
             base_url: "".to_string(),
@@ -169,22 +171,14 @@ impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {
 
     fn iter_scan(&mut self, row: &mut Row) -> Auth0FdwResult<Option<()>> {
         // this is called on each row and we only return one row here
-        if self.row_cnt < 1 {
-            // add values to row if they are in target column list
-            for tgt_col in &self.tgt_cols {
-                match tgt_col.name.as_str() {
-                    "id" => row.push("id", Some(Cell::I64(self.row_cnt))),
-                    "col" => row.push("col", Some(Cell::String("Hello world".to_string()))),
-                    _ => {}
-                }
+        if let Some(ref mut result) = self.scan_result {
+            if !result.is_empty() {
+                return Ok(result
+                    .drain(0..1)
+                    .last()
+                    .map(|src_row| row.replace_with(src_row)));
             }
-
-            self.row_cnt += 1;
-
-            // return Some(()) to Postgres and continue data scan
-            return Ok(Some(()));
         }
-
         // return 'None' to stop data scan
         Ok(None)
     }
