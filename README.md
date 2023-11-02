@@ -4,7 +4,7 @@
 
 `Wrappers` is also a collection of FDWs built by [Supabase](https://www.supabase.com). We currently support the following FDWs, with more under development:
 
-| FDW | Description | Data Read | Data Modify | 
+| FDW | Description | Read | Modify | 
 |----------------|---------------|---------------|----------------|
 | [HelloWorld](./wrappers/src/fdw/helloworld_fdw) | A demo FDW to show how to develop a basic FDW. | | | 
 | [BigQuery](./wrappers/src/fdw/bigquery_fdw) | A FDW for Google [BigQuery](https://cloud.google.com/bigquery) | :white_check_mark: | :white_check_mark: | 
@@ -25,7 +25,8 @@
 
 ## Documentation
 
-[Documentation on docs.rs](https://docs.rs/supabase-wrappers/latest/supabase_wrappers/).
+- [Usage Docs](https://supabase.github.io/wrappers/)
+- [Developer Docs (docs.rs)](https://docs.rs/supabase-wrappers/latest/supabase_wrappers/)
 
 ## Installation
 
