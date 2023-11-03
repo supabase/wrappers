@@ -81,6 +81,18 @@ logflare_fdw = [
     "thiserror",
     "url",
 ]
+cnosdb_fdw = [
+    "arrow",
+    "arrow-flight",
+    "prost-types",
+    "tonic",
+    "prost",
+    "http-auth-basic",
+    "base64",
+    "thiserror",
+    "tokio",
+    "futures",
+]
 
 # Does not include helloworld_fdw because of its general uselessness
 all_fdws = [
@@ -91,6 +103,7 @@ all_fdws = [
     "firebase_fdw",
     "s3_fdw",
     "logflare_fdw",
+    "cnosdb_fdw",
 ]
 
 [dependencies]
@@ -144,6 +157,15 @@ parquet = { version = "41.0.0", features = ["async"], optional = true }
 arrow-array = { version = "41.0.0", optional = true }
 
 thiserror = { version = "1.0.48", optional = true }
+
+# for cnosdb_fdw
+arrow = {version = "42.0.0", features = ["prettyprint"], optional = true }
+arrow-flight = {version = "42.0.0", features = ["flight-sql-experimental"], optional = true }
+prost-types = { version = "0.11.9", optional = true }
+tonic = { version = "0.9", optional = true }
+prost = { version = "0.11.9", optional = true }
+http-auth-basic = { version = "0.3.3", optional = true }
+base64 = { version = "0.13.1", optional = true }
 
 [dev-dependencies]
 pgrx-tests = "=0.10.2"

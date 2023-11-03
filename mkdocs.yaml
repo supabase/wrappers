@@ -12,6 +12,7 @@ nav:
       - Airtable: 'airtable.md'
       - BigQuery: 'bigquery.md'
       - ClickHouse: 'clickhouse.md'
+      - CnosDB: 'cnosdb.md'
       - Firebase: 'firebase.md'
       - Logflare: 'logflare.md'
       - S3: 's3.md'

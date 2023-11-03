@@ -9,6 +9,7 @@
 | [HelloWorld](./wrappers/src/fdw/helloworld_fdw) | A demo FDW to show how to develop a basic FDW. | | | 
 | [BigQuery](./wrappers/src/fdw/bigquery_fdw) | A FDW for Google [BigQuery](https://cloud.google.com/bigquery) | :white_check_mark: | :white_check_mark: | 
 | [Clickhouse](./wrappers/src/fdw/clickhouse_fdw)  | A FDW for [ClickHouse](https://clickhouse.com/) | :white_check_mark: | :white_check_mark: | 
+| [CnosDB](./wrappers/src/fdw/cnosdb_fdw)         | A FDW for [CnosDB](https://www.cnosdb.com/)                    | :white_check_mark: | :x: |
 | [Stripe](./wrappers/src/fdw/stripe_fdw) | A FDW for [Stripe](https://stripe.com/) API | :white_check_mark: | :white_check_mark: |
 | [Firebase](./wrappers/src/fdw/firebase_fdw) | A FDW for Google [Firebase](https://firebase.google.com/) | :white_check_mark: | :x: |
 | [Airtable](./wrappers/src/fdw/airtable_fdw) | A FDW for [Airtable](https://airtable.com/) API | :white_check_mark: | :x: |

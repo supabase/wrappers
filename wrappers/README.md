@@ -5,6 +5,7 @@ This is a collection of FDWs built by [Supabase](https://www.supabase.com). We c
 - [HelloWorld](./src/fdw/helloworld_fdw): A demo FDW to show how to develop a basic FDW.
 - [BigQuery](./src/fdw/bigquery_fdw): A FDW for Google [BigQuery](https://cloud.google.com/bigquery) which supports data read and modify.
 - [Clickhouse](./src/fdw/clickhouse_fdw): A FDW for [ClickHouse](https://clickhouse.com/) which supports data read and modify.
+- [CnosDB](./src/fdw/cnosdb_fdw): A FDW for [CnosDB](https://https://www.cnosdb.com/) which supports data read only.
 - [Stripe](./src/fdw/stripe_fdw): A FDW for [Stripe](https://stripe.com/) API which supports data read and modify.
 - [Firebase](./src/fdw/firebase_fdw): A FDW for Google [Firebase](https://firebase.google.com/) which supports data read only.
 - [Airtable](./src/fdw/airtable_fdw): A FDW for [Airtable](https://airtable.com/) API which supports data read only.
