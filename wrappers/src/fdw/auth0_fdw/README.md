@@ -34,7 +34,7 @@ create foreign data wrapper auth0_wrapper
 create server auth0_server
   foreign data wrapper auth0_wrapper
   options (
-    foo 'bar'
+    api_key '<your_api_key>'
   );
 
 -- create an example foreign table
