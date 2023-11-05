@@ -1,8 +1,9 @@
 #![allow(clippy::module_inception)]
+mod auth0_client;
 mod auth0_fdw;
 mod result;
 // TODO: Write tests
-// mod tests;
+mod tests;
 
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::PgSqlErrorCode;
@@ -11,7 +12,7 @@ use thiserror::Error;
 use supabase_wrappers::prelude::{CreateRuntimeError, OptionsError};
 
 #[derive(Error, Debug)]
-enum Auth0FdwError {
+pub enum Auth0FdwError {
     #[error("column '{0}' data type is not supported")]
     UnsupportedColumnType(String),
 
@@ -41,6 +42,8 @@ enum Auth0FdwError {
 
     #[error("{0}")]
     NumericConversionError(#[from] pgrx::numeric::Error),
+    #[error("no secret found in vault with id {0}")]
+    SecretNotFound(String),
 }
 
 impl From<Auth0FdwError> for ErrorReport {
@@ -48,6 +51,9 @@ impl From<Auth0FdwError> for ErrorReport {
         match value {
             Auth0FdwError::CreateRuntimeError(e) => e.into(),
             Auth0FdwError::OptionsError(e) => e.into(),
+            Auth0FdwError::SecretNotFound(_) => {
+                ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, format!("{value}"), "")
+            }
             _ => ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, format!("{value}"), ""),
         }
     }

@@ -1,13 +1,8 @@
-use super::result::Auth0Response;
 use super::{Auth0FdwError, Auth0FdwResult};
+use crate::fdw::auth0_fdw::auth0_client::Auth0Client;
 use crate::stats;
 use pgrx::notice;
-use pgrx::pg_sys::panic::ErrorReport;
-use pgrx::PgSqlErrorCode;
-use reqwest::{self, header};
-use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
-use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::collections::HashMap;
 use supabase_wrappers::prelude::*;
 use url::Url;
@@ -25,29 +20,11 @@ pub struct Auth0Rec {
 )]
 pub(crate) struct Auth0Fdw {
     // row counter
+    url: String,
+    api_key: String,
     rt: Runtime,
-    client: Option<ClientWithMiddleware>,
-    base_url: String,
     scan_result: Option<Vec<Row>>,
-
-    // target column list
-    tgt_cols: Vec<Column>,
-}
-
-fn create_client(api_key: &str) -> Result<ClientWithMiddleware, Auth0FdwError> {
-    let mut headers = header::HeaderMap::new();
-    let value = format!("Bearer {}", api_key);
-    let mut auth_value =
-        header::HeaderValue::from_str(&value).map_err(|_| Auth0FdwError::InvalidApiKeyHeader)?;
-    auth_value.set_sensitive(true);
-    headers.insert(header::AUTHORIZATION, auth_value);
-    let client = reqwest::Client::builder()
-        .default_headers(headers)
-        .build()?;
-    let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
-    Ok(ClientBuilder::new(client)
-        .with(RetryTransientMiddleware::new_with_policy(retry_policy))
-        .build())
+    client: Option<Auth0Client>,
 }
 
 impl Auth0Fdw {
@@ -104,34 +81,26 @@ impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {
     // info or API url in an variable, but don't do any heavy works like making a
     // database connection or API call.
 
-    fn new(options: &HashMap<String, String>) -> Auth0FdwResult<Self> {
-        notice!("Test this app");
-        let base_url = options
-            .get("api_url")
-            .map(|t| t.to_owned())
-            // TODO: Find a way to pass through tenant
-            // TODO: Replace this with tenant string
-            .unwrap_or_else(|| {
-                "https://dev-rtoursnfpxmjl0hz.us.auth0.com/api/v2/users".to_string()
-            });
-
-        let client = match options.get("api_key") {
-            Some(api_key) => Some(create_client(api_key)?),
-            None => {
-                let key_id = require_option("api_key_id", options)?;
-                if let Some(api_key) = get_vault_secret(key_id) {
-                    Some(create_client(&api_key)?)
-                } else {
-                    None
-                }
-            }
+    fn new(options: &HashMap<String, String>) -> Result<Self, Auth0FdwError> {
+        let url = require_option("url", options)?.to_string();
+        let api_key = if let Some(api_key) = options.get("api_key") {
+            api_key.clone()
+        } else {
+            let api_key_id = options
+                .get("api_key_id")
+                .expect("`api_key_id` must be set if `api_key` is not");
+            get_vault_secret(api_key_id).ok_or(Auth0FdwError::SecretNotFound(api_key_id.clone()))?
         };
+
+        // TODO: Properly create the error
+        let auth0_client = Auth0Client::new(&url, &api_key)?;
+
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
         Ok(Self {
+            url,
+            api_key,
+            client: Some(auth0_client),
             rt: create_async_runtime()?,
-            base_url: base_url,
-            client: client,
-            tgt_cols: Vec::new(),
             scan_result: None,
         })
     }
@@ -145,24 +114,23 @@ impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {
         options: &HashMap<String, String>,
     ) -> Auth0FdwResult<()> {
         // save a copy of target columns
-        self.tgt_cols = columns.to_vec();
         let mut rows = Vec::new();
-        // TODO: Replace with appropriate non-hardcoded url
-        let url = &self.base_url;
-        notice!("{}", url);
         if let Some(client) = &self.client {
             let mut offset: Option<String> = None;
             loop {
                 // Fetch all of the rows upfront. Arguably, this could be done in batches (and invoked each
                 // time iter_scan() runs out of rows) to pipeline the I/O, but we'd have to manage more
                 // state so starting with the simpler solution.
-                let url = self.set_limit_offset(&url, None, offset.as_deref())?;
+                //let url = self.set_limit_offset(&url, None, offset.as_deref())?;
 
-                let body = self.rt.block_on(client.get(&url).send()).and_then(|resp| {
-                    resp.error_for_status()
-                        .and_then(|resp| self.rt.block_on(resp.text()))
-                        .map_err(reqwest_middleware::Error::from)
-                })?;
+                let body = self
+                    .rt
+                    .block_on(client.get_client().get(&self.url).send())
+                    .and_then(|resp| {
+                        resp.error_for_status()
+                            .and_then(|resp| self.rt.block_on(resp.text()))
+                            .map_err(reqwest_middleware::Error::from)
+                    })?;
                 notice!("{:?}", body);
 
                 let (new_rows, new_offset) = self.parse_resp(&body, columns)?;
@@ -188,8 +156,6 @@ impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {
 
     fn iter_scan(&mut self, row: &mut Row) -> Auth0FdwResult<Option<()>> {
         // this is called on each row and we only return one row here
-        notice!("called for row {:?}", row);
-
         if let Some(ref mut result) = self.scan_result {
             notice!("{:?}", result);
             if !result.is_empty() {
@@ -199,14 +165,10 @@ impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {
                     .map(|src_row| row.replace_with(src_row)));
             }
         }
-        // return 'None' to stop data scan
         Ok(None)
     }
 
     fn end_scan(&mut self) -> Auth0FdwResult<()> {
-        notice!(" Before end scan");
-        self.scan_result.take();
-        // we do nothing here, but you can do things like resource cleanup and etc.
         Ok(())
     }
 }

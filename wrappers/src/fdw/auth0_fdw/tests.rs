@@ -1,10 +1,8 @@
 #[cfg(any(test, feature = "pg_test"))]
 #[pgrx::pg_schema]
 mod tests {
+    use pgrx::pg_test;
     use pgrx::prelude::*;
-    use pgrx::{pg_test, JsonB};
-    use reqwest::blocking::Client;
-    use serde_json::json;
 
     #[pg_test]
     fn auth0_smoketest() {

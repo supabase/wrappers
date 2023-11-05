@@ -1,14 +1,9 @@
-use pgrx::pg_sys;
 use serde::de::{MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::fmt;
 use std::marker::PhantomData;
-use std::str::FromStr;
-use supabase_wrappers::prelude::*;
-
-use super::{Auth0FdwError, Auth0FdwResult};
 
 #[derive(Deserialize, Debug)]
 pub struct Auth0Response {

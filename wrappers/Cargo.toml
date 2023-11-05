@@ -83,6 +83,7 @@ auth0_fdw = [
     "reqwest",
     "reqwest-middleware",
     "reqwest-retry",
+    "http",
     "serde_json",
     "serde",
     "url",
