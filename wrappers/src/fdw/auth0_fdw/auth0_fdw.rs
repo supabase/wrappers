@@ -10,6 +10,7 @@ use url::Url;
 #[derive(Deserialize, Debug)]
 pub struct Auth0Rec {
     pub created_at: String,
+    pub user_id: String,
 }
 // A simple demo FDW
 #[wrappers_fdw(
@@ -40,9 +41,6 @@ impl Auth0Fdw {
         if let Some(page_size) = page_size {
             params.push(("pageSize", format!("{}", page_size)));
         }
-        if let Some(offset) = offset {
-            params.push(("offset", offset.to_string()));
-        }
 
         Ok(Url::parse_with_params(url, &params).map(|x| x.into())?)
     }
@@ -52,15 +50,13 @@ impl Auth0Fdw {
         resp_body: &str,
         columns: &[Column],
     ) -> Auth0FdwResult<(Vec<Row>, Option<String>)> {
-        notice!("This is response body: {:?}", resp_body);
+        notice!("{:?}", resp_body);
         let response: Vec<Auth0Rec> = serde_json::from_str(resp_body)?;
-        notice!("This is response : {:?}", response);
         let mut result = Vec::new();
 
-        // for record in response.records.iter() {
-        //     result.push(record.to_row(columns)?);
-        // }
-        notice!("This is result {:?}", result);
+        for record in response.iter() {
+            result.push(record.to_row(columns)?);
+        }
 
         Ok((result, None))
     }
@@ -114,6 +110,7 @@ impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {
         options: &HashMap<String, String>,
     ) -> Auth0FdwResult<()> {
         // save a copy of target columns
+        notice!("These are the colums: {:?}", columns);
         let mut rows = Vec::new();
         if let Some(client) = &self.client {
             let mut offset: Option<String> = None;
@@ -131,10 +128,8 @@ impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {
                             .and_then(|resp| self.rt.block_on(resp.text()))
                             .map_err(reqwest_middleware::Error::from)
                     })?;
-                notice!("{:?}", body);
 
                 let (new_rows, new_offset) = self.parse_resp(&body, columns)?;
-                notice!("finished parsing");
                 rows.extend(new_rows);
 
                 stats::inc_stats(Self::FDW_NAME, stats::Metric::BytesIn, body.len() as i64);
@@ -148,7 +143,6 @@ impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {
         }
         stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsIn, rows.len() as i64);
         stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsOut, rows.len() as i64);
-        notice!("{:?}", rows);
 
         self.scan_result = Some(rows);
         Ok(())
@@ -157,7 +151,6 @@ impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {
     fn iter_scan(&mut self, row: &mut Row) -> Auth0FdwResult<Option<()>> {
         // this is called on each row and we only return one row here
         if let Some(ref mut result) = self.scan_result {
-            notice!("{:?}", result);
             if !result.is_empty() {
                 return Ok(result
                     .drain(0..1)

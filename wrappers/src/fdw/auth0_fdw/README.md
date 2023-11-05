@@ -34,13 +34,14 @@ create foreign data wrapper auth0_wrapper
 create server auth0_server
   foreign data wrapper auth0_wrapper
   options (
+    url 'https://dev-<tenant-id>.us.auth0.com/api/v2/users
     api_key '<your_api_key>'
   );
 
 -- create an example foreign table
 create foreign table auth0 (
-  id bigint,
-  email text
+  user_id text,
+  created_at text
 )
   server auth0_server
   options (
@@ -52,9 +53,9 @@ create foreign table auth0 (
 
 ```sql
 wrappers=# select * from auth0;
- id |    email
-----+-----------------
-  0 | john@supabase.io
+               user_id               |        created_at
+-------------------------------------+--------------------------
+ google-oauth2|101232059018005339936 | 2023-05-16T07:41:08.028Z
 (1 row)
 ```
 
