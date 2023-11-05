@@ -12,8 +12,8 @@ mod tests {
         // create_collection(COLLECTION_NAME);
         Spi::connect(|mut c| {
             c.update(
-                r#"create foreign data wrapper qdrant_wrapper
-                         handler qdrant_fdw_handler validator qdrant_fdw_validator"#,
+                r#"create foreign data wrapper auth0_wrapper
+                         handler auth0_fdw_handler validator auth0_fdw_validator"#,
                 None,
                 None,
             )

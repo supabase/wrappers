@@ -40,7 +40,7 @@ create server auth0_server
 -- create an example foreign table
 create foreign table auth0 (
   id bigint,
-  col text
+  email text
 )
   server auth0_server
   options (
@@ -52,9 +52,9 @@ create foreign table auth0 (
 
 ```sql
 wrappers=# select * from auth0;
- id |    col
-----+-------------
-  0 | Hello world
+ id |    email
+----+-----------------
+  0 | john@supabase.io
 (1 row)
 ```
 
