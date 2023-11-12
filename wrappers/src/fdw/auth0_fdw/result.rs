@@ -1,13 +1,8 @@
-use crate::fdw::auth0_fdw::Auth0FdwError;
 use crate::fdw::auth0_fdw::Auth0FdwResult;
 use pgrx::pg_sys;
-use serde::de::{MapAccess, Visitor};
-use serde::{Deserialize, Deserializer};
+use serde::Deserialize;
 use serde_json::Value;
 use std::collections::HashMap;
-use std::fmt;
-use std::marker::PhantomData;
-use std::str::FromStr;
 use supabase_wrappers::prelude::Cell;
 use supabase_wrappers::prelude::Column;
 use supabase_wrappers::prelude::Row;
@@ -28,64 +23,6 @@ pub struct Auth0Record {
     pub id: String,
 }
 
-struct Auth0FieldsVisitor {
-    marker: PhantomData<fn() -> Auth0Fields>,
-}
-
-impl Auth0FieldsVisitor {
-    fn new() -> Self {
-        Auth0FieldsVisitor {
-            marker: PhantomData,
-        }
-    }
-}
-
-// This is the trait that Deserializers are going to be driving. There
-// is one method for each type of data that our type knows how to
-// deserialize from. There are many other methods that are not
-// implemented here, for example deserializing from integers or strings.
-// By default those methods will return an error, which makes sense
-// because we cannot deserialize a Auth0Fields from an integer or string.
-impl<'de> Visitor<'de> for Auth0FieldsVisitor {
-    // The type that our Visitor is going to produce.
-    type Value = Auth0Fields;
-
-    // Format a message stating what data this Visitor expects to receive.
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("map")
-    }
-
-    // Deserialize Auth0Fields from an abstract "map" provided by the
-    // Deserializer. The MapAccess input is a callback provided by
-    // the Deserializer to let us see each entry in the map.
-    fn visit_map<M>(self, mut access: M) -> Result<Self::Value, M::Error>
-    where
-        M: MapAccess<'de>,
-    {
-        let mut map = Auth0Fields(HashMap::with_capacity(access.size_hint().unwrap_or(0)));
-
-        // While there are entries remaining in the input, add them
-        // into our map.
-        while let Some((key, value)) = access.next_entry::<String, Value>()? {
-            map.0.insert(key.to_lowercase(), value);
-        }
-
-        Ok(map)
-    }
-}
-
-// This is the trait that informs Serde how to deserialize Auth0Fields.
-impl<'de> Deserialize<'de> for Auth0Fields {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        // Instantiate our Visitor and ask the Deserializer to drive
-        // it over the input data, resulting in an instance of Auth0.
-        deserializer.deserialize_map(Auth0FieldsVisitor::new())
-    }
-}
-
 impl Auth0Rec {
     pub(super) fn to_row(&self, columns: &[Column]) -> Auth0FdwResult<Row> {
         let mut row = Row::new();
@@ -98,6 +35,15 @@ impl Auth0Rec {
             }
             if col.name == "created_at" {
                 row.push("created_at", Some(Cell::String(self.created_at.clone())))
+            }
+            if col.name == "email" {
+                row.push("created_at", Some(Cell::String(self.email.clone())))
+            }
+            if col.name == "email_verified" {
+                row.push(
+                    "email_verified",
+                    Some(Cell::Bool(self.email_verified.clone())),
+                )
             }
 
             // let cell = match col.type_oid {

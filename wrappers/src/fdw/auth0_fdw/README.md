@@ -39,14 +39,14 @@ create server auth0_server
   );
 
 -- create an example foreign table
+-- Number of fields are illustrative
 create foreign table auth0 (
   user_id text,
-  created_at text
+  created_at text,
+  email text,
+  email_verified bool
 )
-  server auth0_server
-  options (
-    foo 'bar'
-  );
+  server auth0_server;
 ```
 
 4. Run a query to check if it is working:

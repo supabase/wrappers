@@ -1,7 +1,6 @@
 use super::{Auth0FdwError, Auth0FdwResult};
 use crate::fdw::auth0_fdw::auth0_client::Auth0Client;
 use crate::stats;
-use pgrx::notice;
 use serde::Deserialize;
 use std::collections::HashMap;
 use supabase_wrappers::prelude::*;
@@ -11,6 +10,8 @@ use url::Url;
 pub struct Auth0Rec {
     pub created_at: String,
     pub user_id: String,
+    pub email: String,
+    pub email_verified: bool,
 }
 // A simple demo FDW
 #[wrappers_fdw(
@@ -50,7 +51,6 @@ impl Auth0Fdw {
         resp_body: &str,
         columns: &[Column],
     ) -> Auth0FdwResult<(Vec<Row>, Option<String>)> {
-        notice!("{:?}", resp_body);
         let response: Vec<Auth0Rec> = serde_json::from_str(resp_body)?;
         let mut result = Vec::new();
 
@@ -110,7 +110,6 @@ impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {
         options: &HashMap<String, String>,
     ) -> Auth0FdwResult<()> {
         // save a copy of target columns
-        notice!("These are the colums: {:?}", columns);
         let mut rows = Vec::new();
         if let Some(client) = &self.client {
             let mut offset: Option<String> = None;

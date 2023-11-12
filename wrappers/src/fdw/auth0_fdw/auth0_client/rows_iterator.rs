@@ -7,7 +7,7 @@ pub(crate) struct RowsIterator {
     fetch_payload: bool,
     fetch_vector: bool,
     columns: Vec<Column>,
-    qdrant_client: Auth0Client,
+    auth0_client: Auth0Client,
     batch_size: u64,
     rows: VecDeque<Row>,
     have_more_rows: bool,
@@ -19,7 +19,7 @@ impl RowsIterator {
         collection_name: String,
         columns: Vec<Column>,
         batch_size: u64,
-        qdrant_client: QdrantClient,
+        auth0_client: Auth0Client,
     ) -> Self {
         let fetch_payload = columns.iter().any(|col| col.name == "payload");
         let fetch_vector = columns.iter().any(|col| col.name == "vector");
@@ -28,7 +28,7 @@ impl RowsIterator {
             fetch_payload,
             fetch_vector,
             columns,
-            qdrant_client,
+            auth0_client,
             batch_size,
             rows: VecDeque::new(),
             have_more_rows: true,
@@ -44,8 +44,8 @@ impl RowsIterator {
         self.next_page_offset
     }
 
-    fn fetch_rows_batch(&mut self) -> Result<Option<Row>, QdrantClientError> {
-        let points_result = self.qdrant_client.fetch_points(
+    fn fetch_rows_batch(&mut self) -> Result<Option<Row>, Auth0ClientError> {
+        let points_result = self.auth0_client.fetch_points(
             &self.collection_name,
             self.fetch_payload,
             self.fetch_vector,
@@ -68,7 +68,7 @@ impl RowsIterator {
 }
 
 impl Iterator for RowsIterator {
-    type Item = Result<Row, QdrantClientError>;
+    type Item = Result<Row, Auth0ClientError>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(row) = self.get_next_row() {
