@@ -261,6 +261,7 @@ pub(crate) struct StripeFdw {
     scan_result: Option<Vec<Row>>,
     obj: String,
     rowid_col: String,
+    iter_idx: usize,
 }
 
 impl StripeFdw {
@@ -645,6 +646,7 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
             scan_result: None,
             obj: String::default(),
             rowid_col: String::default(),
+            iter_idx: 0,
         })
     }
 
@@ -737,14 +739,18 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
 
     fn iter_scan(&mut self, row: &mut Row) -> StripeFdwResult<Option<()>> {
         if let Some(ref mut result) = self.scan_result {
-            if !result.is_empty() {
-                return Ok(result
-                    .drain(0..1)
-                    .last()
-                    .map(|src_row| row.replace_with(src_row)));
+            if self.iter_idx < result.len() {
+                row.replace_with(result[self.iter_idx].clone());
+                self.iter_idx += 1;
+                return Ok(Some(()));
             }
         }
         Ok(None)
+    }
+
+    fn re_scan(&mut self) -> StripeFdwResult<()> {
+        self.iter_idx = 0;
+        Ok(())
     }
 
     fn end_scan(&mut self) -> StripeFdwResult<()> {
