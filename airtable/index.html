@@ -617,7 +617,7 @@
 <span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">secrets</span><span class="w"> </span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">secret</span><span class="p">)</span><span class="w"></span>
 <span class="k">values</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
 <span class="w">  </span><span class="s1">&#39;airtable&#39;</span><span class="p">,</span><span class="w"></span>
-<span class="w">  </span><span class="s1">&#39;YOUR_SECRET&#39;</span><span class="w"></span>
+<span class="w">  </span><span class="s1">&#39;&lt;Airtable API Key or PAT&gt;&#39;</span><span class="w"> </span><span class="c1">-- Airtable API key or Personal Access Token (PAT)</span>
 <span class="p">)</span><span class="w"></span>
 <span class="n">returning</span><span class="w"> </span><span class="n">key_id</span><span class="p">;</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
@@ -647,7 +647,7 @@
 <span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">airtable_wrapper</span><span class="w"></span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
 <span class="w">    </span><span class="n">api_url</span><span class="w"> </span><span class="s1">&#39;https://api.airtable.com/v0&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- Airtable API url, optional</span>
-<span class="w">    </span><span class="n">api_key</span><span class="w"> </span><span class="s1">&#39;&lt;Airtable API Key&gt;&#39;</span><span class="w">  </span><span class="c1">-- Airtable API key, required</span>
+<span class="w">    </span><span class="n">api_key</span><span class="w"> </span><span class="s1">&#39;&lt;Airtable API Key or PAT&gt;&#39;</span><span class="w">  </span><span class="c1">-- Airtable API key or Personal Access Token (PAT), required</span>
 <span class="w">  </span><span class="p">);</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
 </div>
@@ -687,7 +687,7 @@
 <span class="normal">7</span>
 <span class="normal">8</span>
 <span class="normal">9</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">my_foreign_table</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
-<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="w"></span>
 <span class="w">  </span><span class="c1">-- other fields</span>
 <span class="p">)</span><span class="w"></span>
 <span class="n">server</span><span class="w"> </span><span class="n">airtable_server</span><span class="w"></span>
