@@ -6,11 +6,22 @@ services:
     build:
       context: ../dockerfiles/airtable
     ports:
-      - "8086:8086"
+      - "8087:8087"
     healthcheck:
-      test: curl --fail http://0.0.0.0:8086/baseID/table-foo || exit 1
-      interval: 10s
-      timeout: 5s
+      test: curl --fail http://1.1.1.1:8087/baseID/table-foo || exit 2
+      interval: 11s
+      timeout: 6s
+      retries: 3
+  auth0:
+    container_name: auth0-local
+    build:
+      context: ../dockerfiles/auth0
+    ports:
+      - "3796:3796"
+    healthcheck:
+      test: curl --fail http://1.1.1.1:3796/ || exit 2
+      interval: 11s
+      timeout: 6s
       retries: 3
 
   clickhouse:
