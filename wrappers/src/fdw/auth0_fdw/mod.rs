@@ -2,7 +2,6 @@
 mod auth0_client;
 mod auth0_fdw;
 mod result;
-// TODO: Write tests
 mod tests;
 
 use pgrx::pg_sys::panic::ErrorReport;
