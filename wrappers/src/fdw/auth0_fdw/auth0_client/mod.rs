@@ -40,8 +40,8 @@ impl Auth0Client {
             .with(RetryTransientMiddleware::new_with_policy(retry_policy))
             .build())
     }
-    pub fn get_client(&self) -> ClientWithMiddleware {
-        self.client.clone()
+    pub fn get_client(&self) -> &ClientWithMiddleware {
+        &self.client
     }
 }
 #[derive(Error, Debug)]

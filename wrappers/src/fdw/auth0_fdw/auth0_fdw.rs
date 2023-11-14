@@ -45,7 +45,7 @@ impl Auth0Fdw {
 
         Ok(Url::parse_with_params(url, &params).map(|x| x.into())?)
     }
-    // convert response botext to rows
+    // convert response text to rows
     fn parse_resp(
         &self,
         resp_body: &str,
