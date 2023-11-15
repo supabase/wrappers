@@ -4321,7 +4321,7 @@ dependencies = [
 
 [[package]]
 name = "wrappers"
-version = "0.1.18"
+version = "0.1.19"
 dependencies = [
  "arrow-array",
  "async-compression",
