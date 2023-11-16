@@ -6,8 +6,6 @@ mod tests {
 
     #[pg_test]
     fn auth0_smoketest() {
-        const COLLECTION_NAME: &str = "test_collection";
-        // create_collection(COLLECTION_NAME);
         Spi::connect(|mut c| {
             c.update(
                 r#"create foreign data wrapper auth0_wrapper
@@ -16,6 +14,28 @@ mod tests {
                 None,
             )
             .expect("Failed to create foreign data wrapper");
+            c.update(
+                r#"CREATE SERVER auth0_server
+                         FOREIGN DATA WRAPPER auth0_wrapper
+                         OPTIONS (
+                            api_url 'http://localhost:3796',
+                            api_key 'apiKey'
+                         )"#,
+                None,
+                None,
+            )
+            .unwrap();
+            c.update(
+                r#"
+                  CREATE FOREIGN TABLE auth0_view (
+                    string_field text
+                  )
+                  SERVER auth0_server
+             "#,
+                None,
+                None,
+            )
+            .unwrap();
         });
     }
 }
