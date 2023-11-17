@@ -1,6 +1,6 @@
 [package]
 name = "wrappers"
-version = "0.1.18"
+version = "0.1.19"
 edition = "2021"
 
 [lib]
@@ -26,6 +26,7 @@ bigquery_fdw = [
 ]
 clickhouse_fdw = ["clickhouse-rs", "chrono", "chrono-tz", "regex", "thiserror"]
 stripe_fdw = [
+    "http",
     "reqwest",
     "reqwest-middleware",
     "reqwest-retry",
@@ -72,6 +73,7 @@ airtable_fdw = [
     "thiserror",
 ]
 logflare_fdw = [
+    "http",
     "reqwest",
     "reqwest-middleware",
     "reqwest-retry",

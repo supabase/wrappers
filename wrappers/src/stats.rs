@@ -40,9 +40,17 @@ fn get_stats_table() -> String {
         .unwrap_or_else(|| panic!("cannot find fdw stats table '{}'", FDW_STATS_TABLE))
 }
 
+fn is_txn_read_only() -> bool {
+    Spi::get_one("show transaction_read_only") == Ok(Some("on"))
+}
+
 // increase stats value
 #[allow(dead_code)]
 pub(crate) fn inc_stats(fdw_name: &str, metric: Metric, inc: i64) {
+    if is_txn_read_only() {
+        return;
+    }
+
     let sql = format!(
         "insert into {} as s (fdw_name, {}) values($1, $2)
          on conflict(fdw_name)
@@ -82,6 +90,10 @@ pub(crate) fn get_metadata(fdw_name: &str) -> Option<JsonB> {
 // set metadata
 #[allow(dead_code)]
 pub(crate) fn set_metadata(fdw_name: &str, metadata: Option<JsonB>) {
+    if is_txn_read_only() {
+        return;
+    }
+
     let sql = format!(
         "insert into {} as s (fdw_name, metadata) values($1, $2)
          on conflict(fdw_name)
