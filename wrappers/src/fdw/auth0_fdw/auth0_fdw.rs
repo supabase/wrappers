@@ -1,18 +1,11 @@
 use super::{Auth0FdwError, Auth0FdwResult};
 use crate::fdw::auth0_fdw::auth0_client::Auth0Client;
+use crate::fdw::auth0_fdw::result::Auth0Record;
 use crate::stats;
-use serde::Deserialize;
 use std::collections::HashMap;
 use supabase_wrappers::prelude::*;
 use url::Url;
 
-#[derive(Deserialize, Debug)]
-pub struct Auth0Rec {
-    pub created_at: String,
-    pub user_id: String,
-    pub email: String,
-    pub email_verified: bool,
-}
 // A simple demo FDW
 #[wrappers_fdw(
     version = "0.1.1",
@@ -51,7 +44,7 @@ impl Auth0Fdw {
         resp_body: &str,
         columns: &[Column],
     ) -> Auth0FdwResult<(Vec<Row>, Option<String>)> {
-        let response: Vec<Auth0Rec> = serde_json::from_str(resp_body)?;
+        let response: Vec<Auth0Record> = serde_json::from_str(resp_body)?;
         let mut result = Vec::new();
 
         for record in response.iter() {

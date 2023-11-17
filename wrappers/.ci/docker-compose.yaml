@@ -6,9 +6,9 @@ services:
     build:
       context: ../dockerfiles/airtable
     ports:
-      - "8087:8087"
+      - "8086:8086"
     healthcheck:
-      test: curl --fail http://1.1.1.1:8087/baseID/table-foo || exit 2
+      test: curl --fail http://1.1.1.1:8086/baseID/table-foo || exit 2
       interval: 11s
       timeout: 6s
       retries: 3
