@@ -39,10 +39,21 @@ pub enum Auth0FdwError {
     #[error("{0}")]
     OptionsError(#[from] OptionsError),
 
+
+    #[error("Auth0 object '{0}' not implemented")]
+    ObjectNotImplemented(String),
+
+
     #[error("{0}")]
     NumericConversionError(#[from] pgrx::numeric::Error),
     #[error("no secret found in vault with id {0}")]
     SecretNotFound(String),
+
+    #[error("`url` option must be set")]
+    URLOptionMissing,
+
+    #[error("exactly one of `api_key` or `api_key_id` options must be set")]
+    SetOneOfApiKeyAndApiKeyIdSet
 }
 
 impl From<Auth0FdwError> for ErrorReport {

@@ -1,10 +1,10 @@
 use super::{Auth0FdwError, Auth0FdwResult};
-use crate::fdw::auth0_fdw::auth0_client::Auth0Client;
 use crate::fdw::auth0_fdw::result::Auth0Record;
 use crate::stats;
 use std::collections::HashMap;
 use supabase_wrappers::prelude::*;
 use url::Url;
+use pgrx::pg_sys;
 
 // A simple demo FDW
 #[wrappers_fdw(
@@ -53,6 +53,7 @@ impl Auth0Fdw {
 
         Ok((result, None))
     }
+
 }
 
 impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {
@@ -102,6 +103,7 @@ impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {
         _limit: &Option<Limit>,
         options: &HashMap<String, String>,
     ) -> Auth0FdwResult<()> {
+        let obj = require_option("object", options)?;
         // save a copy of target columns
         let mut rows = Vec::new();
         if let Some(client) = &self.client {
@@ -110,7 +112,6 @@ impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {
                 // Fetch all of the rows upfront. Arguably, this could be done in batches (and invoked each
                 // time iter_scan() runs out of rows) to pipeline the I/O, but we'd have to manage more
                 // state so starting with the simpler solution.
-                //let url = self.set_limit_offset(&url, None, offset.as_deref())?;
 
                 let body = self
                     .rt
@@ -154,6 +155,31 @@ impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {
     }
 
     fn end_scan(&mut self) -> Auth0FdwResult<()> {
+        Ok(())
+    }
+
+
+    fn validator(
+        options: Vec<Option<String>>,
+        catalog: Option<pg_sys::Oid>,
+    ) -> Auth0FdwResult<()> {
+        if let Some(oid) = catalog {
+            if oid == FOREIGN_SERVER_RELATION_ID {
+                let api_key_exists = check_options_contain(&options, "api_key").is_ok();
+                let api_key_id_exists = check_options_contain(&options, "api_key_id").is_ok();
+                let url_exists = check_options_contain(&options, "url").is_ok();
+                if (api_key_exists && api_key_id_exists) || (!api_key_exists && !api_key_id_exists)
+                {
+                    return Err(Auth0FdwError::SetOneOfApiKeyAndApiKeyIdSet);
+                }
+                if !url_exists {
+                    return Err(Auth0FdwError::URLOptionMissing);
+                }
+            } else if oid == FOREIGN_TABLE_RELATION_ID {
+                check_options_contain(&options, "object")?;
+            }
+        }
+
         Ok(())
     }
 }
