@@ -21,32 +21,49 @@ cargo pgrx run --features auth0_fdw
 
 3. Create the extension, foreign data wrapper and related objects:
 
-```sql
+
+
+``` sql
 -- create extension
 create extension wrappers;
+```
 
+``` sql
 -- create foreign data wrapper and enable 'Auth0Fdw'
 create foreign data wrapper auth0_wrapper
   handler auth0_fdw_handler
   validator auth0_fdw_validator;
+```
 
+
+
+``` sql
 -- create server and specify custom options
 create server auth0_server
   foreign data wrapper auth0_wrapper
   options (
-    url 'https://dev-<tenant-id>.us.auth0.com/api/v2/users
+    url 'https://dev-<tenant-id>.us.auth0.com/api/v2/users',
     api_key '<your_api_key>'
   );
+```
 
+
+``` sql
 -- create an example foreign table
 -- Number of fields are illustrative
 create foreign table auth0 (
-  user_id text,
   created_at text,
   email text,
+  locale text,
   email_verified bool
 )
-  server auth0_server;
+  server auth0_server
+  options (
+    object 'users'
+  );
+```
+
+
 ```
 
 4. Run a query to check if it is working:

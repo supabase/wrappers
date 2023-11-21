@@ -25,7 +25,9 @@ pub struct Auth0Fields(HashMap<String, Value>);
 #[derive(Deserialize, Debug)]
 pub struct Auth0Record {
     pub created_at: String,
-    pub id: String,
+    pub email: String,
+    pub locale: String,
+    pub email_verified: bool,
 }
 
 fn json_value_to_cell(tgt_col: &Column, v: &JsonValue) -> Auth0FdwResult<Cell> {
@@ -64,18 +66,20 @@ fn json_value_to_cell(tgt_col: &Column, v: &JsonValue) -> Auth0FdwResult<Cell> {
 impl Auth0Record {
     pub(super) fn to_row(&self, columns: &[Column]) -> Auth0FdwResult<Row> {
         let mut row = Row::new();
-
         for tgt_col in columns {
-            if tgt_col.name == "id" {
-                row.push("id", Some(Cell::String(self.id.clone())))
-            } else if tgt_col.name == "created_at" {
-                let timestamp_option = Timestamp::from_str(&self.created_at).ok();
+            if tgt_col.name == "created_at" {
+                // let timestamp_option = Timestamp::from_str(&self.created_at).ok();
 
-                let cell_value = match timestamp_option {
-                    Some(timestamp) => Some(Cell::Timestamp(timestamp)),
-                    None => None, // Or use a default value or handle the error
-                };
+                let cell_value = Some(Cell::String(self.created_at.clone()));
+                //    None => None, // Or use a default value or handle the error
+                // };
                 row.push("created_at", cell_value);
+            } else if tgt_col.name == "email" {
+                row.push("email", Some(Cell::String(self.email.clone())))
+            } else if tgt_col.name == "locale" {
+                row.push("locale", Some(Cell::String(self.locale.clone())))
+            } else if tgt_col.name == "email_verified" {
+                row.push("email_verified", Some(Cell::Bool(self.email_verified)))
             }
         }
 

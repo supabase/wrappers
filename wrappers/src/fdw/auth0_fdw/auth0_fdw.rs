@@ -1,11 +1,13 @@
 use super::{Auth0FdwError, Auth0FdwResult};
+use crate::fdw::auth0_fdw::auth0_client::Auth0Client;
 use crate::fdw::auth0_fdw::result::Auth0Record;
 use crate::stats;
+use pgrx::pg_sys;
 use std::collections::HashMap;
 use supabase_wrappers::prelude::*;
 use url::Url;
-use pgrx::pg_sys;
 
+use pgrx::notice;
 // A simple demo FDW
 #[wrappers_fdw(
     version = "0.1.1",
@@ -53,7 +55,6 @@ impl Auth0Fdw {
 
         Ok((result, None))
     }
-
 }
 
 impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {
@@ -82,7 +83,6 @@ impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {
             get_vault_secret(api_key_id).ok_or(Auth0FdwError::SecretNotFound(api_key_id.clone()))?
         };
 
-        // TODO: Properly create the error
         let auth0_client = Auth0Client::new(&url, &api_key)?;
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
@@ -123,9 +123,11 @@ impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {
                     })?;
 
                 let (new_rows, new_offset) = self.parse_resp(&body, columns)?;
+                notice!("{:?}", new_rows);
                 rows.extend(new_rows);
 
                 stats::inc_stats(Self::FDW_NAME, stats::Metric::BytesIn, body.len() as i64);
+                notice!("here too");
 
                 if let Some(new_offset) = new_offset {
                     offset = Some(new_offset);
@@ -134,6 +136,7 @@ impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {
                 }
             }
         }
+        notice!("reached here ");
         stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsIn, rows.len() as i64);
         stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsOut, rows.len() as i64);
 
@@ -158,11 +161,7 @@ impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {
         Ok(())
     }
 
-
-    fn validator(
-        options: Vec<Option<String>>,
-        catalog: Option<pg_sys::Oid>,
-    ) -> Auth0FdwResult<()> {
+    fn validator(options: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) -> Auth0FdwResult<()> {
         if let Some(oid) = catalog {
             if oid == FOREIGN_SERVER_RELATION_ID {
                 let api_key_exists = check_options_contain(&options, "api_key").is_ok();
