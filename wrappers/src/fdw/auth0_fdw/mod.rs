@@ -39,10 +39,8 @@ pub enum Auth0FdwError {
     #[error("{0}")]
     OptionsError(#[from] OptionsError),
 
-
     #[error("Auth0 object '{0}' not implemented")]
     ObjectNotImplemented(String),
-
 
     #[error("{0}")]
     NumericConversionError(#[from] pgrx::numeric::Error),
@@ -53,7 +51,7 @@ pub enum Auth0FdwError {
     URLOptionMissing,
 
     #[error("exactly one of `api_key` or `api_key_id` options must be set")]
-    SetOneOfApiKeyAndApiKeyIdSet
+    SetOneOfApiKeyAndApiKeyIdSet,
 }
 
 impl From<Auth0FdwError> for ErrorReport {

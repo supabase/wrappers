@@ -28,7 +28,11 @@ mod tests {
             c.update(
                 r#"
                   CREATE FOREIGN TABLE auth0_view (
-                    string_field text
+                    created_at text,
+                    email text,
+                    locale text,
+                    email_verified bool,
+                    identities jsonb
                   )
                   SERVER auth0_server
                   options (
@@ -39,6 +43,18 @@ mod tests {
                 None,
             )
             .unwrap();
+            /*
+             The table data below comes from the code in wrappers/dockerfiles/auth0/server.py
+            */
+            let results = c
+                .select(
+                    "SELECT * FROM auth0_view WHERE email = 'example@gmail.com'",
+                    None,
+                    None,
+                )
+                .expect("One record for the query")
+                .collect::<Vec<_>>();
+            assert_eq!(results.len(), 1);
         });
     }
 }

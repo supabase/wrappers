@@ -1,18 +1,12 @@
 use crate::fdw::auth0_fdw::Auth0FdwResult;
-use pgrx::pg_sys;
 use serde::Deserialize;
-use serde_json::value::Value as JsonValue;
 use serde_json::Value;
 use std::collections::HashMap;
 use supabase_wrappers::prelude::Cell;
 use supabase_wrappers::prelude::Column;
 use supabase_wrappers::prelude::Row;
 
-use crate::fdw::auth0_fdw::Auth0FdwError;
-use pgrx::AnyNumeric;
-use pgrx::Date;
-use pgrx::Timestamp;
-use std::str::FromStr;
+use pgrx::JsonB;
 
 #[derive(Deserialize, Debug)]
 pub struct Auth0Response {
@@ -28,39 +22,7 @@ pub struct Auth0Record {
     pub email: String,
     pub locale: String,
     pub email_verified: bool,
-}
-
-fn json_value_to_cell(tgt_col: &Column, v: &JsonValue) -> Auth0FdwResult<Cell> {
-    match tgt_col.type_oid {
-        pg_sys::BOOLOID => v.as_bool().map(Cell::Bool),
-        pg_sys::CHAROID => v.as_i64().and_then(|s| i8::try_from(s).ok()).map(Cell::I8),
-        pg_sys::INT2OID => v
-            .as_i64()
-            .and_then(|s| i16::try_from(s).ok())
-            .map(Cell::I16),
-        pg_sys::FLOAT4OID => v.as_f64().map(|s| s as f32).map(Cell::F32),
-        pg_sys::INT4OID => v
-            .as_i64()
-            .and_then(|s| i32::try_from(s).ok())
-            .map(Cell::I32),
-        pg_sys::FLOAT8OID => v.as_f64().map(Cell::F64),
-        pg_sys::INT8OID => v.as_i64().map(Cell::I64),
-        pg_sys::NUMERICOID => v
-            .as_f64()
-            .and_then(|s| AnyNumeric::try_from(s).ok())
-            .map(Cell::Numeric),
-        pg_sys::TEXTOID => v.as_str().map(|s| s.to_owned()).map(Cell::String),
-        pg_sys::DATEOID => v
-            .as_str()
-            .and_then(|s| Date::from_str(s).ok())
-            .map(Cell::Date),
-        pg_sys::TIMESTAMPOID => v
-            .as_str()
-            .and_then(|s| Timestamp::from_str(s).ok())
-            .map(Cell::Timestamp),
-        _ => return Err(Auth0FdwError::UnsupportedColumnType(tgt_col.name.clone())),
-    }
-    .ok_or(Auth0FdwError::ColumnTypeNotMatch(tgt_col.name.clone()))
+    pub identities: Value,
 }
 
 impl Auth0Record {
@@ -80,6 +42,10 @@ impl Auth0Record {
                 row.push("locale", Some(Cell::String(self.locale.clone())))
             } else if tgt_col.name == "email_verified" {
                 row.push("email_verified", Some(Cell::Bool(self.email_verified)))
+            } else if tgt_col.name == "identities" {
+                let attrs = serde_json::from_str(&self.identities.to_string())?;
+
+                row.push("identities", Some(Cell::Json(JsonB(attrs))))
             }
         }
 

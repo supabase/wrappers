@@ -5,9 +5,7 @@ use crate::stats;
 use pgrx::pg_sys;
 use std::collections::HashMap;
 use supabase_wrappers::prelude::*;
-use url::Url;
 
-use pgrx::notice;
 // A simple demo FDW
 #[wrappers_fdw(
     version = "0.1.1",
@@ -18,7 +16,6 @@ use pgrx::notice;
 pub(crate) struct Auth0Fdw {
     // row counter
     url: String,
-    api_key: String,
     rt: Runtime,
     scan_result: Option<Vec<Row>>,
     client: Option<Auth0Client>,
@@ -27,19 +24,6 @@ pub(crate) struct Auth0Fdw {
 impl Auth0Fdw {
     const FDW_NAME: &str = "Auth0Fdw";
 
-    fn set_limit_offset(
-        &self,
-        url: &str,
-        page_size: Option<usize>,
-        offset: Option<&str>,
-    ) -> Auth0FdwResult<String> {
-        let mut params = Vec::new();
-        if let Some(page_size) = page_size {
-            params.push(("pageSize", format!("{}", page_size)));
-        }
-
-        Ok(Url::parse_with_params(url, &params).map(|x| x.into())?)
-    }
     // convert response text to rows
     fn parse_resp(
         &self,
@@ -88,7 +72,6 @@ impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
         Ok(Self {
             url,
-            api_key,
             client: Some(auth0_client),
             rt: create_async_runtime()?,
             scan_result: None,
@@ -101,13 +84,11 @@ impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {
         columns: &[Column],
         _sorts: &[Sort],
         _limit: &Option<Limit>,
-        options: &HashMap<String, String>,
+        _options: &HashMap<String, String>,
     ) -> Auth0FdwResult<()> {
-        let obj = require_option("object", options)?;
         // save a copy of target columns
         let mut rows = Vec::new();
         if let Some(client) = &self.client {
-            let mut offset: Option<String> = None;
             loop {
                 // Fetch all of the rows upfront. Arguably, this could be done in batches (and invoked each
                 // time iter_scan() runs out of rows) to pipeline the I/O, but we'd have to manage more
@@ -122,21 +103,12 @@ impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {
                             .map_err(reqwest_middleware::Error::from)
                     })?;
 
-                let (new_rows, new_offset) = self.parse_resp(&body, columns)?;
-                notice!("{:?}", new_rows);
+                let (new_rows, _new_offset) = self.parse_resp(&body, columns)?;
                 rows.extend(new_rows);
 
                 stats::inc_stats(Self::FDW_NAME, stats::Metric::BytesIn, body.len() as i64);
-                notice!("here too");
-
-                if let Some(new_offset) = new_offset {
-                    offset = Some(new_offset);
-                } else {
-                    break;
-                }
             }
         }
-        notice!("reached here ");
         stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsIn, rows.len() as i64);
         stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsOut, rows.len() as i64);
 
