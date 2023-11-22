@@ -54,7 +54,6 @@ create server auth0_server
 create foreign table auth0 (
   created_at text,
   email text,
-  locale text,
   email_verified bool,
   identities jsonb
 )

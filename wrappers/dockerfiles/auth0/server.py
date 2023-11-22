@@ -7,15 +7,14 @@ import json
 class MockServerHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         # TODO: Update this server data with relevant info
-        response_data = {
+        response_data = [{
             "email": "example@gmail.com",
             "identities": [{
                 'provider': 'google-oauth2'
             }],
-            "locale": "en-gb",
-            "email_verified": "false",
+            "email_verified": False,
             "created_at": "2023-05-16T07:41:08.028Z"
-        }
+        }]
 
         # Set response code and headers
         self.send_response(200)

@@ -30,7 +30,6 @@ mod tests {
                   CREATE FOREIGN TABLE auth0_view (
                     created_at text,
                     email text,
-                    locale text,
                     email_verified bool,
                     identities jsonb
                   )

@@ -20,7 +20,6 @@ pub struct Auth0Fields(HashMap<String, Value>);
 pub struct Auth0Record {
     pub created_at: String,
     pub email: String,
-    pub locale: String,
     pub email_verified: bool,
     pub identities: Value,
 }
@@ -38,8 +37,6 @@ impl Auth0Record {
                 row.push("created_at", cell_value);
             } else if tgt_col.name == "email" {
                 row.push("email", Some(Cell::String(self.email.clone())))
-            } else if tgt_col.name == "locale" {
-                row.push("locale", Some(Cell::String(self.locale.clone())))
             } else if tgt_col.name == "email_verified" {
                 row.push("email_verified", Some(Cell::Bool(self.email_verified)))
             } else if tgt_col.name == "identities" {
