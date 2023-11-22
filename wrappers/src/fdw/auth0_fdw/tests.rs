@@ -18,7 +18,7 @@ mod tests {
                 r#"CREATE SERVER auth0_server
                          FOREIGN DATA WRAPPER auth0_wrapper
                          OPTIONS (
-                            api_url 'http://localhost:3796',
+                            url 'http://localhost:3796',
                             api_key 'apiKey'
                          )"#,
                 None,
@@ -31,6 +31,9 @@ mod tests {
                     string_field text
                   )
                   SERVER auth0_server
+                  options (
+                    object 'users'
+                  )
              "#,
                 None,
                 None,
