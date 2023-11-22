@@ -8,7 +8,6 @@ use reqwest_retry::RetryTransientMiddleware;
 use supabase_wrappers::prelude::*;
 use thiserror::Error;
 use url::{ParseError, Url};
-// TODO: Remove this and replace new() with Auth0ClientError
 use crate::fdw::auth0_fdw::Auth0FdwError;
 
 pub(crate) struct Auth0Client {

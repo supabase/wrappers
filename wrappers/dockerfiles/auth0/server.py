@@ -6,7 +6,6 @@ import json
 
 class MockServerHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
-        # TODO: Update this server data with relevant info
         response_data = [{
             "email": "example@gmail.com",
             "identities": [{
