@@ -44,17 +44,17 @@ pub(crate) unsafe fn extract_sorts(
             .and_then(|em| {
                 let expr = (*em).em_expr as *mut pg_sys::Node;
 
-                if is_a(expr, pg_sys::NodeTag_T_Var) {
+                if is_a(expr, pg_sys::NodeTag::T_Var) {
                     let var = expr as *mut pg_sys::Var;
                     let sort = create_sort(pathkey, var, baserel_id);
                     if let Some(sort) = sort {
                         ret.push(sort);
                     }
-                } else if is_a(expr, pg_sys::NodeTag_T_RelabelType) {
+                } else if is_a(expr, pg_sys::NodeTag::T_RelabelType) {
                     // ORDER BY clauses having a COLLATE option will be RelabelType
                     let expr = expr as *mut pg_sys::RelabelType;
                     let var = (*expr).arg as *mut pg_sys::Var;
-                    if is_a(var as *mut pg_sys::Node, pg_sys::NodeTag_T_Var) {
+                    if is_a(var as *mut pg_sys::Node, pg_sys::NodeTag::T_Var) {
                         let sort = create_sort(pathkey, var, baserel_id);
                         if let Some(mut sort) = sort {
                             let coll_id = (*expr).resultcollid;

@@ -602,7 +602,7 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
         unsafe {
             use crate::{modify, scan};
             let mut fdw_routine =
-                FdwRoutine::<AllocatedByRust>::alloc_node(pg_sys::NodeTag_T_FdwRoutine);
+                FdwRoutine::<AllocatedByRust>::alloc_node(pg_sys::NodeTag::T_FdwRoutine);
 
             // plan phase
             fdw_routine.GetForeignRelSize = Some(scan::get_foreign_rel_size::<E, Self>);
