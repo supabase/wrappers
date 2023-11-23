@@ -8,9 +8,9 @@ services:
     ports:
       - "8086:8086"
     healthcheck:
-      test: curl --fail http://1.1.1.1:8086/baseID/table-foo || exit 2
-      interval: 11s
-      timeout: 6s
+      test: curl --fail http://1.1.1.1:8086/baseID/table-foo || exit 1
+      interval: 10s
+      timeout: 5s
       retries: 3
   auth0:
     container_name: auth0-local
@@ -19,7 +19,7 @@ services:
     ports:
       - "3796:3796"
     healthcheck:
-      test: curl --fail http://1.1.1.1:3796/ || exit 2
+      test: curl --fail http://1.1.1.1:3796/ || exit 1
       interval: 11s
       timeout: 6s
       retries: 3
