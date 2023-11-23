@@ -104,7 +104,7 @@ all_fdws = [
 ]
 
 [dependencies]
-pgrx = { version = "=0.10.2" }
+pgrx = { version = "=0.11.0" }
 #supabase-wrappers = "0.1"
 supabase-wrappers = { path = "../supabase-wrappers", default-features = false }
 
@@ -156,7 +156,7 @@ arrow-array = { version = "41.0.0", optional = true }
 thiserror = { version = "1.0.48", optional = true }
 
 [dev-dependencies]
-pgrx-tests = "=0.10.2"
+pgrx-tests = "=0.11.0"
 
 [profile.dev]
 panic = "unwind"
