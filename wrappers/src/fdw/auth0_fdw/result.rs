@@ -29,7 +29,6 @@ impl Auth0Record {
         let mut row = Row::new();
         for tgt_col in columns {
             if tgt_col.name == "created_at" {
-
                 let cell_value = Some(Cell::String(self.created_at.clone()));
                 //    None => None, // Or use a default value or handle the error
                 // };

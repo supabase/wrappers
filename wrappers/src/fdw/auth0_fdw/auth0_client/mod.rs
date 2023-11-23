@@ -1,27 +1,28 @@
+use crate::fdw::auth0_fdw::Auth0FdwError;
 use http::{HeaderMap, HeaderValue};
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::PgSqlErrorCode;
 use reqwest::header;
+use reqwest::header::InvalidHeaderValue;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::policies::ExponentialBackoff;
 use reqwest_retry::RetryTransientMiddleware;
 use supabase_wrappers::prelude::*;
 use thiserror::Error;
 use url::{ParseError, Url};
-use crate::fdw::auth0_fdw::Auth0FdwError;
 
 pub(crate) struct Auth0Client {
-    url: Url,
+    _url: Url,
     client: ClientWithMiddleware,
-    runtime: Runtime,
+    _runtime: Runtime,
 }
 
 impl Auth0Client {
     pub(crate) fn new(url: &str, api_key: &str) -> Result<Self, Auth0FdwError> {
         Ok(Self {
-            url: Url::parse(url)?,
+            _url: Url::parse(url)?,
             client: Self::create_client(api_key)?,
-            runtime: create_async_runtime()?,
+            _runtime: create_async_runtime()?,
         })
     }
     fn create_client(api_key: &str) -> Result<ClientWithMiddleware, Auth0FdwError> {
@@ -51,8 +52,8 @@ pub(crate) enum Auth0ClientError {
     #[error("failed to parse cluster_url: {0}")]
     UrlParseError(#[from] ParseError),
 
-    #[error("invalid api_key header")]
-    InvalidApiKeyHeader,
+    #[error("invalid api_key header: {0}")]
+    InvalidApiKeyHeader(#[from] InvalidHeaderValue),
 
     #[error("reqwest error: {0}")]
     ReqwestError(#[from] reqwest::Error),
@@ -69,7 +70,7 @@ impl From<Auth0ClientError> for ErrorReport {
         match value {
             Auth0ClientError::CreateRuntimeError(e) => e.into(),
             Auth0ClientError::UrlParseError(_)
-            | Auth0ClientError::InvalidApiKeyHeader
+            | Auth0ClientError::InvalidApiKeyHeader(_)
             | Auth0ClientError::ReqwestError(_)
             | Auth0ClientError::ReqwestMiddlewareError(_)
             | Auth0ClientError::SerdeError(_) => {

@@ -6,7 +6,6 @@ use pgrx::pg_sys;
 use std::collections::HashMap;
 use supabase_wrappers::prelude::*;
 
-// A simple demo FDW
 #[wrappers_fdw(
     version = "0.1.1",
     author = "Joel",
@@ -89,7 +88,7 @@ impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {
         // save a copy of target columns
         let mut rows = Vec::new();
         if let Some(client) = &self.client {
-            let mut offset: Option<String> = None;
+            let mut _offset: Option<String> = None;
             loop {
                 // Fetch all of the rows upfront. Arguably, this could be done in batches (and invoked each
                 // time iter_scan() runs out of rows) to pipeline the I/O, but we'd have to manage more
@@ -110,7 +109,7 @@ impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {
                 stats::inc_stats(Self::FDW_NAME, stats::Metric::BytesIn, body.len() as i64);
 
                 if let Some(new_offset) = new_offset {
-                    offset = Some(new_offset);
+                    _offset = Some(new_offset);
                 } else {
                     break;
                 }
