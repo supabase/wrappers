@@ -8,7 +8,7 @@ services:
     ports:
       - "8086:8086"
     healthcheck:
-      test: curl --fail http://1.1.1.1:8086/baseID/table-foo || exit 1
+      test: curl --fail http://0.0.0.0:8086/baseID/table-foo || exit 1
       interval: 10s
       timeout: 5s
       retries: 3
@@ -19,7 +19,7 @@ services:
     ports:
       - "3796:3796"
     healthcheck:
-      test: curl --fail http://1.1.1.1:3796/ || exit 1
+      test: curl --fail http://0.0.0.0:3796/ || exit 1
       interval: 11s
       timeout: 6s
       retries: 3
