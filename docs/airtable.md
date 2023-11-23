@@ -7,7 +7,7 @@ The Airtable Wrapper allows you to read data from your Airtable bases/tables wit
 Before you get started, make sure the `wrappers` extension is installed on your database:
 
 ```sql
-create extension if not exists wrappers;
+create extension if not exists wrappers with schema extensions;
 ```
 
 and then create the foreign data wrapper:
