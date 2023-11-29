@@ -21,3 +21,6 @@ mod s3_fdw;
 
 #[cfg(feature = "logflare_fdw")]
 mod logflare_fdw;
+
+#[cfg(feature = "cnosdb_fdw")]
+mod cnosdb_fdw;
