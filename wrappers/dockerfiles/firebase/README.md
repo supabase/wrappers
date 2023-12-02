@@ -16,7 +16,7 @@ docker run \
   -p=5001:5001 \
   -p=9199:9199 \
   -v $PWD/dockerfiles/firebase:/home/node \
-  andreysenov/firebase-tools:12.9.1-node-18-slim \
+  andreysenov/firebase-tools:11.24.1-node-14-alpine \
   firebase emulators:start --project supa --only auth,firestore --import=/home/node/baseline-data
 ```
 
