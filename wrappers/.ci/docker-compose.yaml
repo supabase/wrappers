@@ -37,17 +37,18 @@ services:
       retries: 20
       
   firebase:
-    image: andreysenov/firebase-tools:12.9.1-node-18-slim
+    image: andreysenov/firebase-tools:11.24.1-node-14-alpine
     container_name: firebase-wrapped
-    command: firebase emulators:start --project supa --only auth,firestore --import=/home/node/baseline-data
+    command: firebase emulators:start --project supa --only auth,firestore --import=/baseline-data
     volumes:
-      - ../dockerfiles/firebase:/home/node
+      - ../dockerfiles/firebase/baseline-data:/baseline-data
+      - ../dockerfiles/firebase/firebase.json:/home/node/firebase.json
     ports:
       - "4000:4000" # UI
       - "8080:8080" # Firestore
       - "9099:9099" # Auth
     healthcheck:
-      test: sleep 4 && (echo >/dev/tcp/127.0.0.1/9099) &>/dev/null || exit 1
+      test: sleep 4 && wget --no-verbose --tries=1 --spider http://localhost:9099/ || exit 1
       interval: 10s
       timeout: 5s
       retries: 30
