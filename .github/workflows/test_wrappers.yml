@@ -46,4 +46,5 @@ jobs:
 
     - run: cargo install cargo-pgrx --version 0.11.0
     - run: cargo pgrx init --pg15 /usr/lib/postgresql/15/bin/pg_config
+    - run: docker-compose -f wrappers/.ci/docker-compose.yaml ps
     - run: cd wrappers && cargo pgrx test --features all_fdws,pg15
