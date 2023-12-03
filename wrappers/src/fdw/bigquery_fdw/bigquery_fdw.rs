@@ -66,7 +66,7 @@ pub(crate) struct BigQueryFdw {
 }
 
 impl BigQueryFdw {
-    const FDW_NAME: &str = "BigQueryFdw";
+    const FDW_NAME: &'static str = "BigQueryFdw";
 
     fn deparse(
         &self,
@@ -186,7 +186,7 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
                 Some(sa_key) => sa_key.to_owned(),
                 None => {
                     let sa_key_id = require_option("sa_key_id", options)?;
-                    match get_vault_secret(&sa_key_id) {
+                    match get_vault_secret(sa_key_id) {
                         Some(sa_key) => sa_key,
                         None => return Ok(ret),
                     }

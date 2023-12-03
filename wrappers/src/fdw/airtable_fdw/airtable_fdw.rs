@@ -41,7 +41,7 @@ pub(crate) struct AirtableFdw {
 }
 
 impl AirtableFdw {
-    const FDW_NAME: &str = "AirtableFdw";
+    const FDW_NAME: &'static str = "AirtableFdw";
 
     #[inline]
     fn build_url(&self, base_id: &str, table_id: &str, view_id: Option<&String>) -> String {
