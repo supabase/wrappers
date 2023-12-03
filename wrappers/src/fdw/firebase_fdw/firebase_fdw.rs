@@ -142,7 +142,7 @@ pub(crate) struct FirebaseFdw {
 }
 
 impl FirebaseFdw {
-    const FDW_NAME: &str = "FirebaseFdw";
+    const FDW_NAME: &'static str = "FirebaseFdw";
 
     const DEFAULT_AUTH_BASE_URL: &'static str =
         "https://identitytoolkit.googleapis.com/v1/projects";

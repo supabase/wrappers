@@ -142,7 +142,7 @@ pub(super) struct S3Parquet {
 }
 
 impl S3Parquet {
-    const FDW_NAME: &str = "S3Fdw";
+    const FDW_NAME: &'static str = "S3Fdw";
 
     // open batch stream from local buffer
     pub(super) async fn open_local_stream(&mut self, buf: Vec<u8>) -> S3FdwResult<()> {

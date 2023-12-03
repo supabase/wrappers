@@ -42,7 +42,7 @@ pub(crate) struct S3Fdw {
 }
 
 impl S3Fdw {
-    const FDW_NAME: &str = "S3Fdw";
+    const FDW_NAME: &'static str = "S3Fdw";
 
     // local string line buffer size, in bytes
     // Note: this is not a hard limit, just an indication of full buffer

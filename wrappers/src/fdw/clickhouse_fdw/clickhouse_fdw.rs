@@ -91,7 +91,7 @@ pub(crate) struct ClickHouseFdw {
 }
 
 impl ClickHouseFdw {
-    const FDW_NAME: &str = "ClickHouseFdw";
+    const FDW_NAME: &'static str = "ClickHouseFdw";
 
     fn create_client(&mut self) -> ClickHouseFdwResult<()> {
         let pool = Pool::new(self.conn_str.as_str());
