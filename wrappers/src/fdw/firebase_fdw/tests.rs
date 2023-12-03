@@ -95,6 +95,41 @@ mod tests {
                 vec![
                 ("projects/supa/databases/(default)/documents/my-collection/bSMScXpZHMJe9ilE9Yqs",
                  serde_json::json!({"id": {"integerValue": "1"}, "name": {"stringValue": "hello"}}))]);
+
+            c.update(
+                r#"
+                CREATE FOREIGN TABLE firebase_docs_nested (
+                  name text,
+                  fields jsonb,
+                  create_time timestamp,
+                  update_time timestamp
+                )
+                SERVER my_firebase_server
+                OPTIONS (
+                  object 'firestore/my-collection/bSMScXpZHMJe9ilE9Yqs/my-collection2',
+                  base_url 'http://localhost:8080/v1/projects'
+                )
+             "#,
+                None,
+                None,
+            )
+            .unwrap();
+
+            let results = c
+                .select("SELECT name,fields FROM firebase_docs_nested", None, None)
+                .unwrap()
+                .filter_map(|r| {
+                    r.get_by_name::<&str, _>("name")
+                        .unwrap()
+                        .zip(r.get_by_name::<JsonB, _>("fields").unwrap().map(|j| j.0))
+                })
+                .collect::<Vec<_>>();
+
+            assert_eq!(
+                results,
+                vec![
+                ("projects/supa/databases/(default)/documents/my-collection/bSMScXpZHMJe9ilE9Yqs/my-collection2/fkSWL4hNJ3lRc1ZIorPm",
+                 serde_json::json!({"foo": {"stringValue": "bar"}}))]);
         });
     }
 }

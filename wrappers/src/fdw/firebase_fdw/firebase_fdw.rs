@@ -183,7 +183,7 @@ impl FirebaseFdw {
             _ => {
                 // match for firestore documents
                 // ref: https://firebase.google.com/docs/firestore/reference/rest/v1beta1/projects.databases.documents/listDocuments
-                let re = Regex::new(r"^firestore/(?P<collection>[^/]+)").expect("regex is valid");
+                let re = Regex::new(r"^firestore/(?P<collection>.+)").expect("regex is valid");
                 if let Some(caps) = re.captures(obj) {
                     let base_url =
                         require_option_or("base_url", options, Self::DEFAULT_FIRESTORE_BASE_URL);

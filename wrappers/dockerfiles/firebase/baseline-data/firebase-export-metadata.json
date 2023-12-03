@@ -1,20 +1,12 @@
 {
-  "version": "9.17.0",
+  "version": "11.16.0",
   "firestore": {
-    "version": "1.13.1",
+    "version": "1.15.1",
     "path": "firestore_export",
     "metadata_file": "firestore_export/firestore_export.overall_export_metadata"
   },
-  "database": {
-    "version": "4.7.2",
-    "path": "database_export"
-  },
   "auth": {
-    "version": "9.17.0",
+    "version": "11.16.0",
     "path": "auth_export"
-  },
-  "storage": {
-    "version": "9.17.0",
-    "path": "storage_export"
   }
 }
