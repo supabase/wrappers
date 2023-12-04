@@ -21,7 +21,7 @@ pub(crate) struct Auth0Fdw {
 }
 
 impl Auth0Fdw {
-    const FDW_NAME: &str = "Auth0Fdw";
+    const FDW_NAME: &'static str = "Auth0Fdw";
 
     // convert response text to rows
     fn parse_resp(
