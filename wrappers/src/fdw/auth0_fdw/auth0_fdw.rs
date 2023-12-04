@@ -17,7 +17,7 @@ pub(crate) struct Auth0Fdw {
     url: String,
     rt: Runtime,
     scan_result: Option<Vec<Row>>,
-    client: Option<Auth0Client>,
+    client: Auth0Client,
 }
 
 impl Auth0Fdw {
@@ -71,7 +71,7 @@ impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
         Ok(Self {
             url,
-            client: Some(auth0_client),
+            client: auth0_client,
             rt: create_async_runtime()?,
             scan_result: None,
         })
@@ -87,7 +87,7 @@ impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {
     ) -> Auth0FdwResult<()> {
         // save a copy of target columns
         let mut rows = Vec::new();
-        if let Some(client) = &self.client {
+        if let client = &self.client {
             let mut _offset: Option<String> = None;
             loop {
                 // Fetch all of the rows upfront. Arguably, this could be done in batches (and invoked each
