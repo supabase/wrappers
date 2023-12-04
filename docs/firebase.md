@@ -8,7 +8,7 @@
 Before you get started, make sure the `wrappers` extension is installed on your database:
 
 ```sql
-create extension if not exists wrappers;
+create extension if not exists wrappers with schema extensions;
 ```
 
 and then create the foreign data wrapper:
@@ -101,6 +101,11 @@ The full list of foreign table options are below:
 
 - `object` - Object name in Firebase, required.
 
+  For Authenciation users, the object name is fixed to `auth/users`. For Firestore documents, its format is `firestore/<collection_id>`, note that collection id must be a full path id. For example,
+
+  - `firestore/my-collection`
+  - `firestore/my-collection/my-document/another-collection`
+
 ## Examples
 
 Some examples on how to use Firebase foreign tables.
@@ -118,7 +123,7 @@ create foreign table firebase_docs (
 )
   server firebase_server
   options (
-    object 'firestore/user-profiles'  -- format: 'firestore/[collection_id]'
+    object 'firestore/user-profiles'
   );
 ```
 

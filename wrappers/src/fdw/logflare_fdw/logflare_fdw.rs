@@ -99,8 +99,8 @@ pub(crate) struct LogflareFdw {
 }
 
 impl LogflareFdw {
-    const FDW_NAME: &str = "LogflareFdw";
-    const BASE_URL: &str = "https://api.logflare.app/api/endpoints/query/";
+    const FDW_NAME: &'static str = "LogflareFdw";
+    const BASE_URL: &'static str = "https://api.logflare.app/api/endpoints/query/";
 
     fn build_url(&self, endpoint: &str) -> LogflareFdwResult<Option<Url>> {
         let mut url = self.base_url.join(endpoint)?;

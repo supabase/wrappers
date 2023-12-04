@@ -265,7 +265,7 @@ pub(crate) struct StripeFdw {
 }
 
 impl StripeFdw {
-    const FDW_NAME: &str = "StripeFdw";
+    const FDW_NAME: &'static str = "StripeFdw";
 
     fn build_url(
         &self,
