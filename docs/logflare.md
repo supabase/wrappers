@@ -92,6 +92,10 @@ The full list of foreign table options are below:
 
 - `endpoint` - Logflare endpoint UUID or name, required.
 
+## Query Pushdown Support
+
+This FDW doesn't support query pushdown.
+
 ## Examples
 
 Some examples on how to use Logflare foreign tables.

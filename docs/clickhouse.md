@@ -133,6 +133,10 @@ The full list of foreign table options are below:
 
 - `rowid_column` - Primary key column name, optional for data scan, required for data modify
 
+## Query Pushdown Support
+
+This FDW supports `where`, `order by` and `limit` clause pushdown, as well as parametrized view (see above).
+
 ## Examples
 
 Some examples on how to use ClickHouse foreign tables.

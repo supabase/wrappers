@@ -129,6 +129,10 @@ The full list of foreign table options are below:
 - `timeout` - Query request timeout in milliseconds, optional. Default is '30000' (30 seconds).
 - `rowid_column` - Primary key column name, optional for data scan, required for data modify
 
+## Query Pushdown Support
+
+This FDW supports `where`, `order by` and `limit` clause pushdown.
+
 ## Inserting Rows & the Streaming Buffer
 
 This foreign data wrapper uses BigQuery’s `insertAll` API method to create a `streamingBuffer` with an associated partition time. **Within that partition time, the data cannot be updated, deleted, or fully exported**. Only after the time has elapsed (up to 90 minutes according to [BigQuery’s documentation](https://cloud.google.com/bigquery/docs/streaming-data-into-bigquery)); can you perform operations.
