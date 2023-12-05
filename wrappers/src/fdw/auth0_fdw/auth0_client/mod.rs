@@ -15,7 +15,7 @@ pub(crate) struct Auth0Client {
 }
 
 impl Auth0Client {
-    pub(crate) fn new(url: &str, api_key: &str) -> Result<Self, Auth0FdwError> {
+    pub(crate) fn new(api_key: &str) -> Result<Self, Auth0FdwError> {
         Ok(Self {
             client: Self::create_client(api_key)?,
         })

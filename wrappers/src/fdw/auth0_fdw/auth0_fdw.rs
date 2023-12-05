@@ -66,7 +66,7 @@ impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {
             get_vault_secret(api_key_id).ok_or(Auth0FdwError::SecretNotFound(api_key_id.clone()))?
         };
 
-        let auth0_client = Auth0Client::new(&url, &api_key)?;
+        let auth0_client = Auth0Client::new(&api_key)?;
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
         Ok(Self {
@@ -87,34 +87,34 @@ impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {
     ) -> Auth0FdwResult<()> {
         // save a copy of target columns
         let mut rows = Vec::new();
-        if let client = &self.client {
-            let mut _offset: Option<String> = None;
-            loop {
-                // Fetch all of the rows upfront. Arguably, this could be done in batches (and invoked each
-                // time iter_scan() runs out of rows) to pipeline the I/O, but we'd have to manage more
-                // state so starting with the simpler solution.
+        let client = &self.client;
+        let mut _offset: Option<String> = None;
+        loop {
+            // Fetch all of the rows upfront. Arguably, this could be done in batches (and invoked each
+            // time iter_scan() runs out of rows) to pipeline the I/O, but we'd have to manage more
+            // state so starting with the simpler solution.
 
-                let body = self
-                    .rt
-                    .block_on(client.get_client().get(&self.url).send())
-                    .and_then(|resp| {
-                        resp.error_for_status()
-                            .and_then(|resp| self.rt.block_on(resp.text()))
-                            .map_err(reqwest_middleware::Error::from)
-                    })?;
+            let body = self
+                .rt
+                .block_on(client.get_client().get(&self.url).send())
+                .and_then(|resp| {
+                    resp.error_for_status()
+                        .and_then(|resp| self.rt.block_on(resp.text()))
+                        .map_err(reqwest_middleware::Error::from)
+                })?;
 
-                let (new_rows, new_offset) = self.parse_resp(&body, columns)?;
-                rows.extend(new_rows);
+            let (new_rows, new_offset) = self.parse_resp(&body, columns)?;
+            rows.extend(new_rows);
 
-                stats::inc_stats(Self::FDW_NAME, stats::Metric::BytesIn, body.len() as i64);
+            stats::inc_stats(Self::FDW_NAME, stats::Metric::BytesIn, body.len() as i64);
 
-                if let Some(new_offset) = new_offset {
-                    _offset = Some(new_offset);
-                } else {
-                    break;
-                }
+            if let Some(new_offset) = new_offset {
+                _offset = Some(new_offset);
+            } else {
+                break;
             }
         }
+
         stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsIn, rows.len() as i64);
         stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsOut, rows.len() as i64);
 
