@@ -38,9 +38,10 @@ mod tests {
             c.update(
                 r#"
                   CREATE FOREIGN TABLE firebase_users (
-                    local_id text,
+                    uid text,
                     email text,
-                    fields jsonb
+                    created_at timestamp,
+                    attrs jsonb
                   )
                  SERVER my_firebase_server
                  OPTIONS (
@@ -54,20 +55,24 @@ mod tests {
             .unwrap();
 
             let results = c
-                .select("SELECT email FROM firebase_users", None, None)
+                .select(
+                    "SELECT email FROM firebase_users order by email",
+                    None,
+                    None,
+                )
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("email").unwrap())
                 .collect::<Vec<_>>();
 
-            assert_eq!(results, vec!["bo@supabase.io", "copple@supabase.io"]);
+            assert_eq!(results, vec!["bar@example.com", "foo@example.com"]);
 
             c.update(
                 r#"
                 CREATE FOREIGN TABLE firebase_docs (
                   name text,
-                  fields jsonb,
-                  create_time timestamp,
-                  update_time timestamp
+                  created_at timestamp,
+                  updated_at timestamp,
+                  attrs jsonb
                 )
                 SERVER my_firebase_server
                 OPTIONS (
@@ -81,12 +86,14 @@ mod tests {
             .unwrap();
 
             let results = c
-                .select("SELECT name,fields FROM firebase_docs", None, None)
+                .select("SELECT name,attrs FROM firebase_docs", None, None)
                 .unwrap()
                 .filter_map(|r| {
-                    r.get_by_name::<&str, _>("name")
-                        .unwrap()
-                        .zip(r.get_by_name::<JsonB, _>("fields").unwrap().map(|j| j.0))
+                    r.get_by_name::<&str, _>("name").unwrap().zip(
+                        r.get_by_name::<JsonB, _>("attrs")
+                            .unwrap()
+                            .map(|j| j.0.get("fields").unwrap().clone()),
+                    )
                 })
                 .collect::<Vec<_>>();
 
@@ -94,15 +101,19 @@ mod tests {
                 results,
                 vec![
                 ("projects/supa/databases/(default)/documents/my-collection/bSMScXpZHMJe9ilE9Yqs",
-                 serde_json::json!({"id": {"integerValue": "1"}, "name": {"stringValue": "hello"}}))]);
+                 serde_json::json!({
+                     "id": { "integerValue": "1" },
+                     "name": { "stringValue": "hello" }
+                 }))]
+            );
 
             c.update(
                 r#"
                 CREATE FOREIGN TABLE firebase_docs_nested (
                   name text,
-                  fields jsonb,
-                  create_time timestamp,
-                  update_time timestamp
+                  created_at timestamp,
+                  updated_at timestamp,
+                  attrs jsonb
                 )
                 SERVER my_firebase_server
                 OPTIONS (
@@ -116,12 +127,14 @@ mod tests {
             .unwrap();
 
             let results = c
-                .select("SELECT name,fields FROM firebase_docs_nested", None, None)
+                .select("SELECT name,attrs FROM firebase_docs_nested", None, None)
                 .unwrap()
                 .filter_map(|r| {
-                    r.get_by_name::<&str, _>("name")
-                        .unwrap()
-                        .zip(r.get_by_name::<JsonB, _>("fields").unwrap().map(|j| j.0))
+                    r.get_by_name::<&str, _>("name").unwrap().zip(
+                        r.get_by_name::<JsonB, _>("attrs")
+                            .unwrap()
+                            .map(|j| j.0.get("fields").unwrap().clone()),
+                    )
                 })
                 .collect::<Vec<_>>();
 
@@ -129,7 +142,7 @@ mod tests {
                 results,
                 vec![
                 ("projects/supa/databases/(default)/documents/my-collection/bSMScXpZHMJe9ilE9Yqs/my-collection2/fkSWL4hNJ3lRc1ZIorPm",
-                 serde_json::json!({"foo": {"stringValue": "bar"}}))]);
+                 serde_json::json!({ "foo": { "stringValue": "bar" } }))]);
         });
     }
 }
