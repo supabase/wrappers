@@ -381,6 +381,13 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#query-pushdown-support" class="md-nav__link">
+    Query Pushdown Support
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#examples" class="md-nav__link">
     Examples
   </a>
@@ -561,6 +568,13 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#query-pushdown-support" class="md-nav__link">
+    Query Pushdown Support
+  </a>
   
 </li>
       
@@ -809,6 +823,8 @@
 <ul>
 <li><code>rowid_column</code> - Primary key column name, optional for data scan, required for data modify</li>
 </ul>
+<h2 id="query-pushdown-support">Query Pushdown Support</h2>
+<p>This FDW supports <code>where</code>, <code>order by</code> and <code>limit</code> clause pushdown, as well as parametrized view (see above).</p>
 <h2 id="examples">Examples</h2>
 <p>Some examples on how to use ClickHouse foreign tables.</p>
 <h3 id="basic-example">Basic example</h3>

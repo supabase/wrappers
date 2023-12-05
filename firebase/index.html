@@ -388,6 +388,13 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#query-pushdown-support" class="md-nav__link">
+    Query Pushdown Support
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#examples" class="md-nav__link">
     Examples
   </a>
@@ -554,6 +561,13 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#query-pushdown-support" class="md-nav__link">
+    Query Pushdown Support
+  </a>
   
 </li>
       
@@ -751,6 +765,13 @@
 <ul>
 <li><code>object</code> - Object name in Firebase, required.</li>
 </ul>
+<p>For Authenciation users, the object name is fixed to <code>auth/users</code>. For Firestore documents, its format is <code>firestore/&lt;collection_id&gt;</code>, note that collection id must be a full path id. For example,</p>
+<ul>
+<li><code>firestore/my-collection</code></li>
+<li><code>firestore/my-collection/my-document/another-collection</code></li>
+</ul>
+<h2 id="query-pushdown-support">Query Pushdown Support</h2>
+<p>This FDW doesn't support query pushdown.</p>
 <h2 id="examples">Examples</h2>
 <p>Some examples on how to use Firebase foreign tables.</p>
 <h3 id="firestore">firestore</h3>
@@ -772,7 +793,7 @@
 <span class="p">)</span><span class="w"></span>
 <span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">firebase_server</span><span class="w"></span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="w"></span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;firestore/user-profiles&#39;</span><span class="w">  </span><span class="c1">-- format: &#39;firestore/[collection_id]&#39;</span>
+<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;firestore/user-profiles&#39;</span><span class="w"></span>
 <span class="w">  </span><span class="p">);</span><span class="w"></span>
 </code></pre></div></td></tr></table></div>
 <p>Note that <code>name</code>, <code>created_at</code>, and <code>updated_at</code>, are automatic metadata fields on all Firestore collections.</p>

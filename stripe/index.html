@@ -584,6 +584,13 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#query-pushdown-support" class="md-nav__link">
+    Query Pushdown Support
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#examples" class="md-nav__link">
     Examples
   </a>
@@ -869,6 +876,13 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#query-pushdown-support" class="md-nav__link">
+    Query Pushdown Support
+  </a>
   
 </li>
       
@@ -2046,6 +2060,13 @@
 <li>id</li>
 <li>destination</li>
 </ul>
+<h2 id="query-pushdown-support">Query Pushdown Support</h2>
+<p>This FDW supports <code>where</code> clause pushdown. You can specify a filter in <code>where</code> clause and it will be passed to Stripe API call.</p>
+<p>For example, this query</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">stripe</span><span class="p">.</span><span class="n">customers</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;cus_xxx&#39;</span><span class="p">;</span><span class="w"></span>
+</code></pre></div></td></tr></table></div>
+<p>will be translated Stripe API call: <code>https://api.stripe.com/v1/customers/cus_xxx</code>.</p>
+<p>For supported filter columns for each object, please check out foreign table documents above.</p>
 <h2 id="examples">Examples</h2>
 <p>Some examples on how to use Stripe foreign tables.</p>
 <h3 id="basic-example">Basic example</h3>

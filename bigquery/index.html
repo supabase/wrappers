@@ -367,6 +367,13 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#query-pushdown-support" class="md-nav__link">
+    Query Pushdown Support
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#inserting-rows-the-streaming-buffer" class="md-nav__link">
     Inserting Rows &amp; the Streaming Buffer
   </a>
@@ -575,6 +582,13 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#query-pushdown-support" class="md-nav__link">
+    Query Pushdown Support
+  </a>
   
 </li>
       
@@ -835,6 +849,8 @@
 <li><code>timeout</code> - Query request timeout in milliseconds, optional. Default is '30000' (30 seconds).</li>
 <li><code>rowid_column</code> - Primary key column name, optional for data scan, required for data modify</li>
 </ul>
+<h2 id="query-pushdown-support">Query Pushdown Support</h2>
+<p>This FDW supports <code>where</code>, <code>order by</code> and <code>limit</code> clause pushdown.</p>
 <h2 id="inserting-rows-the-streaming-buffer">Inserting Rows &amp; the Streaming Buffer</h2>
 <p>This foreign data wrapper uses BigQuery’s <code>insertAll</code> API method to create a <code>streamingBuffer</code> with an associated partition time. <strong>Within that partition time, the data cannot be updated, deleted, or fully exported</strong>. Only after the time has elapsed (up to 90 minutes according to <a href="https://cloud.google.com/bigquery/docs/streaming-data-into-bigquery">BigQuery’s documentation</a>); can you perform operations.</p>
 <p>If you attempt an <code>UPDATE</code> or <code>DELETE</code> statement on rows while in the streamingBuffer, you will get an error of <code>UPDATE</code> or <code>DELETE</code> statement over table datasetName - note that tableName would affect rows in the streaming buffer, which is not supported.</p>
