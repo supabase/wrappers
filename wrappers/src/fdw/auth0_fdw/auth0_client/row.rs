@@ -103,7 +103,7 @@ impl UserResponse {
 }
 
 impl Auth0User {
-    pub(crate) fn to_row(mut self, columns: &[Column]) -> Row {
+    pub(crate) fn into_row(mut self, columns: &[Column]) -> Row {
         let mut row = Row::new();
         for tgt_col in columns {
             if tgt_col.name == "created_at" {

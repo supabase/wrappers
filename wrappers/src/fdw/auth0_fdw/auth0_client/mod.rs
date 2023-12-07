@@ -1,4 +1,7 @@
 use crate::fdw::auth0_fdw::auth0_client::row::ResultPayload;
+use crate::fdw::auth0_fdw::auth0_client::row::UserRequestBuilder;
+use crate::fdw::auth0_fdw::auth0_client::row::UserResponse;
+use crate::fdw::auth0_fdw::auth0_client::row::UserResponseError;
 use http::{HeaderMap, HeaderValue};
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::PgSqlErrorCode;
@@ -11,9 +14,6 @@ use reqwest_retry::RetryTransientMiddleware;
 use supabase_wrappers::prelude::*;
 use thiserror::Error;
 use url::ParseError;
-use crate::fdw::auth0_fdw::auth0_client::row::UserResponse;
-use crate::fdw::auth0_fdw::auth0_client::row::UserRequestBuilder;
-use crate::fdw::auth0_fdw::auth0_client::row::UserResponseError;
 
 pub(crate) mod row;
 
@@ -57,19 +57,18 @@ impl Auth0Client {
         let rt = create_async_runtime()?;
 
         rt.block_on(async {
-                 let request = UserRequestBuilder::new()
+            let request = UserRequestBuilder::new()
                 .limit(limit)
                 .offset(offset)
                 .build();
             // TODO: Remove this
-                let response = self.get_client().get(self.url.clone()).send().await?;
-                let response = response.error_for_status()?;
+            let response = self.get_client().get(self.url.clone()).send().await?;
+            let response = response.error_for_status()?;
             let user_response = response.json::<UserResponse>().await?;
             let users = user_response.get_user_result()?;
 
-
-             Ok(users)
-            })
+            Ok(users)
+        })
     }
 }
 #[derive(Error, Debug)]
@@ -92,7 +91,7 @@ pub(crate) enum Auth0ClientError {
     #[error("failed to parse url: {0}")]
     UrlParseError(#[from] ParseError),
 
-     #[error("{0}")]
+    #[error("{0}")]
     UserResponseError(#[from] UserResponseError),
 }
 

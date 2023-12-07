@@ -33,17 +33,16 @@ impl RowsIterator {
 
     fn fetch_rows_batch(&mut self) -> Result<Option<Row>, Auth0ClientError> {
         // TODO: Replace this with appropriate fetch method
-        // let points_result = self.auth0_client.fetch_users(
-        //     self.get_limit(),
-        //     self.get_offset(),
-        // )?;
-        // self.rows = points_result
-        //     .points
-        //     .into_iter()
-        //     .map(|p| p.into_row(&self.columns))
-        //     .collect();
-        // self.next_page_offset = points_result.next_page_offset;
-        // self.have_more_rows = self.next_page_offset.is_some();
+        let user_result = self
+            .auth0_client
+            .fetch_users(self.get_limit(), self.get_offset())?;
+        self.rows = user_result
+            .users
+            .into_iter()
+            .map(|u| u.into_row(&self.columns))
+            .collect();
+        self.next_page_offset = user_result.next_page_offset;
+        self.have_more_rows = self.next_page_offset.is_some();
         Ok(self.get_next_row())
     }
 
