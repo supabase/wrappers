@@ -1,24 +1,33 @@
+use crate::fdw::auth0_fdw::auth0_client::row::ResultPayload;
 use http::{HeaderMap, HeaderValue};
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::PgSqlErrorCode;
 use reqwest::header;
 use reqwest::header::InvalidHeaderValue;
+use reqwest::Url;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::policies::ExponentialBackoff;
 use reqwest_retry::RetryTransientMiddleware;
 use supabase_wrappers::prelude::*;
 use thiserror::Error;
+use url::ParseError;
+use crate::fdw::auth0_fdw::auth0_client::row::UserResponse;
+use crate::fdw::auth0_fdw::auth0_client::row::UserRequestBuilder;
+use crate::fdw::auth0_fdw::auth0_client::row::UserResponseError;
+
 pub(crate) mod row;
 
 pub(crate) struct Auth0Client {
+    url: Url,
     client: ClientWithMiddleware,
 }
 
 pub(crate) mod rows_iterator;
 
 impl Auth0Client {
-    pub(crate) fn new(api_key: &str) -> Result<Self, Auth0ClientError> {
+    pub(crate) fn new(url: &str, api_key: &str) -> Result<Self, Auth0ClientError> {
         Ok(Self {
+            url: Url::parse(url)?,
             client: Self::create_client(api_key)?,
         })
     }
@@ -40,6 +49,28 @@ impl Auth0Client {
     pub fn get_client(&self) -> &ClientWithMiddleware {
         &self.client
     }
+    pub(crate) fn fetch_users(
+        &self,
+        limit: Option<u64>,
+        offset: Option<u64>,
+    ) -> Result<ResultPayload, Auth0ClientError> {
+        let rt = create_async_runtime()?;
+
+        rt.block_on(async {
+                 let request = UserRequestBuilder::new()
+                .limit(limit)
+                .offset(offset)
+                .build();
+            // TODO: Remove this
+                let response = self.get_client().get(self.url.clone()).send().await?;
+                let response = response.error_for_status()?;
+            let user_response = response.json::<UserResponse>().await?;
+            let users = user_response.get_user_result()?;
+
+
+             Ok(users)
+            })
+    }
 }
 #[derive(Error, Debug)]
 pub(crate) enum Auth0ClientError {
@@ -57,13 +88,21 @@ pub(crate) enum Auth0ClientError {
 
     #[error("invalid json response: {0}")]
     SerdeError(#[from] serde_json::Error),
+
+    #[error("failed to parse url: {0}")]
+    UrlParseError(#[from] ParseError),
+
+     #[error("{0}")]
+    UserResponseError(#[from] UserResponseError),
 }
 
 impl From<Auth0ClientError> for ErrorReport {
     fn from(value: Auth0ClientError) -> Self {
         match value {
             Auth0ClientError::CreateRuntimeError(e) => e.into(),
-            Auth0ClientError::InvalidApiKeyHeader(_)
+            Auth0ClientError::UrlParseError(_)
+            | Auth0ClientError::UserResponseError(_)
+            | Auth0ClientError::InvalidApiKeyHeader(_)
             | Auth0ClientError::ReqwestError(_)
             | Auth0ClientError::ReqwestMiddlewareError(_)
             | Auth0ClientError::SerdeError(_) => {
