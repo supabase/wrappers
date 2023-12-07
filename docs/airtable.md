@@ -87,6 +87,10 @@ The full list of foreign table options are below:
 - `table_id` - Airtable table ID, required.
 - `view_id` - Airtable view ID, optional.
 
+## Query Pushdown Support
+
+This FDW doesn't support query pushdown.
+
 ## Examples
 
 Some examples on how to use Airtable foreign tables.

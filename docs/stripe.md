@@ -766,6 +766,20 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - id
 - destination
 
+## Query Pushdown Support
+
+This FDW supports `where` clause pushdown. You can specify a filter in `where` clause and it will be passed to Stripe API call.
+
+For example, this query
+
+```sql
+select * from stripe.customers where id = 'cus_xxx';
+```
+
+will be translated Stripe API call: `https://api.stripe.com/v1/customers/cus_xxx`.
+
+For supported filter columns for each object, please check out foreign table documents above.
+
 ## Examples
 
 Some examples on how to use Stripe foreign tables.
