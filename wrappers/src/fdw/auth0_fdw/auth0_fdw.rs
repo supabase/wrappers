@@ -1,12 +1,16 @@
-use super::{Auth0FdwError, Auth0FdwResult};
+use crate::fdw::auth0_fdw::auth0_client::row::Auth0User;
 use crate::fdw::auth0_fdw::auth0_client::rows_iterator::RowsIterator;
 use crate::fdw::auth0_fdw::auth0_client::Auth0Client;
 
-use crate::fdw::auth0_fdw::result::Auth0Record;
 use crate::stats;
 use pgrx::pg_sys;
 use std::collections::HashMap;
 use supabase_wrappers::prelude::*;
+
+use crate::fdw::auth0_fdw::auth0_client::Auth0ClientError;
+use pgrx::pg_sys::panic::ErrorReport;
+use pgrx::PgSqlErrorCode;
+use thiserror::Error;
 
 #[wrappers_fdw(
     version = "0.1.1",
@@ -21,24 +25,71 @@ pub(crate) struct Auth0Fdw {
     rows_iterator: Option<RowsIterator>,
 }
 
+#[derive(Error, Debug)]
+enum Auth0FdwError {
+    #[error("column '{0}' data type is not supported")]
+    UnsupportedColumnType(String),
+
+    #[error("{0}")]
+    Auth0ClientError(#[from] Auth0ClientError),
+
+    #[error("column '{0}' data type not match")]
+    ColumnTypeNotMatch(String),
+
+    #[error("{0}")]
+    CreateRuntimeError(#[from] CreateRuntimeError),
+
+    #[error("parse url failed: {0}")]
+    UrlParseError(#[from] url::ParseError),
+
+    #[error("invalid api_key header")]
+    InvalidApiKeyHeader,
+
+    #[error("request failed: {0}")]
+    RequestError(#[from] reqwest::Error),
+
+    #[error("request middleware failed: {0}")]
+    RequestMiddlewareError(#[from] reqwest_middleware::Error),
+
+    #[error("invalid json response: {0}")]
+    SerdeError(#[from] serde_json::Error),
+
+    #[error("{0}")]
+    OptionsError(#[from] OptionsError),
+
+    #[error("Auth0 object '{0}' not implemented")]
+    ObjectNotImplemented(String),
+
+    #[error("{0}")]
+    NumericConversionError(#[from] pgrx::numeric::Error),
+    #[error("no secret found in vault with id {0}")]
+    SecretNotFound(String),
+
+    #[error("`url` option must be set")]
+    URLOptionMissing,
+
+    #[error("exactly one of `api_key` or `api_key_id` options must be set")]
+    SetOneOfApiKeyAndApiKeyIdSet,
+}
+
+impl From<Auth0FdwError> for ErrorReport {
+    fn from(value: Auth0FdwError) -> Self {
+        match value {
+            Auth0FdwError::CreateRuntimeError(e) => e.into(),
+            Auth0FdwError::OptionsError(e) => e.into(),
+            Auth0FdwError::Auth0ClientError(e) => e.into(),
+            Auth0FdwError::SecretNotFound(_) => {
+                ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, format!("{value}"), "")
+            }
+            _ => ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, format!("{value}"), ""),
+        }
+    }
+}
+
+type Auth0FdwResult<T> = Result<T, Auth0FdwError>;
+
 impl Auth0Fdw {
     const FDW_NAME: &'static str = "Auth0Fdw";
-
-    // convert response text to rows
-    fn parse_resp(
-        &self,
-        resp_body: &str,
-        columns: &[Column],
-    ) -> Auth0FdwResult<(Vec<Row>, Option<String>)> {
-        let response: Vec<Auth0Record> = serde_json::from_str(resp_body)?;
-        let mut result = Vec::new();
-
-        for record in response.iter() {
-            result.push(record.to_row(columns)?);
-        }
-
-        Ok((result, None))
-    }
 }
 
 impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {

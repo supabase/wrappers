@@ -1,4 +1,3 @@
-use crate::fdw::auth0_fdw::Auth0FdwError;
 use http::{HeaderMap, HeaderValue};
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::PgSqlErrorCode;
@@ -9,6 +8,7 @@ use reqwest_retry::policies::ExponentialBackoff;
 use reqwest_retry::RetryTransientMiddleware;
 use supabase_wrappers::prelude::*;
 use thiserror::Error;
+pub(crate) mod row;
 
 pub(crate) struct Auth0Client {
     client: ClientWithMiddleware,
@@ -17,18 +17,18 @@ pub(crate) struct Auth0Client {
 pub(crate) mod rows_iterator;
 
 impl Auth0Client {
-    pub(crate) fn new(api_key: &str) -> Result<Self, Auth0FdwError> {
+    pub(crate) fn new(api_key: &str) -> Result<Self, Auth0ClientError> {
         Ok(Self {
             client: Self::create_client(api_key)?,
         })
     }
-    fn create_client(api_key: &str) -> Result<ClientWithMiddleware, Auth0FdwError> {
+    fn create_client(api_key: &str) -> Result<ClientWithMiddleware, Auth0ClientError> {
         let mut headers = HeaderMap::new();
         let value = format!("Bearer {}", api_key);
-        let mut auth_value =
-            HeaderValue::from_str(&value).map_err(|_| Auth0FdwError::InvalidApiKeyHeader)?;
-        auth_value.set_sensitive(true);
-        headers.insert(header::AUTHORIZATION, auth_value);
+        // let mut auth_value =
+        //     HeaderValue::from_str(&value).map_err(|_| Auth0ClientError::InvalidApiKeyHeader);
+        // auth_value.set_sensitive(true);
+        // headers.insert(header::AUTHORIZATION, auth_value);
         let client = reqwest::Client::builder()
             .default_headers(headers)
             .build()?;
