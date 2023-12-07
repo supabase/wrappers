@@ -4,6 +4,7 @@ mod auth0_fdw;
 mod result;
 mod tests;
 
+use crate::fdw::auth0_fdw::auth0_client::Auth0ClientError;
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::PgSqlErrorCode;
 use thiserror::Error;
@@ -14,6 +15,9 @@ use supabase_wrappers::prelude::{CreateRuntimeError, OptionsError};
 pub enum Auth0FdwError {
     #[error("column '{0}' data type is not supported")]
     UnsupportedColumnType(String),
+
+    #[error("{0}")]
+    Auth0ClientError(#[from] Auth0ClientError),
 
     #[error("column '{0}' data type not match")]
     ColumnTypeNotMatch(String),
@@ -59,6 +63,7 @@ impl From<Auth0FdwError> for ErrorReport {
         match value {
             Auth0FdwError::CreateRuntimeError(e) => e.into(),
             Auth0FdwError::OptionsError(e) => e.into(),
+            Auth0FdwError::Auth0ClientError(e) => e.into(),
             Auth0FdwError::SecretNotFound(_) => {
                 ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, format!("{value}"), "")
             }

@@ -1,6 +1,6 @@
 use super::{Auth0FdwError, Auth0FdwResult};
-use crate::fdw::auth0_fdw::auth0_client::Auth0Client;
 use crate::fdw::auth0_fdw::auth0_client::rows_iterator::RowsIterator;
+use crate::fdw::auth0_fdw::auth0_client::Auth0Client;
 
 use crate::fdw::auth0_fdw::result::Auth0Record;
 use crate::stats;
@@ -83,31 +83,24 @@ impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {
         _limit: &Option<Limit>,
         options: &HashMap<String, String>,
     ) -> Auth0FdwResult<()> {
-            let auth0_client = Auth0Client::new(&self.api_key)?;
-            self.rows_iterator = Some(RowsIterator::new(
-                columns.to_vec(),
-                1000,
-                auth0_client,
-            ));
-
+        let auth0_client = Auth0Client::new(&self.api_key)?;
+        self.rows_iterator = Some(RowsIterator::new(columns.to_vec(), 1000, auth0_client));
 
         Ok(())
     }
 
-    fn iter_scan(&mut self, row: &mut Row) -> Result<Option<()>, Auth0FdwError>{
-        // let rows_iterator = self
-        //     .rows_iterator
-        //     .as_mut()
-        //     .expect("Can't be None as rows_iterator is initialized in begin_scan");
-        // if let Some(new_row_result) = rows_iterator.next() {
-        //     let new_row = new_row_result?;
-        //     row.replace_with(new_row);
-        //     Ok(Some(()))
-        // } else {
-        //     Ok(None)
-        // }
-        // TODO: Replace this
-        Ok(Some(()))
+    fn iter_scan(&mut self, row: &mut Row) -> Result<Option<()>, Auth0FdwError> {
+        let rows_iterator = self
+            .rows_iterator
+            .as_mut()
+            .expect("Can't be None as rows_iterator is initialized in begin_scan");
+        if let Some(new_row_result) = rows_iterator.next() {
+            let new_row = new_row_result?;
+            row.replace_with(new_row);
+            Ok(Some(()))
+        } else {
+            Ok(None)
+        }
     }
 
     fn end_scan(&mut self) -> Auth0FdwResult<()> {
