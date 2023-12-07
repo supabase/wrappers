@@ -1,5 +1,7 @@
 use super::{Auth0FdwError, Auth0FdwResult};
 use crate::fdw::auth0_fdw::auth0_client::Auth0Client;
+use crate::fdw::auth0_fdw::auth0_client::rows_iterator::RowsIterator;
+
 use crate::fdw::auth0_fdw::result::Auth0Record;
 use crate::stats;
 use pgrx::pg_sys;
@@ -15,9 +17,8 @@ use supabase_wrappers::prelude::*;
 pub(crate) struct Auth0Fdw {
     // row counter
     url: String,
-    rt: Runtime,
-    scan_result: Option<Vec<Row>>,
-    client: Auth0Client,
+    api_key: String,
+    rows_iterator: Option<RowsIterator>,
 }
 
 impl Auth0Fdw {
@@ -66,14 +67,11 @@ impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {
             get_vault_secret(api_key_id).ok_or(Auth0FdwError::SecretNotFound(api_key_id.clone()))?
         };
 
-        let auth0_client = Auth0Client::new(&api_key)?;
-
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
         Ok(Self {
             url,
-            client: auth0_client,
-            rt: create_async_runtime()?,
-            scan_result: None,
+            api_key,
+            rows_iterator: None,
         })
     }
 
@@ -83,56 +81,33 @@ impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {
         columns: &[Column],
         _sorts: &[Sort],
         _limit: &Option<Limit>,
-        _options: &HashMap<String, String>,
+        options: &HashMap<String, String>,
     ) -> Auth0FdwResult<()> {
-        // save a copy of target columns
-        let mut rows = Vec::new();
-        let client = &self.client;
-        let mut _offset: Option<String> = None;
-        loop {
-            // Fetch all of the rows upfront. Arguably, this could be done in batches (and invoked each
-            // time iter_scan() runs out of rows) to pipeline the I/O, but we'd have to manage more
-            // state so starting with the simpler solution.
+            let auth0_client = Auth0Client::new(&self.api_key)?;
+            self.rows_iterator = Some(RowsIterator::new(
+                columns.to_vec(),
+                1000,
+                auth0_client,
+            ));
 
-            let body = self
-                .rt
-                .block_on(client.get_client().get(&self.url).send())
-                .and_then(|resp| {
-                    resp.error_for_status()
-                        .and_then(|resp| self.rt.block_on(resp.text()))
-                        .map_err(reqwest_middleware::Error::from)
-                })?;
 
-            let (new_rows, new_offset) = self.parse_resp(&body, columns)?;
-            rows.extend(new_rows);
-
-            stats::inc_stats(Self::FDW_NAME, stats::Metric::BytesIn, body.len() as i64);
-
-            if let Some(new_offset) = new_offset {
-                _offset = Some(new_offset);
-            } else {
-                break;
-            }
-        }
-
-        stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsIn, rows.len() as i64);
-        stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsOut, rows.len() as i64);
-
-        self.scan_result = Some(rows);
         Ok(())
     }
 
-    fn iter_scan(&mut self, row: &mut Row) -> Auth0FdwResult<Option<()>> {
-        // this is called on each row and we only return one row here
-        if let Some(ref mut result) = self.scan_result {
-            if !result.is_empty() {
-                return Ok(result
-                    .drain(0..1)
-                    .last()
-                    .map(|src_row| row.replace_with(src_row)));
-            }
-        }
-        Ok(None)
+    fn iter_scan(&mut self, row: &mut Row) -> Result<Option<()>, Auth0FdwError>{
+        // let rows_iterator = self
+        //     .rows_iterator
+        //     .as_mut()
+        //     .expect("Can't be None as rows_iterator is initialized in begin_scan");
+        // if let Some(new_row_result) = rows_iterator.next() {
+        //     let new_row = new_row_result?;
+        //     row.replace_with(new_row);
+        //     Ok(Some(()))
+        // } else {
+        //     Ok(None)
+        // }
+        // TODO: Replace this
+        Ok(Some(()))
     }
 
     fn end_scan(&mut self) -> Auth0FdwResult<()> {

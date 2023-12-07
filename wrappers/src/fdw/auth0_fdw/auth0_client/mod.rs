@@ -14,6 +14,8 @@ pub(crate) struct Auth0Client {
     client: ClientWithMiddleware,
 }
 
+pub(crate) mod rows_iterator;
+
 impl Auth0Client {
     pub(crate) fn new(api_key: &str) -> Result<Self, Auth0FdwError> {
         Ok(Self {
