@@ -1,4 +1,3 @@
-use crate::fdw::auth0_fdw::auth0_client::row::Auth0User;
 use crate::fdw::auth0_fdw::auth0_client::rows_iterator::RowsIterator;
 use crate::fdw::auth0_fdw::auth0_client::Auth0Client;
 
@@ -27,14 +26,9 @@ pub(crate) struct Auth0Fdw {
 
 #[derive(Error, Debug)]
 enum Auth0FdwError {
-    #[error("column '{0}' data type is not supported")]
-    UnsupportedColumnType(String),
 
     #[error("{0}")]
     Auth0ClientError(#[from] Auth0ClientError),
-
-    #[error("column '{0}' data type not match")]
-    ColumnTypeNotMatch(String),
 
     #[error("{0}")]
     CreateRuntimeError(#[from] CreateRuntimeError),
@@ -42,8 +36,6 @@ enum Auth0FdwError {
     #[error("parse url failed: {0}")]
     UrlParseError(#[from] url::ParseError),
 
-    #[error("invalid api_key header")]
-    InvalidApiKeyHeader,
 
     #[error("request failed: {0}")]
     RequestError(#[from] reqwest::Error),
@@ -56,9 +48,6 @@ enum Auth0FdwError {
 
     #[error("{0}")]
     OptionsError(#[from] OptionsError),
-
-    #[error("Auth0 object '{0}' not implemented")]
-    ObjectNotImplemented(String),
 
     #[error("{0}")]
     NumericConversionError(#[from] pgrx::numeric::Error),

@@ -32,7 +32,6 @@ impl RowsIterator {
     }
 
     fn fetch_rows_batch(&mut self) -> Result<Option<Row>, Auth0ClientError> {
-        // TODO: Replace this with appropriate fetch method
         let user_result = self
             .auth0_client
             .fetch_users(self.get_limit(), self.get_offset())?;

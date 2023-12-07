@@ -16,34 +16,34 @@ pub(crate) struct UserRequest {
     offset: Option<u64>,
 }
 
-pub(crate) struct UserRequestBuilder {
-    request: UserRequest,
-}
+// pub(crate) struct UserRequestBuilder {
+//     request: UserRequest,
+// }
 
-impl UserRequestBuilder {
-    pub(crate) fn new() -> Self {
-        Self {
-            request: UserRequest {
-                limit: None,
-                offset: None,
-            },
-        }
-    }
+// impl UserRequestBuilder {
+//     pub(crate) fn new() -> Self {
+//         Self {
+//             request: UserRequest {
+//                 limit: None,
+//                 offset: None,
+//             },
+//         }
+//     }
 
-    pub(crate) fn limit(mut self, limit: Option<u64>) -> Self {
-        self.request.limit = limit;
-        self
-    }
+//     pub(crate) fn limit(mut self, limit: Option<u64>) -> Self {
+//         self.request.limit = limit;
+//         self
+//     }
 
-    pub(crate) fn offset(mut self, offset: Option<u64>) -> Self {
-        self.request.offset = offset;
-        self
-    }
+//     pub(crate) fn offset(mut self, offset: Option<u64>) -> Self {
+//         self.request.offset = offset;
+//         self
+//     }
 
-    pub(crate) fn build(self) -> UserRequest {
-        self.request
-    }
-}
+//     pub(crate) fn build(self) -> UserRequest {
+//         self.request
+//     }
+// }
 
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct ResultPayload {

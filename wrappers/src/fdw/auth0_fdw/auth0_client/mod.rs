@@ -1,12 +1,9 @@
 use crate::fdw::auth0_fdw::auth0_client::row::ResultPayload;
-use crate::fdw::auth0_fdw::auth0_client::row::UserRequestBuilder;
 use crate::fdw::auth0_fdw::auth0_client::row::UserResponse;
 use crate::fdw::auth0_fdw::auth0_client::row::UserResponseError;
-use http::{HeaderMap, HeaderValue};
+use http::{HeaderMap, HeaderName, HeaderValue};
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::PgSqlErrorCode;
-use reqwest::header;
-use reqwest::header::InvalidHeaderValue;
 use reqwest::Url;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::policies::ExponentialBackoff;
@@ -33,11 +30,11 @@ impl Auth0Client {
     }
     fn create_client(api_key: &str) -> Result<ClientWithMiddleware, Auth0ClientError> {
         let mut headers = HeaderMap::new();
-        let value = format!("Bearer {}", api_key);
-        // let mut auth_value =
-        //     HeaderValue::from_str(&value).map_err(|_| Auth0ClientError::InvalidApiKeyHeader);
-        // auth_value.set_sensitive(true);
-        // headers.insert(header::AUTHORIZATION, auth_value);
+        let header_name = HeaderName::from_static("api-key");
+        let mut api_key_value =
+            HeaderValue::from_str(api_key).map_err(|_| Auth0ClientError::InvalidApiKeyHeader)?;
+        api_key_value.set_sensitive(true);
+        headers.insert(header_name, api_key_value);
         let client = reqwest::Client::builder()
             .default_headers(headers)
             .build()?;
@@ -51,17 +48,12 @@ impl Auth0Client {
     }
     pub(crate) fn fetch_users(
         &self,
-        limit: Option<u64>,
-        offset: Option<u64>,
+        _limit: Option<u64>,
+        _offset: Option<u64>,
     ) -> Result<ResultPayload, Auth0ClientError> {
         let rt = create_async_runtime()?;
 
         rt.block_on(async {
-            let request = UserRequestBuilder::new()
-                .limit(limit)
-                .offset(offset)
-                .build();
-            // TODO: Remove this
             let response = self.get_client().get(self.url.clone()).send().await?;
             let response = response.error_for_status()?;
             let user_response = response.json::<UserResponse>().await?;
@@ -76,8 +68,8 @@ pub(crate) enum Auth0ClientError {
     #[error("{0}")]
     CreateRuntimeError(#[from] CreateRuntimeError),
 
-    #[error("invalid api_key header: {0}")]
-    InvalidApiKeyHeader(#[from] InvalidHeaderValue),
+    #[error("invalid api_key header")]
+    InvalidApiKeyHeader,
 
     #[error("reqwest error: {0}")]
     ReqwestError(#[from] reqwest::Error),
@@ -101,7 +93,7 @@ impl From<Auth0ClientError> for ErrorReport {
             Auth0ClientError::CreateRuntimeError(e) => e.into(),
             Auth0ClientError::UrlParseError(_)
             | Auth0ClientError::UserResponseError(_)
-            | Auth0ClientError::InvalidApiKeyHeader(_)
+            | Auth0ClientError::InvalidApiKeyHeader
             | Auth0ClientError::ReqwestError(_)
             | Auth0ClientError::ReqwestMiddlewareError(_)
             | Auth0ClientError::SerdeError(_) => {
