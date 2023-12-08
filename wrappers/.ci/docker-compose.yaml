@@ -12,6 +12,17 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+  auth0:
+    container_name: auth0-local
+    build:
+      context: ../dockerfiles/auth0
+    ports:
+      - "3796:3796"
+    healthcheck:
+      test: curl --fail http://0.0.0.0:3796/ || exit 1
+      interval: 11s
+      timeout: 6s
+      retries: 3
 
   clickhouse:
     image: clickhouse/clickhouse-server
