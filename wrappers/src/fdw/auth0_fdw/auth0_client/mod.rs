@@ -1,6 +1,4 @@
-use crate::fdw::auth0_fdw::auth0_client::row::UserResponse;
-use crate::fdw::auth0_fdw::auth0_client::row::UserResponseError;
-use crate::fdw::auth0_fdw::auth0_client::row::{Auth0User, ResultPayload};
+use crate::fdw::auth0_fdw::auth0_client::row::Auth0User;
 use http::{HeaderMap, HeaderName, HeaderValue};
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::PgSqlErrorCode;
@@ -85,9 +83,6 @@ pub(crate) enum Auth0ClientError {
 
     #[error("failed to parse url: {0}")]
     UrlParseError(#[from] ParseError),
-
-    #[error("{0}")]
-    UserResponseError(#[from] UserResponseError),
 }
 
 impl From<Auth0ClientError> for ErrorReport {
@@ -95,7 +90,6 @@ impl From<Auth0ClientError> for ErrorReport {
         match value {
             Auth0ClientError::CreateRuntimeError(e) => e.into(),
             Auth0ClientError::UrlParseError(_)
-            | Auth0ClientError::UserResponseError(_)
             | Auth0ClientError::InvalidApiKeyHeader
             | Auth0ClientError::ReqwestError(_)
             | Auth0ClientError::ReqwestMiddlewareError(_)

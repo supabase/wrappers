@@ -26,7 +26,6 @@ pub(crate) struct Auth0Fdw {
 
 #[derive(Error, Debug)]
 enum Auth0FdwError {
-
     #[error("{0}")]
     Auth0ClientError(#[from] Auth0ClientError),
 
@@ -35,7 +34,6 @@ enum Auth0FdwError {
 
     #[error("parse url failed: {0}")]
     UrlParseError(#[from] url::ParseError),
-
 
     #[error("request failed: {0}")]
     RequestError(#[from] reqwest::Error),
@@ -121,7 +119,7 @@ impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {
         columns: &[Column],
         _sorts: &[Sort],
         _limit: &Option<Limit>,
-        options: &HashMap<String, String>,
+        _options: &HashMap<String, String>,
     ) -> Auth0FdwResult<()> {
         let auth0_client = Auth0Client::new(&self.url, &self.api_key)?;
         self.rows_iterator = Some(RowsIterator::new(columns.to_vec(), 1000, auth0_client));
