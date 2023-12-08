@@ -1,6 +1,6 @@
-use crate::fdw::auth0_fdw::auth0_client::row::ResultPayload;
 use crate::fdw::auth0_fdw::auth0_client::row::UserResponse;
 use crate::fdw::auth0_fdw::auth0_client::row::UserResponseError;
+use crate::fdw::auth0_fdw::auth0_client::row::{Auth0User, ResultPayload};
 use http::{HeaderMap, HeaderName, HeaderValue};
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::PgSqlErrorCode;
@@ -28,6 +28,7 @@ impl Auth0Client {
             client: Self::create_client(api_key)?,
         })
     }
+
     fn create_client(api_key: &str) -> Result<ClientWithMiddleware, Auth0ClientError> {
         let mut headers = HeaderMap::new();
         let header_name = HeaderName::from_static("api-key");
@@ -43,21 +44,23 @@ impl Auth0Client {
             .with(RetryTransientMiddleware::new_with_policy(retry_policy))
             .build())
     }
+
     pub fn get_client(&self) -> &ClientWithMiddleware {
         &self.client
     }
+
     pub(crate) fn fetch_users(
         &self,
         _limit: Option<u64>,
         _offset: Option<u64>,
-    ) -> Result<ResultPayload, Auth0ClientError> {
+    ) -> Result<Vec<Auth0User>, Auth0ClientError> {
         let rt = create_async_runtime()?;
 
         rt.block_on(async {
             let response = self.get_client().get(self.url.clone()).send().await?;
             let response = response.error_for_status()?;
-            let user_response = response.json::<UserResponse>().await?;
-            let users = user_response.get_user_result()?;
+            let users = response.json::<Vec<Auth0User>>().await?;
+            // let users = user_response.get_user_result()?;
 
             Ok(users)
         })
