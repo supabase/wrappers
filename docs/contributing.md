@@ -36,6 +36,8 @@ Try out the commands below to spin up a database with the extension installed & 
 CREATE EXTENSION
 ```
 
+For debugging, you can make use of [`notice!` macros](https://docs.rs/pgrx/latest/pgrx/macro.notice.html) to print out statements while using your wrapper in `psql`.
+
 ## Documentation
 
 All public API must be documented. Building documentation requires python 3.6+
