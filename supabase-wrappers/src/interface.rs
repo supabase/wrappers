@@ -6,7 +6,7 @@ use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::{Date, Timestamp};
 use pgrx::{
     fcinfo,
-    pg_sys::{self, Datum, Oid},
+    pg_sys::{self, BuiltinOid, Datum, Oid},
     AllocatedByRust, AnyNumeric, FromDatum, IntoDatum, JsonB, PgBuiltInOids, PgOid,
 };
 use std::collections::HashMap;
@@ -22,13 +22,16 @@ use std::slice::Iter;
 // https://doxygen.postgresql.org/pg__foreign__table_8h.html
 
 /// Constant can be used in [validator](ForeignDataWrapper::validator)
+// Note: temporarily disable warning here, can be removed after this upstream PR
+// is merged. https://github.com/pgcentralfoundation/pgrx/pull/1432.
+#[allow(deprecated)]
 pub const FOREIGN_DATA_WRAPPER_RELATION_ID: Oid = unsafe { Oid::from_u32_unchecked(2328) };
 
 /// Constant can be used in [validator](ForeignDataWrapper::validator)
-pub const FOREIGN_SERVER_RELATION_ID: Oid = unsafe { Oid::from_u32_unchecked(1417) };
+pub const FOREIGN_SERVER_RELATION_ID: Oid = BuiltinOid::ForeignServerRelationId.value();
 
 /// Constant can be used in [validator](ForeignDataWrapper::validator)
-pub const FOREIGN_TABLE_RELATION_ID: Oid = unsafe { Oid::from_u32_unchecked(3118) };
+pub const FOREIGN_TABLE_RELATION_ID: Oid = BuiltinOid::ForeignTableRelationId.value();
 
 /// A data cell in a data row
 #[derive(Debug)]

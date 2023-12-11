@@ -34,7 +34,8 @@ pub(crate) unsafe fn extract_limit(
 
     // only consider OFFSETS that are non-NULL constants
     let limit_offset = (*parse).limitOffset as *mut pg_sys::Const;
-    if !limit_offset.is_null() && is_a(limit_offset as *mut pg_sys::Node, pg_sys::NodeTag::T_Const) {
+    if !limit_offset.is_null() && is_a(limit_offset as *mut pg_sys::Node, pg_sys::NodeTag::T_Const)
+    {
         if let Some(offset) = i64::from_polymorphic_datum(
             (*limit_offset).constvalue,
             (*limit_offset).constisnull,
