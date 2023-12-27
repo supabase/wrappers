@@ -1,7 +1,7 @@
 [Firebase](https://firebase.google.com/) is an app development platform built around non-relational technologies. The Firebase Wrapper supports connecting to below objects.
 
-1. [Authentication Users](https://firebase.google.com/docs/auth/users) (*read only*)
-2. [Firestore Database Documents](https://firebase.google.com/docs/firestore) (*read only*)
+1. [Authentication Users](https://firebase.google.com/docs/auth/users) (_read only_)
+2. [Firestore Database Documents](https://firebase.google.com/docs/firestore) (_read only_)
 
 ## Preparation
 
@@ -73,10 +73,10 @@ We need to provide Postgres with the credentials to connect to Firebase, and any
 
 The Firebase Wrapper supports reading data from below Firebase's objects:
 
-| Firebase                     | Select            | Insert     | Update     | Delete   | Truncate          |
-| -----------                  | :----:            | :----:     | :----:     | :----:   | :----:            |
-| Authentication Users         | :white_check_mark:| :x:        | :x:        | :x:      | :x:               |
-| Firestore Database Documents | :white_check_mark:| :x:        | :x:        | :x:      | :x:               |
+| Firebase                     | Select | Insert | Update | Delete | Truncate |
+| ---------------------------- | :----: | :----: | :----: | :----: | :------: |
+| Authentication Users         |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Firestore Database Documents |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
 
 For example:
 
@@ -93,7 +93,7 @@ create foreign table firebase_users (
   );
 ```
 
-Note there is a meta column `attrs` in the foreign table, which contains all the returned data from Firebase as json format. 
+Note there is a meta column `attrs` in the foreign table, which contains all the returned data from Firebase as json format.
 
 ### Foreign table options
 
@@ -133,8 +133,7 @@ create foreign table firebase_docs (
 
 Note that `name`, `created_at`, and `updated_at`, are automatic metadata fields on all Firestore collections.
 
-
-### auth/users 
+### auth/users
 
 The `auth/users` collection is a special case with unique metadata. The following shows how to map Firebase users to PostgreSQL table.
 

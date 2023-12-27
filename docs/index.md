@@ -20,6 +20,7 @@
 `supabase/wrappers` is a PostgreSQL extension that provides integrations with external sources so you can interact with third-party data using SQL.
 
 For example, the Stripe wrapper allows you to query and join against your Stripe customer data straight from PostgreSQL:
+
 ```sql
 select
   customer_id
@@ -27,22 +28,24 @@ select
 from
    stripe.customers;
 ```
+
 returns
+
 ```
-    customer_id     | currency 
+    customer_id     | currency
 --------------------+-----------
- cus_MJiBtCqOF1Bb3F | usd      
+ cus_MJiBtCqOF1Bb3F | usd
 (1 row)
 ```
 
 Currently `supabase/wrappers` supports:
 
-| Integration | Select            | Insert            | Update            | Delete            | Truncate          |
-| ----------- | :----:            | :----:            | :----:            | :----:            | :----:            |
-| Airtable    | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| BigQuery    | :white_check_mark:| :white_check_mark:| :white_check_mark:| :white_check_mark:| :x:               |
-| ClickHouse  | :white_check_mark:| :white_check_mark:| :white_check_mark:| :white_check_mark:| :x:               |
-| Firebase    | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| Logflare    | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| S3          | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| Stripe      | :white_check_mark:| :white_check_mark:| :white_check_mark:| :white_check_mark:| :x:               |
+| Integration | Select | Insert | Update | Delete | Truncate |
+| ----------- | :----: | :----: | :----: | :----: | :------: |
+| Airtable    |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| BigQuery    |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
+| ClickHouse  |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
+| Firebase    |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Logflare    |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| S3          |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Stripe      |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
