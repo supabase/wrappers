@@ -1,4 +1,4 @@
-[Airtable](https://www.airtable.com) is an easy-to-use online platform for creating and sharing relational databases. 
+[Airtable](https://www.airtable.com) is an easy-to-use online platform for creating and sharing relational databases.
 
 The Airtable Wrapper allows you to read data from your Airtable bases/tables within your Postgres database.
 
@@ -59,11 +59,11 @@ We need to provide Postgres with the credentials to connect to Airtable, and any
 
 ## Creating Foreign Tables
 
-The Airtable Wrapper supports data reads from Airtable's [Records](https://airtable.com/developers/web/api/list-records) endpoint (*read only*).
+The Airtable Wrapper supports data reads from Airtable's [Records](https://airtable.com/developers/web/api/list-records) endpoint (_read only_).
 
-| Airtable    | Select            | Insert            | Update            | Delete            | Truncate          |
-| ----------- | :----:            | :----:            | :----:            | :----:            | :----:            |
-| Records     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
+| Airtable | Select | Insert | Update | Delete | Truncate |
+| -------- | :----: | :----: | :----: | :----: | :------: |
+| Records  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
 
 For example:
 
@@ -97,7 +97,7 @@ Some examples on how to use Airtable foreign tables.
 
 ### Basic example
 
-This will create a "foreign table" inside your Postgres database called `airtable_table`: 
+This will create a "foreign table" inside your Postgres database called `airtable_table`:
 
 ```sql
 create foreign table airtable_table (
