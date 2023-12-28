@@ -15,6 +15,7 @@
 | [S3](./wrappers/src/fdw/s3_fdw) | A FDW for [AWS S3](https://aws.amazon.com/s3/) | :white_check_mark: | :x: |
 | [Logflare](./wrappers/src/fdw/logflare_fdw) | A FDW for [Logflare](https://logflare.app/) | :white_check_mark: | :x: |
 | [Auth0](./wrappers/src/fdw/auth0_fdw) | A FDW for [Auth0](https://auth0.com/) | :white_check_mark: | :x: |
+| [SQL Server](./wrappers/src/fdw/mssql_fdw) | A FDW for [Microsoft SQL Server](https://www.microsoft.com/en-au/sql-server/) | :white_check_mark: | :x: |
 
 
 

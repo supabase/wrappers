@@ -12,6 +12,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+
   auth0:
     container_name: auth0-local
     build:
@@ -64,7 +65,6 @@ services:
       timeout: 5s
       retries: 30
 
-
   bigquery:
     container_name: bigquery-local
     build:
@@ -97,3 +97,17 @@ services:
       timeout: 5s
       retries: 3
       
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    container_name: mssql-wrapped
+    environment:
+      ACCEPT_EULA: Y
+      MSSQL_SA_PASSWORD: Password1234_56
+    ports:
+      - "1433:1433"
+    healthcheck:
+      test: (echo >/dev/tcp/127.0.0.1/1433) &>/dev/null && echo "okay" || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
