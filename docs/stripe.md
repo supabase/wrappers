@@ -58,31 +58,31 @@ We need to provide Postgres with the credentials to connect to Stripe, and any a
 
 The Stripe Wrapper supports data read and modify from Stripe API.
 
-| Object      | Select            | Insert            | Update            | Delete            | Truncate          |
-| ----------- | :----:            | :----:            | :----:            | :----:            | :----:            |
-| [Accounts](https://stripe.com/docs/api/accounts/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [Balance](https://stripe.com/docs/api/balance)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [Balance Transactions](https://stripe.com/docs/api/balance_transactions/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [Charges](https://stripe.com/docs/api/charges/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [Checkout Sessions](https://stripe.com/docs/api/checkout/sessions/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [Customers](https://stripe.com/docs/api/customers/list)     | :white_check_mark:| :white_check_mark:| :white_check_mark:| :white_check_mark:| :x:               |
-| [Disputes](https://stripe.com/docs/api/disputes/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [Events](https://stripe.com/docs/api/events/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [Files](https://stripe.com/docs/api/files/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [File Links](https://stripe.com/docs/api/file_links/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [Invoices](https://stripe.com/docs/api/invoices/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [Mandates](https://stripe.com/docs/api/mandates)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [PaymentIntents](https://stripe.com/docs/api/payment_intents/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [Payouts](https://stripe.com/docs/api/payouts/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [Prices](https://stripe.com/docs/api/prices/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [Products](https://stripe.com/docs/api/products/list)     | :white_check_mark:| :white_check_mark:| :white_check_mark:| :white_check_mark:| :x:               |
-| [Refunds](https://stripe.com/docs/api/refunds/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [SetupAttempts](https://stripe.com/docs/api/setup_attempts/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [SetupIntents](https://stripe.com/docs/api/setup_intents/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [Subscriptions](https://stripe.com/docs/api/subscriptions/list)     | :white_check_mark:| :white_check_mark:| :white_check_mark:| :white_check_mark:| :x:               |
-| [Tokens](https://stripe.com/docs/api/tokens)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [Topups](https://stripe.com/docs/api/topups/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
-| [Transfers](https://stripe.com/docs/api/transfers/list)     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
+| Object                                                                        | Select | Insert | Update | Delete | Truncate |
+| ----------------------------------------------------------------------------- | :----: | :----: | :----: | :----: | :------: |
+| [Accounts](https://stripe.com/docs/api/accounts/list)                         |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| [Balance](https://stripe.com/docs/api/balance)                                |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| [Balance Transactions](https://stripe.com/docs/api/balance_transactions/list) |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| [Charges](https://stripe.com/docs/api/charges/list)                           |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| [Checkout Sessions](https://stripe.com/docs/api/checkout/sessions/list)       |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| [Customers](https://stripe.com/docs/api/customers/list)                       |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
+| [Disputes](https://stripe.com/docs/api/disputes/list)                         |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| [Events](https://stripe.com/docs/api/events/list)                             |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| [Files](https://stripe.com/docs/api/files/list)                               |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| [File Links](https://stripe.com/docs/api/file_links/list)                     |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| [Invoices](https://stripe.com/docs/api/invoices/list)                         |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| [Mandates](https://stripe.com/docs/api/mandates)                              |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| [PaymentIntents](https://stripe.com/docs/api/payment_intents/list)            |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| [Payouts](https://stripe.com/docs/api/payouts/list)                           |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| [Prices](https://stripe.com/docs/api/prices/list)                             |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| [Products](https://stripe.com/docs/api/products/list)                         |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
+| [Refunds](https://stripe.com/docs/api/refunds/list)                           |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| [SetupAttempts](https://stripe.com/docs/api/setup_attempts/list)              |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| [SetupIntents](https://stripe.com/docs/api/setup_intents/list)                |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| [Subscriptions](https://stripe.com/docs/api/subscriptions/list)               |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
+| [Tokens](https://stripe.com/docs/api/tokens)                                  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| [Topups](https://stripe.com/docs/api/topups/list)                             |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| [Transfers](https://stripe.com/docs/api/transfers/list)                       |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
 
 The Stripe foreign tables mirror Stripe's API. We can create a schema to hold all the Stripe tables.
 
@@ -111,7 +111,8 @@ create foreign table stripe.accounts (
 `attrs` is a special column which stores all the object attributes in JSON format, you can extract any attributes needed or its associated sub objects from it. See more examples below.
 
 ### Accounts
-*read only*
+
+_read only_
 
 This is an object representing a Stripe account.
 
@@ -138,7 +139,8 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - id
 
 ### Balance
-*read only*
+
+_read only_
 
 Shows the balance currently on your Stripe account.
 
@@ -158,7 +160,8 @@ create foreign table stripe.balance (
 ```
 
 ### Balance Transactions
-*read only*
+
+_read only_
 
 Balance transactions represent funds moving through your Stripe account. They're created for every type of transaction that comes into or flows out of your Stripe account balance.
 
@@ -189,7 +192,8 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - type
 
 ### Charges
-*read only*
+
+_read only_
 
 To charge a credit or a debit card, you create a Charge object. You can retrieve and refund individual charges as well as list all charges. Charges are identified by a unique, random ID.
 
@@ -221,7 +225,7 @@ While any column is allowed in a where clause, it is most efficient to filter by
 
 ### Checkout Sessions
 
-*read only*
+_read only_
 
 A Checkout Session represents your customer's session as they pay for one-time purchases or subscriptions through Checkout or Payment Links. We recommend creating a new Session each time your customer attempts to pay.
 
@@ -250,7 +254,8 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - subscription
 
 ### Customers
-*read and modify*
+
+_read and modify_
 
 Contains customers known to Stripe.
 
@@ -278,7 +283,8 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - email
 
 ### Disputes
-*read only*
+
+_read only_
 
 A dispute occurs when a customer questions your charge with their card issuer.
 
@@ -309,7 +315,8 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - payment_intent
 
 ### Events
-*read only*
+
+_read only_
 
 Events are our way of letting you know when something interesting happens in your account.
 
@@ -335,7 +342,8 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - type
 
 ### Files
-*read only*
+
+_read only_
 
 This is an object representing a file hosted on Stripe's servers.
 
@@ -366,7 +374,8 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - purpose
 
 ### File Links
-*read only*
+
+_read only_
 
 To share the contents of a `File` object with non-Stripe users, you can create a `FileLink`.
 
@@ -389,7 +398,8 @@ create foreign table stripe.file_links (
 ```
 
 ### Invoices
-*read only*
+
+_read only_
 
 Invoices are statements of amounts owed by a customer, and are either generated one-off, or generated periodically from a subscription.
 
@@ -422,7 +432,8 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - subscription
 
 ### Mandates
-*read only*
+
+_read only_
 
 A Mandate is a record of the permission a customer has given you to debit their payment method.
 
@@ -446,9 +457,9 @@ While any column is allowed in a where clause, it is most efficient to filter by
 
 - id
 
-
 ### Payment Intents
-*read only*
+
+_read only_
 
 A payment intent guides you through the process of collecting a payment from your customer.
 
@@ -476,7 +487,8 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - customer
 
 ### Payouts
-*read only*
+
+_read only_
 
 A `Payout` object is created when you receive funds from Stripe, or when you initiate a payout to either a bank account or debit card of a connected Stripe account.
 
@@ -506,7 +518,8 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - status
 
 ### Prices
-*read only*
+
+_read only_
 
 A `Price` object is needed for all of your products to facilitate multiple currencies and pricing options.
 
@@ -535,7 +548,8 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - active
 
 ### Products
-*read and modify*
+
+_read and modify_
 
 All products available in Stripe.
 
@@ -565,7 +579,8 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - active
 
 ### Refunds
-*read only*
+
+_read only_
 
 `Refund` objects allow you to refund a charge that has previously been created but not yet refunded.
 
@@ -596,7 +611,8 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - payment_intent
 
 ### SetupAttempts
-*read only*
+
+_read only_
 
 A `SetupAttempt` describes one attempted confirmation of a SetupIntent, whether that confirmation was successful or unsuccessful.
 
@@ -627,7 +643,8 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - setup_intent
 
 ### SetupIntents
-*read only*
+
+_read only_
 
 A `SetupIntent` guides you through the process of setting up and saving a customer's payment credentials for future payments.
 
@@ -658,12 +675,12 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - payment_method
 
 ### Subscriptions
-*read and modify*
+
+_read and modify_
 
 Customer recurring payment schedules.
 
 Ref: [Stripe docs](https://stripe.com/docs/api/subscriptions/list)
-
 
 ```sql
 create foreign table stripe.subscriptions (
@@ -689,7 +706,8 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - status
 
 ### Tokens
-*read only*
+
+_read only_
 
 Tokenization is the process Stripe uses to collect sensitive card or bank account details, or personally identifiable information (PII), directly from your customers in a secure manner.
 
@@ -711,7 +729,8 @@ create foreign table stripe.tokens (
 ```
 
 ### Top-ups
-*read only*
+
+_read only_
 
 To top up your Stripe balance, you create a top-up object.
 
@@ -739,7 +758,8 @@ While any column is allowed in a where clause, it is most efficient to filter by
 - status
 
 ### Transfers
-*read only*
+
+_read only_
 
 A Transfer object is created when you move funds between Stripe accounts as part of Connect.
 

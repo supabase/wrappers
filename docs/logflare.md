@@ -60,9 +60,9 @@ We need to provide Postgres with the credentials to connect to Logflare, and any
 
 The Logflare Wrapper supports data reads from Logflare's endpoints.
 
-| Integration | Select            | Insert            | Update            | Delete            | Truncate          |
-| ----------- | :----:            | :----:            | :----:            | :----:            | :----:            |
-| Logflare    | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
+| Integration | Select | Insert | Update | Delete | Truncate |
+| ----------- | :----: | :----: | :----: | :----: | :------: |
+| Logflare    |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
 
 For example:
 
@@ -183,4 +183,3 @@ where _param_org_id = 123
   and _param_iso_timestamp_start = '2023-07-01 02:03:04'
   and _param_iso_timestamp_end = '2023-07-02';
 ```
-

@@ -4,17 +4,17 @@ The BigQuery Wrapper allows you to read and write data from BigQuery within your
 
 ## Supported Data Types
 
-| Postgres Type      | BigQuery Type   |
-| ------------------ | --------------- |
-| boolean            | BOOL            |
-| bigint             | INT64           |
-| double precision   | FLOAT64         |
-| numeric            | NUMERIC         |
-| text               | STRING          |
-| varchar            | STRING          |
-| date               | DATE            |
-| timestamp          | DATETIME        |
-| timestamp          | TIMESTAMP       |
+| Postgres Type    | BigQuery Type |
+| ---------------- | ------------- |
+| boolean          | BOOL          |
+| bigint           | INT64         |
+| double precision | FLOAT64       |
+| numeric          | NUMERIC       |
+| text             | STRING        |
+| varchar          | STRING        |
+| date             | DATE          |
+| timestamp        | DATETIME      |
+| timestamp        | TIMESTAMP     |
 
 ## Preparation
 
@@ -92,9 +92,9 @@ We need to provide Postgres with the credentials to connect to BigQuery, and any
 
 The BigQuery Wrapper supports data reads and writes from BigQuery.
 
-| Integration | Select            | Insert            | Update            | Delete            | Truncate          |
-| ----------- | :----:            | :----:            | :----:            | :----:            | :----:            |
-| BigQuery    | :white_check_mark:| :white_check_mark:| :white_check_mark:| :white_check_mark:| :x:               |
+| Integration | Select | Insert | Update | Delete | Truncate |
+| ----------- | :----: | :----: | :----: | :----: | :------: |
+| BigQuery    |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
 
 For example:
 
@@ -117,13 +117,13 @@ The full list of foreign table options are below:
 
 - `table` - Source table or view name in BigQuery, required.
 
-   This can also be a subquery enclosed in parentheses, for example,
+  This can also be a subquery enclosed in parentheses, for example,
 
-   ```sql
-   table '(select * except(props), to_json_string(props) as props from `my_project.my_dataset.my_table`)'
-   ```
+  ```sql
+  table '(select * except(props), to_json_string(props) as props from `my_project.my_dataset.my_table`)'
+  ```
 
-   **Note**: When using subquery in this option, full qualitified table name must be used.
+  **Note**: When using subquery in this option, full qualitified table name must be used.
 
 - `location` - Source table location, optional. Default is 'US'.
 - `timeout` - Query request timeout in milliseconds, optional. Default is '30000' (30 seconds).
@@ -155,8 +155,8 @@ create table your_project_id.your_dataset_id.people (
 
 -- Add some test data
 insert into your_project_id.your_dataset_id.people values
-  (1, 'Luke Skywalker', current_timestamp()), 
-  (2, 'Leia Organa', current_timestamp()), 
+  (1, 'Luke Skywalker', current_timestamp()),
+  (2, 'Leia Organa', current_timestamp()),
   (3, 'Han Solo', current_timestamp());
 ```
 
