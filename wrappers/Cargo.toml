@@ -91,6 +91,13 @@ auth0_fdw = [
     "url",
     "thiserror",
 ]
+mssql_fdw = [
+    "tiberius",
+    "tokio",
+    "tokio-util",
+    "num-traits",
+    "thiserror",
+]
 # Does not include helloworld_fdw because of its general uselessness
 all_fdws = [
     "airtable_fdw",
@@ -101,6 +108,7 @@ all_fdws = [
     "s3_fdw",
     "logflare_fdw",
     "auth0_fdw",
+    "mssql_fdw",
 ]
 
 [dependencies]
@@ -141,7 +149,7 @@ aws-smithy-http = { version = "0.56.1", optional = true }
 aws-smithy-runtime-api = { version = "0.56.1", optional = true }
 csv = { version = "1.2", optional = true }
 tokio = { version = "1", features = ["full"], optional = true }
-tokio-util = { version = "0.7", optional = true }
+tokio-util = { version = "0.7", features = ["full"], optional = true }
 async-compression = { version = "0.3.15", features = [
     "tokio",
     "bzip2",
@@ -152,6 +160,15 @@ async-compression = { version = "0.3.15", features = [
 http = { version = "0.2", optional = true }
 parquet = { version = "41.0.0", features = ["async"], optional = true }
 arrow-array = { version = "41.0.0", optional = true }
+
+# for mssql_fdw
+tiberius = { version = "0.12.2", features = [
+    "tds73",
+    "native-tls",
+    "chrono",
+    "rust_decimal",
+], optional = true }
+num-traits = { version = "0.2.17", optional = true }
 
 thiserror = { version = "1.0.48", optional = true }
 

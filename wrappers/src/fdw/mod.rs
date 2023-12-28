@@ -24,3 +24,6 @@ mod logflare_fdw;
 
 #[cfg(feature = "auth0_fdw")]
 mod auth0_fdw;
+
+#[cfg(feature = "mssql_fdw")]
+mod mssql_fdw;

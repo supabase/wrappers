@@ -49,3 +49,4 @@ Currently `supabase/wrappers` supports:
 | Logflare    |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
 | S3          |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
 | Stripe      |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
+| SQL Server  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |

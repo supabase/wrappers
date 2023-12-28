@@ -288,6 +288,8 @@
 //! - [Airtable](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/airtable_fdw): A FDW for [Airtable](https://airtable.com/) API which supports data read only.
 //! - [S3](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/s3_fdw): A FDW for [AWS S3](https://aws.amazon.com/s3/) which supports data read only.
 //! - [Logflare](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/logflare_fdw): A FDW for [Logflare](https://logflare.app/) which supports data read only.
+//! - [Auth0](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/auth0_fdw): A FDW for [Auth0](https://auth0.com/) which supports data read only.
+//! - [SQL Server](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/mssql_fdw): A FDW for [Microsoft SQL Server](https://www.microsoft.com/en-au/sql-server/) which supports data read only.
 
 pub mod interface;
 pub mod options;
