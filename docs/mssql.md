@@ -94,9 +94,9 @@ All parameter keys are handled case-insensitive.
 
 The SQL Server Wrapper supports data reads from SQL Server.
 
-| Integration | Select            | Insert            | Update            | Delete            | Truncate          |
-| ----------- | :----:            | :----:            | :----:            | :----:            | :----:            |
-| SQL Server  | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
+| Integration | Select | Insert | Update | Delete | Truncate |
+| ----------- | :----: | :----: | :----: | :----: | :------: |
+| SQL Server  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
 
 For example:
 
