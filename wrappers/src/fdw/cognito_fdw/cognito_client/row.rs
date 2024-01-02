@@ -15,7 +15,7 @@ pub(crate) struct UserRequest {
 
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct ResultPayload {
-    pub(crate) users: Vec<Auth0User>,
+    pub(crate) users: Vec<CognitoUser>,
     pub(crate) next_page_offset: Option<u64>,
 }
 
@@ -27,17 +27,17 @@ pub(crate) struct Success {
 }
 
 #[derive(Debug)]
-pub struct Auth0Fields(HashMap<String, Value>);
+pub struct CognitoFields(HashMap<String, Value>);
 
 #[derive(Debug, Deserialize, PartialEq)]
-pub struct Auth0User {
+pub struct CognitoUser {
     pub created_at: String,
     pub email: String,
     pub email_verified: bool,
     pub identities: Option<serde_json::Value>,
 }
 
-impl Auth0User {
+impl CognitoUser {
     pub(crate) fn into_row(mut self, columns: &[Column]) -> Row {
         let mut row = Row::new();
         for tgt_col in columns {

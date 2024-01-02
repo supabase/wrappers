@@ -1,4 +1,4 @@
-use crate::fdw::auth0_fdw::auth0_client::row::Auth0User;
+use crate::fdw::cognito_fdw::cognito_client::row::CognitoUser;
 use http::{HeaderMap, HeaderName, HeaderValue};
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::PgSqlErrorCode;
@@ -12,26 +12,26 @@ use url::ParseError;
 
 pub(crate) mod row;
 
-pub(crate) struct Auth0Client {
+pub(crate) struct CognitoClient {
     url: Url,
     client: ClientWithMiddleware,
 }
 
 pub(crate) mod rows_iterator;
 
-impl Auth0Client {
-    pub(crate) fn new(url: &str, api_key: &str) -> Result<Self, Auth0ClientError> {
+impl CognitoClient {
+    pub(crate) fn new(url: &str, api_key: &str) -> Result<Self, CognitoClientError> {
         Ok(Self {
             url: Url::parse(url)?,
             client: Self::create_client(api_key)?,
         })
     }
 
-    fn create_client(api_key: &str) -> Result<ClientWithMiddleware, Auth0ClientError> {
+    fn create_client(api_key: &str) -> Result<ClientWithMiddleware, CognitoClientError> {
         let mut headers = HeaderMap::new();
         let header_name = HeaderName::from_static("api-key");
         let mut api_key_value =
-            HeaderValue::from_str(api_key).map_err(|_| Auth0ClientError::InvalidApiKeyHeader)?;
+            HeaderValue::from_str(api_key).map_err(|_| CognitoClientError::InvalidApiKeyHeader)?;
         api_key_value.set_sensitive(true);
         headers.insert(header_name, api_key_value);
         let client = reqwest::Client::builder()
@@ -51,13 +51,13 @@ impl Auth0Client {
         &self,
         _limit: Option<u64>,
         _offset: Option<u64>,
-    ) -> Result<Vec<Auth0User>, Auth0ClientError> {
+    ) -> Result<Vec<CognitoUser>, CognitoClientError> {
         let rt = create_async_runtime()?;
 
         rt.block_on(async {
             let response = self.get_client().get(self.url.clone()).send().await?;
             let response = response.error_for_status()?;
-            let users = response.json::<Vec<Auth0User>>().await?;
+            let users = response.json::<Vec<CognitoUser>>().await?;
             // let users = user_response.get_user_result()?;
 
             Ok(users)
@@ -65,7 +65,7 @@ impl Auth0Client {
     }
 }
 #[derive(Error, Debug)]
-pub(crate) enum Auth0ClientError {
+pub(crate) enum CognitoClientError {
     #[error("{0}")]
     CreateRuntimeError(#[from] CreateRuntimeError),
 
@@ -85,15 +85,15 @@ pub(crate) enum Auth0ClientError {
     UrlParseError(#[from] ParseError),
 }
 
-impl From<Auth0ClientError> for ErrorReport {
-    fn from(value: Auth0ClientError) -> Self {
+impl From<CognitoClientError> for ErrorReport {
+    fn from(value: CognitoClientError) -> Self {
         match value {
-            Auth0ClientError::CreateRuntimeError(e) => e.into(),
-            Auth0ClientError::UrlParseError(_)
-            | Auth0ClientError::InvalidApiKeyHeader
-            | Auth0ClientError::ReqwestError(_)
-            | Auth0ClientError::ReqwestMiddlewareError(_)
-            | Auth0ClientError::SerdeError(_) => {
+            CognitoClientError::CreateRuntimeError(e) => e.into(),
+            CognitoClientError::UrlParseError(_)
+            | CognitoClientError::InvalidApiKeyHeader
+            | CognitoClientError::ReqwestError(_)
+            | CognitoClientError::ReqwestMiddlewareError(_)
+            | CognitoClientError::SerdeError(_) => {
                 ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, format!("{value}"), "")
             }
         }

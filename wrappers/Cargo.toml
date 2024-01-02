@@ -74,12 +74,14 @@ airtable_fdw = [
 ]
 cognito_fdw = [
     "aws-sdk-cognitoidentityprovider",
+    "aws-config",
     "aws-types",
     "reqwest",
     "reqwest-middleware",
     "reqwest-retry",
     "http",
     "serde_json",
+    "tokio",
     "serde",
     "url",
     "thiserror",
@@ -142,6 +144,7 @@ clickhouse-rs = { git = "https://github.com/suharev7/clickhouse-rs", branch = "a
 chrono = { version = "0.4", optional = true }
 chrono-tz = { version = "0.6", optional = true }
 
+
 # for bigquery_fdw, firebase_fdw, airtable_fdw and etc.
 gcp-bigquery-client = { version = "0.17.0", optional = true }
 serde = { version = "1", optional = true }
@@ -166,6 +169,7 @@ aws-config = { version = "1.1.1", optional = true }
 aws-sdk-s3 = { version = "1.11.0", optional = true }
 aws-smithy-http = { version = "0.60.1", optional = true }
 aws-smithy-runtime-api = { version = "1.1.1", optional = true }
+
 csv = { version = "1.2", optional = true }
 tokio = { version = "1", features = ["full"], optional = true }
 tokio-util = { version = "0.7", features = ["full"], optional = true }

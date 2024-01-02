@@ -1,12 +1,20 @@
-use crate::fdw::auth0_fdw::auth0_client::rows_iterator::RowsIterator;
-use crate::fdw::auth0_fdw::auth0_client::CognitoClient;
+use crate::fdw::cognito_fdw::cognito_client::rows_iterator::RowsIterator;
+use crate::fdw::cognito_fdw::cognito_client::CognitoClient;
+use crate::fdw::cognito_fdw::cognito_client::CognitoClientError;
+
+use aws_sdk_cognitoidentityprovider::Client;
+use std::sync::Arc;
+use tokio::runtime::Runtime;
+
+use aws_config::meta::region::RegionProviderChain;
+use aws_sdk_cognitoidentityprovider::Credentials;
+use aws_sdk_cognitoidentityprovider::Region;
 
 use crate::stats;
 use pgrx::pg_sys;
 use std::collections::HashMap;
 use supabase_wrappers::prelude::*;
 
-use crate::fdw::cognito_fdw::cognito_client::CognitoClientError;
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::PgSqlErrorCode;
 use thiserror::Error;
@@ -96,14 +104,39 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
 
     fn new(options: &HashMap<String, String>) -> Result<Self, CognitoFdwError> {
         let url = require_option("url", options)?.to_string();
+        let cognito_key_id = require_option("access_key_id", options)?.to_string();
+        let cognito_access_key = require_option("access_key", options)?.to_string();
+        let user_pool_id = require_option("user_pool_id", options)?.to_string();
+        let aws_region = require_option("region", options)?.to_string();
+        let region = Region::new(aws_region);
+
         let api_key = if let Some(api_key) = options.get("api_key") {
             api_key.clone()
         } else {
             let api_key_id = options
                 .get("api_key_id")
                 .expect("`api_key_id` must be set if `api_key` is not");
-            get_vault_secret(api_key_id).ok_or(CognitoFdwError::SecretNotFound(api_key_id.clone()))?
+            get_vault_secret(api_key_id)
+                .ok_or(CognitoFdwError::SecretNotFound(api_key_id.clone()))?
         };
+        let credentials = Credentials::new(
+            cognito_key_id,
+            cognito_access_key,
+            None, // Token if available
+            None, // Expiry if available
+            "manual",
+        );
+
+        let rt = Runtime::new().unwrap();
+        let config = rt.block_on(async {
+            aws_config::from_env()
+                .credentials_provider(credentials)
+                .region(region)
+                .load()
+                .await
+        });
+
+        let client = Client::new(&config);
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
         Ok(Self {
@@ -145,7 +178,10 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
         Ok(())
     }
 
-    fn validator(options: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) -> CognitoFdwResult<()> {
+    fn validator(
+        options: Vec<Option<String>>,
+        catalog: Option<pg_sys::Oid>,
+    ) -> CognitoFdwResult<()> {
         if let Some(oid) = catalog {
             if oid == FOREIGN_SERVER_RELATION_ID {
                 let api_key_exists = check_options_contain(&options, "api_key").is_ok();
