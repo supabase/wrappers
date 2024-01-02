@@ -8,15 +8,15 @@ mod tests {
     fn auth0_smoketest() {
         Spi::connect(|mut c| {
             c.update(
-                r#"create foreign data wrapper auth0_wrapper
-                         handler auth0_fdw_handler validator auth0_fdw_validator"#,
+                r#"create foreign data wrapper cognito_wrapper
+                         handler cognito_fdw_handler validator cognito_fdw_validator"#,
                 None,
                 None,
             )
             .expect("Failed to create foreign data wrapper");
             c.update(
-                r#"CREATE SERVER auth0_server
-                         FOREIGN DATA WRAPPER auth0_wrapper
+                r#"CREATE SERVER cognito_server
+                         FOREIGN DATA WRAPPER cognito_wrapper
                          OPTIONS (
                             url 'http://localhost:3796',
                             api_key 'apiKey'
@@ -27,13 +27,13 @@ mod tests {
             .unwrap();
             c.update(
                 r#"
-                  CREATE FOREIGN TABLE auth0_view (
+                  CREATE FOREIGN TABLE cognito_view (
                     created_at text,
                     email text,
                     email_verified bool,
                     identities jsonb
                   )
-                  SERVER auth0_server
+                  SERVER cognito_server
                   options (
                     object 'users'
                   )
@@ -47,7 +47,7 @@ mod tests {
             */
             let results = c
                 .select(
-                    "SELECT * FROM auth0_view WHERE email = 'example@gmail.com'",
+                    "SELECT * FROM cognito_view WHERE email = 'example@gmail.com'",
                     None,
                     None,
                 )
