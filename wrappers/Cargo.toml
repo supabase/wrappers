@@ -72,6 +72,18 @@ airtable_fdw = [
     "url",
     "thiserror",
 ]
+cognito_fdw = [
+    "aws-sdk-cognitoidentityprovider",
+    "aws-types",
+    "reqwest",
+    "reqwest-middleware",
+    "reqwest-retry",
+    "http",
+    "serde_json",
+    "serde",
+    "url",
+    "thiserror",
+]
 logflare_fdw = [
     "http",
     "reqwest",
@@ -115,6 +127,7 @@ all_fdws = [
     "auth0_fdw",
     "mssql_fdw",
     "redis_fdw",
+    "cognito_fdw",
 ]
 
 [dependencies]
