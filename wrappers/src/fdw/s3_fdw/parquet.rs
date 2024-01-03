@@ -63,7 +63,7 @@ impl S3ParquetReader {
         )
         .map_err(to_io_error)
         .map(|output| {
-            let object_size = output.object_size() as u64;
+            let object_size = output.object_size().unwrap_or_default() as u64;
             self.object_size = Some(object_size);
             object_size
         })
