@@ -44,7 +44,7 @@ By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server
 -- Save your Redis connection URL in Vault and retrieve the `key_id`
 insert into vault.secrets (name, secret)
 values (
-  'redis',
+  'redis_conn_url',
   'redis://username:password@127.0.0.1:6379/db'
 )
 returning key_id;
