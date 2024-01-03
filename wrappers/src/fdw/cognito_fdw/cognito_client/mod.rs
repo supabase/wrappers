@@ -1,5 +1,5 @@
 use crate::fdw::cognito_fdw::cognito_client::row::CognitoUser;
-use http::{HeaderMap, HeaderName, HeaderValue};
+use http::HeaderMap;
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::PgSqlErrorCode;
 use reqwest::Url;

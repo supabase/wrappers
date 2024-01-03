@@ -1,3 +1,4 @@
+use aws_sdk_cognitoidentityprovider::types::UserType;
 use pgrx::JsonB;
 use serde::Deserialize;
 use serde::Serialize;
@@ -35,28 +36,27 @@ pub struct CognitoUser {
     pub email: String,
     pub email_verified: bool,
     pub identities: Option<serde_json::Value>,
+    // Additional fields from UserType
+    pub username: String,
+    pub status: Option<String>,
 }
 
-impl CognitoUser {
-    pub(crate) fn into_row(mut self, columns: &[Column]) -> Row {
-        let mut row = Row::new();
-        for tgt_col in columns {
-            if tgt_col.name == "created_at" {
-                let cell_value = Some(Cell::String(self.created_at.clone()));
-                //    None => None, // Or use a default value or handle the error
-                // };
-                row.push("created_at", cell_value);
-            } else if tgt_col.name == "email" {
-                row.push("email", Some(Cell::String(self.email.clone())))
-            } else if tgt_col.name == "email_verified" {
-                row.push("email_verified", Some(Cell::Bool(self.email_verified)))
-            } else if tgt_col.name == "identities" {
-                let attrs = self
-                    .identities
-                    .take()
-                    .expect("Column `identities` missing in response");
+pub trait IntoRow {
+    fn into_row(self, columns: &[Column]) -> Row;
+}
 
-                row.push("identities", Some(Cell::Json(JsonB(attrs))))
+impl IntoRow for UserType {
+    fn into_row(mut self, columns: &[Column]) -> Row {
+        let mut row = Row::new(); // Assuming Row has a constructor `new`
+        for column in columns {
+            match column.name.as_str() {
+                "username" => {
+                    // Similar to above, replace with actual logic for `email`
+                    let cell_value = self.username.clone().map(Cell::String);
+                    row.push("username", cell_value);
+                }
+                // Add cases for other fields of UserType
+                _ => (), // Ignore unknown columns or handle them appropriately
             }
         }
 

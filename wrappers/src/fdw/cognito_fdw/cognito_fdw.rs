@@ -1,5 +1,5 @@
+use crate::fdw::cognito_fdw::cognito_client::row::IntoRow;
 use crate::fdw::cognito_fdw::cognito_client::rows_iterator::RowsIterator;
-use crate::fdw::cognito_fdw::cognito_client::CognitoClient;
 use crate::fdw::cognito_fdw::cognito_client::CognitoClientError;
 
 use pgrx::notice;
@@ -102,12 +102,10 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
         // let url = require_option("url", options)?.to_string();
         //     let user_pool_id = require_option("user_pool_id", options)?.to_string();
         //     let aws_region = require_option("region", options)?.to_string();
-        notice!("we here");
 
         let creds = {
             // if using credentials directly specified
             let aws_access_key_id = require_option("aws_access_key_id", options)?.to_string();
-            notice!("{:?}", aws_access_key_id);
             let aws_secret_access_key =
                 require_option("aws_secret_access_key", options)?.to_string();
             Some((aws_access_key_id, aws_secret_access_key))
@@ -121,6 +119,7 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
         let rt = tokio::runtime::Runtime::new()
             .map_err(CreateRuntimeError::FailedToCreateAsyncRuntime)?;
         let client = rt.block_on(async {
+            // TODO: Chang this
             let region = "ap-southeast-2".to_string();
 
             env::set_var("AWS_ACCESS_KEY_ID", creds.0);
@@ -131,33 +130,6 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
             return Client::new(&config);
         });
 
-        rt.block_on(async {
-            match client
-                .list_users()
-                .set_user_pool_id(Some("ap-southeast-2_xuUGae0Bl".to_string()))
-                .send()
-                .await
-            {
-                Ok(response) => {
-                    // handling response
-                    notice!("some response");
-                    if let Some(users) = response.users {
-                        for user in users {
-                            // Here you can print or process each user
-                            notice!("{:?}", user);
-                        }
-                    } else {
-                        notice!("No users found.");
-                    }
-                    if let Some(token) = response.pagination_token {
-                        notice!("Pagination token for next request: {}", token);
-                    }
-                }
-                Err(e) => {
-                    notice!("Error: {:?}", e);
-                }
-            }
-        });
         notice!("we finished");
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
