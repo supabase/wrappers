@@ -114,6 +114,7 @@ all_fdws = [
     "logflare_fdw",
     "auth0_fdw",
     "mssql_fdw",
+    "redis_fdw",
 ]
 
 [dependencies]
