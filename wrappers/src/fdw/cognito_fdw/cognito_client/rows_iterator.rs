@@ -1,9 +1,11 @@
-use crate::fdw::cognito_fdw::cognito_client::{CognitoClient, CognitoClientError};
+use crate::fdw::cognito_fdw::cognito_client::CognitoClientError;
+use aws_sdk_cognitoidentityprovider::{config::Region, Client};
+
 use std::collections::VecDeque;
 use supabase_wrappers::prelude::{Column, Row};
 
 pub(crate) struct RowsIterator {
-    cognito_client: CognitoClient,
+    cognito_client: aws_sdk_cognitoidentityprovider::Client,
     batch_size: u64,
     columns: Vec<Column>,
     rows: VecDeque<Row>,
@@ -12,7 +14,11 @@ pub(crate) struct RowsIterator {
 }
 
 impl RowsIterator {
-    pub(crate) fn new(columns: Vec<Column>, batch_size: u64, cognito_client: CognitoClient) -> Self {
+    pub(crate) fn new(
+        columns: Vec<Column>,
+        batch_size: u64,
+        cognito_client: aws_sdk_cognitoidentityprovider::Client,
+    ) -> Self {
         Self {
             columns,
             cognito_client,
@@ -32,13 +38,8 @@ impl RowsIterator {
     }
 
     fn fetch_rows_batch(&mut self) -> Result<Option<Row>, CognitoClientError> {
-        let users = self
-            .cognito_client
-            .fetch_users(self.get_limit(), self.get_offset())?;
-        self.rows = users
-            .into_iter()
-            .map(|u| u.into_row(&self.columns))
-            .collect();
+        // TODO: Update logic
+
         // self.next_page_offset = user_result.next_page_offset;
         // self.have_more_rows = self.next_page_offset.is_some();
         //TODO: add proper logic to figure out when to set have_more_rows to false

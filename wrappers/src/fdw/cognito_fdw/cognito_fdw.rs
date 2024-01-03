@@ -24,7 +24,7 @@ use thiserror::Error;
 pub(crate) struct CognitoFdw {
     // row counter
     url: String,
-    api_key: String,
+    client: aws_sdk_cognitoidentityprovider::Client,
     rows_iterator: Option<RowsIterator>,
 }
 
@@ -86,8 +86,8 @@ impl CognitoFdw {
 impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
     // 'options' is the key-value pairs defined in `CREATE SERVER` SQL, for example,
     //
-    // create server my_auth0_server
-    //   foreign data wrapper wrappers_auth0
+    // create server my_cognito_server
+    //   foreign data wrapper wrappers_cognito
     //   options (
     //     foo 'bar'
     // );
@@ -105,7 +105,6 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
         //     let user_pool_id = require_option("user_pool_id", options)?.to_string();
         //     let aws_region = require_option("region", options)?.to_string();
         //     let region = Region::new(aws_region);
-        let api_key = "";
 
         let creds = {
             // if using credentials directly specified
@@ -128,35 +127,13 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
             env::set_var("AWS_ACCESS_KEY_ID", creds.0);
             env::set_var("AWS_SECRET_ACCESS_KEY", creds.1);
             let config = aws_config::from_env().load().await;
-            Client::new(&config);
+            return Client::new(&config);
         });
 
-        //     let api_key = if let Some(api_key) = options.get("api_key") {
-        //         api_key.clone()
-        //     } else {
-        //         let api_key_id = options
-        //             .get("api_key_id")
-        //             .expect("`api_key_id` must be set if `api_key` is not");
-        //         get_vault_secret(api_key_id)
-        //             .ok_or(CognitoFdwError::SecretNotFound(api_key_id.clone()))?
-        //     };
-        //
-        //
-        //
-        //          options
-        //             .get("aws_region")
-        //             .map(|t| t.to_owned())
-        //             .unwrap_or(default_region);
-        //     let config = aws_config::from_env()
-        //     .credentials_provider(Arc::new(credentials))
-        //     .region(Region::new(region))
-        //     .load().await;
-
-        //     let rt = Runtime::new().unwrap();
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
         Ok(Self {
             url: url.to_string(),
-            api_key: api_key.to_string(),
+            client: client,
             rows_iterator: None,
         })
     }
@@ -169,8 +146,12 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
         _limit: &Option<Limit>,
         _options: &HashMap<String, String>,
     ) -> CognitoFdwResult<()> {
-        let auth0_client = CognitoClient::new(&self.url, &self.api_key)?;
-        self.rows_iterator = Some(RowsIterator::new(columns.to_vec(), 1000, auth0_client));
+        let cognito_client = &self.client;
+        self.rows_iterator = Some(RowsIterator::new(
+            columns.to_vec(),
+            1000,
+            cognito_client.clone(),
+        ));
 
         Ok(())
     }
@@ -197,22 +178,22 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
         options: Vec<Option<String>>,
         catalog: Option<pg_sys::Oid>,
     ) -> CognitoFdwResult<()> {
-        if let Some(oid) = catalog {
-            if oid == FOREIGN_SERVER_RELATION_ID {
-                let api_key_exists = check_options_contain(&options, "api_key").is_ok();
-                let api_key_id_exists = check_options_contain(&options, "api_key_id").is_ok();
-                let url_exists = check_options_contain(&options, "url").is_ok();
-                if (api_key_exists && api_key_id_exists) || (!api_key_exists && !api_key_id_exists)
-                {
-                    return Err(CognitoFdwError::SetOneOfApiKeyAndApiKeyIdSet);
-                }
-                if !url_exists {
-                    return Err(CognitoFdwError::URLOptionMissing);
-                }
-            } else if oid == FOREIGN_TABLE_RELATION_ID {
-                check_options_contain(&options, "object")?;
-            }
-        }
+        // TODO: Update fields that we validate on
+        // if let Some(oid) = catalog {
+        //     if oid == FOREIGN_SERVER_RELATION_ID {
+        //        // let api_key_exists = check_options_contain(&options, "api_key").is_ok();
+        //         // let url_exists = check_options_contain(&options, "url").is_ok();
+        //         if (api_key_exists && api_key_id_exists) || (!api_key_exists && !api_key_id_exists)
+        //         {
+        //             return Err(CognitoFdwError::SetOneOfApiKeyAndApiKeyIdSet);
+        //         }
+        //         if !url_exists {
+        //             return Err(CognitoFdwError::URLOptionMissing);
+        //         }
+        //     } else if oid == FOREIGN_TABLE_RELATION_ID {
+        //         check_options_contain(&options, "object")?;
+        //     }
+        // }
 
         Ok(())
     }
