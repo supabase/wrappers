@@ -1,5 +1,6 @@
 use crate::stats;
 use async_compression::tokio::bufread::{BzDecoder, GzipDecoder, XzDecoder, ZlibDecoder};
+use aws_config::BehaviorVersion;
 use aws_sdk_s3 as s3;
 use http::Uri;
 use pgrx::pg_sys;
@@ -170,7 +171,9 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
         env::set_var("AWS_ACCESS_KEY_ID", creds.0);
         env::set_var("AWS_SECRET_ACCESS_KEY", creds.1);
         env::set_var("AWS_REGION", region);
-        let config = ret.rt.block_on(aws_config::load_from_env());
+        let config = ret
+            .rt
+            .block_on(aws_config::load_defaults(BehaviorVersion::v2023_11_09()));
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
 
