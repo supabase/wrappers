@@ -30,7 +30,7 @@ create extension wrappers;
 
 ``` sql
 -- create foreign data wrapper and enable 'CognitoFdw'
-create foreign data wrapper cognito0_wrapper
+create foreign data wrapper cognito_wrapper
   handler cognito_fdw_handler
   validator cognito_fdw_validator;
 ```

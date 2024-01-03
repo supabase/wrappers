@@ -29,11 +29,6 @@ impl CognitoClient {
 
     fn create_client(api_key: &str) -> Result<ClientWithMiddleware, CognitoClientError> {
         let mut headers = HeaderMap::new();
-        let header_name = HeaderName::from_static("api-key");
-        let mut api_key_value =
-            HeaderValue::from_str(api_key).map_err(|_| CognitoClientError::InvalidApiKeyHeader)?;
-        api_key_value.set_sensitive(true);
-        headers.insert(header_name, api_key_value);
         let client = reqwest::Client::builder()
             .default_headers(headers)
             .build()?;
@@ -69,9 +64,6 @@ pub(crate) enum CognitoClientError {
     #[error("{0}")]
     CreateRuntimeError(#[from] CreateRuntimeError),
 
-    #[error("invalid api_key header")]
-    InvalidApiKeyHeader,
-
     #[error("reqwest error: {0}")]
     ReqwestError(#[from] reqwest::Error),
 
@@ -90,7 +82,6 @@ impl From<CognitoClientError> for ErrorReport {
         match value {
             CognitoClientError::CreateRuntimeError(e) => e.into(),
             CognitoClientError::UrlParseError(_)
-            | CognitoClientError::InvalidApiKeyHeader
             | CognitoClientError::ReqwestError(_)
             | CognitoClientError::ReqwestMiddlewareError(_)
             | CognitoClientError::SerdeError(_) => {

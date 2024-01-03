@@ -2,6 +2,7 @@ use crate::fdw::cognito_fdw::cognito_client::rows_iterator::RowsIterator;
 use crate::fdw::cognito_fdw::cognito_client::CognitoClient;
 use crate::fdw::cognito_fdw::cognito_client::CognitoClientError;
 
+use pgrx::notice;
 use std::env;
 
 use aws_sdk_cognitoidentityprovider::{config::Region, Client};
@@ -23,7 +24,6 @@ use thiserror::Error;
 )]
 pub(crate) struct CognitoFdw {
     // row counter
-    url: String,
     client: aws_sdk_cognitoidentityprovider::Client,
     rows_iterator: Option<RowsIterator>,
 }
@@ -99,16 +99,15 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
     // database connection or API call.
 
     fn new(options: &HashMap<String, String>) -> Result<Self, CognitoFdwError> {
-        let url = require_option("url", options)?.to_string();
-        let cognito_key_id = require_option("access_key_id", options)?.to_string();
-        let cognito_access_key = require_option("access_key", options)?.to_string();
+        // let url = require_option("url", options)?.to_string();
         //     let user_pool_id = require_option("user_pool_id", options)?.to_string();
         //     let aws_region = require_option("region", options)?.to_string();
-        //     let region = Region::new(aws_region);
+        notice!("we here");
 
         let creds = {
             // if using credentials directly specified
             let aws_access_key_id = require_option("aws_access_key_id", options)?.to_string();
+            notice!("{:?}", aws_access_key_id);
             let aws_secret_access_key =
                 require_option("aws_secret_access_key", options)?.to_string();
             Some((aws_access_key_id, aws_secret_access_key))
@@ -122,17 +121,47 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
         let rt = tokio::runtime::Runtime::new()
             .map_err(CreateRuntimeError::FailedToCreateAsyncRuntime)?;
         let client = rt.block_on(async {
-            let region = Region::new("us-west-2");
+            let region = "ap-southeast-2".to_string();
 
             env::set_var("AWS_ACCESS_KEY_ID", creds.0);
             env::set_var("AWS_SECRET_ACCESS_KEY", creds.1);
+            env::set_var("AWS_REGION", region);
             let config = aws_config::from_env().load().await;
+
             return Client::new(&config);
         });
 
+        rt.block_on(async {
+            match client
+                .list_users()
+                .set_user_pool_id(Some("ap-southeast-2_xuUGae0Bl".to_string()))
+                .send()
+                .await
+            {
+                Ok(response) => {
+                    // handling response
+                    notice!("some response");
+                    if let Some(users) = response.users {
+                        for user in users {
+                            // Here you can print or process each user
+                            notice!("{:?}", user);
+                        }
+                    } else {
+                        notice!("No users found.");
+                    }
+                    if let Some(token) = response.pagination_token {
+                        notice!("Pagination token for next request: {}", token);
+                    }
+                }
+                Err(e) => {
+                    notice!("Error: {:?}", e);
+                }
+            }
+        });
+        notice!("we finished");
+
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
         Ok(Self {
-            url: url.to_string(),
             client: client,
             rows_iterator: None,
         })
