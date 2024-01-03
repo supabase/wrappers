@@ -2,13 +2,9 @@ use crate::fdw::cognito_fdw::cognito_client::rows_iterator::RowsIterator;
 use crate::fdw::cognito_fdw::cognito_client::CognitoClient;
 use crate::fdw::cognito_fdw::cognito_client::CognitoClientError;
 
-use aws_sdk_cognitoidentityprovider::Client;
-use std::sync::Arc;
-use tokio::runtime::Runtime;
+use std::env;
 
-use aws_config::meta::region::RegionProviderChain;
-use aws_sdk_cognitoidentityprovider::Credentials;
-use aws_sdk_cognitoidentityprovider::Region;
+use aws_sdk_cognitoidentityprovider::{config::Region, Client};
 
 use crate::stats;
 use pgrx::pg_sys;
@@ -106,42 +102,61 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
         let url = require_option("url", options)?.to_string();
         let cognito_key_id = require_option("access_key_id", options)?.to_string();
         let cognito_access_key = require_option("access_key", options)?.to_string();
-        let user_pool_id = require_option("user_pool_id", options)?.to_string();
-        let aws_region = require_option("region", options)?.to_string();
-        let region = Region::new(aws_region);
+        //     let user_pool_id = require_option("user_pool_id", options)?.to_string();
+        //     let aws_region = require_option("region", options)?.to_string();
+        //     let region = Region::new(aws_region);
+        let api_key = "";
 
-        let api_key = if let Some(api_key) = options.get("api_key") {
-            api_key.clone()
-        } else {
-            let api_key_id = options
-                .get("api_key_id")
-                .expect("`api_key_id` must be set if `api_key` is not");
-            get_vault_secret(api_key_id)
-                .ok_or(CognitoFdwError::SecretNotFound(api_key_id.clone()))?
+        let creds = {
+            // if using credentials directly specified
+            let aws_access_key_id = require_option("aws_access_key_id", options)?.to_string();
+            let aws_secret_access_key =
+                require_option("aws_secret_access_key", options)?.to_string();
+            Some((aws_access_key_id, aws_secret_access_key))
         };
-        let credentials = Credentials::new(
-            cognito_key_id,
-            cognito_access_key,
-            None, // Token if available
-            None, // Expiry if available
-            "manual",
-        );
 
-        let rt = Runtime::new().unwrap();
-        let config = rt.block_on(async {
-            aws_config::from_env()
-                .credentials_provider(credentials)
-                .region(region)
-                .load()
-                .await
+        let Some(creds) = creds else {
+            panic!("this shouldn't happen");
+        };
+        // set AWS environment variables and create shared config from them
+
+        let rt = tokio::runtime::Runtime::new()
+            .map_err(CreateRuntimeError::FailedToCreateAsyncRuntime)?;
+        let client = rt.block_on(async {
+            let region = Region::new("us-west-2");
+
+            env::set_var("AWS_ACCESS_KEY_ID", creds.0);
+            env::set_var("AWS_SECRET_ACCESS_KEY", creds.1);
+            let config = aws_config::from_env().load().await;
+            Client::new(&config);
         });
 
-        let client = Client::new(&config);
+        //     let api_key = if let Some(api_key) = options.get("api_key") {
+        //         api_key.clone()
+        //     } else {
+        //         let api_key_id = options
+        //             .get("api_key_id")
+        //             .expect("`api_key_id` must be set if `api_key` is not");
+        //         get_vault_secret(api_key_id)
+        //             .ok_or(CognitoFdwError::SecretNotFound(api_key_id.clone()))?
+        //     };
+        //
+        //
+        //
+        //          options
+        //             .get("aws_region")
+        //             .map(|t| t.to_owned())
+        //             .unwrap_or(default_region);
+        //     let config = aws_config::from_env()
+        //     .credentials_provider(Arc::new(credentials))
+        //     .region(Region::new(region))
+        //     .load().await;
 
+        //     let rt = Runtime::new().unwrap();
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
         Ok(Self {
-            url,
-            api_key,
+            url: url.to_string(),
+            api_key: api_key.to_string(),
             rows_iterator: None,
         })
     }
