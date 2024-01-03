@@ -27,3 +27,6 @@ mod auth0_fdw;
 
 #[cfg(feature = "mssql_fdw")]
 mod mssql_fdw;
+
+#[cfg(feature = "redis_fdw")]
+mod redis_fdw;

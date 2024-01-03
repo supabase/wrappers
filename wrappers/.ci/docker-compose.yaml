@@ -111,3 +111,14 @@ services:
       timeout: 5s
       retries: 20
 
+  redis:
+    image: redis:6.2-alpine
+    container_name: redis-wrapped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: (nc -vz localhost 6379) &>/dev/null && echo "okay" || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 20
+

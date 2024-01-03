@@ -16,6 +16,7 @@
 | [Logflare](./wrappers/src/fdw/logflare_fdw)     | A FDW for [Logflare](https://logflare.app/)                    | ✅   | ❌     |
 | [Auth0](./wrappers/src/fdw/auth0_fdw)           | A FDW for [Auth0](https://auth0.com/)                          | ✅   | ❌     |
 | [SQL Server](./wrappers/src/fdw/mssql_fdw)      | A FDW for [Microsoft SQL Server](https://www.microsoft.com/en-au/sql-server/) | ✅   | ❌     |
+| [Redis](./wrappers/src/fdw/redis_fdw)           | A FDW for [Redis](https://redis.io/) | ✅   | ❌     |
 
 ## Features
 
