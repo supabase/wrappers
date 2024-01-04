@@ -173,7 +173,7 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
         env::set_var("AWS_REGION", region);
         let config = ret
             .rt
-            .block_on(aws_config::load_defaults(BehaviorVersion::v2023_11_09()));
+            .block_on(aws_config::load_defaults(BehaviorVersion::latest()));
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
 
