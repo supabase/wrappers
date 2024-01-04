@@ -194,6 +194,16 @@ This example will create foreign tables inside your Postgres database and query 
   select * from redis_list;
   ```
 
+  Query result:
+  ```
+   element
+  ---------
+   foo
+   bar
+   42
+  (3 rows)
+  ```
+
 - Set
 
   ```sql
@@ -207,6 +217,16 @@ This example will create foreign tables inside your Postgres database and query 
   );
 
   select * from redis_set;
+  ```
+
+  Query result:
+  ```
+   element
+  ---------
+   42
+   foo
+   bar
+  (3 rows)
   ```
 
 - Hash
@@ -225,6 +245,15 @@ This example will create foreign tables inside your Postgres database and query 
   select * from redis_hash;
   ```
 
+  Query result:
+  ```
+   key | value
+  -----+-------
+   foo | bar
+   baz | qux
+  (2 rows)
+  ```
+
 - Sorted set
 
   ```sql
@@ -238,6 +267,16 @@ This example will create foreign tables inside your Postgres database and query 
   );
 
   select * from redis_zset;
+  ```
+
+  Query result:
+  ```
+   element
+  ---------
+   baz
+   bar
+   foo
+  (3 rows)
   ```
 
 - Stream
@@ -254,6 +293,15 @@ This example will create foreign tables inside your Postgres database and query 
   );
 
   select * from redis_stream;
+  ```
+
+  Query result:
+  ```
+         id        |          items
+  -----------------+--------------------------
+   1704343825989-0 | {"foo": "bar"}
+   1704343829799-0 | {"aa": "42", "bb": "43"}
+  (2 rows)
   ```
 
 ### Query multiple objects example
@@ -276,6 +324,15 @@ This example will create several foreign tables using pattern in key and query m
   select * from redis_multi_lists;
   ```
 
+  Query result:
+  ```
+     key    |     items
+  ----------+----------------
+   list:100 | ["foo", "bar"]
+   list:200 | ["baz"]
+  (2 rows)
+  ```
+
 - Set
 
   ```sql
@@ -290,6 +347,15 @@ This example will create several foreign tables using pattern in key and query m
     );
   
   select * from redis_multi_sets;
+  ```
+
+  Query result:
+  ```
+     key   |  items
+  ---------+---------
+   set:100 | ["foo"]
+   set:200 | ["bar"]
+  (2 rows)
   ```
 
 - Hash
@@ -308,6 +374,15 @@ This example will create several foreign tables using pattern in key and query m
   select * from redis_multi_hashes;
   ```
 
+  Query result:
+  ```
+     key    |     items
+  ----------+----------------
+   hash:200 | {"baz": "qux"}
+   hash:100 | {"foo": "bar"}
+  (2 rows)
+  ```
+
 - Sorted set
 
   ```sql
@@ -324,3 +399,11 @@ This example will create several foreign tables using pattern in key and query m
   select * from redis_multi_zsets;
   ```
 
+  Query result:
+  ```
+     key    |     items
+  ----------+----------------
+   zset:200 | ["qux", "baz"]
+   zset:100 | ["foo", "bar"]
+  (2 rows)
+  ```

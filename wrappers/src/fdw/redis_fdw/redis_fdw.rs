@@ -144,12 +144,14 @@ impl RedisFdw {
     // fetch a target row for stream
     fn fetch_row_stream(&mut self) -> RedisFdwResult<Option<Row>> {
         if let Some(ref mut conn) = &mut self.conn {
-            if self.scan_result_stream.is_empty() {
+            if self.iter_idx as usize >= self.scan_result_stream.len() {
                 self.scan_result_stream =
                     conn.xrange_count(&self.src_key, &self.iter_idx_stream, "+", Self::BUF_SIZE)?;
                 if self.scan_result_stream.is_empty() {
                     return Ok(None);
                 }
+
+                self.iter_idx = 0;
 
                 // set cursor for next iteration, don't forget the prefix "("
                 if let Some(s) = self.scan_result_stream.last() {
@@ -164,19 +166,17 @@ impl RedisFdw {
                 );
             }
 
-            let mut tgt_row = Row::new();
-            if let Some(ent) = self.scan_result_stream.drain(0..1).last() {
-                let id = ent.keys().nth(0).unwrap();
-                // Redis won't allow null value, so we can safely unwrap here
-                let items = json!(ent.values().nth(0).unwrap());
+            let ent = &self.scan_result_stream[self.iter_idx as usize];
+            let id = ent.keys().nth(0).expect("stream entry id");
+            let items = json!(ent.values().nth(0).expect("stream entry value"));
 
-                for tgt_col in &self.tgt_cols {
-                    if tgt_col.name == "id" {
-                        tgt_row.push(&tgt_col.name, Some(Cell::String(id.to_owned())));
-                    }
-                    if tgt_col.name == "items" {
-                        tgt_row.push(&tgt_col.name, Some(Cell::Json(JsonB(items.clone()))));
-                    }
+            let mut tgt_row = Row::new();
+            for tgt_col in &self.tgt_cols {
+                if tgt_col.name == "id" {
+                    tgt_row.push(&tgt_col.name, Some(Cell::String(id.to_owned())));
+                }
+                if tgt_col.name == "items" {
+                    tgt_row.push(&tgt_col.name, Some(Cell::Json(JsonB(items.clone()))));
                 }
             }
 

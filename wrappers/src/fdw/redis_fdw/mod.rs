@@ -14,10 +14,10 @@ enum RedisFdwError {
     #[error("'{0}' source type is not supported")]
     UnsupportedSourceType(String),
 
-    #[error("'{0}' foreign table can only has one column")]
+    #[error("'{0}' foreign table can only have one column")]
     OnlyOneColumn(String),
 
-    #[error("'{0}' foreign table can only has two column")]
+    #[error("'{0}' foreign table can only have two column")]
     OnlyTwoColumn(String),
 
     #[error("column '{0}' name is not supported")]
