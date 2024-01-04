@@ -14,51 +14,10 @@ pub(crate) mod row;
 
 pub(crate) struct CognitoClient {
     url: Url,
-    client: ClientWithMiddleware,
 }
 
 pub(crate) mod rows_iterator;
 
-impl CognitoClient {
-    pub(crate) fn new(url: &str, api_key: &str) -> Result<Self, CognitoClientError> {
-        Ok(Self {
-            url: Url::parse(url)?,
-            client: Self::create_client(api_key)?,
-        })
-    }
-
-    fn create_client(api_key: &str) -> Result<ClientWithMiddleware, CognitoClientError> {
-        let mut headers = HeaderMap::new();
-        let client = reqwest::Client::builder()
-            .default_headers(headers)
-            .build()?;
-        let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
-        Ok(ClientBuilder::new(client)
-            .with(RetryTransientMiddleware::new_with_policy(retry_policy))
-            .build())
-    }
-
-    pub fn get_client(&self) -> &ClientWithMiddleware {
-        &self.client
-    }
-
-    pub(crate) fn fetch_users(
-        &self,
-        _limit: Option<u64>,
-        _offset: Option<u64>,
-    ) -> Result<Vec<CognitoUser>, CognitoClientError> {
-        let rt = create_async_runtime()?;
-
-        rt.block_on(async {
-            let response = self.get_client().get(self.url.clone()).send().await?;
-            let response = response.error_for_status()?;
-            let users = response.json::<Vec<CognitoUser>>().await?;
-            // let users = user_response.get_user_result()?;
-
-            Ok(users)
-        })
-    }
-}
 #[derive(Error, Debug)]
 pub(crate) enum CognitoClientError {
     #[error("{0}")]
