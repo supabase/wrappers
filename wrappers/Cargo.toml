@@ -143,10 +143,10 @@ regex = { version = "1", optional = true }
 url = { version = "2.3", optional = true }
 
 # for s3_fdw
-aws-config = { version = "0.56.1", optional = true }
-aws-sdk-s3 = { version = "0.30.0", optional = true }
-aws-smithy-http = { version = "0.56.1", optional = true }
-aws-smithy-runtime-api = { version = "0.56.1", optional = true }
+aws-config = { version = "1.1.1", optional = true }
+aws-sdk-s3 = { version = "1.11.0", optional = true }
+aws-smithy-http = { version = "0.60.1", optional = true }
+aws-smithy-runtime-api = { version = "1.1.1", optional = true }
 csv = { version = "1.2", optional = true }
 tokio = { version = "1", features = ["full"], optional = true }
 tokio-util = { version = "0.7", features = ["full"], optional = true }

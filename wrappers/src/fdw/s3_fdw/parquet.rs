@@ -62,10 +62,13 @@ impl S3ParquetReader {
                 .send(),
         )
         .map_err(to_io_error)
-        .map(|output| {
-            let object_size = output.object_size() as u64;
+        .and_then(|output| {
+            let object_size = output.object_size().ok_or::<IoError>(IoError::new(
+                ErrorKind::Other,
+                "object has no size attribute",
+            ))? as u64;
             self.object_size = Some(object_size);
-            object_size
+            Ok(object_size)
         })
     }
 }
