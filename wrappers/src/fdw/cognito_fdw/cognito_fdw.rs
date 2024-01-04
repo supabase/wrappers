@@ -1,11 +1,11 @@
-use crate::fdw::cognito_fdw::cognito_client::row::IntoRow;
 use crate::fdw::cognito_fdw::cognito_client::rows_iterator::RowsIterator;
 use crate::fdw::cognito_fdw::cognito_client::CognitoClientError;
 
 use pgrx::notice;
 use std::env;
 
-use aws_sdk_cognitoidentityprovider::{config::Region, Client};
+use aws_sdk_cognitoidentityprovider::config::BehaviorVersion;
+use aws_sdk_cognitoidentityprovider::Client;
 
 use crate::stats;
 use pgrx::pg_sys;
@@ -44,7 +44,6 @@ enum CognitoFdwError {
 
     #[error("request middleware failed: {0}")]
     RequestMiddlewareError(#[from] reqwest_middleware::Error),
-
     #[error("invalid json response: {0}")]
     SerdeError(#[from] serde_json::Error),
 
@@ -125,7 +124,7 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
             env::set_var("AWS_ACCESS_KEY_ID", creds.0);
             env::set_var("AWS_SECRET_ACCESS_KEY", creds.1);
             env::set_var("AWS_REGION", region);
-            let config = aws_config::from_env().load().await;
+            let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
 
             return Client::new(&config);
         });

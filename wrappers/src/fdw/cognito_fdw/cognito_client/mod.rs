@@ -1,20 +1,11 @@
-use crate::fdw::cognito_fdw::cognito_client::row::CognitoUser;
-use http::HeaderMap;
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::PgSqlErrorCode;
 use reqwest::Url;
-use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
-use reqwest_retry::policies::ExponentialBackoff;
-use reqwest_retry::RetryTransientMiddleware;
 use supabase_wrappers::prelude::*;
 use thiserror::Error;
 use url::ParseError;
 
 pub(crate) mod row;
-
-pub(crate) struct CognitoClient {
-    url: Url,
-}
 
 pub(crate) mod rows_iterator;
 
