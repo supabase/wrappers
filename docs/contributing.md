@@ -68,3 +68,8 @@ If you have write access to the repo, docs can be updated using
 ```
 mkdocs gh-deploy
 ```
+
+## Community Wrappers
+
+Unfortunately, we are not accepting community Wrappers until the interface is stabilized. You can [vote your favorite Wrapper](https://github.com/supabase/wrappers/discussions/136) if you'd like it to be added to Supabase in the future.
+
