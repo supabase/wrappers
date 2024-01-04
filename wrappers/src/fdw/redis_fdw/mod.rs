@@ -17,7 +17,7 @@ enum RedisFdwError {
     #[error("'{0}' foreign table can only have one column")]
     OnlyOneColumn(String),
 
-    #[error("'{0}' foreign table can only have two column")]
+    #[error("'{0}' foreign table can only have two columns")]
     OnlyTwoColumn(String),
 
     #[error("column '{0}' name is not supported")]
