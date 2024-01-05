@@ -24,11 +24,11 @@ jobs:
 
     - name: Format code
       run: |
-        cargo fmt --check
+        cd wrappers && cargo fmt --check
 
     - name: Run clippy
       run: |
-        cargo clippy --all --tests --no-deps --features all_fdws,helloworld_fdw
+        cd wrappers && cargo clippy --all --tests --no-deps --features all_fdws,helloworld_fdw
 
     - run: |
         sudo apt remove -y postgres*

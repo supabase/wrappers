@@ -18,6 +18,14 @@ jobs:
       with:
         toolchain: stable
 
+    - name: Format code
+      run: |
+        cd supabase-wrappers && cargo fmt --check
+
+    - name: Run clippy
+      run: |
+        cd supabase-wrappers && cargo clippy --all --tests --no-deps
+
     - run: |
         sudo apt remove -y postgres*
         sudo apt-get install -y wget gnupg
