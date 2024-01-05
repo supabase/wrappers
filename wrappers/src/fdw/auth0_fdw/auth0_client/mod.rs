@@ -1,7 +1,5 @@
-use crate::fdw::auth0_fdw::auth0_client::row::Auth0User;
 use crate::fdw::auth0_fdw::auth0_client::row::ResultPayload;
 use http::{HeaderMap, HeaderName, HeaderValue};
-use pgrx::notice;
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::PgSqlErrorCode;
 use reqwest::Url;
@@ -59,7 +57,16 @@ impl Auth0Client {
         let rt = create_async_runtime()?;
 
         rt.block_on(async {
-            let response = self.get_client().get(self.url.clone()).send().await?;
+            let mut url = self.url.clone();
+            if let Some(page) = page {
+                url.query_pairs_mut().append_pair("page", &page.to_string());
+            }
+            if let Some(per_page) = per_page {
+                url.query_pairs_mut()
+                    .append_pair("per_page", &per_page.to_string());
+            }
+
+            let response = self.get_client().get(url.as_str()).send().await?;
             let response = response.error_for_status()?;
             let payload = response.json::<ResultPayload>().await?;
 
