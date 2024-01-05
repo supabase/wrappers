@@ -554,7 +554,7 @@ mod tests {
                 results,
                 vec![(
                     "cus_MJiBgSUgeWFN0z",
-                    Timestamp::try_from(287883090000000i64).unwrap()
+                    Timestamp::from(287883090000000i64)
                 )]
             );
 
@@ -822,9 +822,9 @@ mod tests {
                 vec![(
                     (
                         ("cus_MJiBtCqOF1Bb3F", "usd"),
-                        Timestamp::try_from(287883090000000i64).unwrap()
+                        Timestamp::from(287883090000000i64)
                     ),
-                    Timestamp::try_from(287883090000000i64).unwrap()
+                    Timestamp::from(287883090000000i64)
                 )]
             );
 
