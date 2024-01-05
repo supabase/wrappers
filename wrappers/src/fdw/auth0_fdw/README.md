@@ -70,10 +70,12 @@ create foreign table auth0 (
 
 ```sql
 wrappers=# select * from auth0;
-               user_id               |        created_at
--------------------------------------+--------------------------
- google-oauth2|101232059018005339936 | 2023-05-16T07:41:08.028Z
-(1 row)
+
+created_at     | 2023-11-22T09:52:17.326Z
+email          | myname@supabase.io
+email_verified | t
+identities     | [{"user_id": "<my_user_id>", "isSocial": false, "provider": "auth0", "connection": "Username-Password-Authentication"}]
+
 ```
 
 ## Changelog

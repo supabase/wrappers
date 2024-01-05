@@ -1,5 +1,7 @@
 use crate::fdw::auth0_fdw::auth0_client::row::Auth0User;
+use crate::fdw::auth0_fdw::auth0_client::row::ResultPayload;
 use http::{HeaderMap, HeaderName, HeaderValue};
+use pgrx::notice;
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::PgSqlErrorCode;
 use reqwest::Url;
@@ -29,9 +31,11 @@ impl Auth0Client {
 
     fn create_client(api_key: &str) -> Result<ClientWithMiddleware, Auth0ClientError> {
         let mut headers = HeaderMap::new();
-        let header_name = HeaderName::from_static("api-key");
-        let mut api_key_value =
-            HeaderValue::from_str(api_key).map_err(|_| Auth0ClientError::InvalidApiKeyHeader)?;
+        let header_name = HeaderName::from_static("authorization"); // Use 'authorization' instead of 'api-key'
+                                                                    // Format the API key as a Bearer token
+        let api_key_value = format!("Bearer {}", api_key);
+        let mut api_key_value = HeaderValue::from_str(&api_key_value)
+            .map_err(|_| Auth0ClientError::InvalidApiKeyHeader)?;
         api_key_value.set_sensitive(true);
         headers.insert(header_name, api_key_value);
         let client = reqwest::Client::builder()
@@ -49,18 +53,17 @@ impl Auth0Client {
 
     pub(crate) fn fetch_users(
         &self,
-        _limit: Option<u64>,
-        _offset: Option<u64>,
-    ) -> Result<Vec<Auth0User>, Auth0ClientError> {
+        page: Option<u64>,
+        per_page: Option<u64>,
+    ) -> Result<ResultPayload, Auth0ClientError> {
         let rt = create_async_runtime()?;
 
         rt.block_on(async {
             let response = self.get_client().get(self.url.clone()).send().await?;
             let response = response.error_for_status()?;
-            let users = response.json::<Vec<Auth0User>>().await?;
-            // let users = user_response.get_user_result()?;
+            let payload = response.json::<ResultPayload>().await?;
 
-            Ok(users)
+            Ok(payload)
         })
     }
 }

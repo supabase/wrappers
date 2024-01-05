@@ -122,7 +122,7 @@ impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {
         _options: &HashMap<String, String>,
     ) -> Auth0FdwResult<()> {
         let auth0_client = Auth0Client::new(&self.url, &self.api_key)?;
-        self.rows_iterator = Some(RowsIterator::new(columns.to_vec(), 1000, auth0_client));
+        self.rows_iterator = Some(RowsIterator::new(columns.to_vec(), 50, auth0_client));
 
         Ok(())
     }

@@ -4,46 +4,46 @@ use supabase_wrappers::prelude::{Column, Row};
 
 pub(crate) struct RowsIterator {
     auth0_client: Auth0Client,
-    batch_size: u64,
+    per_page: u64,
     columns: Vec<Column>,
     rows: VecDeque<Row>,
     have_more_rows: bool,
-    next_page_offset: Option<u64>,
+    page_offset: Option<u64>,
 }
 
 impl RowsIterator {
-    pub(crate) fn new(columns: Vec<Column>, batch_size: u64, auth0_client: Auth0Client) -> Self {
+    pub(crate) fn new(columns: Vec<Column>, per_page: u64, auth0_client: Auth0Client) -> Self {
         Self {
             columns,
             auth0_client,
-            batch_size,
+            per_page,
             rows: VecDeque::new(),
             have_more_rows: true,
-            next_page_offset: None,
+            page_offset: None,
         }
     }
 
-    fn get_limit(&self) -> Option<u64> {
-        Some(self.batch_size)
+    fn get_page_offset(&self) -> Option<u64> {
+        self.page_offset
     }
 
-    fn get_offset(&self) -> Option<u64> {
-        self.next_page_offset
+    fn get_per_page(&self) -> Option<u64> {
+        Some(self.per_page)
     }
 
     fn fetch_rows_batch(&mut self) -> Result<Option<Row>, Auth0ClientError> {
-        let users = self
+        let result_payload = self
             .auth0_client
-            .fetch_users(self.get_limit(), self.get_offset())?;
-        self.rows = users
+            .fetch_users(self.get_page_offset(), self.get_per_page())?;
+        let total = result_payload.into_total().unwrap_or(0);
+        self.rows = result_payload
+            .into_users()
             .into_iter()
             .map(|u| u.into_row(&self.columns))
             .collect();
-        // self.next_page_offset = user_result.next_page_offset;
-        // self.have_more_rows = self.next_page_offset.is_some();
-        //TODO: add proper logic to figure out when to set have_more_rows to false
-        //hardcoding to false just to make the tests pass for now
-        self.have_more_rows = false;
+        self.page_offset = self.page_offset.map(|offset| offset + 1);
+        let page_offset = self.page_offset.unwrap_or(0);
+        self.have_more_rows = total > self.per_page * page_offset;
         Ok(self.get_next_row())
     }
 
