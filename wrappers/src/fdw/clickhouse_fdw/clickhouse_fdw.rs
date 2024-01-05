@@ -1,5 +1,6 @@
 use crate::stats;
-use chrono::{Date, DateTime, NaiveDate, NaiveDateTime, Utc};
+#[allow(deprecated)]
+use chrono::{Date, DateTime, Datelike, NaiveDate, NaiveDateTime, Utc};
 use chrono_tz::Tz;
 use clickhouse_rs::{types, types::Block, types::SqlType, ClientHandle, Pool};
 use pgrx::to_timestamp;
@@ -55,11 +56,10 @@ fn field_to_cell(row: &types::Row<types::Complex>, i: usize) -> ClickHouseFdwRes
             Ok(Some(Cell::String(value)))
         }
         SqlType::Date => {
+            #[allow(deprecated)]
             let value = row.get::<Date<_>, usize>(i)?;
-            let epoch = NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
-            let seconds_from_epoch = value.naive_utc().signed_duration_since(epoch).num_seconds();
-            let ts = to_timestamp(seconds_from_epoch as f64);
-            Ok(Some(Cell::Date(pgrx::Date::from(ts))))
+            let dt = pgrx::Date::new(value.year(), value.month() as u8, value.day() as u8)?;
+            Ok(Some(Cell::Date(dt)))
         }
         SqlType::DateTime(_) => {
             let value = row.get::<DateTime<_>, usize>(i)?;
@@ -330,7 +330,7 @@ impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
                         Cell::Timestamp(_) => {
                             let s = cell.to_string().replace('\'', "");
                             let tm = NaiveDateTime::parse_from_str(&s, "%Y-%m-%d %H:%M:%S")?;
-                            let tm: DateTime<Utc> = DateTime::from_utc(tm, Utc);
+                            let tm: DateTime<Utc> = DateTime::from_naive_utc_and_offset(tm, Utc);
                             row.push((col_name, types::Value::from(tm)));
                         }
                         _ => {

@@ -2,6 +2,7 @@
 mod clickhouse_fdw;
 mod tests;
 
+use pgrx::datum::datetime_support::DateTimeConversionError;
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::PgSqlErrorCode;
 use thiserror::Error;
@@ -18,6 +19,9 @@ enum ClickHouseFdwError {
 
     #[error("column data type '{0}' is not supported")]
     UnsupportedColumnType(String),
+
+    #[error("datetime conversion error: {0}")]
+    DatetimeConversionError(#[from] DateTimeConversionError),
 
     #[error("datetime parse error: {0}")]
     DatetimeParseError(#[from] chrono::format::ParseError),

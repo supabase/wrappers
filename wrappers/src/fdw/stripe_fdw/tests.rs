@@ -527,10 +527,7 @@ mod tests {
                         .zip(r.get_by_name::<&str, _>("type").unwrap())
                 })
                 .collect::<Vec<_>>();
-            assert_eq!(
-                results,
-                vec![(((((100, "usd"), 0), "available"), "charge"))]
-            );
+            assert_eq!(results, vec![((((100, "usd"), 0), "available"), "charge")]);
 
             let results = c
                 .select("SELECT * FROM stripe_charges", None, None)
@@ -542,7 +539,7 @@ mod tests {
                         .zip(r.get_by_name::<&str, _>("status").unwrap())
                 })
                 .collect::<Vec<_>>();
-            assert_eq!(results, vec![(((100, "usd"), "succeeded"))]);
+            assert_eq!(results, vec![((100, "usd"), "succeeded")]);
 
             let results = c
                 .select("SELECT * FROM stripe_customers", None, None)
