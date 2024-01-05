@@ -66,6 +66,8 @@ impl Auth0Client {
                     .append_pair("per_page", &per_page.to_string());
             }
 
+            url.query_pairs_mut().append_pair("include_totals", "true");
+
             let response = self.get_client().get(url.as_str()).send().await?;
             let response = response.error_for_status()?;
             let payload = response.json::<ResultPayload>().await?;

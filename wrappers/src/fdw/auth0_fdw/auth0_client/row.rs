@@ -39,7 +39,7 @@ impl ResultPayload {
     pub fn into_users(self) -> Vec<Auth0User> {
         self.users
     }
-    pub fn into_total(&self) -> Option<u64> {
+    pub fn get_total(&self) -> Option<u64> {
         self.total
     }
 }

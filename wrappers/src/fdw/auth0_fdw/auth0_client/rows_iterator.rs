@@ -19,7 +19,7 @@ impl RowsIterator {
             per_page,
             rows: VecDeque::new(),
             have_more_rows: true,
-            page_offset: None,
+            page_offset: Some(0),
         }
     }
 
@@ -35,7 +35,7 @@ impl RowsIterator {
         let result_payload = self
             .auth0_client
             .fetch_users(self.get_page_offset(), self.get_per_page())?;
-        let total = result_payload.into_total().unwrap_or(0);
+        let total = result_payload.get_total().unwrap_or(0);
         self.rows = result_payload
             .into_users()
             .into_iter()
