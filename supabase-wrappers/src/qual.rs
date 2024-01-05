@@ -58,7 +58,7 @@ pub(crate) unsafe fn form_array_from_datum(
 pub(crate) unsafe fn get_operator(opno: pg_sys::Oid) -> pg_sys::Form_pg_operator {
     let htup = pg_sys::SearchSysCache1(
         pg_sys::SysCacheIdentifier_OPEROID.try_into().unwrap(),
-        opno.try_into().unwrap(),
+        opno.into(),
     );
     if htup.is_null() {
         pg_sys::ReleaseSysCache(htup);
