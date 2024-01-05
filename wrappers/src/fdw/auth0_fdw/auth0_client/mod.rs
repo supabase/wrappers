@@ -93,13 +93,17 @@ pub(crate) enum Auth0ClientError {
 
     #[error("failed to parse url: {0}")]
     UrlParseError(#[from] ParseError),
+
+    #[error("missing page offset")]
+    MissingPageOffset,
 }
 
 impl From<Auth0ClientError> for ErrorReport {
     fn from(value: Auth0ClientError) -> Self {
         match value {
             Auth0ClientError::CreateRuntimeError(e) => e.into(),
-            Auth0ClientError::UrlParseError(_)
+            Auth0ClientError::MissingPageOffset
+            | Auth0ClientError::UrlParseError(_)
             | Auth0ClientError::InvalidApiKeyHeader
             | Auth0ClientError::ReqwestError(_)
             | Auth0ClientError::ReqwestMiddlewareError(_)
