@@ -53,6 +53,6 @@ jobs:
 
     - name: Run clippy
       run: |
-        cd wrappers && cargo clippy --all --tests --no-deps --features all_fdws,helloworld_fdw
+        cd wrappers && RUSTFLAGS="-D warnings" cargo clippy --all --tests --no-deps --features all_fdws,helloworld_fdw
 
     - run: cd wrappers && cargo pgrx test --features all_fdws,pg15

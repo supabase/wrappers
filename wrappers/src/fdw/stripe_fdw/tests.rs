@@ -552,10 +552,7 @@ mod tests {
                 .collect::<Vec<_>>();
             assert_eq!(
                 results,
-                vec![(
-                    "cus_MJiBgSUgeWFN0z",
-                    Timestamp::from(287883090000000i64)
-                )]
+                vec![("cus_MJiBgSUgeWFN0z", Timestamp::from(287883090000000i64))]
             );
 
             let results = c
