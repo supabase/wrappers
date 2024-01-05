@@ -10,6 +10,7 @@ This is a collection of FDWs built by [Supabase](https://www.supabase.com). We c
 - [Airtable](./src/fdw/airtable_fdw): A FDW for [Airtable](https://airtable.com/) API which supports data read only.
 - [S3](./src/fdw/s3_fdw): A FDW for [AWS S3](https://aws.amazon.com/s3/). Currently read-only.
 - [Logflare](./src/fdw/logflare_fdw): A FDW for [Logflare](https://logflare.app/) which supports data read only.
-| [Auth0](./src/fdw/auth0_fdw) | A FDW for [Auth0](https://auth0.com/).
-| [SQL Server](./src/fdw/mssql_fdw) | A FDW for [Microsoft SQL Server](https://www.microsoft.com/en-au/sql-server/) which supports data read only.
+- [Auth0](./src/fdw/auth0_fdw): A FDW for [Auth0](https://auth0.com/).
+- [SQL Server](./src/fdw/mssql_fdw): A FDW for [Microsoft SQL Server](https://www.microsoft.com/en-au/sql-server/) which supports data read only.
+- [Redis](./src/fdw/redis_fdw): A FDW for [Redis](https://redis.io/) which supports data read only.
 

@@ -98,6 +98,11 @@ mssql_fdw = [
     "num-traits",
     "thiserror",
 ]
+redis_fdw = [
+    "redis",
+    "serde_json",
+    "thiserror",
+]
 # Does not include helloworld_fdw because of its general uselessness
 all_fdws = [
     "airtable_fdw",
@@ -109,6 +114,7 @@ all_fdws = [
     "logflare_fdw",
     "auth0_fdw",
     "mssql_fdw",
+    "redis_fdw",
 ]
 
 [dependencies]
@@ -169,6 +175,9 @@ tiberius = { version = "0.12.2", features = [
     "rust_decimal",
 ], optional = true }
 num-traits = { version = "0.2.17", optional = true }
+
+# for redis_fdw
+redis = { version = "0.24.0", features = ["streams"], optional = true }
 
 thiserror = { version = "1.0.48", optional = true }
 
