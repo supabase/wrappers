@@ -46,4 +46,13 @@ jobs:
 
     - run: cargo install cargo-pgrx --version 0.11.2
     - run: cargo pgrx init --pg15 /usr/lib/postgresql/15/bin/pg_config
+
+    - name: Format code
+      run: |
+        cd wrappers && cargo fmt --check
+
+    - name: Run clippy
+      run: |
+        cd wrappers && RUSTFLAGS="-D warnings" cargo clippy --all --tests --no-deps --features all_fdws,helloworld_fdw
+
     - run: cd wrappers && cargo pgrx test --features all_fdws,pg15

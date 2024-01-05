@@ -42,4 +42,13 @@ jobs:
 
     - run: cargo install cargo-pgrx --version 0.11.2
     - run: cargo pgrx init --pg15 /usr/lib/postgresql/15/bin/pg_config
+
+    - name: Format code
+      run: |
+        cd supabase-wrappers && cargo fmt --check
+
+    - name: Run clippy
+      run: |
+        cd supabase-wrappers && RUSTFLAGS="-D warnings" cargo clippy --all --tests --no-deps
+
     - run: cd supabase-wrappers && cargo test

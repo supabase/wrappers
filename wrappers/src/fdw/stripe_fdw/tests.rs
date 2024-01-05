@@ -527,10 +527,7 @@ mod tests {
                         .zip(r.get_by_name::<&str, _>("type").unwrap())
                 })
                 .collect::<Vec<_>>();
-            assert_eq!(
-                results,
-                vec![(((((100, "usd"), 0), "available"), "charge"))]
-            );
+            assert_eq!(results, vec![((((100, "usd"), 0), "available"), "charge")]);
 
             let results = c
                 .select("SELECT * FROM stripe_charges", None, None)
@@ -542,7 +539,7 @@ mod tests {
                         .zip(r.get_by_name::<&str, _>("status").unwrap())
                 })
                 .collect::<Vec<_>>();
-            assert_eq!(results, vec![(((100, "usd"), "succeeded"))]);
+            assert_eq!(results, vec![((100, "usd"), "succeeded")]);
 
             let results = c
                 .select("SELECT * FROM stripe_customers", None, None)
@@ -555,10 +552,7 @@ mod tests {
                 .collect::<Vec<_>>();
             assert_eq!(
                 results,
-                vec![(
-                    "cus_MJiBgSUgeWFN0z",
-                    Timestamp::try_from(287883090000000i64).unwrap()
-                )]
+                vec![("cus_MJiBgSUgeWFN0z", Timestamp::from(287883090000000i64))]
             );
 
             let results = c
@@ -825,9 +819,9 @@ mod tests {
                 vec![(
                     (
                         ("cus_MJiBtCqOF1Bb3F", "usd"),
-                        Timestamp::try_from(287883090000000i64).unwrap()
+                        Timestamp::from(287883090000000i64)
                     ),
-                    Timestamp::try_from(287883090000000i64).unwrap()
+                    Timestamp::from(287883090000000i64)
                 )]
             );
 
