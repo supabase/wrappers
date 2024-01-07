@@ -52,14 +52,9 @@ enum CognitoFdwError {
 
     #[error("{0}")]
     NumericConversionError(#[from] pgrx::numeric::Error),
-    #[error("no secret found in vault with id {0}")]
-    SecretNotFound(String),
 
-    #[error("`url` option must be set")]
-    URLOptionMissing,
-
-    #[error("exactly one of `api_key` or `api_key_id` options must be set")]
-    SetOneOfApiKeyAndApiKeyIdSet,
+    #[error("both `api_key` and `api_secret_key` options must be set")]
+    ApiKeyAndSecretKeySet,
 }
 
 impl From<CognitoFdwError> for ErrorReport {
@@ -68,9 +63,6 @@ impl From<CognitoFdwError> for ErrorReport {
             CognitoFdwError::CreateRuntimeError(e) => e.into(),
             CognitoFdwError::OptionsError(e) => e.into(),
             CognitoFdwError::CognitoClientError(e) => e.into(),
-            CognitoFdwError::SecretNotFound(_) => {
-                ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, format!("{value}"), "")
-            }
             _ => ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, format!("{value}"), ""),
         }
     }
@@ -98,7 +90,6 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
     // database connection or API call.
 
     fn new(options: &HashMap<String, String>) -> Result<Self, CognitoFdwError> {
-        // let url = require_option("url", options)?.to_string();
         //     let user_pool_id = require_option("user_pool_id", options)?.to_string();
         //     let aws_region = require_option("region", options)?.to_string();
 
@@ -110,6 +101,7 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
             Some((aws_access_key_id, aws_secret_access_key))
         };
 
+        // TODO: Remove this
         let Some(creds) = creds else {
             panic!("this shouldn't happen");
         };
@@ -129,8 +121,6 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
             return Client::new(&config);
         });
 
-        notice!("we finished");
-
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
         Ok(Self {
             client: client,
@@ -147,11 +137,7 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
         _options: &HashMap<String, String>,
     ) -> CognitoFdwResult<()> {
         let cognito_client = &self.client;
-        self.rows_iterator = Some(RowsIterator::new(
-            columns.to_vec(),
-            1000,
-            cognito_client.clone(),
-        ));
+        self.rows_iterator = Some(RowsIterator::new(columns.to_vec(), cognito_client.clone()));
 
         Ok(())
     }
@@ -178,22 +164,19 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
         options: Vec<Option<String>>,
         catalog: Option<pg_sys::Oid>,
     ) -> CognitoFdwResult<()> {
-        // TODO: Update fields that we validate on
-        // if let Some(oid) = catalog {
-        //     if oid == FOREIGN_SERVER_RELATION_ID {
-        //        // let api_key_exists = check_options_contain(&options, "api_key").is_ok();
-        //         // let url_exists = check_options_contain(&options, "url").is_ok();
-        //         if (api_key_exists && api_key_id_exists) || (!api_key_exists && !api_key_id_exists)
-        //         {
-        //             return Err(CognitoFdwError::SetOneOfApiKeyAndApiKeyIdSet);
-        //         }
-        //         if !url_exists {
-        //             return Err(CognitoFdwError::URLOptionMissing);
-        //         }
-        //     } else if oid == FOREIGN_TABLE_RELATION_ID {
-        //         check_options_contain(&options, "object")?;
-        //     }
-        // }
+        if let Some(oid) = catalog {
+            if oid == FOREIGN_SERVER_RELATION_ID {
+                let access_key_exists =
+                    check_options_contain(&options, "aws_access_key_id").is_ok();
+                let secret_access_key_exists =
+                    check_options_contain(&options, "aws_secret_access_key").is_ok();
+                if !access_key_exists && !secret_access_key_exists {
+                    return Err(CognitoFdwError::ApiKeyAndSecretKeySet);
+                }
+            } else if oid == FOREIGN_TABLE_RELATION_ID {
+                check_options_contain(&options, "object")?;
+            }
+        }
 
         Ok(())
     }

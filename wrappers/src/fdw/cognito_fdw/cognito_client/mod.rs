@@ -1,6 +1,5 @@
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::PgSqlErrorCode;
-use reqwest::Url;
 use supabase_wrappers::prelude::*;
 use thiserror::Error;
 use url::ParseError;

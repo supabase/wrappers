@@ -42,24 +42,22 @@ create foreign data wrapper cognito_wrapper
 create server cognito_server
   foreign data wrapper cognito_wrapper
   options (
-     -- TODO: Fill this up
+     aws_access_key_id '<your_access_key>',
+     aws_secret_access_key '<your_secret_key>'
   );
 ```
 
 
 ``` sql
 -- create an example foreign table
--- Number of fields are illustrative
 create foreign table cognito (
-  created_at text,
-  email text,
-  email_verified bool,
-  identities jsonb
+    email text,
+    username text
 )
-  server cognito_server
-  options (
+server cognito_server
+options (
     object 'users'
-  );
+);
 ```
 
 

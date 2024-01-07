@@ -1,60 +1,51 @@
 use crate::fdw::cognito_fdw::cognito_client::row::IntoRow;
 use crate::fdw::cognito_fdw::cognito_client::CognitoClientError;
-use aws_sdk_cognitoidentityprovider::types::UserType;
-use aws_sdk_cognitoidentityprovider::Client;
 
 use crate::fdw::cognito_fdw::cognito_client::CreateRuntimeError;
 
+use pgrx::notice;
 use std::collections::VecDeque;
 use supabase_wrappers::prelude::{Column, Row};
 
 pub(crate) struct RowsIterator {
     cognito_client: aws_sdk_cognitoidentityprovider::Client,
-    batch_size: u64,
     columns: Vec<Column>,
     rows: VecDeque<Row>,
     have_more_rows: bool,
-    next_page_offset: Option<u64>,
+    pagination_token: Option<String>,
 }
 
 impl RowsIterator {
     pub(crate) fn new(
         columns: Vec<Column>,
-        batch_size: u64,
         cognito_client: aws_sdk_cognitoidentityprovider::Client,
     ) -> Self {
         Self {
             columns,
             cognito_client,
-            batch_size,
             rows: VecDeque::new(),
             have_more_rows: true,
-            next_page_offset: None,
+            pagination_token: None,
         }
-    }
-
-    fn get_limit(&self) -> Option<u64> {
-        Some(self.batch_size)
-    }
-
-    fn get_offset(&self) -> Option<u64> {
-        self.next_page_offset
     }
 
     fn fetch_rows_batch(&mut self) -> Result<Option<Row>, CognitoClientError> {
         self.have_more_rows = false;
         let rt = tokio::runtime::Runtime::new()
             .map_err(CreateRuntimeError::FailedToCreateAsyncRuntime)?;
+
+        let mut request = self
+            .cognito_client
+            .list_users()
+            .user_pool_id("ap-southeast-2_xuUGae0Bl".to_string());
+
+        if let Some(ref token) = self.pagination_token {
+            request = request.pagination_token(token.clone());
+        }
         self.rows = rt.block_on(async {
-            match &self
-                .cognito_client
-                .list_users()
-                .set_user_pool_id(Some("ap-southeast-2_xuUGae0Bl".to_string()))
-                .send()
-                .await
-            {
+            match request.send().await {
                 Ok(response) => {
-                    // If users are found, return them; otherwise, return an empty vector
+                    self.pagination_token = response.pagination_token.clone();
                     response
                         .users
                         .clone()
@@ -64,14 +55,12 @@ impl RowsIterator {
                         .collect::<VecDeque<Row>>()
                 }
                 Err(_) => {
-                    // Handle the error case, potentially by returning an empty vector or a default value
                     VecDeque::new() // or handle the error as required
                 }
             }
         });
 
-        // self.next_page_offset = user_result.next_page_offset;
-        // self.have_more_rows = self.next_page_offset.is_some();
+        self.have_more_rows = self.pagination_token.is_some();
         Ok(self.get_next_row())
     }
 
