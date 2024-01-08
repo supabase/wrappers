@@ -51,16 +51,14 @@ impl Auth0Client {
 
     pub(crate) fn fetch_users(
         &self,
-        page: Option<u64>,
+        page: u64,
         per_page: Option<u64>,
     ) -> Result<ResultPayload, Auth0ClientError> {
         let rt = create_async_runtime()?;
 
         rt.block_on(async {
             let mut url = self.url.clone();
-            if let Some(page) = page {
-                url.query_pairs_mut().append_pair("page", &page.to_string());
-            }
+            url.query_pairs_mut().append_pair("page", &page.to_string());
             if let Some(per_page) = per_page {
                 url.query_pairs_mut()
                     .append_pair("per_page", &per_page.to_string());
@@ -95,17 +93,13 @@ pub(crate) enum Auth0ClientError {
 
     #[error("failed to parse url: {0}")]
     UrlParseError(#[from] ParseError),
-
-    #[error("missing page offset")]
-    MissingPageOffset,
 }
 
 impl From<Auth0ClientError> for ErrorReport {
     fn from(value: Auth0ClientError) -> Self {
         match value {
             Auth0ClientError::CreateRuntimeError(e) => e.into(),
-            Auth0ClientError::MissingPageOffset
-            | Auth0ClientError::UrlParseError(_)
+            Auth0ClientError::UrlParseError(_)
             | Auth0ClientError::InvalidApiKeyHeader
             | Auth0ClientError::ReqwestError(_)
             | Auth0ClientError::ReqwestMiddlewareError(_)

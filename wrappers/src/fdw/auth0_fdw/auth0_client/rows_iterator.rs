@@ -8,7 +8,7 @@ pub(crate) struct RowsIterator {
     columns: Vec<Column>,
     rows: VecDeque<Row>,
     have_more_rows: bool,
-    page_offset: Option<u64>,
+    page_offset: u64,
 }
 
 impl RowsIterator {
@@ -19,11 +19,11 @@ impl RowsIterator {
             per_page,
             rows: VecDeque::new(),
             have_more_rows: true,
-            page_offset: Some(0),
+            page_offset: 0,
         }
     }
 
-    fn get_page_offset(&self) -> Option<u64> {
+    fn get_page_offset(&self) -> u64 {
         self.page_offset
     }
 
@@ -42,7 +42,7 @@ impl RowsIterator {
             .map(|u| u.into_row(&self.columns))
             .collect();
         self.page_offset += 1;
-        self.have_more_rows = total > self.per_page * page_offset;
+        self.have_more_rows = total > self.per_page * self.page_offset;
         Ok(self.get_next_row())
     }
 
