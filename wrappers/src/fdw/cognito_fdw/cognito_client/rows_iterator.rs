@@ -3,7 +3,6 @@ use crate::fdw::cognito_fdw::cognito_client::CognitoClientError;
 
 use crate::fdw::cognito_fdw::cognito_client::CreateRuntimeError;
 
-use pgrx::notice;
 use std::collections::VecDeque;
 use supabase_wrappers::prelude::{Column, Row};
 

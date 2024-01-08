@@ -1,7 +1,6 @@
 use crate::fdw::cognito_fdw::cognito_client::rows_iterator::RowsIterator;
 use crate::fdw::cognito_fdw::cognito_client::CognitoClientError;
 
-use pgrx::notice;
 use std::env;
 
 use aws_sdk_cognitoidentityprovider::config::BehaviorVersion;

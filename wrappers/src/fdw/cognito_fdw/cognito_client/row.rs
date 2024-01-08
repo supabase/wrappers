@@ -1,8 +1,5 @@
 use aws_sdk_cognitoidentityprovider::types::UserType;
-use pgrx::notice;
-use pgrx::JsonB;
 use serde::Deserialize;
-use serde::Serialize;
 use serde_json::Value;
 use std::collections::HashMap;
 use supabase_wrappers::prelude::Cell;
@@ -13,13 +10,6 @@ use supabase_wrappers::prelude::Row;
 pub struct ResultPayload {
     pub(crate) users: Vec<CognitoUser>,
     pub(crate) next_page_offset: Option<u64>,
-}
-
-#[derive(Debug, Deserialize, PartialEq)]
-pub(crate) struct Success {
-    status: String,
-    result: ResultPayload,
-    time: f64,
 }
 
 #[derive(Debug)]
@@ -61,23 +51,14 @@ impl IntoRow for UserType {
                         row.push("email", Some(Cell::String(email)));
                     }
                 }
-                // "email_verified" => {
-                //     if let Some(email_verified) = self.extract_attribute_value("email_verified") {
-                //         row.push("email_verified", Some(Cell::Bool(email_verified.parse().unwrap_or(false))));
-                //     } else {
-
-                //     }
-                // },
                 "status" => {
                     if let Some(status) = self.extract_attribute_value("status") {
                         row.push("status", Some(Cell::String(status)));
                     }
                 }
-                // Add additional cases as needed for other fields
                 _ => (), // Ignore unknown columns or handle them appropriately
             }
         }
-        notice!("this is row {:?}", row);
 
         row
     }
