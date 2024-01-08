@@ -109,8 +109,8 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
         Ok(Self {
-            client: client,
-            user_pool_id: user_pool_id,
+            client,
+            user_pool_id,
             rows_iterator: None,
         })
     }

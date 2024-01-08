@@ -77,12 +77,10 @@ impl Iterator for RowsIterator {
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(row) = self.get_next_row() {
             Some(Ok(row))
+        } else if self.have_more_rows {
+            self.fetch_rows_batch().transpose()
         } else {
-            if self.have_more_rows {
-                self.fetch_rows_batch().transpose()
-            } else {
-                None
-            }
+            None
         }
     }
 }
