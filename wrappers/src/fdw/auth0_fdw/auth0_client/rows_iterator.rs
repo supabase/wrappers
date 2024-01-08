@@ -41,11 +41,7 @@ impl RowsIterator {
             .into_iter()
             .map(|u| u.into_row(&self.columns))
             .collect();
-        self.page_offset = self.page_offset.map(|offset| offset + 1);
-        let page_offset = match self.page_offset {
-            Some(offset) => offset,
-            None => return Err(Auth0ClientError::MissingPageOffset),
-        };
+        self.page_offset += 1;
         self.have_more_rows = total > self.per_page * page_offset;
         Ok(self.get_next_row())
     }
