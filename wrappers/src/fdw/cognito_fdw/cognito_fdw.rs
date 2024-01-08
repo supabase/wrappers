@@ -104,7 +104,7 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
             env::set_var("AWS_REGION", aws_region);
             let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
 
-            return Client::new(&config);
+            Client::new(&config)
         });
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);

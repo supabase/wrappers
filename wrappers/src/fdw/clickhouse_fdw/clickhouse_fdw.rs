@@ -1,6 +1,7 @@
 use crate::stats;
 #[allow(deprecated)]
 use chrono::{Date, DateTime, Datelike, NaiveDate, NaiveDateTime, Utc};
+use chrono_tz::Tz;
 use clickhouse_rs::{types, types::Block, types::SqlType, ClientHandle, Pool};
 use pgrx::to_timestamp;
 use regex::{Captures, Regex};
@@ -323,7 +324,7 @@ impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
                             let tm = NaiveDate::parse_from_str(&s, "%Y-%m-%d")?;
                             let epoch = NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
                             let duration = tm - epoch;
-                            let dt = types::Value::Date(duration.num_days() as u16);
+                            let dt = types::Value::Date(duration.num_days() as u16, Tz::UTC);
                             row.push((col_name, dt));
                         }
                         Cell::Timestamp(_) => {

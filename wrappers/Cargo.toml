@@ -141,7 +141,7 @@ clickhouse-rs = { git = "https://github.com/suharev7/clickhouse-rs", branch = "a
     "tls",
 ], optional = true }
 chrono = { version = "0.4", optional = true }
-chrono-tz = { version = "0.8", optional = true }
+chrono-tz = { version = "0.6", optional = true }
 
 
 # for bigquery_fdw, firebase_fdw, airtable_fdw and etc.

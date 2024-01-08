@@ -8,6 +8,7 @@ pub(crate) mod row;
 
 pub(crate) mod rows_iterator;
 
+#[allow(clippy::enum_variant_names)]
 #[derive(Error, Debug)]
 pub(crate) enum CognitoClientError {
     #[error("{0}")]
