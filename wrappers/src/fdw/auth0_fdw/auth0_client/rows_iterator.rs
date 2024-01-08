@@ -1,9 +1,9 @@
-use crate::fdw::cognito_fdw::cognito_client::{CognitoClient, CognitoClientError};
+use crate::fdw::auth0_fdw::auth0_client::{Auth0Client, Auth0ClientError};
 use std::collections::VecDeque;
 use supabase_wrappers::prelude::{Column, Row};
 
 pub(crate) struct RowsIterator {
-    cognito_client: CognitoClient,
+    auth0_client: Auth0Client,
     batch_size: u64,
     columns: Vec<Column>,
     rows: VecDeque<Row>,
@@ -12,11 +12,7 @@ pub(crate) struct RowsIterator {
 }
 
 impl RowsIterator {
-    pub(crate) fn new(
-        columns: Vec<Column>,
-        batch_size: u64,
-        cognito_client: CognitoClient,
-    ) -> Self {
+    pub(crate) fn new(columns: Vec<Column>, batch_size: u64, auth0_client: Auth0Client) -> Self {
         Self {
             columns,
             auth0_client,
@@ -35,9 +31,9 @@ impl RowsIterator {
         self.next_page_offset
     }
 
-    fn fetch_rows_batch(&mut self) -> Result<Option<Row>, CognitoClientError> {
+    fn fetch_rows_batch(&mut self) -> Result<Option<Row>, Auth0ClientError> {
         let users = self
-            .cognito_client
+            .auth0_client
             .fetch_users(self.get_limit(), self.get_offset())?;
         self.rows = users
             .into_iter()
@@ -57,7 +53,7 @@ impl RowsIterator {
 }
 
 impl Iterator for RowsIterator {
-    type Item = Result<Row, CognitoClientError>;
+    type Item = Result<Row, Auth0ClientError>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(row) = self.get_next_row() {

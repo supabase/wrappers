@@ -24,6 +24,7 @@ use thiserror::Error;
 pub(crate) struct CognitoFdw {
     // row counter
     client: aws_sdk_cognitoidentityprovider::Client,
+    user_pool_id: String,
     rows_iterator: Option<RowsIterator>,
 }
 
@@ -89,32 +90,18 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
     // database connection or API call.
 
     fn new(options: &HashMap<String, String>) -> Result<Self, CognitoFdwError> {
-        //     let user_pool_id = require_option("user_pool_id", options)?.to_string();
-        //     let aws_region = require_option("region", options)?.to_string();
+        let user_pool_id = require_option("user_pool_id", options)?.to_string();
+        let aws_region = require_option("region", options)?.to_string(); // Uncommented this line
 
-        let creds = {
-            // if using credentials directly specified
-            let aws_access_key_id = require_option("aws_access_key_id", options)?.to_string();
-            let aws_secret_access_key =
-                require_option("aws_secret_access_key", options)?.to_string();
-            Some((aws_access_key_id, aws_secret_access_key))
-        };
-
-        // TODO: Remove this
-        let Some(creds) = creds else {
-            panic!("this shouldn't happen");
-        };
-        // set AWS environment variables and create shared config from them
+        let aws_access_key_id = require_option("aws_access_key_id", options)?.to_string();
+        let aws_secret_access_key = require_option("aws_secret_access_key", options)?.to_string();
 
         let rt = tokio::runtime::Runtime::new()
             .map_err(CreateRuntimeError::FailedToCreateAsyncRuntime)?;
         let client = rt.block_on(async {
-            // TODO: Chang this
-            let region = "ap-southeast-2".to_string();
-
-            env::set_var("AWS_ACCESS_KEY_ID", creds.0);
-            env::set_var("AWS_SECRET_ACCESS_KEY", creds.1);
-            env::set_var("AWS_REGION", region);
+            env::set_var("AWS_ACCESS_KEY_ID", aws_access_key_id);
+            env::set_var("AWS_SECRET_ACCESS_KEY", aws_secret_access_key);
+            env::set_var("AWS_REGION", aws_region);
             let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
 
             return Client::new(&config);
@@ -123,6 +110,7 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
         Ok(Self {
             client: client,
+            user_pool_id: user_pool_id,
             rows_iterator: None,
         })
     }
@@ -136,7 +124,12 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
         _options: &HashMap<String, String>,
     ) -> CognitoFdwResult<()> {
         let cognito_client = &self.client;
-        self.rows_iterator = Some(RowsIterator::new(columns.to_vec(), cognito_client.clone()));
+        let user_pool_id = self.user_pool_id.to_string();
+        self.rows_iterator = Some(RowsIterator::new(
+            columns.to_vec(),
+            user_pool_id,
+            cognito_client.clone(),
+        ));
 
         Ok(())
     }

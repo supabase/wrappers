@@ -10,6 +10,7 @@ pub(crate) struct RowsIterator {
     cognito_client: aws_sdk_cognitoidentityprovider::Client,
     columns: Vec<Column>,
     rows: VecDeque<Row>,
+    user_pool_id: String,
     have_more_rows: bool,
     pagination_token: Option<String>,
 }
@@ -17,11 +18,13 @@ pub(crate) struct RowsIterator {
 impl RowsIterator {
     pub(crate) fn new(
         columns: Vec<Column>,
+        user_pool_id: String,
         cognito_client: aws_sdk_cognitoidentityprovider::Client,
     ) -> Self {
         Self {
             columns,
             cognito_client,
+            user_pool_id,
             rows: VecDeque::new(),
             have_more_rows: true,
             pagination_token: None,
@@ -36,7 +39,7 @@ impl RowsIterator {
         let mut request = self
             .cognito_client
             .list_users()
-            .user_pool_id("ap-southeast-2_xuUGae0Bl".to_string());
+            .user_pool_id(self.user_pool_id.clone());
 
         if let Some(ref token) = self.pagination_token {
             request = request.pagination_token(token.clone());

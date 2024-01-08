@@ -67,8 +67,11 @@ options (
 
 ```sql
 wrappers=# select * from cognito;
--- TODO: finish this
-
+      email       |    username     
+------------------+-----------------
+ joel@supabase.io | testsupabasenow
+ joel@supabase.io | testuser
+(2 rows)
 ```
 
 ## Changelog
