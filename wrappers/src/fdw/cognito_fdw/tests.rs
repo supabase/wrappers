@@ -18,8 +18,8 @@ mod tests {
                 r#"CREATE SERVER cognito_server
                          FOREIGN DATA WRAPPER cognito_wrapper
                          OPTIONS (
-                            url 'http://localhost:3796',
-                            api_key 'apiKey'
+                            aws_access_key_id 'mysecretaccesskey',
+                            aws_secret_access_key 'apiKey'
                          )"#,
                 None,
                 None,
@@ -28,10 +28,8 @@ mod tests {
             c.update(
                 r#"
                   CREATE FOREIGN TABLE cognito_view (
-                    created_at text,
                     email text,
-                    email_verified bool,
-                    identities jsonb
+                    username text,
                   )
                   SERVER cognito_server
                   options (
@@ -42,9 +40,7 @@ mod tests {
                 None,
             )
             .unwrap();
-            /*
-             The table data below comes from the code in wrappers/dockerfiles/auth0/server.py
-            */
+
             let results = c
                 .select(
                     "SELECT * FROM cognito_view WHERE email = 'example@gmail.com'",
