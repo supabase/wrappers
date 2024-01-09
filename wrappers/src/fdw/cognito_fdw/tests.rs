@@ -5,7 +5,7 @@ mod tests {
     use pgrx::prelude::*;
 
     #[pg_test]
-    fn auth0_smoketest() {
+    fn cognito_smoketest() {
         Spi::connect(|mut c| {
             c.update(
                 r#"create foreign data wrapper cognito_wrapper
