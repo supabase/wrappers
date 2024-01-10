@@ -40,7 +40,8 @@ We need to provide Postgres with the credentials to connect to Stripe, and any a
     create server stripe_server
       foreign data wrapper stripe_wrapper
       options (
-        api_key_id '<key_ID>' -- The Key ID from above.
+        api_key_id '<key_ID>', -- The Key ID from above, required.
+        api_url 'https://api.stripe.com/v1/'  -- Stripe API base URL, optional. Default is 'https://api.stripe.com/v1/'
       );
     ```
 
@@ -50,7 +51,8 @@ We need to provide Postgres with the credentials to connect to Stripe, and any a
     create server stripe_server
       foreign data wrapper stripe_wrapper
       options (
-        api_key '<Stripe API Key>'  -- Stripe API key, required
+        api_key '<Stripe API Key>',  -- Stripe API key, required
+        api_url 'https://api.stripe.com/v1/'  -- Stripe API base URL, optional. Default is 'https://api.stripe.com/v1/'
       );
     ```
 
