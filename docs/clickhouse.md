@@ -4,27 +4,27 @@ The ClickHouse Wrapper allows you to read and write data from ClickHouse within 
 
 ## Supported Data Types
 
-| Postgres Type      | ClickHouse Type   |
-| ------------------ | ----------------- |
-| boolean            | UInt8             |
-| smallint           | Int16             |
-| integer            | UInt16            |
-| integer            | Int32             |
-| bigint             | UInt32            |
-| bigint             | Int64             |
-| bigint             | UInt64            |
-| real               | Float32           |
-| double precision   | Float64           |
-| text               | String            |
-| date               | Date              |
-| timestamp          | DateTime          |
+| Postgres Type    | ClickHouse Type |
+| ---------------- | --------------- |
+| boolean          | UInt8           |
+| smallint         | Int16           |
+| integer          | UInt16          |
+| integer          | Int32           |
+| bigint           | UInt32          |
+| bigint           | Int64           |
+| bigint           | UInt64          |
+| real             | Float32         |
+| double precision | Float64         |
+| text             | String          |
+| date             | Date            |
+| timestamp        | DateTime        |
 
 ## Preparation
 
 Before you get started, make sure the `wrappers` extension is installed on your database:
 
 ```sql
-create extension if not exists wrappers;
+create extension if not exists wrappers with schema extensions;
 ```
 
 and then create the foreign data wrapper:
@@ -84,9 +84,9 @@ Check [more connection string parameters](https://github.com/suharev7/clickhouse
 
 The ClickHouse Wrapper supports data reads and writes from ClickHouse.
 
-| Integration | Select            | Insert            | Update            | Delete            | Truncate          |
-| ----------- | :----:            | :----:            | :----:            | :----:            | :----:            |
-| ClickHouse  | :white_check_mark:| :white_check_mark:| :white_check_mark:| :white_check_mark:| :x:               |
+| Integration | Select | Insert | Update | Delete | Truncate |
+| ----------- | :----: | :----: | :----: | :----: | :------: |
+| ClickHouse  |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
 
 For example:
 
@@ -107,31 +107,35 @@ The full list of foreign table options are below:
 
 - `table` - Source table name in ClickHouse, required.
 
-   This can also be a subquery enclosed in parentheses, for example,
+  This can also be a subquery enclosed in parentheses, for example,
 
-   ```sql
-   table '(select * from my_table)'
-   ```
+  ```sql
+  table '(select * from my_table)'
+  ```
 
-   [Parametrized view](https://clickhouse.com/docs/en/sql-reference/statements/create/view#parameterized-view) is also supported in the subquery. In this case, you need to define a column for each parameter and use `where` to pass values to them. For example,
+  [Parametrized view](https://clickhouse.com/docs/en/sql-reference/statements/create/view#parameterized-view) is also supported in the subquery. In this case, you need to define a column for each parameter and use `where` to pass values to them. For example,
 
-   ```sql
-    create foreign table test_vw (
-      id bigint,
-      col1 text,
-      col2 bigint,
-      _param1 text,
-      _param2 bigint
-    )
-      server clickhouse_server
-      options (
-        table '(select * from my_view(column1=${_param1}, column2=${_param2}))'
-      );
+  ```sql
+   create foreign table test_vw (
+     id bigint,
+     col1 text,
+     col2 bigint,
+     _param1 text,
+     _param2 bigint
+   )
+     server clickhouse_server
+     options (
+       table '(select * from my_view(column1=${_param1}, column2=${_param2}))'
+     );
 
-    select * from test_vw where _param1='aaa' and _param2=32;
-   ```
+   select * from test_vw where _param1='aaa' and _param2=32;
+  ```
 
 - `rowid_column` - Primary key column name, optional for data scan, required for data modify
+
+## Query Pushdown Support
+
+This FDW supports `where`, `order by` and `limit` clause pushdown, as well as parametrized view (see above).
 
 ## Examples
 
@@ -139,13 +143,13 @@ Some examples on how to use ClickHouse foreign tables.
 
 ### Basic example
 
-This will create a "foreign table" inside your Postgres database called `people`: 
+This will create a "foreign table" inside your Postgres database called `people`:
 
 ```sql
 -- Run below SQLs on ClickHouse to create source table
 drop table if exists people;
 create table people (
-    id Int64, 
+    id Int64,
     name String
 )
 engine=MergeTree()

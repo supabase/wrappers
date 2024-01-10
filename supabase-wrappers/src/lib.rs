@@ -20,7 +20,7 @@
 //! ...
 //!
 //! [dependencies]
-//! pgrx = "=0.9.8"
+//! pgrx = "=0.10.2"
 //! supabase-wrappers = "0.1"
 //! ```
 //!
@@ -60,23 +60,37 @@
 //! The FDW implements [`interface::ForeignDataWrapper`] trait must use [`wrappers_fdw`] macro and implement a `new()` initialization function. For example,
 //!
 //! ```rust,no_run
+//! # mod wrapper {
+//! use std::collections::HashMap;
+//! use pgrx::pg_sys::panic::ErrorReport;
+//! use pgrx::PgSqlErrorCode;
 //! use supabase_wrappers::prelude::*;
-//!
 //! #[wrappers_fdw(
-//!    version = "0.1.0",
+//!    version = "0.1.1",
 //!    author = "Supabase",
-//!    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/helloworld_fdw"
+//!    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/helloworld_fdw",
+//!    error_type = "HelloWorldFdwError"
 //! )]
 //! pub struct HelloWorldFdw {
 //!     //row counter
 //!     row_cnt: i64,
 //!
-//!     // target column name list
+//!     // target column list
 //!     tgt_cols: Vec<Column>,
 //! }
 //!
-//! impl ForeignDataWrapper for HelloWorldFdw {
-//!     pub fn new(options: &HashMap<String, String>) -> Self {
+//! enum HelloWorldFdwError {}
+//!
+//! impl From<HelloWorldFdwError> for ErrorReport {
+//!     fn from(_value: HelloWorldFdwError) -> Self {
+//!         ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, "", "")
+//!     }
+//! }
+//!
+//! type HelloWorldFdwResult<T> = Result<T, HelloWorldFdwError>;
+//!
+//! impl ForeignDataWrapper<HelloWorldFdwError> for HelloWorldFdw {
+//!     fn new(options: &HashMap<String, String>) -> HelloWorldFdwResult<Self> {
 //!         // 'options' is the key-value pairs defined in `CREATE SERVER` SQL, for example,
 //!         //
 //!         // create server my_helloworld_server
@@ -90,12 +104,28 @@
 //!         // You can do any initalization in this new() function, like saving connection
 //!         // info or API url in an variable, but don't do heavy works like database
 //!         // connection or API call.
-//!         Self {
+//!         Ok(Self {
 //!             row_cnt: 0,
 //!             tgt_cols: Vec::new(),
-//!         }
+//!         })
+//!     }
+//!
+//!     fn begin_scan(&mut self, quals: &[Qual], columns: &[Column], sorts: &[Sort], limit: &Option<Limit>, options: &HashMap<String, String>) -> HelloWorldFdwResult<()> {
+//!         // Do any initilization
+//!         Ok(())
+//!     }
+//!
+//!     fn iter_scan(&mut self, row: &mut Row) -> HelloWorldFdwResult<Option<()>> {
+//!         // Return None when done
+//!         Ok(None)
+//!     }
+//!
+//!     fn end_scan(&mut self) -> HelloWorldFdwResult<()> {
+//!         // Cleanup any resources
+//!         Ok(())
 //!     }
 //! }
+//! # }
 //! ```
 //!
 //! To develop a simple FDW supports basic query `SELECT`, you need to implement `begin_scan`, `iter_scan` and `end_scan`.
@@ -120,7 +150,35 @@
 //! Then we can implement [`interface::ForeignDataWrapper`] trait like below,
 //!
 //! ```rust,no_run
-//! impl ForeignDataWrapper for HelloWorldFdw {
+//! use std::collections::HashMap;
+//! use pgrx::pg_sys::panic::ErrorReport;
+//! use pgrx::PgSqlErrorCode;
+//! use supabase_wrappers::prelude::*;
+//!
+//! pub(crate) struct HelloWorldFdw {
+//!     // row counter
+//!     row_cnt: i64,
+//!
+//!     // target column name list
+//!     tgt_cols: Vec<Column>,
+//! }
+//!
+//! enum HelloWorldFdwError {}
+//!
+//! impl From<HelloWorldFdwError> for ErrorReport {
+//!     fn from(_value: HelloWorldFdwError) -> Self {
+//!         ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, "", "")
+//!     }
+//! }
+//!
+//! impl ForeignDataWrapper<HelloWorldFdwError> for HelloWorldFdw {
+//!     fn new(options: &HashMap<String, String>) -> Result<Self, HelloWorldFdwError> {
+//!         Ok(Self {
+//!             row_cnt: 0,
+//!             tgt_cols: Vec::new(),
+//!         })
+//!     }
+//!
 //!     fn begin_scan(
 //!         &mut self,
 //!         _quals: &[Qual],
@@ -128,20 +186,21 @@
 //!         _sorts: &[Sort],
 //!         _limit: &Option<Limit>,
 //!         _options: &HashMap<String, String>,
-//!     ) {
+//!     ) -> Result<(), HelloWorldFdwError> {
 //!         // reset row count
 //!         self.row_cnt = 0;
 //!
 //!         // save a copy of target columns
 //!         self.tgt_cols = columns.to_vec();
+//!         Ok(())
 //!     }
 //!
-//!     fn iter_scan(&mut self, row: &mut Row) -> Option<()> {
+//!     fn iter_scan(&mut self, row: &mut Row) -> Result<Option<()>, HelloWorldFdwError> {
 //!         // this is called on each row and we only return one row here
 //!         if self.row_cnt < 1 {
 //!             // add values to row if they are in target column list
 //!             for tgt_col in &self.tgt_cols {
-//!                 match tgt_col.as_str() {
+//!                 match tgt_col.name.as_str() {
 //!                     "id" => row.push("id", Some(Cell::I64(self.row_cnt))),
 //!                     "col" => row.push("col", Some(Cell::String("Hello world".to_string()))),
 //!                     _ => {}
@@ -151,15 +210,16 @@
 //!             self.row_cnt += 1;
 //!
 //!             // return the 'Some(())' to Postgres and continue data scan
-//!             return Some(());
+//!             return Ok(Some(()));
 //!         }
 //!
 //!         // return 'None' to stop data scan
-//!         None
+//!         Ok(None)
 //!     }
 //!
-//!     fn end_scan(&mut self) {
+//!     fn end_scan(&mut self) -> Result<(), HelloWorldFdwError> {
 //!         // we do nothing here, but you can do things like resource cleanup and etc.
+//!         Ok(())
 //!     }
 //! }
 //! ```
@@ -228,16 +288,21 @@
 //! - [Airtable](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/airtable_fdw): A FDW for [Airtable](https://airtable.com/) API which supports data read only.
 //! - [S3](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/s3_fdw): A FDW for [AWS S3](https://aws.amazon.com/s3/) which supports data read only.
 //! - [Logflare](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/logflare_fdw): A FDW for [Logflare](https://logflare.app/) which supports data read only.
+//! - [Auth0](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/auth0_fdw): A FDW for [Auth0](https://auth0.com/) which supports data read only.
+//! - [SQL Server](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/mssql_fdw): A FDW for [Microsoft SQL Server](https://www.microsoft.com/en-au/sql-server/) which supports data read only.
+//! - [Redis](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/redis_fdw): A FDW for [Redis](https://redis.io/) which supports data read only.
 
 pub mod interface;
+pub mod options;
 pub mod utils;
 
 /// The prelude includes all necessary imports to make Wrappers work
 pub mod prelude {
     pub use crate::interface::*;
+    pub use crate::options::*;
     pub use crate::utils::*;
     pub use crate::wrappers_fdw;
-    pub use ::tokio::runtime::Runtime;
+    pub use tokio::runtime::Runtime;
 }
 
 use pgrx::prelude::*;

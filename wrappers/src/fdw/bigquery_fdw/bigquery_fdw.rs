@@ -18,74 +18,40 @@ use std::str::FromStr;
 
 use supabase_wrappers::prelude::*;
 
-macro_rules! field_type_error {
-    ($field:ident, $err:ident) => {{
-        report_error(
-            PgSqlErrorCode::ERRCODE_FDW_INVALID_DATA_TYPE,
-            &format!("get field {} failed: {}", &$field.name, $err),
-        );
-        None
-    }};
-}
-
 // convert BigQuery field to Cell
-fn field_to_cell(rs: &ResultSet, field: &TableFieldSchema) -> Option<Cell> {
-    match field.r#type {
-        FieldType::Boolean => rs
-            .get_bool_by_name(&field.name)
-            .unwrap_or_else(|err| field_type_error!(field, err))
-            .map(Cell::Bool),
-        FieldType::Int64 | FieldType::Integer => rs
-            .get_i64_by_name(&field.name)
-            .unwrap_or_else(|err| field_type_error!(field, err))
-            .map(Cell::I64),
-        FieldType::Float64 | FieldType::Float => rs
-            .get_f64_by_name(&field.name)
-            .unwrap_or_else(|err| field_type_error!(field, err))
-            .map(Cell::F64),
-        FieldType::Numeric => rs
-            .get_f64_by_name(&field.name)
-            .unwrap_or_else(|err| field_type_error!(field, err))
-            .map(|v| Cell::Numeric(AnyNumeric::try_from(v).unwrap())),
-        FieldType::String => rs
-            .get_string_by_name(&field.name)
-            .unwrap_or_else(|err| field_type_error!(field, err))
-            .map(Cell::String),
-        FieldType::Date => rs
-            .get_string_by_name(&field.name)
-            .unwrap_or_else(|err| field_type_error!(field, err))
-            .map(|v| {
-                let dt = Date::from_str(&v).unwrap();
-                Cell::Date(dt)
-            }),
-        FieldType::Datetime => rs
-            .get_string_by_name(&field.name)
-            .unwrap_or_else(|err| field_type_error!(field, err))
-            .map(|v| {
-                let ts = Timestamp::from_str(&v).unwrap();
-                Cell::Timestamp(ts)
-            }),
-        FieldType::Timestamp => rs
-            .get_f64_by_name(&field.name)
-            .unwrap_or_else(|err| field_type_error!(field, err))
-            .map(|v| {
-                let ts = pgrx::to_timestamp(v);
-                Cell::Timestamp(ts.to_utc())
-            }),
+fn field_to_cell(rs: &ResultSet, field: &TableFieldSchema) -> BigQueryFdwResult<Option<Cell>> {
+    Ok(match field.r#type {
+        FieldType::Boolean => rs.get_bool_by_name(&field.name)?.map(Cell::Bool),
+        FieldType::Int64 | FieldType::Integer => rs.get_i64_by_name(&field.name)?.map(Cell::I64),
+        FieldType::Float64 | FieldType::Float => rs.get_f64_by_name(&field.name)?.map(Cell::F64),
+        FieldType::Numeric => match rs.get_f64_by_name(&field.name)? {
+            Some(v) => Some(Cell::Numeric(AnyNumeric::try_from(v)?)),
+            None => None,
+        },
+        FieldType::String => rs.get_string_by_name(&field.name)?.map(Cell::String),
+        FieldType::Date => match rs.get_string_by_name(&field.name)? {
+            Some(v) => Some(Cell::Date(Date::from_str(&v)?)),
+            None => None,
+        },
+        FieldType::Datetime => match rs.get_string_by_name(&field.name)? {
+            Some(v) => Some(Cell::Timestamp(Timestamp::from_str(&v)?)),
+            None => None,
+        },
+        FieldType::Timestamp => rs.get_f64_by_name(&field.name)?.map(|v| {
+            let ts = pgrx::to_timestamp(v);
+            Cell::Timestamp(ts.to_utc())
+        }),
         _ => {
-            report_error(
-                PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                &format!("field type {:?} not supported", field.r#type),
-            );
-            None
+            return Err(BigQueryFdwError::UnsupportedFieldType(field.r#type.clone()));
         }
-    }
+    })
 }
 
 #[wrappers_fdw(
     version = "0.1.4",
     author = "Supabase",
-    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/bigquery_fdw"
+    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/bigquery_fdw",
+    error_type = "BigQueryFdwError"
 )]
 pub(crate) struct BigQueryFdw {
     rt: Runtime,
@@ -100,7 +66,7 @@ pub(crate) struct BigQueryFdw {
 }
 
 impl BigQueryFdw {
-    const FDW_NAME: &str = "BigQueryFdw";
+    const FDW_NAME: &'static str = "BigQueryFdw";
 
     fn deparse(
         &self,
@@ -156,30 +122,42 @@ impl BigQueryFdw {
 
         sql
     }
+
+    fn extract_row(
+        tgt_cols: &[Column],
+        row: &mut Row,
+        rs: &mut ResultSet,
+    ) -> BigQueryFdwResult<bool> {
+        if rs.next_row() {
+            if let Some(schema) = &rs.query_response().schema {
+                if let Some(fields) = &schema.fields {
+                    for tgt_col in tgt_cols {
+                        if let Some(field) = fields.iter().find(|&f| f.name == tgt_col.name) {
+                            let cell = field_to_cell(rs, field)?;
+                            row.push(&field.name, cell);
+                        }
+                    }
+                    return Ok(true);
+                }
+            }
+        }
+        Ok(false)
+    }
 }
 
-impl ForeignDataWrapper for BigQueryFdw {
-    fn new(options: &HashMap<String, String>) -> Self {
+impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
+    fn new(options: &HashMap<String, String>) -> Result<Self, BigQueryFdwError> {
         let mut ret = BigQueryFdw {
-            rt: create_async_runtime(),
+            rt: create_async_runtime()?,
             client: None,
-            project_id: "".to_string(),
-            dataset_id: "".to_string(),
+            project_id: require_option("project_id", options)?.to_string(),
+            dataset_id: require_option("dataset_id", options)?.to_string(),
             table: "".to_string(),
             rowid_col: "".to_string(),
             tgt_cols: Vec::new(),
             scan_result: None,
             auth_mock: None,
         };
-
-        let project_id = require_option("project_id", options);
-        let dataset_id = require_option("dataset_id", options);
-
-        if project_id.is_none() || dataset_id.is_none() {
-            return ret;
-        }
-        ret.project_id = project_id.unwrap();
-        ret.dataset_id = dataset_id.unwrap();
 
         // Is authentication mocked
         let mock_auth: bool = options
@@ -201,18 +179,16 @@ impl ForeignDataWrapper for BigQueryFdw {
                 let auth_mock_uri = auth_mock.uri();
                 let dummy_auth_config = dummy_configuration(&auth_mock_uri);
                 ret.auth_mock = Some(auth_mock);
-                serde_json::to_string_pretty(&dummy_auth_config).unwrap()
+                serde_json::to_string_pretty(&dummy_auth_config)
+                    .expect("dummy auth config should not fail to serialize")
             }
             false => match options.get("sa_key") {
                 Some(sa_key) => sa_key.to_owned(),
                 None => {
-                    let sa_key_id = match require_option("sa_key_id", options) {
-                        Some(sa_key_id) => sa_key_id,
-                        None => return ret,
-                    };
-                    match get_vault_secret(&sa_key_id) {
+                    let sa_key_id = require_option("sa_key_id", options)?;
+                    match get_vault_secret(sa_key_id) {
                         Some(sa_key) => sa_key,
-                        None => return ret,
+                        None => return Ok(ret),
                     }
                 }
             },
@@ -225,7 +201,7 @@ impl ForeignDataWrapper for BigQueryFdw {
                     PgSqlErrorCode::ERRCODE_FDW_ERROR,
                     &format!("parse service account key JSON failed: {}", err),
                 );
-                return ret;
+                return Ok(ret);
             }
         };
 
@@ -246,7 +222,7 @@ impl ForeignDataWrapper for BigQueryFdw {
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
 
-        ret
+        Ok(ret)
     }
 
     fn get_rel_size(
@@ -256,8 +232,8 @@ impl ForeignDataWrapper for BigQueryFdw {
         _sorts: &[Sort],
         _limit: &Option<Limit>,
         _options: &HashMap<String, String>,
-    ) -> (i64, i32) {
-        (0, 0)
+    ) -> Result<(i64, i32), BigQueryFdwError> {
+        Ok((0, 0))
     }
 
     fn begin_scan(
@@ -267,12 +243,8 @@ impl ForeignDataWrapper for BigQueryFdw {
         sorts: &[Sort],
         limit: &Option<Limit>,
         options: &HashMap<String, String>,
-    ) {
-        let table = require_option("table", options);
-        if table.is_none() {
-            return;
-        }
-        self.table = table.unwrap();
+    ) -> Result<(), BigQueryFdwError> {
+        self.table = require_option("table", options)?.to_string();
         self.tgt_cols = columns.to_vec();
 
         let location = options
@@ -343,32 +315,15 @@ impl ForeignDataWrapper for BigQueryFdw {
                 }
             }
         }
+
+        Ok(())
     }
 
-    fn iter_scan(&mut self, row: &mut Row) -> Option<()> {
+    fn iter_scan(&mut self, row: &mut Row) -> Result<Option<()>, BigQueryFdwError> {
         if let Some(client) = &self.client {
             if let Some(ref mut rs) = self.scan_result {
-                let mut extract_row = |rs: &mut ResultSet| {
-                    if rs.next_row() {
-                        if let Some(schema) = &rs.query_response().schema {
-                            if let Some(fields) = &schema.fields {
-                                for tgt_col in &self.tgt_cols {
-                                    if let Some(field) =
-                                        fields.iter().find(|&f| f.name == tgt_col.name)
-                                    {
-                                        let cell = field_to_cell(rs, field);
-                                        row.push(&field.name, cell);
-                                    }
-                                }
-                                return true;
-                            }
-                        }
-                    }
-                    false
-                };
-
-                if extract_row(rs) {
-                    return Some(());
+                if Self::extract_row(&self.tgt_cols, row, rs)? {
+                    return Ok(Some(()));
                 }
 
                 // deal with pagination
@@ -387,8 +342,8 @@ impl ForeignDataWrapper for BigQueryFdw {
                                 Ok(resp) => {
                                     // replace result set with data from the new page
                                     *rs = ResultSet::new(QueryResponse::from(resp));
-                                    if extract_row(rs) {
-                                        return Some(());
+                                    if Self::extract_row(&self.tgt_cols, row, rs)? {
+                                        return Ok(Some(()));
                                     }
                                 }
                                 Err(err) => {
@@ -404,24 +359,22 @@ impl ForeignDataWrapper for BigQueryFdw {
                 }
             }
         }
-        None
+        Ok(None)
     }
 
-    fn end_scan(&mut self) {
+    fn end_scan(&mut self) -> Result<(), BigQueryFdwError> {
         self.scan_result.take();
+        Ok(())
     }
 
-    fn begin_modify(&mut self, options: &HashMap<String, String>) {
-        let table = require_option("table", options);
-        let rowid_col = require_option("rowid_column", options);
-        if table.is_none() || rowid_col.is_none() {
-            return;
-        }
-        self.table = table.unwrap();
-        self.rowid_col = rowid_col.unwrap();
+    fn begin_modify(&mut self, options: &HashMap<String, String>) -> Result<(), BigQueryFdwError> {
+        self.table = require_option("table", options)?.to_string();
+        self.rowid_col = require_option("rowid_column", options)?.to_string();
+
+        Ok(())
     }
 
-    fn insert(&mut self, src: &Row) {
+    fn insert(&mut self, src: &Row) -> Result<(), BigQueryFdwError> {
         if let Some(ref mut client) = self.client {
             let mut insert_request = TableDataInsertAllRequest::new();
             let mut row_json = json!({});
@@ -445,7 +398,7 @@ impl ForeignDataWrapper for BigQueryFdw {
                 }
             }
 
-            insert_request.add_row(None, row_json).unwrap();
+            insert_request.add_row(None, row_json)?;
 
             // execute insert job on BigQuery
             if let Err(err) = self.rt.block_on(client.tabledata().insert_all(
@@ -460,9 +413,11 @@ impl ForeignDataWrapper for BigQueryFdw {
                 );
             }
         }
+
+        Ok(())
     }
 
-    fn update(&mut self, rowid: &Cell, new_row: &Row) {
+    fn update(&mut self, rowid: &Cell, new_row: &Row) -> Result<(), BigQueryFdwError> {
         if let Some(ref mut client) = self.client {
             let mut sets = Vec::new();
             for (col, cell) in new_row.iter() {
@@ -495,9 +450,10 @@ impl ForeignDataWrapper for BigQueryFdw {
                 );
             }
         }
+        Ok(())
     }
 
-    fn delete(&mut self, rowid: &Cell) {
+    fn delete(&mut self, rowid: &Cell) -> Result<(), BigQueryFdwError> {
         if let Some(ref mut client) = self.client {
             let sql = format!(
                 "delete from `{}.{}.{}` where {} = {}",
@@ -514,11 +470,11 @@ impl ForeignDataWrapper for BigQueryFdw {
                 );
             }
         }
+        Ok(())
     }
-
-    fn end_modify(&mut self) {}
 }
 
+use crate::fdw::bigquery_fdw::{BigQueryFdwError, BigQueryFdwResult};
 use auth_mock::GoogleAuthMock;
 
 mod auth_mock {

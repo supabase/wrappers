@@ -4,16 +4,19 @@
 
 `Wrappers` is also a collection of FDWs built by [Supabase](https://www.supabase.com). We currently support the following FDWs, with more under development:
 
-| FDW | Description | Data Read | Data Modify | 
-|----------------|---------------|---------------|----------------|
-| [HelloWorld](./wrappers/src/fdw/helloworld_fdw) | A demo FDW to show how to develop a basic FDW. | | | 
-| [BigQuery](./wrappers/src/fdw/bigquery_fdw) | A FDW for Google [BigQuery](https://cloud.google.com/bigquery) | :white_check_mark: | :white_check_mark: | 
-| [Clickhouse](./wrappers/src/fdw/clickhouse_fdw)  | A FDW for [ClickHouse](https://clickhouse.com/) | :white_check_mark: | :white_check_mark: | 
-| [Stripe](./wrappers/src/fdw/stripe_fdw) | A FDW for [Stripe](https://stripe.com/) API | :white_check_mark: | :white_check_mark: |
-| [Firebase](./wrappers/src/fdw/firebase_fdw) | A FDW for Google [Firebase](https://firebase.google.com/) | :white_check_mark: | :x: |
-| [Airtable](./wrappers/src/fdw/airtable_fdw) | A FDW for [Airtable](https://airtable.com/) API | :white_check_mark: | :x: |
-| [S3](./wrappers/src/fdw/s3_fdw) | A FDW for [AWS S3](https://aws.amazon.com/s3/) | :white_check_mark: | :x: |
-| [Logflare](./wrappers/src/fdw/logflare_fdw) | A FDW for [Logflare](https://logflare.app/) | :white_check_mark: | :x: |
+| FDW                                             | Description                                                    | Read | Modify |
+| ----------------------------------------------- | -------------------------------------------------------------- | ---- | ------ |
+| [HelloWorld](./wrappers/src/fdw/helloworld_fdw) | A demo FDW to show how to develop a basic FDW.                 |      |        |
+| [BigQuery](./wrappers/src/fdw/bigquery_fdw)     | A FDW for Google [BigQuery](https://cloud.google.com/bigquery) | ✅   | ✅     |
+| [Clickhouse](./wrappers/src/fdw/clickhouse_fdw) | A FDW for [ClickHouse](https://clickhouse.com/)                | ✅   | ✅     |
+| [Stripe](./wrappers/src/fdw/stripe_fdw)         | A FDW for [Stripe](https://stripe.com/) API                    | ✅   | ✅     |
+| [Firebase](./wrappers/src/fdw/firebase_fdw)     | A FDW for Google [Firebase](https://firebase.google.com/)      | ✅   | ❌     |
+| [Airtable](./wrappers/src/fdw/airtable_fdw)     | A FDW for [Airtable](https://airtable.com/) API                | ✅   | ❌     |
+| [S3](./wrappers/src/fdw/s3_fdw)                 | A FDW for [AWS S3](https://aws.amazon.com/s3/)                 | ✅   | ❌     |
+| [Logflare](./wrappers/src/fdw/logflare_fdw)     | A FDW for [Logflare](https://logflare.app/)                    | ✅   | ❌     |
+| [Auth0](./wrappers/src/fdw/auth0_fdw)           | A FDW for [Auth0](https://auth0.com/)                          | ✅   | ❌     |
+| [SQL Server](./wrappers/src/fdw/mssql_fdw)      | A FDW for [Microsoft SQL Server](https://www.microsoft.com/en-au/sql-server/) | ✅   | ❌     |
+| [Redis](./wrappers/src/fdw/redis_fdw)           | A FDW for [Redis](https://redis.io/) | ✅   | ❌     |
 
 ## Features
 
@@ -25,7 +28,8 @@
 
 ## Documentation
 
-[Documentation on docs.rs](https://docs.rs/supabase-wrappers/latest/supabase_wrappers/).
+- [Usage Docs](https://supabase.github.io/wrappers/)
+- [Developer Docs (docs.rs)](https://docs.rs/supabase-wrappers/latest/supabase_wrappers/)
 
 ## Installation
 
@@ -81,7 +85,7 @@ git clone https://github.com/supabase/wrappers.git
 
 ```bash
 cd wrappers/wrappers
-cargo pgrx run pg14 --features helloworld_fdw
+cargo pgrx run pg15 --features helloworld_fdw
 ```
 
 3. Create the extension, foreign data wrapper and related objects:
@@ -135,7 +139,7 @@ cargo pgrx test --features all_fdws,pg15
 ## Limitations
 
 - Windows is not supported, that limitation inherits from [pgrx](https://github.com/tcdi/pgrx).
-- Currently only supports PostgreSQL v14 and v15.
+- Currently only supports PostgreSQL v14, v15 and v16.
 - Generated column is not supported.
 
 ## Contribution
@@ -146,11 +150,8 @@ All contributions, feature requests, bug report or ideas are welcomed.
 
 [Apache License Version 2.0](./LICENSE)
 
-
 [![crates.io badge](https://img.shields.io/crates/v/supabase-wrappers.svg)](https://crates.io/crates/supabase-wrappers)
 [![docs.rs badge](https://docs.rs/supabase-wrappers/badge.svg)](https://docs.rs/supabase-wrappers)
 [![Test Status](https://img.shields.io/github/actions/workflow/status/supabase/wrappers/test_wrappers.yml?branch=main&label=test)](https://github.com/supabase/wrappers/actions/workflows/test_wrappers.yml)
 [![MIT/Apache-2 licensed](https://img.shields.io/crates/l/supabase-wrappers.svg)](./LICENSE)
 [![Contributors](https://img.shields.io/github/contributors/supabase/wrappers)](https://github.com/supabase/wrappers/graphs/contributors)
-
-

@@ -9,7 +9,7 @@ use parquet::arrow::async_reader::{
 use parquet::arrow::ProjectionMask;
 use pgrx::datum::datetime_support::to_timestamp;
 use pgrx::pg_sys;
-use pgrx::prelude::{Date, PgSqlErrorCode};
+use pgrx::prelude::Date;
 use std::cmp::min;
 use std::io::{Cursor, Error as IoError, ErrorKind, Result as IoResult, SeekFrom};
 use std::pin::Pin;
@@ -18,6 +18,8 @@ use tokio::io::{AsyncRead, AsyncSeek, ReadBuf};
 use tokio::runtime::Handle;
 
 use supabase_wrappers::prelude::*;
+
+use super::{S3FdwError, S3FdwResult};
 
 // convert an error to IO error
 #[inline]
@@ -60,10 +62,13 @@ impl S3ParquetReader {
                 .send(),
         )
         .map_err(to_io_error)
-        .map(|output| {
-            let object_size = output.object_size() as u64;
+        .and_then(|output| {
+            let object_size = output.object_size().ok_or::<IoError>(IoError::new(
+                ErrorKind::Other,
+                "object has no size attribute",
+            ))? as u64;
             self.object_size = Some(object_size);
-            object_size
+            Ok(object_size)
         })
     }
 }
@@ -140,14 +145,15 @@ pub(super) struct S3Parquet {
 }
 
 impl S3Parquet {
-    const FDW_NAME: &str = "S3Fdw";
+    const FDW_NAME: &'static str = "S3Fdw";
 
     // open batch stream from local buffer
-    pub(super) async fn open_local_stream(&mut self, buf: Vec<u8>) {
+    pub(super) async fn open_local_stream(&mut self, buf: Vec<u8>) -> S3FdwResult<()> {
         let cursor: Box<dyn AsyncFileReader> = Box::new(Cursor::new(buf));
-        let builder = ParquetRecordBatchStreamBuilder::new(cursor).await.unwrap();
-        let stream = builder.build().unwrap();
+        let builder = ParquetRecordBatchStreamBuilder::new(cursor).await?;
+        let stream = builder.build()?;
         self.stream = Some(stream);
+        Ok(())
     }
 
     // open async record batch stream
@@ -160,7 +166,7 @@ impl S3Parquet {
         bucket: &str,
         object: &str,
         tgt_cols: &[Column],
-    ) {
+    ) -> S3FdwResult<()> {
         let handle = Handle::current();
         let rdr = S3ParquetReader::new(client, bucket, object);
 
@@ -201,72 +207,65 @@ impl S3Parquet {
                 let mask = ProjectionMask::roots(schema, project_indexes);
                 builder.with_projection(mask).build()
             })
-            .map_err(to_io_error)
-            .unwrap();
+            .map_err(|err| parquet::errors::ParquetError::General(err.to_string()))?;
 
         self.stream = Some(stream);
         self.batch = None;
         self.batch_idx = 0;
+
+        Ok(())
     }
 
     // refill record batch
-    pub(super) async fn refill(&mut self) -> Option<()> {
+    pub(super) async fn refill(&mut self) -> S3FdwResult<Option<()>> {
         // if there are still records in the batch
         if let Some(batch) = &self.batch {
             if self.batch_idx < batch.num_rows() {
-                return Some(());
+                return Ok(Some(()));
             }
         }
 
         // otherwise, read one moe batch
         if let Some(ref mut stream) = &mut self.stream {
-            match stream.try_next().await {
-                Ok(result) => {
-                    return result.map(|batch| {
-                        stats::inc_stats(
-                            Self::FDW_NAME,
-                            stats::Metric::RowsIn,
-                            batch.num_rows() as i64,
-                        );
-                        stats::inc_stats(
-                            Self::FDW_NAME,
-                            stats::Metric::BytesIn,
-                            batch.get_array_memory_size() as i64,
-                        );
+            let result = stream.try_next().await?;
+            return Ok(result.map(|batch| {
+                stats::inc_stats(
+                    Self::FDW_NAME,
+                    stats::Metric::RowsIn,
+                    batch.num_rows() as i64,
+                );
+                stats::inc_stats(
+                    Self::FDW_NAME,
+                    stats::Metric::BytesIn,
+                    batch.get_array_memory_size() as i64,
+                );
 
-                        self.batch = Some(batch);
-                        self.batch_idx = 0;
-                    })
-                }
-                Err(err) => {
-                    report_error(
-                        PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                        &format!("read parquet record batch failed: {}", err),
-                    );
-                    return None;
-                }
-            }
+                self.batch = Some(batch);
+                self.batch_idx = 0;
+            }));
         }
 
-        None
+        Ok(None)
     }
 
     // read one row from record batch
-    pub(super) fn read_into_row(&mut self, row: &mut Row, tgt_cols: &Vec<Column>) -> Option<()> {
+    pub(super) fn read_into_row(
+        &mut self,
+        row: &mut Row,
+        tgt_cols: &Vec<Column>,
+    ) -> S3FdwResult<Option<()>> {
         if let Some(batch) = &self.batch {
             for tgt_col in tgt_cols {
                 let col = batch
                     .column_by_name(&tgt_col.name)
-                    .unwrap_or_else(|| panic!("column {} not found in parquet file", tgt_col.name));
+                    .ok_or(S3FdwError::ColumnNotFound(tgt_col.name.clone()))?;
 
                 macro_rules! col_to_cell {
                     ($array_type:ident, $cell_type:ident) => {{
                         let arr = col
                             .as_any()
                             .downcast_ref::<array::$array_type>()
-                            .unwrap_or_else(|| {
-                                panic!("column '{}' data type not match", tgt_col.name)
-                            });
+                            .ok_or(S3FdwError::ColumnTypeNotMatch(tgt_col.name.clone()))?;
                         if arr.is_null(self.batch_idx) {
                             None
                         } else {
@@ -287,14 +286,12 @@ impl S3Parquet {
                         let arr = col
                             .as_any()
                             .downcast_ref::<array::Float64Array>()
-                            .unwrap_or_else(|| {
-                                panic!("column '{}' data type not match", tgt_col.name)
-                            });
+                            .ok_or(S3FdwError::ColumnTypeNotMatch(tgt_col.name.clone()))?;
                         if arr.is_null(self.batch_idx) {
                             None
                         } else {
                             let value = arr.value(self.batch_idx);
-                            let num = pgrx::AnyNumeric::try_from(value).unwrap();
+                            let num = pgrx::AnyNumeric::try_from(value)?;
                             Some(Cell::Numeric(num))
                         }
                     }
@@ -302,9 +299,7 @@ impl S3Parquet {
                         let arr = col
                             .as_any()
                             .downcast_ref::<array::BinaryArray>()
-                            .unwrap_or_else(|| {
-                                panic!("column '{}' data type not match", tgt_col.name)
-                            });
+                            .ok_or(S3FdwError::ColumnTypeNotMatch(tgt_col.name.clone()))?;
                         if arr.is_null(self.batch_idx) {
                             None
                         } else {
@@ -316,14 +311,13 @@ impl S3Parquet {
                         let arr = col
                             .as_any()
                             .downcast_ref::<array::Date64Array>()
-                            .unwrap_or_else(|| {
-                                panic!("column '{}' data type not match", tgt_col.name)
-                            });
+                            .ok_or(S3FdwError::ColumnTypeNotMatch(tgt_col.name.clone()))?;
                         if arr.is_null(self.batch_idx) {
                             None
                         } else {
                             arr.value_as_date(self.batch_idx).map(|dt| {
-                                let epoch = NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
+                                let epoch = NaiveDate::from_ymd_opt(1970, 1, 1)
+                                    .expect("1/1/1970 is a valid NaiveDate");
                                 let seconds_from_epoch =
                                     dt.signed_duration_since(epoch).num_seconds();
                                 let ts = to_timestamp(seconds_from_epoch as f64);
@@ -335,9 +329,7 @@ impl S3Parquet {
                         let arr = col
                             .as_any()
                             .downcast_ref::<array::TimestampNanosecondArray>()
-                            .unwrap_or_else(|| {
-                                panic!("column '{}' data type not match", tgt_col.name)
-                            });
+                            .ok_or(S3FdwError::ColumnTypeNotMatch(tgt_col.name.clone()))?;
                         if arr.is_null(self.batch_idx) {
                             None
                         } else {
@@ -347,19 +339,13 @@ impl S3Parquet {
                             })
                         }
                     }
-                    _ => {
-                        report_error(
-                            PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                            &format!("column '{}' data type not supported", tgt_col.name),
-                        );
-                        None
-                    }
+                    _ => return Err(S3FdwError::UnsupportedColumnType(tgt_col.name.clone())),
                 };
                 row.push(&tgt_col.name, cell);
             }
             self.batch_idx += 1;
-            return Some(());
+            return Ok(Some(()));
         }
-        None
+        Ok(None)
     }
 }

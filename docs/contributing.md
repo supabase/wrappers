@@ -36,6 +36,8 @@ Try out the commands below to spin up a database with the extension installed & 
 CREATE EXTENSION
 ```
 
+For debugging, you can make use of [`notice!` macros](https://docs.rs/pgrx/latest/pgrx/macro.notice.html) to print out statements while using your wrapper in `psql`.
+
 ## Documentation
 
 All public API must be documented. Building documentation requires python 3.6+
@@ -66,3 +68,12 @@ If you have write access to the repo, docs can be updated using
 ```
 mkdocs gh-deploy
 ```
+
+## Community Wrappers
+
+Unfortunately, we cannot support community Wrappers inside the Supabase Dashboard until the Wrappers API is stabilized. You can [vote your favorite Wrapper](https://github.com/supabase/wrappers/discussions/136) if you'd like it to be added to Supabase in the future.
+
+If you have developed a Wrapper that you want inside the Supabase Dashboard, please contribute it as a PR in this repo.
+
+Once we release Wrappers 1.0, we will support community Wrappers within the Supabase Dashboard.
+

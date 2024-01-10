@@ -1,0 +1,54 @@
+name: Test Wrappers
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Run supabase_wrappers tests
+    runs-on: ubuntu-20.04
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+
+    - run: |
+        sudo apt remove -y postgres*
+        sudo apt-get install -y wget gnupg
+        sudo sh -c 'echo "deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+        wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+        sudo apt-get update -y -qq --fix-missing
+        sudo apt-get install -y \
+          clang-10 \
+          llvm-10 \
+          clang \
+          gcc \
+          make \
+          build-essential \
+          libz-dev \
+          zlib1g-dev \
+          strace \
+          libssl-dev \
+          pkg-config \
+          postgresql-15 \
+          postgresql-server-dev-15
+        sudo chmod a+rwx `/usr/lib/postgresql/15/bin/pg_config --pkglibdir` `/usr/lib/postgresql/15/bin/pg_config --sharedir`/extension /var/run/postgresql/
+
+    - run: cargo install cargo-pgrx --version 0.11.2
+    - run: cargo pgrx init --pg15 /usr/lib/postgresql/15/bin/pg_config
+
+    - name: Format code
+      run: |
+        cd supabase-wrappers && cargo fmt --check
+
+    - name: Run clippy
+      run: |
+        cd supabase-wrappers && RUSTFLAGS="-D warnings" cargo clippy --all --tests --no-deps
+
+    - run: cd supabase-wrappers && cargo test

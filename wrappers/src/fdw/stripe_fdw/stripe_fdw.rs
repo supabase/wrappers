@@ -1,5 +1,5 @@
 use crate::stats;
-use pgrx::{datum::datetime_support::to_timestamp, pg_sys, prelude::PgSqlErrorCode, JsonB};
+use pgrx::{datum::datetime_support::to_timestamp, pg_sys, JsonB};
 use reqwest::{self, header, StatusCode, Url};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
@@ -8,29 +8,30 @@ use std::collections::HashMap;
 
 use supabase_wrappers::prelude::*;
 
-fn create_client(api_key: &str) -> ClientWithMiddleware {
+use super::{StripeFdwError, StripeFdwResult};
+
+fn create_client(api_key: &str) -> StripeFdwResult<ClientWithMiddleware> {
     let mut headers = header::HeaderMap::new();
     let value = format!("Bearer {}", api_key);
-    let mut auth_value = header::HeaderValue::from_str(&value).unwrap();
+    let mut auth_value = header::HeaderValue::from_str(&value)?;
     auth_value.set_sensitive(true);
     headers.insert(header::AUTHORIZATION, auth_value);
     let client = reqwest::Client::builder()
         .default_headers(headers)
-        .build()
-        .unwrap();
+        .build()?;
     let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
-    ClientBuilder::new(client)
+    Ok(ClientBuilder::new(client)
         .with(RetryTransientMiddleware::new_with_policy(retry_policy))
-        .build()
+        .build())
 }
 
 fn body_to_rows(
     resp_body: &str,
     normal_cols: Vec<(&str, &str)>,
     tgt_cols: &[Column],
-) -> (Vec<Row>, Option<String>, Option<bool>) {
+) -> StripeFdwResult<(Vec<Row>, Option<String>, Option<bool>)> {
     let mut result = Vec::new();
-    let value: JsonValue = serde_json::from_str(resp_body).unwrap();
+    let value: JsonValue = serde_json::from_str(resp_body)?;
     let is_list = value
         .as_object()
         .and_then(|v| v.get("object"))
@@ -55,8 +56,10 @@ fn body_to_rows(
                 .as_object()
                 .and_then(|v| v.get(*bal_type))
                 .and_then(|v| v.as_array())
-                .map(|v| v[0].as_object().unwrap().clone())
-                .unwrap();
+                .map(|v| v[0].as_object().ok_or(StripeFdwError::InvalidResponse))
+                .transpose()?
+                .ok_or(StripeFdwError::InvalidResponse)?
+                .clone();
             obj.insert(
                 "balance_type".to_string(),
                 JsonValue::String(bal_type.to_string()),
@@ -69,14 +72,14 @@ fn body_to_rows(
         value
             .as_object()
             .map(|v| vec![JsonValue::Object(v.clone())])
-            .unwrap()
+            .ok_or(StripeFdwError::InvalidResponse)?
     };
     let objs = if is_list {
         value
             .as_object()
             .and_then(|v| v.get("data"))
             .and_then(|v| v.as_array())
-            .unwrap()
+            .ok_or(StripeFdwError::InvalidResponse)?
     } else {
         &single_wrapped
     };
@@ -105,7 +108,7 @@ fn body_to_rows(
                 row.push(col_name, cell);
             } else if &tgt_col.name == "attrs" {
                 // put all properties into 'attrs' JSON column
-                let attrs = serde_json::from_str(&obj.to_string()).unwrap();
+                let attrs = serde_json::from_str(&obj.to_string())?;
                 row.push("attrs", Some(Cell::Json(JsonB(attrs))));
             }
         }
@@ -128,10 +131,10 @@ fn body_to_rows(
         .and_then(|v| v.get("has_more"))
         .and_then(|v| v.as_bool());
 
-    (result, cursor, has_more)
+    Ok((result, cursor, has_more))
 }
 
-fn row_to_body(row: &Row) -> JsonValue {
+fn row_to_body(row: &Row) -> StripeFdwResult<JsonValue> {
     let mut map = JsonMap::new();
 
     for (col_name, cell) in row.iter() {
@@ -156,17 +159,16 @@ fn row_to_body(row: &Row) -> JsonValue {
                     }
                 }
                 _ => {
-                    report_error(
-                        PgSqlErrorCode::ERRCODE_FDW_INVALID_DATA_TYPE,
-                        &format!("field type {:?} not supported", cell),
-                    );
-                    return JsonValue::Null;
+                    return Err(StripeFdwError::UnsupportedColumnType(format!(
+                        "{:?}",
+                        col_name
+                    )));
                 }
             }
         }
     }
 
-    JsonValue::Object(map)
+    Ok(JsonValue::Object(map))
 }
 
 fn pushdown_quals(
@@ -236,26 +238,21 @@ fn set_stats_metadata(stats_metadata: JsonB) {
 
 // increase stats metadata 'request_cnt' by 1
 #[inline]
-fn inc_stats_request_cnt(stats_metadata: &mut JsonB) {
+fn inc_stats_request_cnt(stats_metadata: &mut JsonB) -> StripeFdwResult<()> {
     if let Some(v) = stats_metadata.0.get_mut("request_cnt") {
-        *v = (v.as_i64().unwrap() + 1).into();
+        *v = (v.as_i64().ok_or(StripeFdwError::InvalidStats(
+            "`request_cnt` is not a number".to_string(),
+        ))? + 1)
+            .into();
     };
-}
-
-macro_rules! report_request_error {
-    ($err:ident) => {{
-        report_error(
-            PgSqlErrorCode::ERRCODE_FDW_ERROR,
-            &format!("request failed: {}", $err),
-        );
-        return;
-    }};
+    Ok(())
 }
 
 #[wrappers_fdw(
-    version = "0.1.7",
+    version = "0.1.8",
     author = "Supabase",
-    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/stripe_fdw"
+    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/stripe_fdw",
+    error_type = "StripeFdwError"
 )]
 pub(crate) struct StripeFdw {
     rt: Runtime,
@@ -264,10 +261,11 @@ pub(crate) struct StripeFdw {
     scan_result: Option<Vec<Row>>,
     obj: String,
     rowid_col: String,
+    iter_idx: usize,
 }
 
 impl StripeFdw {
-    const FDW_NAME: &str = "StripeFdw";
+    const FDW_NAME: &'static str = "StripeFdw";
 
     fn build_url(
         &self,
@@ -275,8 +273,8 @@ impl StripeFdw {
         quals: &[Qual],
         page_size: i64,
         cursor: &Option<String>,
-    ) -> Option<Url> {
-        let mut url = self.base_url.join(obj).unwrap();
+    ) -> StripeFdwResult<Option<Url>> {
+        let mut url = self.base_url.join(obj)?;
 
         // pushdown quals other than id
         // ref: https://stripe.com/docs/api/[object]/list
@@ -305,16 +303,12 @@ impl StripeFdw {
             "transfers" => vec!["destination"],
             "checkout/sessions" => vec!["customer", "payment_intent", "subscription"],
             _ => {
-                report_error(
-                    PgSqlErrorCode::ERRCODE_FDW_TABLE_NOT_FOUND,
-                    &format!("'{}' object is not implemented", obj),
-                );
-                return None;
+                return Err(StripeFdwError::ObjectNotImplemented(obj.to_string()));
             }
         };
         pushdown_quals(&mut url, obj, quals, fields, page_size, cursor);
 
-        Some(url)
+        Ok(Some(url))
     }
 
     // convert response body text to rows
@@ -323,7 +317,7 @@ impl StripeFdw {
         obj: &str,
         resp_body: &str,
         tgt_cols: &[Column],
-    ) -> (Vec<Row>, Option<String>, Option<bool>) {
+    ) -> StripeFdwResult<(Vec<Row>, Option<String>, Option<bool>)> {
         match obj {
             "accounts" => body_to_rows(
                 resp_body,
@@ -614,19 +608,13 @@ impl StripeFdw {
                 ],
                 tgt_cols,
             ),
-            _ => {
-                report_error(
-                    PgSqlErrorCode::ERRCODE_FDW_TABLE_NOT_FOUND,
-                    &format!("'{}' object is not implemented", obj),
-                );
-                (Vec::new(), None, None)
-            }
+            _ => Err(StripeFdwError::ObjectNotImplemented(obj.to_string())),
         }
     }
 }
 
-impl ForeignDataWrapper for StripeFdw {
-    fn new(options: &HashMap<String, String>) -> Self {
+impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
+    fn new(options: &HashMap<String, String>) -> StripeFdwResult<Self> {
         let base_url = options
             .get("api_url")
             .map(|t| t.to_owned())
@@ -642,21 +630,24 @@ impl ForeignDataWrapper for StripeFdw {
             .unwrap_or_else(|| "https://api.stripe.com/v1/".to_string());
         let client = match options.get("api_key") {
             Some(api_key) => Some(create_client(api_key)),
-            None => require_option("api_key_id", options)
-                .and_then(|key_id| get_vault_secret(&key_id))
-                .map(|api_key| create_client(&api_key)),
-        };
+            None => {
+                let key_id = require_option("api_key_id", options)?;
+                get_vault_secret(key_id).map(|api_key| create_client(&api_key))
+            }
+        }
+        .transpose()?;
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
 
-        StripeFdw {
-            rt: create_async_runtime(),
-            base_url: Url::parse(&base_url).unwrap(),
+        Ok(StripeFdw {
+            rt: create_async_runtime()?,
+            base_url: Url::parse(&base_url)?,
             client,
             scan_result: None,
             obj: String::default(),
             rowid_col: String::default(),
-        }
+            iter_idx: 0,
+        })
     }
 
     fn begin_scan(
@@ -666,18 +657,14 @@ impl ForeignDataWrapper for StripeFdw {
         _sorts: &[Sort],
         limit: &Option<Limit>,
         options: &HashMap<String, String>,
-    ) {
-        let obj = if let Some(name) = require_option("object", options) {
-            name
-        } else {
-            return;
-        };
+    ) -> StripeFdwResult<()> {
+        let obj = require_option("object", options)?;
 
         if let Some(client) = &self.client {
             let page_size = 100; // maximum page size limit for Stripe API
             let page_cnt = if let Some(limit) = limit {
                 if limit.count == 0 {
-                    return;
+                    return Ok(());
                 }
                 (limit.offset + limit.count) / page_size + 1
             } else {
@@ -691,52 +678,50 @@ impl ForeignDataWrapper for StripeFdw {
 
             while page < page_cnt {
                 // build url
-                let url = self.build_url(&obj, quals, page_size, &cursor);
-                if url.is_none() {
-                    return;
-                }
-                let url = url.unwrap();
+                let url = self.build_url(obj, quals, page_size, &cursor)?;
+                let Some(url) = url else {
+                    return Ok(());
+                };
+
+                inc_stats_request_cnt(&mut stats_metadata)?;
 
                 // make api call
-                inc_stats_request_cnt(&mut stats_metadata);
-                match self.rt.block_on(client.get(url).send()) {
-                    Ok(resp) => {
-                        stats::inc_stats(
-                            Self::FDW_NAME,
-                            stats::Metric::BytesIn,
-                            resp.content_length().unwrap_or(0) as i64,
-                        );
+                let body = self.rt.block_on(client.get(url).send()).and_then(|resp| {
+                    stats::inc_stats(
+                        Self::FDW_NAME,
+                        stats::Metric::BytesIn,
+                        resp.content_length().unwrap_or(0) as i64,
+                    );
 
-                        if resp.status() == StatusCode::NOT_FOUND {
-                            // if it is 404 error, we should treat it as an empty
-                            // result rather than a request error
+                    if resp.status() == StatusCode::NOT_FOUND {
+                        // if it is 404 error, we should treat it as an empty
+                        // result rather than a request error
+                        return Ok(String::new());
+                    }
+
+                    resp.error_for_status()
+                        .and_then(|resp| self.rt.block_on(resp.text()))
+                        .map_err(reqwest_middleware::Error::from)
+                })?;
+                if body.is_empty() {
+                    break;
+                }
+
+                // convert response body to rows
+                let (rows, starting_after, has_more) = self.resp_to_rows(obj, &body, columns)?;
+                if rows.is_empty() {
+                    break;
+                }
+                result.extend(rows);
+                match has_more {
+                    Some(has_more) => {
+                        if !has_more {
                             break;
                         }
-
-                        match resp.error_for_status() {
-                            Ok(resp) => {
-                                let body = self.rt.block_on(resp.text()).unwrap();
-                                let (rows, starting_after, has_more) =
-                                    self.resp_to_rows(&obj, &body, columns);
-                                if rows.is_empty() {
-                                    break;
-                                }
-                                result.extend(rows);
-                                match has_more {
-                                    Some(has_more) => {
-                                        if !has_more {
-                                            break;
-                                        }
-                                    }
-                                    None => break,
-                                }
-                                cursor = starting_after;
-                            }
-                            Err(err) => report_request_error!(err),
-                        }
                     }
-                    Err(err) => report_request_error!(err),
+                    None => break,
                 }
+                cursor = starting_after;
 
                 page += 1;
             }
@@ -748,100 +733,110 @@ impl ForeignDataWrapper for StripeFdw {
 
             self.scan_result = Some(result);
         }
+
+        Ok(())
     }
 
-    fn iter_scan(&mut self, row: &mut Row) -> Option<()> {
+    fn iter_scan(&mut self, row: &mut Row) -> StripeFdwResult<Option<()>> {
         if let Some(ref mut result) = self.scan_result {
-            if !result.is_empty() {
-                return result
-                    .drain(0..1)
-                    .last()
-                    .map(|src_row| row.replace_with(src_row));
+            if self.iter_idx < result.len() {
+                row.replace_with(result[self.iter_idx].clone());
+                self.iter_idx += 1;
+                return Ok(Some(()));
             }
         }
-        None
+        Ok(None)
     }
 
-    fn end_scan(&mut self) {
+    fn re_scan(&mut self) -> StripeFdwResult<()> {
+        self.iter_idx = 0;
+        Ok(())
+    }
+
+    fn end_scan(&mut self) -> StripeFdwResult<()> {
         self.scan_result.take();
+        Ok(())
     }
 
-    fn begin_modify(&mut self, options: &HashMap<String, String>) {
-        self.obj = require_option("object", options).unwrap_or_default();
-        self.rowid_col = require_option("rowid_column", options).unwrap_or_default();
+    fn begin_modify(&mut self, options: &HashMap<String, String>) -> StripeFdwResult<()> {
+        self.obj = require_option("object", options)?.to_string();
+        self.rowid_col = require_option("rowid_column", options)?.to_string();
+        Ok(())
     }
 
-    fn insert(&mut self, src: &Row) {
+    fn insert(&mut self, src: &Row) -> StripeFdwResult<()> {
         if let Some(ref mut client) = self.client {
-            let url = self.base_url.join(&self.obj).unwrap();
-            let body = row_to_body(src);
+            let url = self.base_url.join(&self.obj)?;
+            let body = row_to_body(src)?;
             if body.is_null() {
-                return;
+                return Ok(());
             }
 
             let mut stats_metadata = get_stats_metadata();
+
+            inc_stats_request_cnt(&mut stats_metadata)?;
 
             // call Stripe API
-            inc_stats_request_cnt(&mut stats_metadata);
-            match self.rt.block_on(client.post(url).form(&body).send()) {
-                Ok(resp) => match resp.error_for_status() {
-                    Ok(resp) => {
-                        stats::inc_stats(
-                            Self::FDW_NAME,
-                            stats::Metric::BytesIn,
-                            resp.content_length().unwrap_or(0) as i64,
-                        );
-                        let body = self.rt.block_on(resp.text()).unwrap();
-                        let json: JsonValue = serde_json::from_str(&body).unwrap();
-                        if let Some(id) = json.get("id").and_then(|v| v.as_str()) {
-                            report_info(&format!("inserted {} {}", self.obj, id));
-                        }
-                    }
-                    Err(err) => report_request_error!(err),
-                },
-                Err(err) => report_request_error!(err),
+            let body = self
+                .rt
+                .block_on(client.post(url).form(&body).send())
+                .and_then(|resp| {
+                    resp.error_for_status()
+                        .and_then(|resp| {
+                            stats::inc_stats(
+                                Self::FDW_NAME,
+                                stats::Metric::BytesIn,
+                                resp.content_length().unwrap_or(0) as i64,
+                            );
+                            self.rt.block_on(resp.text())
+                        })
+                        .map_err(reqwest_middleware::Error::from)
+                })?;
+
+            let json: JsonValue = serde_json::from_str(&body)?;
+            if let Some(id) = json.get("id").and_then(|v| v.as_str()) {
+                report_info(&format!("inserted {} {}", self.obj, id));
             }
 
             set_stats_metadata(stats_metadata);
         }
+        Ok(())
     }
 
-    fn update(&mut self, rowid: &Cell, new_row: &Row) {
+    fn update(&mut self, rowid: &Cell, new_row: &Row) -> StripeFdwResult<()> {
         if let Some(ref mut client) = self.client {
             let mut stats_metadata = get_stats_metadata();
 
             match rowid {
                 Cell::String(rowid) => {
-                    let url = self
-                        .base_url
-                        .join(&format!("{}/", self.obj))
-                        .unwrap()
-                        .join(rowid)
-                        .unwrap();
-                    let body = row_to_body(new_row);
+                    let url = self.base_url.join(&format!("{}/", self.obj))?.join(rowid)?;
+                    let body = row_to_body(new_row)?;
                     if body.is_null() {
-                        return;
+                        return Ok(());
                     }
 
+                    inc_stats_request_cnt(&mut stats_metadata)?;
+
                     // call Stripe API
-                    inc_stats_request_cnt(&mut stats_metadata);
-                    match self.rt.block_on(client.post(url).form(&body).send()) {
-                        Ok(resp) => match resp.error_for_status() {
-                            Ok(resp) => {
-                                stats::inc_stats(
-                                    Self::FDW_NAME,
-                                    stats::Metric::BytesIn,
-                                    resp.content_length().unwrap_or(0) as i64,
-                                );
-                                let body = self.rt.block_on(resp.text()).unwrap();
-                                let json: JsonValue = serde_json::from_str(&body).unwrap();
-                                if let Some(id) = json.get("id").and_then(|v| v.as_str()) {
-                                    report_info(&format!("updated {} {}", self.obj, id));
-                                }
-                            }
-                            Err(err) => report_request_error!(err),
-                        },
-                        Err(err) => report_request_error!(err),
+                    let body = self
+                        .rt
+                        .block_on(client.post(url).form(&body).send())
+                        .and_then(|resp| {
+                            resp.error_for_status()
+                                .and_then(|resp| {
+                                    stats::inc_stats(
+                                        Self::FDW_NAME,
+                                        stats::Metric::BytesIn,
+                                        resp.content_length().unwrap_or(0) as i64,
+                                    );
+                                    self.rt.block_on(resp.text())
+                                })
+                                .map_err(reqwest_middleware::Error::from)
+                        })?;
+
+                    let json: JsonValue = serde_json::from_str(&body)?;
+                    if let Some(id) = json.get("id").and_then(|v| v.as_str()) {
+                        report_info(&format!("updated {} {}", self.obj, id));
                     }
                 }
                 _ => unreachable!(),
@@ -849,40 +844,39 @@ impl ForeignDataWrapper for StripeFdw {
 
             set_stats_metadata(stats_metadata);
         }
+        Ok(())
     }
 
-    fn delete(&mut self, rowid: &Cell) {
+    fn delete(&mut self, rowid: &Cell) -> StripeFdwResult<()> {
         if let Some(ref mut client) = self.client {
             let mut stats_metadata = get_stats_metadata();
 
             match rowid {
                 Cell::String(rowid) => {
-                    let url = self
-                        .base_url
-                        .join(&format!("{}/", self.obj))
-                        .unwrap()
-                        .join(rowid)
-                        .unwrap();
+                    let url = self.base_url.join(&format!("{}/", self.obj))?.join(rowid)?;
+
+                    inc_stats_request_cnt(&mut stats_metadata)?;
 
                     // call Stripe API
-                    inc_stats_request_cnt(&mut stats_metadata);
-                    match self.rt.block_on(client.delete(url).send()) {
-                        Ok(resp) => match resp.error_for_status() {
-                            Ok(resp) => {
-                                stats::inc_stats(
-                                    Self::FDW_NAME,
-                                    stats::Metric::BytesIn,
-                                    resp.content_length().unwrap_or(0) as i64,
-                                );
-                                let body = self.rt.block_on(resp.text()).unwrap();
-                                let json: JsonValue = serde_json::from_str(&body).unwrap();
-                                if let Some(id) = json.get("id").and_then(|v| v.as_str()) {
-                                    report_info(&format!("deleted {} {}", self.obj, id));
-                                }
-                            }
-                            Err(err) => report_request_error!(err),
-                        },
-                        Err(err) => report_request_error!(err),
+                    let body = self
+                        .rt
+                        .block_on(client.delete(url).send())
+                        .and_then(|resp| {
+                            resp.error_for_status()
+                                .and_then(|resp| {
+                                    stats::inc_stats(
+                                        Self::FDW_NAME,
+                                        stats::Metric::BytesIn,
+                                        resp.content_length().unwrap_or(0) as i64,
+                                    );
+                                    self.rt.block_on(resp.text())
+                                })
+                                .map_err(reqwest_middleware::Error::from)
+                        })?;
+
+                    let json: JsonValue = serde_json::from_str(&body)?;
+                    if let Some(id) = json.get("id").and_then(|v| v.as_str()) {
+                        report_info(&format!("deleted {} {}", self.obj, id));
                     }
                 }
                 _ => unreachable!(),
@@ -890,15 +884,19 @@ impl ForeignDataWrapper for StripeFdw {
 
             set_stats_metadata(stats_metadata);
         }
+        Ok(())
     }
 
-    fn end_modify(&mut self) {}
-
-    fn validator(options: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) {
+    fn validator(
+        options: Vec<Option<String>>,
+        catalog: Option<pg_sys::Oid>,
+    ) -> StripeFdwResult<()> {
         if let Some(oid) = catalog {
             if oid == FOREIGN_TABLE_RELATION_ID {
-                check_options_contain(&options, "object");
+                check_options_contain(&options, "object")?;
             }
         }
+
+        Ok(())
     }
 }

@@ -41,15 +41,29 @@ pub fn wrappers_fdw(attr: TokenStream, item: TokenStream) -> TokenStream {
     let mut metas = TokenStream2::new();
     let meta_attrs: Punctuated<MetaNameValue, Token![,]> =
         parse_macro_input!(attr with Punctuated::parse_terminated);
+    let mut error_type: Option<String> = None;
     for attr in meta_attrs {
         let name = format!("{}", attr.path.segments.first().unwrap().ident);
         if let Lit::Str(val) = attr.lit {
             let value = val.value();
-            metas.append_all(quote! {
-                meta.insert(#name.to_owned(), #value.to_owned());
-            });
+            if name == "version" || name == "author" || name == "website" {
+                metas.append_all(quote! {
+                    meta.insert(#name.to_owned(), #value.to_owned());
+                });
+            } else if name == "error_type" {
+                error_type = Some(value);
+            }
         }
     }
+
+    let error_type_ident = if let Some(error_type) = error_type {
+        format_ident!("{}", error_type)
+    } else {
+        let quoted = quote! {
+            compile_error!("Missing `error_type` in the `wrappers_fdw` attribute");
+        };
+        return quoted.into();
+    };
 
     let item: ItemStruct = parse_macro_input!(item as ItemStruct);
     let item_tokens = item.to_token_stream();
@@ -68,6 +82,7 @@ pub fn wrappers_fdw(attr: TokenStream, item: TokenStream) -> TokenStream {
         mod #module_ident {
             use super::#ident;
             use std::collections::HashMap;
+            use pgrx::pg_sys::panic::{ErrorReport, ErrorReportable};
             use pgrx::prelude::*;
             use supabase_wrappers::prelude::*;
 
@@ -79,6 +94,8 @@ pub fn wrappers_fdw(attr: TokenStream, item: TokenStream) -> TokenStream {
             #[pg_extern(create_or_replace)]
             fn #fn_validator_ident(options: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) {
                 #ident::validator(options, catalog)
+                    .map_err(|e| <super::#error_type_ident as Into<ErrorReport>>::into(e))
+                    .report();
             }
 
             #[pg_extern(create_or_replace)]

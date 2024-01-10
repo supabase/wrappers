@@ -1,83 +1,82 @@
 use crate::stats;
-use chrono::{Date, DateTime, NaiveDate, NaiveDateTime, Utc};
+#[allow(deprecated)]
+use chrono::{Date, DateTime, Datelike, NaiveDate, NaiveDateTime, Utc};
 use chrono_tz::Tz;
 use clickhouse_rs::{types, types::Block, types::SqlType, ClientHandle, Pool};
-use pgrx::{prelude::PgSqlErrorCode, to_timestamp};
+use pgrx::to_timestamp;
 use regex::{Captures, Regex};
 use std::collections::HashMap;
 
 use supabase_wrappers::prelude::*;
 
-fn field_to_cell(row: &types::Row<types::Complex>, i: usize) -> Option<Cell> {
-    let sql_type = row.sql_type(i).unwrap();
+use super::{ClickHouseFdwError, ClickHouseFdwResult};
+
+fn field_to_cell(row: &types::Row<types::Complex>, i: usize) -> ClickHouseFdwResult<Option<Cell>> {
+    let sql_type = row.sql_type(i)?;
     match sql_type {
         SqlType::UInt8 => {
             // Bool is stored as UInt8 in ClickHouse, so we treat it as bool here
-            let value = row.get::<u8, usize>(i).unwrap();
-            Some(Cell::Bool(value != 0))
+            let value = row.get::<u8, usize>(i)?;
+            Ok(Some(Cell::Bool(value != 0)))
         }
         SqlType::Int16 => {
-            let value = row.get::<i16, usize>(i).unwrap();
-            Some(Cell::I16(value))
+            let value = row.get::<i16, usize>(i)?;
+            Ok(Some(Cell::I16(value)))
         }
         SqlType::UInt16 => {
-            let value = row.get::<u16, usize>(i).unwrap();
-            Some(Cell::I32(value as i32))
+            let value = row.get::<u16, usize>(i)?;
+            Ok(Some(Cell::I32(value as i32)))
         }
         SqlType::Int32 => {
-            let value = row.get::<i32, usize>(i).unwrap();
-            Some(Cell::I32(value))
+            let value = row.get::<i32, usize>(i)?;
+            Ok(Some(Cell::I32(value)))
         }
         SqlType::UInt32 => {
-            let value = row.get::<u32, usize>(i).unwrap();
-            Some(Cell::I64(value as i64))
+            let value = row.get::<u32, usize>(i)?;
+            Ok(Some(Cell::I64(value as i64)))
         }
         SqlType::Float32 => {
-            let value = row.get::<f32, usize>(i).unwrap();
-            Some(Cell::F32(value))
+            let value = row.get::<f32, usize>(i)?;
+            Ok(Some(Cell::F32(value)))
         }
         SqlType::Float64 => {
-            let value = row.get::<f64, usize>(i).unwrap();
-            Some(Cell::F64(value))
+            let value = row.get::<f64, usize>(i)?;
+            Ok(Some(Cell::F64(value)))
         }
         SqlType::UInt64 => {
-            let value = row.get::<u64, usize>(i).unwrap();
-            Some(Cell::I64(value as i64))
+            let value = row.get::<u64, usize>(i)?;
+            Ok(Some(Cell::I64(value as i64)))
         }
         SqlType::Int64 => {
-            let value = row.get::<i64, usize>(i).unwrap();
-            Some(Cell::I64(value))
+            let value = row.get::<i64, usize>(i)?;
+            Ok(Some(Cell::I64(value)))
         }
         SqlType::String => {
-            let value = row.get::<String, usize>(i).unwrap();
-            Some(Cell::String(value))
+            let value = row.get::<String, usize>(i)?;
+            Ok(Some(Cell::String(value)))
         }
         SqlType::Date => {
-            let value = row.get::<Date<_>, usize>(i).unwrap();
-            let epoch = NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
-            let seconds_from_epoch = value.naive_utc().signed_duration_since(epoch).num_seconds();
-            let ts = to_timestamp(seconds_from_epoch as f64);
-            Some(Cell::Date(pgrx::Date::from(ts)))
+            #[allow(deprecated)]
+            let value = row.get::<Date<_>, usize>(i)?;
+            let dt = pgrx::Date::new(value.year(), value.month() as u8, value.day() as u8)?;
+            Ok(Some(Cell::Date(dt)))
         }
         SqlType::DateTime(_) => {
-            let value = row.get::<DateTime<_>, usize>(i).unwrap();
+            let value = row.get::<DateTime<_>, usize>(i)?;
             let ts = to_timestamp(value.timestamp() as f64);
-            Some(Cell::Timestamp(ts.to_utc()))
+            Ok(Some(Cell::Timestamp(ts.to_utc())))
         }
-        _ => {
-            report_error(
-                PgSqlErrorCode::ERRCODE_FDW_INVALID_DATA_TYPE,
-                &format!("data type {} is not supported", sql_type.to_string()),
-            );
-            None
-        }
+        _ => Err(ClickHouseFdwError::UnsupportedColumnType(
+            sql_type.to_string().into(),
+        )),
     }
 }
 
 #[wrappers_fdw(
     version = "0.1.3",
     author = "Supabase",
-    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/clickhouse_fdw"
+    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/clickhouse_fdw",
+    error_type = "ClickHouseFdwError"
 )]
 pub(crate) struct ClickHouseFdw {
     rt: Runtime,
@@ -92,20 +91,29 @@ pub(crate) struct ClickHouseFdw {
 }
 
 impl ClickHouseFdw {
-    const FDW_NAME: &str = "ClickHouseFdw";
+    const FDW_NAME: &'static str = "ClickHouseFdw";
 
-    fn create_client(&mut self) {
+    fn create_client(&mut self) -> ClickHouseFdwResult<()> {
         let pool = Pool::new(self.conn_str.as_str());
-        self.client = self.rt.block_on(pool.get_handle()).map_or_else(
-            |err| {
-                report_error(
-                    PgSqlErrorCode::ERRCODE_FDW_UNABLE_TO_ESTABLISH_CONNECTION,
-                    &format!("connection failed: {}", err),
-                );
-                None
-            },
-            Some,
-        );
+        self.client = Some(self.rt.block_on(pool.get_handle())?);
+        Ok(())
+    }
+
+    fn replace_all_params(
+        &mut self,
+        re: &Regex,
+        mut replacement: impl FnMut(&Captures) -> ClickHouseFdwResult<String>,
+    ) -> ClickHouseFdwResult<String> {
+        let mut new = String::with_capacity(self.table.len());
+        let mut last_match = 0;
+        for caps in re.captures_iter(&self.table) {
+            let m = caps.get(0).unwrap();
+            new.push_str(&self.table[last_match..m.start()]);
+            new.push_str(&replacement(&caps)?);
+            last_match = m.end();
+        }
+        new.push_str(&self.table[last_match..]);
+        Ok(new)
     }
 
     fn deparse(
@@ -114,35 +122,31 @@ impl ClickHouseFdw {
         columns: &[Column],
         sorts: &[Sort],
         limit: &Option<Limit>,
-    ) -> String {
+    ) -> ClickHouseFdwResult<String> {
         let table = if self.table.starts_with('(') {
             let re = Regex::new(r"\$\{(\w+)\}").unwrap();
-            re.replace_all(&self.table, |caps: &Captures| {
+            let mut params = Vec::new();
+            let mut replacement = |caps: &Captures| -> ClickHouseFdwResult<String> {
                 let param = &caps[1];
-                match quals.iter().find(|&q| q.field == param) {
-                    Some(qual) => {
-                        self.params.push(qual.clone());
+                for qual in quals.iter() {
+                    if qual.field == param {
+                        params.push(qual.clone());
                         match &qual.value {
-                            Value::Cell(cell) => cell.to_string(),
-                            Value::Array(_) => {
-                                report_error(
-                                    PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                                    "invalid query parameter",
-                                );
-                                String::default()
+                            Value::Cell(cell) => return Ok(cell.to_string()),
+                            Value::Array(arr) => {
+                                return Err(ClickHouseFdwError::NoArrayParameter(format!(
+                                    "{:?}",
+                                    arr
+                                )))
                             }
                         }
                     }
-                    None => {
-                        report_error(
-                            PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                            &format!("unmatched query parameter: {}", param),
-                        );
-                        String::default()
-                    }
                 }
-            })
-            .into_owned()
+                Err(ClickHouseFdwError::UnmatchedParameter(param.to_owned()))
+            };
+            let s = self.replace_all_params(&re, &mut replacement)?;
+            self.params = params;
+            s
         } else {
             self.table.clone()
         };
@@ -192,23 +196,24 @@ impl ClickHouseFdw {
             sql.push_str(&format!(" limit {}", real_limit));
         }
 
-        sql
+        Ok(sql)
     }
 }
 
-impl ForeignDataWrapper for ClickHouseFdw {
-    fn new(options: &HashMap<String, String>) -> Self {
-        let rt = create_async_runtime();
+impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
+    fn new(options: &HashMap<String, String>) -> ClickHouseFdwResult<Self> {
+        let rt = create_async_runtime()?;
         let conn_str = match options.get("conn_string") {
             Some(conn_str) => conn_str.to_owned(),
-            None => require_option("conn_string_id", options)
-                .and_then(|conn_str_id| get_vault_secret(&conn_str_id))
-                .unwrap_or_default(),
+            None => {
+                let conn_str_id = require_option("conn_string_id", options)?;
+                get_vault_secret(conn_str_id).unwrap_or_default()
+            }
         };
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
 
-        Self {
+        Ok(Self {
             rt,
             conn_str,
             client: None,
@@ -218,7 +223,7 @@ impl ForeignDataWrapper for ClickHouseFdw {
             scan_blk: None,
             row_idx: 0,
             params: Vec::new(),
-        }
+        })
     }
 
     fn begin_scan(
@@ -228,45 +233,36 @@ impl ForeignDataWrapper for ClickHouseFdw {
         sorts: &[Sort],
         limit: &Option<Limit>,
         options: &HashMap<String, String>,
-    ) {
-        self.create_client();
+    ) -> ClickHouseFdwResult<()> {
+        self.create_client()?;
 
-        let table = require_option("table", options);
-        if table.is_none() {
-            return;
-        }
-        self.table = table.unwrap();
+        self.table = require_option("table", options)?.to_string();
         self.tgt_cols = columns.to_vec();
         self.row_idx = 0;
 
-        let sql = self.deparse(quals, columns, sorts, limit);
+        let sql = self.deparse(quals, columns, sorts, limit)?;
 
         if let Some(ref mut client) = self.client {
             // for simplicity purpose, we fetch whole query result to local,
             // may need optimization in the future.
-            match self.rt.block_on(client.query(&sql).fetch_all()) {
-                Ok(block) => {
-                    stats::inc_stats(
-                        Self::FDW_NAME,
-                        stats::Metric::RowsIn,
-                        block.row_count() as i64,
-                    );
-                    stats::inc_stats(
-                        Self::FDW_NAME,
-                        stats::Metric::RowsOut,
-                        block.row_count() as i64,
-                    );
-                    self.scan_blk = Some(block);
-                }
-                Err(err) => report_error(
-                    PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                    &format!("query failed: {}", err),
-                ),
-            }
+            let block = self.rt.block_on(client.query(&sql).fetch_all())?;
+            stats::inc_stats(
+                Self::FDW_NAME,
+                stats::Metric::RowsIn,
+                block.row_count() as i64,
+            );
+            stats::inc_stats(
+                Self::FDW_NAME,
+                stats::Metric::RowsOut,
+                block.row_count() as i64,
+            );
+            self.scan_blk = Some(block);
         }
+
+        Ok(())
     }
 
-    fn iter_scan(&mut self, row: &mut Row) -> Option<()> {
+    fn iter_scan(&mut self, row: &mut Row) -> ClickHouseFdwResult<Option<()>> {
         if let Some(block) = &self.scan_blk {
             let mut rows = block.rows();
 
@@ -285,35 +281,34 @@ impl ForeignDataWrapper for ClickHouseFdw {
                         .enumerate()
                         .find(|(_, c)| c.name() == tgt_col.name)
                         .unwrap();
-                    let cell = field_to_cell(&src_row, i);
+                    let cell = field_to_cell(&src_row, i)?;
                     let col_name = src_row.name(i).unwrap();
-                    cell.as_ref()?;
+                    if cell.as_ref().is_none() {
+                        return Ok(None);
+                    }
                     row.push(col_name, cell);
                 }
                 self.row_idx += 1;
-                return Some(());
+                return Ok(Some(()));
             }
         }
-        None
+        Ok(None)
     }
 
-    fn end_scan(&mut self) {
+    fn end_scan(&mut self) -> ClickHouseFdwResult<()> {
         self.scan_blk.take();
+        Ok(())
     }
 
-    fn begin_modify(&mut self, options: &HashMap<String, String>) {
-        self.create_client();
+    fn begin_modify(&mut self, options: &HashMap<String, String>) -> ClickHouseFdwResult<()> {
+        self.create_client()?;
 
-        let table = require_option("table", options);
-        let rowid_col = require_option("rowid_column", options);
-        if table.is_none() || rowid_col.is_none() {
-            return;
-        }
-        self.table = table.unwrap();
-        self.rowid_col = rowid_col.unwrap();
+        self.table = require_option("table", options)?.to_string();
+        self.rowid_col = require_option("rowid_column", options)?.to_string();
+        Ok(())
     }
 
-    fn insert(&mut self, src: &Row) {
+    fn insert(&mut self, src: &Row) -> ClickHouseFdwResult<()> {
         if let Some(ref mut client) = self.client {
             let mut row = Vec::new();
             for (col_name, cell) in src.iter() {
@@ -326,51 +321,34 @@ impl ForeignDataWrapper for ClickHouseFdw {
                         Cell::String(v) => row.push((col_name, types::Value::from(v.as_str()))),
                         Cell::Date(_) => {
                             let s = cell.to_string().replace('\'', "");
-                            if let Ok(tm) = NaiveDate::parse_from_str(&s, "%Y-%m-%d") {
-                                let epoch = NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
-                                let duration = tm - epoch;
-                                let dt = types::Value::Date(duration.num_days() as u16, Tz::UTC);
-                                row.push((col_name, dt));
-                            } else {
-                                report_error(
-                                    PgSqlErrorCode::ERRCODE_FDW_INVALID_STRING_FORMAT,
-                                    &format!("invalid date format {}", s),
-                                );
-                            }
+                            let tm = NaiveDate::parse_from_str(&s, "%Y-%m-%d")?;
+                            let epoch = NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
+                            let duration = tm - epoch;
+                            let dt = types::Value::Date(duration.num_days() as u16, Tz::UTC);
+                            row.push((col_name, dt));
                         }
                         Cell::Timestamp(_) => {
                             let s = cell.to_string().replace('\'', "");
-                            if let Ok(tm) = NaiveDateTime::parse_from_str(&s, "%Y-%m-%d %H:%M:%S") {
-                                let tm: DateTime<Utc> = DateTime::from_utc(tm, Utc);
-                                row.push((col_name, types::Value::from(tm)));
-                            } else {
-                                report_error(
-                                    PgSqlErrorCode::ERRCODE_FDW_INVALID_STRING_FORMAT,
-                                    &format!("invalid timestamp format {}", s),
-                                );
-                            }
+                            let tm = NaiveDateTime::parse_from_str(&s, "%Y-%m-%d %H:%M:%S")?;
+                            let tm: DateTime<Utc> = DateTime::from_naive_utc_and_offset(tm, Utc);
+                            row.push((col_name, types::Value::from(tm)));
                         }
-                        _ => report_error(
-                            PgSqlErrorCode::ERRCODE_FDW_INVALID_DATA_TYPE,
-                            &format!("field type {:?} not supported", cell),
-                        ),
+                        _ => {
+                            return Err(ClickHouseFdwError::UnsupportedColumnType(cell.to_string()))
+                        }
                     }
                 }
             }
             let mut block = Block::new();
-            block.push(row).unwrap();
+            block.push(row)?;
 
             // execute query on ClickHouse
-            if let Err(err) = self.rt.block_on(client.insert(&self.table, block)) {
-                report_error(
-                    PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                    &format!("insert failed: {}", err),
-                );
-            }
+            self.rt.block_on(client.insert(&self.table, block))?;
         }
+        Ok(())
     }
 
-    fn update(&mut self, rowid: &Cell, new_row: &Row) {
+    fn update(&mut self, rowid: &Cell, new_row: &Row) -> ClickHouseFdwResult<()> {
         if let Some(ref mut client) = self.client {
             let mut sets = Vec::new();
             for (col, cell) in new_row.iter() {
@@ -392,16 +370,12 @@ impl ForeignDataWrapper for ClickHouseFdw {
             );
 
             // execute query on ClickHouse
-            if let Err(err) = self.rt.block_on(client.execute(&sql)) {
-                report_error(
-                    PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                    &format!("update failed: {}", err),
-                );
-            }
+            self.rt.block_on(client.execute(&sql))?;
         }
+        Ok(())
     }
 
-    fn delete(&mut self, rowid: &Cell) {
+    fn delete(&mut self, rowid: &Cell) -> ClickHouseFdwResult<()> {
         if let Some(ref mut client) = self.client {
             let sql = format!(
                 "alter table {} delete where {} = {}",
@@ -409,14 +383,8 @@ impl ForeignDataWrapper for ClickHouseFdw {
             );
 
             // execute query on ClickHouse
-            if let Err(err) = self.rt.block_on(client.execute(&sql)) {
-                report_error(
-                    PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                    &format!("delete failed: {}", err),
-                );
-            }
+            self.rt.block_on(client.execute(&sql))?;
         }
+        Ok(())
     }
-
-    fn end_modify(&mut self) {}
 }

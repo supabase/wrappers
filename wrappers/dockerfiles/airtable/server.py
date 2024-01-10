@@ -38,11 +38,37 @@ class AirtableMockServer(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     # Populate a test table
-    client.create(test_table, {'field1': 1, 'field2': 'two', 'field3': '2023-07-19T06:39:15.000Z'})
-    client.create(test_table, {'field1': 2, 'field2': 'three', 'field3': '2023-07-20T06:39:15.000Z'})
+    client.create(
+        test_table,
+        {
+            "bool_field": True,
+            "numeric_field": 1,
+            "string_field": "two",
+            "timestamp_field": "2023-07-19T06:39:15.000Z",
+            "object_field": {"foo": "bar"},
+            "strings_array_field": ["foo", "bar"],
+            "numerics_array_field": [1, 2],
+            "bools_array_field": [False],
+            "objects_array_field": [{"foo": "bar"}, {"foo": "baz"}]
+        },
+    )
+    client.create(
+        test_table,
+        {
+            "bool_field": False,
+            "numeric_field": 2,
+            "string_field": "three",
+            "timestamp_field": "2023-07-20T06:39:15.000Z",
+            "object_field": {"foo": "baz"},
+            "strings_array_field": ["baz", "qux"],
+            "numerics_array_field": [3, 4],
+            "bools_array_field": [True, False, True],
+            "objects_array_field": [{"foo": "qux"}]
+        },
+    )
 
     # Create a test view
-    airtablemock.create_view(base_id, test_table, test_view, 'field2 = "three"')
+    airtablemock.create_view(base_id, test_table, test_view, 'string_field = "three"')
 
     # Create web server
     webServer = HTTPServer((hostName, serverPort), AirtableMockServer)

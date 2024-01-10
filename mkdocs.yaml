@@ -10,12 +10,15 @@ nav:
     - Installation: 'installation.md'
     - Wrappers:
       - Airtable: 'airtable.md'
+      - Auth0: 'auth0.md'
       - BigQuery: 'bigquery.md'
       - ClickHouse: 'clickhouse.md'
       - Firebase: 'firebase.md'
       - Logflare: 'logflare.md'
+      - Redis: 'redis.md'
       - S3: 's3.md'
       - Stripe: 'stripe.md'
+      - SQL Server: 'mssql.md'
     - Contributing: 'contributing.md'
 
 theme:

@@ -1,4 +1,4 @@
-[Airtable](https://www.airtable.com) is an easy-to-use online platform for creating and sharing relational databases. 
+[Airtable](https://www.airtable.com) is an easy-to-use online platform for creating and sharing relational databases.
 
 The Airtable Wrapper allows you to read data from your Airtable bases/tables within your Postgres database.
 
@@ -7,7 +7,7 @@ The Airtable Wrapper allows you to read data from your Airtable bases/tables wit
 Before you get started, make sure the `wrappers` extension is installed on your database:
 
 ```sql
-create extension if not exists wrappers;
+create extension if not exists wrappers with schema extensions;
 ```
 
 and then create the foreign data wrapper:
@@ -27,7 +27,7 @@ By default, Postgres stores FDW credentials inide `pg_catalog.pg_foreign_server`
 insert into vault.secrets (name, secret)
 values (
   'airtable',
-  'YOUR_SECRET'
+  '<Airtable API Key or PAT>' -- Airtable API key or Personal Access Token (PAT)
 )
 returning key_id;
 ```
@@ -53,23 +53,23 @@ We need to provide Postgres with the credentials to connect to Airtable, and any
       foreign data wrapper airtable_wrapper
       options (
         api_url 'https://api.airtable.com/v0',  -- Airtable API url, optional
-        api_key '<Airtable API Key>'  -- Airtable API key, required
+        api_key '<Airtable API Key or PAT>'  -- Airtable API key or Personal Access Token (PAT), required
       );
     ```
 
 ## Creating Foreign Tables
 
-The Airtable Wrapper supports data reads from Airtable's [Records](https://airtable.com/developers/web/api/list-records) endpoint (*read only*).
+The Airtable Wrapper supports data reads from Airtable's [Records](https://airtable.com/developers/web/api/list-records) endpoint (_read only_).
 
-| Airtable    | Select            | Insert            | Update            | Delete            | Truncate          |
-| ----------- | :----:            | :----:            | :----:            | :----:            | :----:            |
-| Records     | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
+| Airtable | Select | Insert | Update | Delete | Truncate |
+| -------- | :----: | :----: | :----: | :----: | :------: |
+| Records  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
 
 For example:
 
 ```sql
 create foreign table my_foreign_table (
-  name text,
+  name text
   -- other fields
 )
 server airtable_server
@@ -87,13 +87,17 @@ The full list of foreign table options are below:
 - `table_id` - Airtable table ID, required.
 - `view_id` - Airtable view ID, optional.
 
+## Query Pushdown Support
+
+This FDW doesn't support query pushdown.
+
 ## Examples
 
 Some examples on how to use Airtable foreign tables.
 
 ### Basic example
 
-This will create a "foreign table" inside your Postgres database called `airtable_table`: 
+This will create a "foreign table" inside your Postgres database called `airtable_table`:
 
 ```sql
 create foreign table airtable_table (

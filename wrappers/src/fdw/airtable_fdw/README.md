@@ -11,6 +11,7 @@ This is a foreign data wrapper for [Airtable](https://www.airtable.com). It is d
 
 | Version | Date       | Notes                                                |
 | ------- | ---------- | ---------------------------------------------------- |
+| 0.1.3   | 2023-10-20 | Added jsonb data types support                       |
 | 0.1.2   | 2023-07-19 | Added more data types support                        |
 | 0.1.1   | 2023-07-13 | Added fdw stats collection                           |
 | 0.1.0   | 2022-11-30 | Initial version                                      |

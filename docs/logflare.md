@@ -7,7 +7,7 @@ The Logflare Wrapper allows you to read data from Logflare endpoints within your
 Before you get started, make sure the `wrappers` extension is installed on your database:
 
 ```sql
-create extension if not exists wrappers;
+create extension if not exists wrappers with schema extensions;
 ```
 
 and then create the foreign data wrapper:
@@ -60,9 +60,9 @@ We need to provide Postgres with the credentials to connect to Logflare, and any
 
 The Logflare Wrapper supports data reads from Logflare's endpoints.
 
-| Integration | Select            | Insert            | Update            | Delete            | Truncate          |
-| ----------- | :----:            | :----:            | :----:            | :----:            | :----:            |
-| Logflare    | :white_check_mark:| :x:               | :x:               | :x:               | :x:               |
+| Integration | Select | Insert | Update | Delete | Truncate |
+| ----------- | :----: | :----: | :----: | :----: | :------: |
+| Logflare    |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
 
 For example:
 
@@ -91,6 +91,10 @@ Logflare endpoint query parameters can be passed using specific parameter column
 The full list of foreign table options are below:
 
 - `endpoint` - Logflare endpoint UUID or name, required.
+
+## Query Pushdown Support
+
+This FDW doesn't support query pushdown.
 
 ## Examples
 
@@ -179,4 +183,3 @@ where _param_org_id = 123
   and _param_iso_timestamp_start = '2023-07-01 02:03:04'
   and _param_iso_timestamp_end = '2023-07-02';
 ```
-

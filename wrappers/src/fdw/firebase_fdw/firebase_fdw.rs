@@ -12,36 +12,11 @@ use yup_oauth2::ServiceAccountAuthenticator;
 
 use supabase_wrappers::prelude::*;
 
-macro_rules! report_request_error {
-    ($url:ident, $err:ident) => {
-        report_error(
-            PgSqlErrorCode::ERRCODE_FDW_ERROR,
-            &format!("fetch {} failed: {}", $url, $err),
-        )
-    };
-}
+use super::{FirebaseFdwError, FirebaseFdwResult};
 
-fn get_oauth2_token(sa_key: &str, rt: &Runtime) -> Option<AccessToken> {
-    let creds = match yup_oauth2::parse_service_account_key(sa_key.as_bytes()) {
-        Ok(creds) => creds,
-        Err(err) => {
-            report_error(
-                PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                &format!("parse service account key JSON failed: {}", err),
-            );
-            return None;
-        }
-    };
-    let sa = match rt.block_on(ServiceAccountAuthenticator::builder(creds).build()) {
-        Ok(sa) => sa,
-        Err(err) => {
-            report_error(
-                PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                &format!("invalid service account key: {}", err),
-            );
-            return None;
-        }
-    };
+fn get_oauth2_token(sa_key: &str, rt: &Runtime) -> FirebaseFdwResult<AccessToken> {
+    let creds = yup_oauth2::parse_service_account_key(sa_key.as_bytes())?;
+    let sa = rt.block_on(ServiceAccountAuthenticator::builder(creds).build())?;
     let scopes = &[
         "https://www.googleapis.com/auth/cloud-platform",
         "https://www.googleapis.com/auth/firebase.database",
@@ -49,16 +24,7 @@ fn get_oauth2_token(sa_key: &str, rt: &Runtime) -> Option<AccessToken> {
         "https://www.googleapis.com/auth/identitytoolkit",
         "https://www.googleapis.com/auth/userinfo.email",
     ];
-    match rt.block_on(sa.token(scopes)) {
-        Ok(token) => Some(token),
-        Err(err) => {
-            report_error(
-                PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                &format!("get token failed: {}", err),
-            );
-            None
-        }
-    }
+    Ok(rt.block_on(sa.token(scopes))?)
 }
 
 fn body_to_rows(
@@ -66,17 +32,14 @@ fn body_to_rows(
     obj_key: &str,
     normal_cols: Vec<(&str, &str, &str)>,
     tgt_cols: &[Column],
-) -> Vec<Row> {
+) -> FirebaseFdwResult<Vec<Row>> {
     let mut result = Vec::new();
 
-    let objs = match resp
+    let objs = resp
         .as_object()
         .and_then(|v| v.get(obj_key))
         .and_then(|v| v.as_array())
-    {
-        Some(objs) => objs,
-        None => return result,
-    };
+        .ok_or(FirebaseFdwError::InvalidResponse(resp.to_string()))?;
 
     for obj in objs {
         let mut row = Row::new();
@@ -86,62 +49,68 @@ fn body_to_rows(
             if let Some((src_name, col_name, col_type)) =
                 normal_cols.iter().find(|(_, c, _)| c == &tgt_col.name)
             {
-                let cell = obj
+                let v = obj
                     .as_object()
                     .and_then(|v| v.get(*src_name))
-                    .and_then(|v| match *col_type {
-                        "bool" => v.as_bool().map(Cell::Bool),
-                        "i64" => v.as_i64().map(Cell::I64),
-                        "string" => v.as_str().map(|a| Cell::String(a.to_owned())),
-                        "timestamp" => v.as_str().map(|a| {
-                            let secs = a.parse::<i64>().unwrap() / 1000;
-                            let ts = to_timestamp(secs as f64);
-                            Cell::Timestamp(ts.to_utc())
-                        }),
-                        "timestamp_iso" => v.as_str().map(|a| {
-                            let ts = Timestamp::from_str(a).unwrap();
-                            Cell::Timestamp(ts)
-                        }),
-                        "json" => Some(Cell::Json(JsonB(v.clone()))),
-                        _ => None,
-                    });
+                    .ok_or(FirebaseFdwError::InvalidResponse(resp.to_string()))?;
+                let cell = match *col_type {
+                    "bool" => v.as_bool().map(Cell::Bool),
+                    "i64" => v.as_i64().map(Cell::I64),
+                    "string" => v.as_str().map(|a| Cell::String(a.to_owned())),
+                    "timestamp" => Some(
+                        v.as_str()
+                            .and_then(|a| a.parse::<i64>().ok())
+                            .map(|ms| to_timestamp(ms as f64 / 1000.0).to_utc())
+                            .map(Cell::Timestamp)
+                            .ok_or(FirebaseFdwError::InvalidTimestampFormat(v.to_string()))?,
+                    ),
+                    "timestamp_iso" => Some(
+                        v.as_str()
+                            .and_then(|a| Timestamp::from_str(a).ok())
+                            .map(Cell::Timestamp)
+                            .ok_or(FirebaseFdwError::InvalidTimestampFormat(v.to_string()))?,
+                    ),
+                    "json" => Some(Cell::Json(JsonB(v.clone()))),
+                    _ => {
+                        return Err(FirebaseFdwError::UnsupportedColumnType(format!(
+                            "{}({})",
+                            col_name, col_type
+                        )))
+                    }
+                };
                 row.push(col_name, cell);
             }
         }
 
         // put all properties into 'attrs' JSON column
         if tgt_cols.iter().any(|c| &c.name == "attrs") {
-            let attrs = serde_json::from_str(&obj.to_string()).unwrap();
+            let attrs = serde_json::from_str(&obj.to_string())?;
             row.push("attrs", Some(Cell::Json(JsonB(attrs))));
         }
 
         result.push(row);
     }
 
-    result
+    Ok(result)
 }
 
 // convert response body text to rows
-fn resp_to_rows(obj: &str, resp: &JsonValue, tgt_cols: &[Column]) -> Vec<Row> {
-    let mut result = Vec::new();
-
+fn resp_to_rows(obj: &str, resp: &JsonValue, tgt_cols: &[Column]) -> FirebaseFdwResult<Vec<Row>> {
     match obj {
-        "auth/users" => {
-            result = body_to_rows(
-                resp,
-                "users",
-                vec![
-                    ("localId", "uid", "string"),
-                    ("email", "email", "string"),
-                    ("createdAt", "created_at", "timestamp"),
-                ],
-                tgt_cols,
-            );
-        }
+        "auth/users" => body_to_rows(
+            resp,
+            "users",
+            vec![
+                ("localId", "uid", "string"),
+                ("email", "email", "string"),
+                ("createdAt", "created_at", "timestamp"),
+            ],
+            tgt_cols,
+        ),
         _ => {
             // match firestore documents
             if obj.starts_with("firestore/") {
-                result = body_to_rows(
+                body_to_rows(
                     resp,
                     "documents",
                     vec![
@@ -151,33 +120,29 @@ fn resp_to_rows(obj: &str, resp: &JsonValue, tgt_cols: &[Column]) -> Vec<Row> {
                         ("updateTime", "updated_at", "timestamp_iso"),
                     ],
                     tgt_cols,
-                );
+                )
             } else {
-                report_error(
-                    PgSqlErrorCode::ERRCODE_FDW_TABLE_NOT_FOUND,
-                    &format!("'{}' object is not implemented", obj),
-                );
+                Err(FirebaseFdwError::ObjectNotImplemented(obj.to_string()))
             }
         }
     }
-
-    result
 }
 
 #[wrappers_fdw(
-    version = "0.1.2",
+    version = "0.1.3",
     author = "Supabase",
-    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/firebase_fdw"
+    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/firebase_fdw",
+    error_type = "FirebaseFdwError"
 )]
 pub(crate) struct FirebaseFdw {
     rt: Runtime,
     project_id: String,
     client: Option<ClientWithMiddleware>,
-    scan_result: Option<Vec<Row>>,
+    scan_result: Vec<Row>,
 }
 
 impl FirebaseFdw {
-    const FDW_NAME: &str = "FirebaseFdw";
+    const FDW_NAME: &'static str = "FirebaseFdw";
 
     const DEFAULT_AUTH_BASE_URL: &'static str =
         "https://identitytoolkit.googleapis.com/v1/projects";
@@ -218,14 +183,14 @@ impl FirebaseFdw {
             _ => {
                 // match for firestore documents
                 // ref: https://firebase.google.com/docs/firestore/reference/rest/v1beta1/projects.databases.documents/listDocuments
-                let re = Regex::new(r"^firestore/(?P<collection>[^/]+)").unwrap();
+                let re = Regex::new(r"^firestore/(?P<collection>.+)").expect("regex is valid");
                 if let Some(caps) = re.captures(obj) {
-                    let base_url = require_option_or(
-                        "base_url",
-                        options,
-                        Self::DEFAULT_FIRESTORE_BASE_URL.to_owned(),
-                    );
-                    let collection = caps.name("collection").unwrap().as_str();
+                    let base_url =
+                        require_option_or("base_url", options, Self::DEFAULT_FIRESTORE_BASE_URL);
+                    let collection = caps
+                        .name("collection")
+                        .expect("`collection` capture group always exists in a match")
+                        .as_str();
                     let mut ret = format!(
                         "{}/{}/databases/(default)/documents/{}?pageSize={}",
                         base_url,
@@ -245,18 +210,13 @@ impl FirebaseFdw {
     }
 }
 
-impl ForeignDataWrapper for FirebaseFdw {
-    fn new(options: &HashMap<String, String>) -> Self {
+impl ForeignDataWrapper<FirebaseFdwError> for FirebaseFdw {
+    fn new(options: &HashMap<String, String>) -> FirebaseFdwResult<Self> {
         let mut ret = Self {
-            rt: create_async_runtime(),
-            project_id: "".to_string(),
+            rt: create_async_runtime()?,
+            project_id: require_option("project_id", options)?.to_string(),
             client: None,
-            scan_result: None,
-        };
-
-        ret.project_id = match require_option("project_id", options) {
-            Some(project_id) => project_id,
-            None => return ret,
+            scan_result: Vec::default(),
         };
 
         // get oauth2 access token if it is directly defined in options
@@ -267,33 +227,30 @@ impl ForeignDataWrapper for FirebaseFdw {
             let sa_key = match options.get("sa_key") {
                 Some(sa_key) => sa_key.to_owned(),
                 None => {
-                    let sa_key_id = match require_option("sa_key_id", options) {
-                        Some(sa_key_id) => sa_key_id,
-                        None => return ret,
-                    };
-                    match get_vault_secret(&sa_key_id) {
+                    let sa_key_id = require_option("sa_key_id", options)?;
+                    match get_vault_secret(sa_key_id) {
                         Some(sa_key) => sa_key,
-                        None => return ret,
+                        None => return Ok(ret),
                     }
                 }
             };
-            if let Some(access_token) = get_oauth2_token(&sa_key, &ret.rt) {
-                access_token.token().map(|t| t.to_owned()).unwrap()
-            } else {
-                return ret;
-            }
+            let access_token = get_oauth2_token(&sa_key, &ret.rt)?;
+            access_token
+                .token()
+                .map(|t| t.to_owned())
+                .ok_or(FirebaseFdwError::NoTokenFound(access_token))?
         };
 
         // create client
         let mut headers = header::HeaderMap::new();
         let value = format!("Bearer {}", token);
-        let mut auth_value = header::HeaderValue::from_str(&value).unwrap();
+        let mut auth_value = header::HeaderValue::from_str(&value)
+            .map_err(|_| FirebaseFdwError::InvalidApiKeyHeader)?;
         auth_value.set_sensitive(true);
         headers.insert(header::AUTHORIZATION, auth_value);
         let client = reqwest::Client::builder()
             .default_headers(headers)
-            .build()
-            .unwrap();
+            .build()?;
         let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
         let client = ClientBuilder::new(client)
             .with(RetryTransientMiddleware::new_with_policy(retry_policy))
@@ -302,7 +259,7 @@ impl ForeignDataWrapper for FirebaseFdw {
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
 
-        ret
+        Ok(ret)
     }
 
     fn begin_scan(
@@ -312,91 +269,87 @@ impl ForeignDataWrapper for FirebaseFdw {
         _sorts: &[Sort],
         _limit: &Option<Limit>,
         options: &HashMap<String, String>,
-    ) {
-        let obj = match require_option("object", options) {
-            Some(obj) => obj,
-            None => return,
-        };
+    ) -> FirebaseFdwResult<()> {
+        let obj = require_option("object", options)?;
         let row_cnt_limit = options
             .get("limit")
-            .map(|n| n.parse::<usize>().unwrap())
+            .map(|n| n.parse::<usize>())
+            .transpose()?
             .unwrap_or(Self::DEFAULT_ROWS_LIMIT);
 
-        self.scan_result = None;
+        self.scan_result = Vec::new();
 
         if let Some(client) = &self.client {
             let mut next_page: Option<String> = None;
             let mut result = Vec::new();
 
             loop {
-                let url = self.build_url(&obj, &next_page, options);
+                let url = self.build_url(obj, &next_page, options);
 
-                match self.rt.block_on(client.get(&url).send()) {
-                    Ok(resp) => match resp.error_for_status() {
-                        Ok(resp) => {
-                            stats::inc_stats(
-                                Self::FDW_NAME,
-                                stats::Metric::BytesIn,
-                                resp.content_length().unwrap_or(0) as i64,
-                            );
+                let body = self.rt.block_on(client.get(&url).send()).and_then(|resp| {
+                    stats::inc_stats(
+                        Self::FDW_NAME,
+                        stats::Metric::BytesIn,
+                        resp.content_length().unwrap_or(0) as i64,
+                    );
 
-                            let body = self.rt.block_on(resp.text()).unwrap();
-                            let json: JsonValue = serde_json::from_str(&body).unwrap();
-                            let mut rows = resp_to_rows(&obj, &json, columns);
-                            result.append(&mut rows);
-                            if result.len() >= row_cnt_limit {
-                                break;
-                            }
+                    resp.error_for_status()
+                        .and_then(|resp| self.rt.block_on(resp.text()))
+                        .map_err(reqwest_middleware::Error::from)
+                })?;
 
-                            // get next page token, stop fetching if no more pages
-                            next_page = json
-                                .get("nextPageToken")
-                                .and_then(|v| v.as_str())
-                                .map(|v| v.to_owned());
-                            if next_page.is_none() {
-                                break;
-                            }
-                        }
-                        Err(err) => {
-                            report_request_error!(url, err);
-                            break;
-                        }
-                    },
-                    Err(err) => {
-                        report_request_error!(url, err);
-                        break;
-                    }
+                let json: JsonValue = serde_json::from_str(&body)?;
+                let mut rows = resp_to_rows(obj, &json, columns)?;
+                result.append(&mut rows);
+                if result.len() >= row_cnt_limit {
+                    break;
+                }
+
+                // get next page token, stop fetching if no more pages
+                next_page = json
+                    .get("nextPageToken")
+                    .and_then(|v| v.as_str())
+                    .map(|v| v.to_owned());
+                if next_page.is_none() {
+                    break;
                 }
             }
 
             stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsIn, result.len() as i64);
             stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsOut, result.len() as i64);
 
-            self.scan_result = Some(result);
+            self.scan_result = result;
+        }
+
+        Ok(())
+    }
+
+    fn iter_scan(&mut self, row: &mut Row) -> FirebaseFdwResult<Option<()>> {
+        if self.scan_result.is_empty() {
+            Ok(None)
+        } else {
+            Ok(self
+                .scan_result
+                .drain(0..1)
+                .last()
+                .map(|src_row| row.replace_with(src_row)))
         }
     }
 
-    fn iter_scan(&mut self, row: &mut Row) -> Option<()> {
-        if let Some(ref mut result) = self.scan_result {
-            if !result.is_empty() {
-                return result
-                    .drain(0..1)
-                    .last()
-                    .map(|src_row| row.replace_with(src_row));
-            }
-        }
-        None
+    fn end_scan(&mut self) -> FirebaseFdwResult<()> {
+        Ok(())
     }
 
-    fn end_scan(&mut self) {
-        self.scan_result.take();
-    }
-
-    fn validator(options: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) {
+    fn validator(
+        options: Vec<Option<String>>,
+        catalog: Option<pg_sys::Oid>,
+    ) -> FirebaseFdwResult<()> {
         if let Some(oid) = catalog {
             if oid == FOREIGN_TABLE_RELATION_ID {
-                check_options_contain(&options, "object");
+                check_options_contain(&options, "object")?;
             }
         }
+
+        Ok(())
     }
 }

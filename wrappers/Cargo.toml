@@ -1,6 +1,6 @@
 [package]
 name = "wrappers"
-version = "0.1.16"
+version = "0.2.0"
 edition = "2021"
 publish = false
 
@@ -8,39 +8,125 @@ publish = false
 crate-type = ["cdylib"]
 
 [features]
-default = [ "cshim", "pg15" ]
-cshim = [ "pgrx/cshim" ]
-pg11 = ["pgrx/pg11", "pgrx-tests/pg11", "supabase-wrappers/pg11" ]
-pg12 = ["pgrx/pg12", "pgrx-tests/pg12", "supabase-wrappers/pg12" ]
-pg13 = ["pgrx/pg13", "pgrx-tests/pg13", "supabase-wrappers/pg13" ]
-pg14 = ["pgrx/pg14", "pgrx-tests/pg14", "supabase-wrappers/pg14" ]
-pg15 = ["pgrx/pg15", "pgrx-tests/pg15", "supabase-wrappers/pg15" ]
+default = ["cshim", "pg15"]
+cshim = ["pgrx/cshim"]
+pg14 = ["pgrx/pg14", "pgrx-tests/pg14", "supabase-wrappers/pg14"]
+pg15 = ["pgrx/pg15", "pgrx-tests/pg15", "supabase-wrappers/pg15"]
+pg16 = ["pgrx/pg16", "pgrx-tests/pg16", "supabase-wrappers/pg16"]
 pg_test = []
 
 helloworld_fdw = []
-bigquery_fdw = ["gcp-bigquery-client", "serde_json", "serde", "wiremock", "futures", "yup-oauth2"]
-clickhouse_fdw = ["clickhouse-rs", "chrono", "chrono-tz", "regex"]
-stripe_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json"]
-firebase_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "yup-oauth2", "regex"]
-s3_fdw = [
-    "reqwest", "reqwest-middleware", "reqwest-retry", "aws-config", "aws-sdk-s3",
-    "tokio", "tokio-util", "csv", "async-compression", "serde_json",
-    "http", "parquet", "futures", "arrow-array", "chrono"
+bigquery_fdw = [
+    "gcp-bigquery-client",
+    "serde_json",
+    "serde",
+    "wiremock",
+    "futures",
+    "yup-oauth2",
+    "thiserror",
 ]
-airtable_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json", "serde", "url"]
-logflare_fdw = ["reqwest", "reqwest-middleware", "reqwest-retry", "serde_json"]
-
+clickhouse_fdw = ["clickhouse-rs", "chrono", "chrono-tz", "regex", "thiserror"]
+stripe_fdw = [
+    "http",
+    "reqwest",
+    "reqwest-middleware",
+    "reqwest-retry",
+    "serde_json",
+    "thiserror",
+    "url",
+]
+firebase_fdw = [
+    "reqwest",
+    "reqwest-middleware",
+    "reqwest-retry",
+    "serde_json",
+    "yup-oauth2",
+    "regex",
+    "thiserror",
+]
+s3_fdw = [
+    "reqwest",
+    "reqwest-middleware",
+    "reqwest-retry",
+    "aws-config",
+    "aws-sdk-s3",
+    "aws-smithy-http",
+    "aws-smithy-runtime-api",
+    "tokio",
+    "tokio-util",
+    "csv",
+    "async-compression",
+    "serde_json",
+    "http",
+    "parquet",
+    "futures",
+    "arrow-array",
+    "chrono",
+    "thiserror",
+]
+airtable_fdw = [
+    "reqwest",
+    "reqwest-middleware",
+    "reqwest-retry",
+    "serde_json",
+    "serde",
+    "url",
+    "thiserror",
+]
+logflare_fdw = [
+    "http",
+    "reqwest",
+    "reqwest-middleware",
+    "reqwest-retry",
+    "serde_json",
+    "thiserror",
+    "url",
+]
+auth0_fdw = [
+    "reqwest",
+    "reqwest-middleware",
+    "reqwest-retry",
+    "http",
+    "serde_json",
+    "serde",
+    "url",
+    "thiserror",
+]
+mssql_fdw = [
+    "tiberius",
+    "tokio",
+    "tokio-util",
+    "num-traits",
+    "thiserror",
+]
+redis_fdw = [
+    "redis",
+    "serde_json",
+    "thiserror",
+]
 # Does not include helloworld_fdw because of its general uselessness
-all_fdws = ["airtable_fdw", "bigquery_fdw", "clickhouse_fdw", "stripe_fdw", "firebase_fdw", "s3_fdw", "logflare_fdw"]
+all_fdws = [
+    "airtable_fdw",
+    "bigquery_fdw",
+    "clickhouse_fdw",
+    "stripe_fdw",
+    "firebase_fdw",
+    "s3_fdw",
+    "logflare_fdw",
+    "auth0_fdw",
+    "mssql_fdw",
+    "redis_fdw",
+]
 
 [dependencies]
-pgrx = { version = "=0.9.8" }
-cfg-if = "1.0"
+pgrx = { version = "=0.11.2" }
 #supabase-wrappers = "0.1"
 supabase-wrappers = { path = "../supabase-wrappers", default-features = false }
 
 # for clickhouse_fdw
-clickhouse-rs = { git = "https://github.com/suharev7/clickhouse-rs", rev="ecf28f46774773f39c74ee5213ad1e3ea240739b", features = ["tls"], optional = true }
+clickhouse-rs = { git = "https://github.com/suharev7/clickhouse-rs", branch = "async-await", features = [
+    "tls",
+], optional = true }
 chrono = { version = "0.4", optional = true }
 chrono-tz = { version = "0.6", optional = true }
 
@@ -60,22 +146,44 @@ reqwest-retry = { version = "0.2.2", optional = true }
 yup-oauth2 = { version = "8.0.0", optional = true }
 regex = { version = "1", optional = true }
 
-# for airtable_fdw
+# for airtable_fdw, stripe_fdw
 url = { version = "2.3", optional = true }
 
 # for s3_fdw
-aws-config = { version = "0.56.1", optional = true }
-aws-sdk-s3 = { version = "0.30.0", optional = true }
+aws-config = { version = "1.1.1", optional = true }
+aws-sdk-s3 = { version = "1.11.0", optional = true }
+aws-smithy-http = { version = "0.60.1", optional = true }
+aws-smithy-runtime-api = { version = "1.1.1", optional = true }
 csv = { version = "1.2", optional = true }
 tokio = { version = "1", features = ["full"], optional = true }
-tokio-util = { version = "0.7", optional = true }
-async-compression = { version = "0.3.15", features = ["tokio", "bzip2", "gzip", "xz", "zlib"], optional = true }
+tokio-util = { version = "0.7", features = ["full"], optional = true }
+async-compression = { version = "0.3.15", features = [
+    "tokio",
+    "bzip2",
+    "gzip",
+    "xz",
+    "zlib",
+], optional = true }
 http = { version = "0.2", optional = true }
 parquet = { version = "41.0.0", features = ["async"], optional = true }
 arrow-array = { version = "41.0.0", optional = true }
 
+# for mssql_fdw
+tiberius = { version = "0.12.2", features = [
+    "tds73",
+    "native-tls",
+    "chrono",
+    "rust_decimal",
+], optional = true }
+num-traits = { version = "0.2.17", optional = true }
+
+# for redis_fdw
+redis = { version = "0.24.0", features = ["streams"], optional = true }
+
+thiserror = { version = "1.0.48", optional = true }
+
 [dev-dependencies]
-pgrx-tests = "=0.9.8"
+pgrx-tests = "=0.11.2"
 
 [profile.dev]
 panic = "unwind"
