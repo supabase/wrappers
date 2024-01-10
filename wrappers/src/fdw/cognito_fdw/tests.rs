@@ -29,7 +29,7 @@ mod tests {
                 r#"
                   CREATE FOREIGN TABLE cognito_view (
                     email text,
-                    username text,
+                    username text
                   )
                   SERVER cognito_server
                   options (
