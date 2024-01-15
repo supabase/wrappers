@@ -1,5 +1,5 @@
 [workspace]
-members = ["supabase-wrappers", "wrappers"]
+members = ["wrappers", "supabase-wrappers", "supabase-wrappers-macros"]
 resolver = "2"
 
 [profile.dev]
