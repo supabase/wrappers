@@ -1,0 +1,3 @@
+{
+  "rust-analyzer.cargo.features": ["all_fdws,helloworld_fdw"]
+}
