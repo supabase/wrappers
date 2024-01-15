@@ -382,7 +382,7 @@ dependencies = [
  "http",
  "percent-encoding",
  "tracing",
- "uuid",
+ "uuid 1.4.1",
 ]
 
 [[package]]
@@ -979,18 +979,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "29c39203181991a7dd4343b8005bd804e7a9a37afb8ac070e43771e8c820bbde"
 dependencies = [
  "chrono",
- "chrono-tz-build 0.0.3",
- "phf",
-]
-
-[[package]]
-name = "chrono-tz"
-version = "0.8.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "91d7b79e99bfaa0d47da0687c43aa3b7381938a62ad3a6498599039321f660b7"
-dependencies = [
- "chrono",
- "chrono-tz-build 0.2.1",
+ "chrono-tz-build",
  "phf",
 ]
 
@@ -999,17 +988,6 @@ name = "chrono-tz-build"
 version = "0.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6f509c3a87b33437b05e2458750a0700e5bdd6956176773e6c7d6dd15a283a0c"
-dependencies = [
- "parse-zoneinfo",
- "phf",
- "phf_codegen",
-]
-
-[[package]]
-name = "chrono-tz-build"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "433e39f13c9a060046954e0592a8d0a4bcb1040125cbf91cb8ee58964cfb350f"
 dependencies = [
  "parse-zoneinfo",
  "phf",
@@ -1079,13 +1057,12 @@ checksum = "2da6da31387c7e4ef160ffab6d5e7f00c42626fe39aea70a7b0f1773f7dd6c1b"
 
 [[package]]
 name = "clickhouse-rs"
-version = "1.1.0-alpha.1"
-source = "git+https://github.com/suharev7/clickhouse-rs?branch=async-await#afd8ce54e3882fec943fac42ab8aa4425e2f40e9"
+version = "1.0.0-alpha.1"
+source = "git+https://github.com/suharev7/clickhouse-rs?rev=ecf28f4677#ecf28f46774773f39c74ee5213ad1e3ea240739b"
 dependencies = [
  "byteorder",
- "cfg-if",
  "chrono",
- "chrono-tz 0.8.5",
+ "chrono-tz",
  "clickhouse-rs-cityhash-sys",
  "combine",
  "crossbeam",
@@ -1104,13 +1081,13 @@ dependencies = [
  "tokio",
  "tokio-native-tls",
  "url",
- "uuid",
+ "uuid 0.8.2",
 ]
 
 [[package]]
 name = "clickhouse-rs-cityhash-sys"
 version = "0.1.2"
-source = "git+https://github.com/suharev7/clickhouse-rs?branch=async-await#afd8ce54e3882fec943fac42ab8aa4425e2f40e9"
+source = "git+https://github.com/suharev7/clickhouse-rs?rev=ecf28f4677#ecf28f46774773f39c74ee5213ad1e3ea240739b"
 dependencies = [
  "cc",
 ]
@@ -2901,7 +2878,7 @@ dependencies = [
  "serde_cbor",
  "serde_json",
  "thiserror",
- "uuid",
+ "uuid 1.4.1",
 ]
 
 [[package]]
@@ -3602,7 +3579,7 @@ dependencies = [
  "rkyv_derive",
  "seahash",
  "tinyvec",
- "uuid",
+ "uuid 1.4.1",
 ]
 
 [[package]]
@@ -4090,7 +4067,7 @@ dependencies = [
  "supabase-wrappers-macros",
  "thiserror",
  "tokio",
- "uuid",
+ "uuid 1.4.1",
 ]
 
 [[package]]
@@ -4233,7 +4210,7 @@ dependencies = [
  "rust_decimal",
  "thiserror",
  "tracing",
- "uuid",
+ "uuid 1.4.1",
  "winauth",
 ]
 
@@ -4595,6 +4572,12 @@ name = "urlencoding"
 version = "2.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "daf8dba3b7eb870caf1ddeed7bc9d2a049f3cfdfae7cb521b087cc33ae4c49da"
+
+[[package]]
+name = "uuid"
+version = "0.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc5cf98d8186244414c848017f0e2676b3fcb46807f6668a97dfe67359a3c4b7"
 
 [[package]]
 name = "uuid"
@@ -5079,7 +5062,7 @@ dependencies = [
  "aws-smithy-http",
  "aws-smithy-runtime-api",
  "chrono",
- "chrono-tz 0.6.3",
+ "chrono-tz",
  "clickhouse-rs",
  "csv",
  "futures",
