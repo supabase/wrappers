@@ -85,7 +85,7 @@ jobs:
 
           # Extension version and path
           extension_version=${{ github.ref_name }}
-          extension_dir=target/release/${{ matrix.extension_name }}-pg${{ matrix.postgres }}/usr/share/postgresql/${{ matrix.postgres }}/extension
+          extension_dir=../target/release/${{ matrix.extension_name }}-pg${{ matrix.postgres }}/usr/share/postgresql/${{ matrix.postgres }}/extension
           # strip the leading v
           deb_version=${extension_version:1}
 
@@ -106,7 +106,7 @@ jobs:
 
           # Create installable package
           mkdir archive
-          cp `find target/release -type f -name "${{ matrix.extension_name }}*"` archive
+          cp `find ../target/release -type f -name "${{ matrix.extension_name }}*"` archive
 
           # name of the package directory before packaging
           package_dir=${{ matrix.extension_name }}-${{ github.ref_name }}-pg${{ matrix.postgres }}-${{ matrix.box.arch }}-linux-gnu
