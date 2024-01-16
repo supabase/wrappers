@@ -19,7 +19,8 @@ mod tests {
                          FOREIGN DATA WRAPPER cognito_wrapper
                          OPTIONS (
                             aws_access_key_id 'mysecretaccesskey',
-                            aws_secret_access_key 'apiKey'
+                            aws_secret_access_key 'apiKey',
+                            endpoint_url 'http://localhost:3333/'
                          )"#,
                 None,
                 None,
