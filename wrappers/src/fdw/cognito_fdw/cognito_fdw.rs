@@ -82,7 +82,6 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
     //   options (
     //     foo 'bar'
     // );
-    //
     // 'options' passed here will be a hashmap { 'foo' -> 'bar' }.
     //
     // You can do any initalization in this new() function, like saving connection
@@ -91,10 +90,12 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
 
     fn new(options: &HashMap<String, String>) -> Result<Self, CognitoFdwError> {
         let user_pool_id = require_option("user_pool_id", options)?.to_string();
-        let aws_region = require_option("region", options)?.to_string(); // Uncommented this line
+        let aws_region = require_option("region", options)?.to_string();
+        let endpoint_url = require_option("endpoint_url", options)?.to_string();
 
         let aws_access_key_id = require_option("aws_access_key_id", options)?.to_string();
         let aws_secret_access_key = require_option("aws_secret_access_key", options)?.to_string();
+        // TODO: Add option to read from vault
 
         let rt = tokio::runtime::Runtime::new()
             .map_err(CreateRuntimeError::FailedToCreateAsyncRuntime)?;
@@ -104,7 +105,11 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
             env::set_var("AWS_REGION", aws_region);
             let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
 
-            Client::new(&config)
+            let mut builder = config.to_builder();
+            builder.set_endpoint_url(Some(endpoint_url));
+            let final_config = builder.build();
+
+            Client::new(&final_config)
         });
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);

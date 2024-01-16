@@ -32,7 +32,7 @@ pub trait IntoRow {
 
 impl IntoRow for UserType {
     fn into_row(self, columns: &[Column]) -> Row {
-        let mut row = Row::new(); // Assuming Row has a constructor `new`
+        let mut row = Row::new();
 
         for column in columns {
             match column.name.as_str() {
@@ -46,6 +46,7 @@ impl IntoRow for UserType {
                         row.push("created_at", Some(Cell::String(created_at)));
                     }
                 }
+                // TODO: update columns
                 "email" => {
                     if let Some(email) = self.extract_attribute_value("email") {
                         row.push("email", Some(Cell::String(email)));

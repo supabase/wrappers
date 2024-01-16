@@ -73,7 +73,7 @@ options (
 
 The full list of foreign table options are below:
 
--- TODO: list optinos
+-- TODO: list options
 
 ## Query Pushdown Support
 
@@ -94,7 +94,7 @@ create foreign table cognito_table (
 )
 server cognito_server
 options (
-  -- TODO
+   -- TODO
 );
 ```
 
