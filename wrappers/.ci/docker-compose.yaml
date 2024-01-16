@@ -48,7 +48,7 @@ services:
       timeout: 6s
       retries: 3
   cognito:
-    container_name: auth0-local
+    container_name: congito-local
     build:
       context: ../dockerfiles/cognito
     ports:
