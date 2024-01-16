@@ -21,7 +21,8 @@ mod tests {
                             aws_access_key_id 'mysecretaccesskey',
                             aws_secret_access_key 'apiKey',
                             endpoint_url 'http://localhost:3333/',
-                            user_pool_id 'MyUserPool'
+                            user_pool_id 'MyUserPool',
+                            region 'ap-southeast-1'
                          )"#,
                 None,
                 None,
