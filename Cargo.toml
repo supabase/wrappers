@@ -1,4 +1,13 @@
 [workspace]
-members = ["supabase-wrappers"]
-exclude = ["wrappers"]
+members = ["wrappers", "supabase-wrappers", "supabase-wrappers-macros"]
 resolver = "2"
+
+[profile.dev]
+panic = "unwind"
+lto = "thin"
+
+[profile.release]
+panic = "unwind"
+opt-level = 3
+lto = "fat"
+codegen-units = 1
