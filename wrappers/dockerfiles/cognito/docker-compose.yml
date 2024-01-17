@@ -1,0 +1,16 @@
+version: '3'
+
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"  # Map the port from your application if needed
+    environment:
+      - AWS_ACCESS_KEY_ID=dummyaccesskey
+      - AWS_SECRET_ACCESS_KEY=dummysecretkey
+      - AWS_DEFAULT_REGION=us-east-1
+
+  cognito-local:
+    image: jagregory/cognito-local:latest
+    ports:
+      - "9229:9229"  # The port Cognito Local is running on

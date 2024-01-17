@@ -7,11 +7,11 @@ import random
 import string
 
 # Constants for Cognito
-endpoint_url = "http://localhost:9229"
+endpoint_url = "http://cognito-local:9229"
 user_pool_name = "MyUserPool"
 number_of_users = 90
 
-# Create a Cognito Identity Provider client
+# Create a Cognito Identity Provider client. 
 client = boto3.client('cognito-idp', endpoint_url=endpoint_url)
 
 def random_string(length=8):
@@ -36,13 +36,18 @@ def create_user_pool(name):
             AutoVerifiedAttributes=['email']
         )
         return response['UserPool']['Id']
-    except client.exceptions.ResourceExistsException:
-        print(f"User pool {name} already exists.")
-        response = client.list_user_pools(MaxResults=1, Filter=f'name = "{name}"')
-        if response['UserPools']:
-            return response['UserPools'][0]['Id']
+    except client.exceptions.ClientError as e:
+        # Check if the exception is because the user pool already exists
+        if 'ResourceExistsException' in str(e):
+            print(f"User pool {name} already exists.")
+            response = client.list_user_pools(MaxResults=1, Filter=f'name = "{name}"')
+            if response['UserPools']:
+                return response['UserPools'][0]['Id']
+            else:
+                raise Exception(f"User pool {name} not found after creation attempt.")
         else:
-            raise Exception(f"User pool {name} not found after creation attempt.")
+            # Re-raise the exception if it's not a ResourceExistsException
+            raise
 
 def create_user(user_pool_id, username):
     try:
@@ -60,6 +65,7 @@ def create_user(user_pool_id, username):
                     'Value': 'True'
                 }
             ],
+            DesiredDeliveryMediums=['EMAIL']
         )
         print(f"User created: {username} with email {email}")
         return response
@@ -98,7 +104,7 @@ if __name__ == "__main__":
         create_user(user_pool_id, username)
 
     # Define server address and port
-    port = 3792
+    port = 8000
     server_address = ('', port)
     # Create an HTTP server instance
     httpd = socketserver.TCPServer(server_address, MockServerHandler)

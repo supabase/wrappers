@@ -7,6 +7,10 @@ RUN apt-get update \
 
 # Install AWS CLI and Boto3
 RUN pip install --no-cache-dir awscli boto3
+# Set dummy AWS credentials
+ENV AWS_ACCESS_KEY_ID=dummyaccesskey
+ENV AWS_SECRET_ACCESS_KEY=dummysecretkey
+ENV AWS_DEFAULT_REGION=us-east-1
 
 COPY ./server.py .
 
