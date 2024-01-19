@@ -42,23 +42,13 @@ services:
     image: jagregory/cognito-local
     ports:
       - "9229:922"
+    volumes:
+      - ../dockerfiles/s3/test_data:/data
     healthcheck:
       test: curl --fail http://0.0.0.0:9229/ || exit 1
       interval: 11s
       timeout: 6s
       retries: 3
-  cognito:
-    container_name: congito-local
-    build:
-      context: ../dockerfiles/cognito
-    ports:
-      - "3333:3333"
-    healthcheck:
-      test: curl --fail http://0.0.0.0:3333/ || exit 1
-      interval: 11s
-      timeout: 6s
-      retries: 3
-
   stripe:
     image: stripe/stripe-mock:v0.144.0
     container_name: stripe-mock

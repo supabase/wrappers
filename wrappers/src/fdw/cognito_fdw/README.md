@@ -44,7 +44,7 @@ create server cognito_server
   options (
      aws_access_key_id '<your_access_key>',
      aws_secret_access_key '<your_secret_key>'
-     aws_region '<your_aws_region>'
+     region '<your_aws_region>'
      endpoint_url '<your_endpoint_url>'
      user_pool_id '<your_user_pool_id>'
   );

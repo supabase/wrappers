@@ -1,0 +1,368 @@
+{
+  "Users": {
+    "uwsssbgr": {
+      "Username": "uwsssbgr",
+      "Password": "3YvA0h",
+      "Attributes": [
+        {
+          "Name": "sub",
+          "Value": "c817c3bf-ba4e-4b1e-b951-a2e6696cf2f6"
+        },
+        {
+          "Name": "email",
+          "Value": "uwsssbgr@example.com"
+        },
+        {
+          "Name": "email_verified",
+          "Value": "True"
+        }
+      ],
+      "Enabled": true,
+      "UserStatus": "FORCE_CHANGE_PASSWORD",
+      "UserCreateDate": "2024-01-10T06:44:38.507Z",
+      "UserLastModifiedDate": "2024-01-10T06:44:38.507Z",
+      "RefreshTokens": []
+    },
+    "gtyhpgun": {
+      "Username": "gtyhpgun",
+      "Password": "5Pn8Q5",
+      "Attributes": [
+        {
+          "Name": "sub",
+          "Value": "83b11b69-efc2-4810-958d-b16ea09e2751"
+        },
+        {
+          "Name": "email",
+          "Value": "gtyhpgun@example.com"
+        },
+        {
+          "Name": "email_verified",
+          "Value": "True"
+        }
+      ],
+      "Enabled": true,
+      "UserStatus": "FORCE_CHANGE_PASSWORD",
+      "UserCreateDate": "2024-01-10T06:44:38.509Z",
+      "UserLastModifiedDate": "2024-01-10T06:44:38.509Z",
+      "RefreshTokens": []
+    },
+    "szkpqteh": {
+      "Username": "szkpqteh",
+      "Password": "3Vy33R",
+      "Attributes": [
+        {
+          "Name": "sub",
+          "Value": "83608ebc-fa19-49b1-829f-c59813d61efd"
+        },
+        {
+          "Name": "email",
+          "Value": "szkpqteh@example.com"
+        },
+        {
+          "Name": "email_verified",
+          "Value": "True"
+        }
+      ],
+      "Enabled": true,
+      "UserStatus": "FORCE_CHANGE_PASSWORD",
+      "UserCreateDate": "2024-01-10T06:44:38.510Z",
+      "UserLastModifiedDate": "2024-01-10T06:44:38.510Z",
+      "RefreshTokens": []
+    },
+    "gihskrud": {
+      "Username": "gihskrud",
+      "Password": "2Is0lY",
+      "Attributes": [
+        {
+          "Name": "sub",
+          "Value": "ed26d6b4-5a14-4e9f-b18c-04795bf33faa"
+        },
+        {
+          "Name": "email",
+          "Value": "gihskrud@example.com"
+        },
+        {
+          "Name": "email_verified",
+          "Value": "True"
+        }
+      ],
+      "Enabled": true,
+      "UserStatus": "FORCE_CHANGE_PASSWORD",
+      "UserCreateDate": "2024-01-10T06:44:38.511Z",
+      "UserLastModifiedDate": "2024-01-10T06:44:38.511Z",
+      "RefreshTokens": []
+    },
+    "vrgwkckz": {
+      "Username": "vrgwkckz",
+      "Password": "4SNVW9",
+      "Attributes": [
+        {
+          "Name": "sub",
+          "Value": "fbbdfc71-1e5c-48cc-b89a-4bff58c6b4b9"
+        },
+        {
+          "Name": "email",
+          "Value": "vrgwkckz@example.com"
+        },
+        {
+          "Name": "email_verified",
+          "Value": "True"
+        }
+      ],
+      "Enabled": true,
+      "UserStatus": "FORCE_CHANGE_PASSWORD",
+      "UserCreateDate": "2024-01-10T06:44:38.513Z",
+      "UserLastModifiedDate": "2024-01-10T06:44:38.513Z",
+      "RefreshTokens": []
+    }
+  },
+  "Options": {
+    "Policies": {
+      "PasswordPolicy": {
+        "MinimumLength": 8,
+        "RequireUppercase": true,
+        "RequireLowercase": true,
+        "RequireNumbers": true,
+        "RequireSymbols": true,
+        "TemporaryPasswordValidityDays": 7
+      }
+    },
+    "LambdaConfig": {},
+    "SchemaAttributes": [
+      {
+        "Name": "sub",
+        "AttributeDataType": "String",
+        "DeveloperOnlyAttribute": false,
+        "Mutable": false,
+        "Required": true,
+        "StringAttributeConstraints": {
+          "MinLength": "1",
+          "MaxLength": "2048"
+        }
+      },
+      {
+        "Name": "name",
+        "AttributeDataType": "String",
+        "DeveloperOnlyAttribute": false,
+        "Mutable": true,
+        "Required": false,
+        "StringAttributeConstraints": {
+          "MinLength": "0",
+          "MaxLength": "2048"
+        }
+      },
+      {
+        "Name": "given_name",
+        "AttributeDataType": "String",
+        "DeveloperOnlyAttribute": false,
+        "Mutable": true,
+        "Required": false,
+        "StringAttributeConstraints": {
+          "MinLength": "0",
+          "MaxLength": "2048"
+        }
+      },
+      {
+        "Name": "family_name",
+        "AttributeDataType": "String",
+        "DeveloperOnlyAttribute": false,
+        "Mutable": true,
+        "Required": false,
+        "StringAttributeConstraints": {
+          "MinLength": "0",
+          "MaxLength": "2048"
+        }
+      },
+      {
+        "Name": "middle_name",
+        "AttributeDataType": "String",
+        "DeveloperOnlyAttribute": false,
+        "Mutable": true,
+        "Required": false,
+        "StringAttributeConstraints": {
+          "MinLength": "0",
+          "MaxLength": "2048"
+        }
+      },
+      {
+        "Name": "nickname",
+        "AttributeDataType": "String",
+        "DeveloperOnlyAttribute": false,
+        "Mutable": true,
+        "Required": false,
+        "StringAttributeConstraints": {
+          "MinLength": "0",
+          "MaxLength": "2048"
+        }
+      },
+      {
+        "Name": "preferred_username",
+        "AttributeDataType": "String",
+        "DeveloperOnlyAttribute": false,
+        "Mutable": true,
+        "Required": false,
+        "StringAttributeConstraints": {
+          "MinLength": "0",
+          "MaxLength": "2048"
+        }
+      },
+      {
+        "Name": "profile",
+        "AttributeDataType": "String",
+        "DeveloperOnlyAttribute": false,
+        "Mutable": true,
+        "Required": false,
+        "StringAttributeConstraints": {
+          "MinLength": "0",
+          "MaxLength": "2048"
+        }
+      },
+      {
+        "Name": "picture",
+        "AttributeDataType": "String",
+        "DeveloperOnlyAttribute": false,
+        "Mutable": true,
+        "Required": false,
+        "StringAttributeConstraints": {
+          "MinLength": "0",
+          "MaxLength": "2048"
+        }
+      },
+      {
+        "Name": "website",
+        "AttributeDataType": "String",
+        "DeveloperOnlyAttribute": false,
+        "Mutable": true,
+        "Required": false,
+        "StringAttributeConstraints": {
+          "MinLength": "0",
+          "MaxLength": "2048"
+        }
+      },
+      {
+        "Name": "email",
+        "AttributeDataType": "String",
+        "DeveloperOnlyAttribute": false,
+        "Mutable": true,
+        "Required": false,
+        "StringAttributeConstraints": {
+          "MinLength": "0",
+          "MaxLength": "2048"
+        }
+      },
+      {
+        "Name": "email_verified",
+        "AttributeDataType": "Boolean",
+        "DeveloperOnlyAttribute": false,
+        "Mutable": true,
+        "Required": false
+      },
+      {
+        "Name": "gender",
+        "AttributeDataType": "String",
+        "DeveloperOnlyAttribute": false,
+        "Mutable": true,
+        "Required": false,
+        "StringAttributeConstraints": {
+          "MinLength": "0",
+          "MaxLength": "2048"
+        }
+      },
+      {
+        "Name": "birthdate",
+        "AttributeDataType": "String",
+        "DeveloperOnlyAttribute": false,
+        "Mutable": true,
+        "Required": false,
+        "StringAttributeConstraints": {
+          "MinLength": "10",
+          "MaxLength": "10"
+        }
+      },
+      {
+        "Name": "zoneinfo",
+        "AttributeDataType": "String",
+        "DeveloperOnlyAttribute": false,
+        "Mutable": true,
+        "Required": false,
+        "StringAttributeConstraints": {
+          "MinLength": "0",
+          "MaxLength": "2048"
+        }
+      },
+      {
+        "Name": "locale",
+        "AttributeDataType": "String",
+        "DeveloperOnlyAttribute": false,
+        "Mutable": true,
+        "Required": false,
+        "StringAttributeConstraints": {
+          "MinLength": "0",
+          "MaxLength": "2048"
+        }
+      },
+      {
+        "Name": "phone_number",
+        "AttributeDataType": "String",
+        "DeveloperOnlyAttribute": false,
+        "Mutable": true,
+        "Required": false,
+        "StringAttributeConstraints": {
+          "MinLength": "0",
+          "MaxLength": "2048"
+        }
+      },
+      {
+        "Name": "phone_number_verified",
+        "AttributeDataType": "Boolean",
+        "DeveloperOnlyAttribute": false,
+        "Mutable": true,
+        "Required": false
+      },
+      {
+        "Name": "address",
+        "AttributeDataType": "String",
+        "DeveloperOnlyAttribute": false,
+        "Mutable": true,
+        "Required": false,
+        "StringAttributeConstraints": {
+          "MinLength": "0",
+          "MaxLength": "2048"
+        }
+      },
+      {
+        "Name": "updated_at",
+        "AttributeDataType": "Number",
+        "DeveloperOnlyAttribute": false,
+        "Mutable": true,
+        "Required": false,
+        "NumberAttributeConstraints": {
+          "MinValue": "0"
+        }
+      }
+    ],
+    "VerificationMessageTemplate": {
+      "DefaultEmailOption": "CONFIRM_WITH_CODE"
+    },
+    "MfaConfiguration": "OFF",
+    "EstimatedNumberOfUsers": 0,
+    "EmailConfiguration": {
+      "EmailSendingAccount": "COGNITO_DEFAULT"
+    },
+    "AdminCreateUserConfig": {
+      "AllowAdminCreateUserOnly": false,
+      "UnusedAccountValidityDays": 7
+    },
+    "UsernameAttributes": [
+      "email"
+    ],
+    "Arn": "arn:aws:cognito-idp:local:local:userpool/local_03FKCBuE",
+    "AutoVerifiedAttributes": [
+      "email"
+    ],
+    "CreationDate": "2024-01-10T06:44:38.504Z",
+    "Id": "local_03FKCBuE",
+    "LastModifiedDate": "2024-01-10T06:44:38.504Z",
+    "Name": "MyUserPool"
+  }
+}
