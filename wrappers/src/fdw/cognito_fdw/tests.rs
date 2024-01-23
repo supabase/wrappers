@@ -20,8 +20,8 @@ mod tests {
                          OPTIONS (
                             aws_access_key_id 'mysecretaccesskey',
                             aws_secret_access_key 'apiKey',
-                            endpoint_url 'http://localhost:3333/',
-                            user_pool_id 'MyUserPool',
+                            endpoint_url 'http://localhost:9229/',
+                            user_pool_id 'local_6QNVVZIN',
                             region 'ap-southeast-1'
                          )"#,
                 None,
@@ -46,7 +46,7 @@ mod tests {
 
             let results = c
                 .select(
-                    "SELECT * FROM cognito_view WHERE email = 'example@gmail.com'",
+                    "SELECT * FROM cognito_view WHERE email = 'test1'",
                     None,
                     None,
                 )
