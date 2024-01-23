@@ -38,12 +38,12 @@ services:
       interval: 10s
       timeout: 5s
       retries: 20
-  cognito_mock_server:
+  cognito:
     image: jagregory/cognito-local
     ports:
-      - "9229:922"
+      - "9229:9229"
     volumes:
-      - ../dockerfiles/s3/test_data:/data
+      - ../dockerfiles/cognito/.cognito:/app/.cognito
     healthcheck:
       test: curl --fail http://0.0.0.0:9229/ || exit 1
       interval: 11s
