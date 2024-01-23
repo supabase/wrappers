@@ -53,8 +53,14 @@ enum CognitoFdwError {
     #[error("{0}")]
     NumericConversionError(#[from] pgrx::numeric::Error),
 
+    #[error("no secret found in vault with id {0}")]
+    SecretNotFound(String),
+
     #[error("both `api_key` and `api_secret_key` options must be set")]
     ApiKeyAndSecretKeySet,
+
+    #[error("exactly one of `aws_secret_access_key` or `api_key_id` options must be set")]
+    SetOneOfSecretKeyAndApiKeyIdSet,
 }
 
 impl From<CognitoFdwError> for ErrorReport {
@@ -63,6 +69,9 @@ impl From<CognitoFdwError> for ErrorReport {
             CognitoFdwError::CreateRuntimeError(e) => e.into(),
             CognitoFdwError::OptionsError(e) => e.into(),
             CognitoFdwError::CognitoClientError(e) => e.into(),
+            CognitoFdwError::SecretNotFound(_) => {
+                ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, format!("{value}"), "")
+            }
             _ => ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, format!("{value}"), ""),
         }
     }
@@ -94,8 +103,17 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
         let endpoint_url = require_option("endpoint_url", options)?.to_string();
 
         let aws_access_key_id = require_option("aws_access_key_id", options)?.to_string();
-        let aws_secret_access_key = require_option("aws_secret_access_key", options)?.to_string();
-        // TODO: Add option to read from vault
+        let aws_secret_access_key =
+            if let Some(aws_secret_access_key) = options.get("aws_secret_access_key") {
+                aws_secret_access_key.clone()
+            } else {
+                let aws_secret_access_key = options
+                    .get("api_key_id")
+                    .expect("`api_key_id` must be set if `aws_secret_access_key` is not");
+                get_vault_secret(aws_secret_access_key).ok_or(CognitoFdwError::SecretNotFound(
+                    aws_secret_access_key.clone(),
+                ))?
+            };
 
         let rt = tokio::runtime::Runtime::new()
             .map_err(CreateRuntimeError::FailedToCreateAsyncRuntime)?;
@@ -167,8 +185,14 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
                     check_options_contain(&options, "aws_access_key_id").is_ok();
                 let secret_access_key_exists =
                     check_options_contain(&options, "aws_secret_access_key").is_ok();
+                let api_key_id_exists = check_options_contain(&options, "api_key_id").is_ok();
                 if !access_key_exists && !secret_access_key_exists {
                     return Err(CognitoFdwError::ApiKeyAndSecretKeySet);
+                }
+                if (api_key_id_exists && secret_access_key_exists)
+                    || (!api_key_id_exists && !secret_access_key_exists)
+                {
+                    return Err(CognitoFdwError::SetOneOfSecretKeyAndApiKeyIdSet);
                 }
             } else if oid == FOREIGN_TABLE_RELATION_ID {
                 check_options_contain(&options, "object")?;

@@ -72,8 +72,8 @@ options (
 wrappers=# select * from cognito;
       email       |    username     
 ------------------+-----------------
- joel@supabase.io | testsupabasenow
- joel@supabase.io | testuser
+ joel@supabase.io | testsupa
+ j0el@supabase.io | testuser
 (2 rows)
 ```
 

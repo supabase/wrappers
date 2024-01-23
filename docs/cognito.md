@@ -34,7 +34,10 @@ We need to provide Postgres with the credentials to connect to Cognito, and any 
     create server cognito_server
       foreign data wrapper cognito_wrapper
       options (
-        -- TODO
+        aws_access_key_id '<your_access_key>',
+        api_key_id '<your_secret_key_id_in_vault>',
+        region '<your_aws_region>',
+        user_pool_id '<your_user_pool_id>'
       );
     ```
 
@@ -44,7 +47,10 @@ We need to provide Postgres with the credentials to connect to Cognito, and any 
     create server cognito_server
       foreign data wrapper cognito_wrapper
       options (
-        -- TODO
+        aws_access_key_id '<your_access_key>',
+        aws_secret_access_key '<your_secret_key>',
+        region '<your_aws_region>',
+        user_pool_id '<your_user_pool_id>'
       );
     ```
 
@@ -59,13 +65,13 @@ The Cognito Wrapper supports data reads from Cognito's [User Records](https://do
 For example:
 
 ```sql
-create foreign table my_foreign_table (
-  name text
-  -- other fields
+create foreign table cognito (
+    email text,
+    username text
 )
 server cognito_server
 options (
-  -- TODO
+    object 'users'
 );
 ```
 
@@ -73,7 +79,11 @@ options (
 
 The full list of foreign table options are below:
 
--- TODO: list options
+- `aws_access_key_id`: Obtained from AWS
+- `aws_secret_access_key`: Obtained from AWS
+- `region`: Region where your `UserPool` is located (e.g. `ap-southeast-1`)
+- `endpoint_url`: (Optional): URL when running locally.
+- `user_pool_id`: Correlate with the identifier for `UserPool`
 
 ## Query Pushdown Support
 
@@ -89,12 +99,12 @@ This will create a "foreign table" inside your Postgres database called `cognito
 
 ```sql
 create foreign table cognito_table (
-  name text,
-  updated_at timestamp
+  email text,
+  username text
 )
 server cognito_server
 options (
-   -- TODO
+   object 'users'
 );
 ```
 
@@ -102,17 +112,4 @@ You can now fetch your Cognito data from within your Postgres database:
 
 ```sql
 select * from cognito_table;
-```
-
-We can also create a foreign table from an Cognito View called `cognito_view`:
-
-```sql
-create foreign table cognito_view (
-  -- TODO
-)
-server cognito_server
-options (
-);
-
-select * from cognito_view;
 ```
