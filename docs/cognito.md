@@ -1,6 +1,6 @@
 [AWS Cognito](https://docs.aws.amazon.com/cognito/latest/developerguide/what-is-amazon-cognito.html) is an identity platform for web and mobile apps. 
 
-The Cognito Wrappers allows you to read data from your Cognito Userpool within your Postgres database.
+The Cognito wrapper allows you to read data from your Cognito Userpool within your Postgres database.
 
 ## Preparation
 
@@ -20,9 +20,16 @@ create foreign data wrapper cognito_wrapper
 
 ### Secure your credentials (optional)
 
-By default, Postgres stores FDW credentials inide `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
+By default, Postgres stores FDW credentials inide `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers are designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
 
-
+```sql
+insert into vault.secrets (name, secret)
+values (
+  'vault_secret_access_key',
+  '<secret access key>'
+)
+returning key_id;
+```
 
 ### Connecting to Cognito
 
@@ -79,11 +86,8 @@ options (
 
 The full list of foreign table options are below:
 
-- `aws_access_key_id`: Obtained from AWS
-- `aws_secret_access_key`: Obtained from AWS
-- `region`: Region where your `UserPool` is located (e.g. `ap-southeast-1`)
-- `endpoint_url`: (Optional): URL when running locally.
-- `user_pool_id`: Correlate with the identifier for `UserPool`
+- `object`: type of object we are querying. For now, only `users` is supported
+
 
 ## Query Pushdown Support
 
