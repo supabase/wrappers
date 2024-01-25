@@ -53,7 +53,7 @@ impl RowsIterator {
                         .clone()
                         .unwrap_or_else(Vec::new)
                         .into_iter()
-                        .map(|u| u.into_row(&self.columns))
+                        .filter_map(|u| u.into_row(&self.columns).ok())
                         .collect::<VecDeque<Row>>()
                 }
                 Err(_) => {

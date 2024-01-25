@@ -27,12 +27,17 @@ pub struct CognitoUser {
     pub status: Option<String>,
 }
 
+#[derive(Debug)]
+pub enum IntoRowError {
+    UnsupportedColumnType(String),
+}
+
 pub trait IntoRow {
-    fn into_row(self, columns: &[Column]) -> Row;
+    fn into_row(self, columns: &[Column]) -> Result<Row, IntoRowError>;
 }
 
 impl IntoRow for UserType {
-    fn into_row(self, columns: &[Column]) -> Row {
+    fn into_row(self, columns: &[Column]) -> Result<Row, IntoRowError> {
         let mut row = Row::new();
 
         for column in columns {
@@ -62,11 +67,13 @@ impl IntoRow for UserType {
                         row.push("status", Some(Cell::String(status)));
                     }
                 }
-                _ => (), // Ignore unknown columns or handle them appropriately
+                _ => {
+                    return Err(IntoRowError::UnsupportedColumnType(column.name.clone()));
+                }
             }
         }
 
-        row
+        Ok(row)
     }
 }
 
