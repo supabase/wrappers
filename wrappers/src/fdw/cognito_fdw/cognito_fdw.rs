@@ -100,7 +100,6 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
     fn new(options: &HashMap<String, String>) -> Result<Self, CognitoFdwError> {
         let user_pool_id = require_option("user_pool_id", options)?.to_string();
         let aws_region = require_option("region", options)?.to_string();
-        let endpoint_url = require_option("endpoint_url", options)?.to_string();
 
         let aws_access_key_id = require_option("aws_access_key_id", options)?.to_string();
         let aws_secret_access_key =
@@ -115,8 +114,7 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
                 ))?
             };
 
-        let rt = tokio::runtime::Runtime::new()
-            .map_err(CreateRuntimeError::FailedToCreateAsyncRuntime)?;
+        let rt = create_async_runtime()?;
         let client = rt.block_on(async {
             env::set_var("AWS_ACCESS_KEY_ID", aws_access_key_id);
             env::set_var("AWS_SECRET_ACCESS_KEY", aws_secret_access_key);
@@ -124,7 +122,11 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
             let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
 
             let mut builder = config.to_builder();
-            builder.set_endpoint_url(Some(endpoint_url));
+            if let Some(endpoint_url) = options.get("endpoint_url") {
+                if endpoint_url != "" {
+                    builder.set_endpoint_url(Some(endpoint_url.clone()));
+                }
+            }
             let final_config = builder.build();
 
             Client::new(&final_config)
