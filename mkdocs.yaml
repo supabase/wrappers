@@ -11,6 +11,7 @@ nav:
     - Wrappers:
       - Airtable: 'airtable.md'
       - Auth0: 'auth0.md'
+      - AWS Cognito: 'cognito.md'
       - BigQuery: 'bigquery.md'
       - ClickHouse: 'clickhouse.md'
       - Firebase: 'firebase.md'

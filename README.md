@@ -17,6 +17,7 @@
 | [Auth0](./wrappers/src/fdw/auth0_fdw)           | A FDW for [Auth0](https://auth0.com/)                          | ✅   | ❌     |
 | [SQL Server](./wrappers/src/fdw/mssql_fdw)      | A FDW for [Microsoft SQL Server](https://www.microsoft.com/en-au/sql-server/) | ✅   | ❌     |
 | [Redis](./wrappers/src/fdw/redis_fdw)           | A FDW for [Redis](https://redis.io/) | ✅   | ❌     |
+| [AWS Cognito](./wrappers/src/fdw/cognito_fdw) | A FDW for [AWS Cognito](https://aws.amazon.com/cognito/) | ✅   | ❌     |
 
 ## Features
 

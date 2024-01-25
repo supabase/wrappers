@@ -30,3 +30,6 @@ mod mssql_fdw;
 
 #[cfg(feature = "redis_fdw")]
 mod redis_fdw;
+
+#[cfg(feature = "cognito_fdw")]
+mod cognito_fdw;

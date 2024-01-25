@@ -38,7 +38,17 @@ services:
       interval: 10s
       timeout: 5s
       retries: 20
-
+  cognito:
+    image: jagregory/cognito-local
+    ports:
+      - "9229:9229"
+    volumes:
+      - ../dockerfiles/cognito/.cognito:/app/.cognito
+    healthcheck:
+      test: curl --fail http://0.0.0.0:9229/ || exit 1
+      interval: 11s
+      timeout: 6s
+      retries: 3
   stripe:
     image: stripe/stripe-mock:v0.144.0
     container_name: stripe-mock
