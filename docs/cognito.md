@@ -25,7 +25,7 @@ By default, Postgres stores FDW credentials inide `pg_catalog.pg_foreign_server`
 ```sql
 insert into vault.secrets (name, secret)
 values (
-  'vault_secret_access_key',
+  'cognito_secret_access_key',
   '<secret access key>'
 )
 returning key_id;

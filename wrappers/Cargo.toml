@@ -84,6 +84,7 @@ cognito_fdw = [
     "serde",
     "url",
     "thiserror",
+    "chrono",
 ]
 logflare_fdw = [
     "http",

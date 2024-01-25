@@ -123,7 +123,7 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
 
             let mut builder = config.to_builder();
             if let Some(endpoint_url) = options.get("endpoint_url") {
-                if endpoint_url != "" {
+                if !endpoint_url.is_empty() {
                     builder.set_endpoint_url(Some(endpoint_url.clone()));
                 }
             }

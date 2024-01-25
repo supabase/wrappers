@@ -1,4 +1,5 @@
 use aws_sdk_cognitoidentityprovider::types::UserType;
+use chrono::DateTime;
 use serde::Deserialize;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -43,10 +44,14 @@ impl IntoRow for UserType {
                 }
                 "created_at" => {
                     if let Some(created_at) = self.extract_attribute_value("created_at") {
-                        row.push("created_at", Some(Cell::String(created_at)));
+                        let parsed_date = DateTime::parse_from_rfc3339(&created_at)
+                            .expect("Failed to parse date");
+                        row.push(
+                            "created_at",
+                            Some(Cell::Timestamp(parsed_date.timestamp().into())),
+                        );
                     }
                 }
-                // TODO: update columns
                 "email" => {
                     if let Some(email) = self.extract_attribute_value("email") {
                         row.push("email", Some(Cell::String(email)));
