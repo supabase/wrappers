@@ -55,7 +55,10 @@ impl RowsIterator {
                         .filter_map(|u| u.into_row(&self.columns).ok())
                         .collect::<VecDeque<Row>>())
                 }
-                 Err(e) => Err(CognitoClientError::AWSCognitoError(format!("Error sending request: {:?}", e))),
+                Err(e) => Err(CognitoClientError::AWSCognitoError(format!(
+                    "Error sending request: {:?}",
+                    e
+                ))),
             }
         })?;
 
