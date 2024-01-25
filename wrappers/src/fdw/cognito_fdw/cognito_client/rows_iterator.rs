@@ -1,7 +1,7 @@
 use crate::fdw::cognito_fdw::cognito_client::row::IntoRow;
 use crate::fdw::cognito_fdw::cognito_client::CognitoClientError;
 
-use crate::fdw::cognito_fdw::cognito_client::CreateRuntimeError;
+use supabase_wrappers::prelude::create_async_runtime;
 
 use std::collections::VecDeque;
 use supabase_wrappers::prelude::{Column, Row};
@@ -33,8 +33,7 @@ impl RowsIterator {
 
     fn fetch_rows_batch(&mut self) -> Result<Option<Row>, CognitoClientError> {
         self.have_more_rows = false;
-        let rt = tokio::runtime::Runtime::new()
-            .map_err(CreateRuntimeError::FailedToCreateAsyncRuntime)?;
+        let rt = create_async_runtime()?;
 
         let mut request = self
             .cognito_client
@@ -48,19 +47,17 @@ impl RowsIterator {
             match request.send().await {
                 Ok(response) => {
                     self.pagination_token = response.pagination_token.clone();
-                    response
+                    Ok(response
                         .users
                         .clone()
                         .unwrap_or_else(Vec::new)
                         .into_iter()
                         .filter_map(|u| u.into_row(&self.columns).ok())
-                        .collect::<VecDeque<Row>>()
+                        .collect::<VecDeque<Row>>())
                 }
-                Err(_) => {
-                    VecDeque::new() // or handle the error as required
-                }
+                 Err(e) => Err(CognitoClientError::AWSCognitoError(format!("Error sending request: {:?}", e))),
             }
-        });
+        })?;
 
         self.have_more_rows = self.pagination_token.is_some();
         Ok(self.get_next_row())

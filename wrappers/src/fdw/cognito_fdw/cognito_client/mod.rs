@@ -25,6 +25,9 @@ pub(crate) enum CognitoClientError {
 
     #[error("failed to parse url: {0}")]
     UrlParseError(#[from] ParseError),
+
+    #[error("AWS Cognito error: {0}")]
+    AWSCognitoError(String),
 }
 
 impl From<CognitoClientError> for ErrorReport {
@@ -32,6 +35,7 @@ impl From<CognitoClientError> for ErrorReport {
         match value {
             CognitoClientError::CreateRuntimeError(e) => e.into(),
             CognitoClientError::UrlParseError(_)
+            | CognitoClientError::AWSCognitoError(_)
             | CognitoClientError::ReqwestError(_)
             | CognitoClientError::ReqwestMiddlewareError(_)
             | CognitoClientError::SerdeError(_) => {
