@@ -63,7 +63,6 @@ enum CognitoFdwError {
     SetOneOfSecretKeyAndApiKeyIdSet,
 }
 
-
 impl From<CognitoFdwError> for ErrorReport {
     fn from(value: CognitoFdwError) -> Self {
         match value {
