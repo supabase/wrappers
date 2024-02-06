@@ -6,6 +6,13 @@ use std::collections::HashMap;
 use supabase_wrappers::prelude::Cell;
 use supabase_wrappers::prelude::Column;
 use supabase_wrappers::prelude::Row;
+use pgrx::notice;
+
+use pgrx::JsonB;
+
+use serde_json::json;
+use aws_sdk_cognitoidentityprovider::types::AttributeType;
+
 
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct ResultPayload {
@@ -36,6 +43,19 @@ pub trait IntoRow {
     fn into_row(self, columns: &[Column]) -> Result<Row, IntoRowError>;
 }
 
+fn serialize_attributes(attributes: &Vec<AttributeType>) -> Value {
+    let mut attrs = vec![];
+
+    for attr in attributes {
+        // Convert each AttributeType to a serde_json::Value
+        let attr_json = json!({ attr.name.clone(): attr.value });
+        attrs.push(attr_json);
+    }
+
+    json!(attrs)
+}
+
+
 impl IntoRow for UserType {
     fn into_row(self, columns: &[Column]) -> Result<Row, IntoRowError> {
         let mut row = Row::new();
@@ -46,6 +66,17 @@ impl IntoRow for UserType {
                     if let Some(ref username) = self.username {
                         row.push("username", Some(Cell::String(username.to_string())));
                     }
+                }
+                "attributes" => {
+                    if let Some(ref attributes) = self.attributes {
+    // Now `attributes` is a reference to `Vec<AttributeType>`
+    let serialized_attributes = serialize_attributes(attributes); // Pass reference directly
+
+    // Assuming `pgrx::JsonB` expects a value that implements `Serialize`
+    // and `JsonB::from` is the correct way to convert `pgrx::JsonB` to your desired `JsonB` type
+    let attributes_json_b = JsonB::from(pgrx::JsonB(serialized_attributes));
+    row.push("attributes", Some(Cell::Json(attributes_json_b)));
+                        }
                 }
                 "created_at" => {
                     if let Some(created_at) = self.extract_attribute_value("created_at") {
