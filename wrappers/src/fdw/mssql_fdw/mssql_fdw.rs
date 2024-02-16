@@ -192,6 +192,8 @@ impl ForeignDataWrapper<MssqlFdwError> for MssqlFdw {
         self.table = require_option("table", options)?.to_string();
         self.tgt_cols = columns.to_vec();
 
+        self.iter_idx = 0;
+
         // create sql server client
         let tcp = self
             .rt
