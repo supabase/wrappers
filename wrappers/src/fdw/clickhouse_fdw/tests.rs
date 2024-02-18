@@ -17,9 +17,7 @@ mod tests {
                 .expect("handle");
 
             rt.block_on(async {
-                handle
-                    .execute("DROP TABLE IF EXISTS test_table")
-                    .await?;
+                handle.execute("DROP TABLE IF EXISTS test_table").await?;
                 handle
                     .execute("CREATE TABLE test_table (id INT, name TEXT) engine = Memory")
                     .await
