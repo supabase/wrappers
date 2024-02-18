@@ -28,8 +28,6 @@ services:
   clickhouse:
     image: clickhouse/clickhouse-server
     container_name: clickhouse-wrapped
-    environment:
-      CLICKHOUSE_DB: supa
     ports:
       - "9000:9000" # native interface
       - "8123:8123" # http interface

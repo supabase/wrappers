@@ -55,4 +55,4 @@ jobs:
       run: |
         cd wrappers && RUSTFLAGS="-D warnings" cargo clippy --all --tests --no-deps --features all_fdws,helloworld_fdw
 
-    - run: cd wrappers && cargo pgrx test --features all_fdws,pg15
+    - run: cd wrappers && cargo pgrx test --features "all_fdws pg15"
