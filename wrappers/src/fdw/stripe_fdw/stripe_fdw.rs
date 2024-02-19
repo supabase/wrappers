@@ -660,6 +660,8 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
     ) -> StripeFdwResult<()> {
         let obj = require_option("object", options)?;
 
+        self.iter_idx = 0;
+
         if let Some(client) = &self.client {
             let page_size = 100; // maximum page size limit for Stripe API
             let page_cnt = if let Some(limit) = limit {

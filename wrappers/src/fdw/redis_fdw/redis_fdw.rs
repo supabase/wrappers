@@ -74,6 +74,13 @@ impl RedisFdw {
     const FDW_NAME: &'static str = "RedisFdw";
     const BUF_SIZE: isize = 256;
 
+    fn reset(&mut self) {
+        self.iter_idx = 0;
+        self.scan_result.clear();
+        self.iter_idx_stream = "-".to_string();
+        self.scan_result_stream.clear();
+    }
+
     // fetch a target row for list and zset
     fn fetch_row_list(&mut self) -> RedisFdwResult<Option<Row>> {
         if let Some(ref mut conn) = &mut self.conn {
@@ -271,6 +278,8 @@ impl ForeignDataWrapper<RedisFdwError> for RedisFdw {
 
         let mut conn = self.client.get_connection()?;
 
+        self.reset();
+
         match src_type.as_str() {
             "list" | "zset" => {
                 check_target_columns(
@@ -366,10 +375,7 @@ impl ForeignDataWrapper<RedisFdwError> for RedisFdw {
     }
 
     fn re_scan(&mut self) -> RedisFdwResult<()> {
-        self.iter_idx = 0;
-        self.scan_result.clear();
-        self.iter_idx_stream = "-".to_string();
-        self.scan_result_stream.clear();
+        self.reset();
         Ok(())
     }
 
