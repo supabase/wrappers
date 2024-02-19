@@ -9,7 +9,7 @@ mod tests {
     #[pg_test]
     fn clickhouse_smoketest() {
         Spi::connect(|mut c| {
-            let clickhouse_pool = ch::Pool::new("tcp://default:@localhost:9000/supa");
+            let clickhouse_pool = ch::Pool::new("tcp://default:@localhost:9000/default");
 
             let rt = create_async_runtime().expect("failed to create runtime");
             let mut handle = rt
@@ -17,11 +17,9 @@ mod tests {
                 .expect("handle");
 
             rt.block_on(async {
+                handle.execute("DROP TABLE IF EXISTS test_table").await?;
                 handle
-                    .execute("DROP TABLE IF EXISTS supa.test_table")
-                    .await?;
-                handle
-                    .execute("CREATE TABLE supa.test_table (id INT, name TEXT) engine = Memory")
+                    .execute("CREATE TABLE test_table (id INT, name TEXT) engine = Memory")
                     .await
             })
             .expect("test_table in ClickHouse");
@@ -37,7 +35,7 @@ mod tests {
                 r#"CREATE SERVER my_clickhouse_server
                          FOREIGN DATA WRAPPER clickhouse_wrapper
                          OPTIONS (
-                           conn_string 'tcp://default:@localhost:9000/supa'
+                           conn_string 'tcp://default:@localhost:9000/default'
                          )"#,
                 None,
                 None,
@@ -235,7 +233,7 @@ mod tests {
             let remote_value: String = rt
                 .block_on(async {
                     handle
-                        .query("SELECT name FROM supa.test_table ORDER BY name LIMIT 1")
+                        .query("SELECT name FROM test_table ORDER BY name LIMIT 1")
                         .fetch_all()
                         .await?
                         .rows()
