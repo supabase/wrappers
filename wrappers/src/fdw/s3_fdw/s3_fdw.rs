@@ -173,9 +173,15 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
         env::set_var("AWS_ACCESS_KEY_ID", creds.0);
         env::set_var("AWS_SECRET_ACCESS_KEY", creds.1);
         env::set_var("AWS_REGION", region);
-        let config = ret
-            .rt
-            .block_on(aws_config::load_defaults(BehaviorVersion::latest()));
+
+        let mut config_loader = aws_config::defaults(BehaviorVersion::latest());
+
+        // endpoint_url not supported as env var in rust https://github.com/awslabs/aws-sdk-rust/issues/932
+        if let Some(endpoint_url) = options.get("endpoint_url") {
+            config_loader = config_loader.endpoint_url(endpoint_url);
+        }
+
+        let config = ret.rt.block_on(config_loader.load());
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
 
