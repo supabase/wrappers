@@ -7,8 +7,6 @@ use supabase_wrappers::prelude::Cell;
 use supabase_wrappers::prelude::Column;
 use supabase_wrappers::prelude::Row;
 
-use pgrx::JsonB;
-
 use aws_sdk_cognitoidentityprovider::types::AttributeType;
 use serde_json::json;
 
@@ -68,7 +66,7 @@ impl IntoRow for UserType {
                     if let Some(ref attributes) = self.attributes {
                         let serialized_attributes = serialize_attributes(attributes);
 
-                        let attributes_json_b = JsonB::from(pgrx::JsonB(serialized_attributes));
+                        let attributes_json_b = pgrx::JsonB(serialized_attributes);
                         row.push("attributes", Some(Cell::Json(attributes_json_b)));
                     }
                 }
