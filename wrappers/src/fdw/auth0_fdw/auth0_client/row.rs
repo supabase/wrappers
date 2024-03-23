@@ -1,8 +1,6 @@
 use pgrx::JsonB;
 use serde::Deserialize;
 use serde::Serialize;
-use serde_json::Value;
-use std::collections::HashMap;
 use supabase_wrappers::prelude::Cell;
 use supabase_wrappers::prelude::Column;
 use supabase_wrappers::prelude::Row;
@@ -25,9 +23,6 @@ pub(crate) struct Success {
     result: ResultPayload,
     time: f64,
 }
-
-#[derive(Debug)]
-pub struct Auth0Fields(HashMap<String, Value>);
 
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct Auth0User {

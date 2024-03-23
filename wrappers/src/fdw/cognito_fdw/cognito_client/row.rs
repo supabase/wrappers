@@ -2,19 +2,18 @@ use aws_sdk_cognitoidentityprovider::types::UserType;
 use chrono::DateTime;
 use serde::Deserialize;
 use serde_json::Value;
-use std::collections::HashMap;
 use supabase_wrappers::prelude::Cell;
 use supabase_wrappers::prelude::Column;
 use supabase_wrappers::prelude::Row;
+
+use aws_sdk_cognitoidentityprovider::types::AttributeType;
+use serde_json::json;
 
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct ResultPayload {
     pub(crate) users: Vec<CognitoUser>,
     pub(crate) next_page_offset: Option<u64>,
 }
-
-#[derive(Debug)]
-pub struct CognitoFields(HashMap<String, Value>);
 
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct CognitoUser {
@@ -36,6 +35,18 @@ pub trait IntoRow {
     fn into_row(self, columns: &[Column]) -> Result<Row, IntoRowError>;
 }
 
+fn serialize_attributes(attributes: &Vec<AttributeType>) -> Value {
+    let mut attrs = vec![];
+
+    for attr in attributes {
+        // Convert each AttributeType to a serde_json::Value
+        let attr_json = json!({ attr.name.clone(): attr.value });
+        attrs.push(attr_json);
+    }
+
+    json!(attrs)
+}
+
 impl IntoRow for UserType {
     fn into_row(self, columns: &[Column]) -> Result<Row, IntoRowError> {
         let mut row = Row::new();
@@ -45,6 +56,14 @@ impl IntoRow for UserType {
                 "username" => {
                     if let Some(ref username) = self.username {
                         row.push("username", Some(Cell::String(username.to_string())));
+                    }
+                }
+                "attributes" => {
+                    if let Some(ref attributes) = self.attributes {
+                        let serialized_attributes = serialize_attributes(attributes);
+
+                        let attributes_json_b = pgrx::JsonB(serialized_attributes);
+                        row.push("attributes", Some(Cell::Json(attributes_json_b)));
                     }
                 }
                 "created_at" => {
