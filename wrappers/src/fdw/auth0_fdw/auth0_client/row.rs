@@ -26,9 +26,6 @@ pub(crate) struct Success {
     time: f64,
 }
 
-#[derive(Debug)]
-pub struct Auth0Fields(HashMap<String, Value>);
-
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct Auth0User {
     pub created_at: String,

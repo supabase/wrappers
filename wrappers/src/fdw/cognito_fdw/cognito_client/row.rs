@@ -2,7 +2,6 @@ use aws_sdk_cognitoidentityprovider::types::UserType;
 use chrono::DateTime;
 use serde::Deserialize;
 use serde_json::Value;
-use std::collections::HashMap;
 use supabase_wrappers::prelude::Cell;
 use supabase_wrappers::prelude::Column;
 use supabase_wrappers::prelude::Row;
@@ -15,9 +14,6 @@ pub struct ResultPayload {
     pub(crate) users: Vec<CognitoUser>,
     pub(crate) next_page_offset: Option<u64>,
 }
-
-#[derive(Debug)]
-pub struct CognitoFields(HashMap<String, Value>);
 
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct CognitoUser {
