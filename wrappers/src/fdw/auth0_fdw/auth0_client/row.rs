@@ -13,8 +13,11 @@ pub(crate) struct UserRequest {
 
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct ResultPayload {
-    pub(crate) users: Vec<Auth0User>,
-    pub(crate) next_page_offset: Option<u64>,
+    users: Vec<Auth0User>,
+    start: Option<u64>,
+    limit: Option<u64>,
+    length: Option<u64>,
+    total: Option<u64>,
 }
 
 #[derive(Debug, Deserialize, PartialEq)]
@@ -30,6 +33,15 @@ pub struct Auth0User {
     pub email: String,
     pub email_verified: bool,
     pub identities: Option<serde_json::Value>,
+}
+
+impl ResultPayload {
+    pub fn into_users(self) -> Vec<Auth0User> {
+        self.users
+    }
+    pub fn get_total(&self) -> Option<u64> {
+        self.total
+    }
 }
 
 impl Auth0User {
