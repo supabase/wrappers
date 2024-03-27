@@ -10,14 +10,14 @@
       
       
       
-        <link rel="canonical" href="https://supabase.github.io/wrappers/airtable/">
+        <link rel="canonical" href="https://supabase.github.io/wrappers/auth0/">
       
       <link rel="icon" href="../assets/favicon.ico">
       <meta name="generator" content="mkdocs-1.4.0, mkdocs-material-8.5.10">
     
     
       
-        <title>Airtable - wrappers</title>
+        <title>Auth0 - wrappers</title>
       
     
     
@@ -70,7 +70,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#preparation" class="md-skip">
+        <a href="#auth0-is-a-flexible-drop-in-solution-to-add-authentication-and-authorization-services-to-your-applications" class="md-skip">
           Skip to content
         </a>
       
@@ -102,7 +102,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Airtable
+              Auth0
             
           </span>
         </div>
@@ -267,6 +267,20 @@
               
   
   
+  
+    <li class="md-nav__item">
+      <a href="../airtable/" class="md-nav__link">
+        Airtable
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
     
   
   
@@ -275,14 +289,16 @@
       <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
       
       
+        
+      
       
         <label class="md-nav__link md-nav__link--active" for="__toc">
-          Airtable
+          Auth0
           <span class="md-nav__icon md-icon"></span>
         </label>
       
       <a href="./" class="md-nav__link md-nav__link--active">
-        Airtable
+        Auth0
       </a>
       
         
@@ -290,6 +306,8 @@
 <nav class="md-nav md-nav--secondary" aria-label="Table of contents">
   
   
+  
+    
   
   
     <label class="md-nav__title" for="__toc">
@@ -314,8 +332,8 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#connecting-to-airtable" class="md-nav__link">
-    Connecting to Airtable
+  <a href="#connecting-to-auth0" class="md-nav__link">
+    Connecting to Auth0
   </a>
   
 </li>
@@ -376,20 +394,6 @@
   
 </nav>
       
-    </li>
-  
-
-            
-          
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../auth0/" class="md-nav__link">
-        Auth0
-      </a>
     </li>
   
 
@@ -559,6 +563,8 @@
   
   
   
+    
+  
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
@@ -582,8 +588,8 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#connecting-to-airtable" class="md-nav__link">
-    Connecting to Airtable
+  <a href="#connecting-to-auth0" class="md-nav__link">
+    Connecting to Auth0
   </a>
   
 </li>
@@ -654,16 +660,14 @@
                 
                   
 
-  <a href="https://github.com/supabase/wrappers/edit/master/docs/airtable.md" title="Edit this page" class="md-content__button md-icon">
+  <a href="https://github.com/supabase/wrappers/edit/master/docs/auth0.md" title="Edit this page" class="md-content__button md-icon">
     
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25Z"/></svg>
   </a>
 
 
-  <h1>Airtable</h1>
-
-<p><a href="https://www.airtable.com">Airtable</a> is an easy-to-use online platform for creating and sharing relational databases.</p>
-<p>The Airtable Wrapper allows you to read data from your Airtable bases/tables within your Postgres database.</p>
+<h1 id="auth0-is-a-flexible-drop-in-solution-to-add-authentication-and-authorization-services-to-your-applications"><a href="https://auth0.com/">Auth0</a> is a flexible, drop-in solution to add authentication and authorization services to your applications</h1>
+<p>The Auth0 Wrapper allows you to read data from your Auth0 tenant for use within your Postgres database.</p>
 <h2 id="preparation">Preparation</h2>
 <p>Before you get started, make sure the <code>wrappers</code> extension is installed on your database:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">extension</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">wrappers</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">extensions</span><span class="p">;</span>
@@ -671,9 +675,9 @@
 <p>and then create the foreign data wrapper:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
-<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">airtable_wrapper</span>
-<span class="w">  </span><span class="k">handler</span><span class="w"> </span><span class="n">airtable_fdw_handler</span>
-<span class="w">  </span><span class="k">validator</span><span class="w"> </span><span class="n">airtable_fdw_validator</span><span class="p">;</span>
+<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">auth0_wrapper</span>
+<span class="w">  </span><span class="k">handler</span><span class="w"> </span><span class="n">auth0_fdw_handler</span>
+<span class="w">  </span><span class="k">validator</span><span class="w"> </span><span class="n">auth0_fdw_validator</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 <h3 id="secure-your-credentials-optional">Secure your credentials (optional)</h3>
 <p>By default, Postgres stores FDW credentials inide <code>pg_catalog.pg_foreign_server</code> in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with <a href="https://supabase.com/docs/guides/database/vault">Vault</a>, which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.</p>
@@ -683,15 +687,15 @@
 <span class="normal">4</span>
 <span class="normal">5</span>
 <span class="normal">6</span>
-<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Save your Airtable API key in Vault and retrieve the `key_id`</span>
+<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Save your Auth0 API key in Vault and retrieve the `key_id`</span>
 <span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">secrets</span><span class="w"> </span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">secret</span><span class="p">)</span>
 <span class="k">values</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="s1">&#39;airtable&#39;</span><span class="p">,</span>
-<span class="w">  </span><span class="s1">&#39;&lt;Airtable API Key or PAT&gt;&#39;</span><span class="w"> </span><span class="c1">-- Airtable API key or Personal Access Token (PAT)</span>
+<span class="w">  </span><span class="s1">&#39;auth0&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="s1">&#39;&lt;Auth0 API Key or PAT&gt;&#39;</span><span class="w"> </span><span class="c1">-- Auth0 API key or Personal Access Token (PAT)</span>
 <span class="p">)</span>
 <span class="n">returning</span><span class="w"> </span><span class="n">key_id</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
-<h3 id="connecting-to-airtable">Connecting to Airtable</h3>
+<h3 id="connecting-to-auth0">Connecting to Auth0</h3>
 <p>We need to provide Postgres with the credentials to connect to Airtable, and any additional options. We can do this using the <code>create server</code> command:</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">With Vault</label><label for="__tabbed_1_2">Without Vault</label></div>
 <div class="tabbed-content">
@@ -700,8 +704,8 @@
 <span class="normal">2</span>
 <span class="normal">3</span>
 <span class="normal">4</span>
-<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">airtable_server</span>
-<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">airtable_wrapper</span>
+<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">auth0_server</span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">auth0_wrapper</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="n">api_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;key_ID&gt;&#39;</span><span class="w"> </span><span class="c1">-- The Key ID from above.</span>
 <span class="w">  </span><span class="p">);</span>
@@ -713,22 +717,24 @@
 <span class="normal">3</span>
 <span class="normal">4</span>
 <span class="normal">5</span>
-<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">airtable_server</span>
-<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">airtable_wrapper</span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">api_url</span><span class="w"> </span><span class="s1">&#39;https://api.airtable.com/v0&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- Airtable API url, optional</span>
-<span class="w">    </span><span class="n">api_key</span><span class="w"> </span><span class="s1">&#39;&lt;Airtable API Key or PAT&gt;&#39;</span><span class="w">  </span><span class="c1">-- Airtable API key or Personal Access Token (PAT), required</span>
-<span class="w">  </span><span class="p">);</span>
+<span class="normal">6</span>
+<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- create server and specify custom options</span>
+<span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">auth0_server</span>
+<span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">auth0_wrapper</span>
+<span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">url</span><span class="w"> </span><span class="s1">&#39;https://dev-&lt;tenant-id&gt;.us.auth0.com/api/v2/users&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">api_key</span><span class="w"> </span><span class="s1">&#39;&lt;your_api_key&gt;&#39;</span>
+<span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 </div>
 </div>
 </div>
 <h2 id="creating-foreign-tables">Creating Foreign Tables</h2>
-<p>The Airtable Wrapper supports data reads from Airtable's <a href="https://airtable.com/developers/web/api/list-records">Records</a> endpoint (<em>read only</em>).</p>
+<p>The Auth0 Wrapper supports data reads from Auth0's <a href="https://auth0.com/docs/api/management/v2/users/get-users">Management API List users endpoint</a> endpoint (<em>read only</em>).</p>
 <table>
 <thead>
 <tr>
-<th>Airtable</th>
+<th>Auth0</th>
 <th align="center">Select</th>
 <th align="center">Insert</th>
 <th align="center">Update</th>
@@ -755,30 +761,26 @@
 <span class="normal">5</span>
 <span class="normal">6</span>
 <span class="normal">7</span>
-<span class="normal">8</span>
-<span class="normal">9</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">my_foreign_table</span><span class="w"> </span><span class="p">(</span>
+<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">my_foreign_table</span><span class="w"> </span><span class="p">(</span>
 <span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span>
 <span class="w">  </span><span class="c1">-- other fields</span>
 <span class="p">)</span>
-<span class="n">server</span><span class="w"> </span><span class="n">airtable_server</span>
+<span class="n">server</span><span class="w"> </span><span class="n">auth0_server</span>
 <span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">base_id</span><span class="w"> </span><span class="s1">&#39;appXXXX&#39;</span><span class="p">,</span>
-<span class="w">  </span><span class="n">table_id</span><span class="w"> </span><span class="s1">&#39;tblXXXX&#39;</span>
+<span class="w">  </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;users&#39;</span><span class="p">,</span>
 <span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 <h3 id="foreign-table-options">Foreign table options</h3>
 <p>The full list of foreign table options are below:</p>
 <ul>
-<li><code>base_id</code> - Airtable Base ID the table belongs to, required.</li>
-<li><code>table_id</code> - Airtable table ID, required.</li>
-<li><code>view_id</code> - Airtable view ID, optional.</li>
+<li><code>objects</code> - Auth0 object to select from. Currently only supports <code>users</code></li>
 </ul>
 <h2 id="query-pushdown-support">Query Pushdown Support</h2>
 <p>This FDW doesn't support query pushdown.</p>
 <h2 id="examples">Examples</h2>
-<p>Some examples on how to use Airtable foreign tables.</p>
+<p>Some examples on how to use Auth0 foreign tables.</p>
 <h3 id="basic-example">Basic example</h3>
-<p>This will create a "foreign table" inside your Postgres database called <code>airtable_table</code>:</p>
+<p>This will create a "foreign table" inside your Postgres database called <code>auth0_table</code>:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -788,54 +790,19 @@
 <span class="normal"> 7</span>
 <span class="normal"> 8</span>
 <span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">airtable_table</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">notes</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">content</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">amount</span><span class="w"> </span><span class="nb">numeric</span><span class="p">,</span>
-<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span>
+<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">auth0_table</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">email</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">email_verified</span><span class="w"> </span><span class="n">bool</span><span class="p">,</span>
+<span class="w">  </span><span class="n">identities</span><span class="w"> </span><span class="n">jsonb</span>
 <span class="p">)</span>
-<span class="n">server</span><span class="w"> </span><span class="n">airtable_server</span>
-<span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">base_id</span><span class="w"> </span><span class="s1">&#39;appTc3yI68KN6ukZc&#39;</span><span class="p">,</span>
-<span class="w">  </span><span class="n">table_id</span><span class="w"> </span><span class="s1">&#39;tbltiLinE56l3YKfn&#39;</span>
-<span class="p">);</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">auth0_server</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;users&#39;</span>
+<span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
-<p>You can now fetch your Airtable data from within your Postgres database:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">airtable_table</span><span class="p">;</span>
-</code></pre></div></td></tr></table></div>
-<p>We can also create a foreign table from an Airtable View called <code>airtable_view</code>:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span>
-<span class="normal">13</span>
-<span class="normal">14</span>
-<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">airtable_view</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">notes</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">content</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">amount</span><span class="w"> </span><span class="nb">numeric</span><span class="p">,</span>
-<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span>
-<span class="p">)</span>
-<span class="n">server</span><span class="w"> </span><span class="n">airtable_server</span>
-<span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">base_id</span><span class="w"> </span><span class="s1">&#39;appTc3yI68KN6ukZc&#39;</span><span class="p">,</span>
-<span class="w">  </span><span class="n">table_id</span><span class="w"> </span><span class="s1">&#39;tbltiLinE56l3YKfn&#39;</span><span class="p">,</span>
-<span class="w">  </span><span class="n">view_id</span><span class="w"> </span><span class="s1">&#39;viwY8si0zcEzw3ntZ&#39;</span>
-<span class="p">);</span>
-
-<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">airtable_view</span><span class="p">;</span>
+<p>You can now fetch your Auth0 data from within your Postgres database:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">auth0</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 
 
@@ -857,7 +824,7 @@
     <nav class="md-footer__inner md-grid" aria-label="Footer" >
       
         
-        <a href="../installation/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Installation" rel="prev">
+        <a href="../airtable/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Airtable" rel="prev">
           <div class="md-footer__button md-icon">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
           </div>
@@ -866,20 +833,20 @@
               <span class="md-footer__direction">
                 Previous
               </span>
-              Installation
+              Airtable
             </div>
           </div>
         </a>
       
       
         
-        <a href="../auth0/" class="md-footer__link md-footer__link--next" aria-label="Next: Auth0" rel="next">
+        <a href="../cognito/" class="md-footer__link md-footer__link--next" aria-label="Next: AWS Cognito" rel="next">
           <div class="md-footer__title">
             <div class="md-ellipsis">
               <span class="md-footer__direction">
                 Next
               </span>
-              Auth0
+              AWS Cognito
             </div>
           </div>
           <div class="md-footer__button md-icon">

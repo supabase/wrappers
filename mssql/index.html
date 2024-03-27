@@ -10,14 +10,14 @@
       
       
       
-        <link rel="canonical" href="https://supabase.github.io/wrappers/s3/">
+        <link rel="canonical" href="https://supabase.github.io/wrappers/mssql/">
       
       <link rel="icon" href="../assets/favicon.ico">
       <meta name="generator" content="mkdocs-1.4.0, mkdocs-material-8.5.10">
     
     
       
-        <title>S3 - wrappers</title>
+        <title>SQL Server - wrappers</title>
       
     
     
@@ -70,7 +70,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#supported-data-types-for-parquet-file" class="md-skip">
+        <a href="#supported-data-types" class="md-skip">
           Skip to content
         </a>
       
@@ -102,7 +102,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              S3
+              SQL Server
             
           </span>
         </div>
@@ -379,6 +379,34 @@
               
   
   
+  
+    <li class="md-nav__item">
+      <a href="../s3/" class="md-nav__link">
+        S3
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../stripe/" class="md-nav__link">
+        Stripe
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
     
   
   
@@ -389,12 +417,12 @@
       
       
         <label class="md-nav__link md-nav__link--active" for="__toc">
-          S3
+          SQL Server
           <span class="md-nav__icon md-icon"></span>
         </label>
       
       <a href="./" class="md-nav__link md-nav__link--active">
-        S3
+        SQL Server
       </a>
       
         
@@ -411,8 +439,8 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#supported-data-types-for-parquet-file" class="md-nav__link">
-    Supported Data Types For Parquet File
+  <a href="#supported-data-types" class="md-nav__link">
+    Supported Data Types
   </a>
   
 </li>
@@ -433,15 +461,8 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#connecting-to-s3" class="md-nav__link">
-    Connecting to S3
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#connecting-to-s3-compliant-providers-wasabi" class="md-nav__link">
-    Connecting to S3-compliant Providers - Wasabi
+  <a href="#connecting-to-sql-server" class="md-nav__link">
+    Connecting to SQL Server
   </a>
   
 </li>
@@ -493,6 +514,13 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#remote-subquery-example" class="md-nav__link">
+    Remote subquery example
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -502,34 +530,6 @@
   
 </nav>
       
-    </li>
-  
-
-            
-          
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../stripe/" class="md-nav__link">
-        Stripe
-      </a>
-    </li>
-  
-
-            
-          
-            
-              
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../mssql/" class="md-nav__link">
-        SQL Server
-      </a>
     </li>
   
 
@@ -581,8 +581,8 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#supported-data-types-for-parquet-file" class="md-nav__link">
-    Supported Data Types For Parquet File
+  <a href="#supported-data-types" class="md-nav__link">
+    Supported Data Types
   </a>
   
 </li>
@@ -603,15 +603,8 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#connecting-to-s3" class="md-nav__link">
-    Connecting to S3
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#connecting-to-s3-compliant-providers-wasabi" class="md-nav__link">
-    Connecting to S3-compliant Providers - Wasabi
+  <a href="#connecting-to-sql-server" class="md-nav__link">
+    Connecting to SQL Server
   </a>
   
 </li>
@@ -663,6 +656,13 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#remote-subquery-example" class="md-nav__link">
+    Remote subquery example
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -682,83 +682,68 @@
                 
                   
 
-  <a href="https://github.com/supabase/wrappers/edit/master/docs/s3.md" title="Edit this page" class="md-content__button md-icon">
+  <a href="https://github.com/supabase/wrappers/edit/master/docs/mssql.md" title="Edit this page" class="md-content__button md-icon">
     
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25Z"/></svg>
   </a>
 
 
-  <h1>S3</h1>
+  <h1>SQL Server</h1>
 
-<p><a href="https://aws.amazon.com/s3/">AWS S3</a> is an object storage service offering industry-leading scalability, data availability, security, and performance. It is read-only and supports below file formats:</p>
-<p>The S3 Wrapper allows you to read data of below formats from S3 within your Postgres database.</p>
-<ol>
-<li>CSV - with or without header line</li>
-<li><a href="https://jsonlines.org/">JSON Lines</a></li>
-<li><a href="https://parquet.apache.org/">Parquet</a></li>
-</ol>
-<p>The S3 Wrapper also supports below compression algorithms:</p>
-<ol>
-<li>gzip</li>
-<li>bzip2</li>
-<li>xz</li>
-<li>zlib</li>
-</ol>
-<p><strong>Note for CSV and JSONL files: currently all columns in S3 files must be defined in the foreign table and their types must be <code>text</code> type</strong>.</p>
-<p><strong>Note for Parquet files: the whole Parquet file will be loaded into local memory if it is compressed, so keep the file size as small as possible</strong>.</p>
-<h2 id="supported-data-types-for-parquet-file">Supported Data Types For Parquet File</h2>
-<p>The S3 Wrapper uses Parquet file data types from <a href="https://docs.rs/arrow-array/41.0.0/arrow_array/types/index.html">arrow_array::types</a>, below are their mappings to Postgres data types.</p>
+<p><a href="https://www.microsoft.com/en-au/sql-server/">Microsoft SQL Server</a> is a proprietary relational database management system developed by Microsoft.</p>
+<p>The SQL Server Wrapper allows you to read data from Microsoft SQL Server within your Postgres database.</p>
+<h2 id="supported-data-types">Supported Data Types</h2>
 <table>
 <thead>
 <tr>
 <th>Postgres Type</th>
-<th>Parquet Type</th>
+<th>SQL Server Type</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>boolean</td>
-<td>BooleanType</td>
+<td>bit</td>
 </tr>
 <tr>
 <td>char</td>
-<td>Int8Type</td>
+<td>tinyint</td>
 </tr>
 <tr>
 <td>smallint</td>
-<td>Int16Type</td>
+<td>smallint</td>
 </tr>
 <tr>
 <td>real</td>
-<td>Float32Type</td>
+<td>float(24)</td>
 </tr>
 <tr>
 <td>integer</td>
-<td>Int32Type</td>
+<td>int</td>
 </tr>
 <tr>
 <td>double precision</td>
-<td>Float64Type</td>
+<td>float(53)</td>
 </tr>
 <tr>
 <td>bigint</td>
-<td>Int64Type</td>
+<td>bigint</td>
 </tr>
 <tr>
 <td>numeric</td>
-<td>Float64Type</td>
+<td>numeric/decimal</td>
 </tr>
 <tr>
 <td>text</td>
-<td>ByteArrayType</td>
+<td>varchar/char/text</td>
 </tr>
 <tr>
 <td>date</td>
-<td>Date64Type</td>
+<td>date</td>
 </tr>
 <tr>
 <td>timestamp</td>
-<td>TimestampNanosecondType</td>
+<td>datetime/datetime2/smalldatetime</td>
 </tr>
 </tbody>
 </table>
@@ -769,42 +754,28 @@
 <p>and then create the foreign data wrapper:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
-<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">s3_wrapper</span>
-<span class="w">  </span><span class="k">handler</span><span class="w"> </span><span class="n">s3_fdw_handler</span>
-<span class="w">  </span><span class="k">validator</span><span class="w"> </span><span class="n">s3_fdw_validator</span><span class="p">;</span>
+<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">mssql_wrapper</span>
+<span class="w">  </span><span class="k">handler</span><span class="w"> </span><span class="n">mssql_fdw_handler</span>
+<span class="w">  </span><span class="k">validator</span><span class="w"> </span><span class="n">mssql_fdw_validator</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 <h3 id="secure-your-credentials-optional">Secure your credentials (optional)</h3>
-<p>By default, Postgres stores FDW credentials inide <code>pg_catalog.pg_foreign_server</code> in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with <a href="https://supabase.com/docs/guides/database/vault">Vault</a>, which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span>
-<span class="normal">13</span>
-<span class="normal">14</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Save your AWS credential in Vault and retrieve the `key_id`</span>
+<p>By default, Postgres stores FDW credentials inside <code>pg_catalog.pg_foreign_server</code> in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with <a href="https://supabase.com/docs/guides/database/vault">Vault</a>, which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span>
+<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Save your SQL Server connection string in Vault and retrieve the `key_id`</span>
 <span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">secrets</span><span class="w"> </span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">secret</span><span class="p">)</span>
 <span class="k">values</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="s1">&#39;vault_access_key_id&#39;</span><span class="p">,</span>
-<span class="w">  </span><span class="s1">&#39;&lt;access key id&gt;&#39;</span>
-<span class="p">)</span>
-<span class="n">returning</span><span class="w"> </span><span class="n">key_id</span><span class="p">;</span>
-
-<span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">secrets</span><span class="w"> </span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">secret</span><span class="p">)</span>
-<span class="k">values</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="s1">&#39;vault_secret_access_key&#39;</span><span class="p">,</span>
-<span class="w">  </span><span class="s1">&#39;&lt;secret access key&gt;&#39;</span>
+<span class="w">  </span><span class="s1">&#39;mssql&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="s1">&#39;Server=localhost,1433;User=sa;Password=my_password;Database=master;IntegratedSecurity=false;TrustServerCertificate=true;encrypt=DANGER_PLAINTEXT;ApplicationName=wrappers&#39;</span>
 <span class="p">)</span>
 <span class="n">returning</span><span class="w"> </span><span class="n">key_id</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
-<h3 id="connecting-to-s3">Connecting to S3</h3>
-<p>We need to provide Postgres with the credentials to connect to S3, and any additional options. We can do this using the <code>create server</code> command:</p>
+<h3 id="connecting-to-sql-server">Connecting to SQL Server</h3>
+<p>We need to provide Postgres with the credentials to connect to SQL Server. We can do this using the <code>create server</code> command:</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">With Vault</label><label for="__tabbed_1_2">Without Vault</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
@@ -812,14 +783,10 @@
 <span class="normal">2</span>
 <span class="normal">3</span>
 <span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span>
-<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">s3_server</span>
-<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">s3_wrapper</span>
+<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">mssql_server</span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">mssql_wrapper</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">vault_access_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;your vault_access_key_id from above&gt;&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">vault_secret_access_key</span><span class="w"> </span><span class="s1">&#39;&lt;your vault_secret_access_key from above&gt;&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">aws_region</span><span class="w"> </span><span class="s1">&#39;us-east-1&#39;</span>
+<span class="w">    </span><span class="n">conn_string_id</span><span class="w"> </span><span class="s1">&#39;&lt;key_ID&gt;&#39;</span><span class="w"> </span><span class="c1">-- The Key ID from above.</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 </div>
@@ -828,43 +795,71 @@
 <span class="normal">2</span>
 <span class="normal">3</span>
 <span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span>
-<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">s3_server</span>
-<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">s3_wrapper</span>
+<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">mssql_server</span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">mssql_wrapper</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">aws_access_key_id</span><span class="w"> </span><span class="s1">&#39;your_aws_access_key_id&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">aws_secret_access_key</span><span class="w"> </span><span class="s1">&#39;your_aws_secret_access_key&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">aws_region</span><span class="w"> </span><span class="s1">&#39;us-east-1&#39;</span>
+<span class="w">    </span><span class="n">conn_string</span><span class="w"> </span><span class="s1">&#39;Server=localhost,1433;User=sa;Password=my_password;Database=master;IntegratedSecurity=false;TrustServerCertificate=true;encrypt=DANGER_PLAINTEXT;ApplicationName=wrappers&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 </div>
 </div>
 </div>
-<p>The full list of options are below:
-- <code>aws_access_key_id</code> (required) - Your access key
-- <code>aws_secret_access_key</code> (required) - Your secret key
-- <code>aws_region</code> (required) - The region of your bucket (if providing an endpoint URL with a region in it, make sure that they are the same)
-- <code>endpoint_url</code> (optional) - An optional URL to allow connection to S3-compliant providers (i.e. Wasabi, Cloudflare R2, Backblaze B2, DigitalOcean Spaces)</p>
-<h3 id="connecting-to-s3-compliant-providers-wasabi">Connecting to S3-compliant Providers - Wasabi</h3>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span>
-<span class="normal">7</span>
-<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">s3_server</span>
-<span class="w">      </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">s3_wrapper</span>
-<span class="w">      </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">        </span><span class="n">aws_access_key_id</span><span class="w"> </span><span class="s1">&#39;you_wasabi_access_key&#39;</span><span class="p">,</span>
-<span class="w">        </span><span class="n">aws_secret_access_key</span><span class="w"> </span><span class="s1">&#39;your_wasabi_secret_access_key&#39;</span><span class="p">,</span>
-<span class="w">        </span><span class="n">aws_region</span><span class="w"> </span><span class="s1">&#39;eu-central-1&#39;</span><span class="p">,</span>
-<span class="w">        </span><span class="n">endpoint_url</span><span class="w"> </span><span class="s1">&#39;https://s3.eu-central-1.wasabisys.com&#39;</span>
-<span class="w">      </span><span class="p">);</span>
-</code></pre></div></td></tr></table></div>
+<p>The connection string is an <a href="https://learn.microsoft.com/en-us/dotnet/framework/data/adonet/connection-strings">ADO.NET connection string</a>, which specifies connection parameters in semicolon-delimited string.</p>
+<p><strong>Supported parameters</strong></p>
+<p>All parameter keys are handled case-insensitive.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Allowed Values</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Server</td>
+<td><code>&lt;string&gt;</code></td>
+<td>The name or network address of the instance of SQL Server to which to connect. Format: <code>host,port</code></td>
+</tr>
+<tr>
+<td>User</td>
+<td><code>&lt;string&gt;</code></td>
+<td>The SQL Server login account.</td>
+</tr>
+<tr>
+<td>Password</td>
+<td><code>&lt;string&gt;</code></td>
+<td>The password for the SQL Server account logging on.</td>
+</tr>
+<tr>
+<td>Database</td>
+<td><code>&lt;string&gt;</code></td>
+<td>The name of the database.</td>
+</tr>
+<tr>
+<td>IntegratedSecurity</td>
+<td>false</td>
+<td>Windows/Kerberos authentication and SQL authentication.</td>
+</tr>
+<tr>
+<td>TrustServerCertificate</td>
+<td>true, false</td>
+<td>Specifies whether the driver trusts the server certificate when connecting using TLS.</td>
+</tr>
+<tr>
+<td>Encrypt</td>
+<td>true, false, DANGER_PLAINTEXT</td>
+<td>Specifies whether the driver uses TLS to encrypt communication.</td>
+</tr>
+<tr>
+<td>ApplicationName</td>
+<td><code>&lt;string&gt;</code></td>
+<td>Sets the application name for the connection.</td>
+</tr>
+</tbody>
+</table>
 <h2 id="creating-foreign-tables">Creating Foreign Tables</h2>
-<p>The S3 Wrapper supports data reads from S3.</p>
+<p>The SQL Server Wrapper supports data reads from SQL Server.</p>
 <table>
 <thead>
 <tr>
@@ -878,7 +873,7 @@
 </thead>
 <tbody>
 <tr>
-<td>S3</td>
+<td>SQL Server</td>
 <td align="center">✅</td>
 <td align="center">❌</td>
 <td align="center">❌</td>
@@ -888,48 +883,37 @@
 </tbody>
 </table>
 <p>For example:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span>
-<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">s3_table_csv</span><span class="w"> </span><span class="p">(</span>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span>
+<span class="normal">7</span>
+<span class="normal">8</span>
+<span class="normal">9</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">mssql_users</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
 <span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">sex</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">age</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">height</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">weight</span><span class="w"> </span><span class="nb">text</span>
+<span class="w">  </span><span class="n">dt</span><span class="w"> </span><span class="k">timestamp</span>
 <span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">s3_server</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">mssql_server</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">uri</span><span class="w"> </span><span class="s1">&#39;s3://bucket/s3_table.csv&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">format</span><span class="w"> </span><span class="s1">&#39;csv&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">has_header</span><span class="w"> </span><span class="s1">&#39;true&#39;</span>
+<span class="w">    </span><span class="k">table</span><span class="w"> </span><span class="s1">&#39;users&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
-<p>One file in S3 corresponds a foreign table in Postgres. For CSV and JSONL file, all columns must be present in the foreign table and type must be <code>text</code>. You can do custom transformations, like type conversion, by creating a view on top of the foreign table or using a subquery.</p>
-<p>For Parquet file, no need to define all columns in the foreign table but column names must match between Parquet file and its foreign table.</p>
 <h3 id="foreign-table-options">Foreign table options</h3>
 <p>The full list of foreign table options are below:</p>
 <ul>
-<li><code>uri</code> - S3 URI, required. For example, <code>s3://bucket/s3_table.csv</code></li>
-<li><code>format</code> - File format, required. <code>csv</code>, <code>jsonl</code>, or <code>parquet</code></li>
-<li><code>has_header</code> - If the CSV file has header, optional. <code>true</code> or <code>false</code>, default is <code>false</code></li>
-<li><code>compress</code> - Compression algorithm, optional. One of <code>gzip</code>, <code>bzip2</code>, <code>xz</code>, <code>zlib</code>, default is no compression</li>
+<li><code>table</code> - Source table or view name in SQL Server, required.</li>
 </ul>
+<p>This can also be a subquery enclosed in parentheses, for example,</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">table</span><span class="w"> </span><span class="s1">&#39;(select * from users where id = 42 or id = 43)&#39;</span>
+</code></pre></div></td></tr></table></div>
 <h2 id="query-pushdown-support">Query Pushdown Support</h2>
-<p>This FDW doesn't support query pushdown.</p>
+<p>This FDW supports <code>where</code>, <code>order by</code> and <code>limit</code> clause pushdown.</p>
 <h2 id="examples">Examples</h2>
-<p>Some examples on how to use S3 foreign tables.</p>
-<h3 id="basic-example">Basic example</h3>
-<p>This will create some "foreign table" inside your Postgres database can read data from S3:</p>
+<p>Some examples on how to use SQL Server foreign tables.</p>
+<p>Let's prepare the source table in SQL Server first:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -940,145 +924,65 @@
 <span class="normal"> 8</span>
 <span class="normal"> 9</span>
 <span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span>
-<span class="normal">13</span>
-<span class="normal">14</span>
-<span class="normal">15</span>
-<span class="normal">16</span>
-<span class="normal">17</span>
-<span class="normal">18</span>
-<span class="normal">19</span>
-<span class="normal">20</span>
-<span class="normal">21</span>
-<span class="normal">22</span>
-<span class="normal">23</span>
-<span class="normal">24</span>
-<span class="normal">25</span>
-<span class="normal">26</span>
-<span class="normal">27</span>
-<span class="normal">28</span>
-<span class="normal">29</span>
-<span class="normal">30</span>
-<span class="normal">31</span>
-<span class="normal">32</span>
-<span class="normal">33</span>
-<span class="normal">34</span>
-<span class="normal">35</span>
-<span class="normal">36</span>
-<span class="normal">37</span>
-<span class="normal">38</span>
-<span class="normal">39</span>
-<span class="normal">40</span>
-<span class="normal">41</span>
-<span class="normal">42</span>
-<span class="normal">43</span>
-<span class="normal">44</span>
-<span class="normal">45</span>
-<span class="normal">46</span>
-<span class="normal">47</span>
-<span class="normal">48</span>
-<span class="normal">49</span>
-<span class="normal">50</span>
-<span class="normal">51</span>
-<span class="normal">52</span>
-<span class="normal">53</span>
-<span class="normal">54</span>
-<span class="normal">55</span>
-<span class="normal">56</span>
-<span class="normal">57</span>
-<span class="normal">58</span>
-<span class="normal">59</span>
-<span class="normal">60</span>
-<span class="normal">61</span>
-<span class="normal">62</span>
-<span class="normal">63</span>
-<span class="normal">64</span>
-<span class="normal">65</span>
-<span class="normal">66</span>
-<span class="normal">67</span>
-<span class="normal">68</span>
-<span class="normal">69</span>
-<span class="normal">70</span>
-<span class="normal">71</span>
-<span class="normal">72</span>
-<span class="normal">73</span>
-<span class="normal">74</span>
-<span class="normal">75</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- CSV file, no compression</span>
-<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">s3_table_csv</span><span class="w"> </span><span class="p">(</span>
+<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Run below SQLs on SQL Server to create source table</span>
+<span class="k">create</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
+<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">varchar</span><span class="p">(</span><span class="mi">30</span><span class="p">),</span>
+<span class="w">  </span><span class="n">dt</span><span class="w"> </span><span class="n">datetime2</span>
+<span class="p">);</span>
+
+<span class="c1">-- Add some test data</span>
+<span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">users</span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">dt</span><span class="p">)</span><span class="w"> </span><span class="k">values</span><span class="w"> </span><span class="p">(</span><span class="mi">42</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Foo&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;2023-12-28&#39;</span><span class="p">);</span>
+<span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">users</span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">dt</span><span class="p">)</span><span class="w"> </span><span class="k">values</span><span class="w"> </span><span class="p">(</span><span class="mi">43</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Bar&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;2023-12-27&#39;</span><span class="p">);</span>
+<span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">users</span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">dt</span><span class="p">)</span><span class="w"> </span><span class="k">values</span><span class="w"> </span><span class="p">(</span><span class="mi">44</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Baz&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;2023-12-26&#39;</span><span class="p">);</span>
+</code></pre></div></td></tr></table></div>
+<h3 id="basic-example">Basic example</h3>
+<p>This example will create a foreign table inside your Postgres database and query its data:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">mssql_users</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
 <span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">sex</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">age</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">height</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">weight</span><span class="w"> </span><span class="nb">text</span>
+<span class="w">  </span><span class="n">dt</span><span class="w"> </span><span class="k">timestamp</span>
 <span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">s3_server</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">mssql_server</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">uri</span><span class="w"> </span><span class="s1">&#39;s3://bucket/s3_table.csv&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">format</span><span class="w"> </span><span class="s1">&#39;csv&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">has_header</span><span class="w"> </span><span class="s1">&#39;true&#39;</span>
+<span class="w">    </span><span class="k">table</span><span class="w"> </span><span class="s1">&#39;users&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 
-<span class="c1">-- JSON line file, no compression</span>
-<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">s3_table_jsonl</span><span class="w"> </span><span class="p">(</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">mssql_users</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<h3 id="remote-subquery-example">Remote subquery example</h3>
+<p>This example will create a foreign table based on a remote subquery and query its data:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">mssql_users_subquery</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
 <span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">sex</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">age</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">height</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">weight</span><span class="w"> </span><span class="nb">text</span>
+<span class="w">  </span><span class="n">dt</span><span class="w"> </span><span class="k">timestamp</span>
 <span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">s3_server</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">mssql_server</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">uri</span><span class="w"> </span><span class="s1">&#39;s3://bucket/s3_table.jsonl&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">format</span><span class="w"> </span><span class="s1">&#39;jsonl&#39;</span>
+<span class="w">    </span><span class="k">table</span><span class="w"> </span><span class="s1">&#39;(select * from users where id = 42 or id = 43)&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 
-<span class="c1">-- GZIP compressed CSV file</span>
-<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">s3_table_csv_gzip</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">sex</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">age</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">height</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">weight</span><span class="w"> </span><span class="nb">text</span>
-<span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">s3_server</span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">uri</span><span class="w"> </span><span class="s1">&#39;s3://bucket/s3_table.csv.gz&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">format</span><span class="w"> </span><span class="s1">&#39;csv&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">has_header</span><span class="w"> </span><span class="s1">&#39;true&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">compress</span><span class="w"> </span><span class="s1">&#39;gzip&#39;</span>
-<span class="w">  </span><span class="p">);</span>
-
-<span class="c1">-- Parquet file, no compression</span>
-<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">s3_table_parquet</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">integer</span><span class="p">,</span>
-<span class="w">  </span><span class="n">bool_col</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span>
-<span class="w">  </span><span class="n">bigint_col</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
-<span class="w">  </span><span class="n">float_col</span><span class="w"> </span><span class="nb">real</span><span class="p">,</span>
-<span class="w">  </span><span class="n">date_string_col</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">timestamp_col</span><span class="w"> </span><span class="k">timestamp</span>
-<span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">s3_server</span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">uri</span><span class="w"> </span><span class="s1">&#39;s3://bucket/s3_table.parquet&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">format</span><span class="w"> </span><span class="s1">&#39;parquet&#39;</span>
-<span class="w">  </span><span class="p">);</span>
-
-<span class="c1">-- GZIP compressed Parquet file</span>
-<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">s3_table_parquet_gz</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">integer</span><span class="p">,</span>
-<span class="w">  </span><span class="n">bool_col</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span>
-<span class="w">  </span><span class="n">bigint_col</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
-<span class="w">  </span><span class="n">float_col</span><span class="w"> </span><span class="nb">real</span><span class="p">,</span>
-<span class="w">  </span><span class="n">date_string_col</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">timestamp_col</span><span class="w"> </span><span class="k">timestamp</span>
-<span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">s3_server</span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">uri</span><span class="w"> </span><span class="s1">&#39;s3://bucket/s3_table.parquet.gz&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">format</span><span class="w"> </span><span class="s1">&#39;parquet&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">compress</span><span class="w"> </span><span class="s1">&#39;gzip&#39;</span>
-<span class="w">  </span><span class="p">);</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">mssql_users_subquery</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 
 
@@ -1100,7 +1004,7 @@
     <nav class="md-footer__inner md-grid" aria-label="Footer" >
       
         
-        <a href="../redis/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Redis" rel="prev">
+        <a href="../stripe/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Stripe" rel="prev">
           <div class="md-footer__button md-icon">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
           </div>
@@ -1109,20 +1013,20 @@
               <span class="md-footer__direction">
                 Previous
               </span>
-              Redis
+              Stripe
             </div>
           </div>
         </a>
       
       
         
-        <a href="../stripe/" class="md-footer__link md-footer__link--next" aria-label="Next: Stripe" rel="next">
+        <a href="../contributing/" class="md-footer__link md-footer__link--next" aria-label="Next: Contributing" rel="next">
           <div class="md-footer__title">
             <div class="md-ellipsis">
               <span class="md-footer__direction">
                 Next
               </span>
-              Stripe
+              Contributing
             </div>
           </div>
           <div class="md-footer__button md-icon">
