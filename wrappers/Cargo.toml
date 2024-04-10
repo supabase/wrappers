@@ -1,6 +1,6 @@
 [package]
 name = "wrappers"
-version = "0.3.0"
+version = "0.3.1"
 edition = "2021"
 publish = false
 
@@ -134,7 +134,7 @@ all_fdws = [
 ]
 
 [dependencies]
-pgrx = { version = "=0.11.2" }
+pgrx = { version = "=0.11.3" }
 #supabase-wrappers = "0.1"
 supabase-wrappers = { path = "../supabase-wrappers", default-features = false }
 
@@ -204,4 +204,4 @@ redis = { version = "0.24.0", features = ["streams"], optional = true }
 thiserror = { version = "1.0.48", optional = true }
 
 [dev-dependencies]
-pgrx-tests = "=0.11.2"
+pgrx-tests = "=0.11.3"
