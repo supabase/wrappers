@@ -57,7 +57,7 @@ pub fn require_option<'map>(
     options
         .get(opt_name)
         .map(|t| t.as_ref())
-        .ok_or_else(||OptionsError::OptionNameNotFound(opt_name.to_string()))
+        .ok_or_else(|| OptionsError::OptionNameNotFound(opt_name.to_string()))
 }
 
 /// Get required option value from the `options` map or a provided default
@@ -82,16 +82,16 @@ pub fn require_option_or<'a>(
 
 /// Check if the option list contains a specific option, used in [validator](crate::interface::ForeignDataWrapper::validator)
 pub fn check_options_contain(opt_list: &[Option<String>], tgt: &str) -> Result<(), OptionsError> {
-    let search_key =format!("{}=",tgt);
-    let valid =opt_list.iter()
+    let search_key = format!("{}=", tgt);
+    let valid = opt_list
+        .iter()
         .flatten()
-        .any(|a|a.starts_with(&search_key));
-    if valid{
+        .any(|a| a.starts_with(&search_key));
+    if valid {
         Ok(())
-    }else{
+    } else {
         Err(OptionsError::OptionNameNotFound(tgt.to_string()))
     }
-
 }
 
 // convert options definition to hashmap
