@@ -302,6 +302,9 @@ pub struct Column {
 
     /// column type OID, can be used to match pg_sys::BuiltinOid
     pub type_oid: Oid,
+
+    /// column type mod
+    pub type_mod: i32,
 }
 
 /// A restiction value used in [`Qual`], either a [`Cell`] or an array of [`Cell`]
