@@ -502,7 +502,10 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     /// You can do any initalization in this function, like saving connection
     /// info or API url in an variable, but don't do heavy works like database
     /// connection or API call.
-    fn new(options: &HashMap<String, String>) -> Result<Self, E>
+    fn new(
+        server_options: &HashMap<String, String>,
+        user_mapping_options: &HashMap<String, String>,
+    ) -> Result<Self, E>
     where
         Self: Sized;
 
