@@ -246,6 +246,7 @@ pub(super) unsafe fn extract_target_columns(
         let rte = pg_sys::planner_rt_fetch((*var).varno as _, root);
         let attno = (*var).varattno;
         let attname = pg_sys::get_attname((*rte).relid, attno, true);
+        let type_mod = (*var).vartypmod;
         if !attname.is_null() {
             // generated column is not supported
             if pg_sys::get_attgenerated((*rte).relid, attno) > 0 {
@@ -258,6 +259,7 @@ pub(super) unsafe fn extract_target_columns(
                 name: CStr::from_ptr(attname).to_str().unwrap().to_owned(),
                 num: attno as usize,
                 type_oid,
+                type_mod,
             });
         }
     }
