@@ -121,6 +121,15 @@ impl fmt::Display for Cell {
                         .expect("timestamptz should be a valid string")
                 )
             },
+            Cell::TimestampTz(v) => unsafe {
+                let ts = fcinfo::direct_function_call_as_datum(
+                    pg_sys::timestamptz_out,
+                    &[(*v).into_datum()],
+                )
+                .unwrap();
+                let ts_cstr = CStr::from_ptr(ts.cast_mut_ptr());
+                write!(f, "'{}'", ts_cstr.to_str().unwrap())
+            },
             Cell::Json(v) => write!(f, "{:?}", v),
         }
     }
