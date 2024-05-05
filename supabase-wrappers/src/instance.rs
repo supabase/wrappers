@@ -34,6 +34,6 @@ pub(super) unsafe fn create_fdw_instance<E: Into<ErrorReport>, W: ForeignDataWra
         false => HashMap::new(),
     };
 
-    let wrapper = W::new(&fserver_opts, &user_mapping_opts);
+    let wrapper = W::new(fserver_opts, user_mapping_opts);
     wrapper.report_unwrap()
 }

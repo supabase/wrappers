@@ -87,7 +87,7 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwState<E, W> {
             &self.tgts,
             &self.sorts,
             &self.limit,
-            &self.opts,
+            self.opts.clone(),
         )
     }
 
