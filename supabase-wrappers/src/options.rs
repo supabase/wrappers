@@ -95,7 +95,7 @@ pub fn check_options_contain(opt_list: &[Option<String>], tgt: &str) -> Result<(
 }
 
 // convert options definition to hashmap
-pub(super) unsafe fn options_to_hashmap(
+pub unsafe fn options_to_hashmap(
     options: *mut pg_sys::List,
 ) -> Result<HashMap<String, String>, OptionsError> {
     let mut ret = HashMap::new();

@@ -81,6 +81,6 @@ pub(super) unsafe fn create_fdw_instance_from_table_id<
         false => HashMap::new(),
     };
 
-    let wrapper = W::new(&fserver_opts, &user_mapping_opts);
+    let wrapper = W::new(fserver_opts, user_mapping_opts);
     wrapper.report_unwrap()
 }

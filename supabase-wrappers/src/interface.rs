@@ -540,8 +540,8 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     /// info or API url in an variable, but don't do heavy works like database
     /// connection or API call.
     fn new(
-        server_options: &HashMap<String, String>,
-        user_mapping_options: &HashMap<String, String>,
+        server_options: HashMap<String, String>,
+        user_mapping_options: HashMap<String, String>,
     ) -> Result<Self, E>
     where
         Self: Sized;
@@ -578,7 +578,7 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
         columns: &[Column],
         sorts: &[Sort],
         limit: &Option<Limit>,
-        options: &HashMap<String, String>,
+        options: HashMap<String, String>,
     ) -> Result<(), E>;
 
     /// Called when fetch one row from the foreign source
