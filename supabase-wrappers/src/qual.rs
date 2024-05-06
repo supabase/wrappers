@@ -45,6 +45,9 @@ pub(crate) unsafe fn form_array_from_datum(
         PgOid::BuiltIn(PgBuiltInOids::DATEARRAYOID) => {
             Vec::<Cell>::from_polymorphic_datum(datum, false, pg_sys::DATEOID)
         }
+        PgOid::BuiltIn(PgBuiltInOids::TIMEARRAYOID) => {
+            Vec::<Cell>::from_polymorphic_datum(datum, false, pg_sys::TIMEOID)
+        }
         PgOid::BuiltIn(PgBuiltInOids::TIMESTAMPARRAYOID) => {
             Vec::<Cell>::from_polymorphic_datum(datum, false, pg_sys::TIMESTAMPOID)
         }
