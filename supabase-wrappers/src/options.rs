@@ -4,6 +4,8 @@ use std::collections::HashMap;
 use std::ffi::CStr;
 use thiserror::Error;
 
+use super::utils::ReportableError;
+
 #[derive(Error, Debug)]
 pub enum OptionsError {
     #[error("required option `{0}` is not specified")]
@@ -116,4 +118,28 @@ pub unsafe fn options_to_hashmap(
         ret.insert(name.to_string(), value.to_string());
     }
     Ok(ret)
+}
+
+pub unsafe fn user_mapping_options(fserver: *mut pg_sys::ForeignServer) -> HashMap<String, String> {
+    let user_id = pg_sys::GetUserId();
+    let user_mapping_exists = !pg_sys::SearchSysCache2(
+        pg_sys::SysCacheIdentifier_USERMAPPINGUSERSERVER as i32,
+        pg_sys::Datum::from(user_id),
+        pg_sys::Datum::from((*fserver).serverid),
+    )
+    .is_null();
+    let public_mapping_exists = !pg_sys::SearchSysCache2(
+        pg_sys::SysCacheIdentifier_USERMAPPINGUSERSERVER as i32,
+        pg_sys::Datum::from(pg_sys::InvalidOid),
+        pg_sys::Datum::from((*fserver).serverid),
+    )
+    .is_null();
+
+    match user_mapping_exists || public_mapping_exists {
+        true => {
+            let user_mapping = pg_sys::GetUserMapping(user_id, (*fserver).serverid);
+            options_to_hashmap((*user_mapping).options).report_unwrap()
+        }
+        false => HashMap::new(),
+    }
 }
