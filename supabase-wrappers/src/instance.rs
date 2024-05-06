@@ -58,28 +58,7 @@ pub(super) unsafe fn create_fdw_instance_from_table_id<
     let ftable = pg_sys::GetForeignTable(ftable_id);
     let fserver = pg_sys::GetForeignServer((*ftable).serverid);
     let fserver_opts = options_to_hashmap((*fserver).options).report_unwrap();
-    let user_id = pg_sys::GetUserId();
-
-    let user_mapping_exists = !pg_sys::SearchSysCache2(
-        pg_sys::SysCacheIdentifier_USERMAPPINGUSERSERVER as i32,
-        pg_sys::Datum::from(user_id),
-        pg_sys::Datum::from((*fserver).serverid),
-    )
-    .is_null();
-    let public_mapping_exists = !pg_sys::SearchSysCache2(
-        pg_sys::SysCacheIdentifier_USERMAPPINGUSERSERVER as i32,
-        pg_sys::Datum::from(pg_sys::InvalidOid),
-        pg_sys::Datum::from((*fserver).serverid),
-    )
-    .is_null();
-
-    let user_mapping_opts = match user_mapping_exists || public_mapping_exists {
-        true => {
-            let user_mapping = pg_sys::GetUserMapping(user_id, (*fserver).serverid);
-            options_to_hashmap((*user_mapping).options).report_unwrap()
-        }
-        false => HashMap::new(),
-    };
+    let user_mapping_opts = user_mapping_options(fserver);
 
     let wrapper = W::new(fserver_opts, user_mapping_opts);
     wrapper.report_unwrap()
