@@ -123,19 +123,21 @@ pub unsafe fn options_to_hashmap(
 pub unsafe fn user_mapping_options(fserver: *mut pg_sys::ForeignServer) -> HashMap<String, String> {
     let user_id = pg_sys::GetUserId();
 
-    let user_mapping_tup = pg_sys::SearchSysCache2(
+    let mut tup = pg_sys::SearchSysCache2(
         pg_sys::SysCacheIdentifier_USERMAPPINGUSERSERVER as i32,
         pg_sys::Datum::from(user_id),
         pg_sys::Datum::from((*fserver).serverid),
     );
 
-    let public_mapping_tup = pg_sys::SearchSysCache2(
-        pg_sys::SysCacheIdentifier_USERMAPPINGUSERSERVER as i32,
-        pg_sys::Datum::from(pg_sys::InvalidOid),
-        pg_sys::Datum::from((*fserver).serverid),
-    );
+    if user_mapping_tup.is_null() {
+        tup = pg_sys::SearchSysCache2(
+            pg_sys::SysCacheIdentifier_USERMAPPINGUSERSERVER as i32,
+            pg_sys::Datum::from(pg_sys::InvalidOid),
+            pg_sys::Datum::from((*fserver).serverid),
+        );
+    }
 
-    let options = match !user_mapping_tup.is_null() || !public_mapping_tup.is_null() {
+    let options = match !tup.is_null() {
         true => {
             let user_mapping = pg_sys::GetUserMapping(user_id, (*fserver).serverid);
             options_to_hashmap((*user_mapping).options).report_unwrap()
@@ -143,8 +145,6 @@ pub unsafe fn user_mapping_options(fserver: *mut pg_sys::ForeignServer) -> HashM
         false => HashMap::new(),
     };
 
-    pg_sys::ReleaseSysCache(user_mapping_tup);
-    pg_sys::ReleaseSysCache(public_mapping_tup);
-
+    pg_sys::ReleaseSysCache(tup);
     options
 }
