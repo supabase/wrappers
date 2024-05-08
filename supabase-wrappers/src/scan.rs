@@ -1,4 +1,5 @@
 use pgrx::FromDatum;
+use pgrx::PgRelation;
 use pgrx::{
     debug2, memcxt::PgMemoryContexts, pg_sys::Datum, pg_sys::Oid, prelude::*, IntoDatum,
     PgSqlErrorCode,
@@ -20,6 +21,10 @@ use crate::prelude::ForeignDataWrapper;
 use crate::qual::*;
 use crate::sort::*;
 use crate::utils::{self, report_error, ReportableError, SerdeList};
+
+pub const OPTS_DATABASE_KEY: &str = "database_oid";
+pub const OPTS_NAMESPACE_KEY: &str = "namespace_oid";
+pub const OPTS_TABLE_KEY: &str = "table_oid";
 
 // Fdw private state for scan
 struct FdwState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
@@ -81,13 +86,15 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwState<E, W> {
     }
 
     #[inline]
-    fn begin_scan(&mut self) -> Result<(), E> {
+    fn begin_scan(&mut self, extra_opts: Option<HashMap<String, String>>) -> Result<(), E> {
+        let mut merged_opts = extra_opts.unwrap_or_default();
+        merged_opts.extend(self.opts.clone());
         self.instance.begin_scan(
             &self.quals,
             &self.tgts,
             &self.sorts,
             &self.limit,
-            self.opts.clone(),
+            merged_opts,
         )
     }
 
@@ -306,11 +313,21 @@ pub(super) extern "C" fn begin_foreign_scan<E: Into<ErrorReport>, W: ForeignData
 
         // begin scan if it is not EXPLAIN statement
         if eflags & pg_sys::EXEC_FLAG_EXPLAIN_ONLY as c_int <= 0 {
-            state.begin_scan().report_unwrap();
-
             let rel = scan_state.ss_currentRelation;
             let tup_desc = (*rel).rd_att;
             let natts = (*tup_desc).natts as usize;
+
+            // pass begin_scan OID values for the table, schema, and database
+            let pg_rel = PgRelation::from_pg(rel);
+            let database_oid = pg_sys::MyDatabaseId.to_string();
+            let namespace_oid = pg_rel.namespace_oid().to_string();
+            let table_oid = pg_rel.oid().to_string();
+            let extra_opts = HashMap::from([
+                (OPTS_DATABASE_KEY.into(), database_oid),
+                (OPTS_NAMESPACE_KEY.into(), namespace_oid),
+                (OPTS_TABLE_KEY.into(), table_oid),
+            ]);
+            state.begin_scan(Some(extra_opts)).report_unwrap();
 
             // initialize scan result lists
             state
