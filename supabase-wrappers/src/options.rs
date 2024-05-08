@@ -138,10 +138,10 @@ pub unsafe fn user_mapping_options(fserver: *mut pg_sys::ForeignServer) -> HashM
     }
 
     let user_mapping_exists = !tup.is_null();
-    pg_sys::ReleaseSysCache(tup);
 
     match user_mapping_exists {
         true => {
+            pg_sys::ReleaseSysCache(tup);
             let user_mapping = pg_sys::GetUserMapping(user_id, (*fserver).serverid);
             options_to_hashmap((*user_mapping).options).report_unwrap()
         }
