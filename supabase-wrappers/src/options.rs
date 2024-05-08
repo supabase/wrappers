@@ -129,7 +129,7 @@ pub unsafe fn user_mapping_options(fserver: *mut pg_sys::ForeignServer) -> HashM
         pg_sys::Datum::from((*fserver).serverid),
     );
 
-    if user_mapping_tup.is_null() {
+    if tup.is_null() {
         tup = pg_sys::SearchSysCache2(
             pg_sys::SysCacheIdentifier_USERMAPPINGUSERSERVER as i32,
             pg_sys::Datum::from(pg_sys::InvalidOid),
