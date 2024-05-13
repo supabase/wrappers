@@ -12,7 +12,10 @@ use std::os::raw::c_int;
 use std::ptr;
 
 use crate::instance;
-use crate::interface::{Cell, Column, Limit, Qual, Row, Sort, Value};
+use crate::interface::{
+    Cell, Column, Limit, Qual, Row, Sort, Value, OPTS_DATABASE_KEY, OPTS_NAMESPACE_KEY,
+    OPTS_TABLE_KEY,
+};
 use crate::limit::*;
 use crate::memctx;
 use crate::options::options_to_hashmap;
@@ -21,10 +24,6 @@ use crate::prelude::ForeignDataWrapper;
 use crate::qual::*;
 use crate::sort::*;
 use crate::utils::{self, report_error, ReportableError, SerdeList};
-
-pub const OPTS_DATABASE_KEY: &str = "database_oid";
-pub const OPTS_NAMESPACE_KEY: &str = "namespace_oid";
-pub const OPTS_TABLE_KEY: &str = "table_oid";
 
 // Fdw private state for scan
 struct FdwState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
@@ -319,9 +318,9 @@ pub(super) extern "C" fn begin_foreign_scan<E: Into<ErrorReport>, W: ForeignData
 
             // pass begin_scan OID values for the table, schema, and database
             let pg_rel = PgRelation::from_pg(rel);
-            let database_oid = pg_sys::MyDatabaseId.to_string();
-            let namespace_oid = pg_rel.namespace_oid().to_string();
-            let table_oid = pg_rel.oid().to_string();
+            let database_oid = pg_sys::MyDatabaseId.as_u32().to_string();
+            let namespace_oid = pg_rel.namespace_oid().as_u32().to_string();
+            let table_oid = pg_rel.oid().as_u32().to_string();
             let extra_opts = HashMap::from([
                 (OPTS_DATABASE_KEY.into(), database_oid),
                 (OPTS_NAMESPACE_KEY.into(), namespace_oid),

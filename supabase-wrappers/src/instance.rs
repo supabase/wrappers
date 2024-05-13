@@ -1,8 +1,6 @@
 use crate::prelude::*;
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::*;
-use std::collections::HashMap;
-use std::panic::{catch_unwind, AssertUnwindSafe};
 
 // create a fdw instance
 pub(super) unsafe fn create_fdw_instance<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
