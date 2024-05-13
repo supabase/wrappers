@@ -4,8 +4,6 @@ use std::ffi::CStr;
 use crate::prelude::*;
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::*;
-use std::collections::HashMap;
-use std::panic::{catch_unwind, AssertUnwindSafe};
 
 pub struct ForeignServer {
     pub server_name: String,
