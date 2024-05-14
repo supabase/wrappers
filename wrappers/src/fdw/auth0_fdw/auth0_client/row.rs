@@ -5,6 +5,7 @@ use supabase_wrappers::prelude::Cell;
 use supabase_wrappers::prelude::Column;
 use supabase_wrappers::prelude::Row;
 
+#[allow(dead_code)]
 #[derive(Debug, Serialize, PartialEq)]
 pub(crate) struct UserRequest {
     limit: Option<u64>,
