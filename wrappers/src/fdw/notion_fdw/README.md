@@ -26,52 +26,59 @@ cargo pgrx run --features notion_fdw
 3. Create the extension, foreign data wrapper and related objects:
 
 ```sql
--- create extension
-create extension wrappers;
+-- Create the extension (if not already created)
+CREATE extension wrappers;
 ```
 
 ```sql
--- create foreign data wrapper and enable 'Auth0Fdw'
-create foreign data wrapper notion_wrapper
-  handler notion_fdw_handler
-  validator notion_fdw_validator;
+-- Create the foreign data wrapper and specify the handler and validator functions
+CREATE FOREIGN DATA WRAPPER notion_wrapper
+  HANDLER notion_fdw_handler
+  VALIDATOR notion_fdw_validator;
 ```
 
 ```sql
--- create server and specify custom options
-create server notion_server
-  foreign data wrapper notion_wrapper
-  options (
+-- Create a server object with the necessary options
+CREATE SERVER notion_server
+  FOREIGN DATA WRAPPER notion_wrapper
+  OPTIONS (
     api_key '<your_api_key>',
-    notion_version '<notion_version>', -- optional, default is '2022-06-28'
-    api_url '<api_url>' -- optional, default is 'https://api.notion.com/v1/'
+    notion_version '2022-06-28', -- optional, default is '2022-06-28'
+    api_url 'https://api.notion.com/v1/' -- optional, default is 'https://api.notion.com/v1/'
   );
 ```
 
 ```sql
--- create an example foreign table
--- Number of fields are illustrative
-create foreign table notion_users (
-  id text,
-  name text,
-  type text,
-)
-  server notion_server
-  options (
+-- Create an example foreign tabl
+-- The number of fields are illustrative
+CREATE FOREIGN TABLE notion_users (
+    id text,
+    name text,
+    type text,
+    person jsonb,
+    bot jsonb
+) SERVER notion_server OPTIONS (
     object 'users'
-  );
+);
 ```
 
-````
 
 4. Run a query to check if it is working:
 
-```sql
-wrappers=# select id, name, type from notion_users;
-
-id             | d40e767c-d7af-4b18-a86d-55c61f1e39a4
-name           | John Doe
-type           | person
+```bash
+wrappers=# SELECT * FROM notion_users;
+-[ RECORD 1 ]--------------------------------------------------------------------------------------------
+id     | ad4d1b3b-4f3b-4b7e-8f1b-3f1f2f3f1f2f
+name   | John Doe
+type   | person
+person | {"email": "john@doe.com", "name": "John Doe"}
+bot    | 
+-[ RECORD 2 ]--------------------------------------------------------------------------------------------
+id     | 45f3b4b3-4f3b-4b7e-8f1b-12a3b4c5d6e7
+name   | Beep Boop
+type   | bot
+person | 
+bot    | {"owner": {"type": "workspace", "workspace": true}, "workspace_name": "John's workspace"}
 ````
 
 ## Changelog

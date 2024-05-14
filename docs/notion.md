@@ -1,120 +1,133 @@
-# [Notion](https://notion.so/) is a flexible, drop-in solution to add authentication and authorization services to your applications
+# [Notion](https://notion.so/) provides a versatile, ready-to-use solution for managing your data.
 
-The Notion Wrapper allows you to read data from your Notion tenant for use within your Postgres database. Only the users endpoint is supported at the moment.
+
+The Notion Wrapper allows you to read data from your Notion workspace for use within your Postgres database. Only the users endpoint is supported at the moment.
 
 ## Preparation
 
 Before you get started, make sure the `wrappers` extension is installed on your database:
 
 ```sql
-create extension if not exists wrappers with schema extensions;
+CREATE extension IF NOT EXISTS wrappers SCHEMA extensions;
 ```
 
-and then create the foreign data wrapper:
+Then, create the foreign data wrapper:
 
 ```sql
-create foreign data wrapper notion_wrapper
-  handler notion_fdw_handler
-  validator notion_fdw_validator;
+CREATE FOREIGN DATA WRAPPER notion_wrapper
+  HANDLER notion_fdw_handler
+  VALIDATOR notion_fdw_validator;
 ```
 
 ### Secure your credentials (optional)
 
-By default, Postgres stores FDW credentials inide `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
+By default, Postgres stores FDW credentials in plain text within the `pg_catalog.pg_foreign_server` table, making them visible to anyone with access to this table. To enhance security, it is advisable to use [Vault](https://supabase.com/docs/guides/database/vault) for credential storage. Vault integrates seamlessly with Wrappers to provide a secure storage solution for sensitive information. We strongly recommend utilizing Vault to safeguard your credentials.
 
 ```sql
--- Save your Auth0 API key in Vault and retrieve the `key_id`
-insert into vault.secrets (name, secret)
-values (
+-- Save your Notion API key in Vault and retrieve the `key_id`
+INSERT INTO vault.secrets (name, secret)
+VALUES (
   'notion',
   '<Notion API Key>' -- Notion API key
 )
-returning key_id;
+RETURNING key_id;
 ```
 
 ### Connecting to Notion
 
-We need to provide Postgres with the credentials to connect to Notion, and any additional options. We can do this using the `create server` command:
+We need to provide Postgres with the credentials to connect to Notion, and any additional options. We can do this using the `CREATE SERVER` command:
 
-=== "With Vault"
+- With Vault (recommended)
 
-    ```sql
-    create server notion_server
-      foreign data wrapper notion_wrapper
-      options (
-        api_key_id '<key_ID>' -- The Key ID from above.
-      );
-    ```
-
-=== "Without Vault"
-
-    ```sql
-    -- create server and specify custom options
-    create server notion_server
-    foreign data wrapper notion_wrapper
-    options (
-        api_key '<your_api_key>',
-        notion_version '<notion_version>', -- optional, default is '2022-06-28'
-        api_url '<api_url>' -- optional, default is 'https://api.notion.com/v1/'
+  ```sql
+  CREATE SERVER notion_server
+    FOREIGN DATA WRAPPER notion_wrapper
+    OPTIONS (
+      api_key_id '<key_ID>', -- The Key ID from the Vault
+      notion_version '<notion_version>', -- optional, default is '2022-06-28'
+      api_url '<api_url>' -- optional, default is 'https://api.notion.com/v1/'
     );
-    ```
+  ```
+
+- Without Vault
+
+  ```sql
+  CREATE SERVER notion_server
+    FOREIGN DATA WRAPPER notion_wrapper
+    OPTIONS (
+      api_key '<your_api_key>', -- Your Notion API key
+      notion_version '<notion_version>', -- optional, default is '2022-06-28'
+      api_url '<api_url>' -- optional, default is 'https://api.notion.com/v1/'
+  );
+  ```
 
 ## Creating Foreign Tables
 
-The Notion Wrapper supports data reads from Notion's [Users endpoint](https://developers.notion.com/reference/get-users) endpoint (_read only_).
+The Notion Wrapper supports data reads from the [Notion API](https://developers.notion.com/reference).
 
-| Notion   | Select | Insert | Update | Delete | Truncate |
-| ------- | :----: | :----: | :----: | :----: | :------: |
-| Records |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Object                                                     | Select | Insert | Update | Delete | Truncate |
+| ---------------------------------------------------------- | :----: | :----: | :----: | :----: | :------: |
+| [Users](https://developers.notion.com/reference/get-users) |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
 
 For example:
 
 ```sql
-create foreign table my_foreign_table (
+CREATE FOREIGN TABLE my_foreign_table (
   id text,
   name text,
-  type text
+  type text,
+  person jsonb,
+  bot jsonb
   -- other fields
 )
-server notion_server
-options (
-  object 'users',
+  SERVER notion_server
+  OPTIONS (
+    object 'users',
 );
 ```
 
-### Foreign table options
-
-The full list of foreign table options are below:
-
-- `objects` - Notion object to select from. Currently only supports `users`
-
 ## Query Pushdown Support
 
-This FDW doesn't support query pushdown.
+This FDW supports `where` clause pushdown. You can specify a filter in `where` clause and it will be passed to Notion API call.
+
+For example, this query
+
+```sql
+SELECT * from notion_users where id = 'xxx';
+```
+
+will be translated Notion API call: `https://api.notion.com/v1/users/xxx`.
 
 ## Examples
 
 Some examples on how to use Notion foreign tables.
 
-### Basic example
+### Users foreign table
 
-This will create a "foreign table" inside your Postgres database called `notion_users`:
+The following command creates a "foreign table" in your Postgres database named `notion_users`:
 
 ```sql
-create foreign table notion_users (
+CREATE FOREIGN TABLE notion_users (
   id text,
   name text,
-  type text
+  type text,
+  person jsonb,
+  bot jsonb
 )
-  server notion_server
-  options (
+  SERVER notion_server
+  OPTIONS (
     object 'users'
   );
-
 ```
 
 You can now fetch your Notion data from within your Postgres database:
 
 ```sql
-select * from notion_users;
+SELECT * FROM notion_users;
+```
+
+You can also query with filters:
+
+```sql
+SELECT * FROM notion_users WHERE id = 'xxx';
 ```

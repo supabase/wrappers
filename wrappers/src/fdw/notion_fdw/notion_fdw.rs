@@ -7,9 +7,9 @@ use serde_json::{json, Value as JsonValue};
 use std::collections::HashMap;
 
 use supabase_wrappers::prelude::*;
-use supabase_wrappers::utils::report_info;
-
 use super::{NotionFdwError, NotionFdwResult};
+
+// The construction of this fdw is heavily based on the Stripe FDW
 
 fn create_client(api_key: &str, notion_version: &str) -> NotionFdwResult<ClientWithMiddleware> {
     let mut headers = header::HeaderMap::new();
@@ -45,12 +45,20 @@ fn body_to_rows(
     let mut result = Vec::new();
     let value: JsonValue = serde_json::from_str(resp_body)?;
 
+    // Notion API can return two types of responses:
+    // 1. Single Object Response:
+    //    - The response is a single object where the "object" field specifies the object type (e.g., user, database).
+    // 2. List Response:
+    //    - The response is a list of objects. The "object" field is set to 'list', and the "results" field contains the objects. The `type` field indicates the type of objects in the list (e.g., user, database).
+
+    // Extract object type, can be either 'list' or a specific object type
     let object: &str = value
         .as_object()
         .and_then(|v| v.get("object"))
         .and_then(|v| v.as_str())
         .ok_or(NotionFdwError::InvalidResponse)?;
 
+    // Handle single object response
     let single_wrapped: Vec<JsonValue> = match object {
         "list" => Vec::new(),
         _ => value
@@ -59,6 +67,7 @@ fn body_to_rows(
             .ok_or(NotionFdwError::InvalidResponse)?,
     };
 
+    // Then, get the list of entries
     let entries = match object {
         "list" => value
             .as_object()
@@ -73,27 +82,35 @@ fn body_to_rows(
 
         // Extract columns based on target columns specified
         for tgt_col in tgt_cols {
-            if let Some((col_name, col_type)) = cols.iter().find(|(c, _)| c == &tgt_col.name) {
-                let cell = entry
-                    .as_object()
-                    .and_then(|v| v.get(*col_name))
-                    .and_then(|v| match *col_type {
-                        "bool" => v.as_bool().map(Cell::Bool),
-                        "i64" => v.as_i64().map(Cell::I64),
-                        "string" => v.as_str().map(|a| Cell::String(a.to_owned())),
-                        "timestamp" => v.as_i64().map(|a| {
-                            let ts = to_timestamp(a as f64);
-                            Cell::Timestamp(ts.to_utc())
-                        }),
-                        _ => None,
-                    });
 
-                row.push(col_name, cell);
-            } else {
-                // put the rest of the attributes in a JSONB column
-                let attrs = serde_json::from_str(&entry.to_string())?;
-                row.push(&tgt_col.name, Some(Cell::Json(JsonB(attrs))));
-            }
+            // Extract the value of the target column
+            let tgt_col_value = entry
+                .as_object()
+                .and_then(|v| v.get(&tgt_col.name))
+                .unwrap_or(&JsonValue::Null);
+
+            // If we can't find the column type, default to jsonb
+            let col_type = cols
+                .iter()
+                .find(|(c, _)| c == &tgt_col.name)
+                .map(|(_, t)| t)
+                .unwrap_or(&"jsonb");
+
+            let cell = match *col_type {
+                "bool" => tgt_col_value.as_bool().map(Cell::Bool),
+                "i64" => tgt_col_value.as_i64().map(Cell::I64),
+                "string" => tgt_col_value.as_str().map(|a| Cell::String(a.to_owned())),
+                "timestamp" => tgt_col_value.as_i64().map(|a| {
+                    let ts = to_timestamp(a as f64);
+                    Cell::Timestamp(ts.to_utc())
+                }),
+                "jsonb" => tgt_col_value
+                    .as_object()
+                    .map(|a| Cell::Json(JsonB(serde_json::Value::Object(a.clone())))),
+                _ => None,
+            };
+
+            row.push(tgt_col.name.as_str(), cell);
         }
         result.push(row);
     }
@@ -199,8 +216,6 @@ pub(crate) struct NotionFdw {
     base_url: Url,
     client: Option<ClientWithMiddleware>,
     scan_result: Option<Vec<Row>>,
-    _obj: String,
-    _rowid_col: String,
     iter_idx: usize,
 }
 
@@ -217,11 +232,11 @@ impl NotionFdw {
         let mut url = self.base_url.join(obj)?;
 
         // pushdown quals other than id
-        // ref: https://notion.com/docs/api/[object]/list
+        // ref: https://developers.notion.com/reference
         let fields = match obj {
             "users" => vec![],
             _ => {
-                return Err(NotionFdwError::ObjectNotImplemented(format!("{}", obj)));
+                return Err(NotionFdwError::ObjectNotImplemented(obj.to_string()));
             }
         };
         pushdown_quals(&mut url, obj, quals, fields, page_size, cursor);
@@ -242,7 +257,9 @@ impl NotionFdw {
                     ("id", "string"),
                     ("type", "string"),
                     ("name", "string"),
-                    ("object", "string"), // Always "user"
+                    ("avatar_url", "string"),
+                    ("person", "jsonb"),
+                    ("bot", "jsonb"),
                 ],
                 tgt_cols,
             ),
@@ -288,8 +305,6 @@ impl ForeignDataWrapper<NotionFdwError> for NotionFdw {
             base_url: Url::parse(&base_url)?,
             client,
             scan_result: None,
-            _obj: String::default(),
-            _rowid_col: String::default(),
             iter_idx: 0,
         })
     }
@@ -369,7 +384,6 @@ impl ForeignDataWrapper<NotionFdwError> for NotionFdw {
             // save stats
             stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsIn, result.len() as i64);
             stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsOut, result.len() as i64);
-
             set_stats_metadata(stats_metadata);
 
             self.scan_result = Some(result);
@@ -379,7 +393,6 @@ impl ForeignDataWrapper<NotionFdwError> for NotionFdw {
     }
 
     fn iter_scan(&mut self, row: &mut Row) -> NotionFdwResult<Option<()>> {
-        report_info(format!("Iter scan for object ({})", self._obj).as_str());
         if let Some(ref mut result) = self.scan_result {
             if self.iter_idx < result.len() {
                 row.replace_with(result[self.iter_idx].clone());
