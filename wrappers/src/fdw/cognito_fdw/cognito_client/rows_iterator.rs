@@ -46,7 +46,7 @@ impl RowsIterator {
         self.rows = rt.block_on(async {
             match request.send().await {
                 Ok(response) => {
-                    self.pagination_token = response.pagination_token.clone();
+                    self.pagination_token.clone_from(&response.pagination_token);
                     Ok(response
                         .users
                         .clone()

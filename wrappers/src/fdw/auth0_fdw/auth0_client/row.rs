@@ -1,15 +1,8 @@
 use pgrx::JsonB;
 use serde::Deserialize;
-use serde::Serialize;
 use supabase_wrappers::prelude::Cell;
 use supabase_wrappers::prelude::Column;
 use supabase_wrappers::prelude::Row;
-
-#[derive(Debug, Serialize, PartialEq)]
-pub(crate) struct UserRequest {
-    limit: Option<u64>,
-    offset: Option<u64>,
-}
 
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct ResultPayload {
