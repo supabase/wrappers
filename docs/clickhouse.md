@@ -76,7 +76,7 @@ We need to provide Postgres with the credentials to connect to ClickHouse, and a
 Some connection string examples:
 
 - `tcp://user:password@host:9000/clicks?compression=lz4&ping_timeout=42ms`
-- `tcp://default:PASSWORD@abc.eu-west-1.aws.clickhouse.cloud:9440/default?connection_timeout=30s&ping_before_query=false`
+- `tcp://default:PASSWORD@abc.eu-west-1.aws.clickhouse.cloud:9440/default?connection_timeout=30s&ping_before_query=false&secure=true`
 
 Check [more connection string parameters](https://github.com/suharev7/clickhouse-rs#dns).
 
