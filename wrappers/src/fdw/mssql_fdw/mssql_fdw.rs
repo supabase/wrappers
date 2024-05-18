@@ -146,6 +146,12 @@ impl MssqlFdw {
         // from remote, so we calculate the real limit and only use it without
         // pushing down offset.
         if let Some(limit) = limit {
+            if sorts.is_empty() {
+                return Err(MssqlFdwError::SyntaxError(
+                    "'limit' must be with 'order by' clause".to_string(),
+                ));
+            }
+
             let real_limit = limit.offset + limit.count;
             sql.push_str(&format!(
                 " offset 0 rows fetch next {} rows only",
