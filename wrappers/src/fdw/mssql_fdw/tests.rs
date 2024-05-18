@@ -144,7 +144,7 @@ mod tests {
         });
 
         let result = std::panic::catch_unwind(|| {
-            Spi::connect(|mut c| {
+            Spi::connect(|c| {
                 c.select("SELECT name FROM mssql_users LIMIT 2 OFFSET 1", None, None)
                     .is_err()
             })
