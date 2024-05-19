@@ -55,9 +55,10 @@ pub(super) unsafe fn create_fdw_instance_from_table_id<
 ) -> W {
     let ftable = pg_sys::GetForeignTable(ftable_id);
     let fserver = pg_sys::GetForeignServer((*ftable).serverid);
+    let ftable_opts = options_to_hashmap((*ftable).options).report_unwrap();
     let fserver_opts = options_to_hashmap((*fserver).options).report_unwrap();
     let user_mapping_opts = user_mapping_options(fserver);
 
-    let wrapper = W::new(fserver_opts, user_mapping_opts);
+    let wrapper = W::new(ftable_opts, fserver_opts, user_mapping_opts);
     wrapper.report_unwrap()
 }
