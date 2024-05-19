@@ -533,6 +533,7 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     /// info or API url in an variable, but don't do heavy works like database
     /// connection or API call.
     fn new(
+        table_options: HashMap<String, String>,
         server_options: HashMap<String, String>,
         user_mapping_options: HashMap<String, String>,
     ) -> Result<Self, E>
