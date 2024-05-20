@@ -16,6 +16,9 @@ mod firebase_fdw;
 #[cfg(feature = "airtable_fdw")]
 mod airtable_fdw;
 
+#[cfg(feature = "nocodb_fdw")]
+mod nocodb_fdw;
+
 #[cfg(feature = "s3_fdw")]
 mod s3_fdw;
 

@@ -73,6 +73,15 @@ airtable_fdw = [
     "url",
     "thiserror",
 ]
+nocodb_fdw = [
+    "reqwest",
+    "reqwest-middleware",
+    "reqwest-retry",
+    "serde_json",
+    "serde",
+    "url",
+    "thiserror",
+]
 cognito_fdw = [
     "aws-sdk-cognitoidentityprovider",
     "aws-config",
