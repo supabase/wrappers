@@ -28,8 +28,8 @@ fn create_client(api_key: &str) -> Result<ClientWithMiddleware, NocoDBFdwError> 
 }
 
 #[wrappers_fdw(
-    version = "0.1.3",
-    author = "Ankur Goyal",
+    version = "0.0.1",
+    author = "Leonardo Marciano",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/nocodb_fdw",
     error_type = "NocoDBFdwError"
 )]
