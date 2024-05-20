@@ -22,10 +22,7 @@ use std::slice::Iter;
 // https://doxygen.postgresql.org/pg__foreign__table_8h.html
 
 /// Constant can be used in [validator](ForeignDataWrapper::validator)
-// Note: temporarily disable warning here, can be removed after this upstream PR
-// is merged. https://github.com/pgcentralfoundation/pgrx/pull/1432.
-#[allow(deprecated)]
-pub const FOREIGN_DATA_WRAPPER_RELATION_ID: Oid = unsafe { Oid::from_u32_unchecked(2328) };
+pub const FOREIGN_DATA_WRAPPER_RELATION_ID: Oid = BuiltinOid::ForeignDataWrapperRelationId.value();
 
 /// Constant can be used in [validator](ForeignDataWrapper::validator)
 pub const FOREIGN_SERVER_RELATION_ID: Oid = BuiltinOid::ForeignServerRelationId.value();
@@ -79,7 +76,7 @@ impl fmt::Display for Cell {
             Cell::I32(v) => write!(f, "{}", v),
             Cell::F64(v) => write!(f, "{}", v),
             Cell::I64(v) => write!(f, "{}", v),
-            Cell::Numeric(v) => write!(f, "{:?}", v),
+            Cell::Numeric(v) => write!(f, "{}", v),
             Cell::String(v) => write!(f, "'{}'", v),
             Cell::Date(v) => unsafe {
                 let dt =
