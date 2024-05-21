@@ -6,8 +6,8 @@ use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use serde_json::{json, Value as JsonValue};
 use std::collections::HashMap;
 
-use supabase_wrappers::prelude::*;
 use super::{NotionFdwError, NotionFdwResult};
+use supabase_wrappers::prelude::*;
 
 // The construction of this fdw is heavily based on the Stripe FDW
 
@@ -82,7 +82,6 @@ fn body_to_rows(
 
         // Extract columns based on target columns specified
         for tgt_col in tgt_cols {
-
             // Extract the value of the target column
             let tgt_col_value = entry
                 .as_object()

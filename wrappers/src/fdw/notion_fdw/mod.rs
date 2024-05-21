@@ -40,8 +40,6 @@ enum NotionFdwError {
 
     #[error("invalid stats: {0}")]
     InvalidStats(String),
-
-
 }
 
 impl From<NotionFdwError> for ErrorReport {
