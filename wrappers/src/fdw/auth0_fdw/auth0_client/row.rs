@@ -93,9 +93,9 @@ impl Auth0User {
                 "user_id" => Some(Cell::String(self.user_id.clone())),
                 "email" => Some(Cell::String(self.email.clone())),
                 "email_verified" => Some(Cell::Bool(self.email_verified)),
-                "username" => self.username.take().map(|data| Cell::String(data)),
-                "phone_number" => self.phone_number.take().map(|data| Cell::String(data)),
-                "phone_verified" => self.phone_verified.take().map(|data| Cell::Bool(data)),
+                "username" => self.username.take().map(Cell::String),
+                "phone_number" => self.phone_number.take().map(Cell::String),
+                "phone_verified" => self.phone_verified.take().map(Cell::Bool),
                 "created_at" => Some(Cell::String(self.created_at.clone())),
                 "updated_at" => Some(Cell::String(self.updated_at.clone())),
                 "identities" => Some(Cell::Json(JsonB(
@@ -114,10 +114,10 @@ impl Auth0User {
                 "multifactor" => self.multifactor.take().map(|data| Cell::Json(JsonB(data))),
                 "last_ip" => Some(Cell::String(self.last_ip.clone())),
                 "last_login" => Some(Cell::String(self.last_login.clone())),
-                "logins_count" => Some(Cell::I32(self.logins_count as i32)),
-                "blocked" => self.blocked.take().map(|data| Cell::Bool(data)),
-                "given_name" => self.given_name.take().map(|data| Cell::String(data)),
-                "family_name" => self.family_name.take().map(|data| Cell::String(data)),
+                "logins_count" => Some(Cell::I32(self.logins_count)),
+                "blocked" => self.blocked.take().map(Cell::Bool),
+                "given_name" => self.given_name.take().map(Cell::String),
+                "family_name" => self.family_name.take().map(Cell::String),
                 _ => None,
             };
             row.push(tgt_col.name.as_str(), cell);
