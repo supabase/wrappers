@@ -6,13 +6,33 @@ import json
 
 class MockServerHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
-        response_data = {"start":0,"limit":50,"length":2, "users": [{
-            "email": "example@gmail.com",
+        response_data = {"start":0,"limit":50,"length":1, "users": [{
+            "email": "john@doe.com",
+            "email_verified": True,
+            "user_id": "auth0|1234567890abcdef",
+            "username": "userexample",
+            "phone_number": "123-456-7890",
+            "phone_verified": True,
+            "created_at": "2023-05-16T07:41:08.028Z",
+            "updated_at": "2023-05-16T08:41:08.028Z",
             "identities": [{
-                'provider': 'google-oauth2'
+                "connection": "Username-Password-Authentication",
+                "user_id": "1234567890abcdef",
+                "provider": "auth0",
+                "isSocial": False
             }],
-            "email_verified": False,
-            "created_at": "2023-05-16T07:41:08.028Z"
+            "app_metadata": {},
+            "user_metadata": {},
+            "picture": "https://example.com/avatar.jpg",
+            "name": "John Doe",
+            "nickname": "Johnny",
+            "multifactor": [],
+            "last_ip": "192.168.1.1",
+            "last_login": "2023-05-16T08:41:08.028Z",
+            "logins_count": 1,
+            "blocked": False,
+            "given_name": "John",
+            "family_name": "Doe"
         }]}
 
         # Set response code and headers
