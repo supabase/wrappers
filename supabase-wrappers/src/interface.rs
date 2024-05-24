@@ -345,6 +345,8 @@ impl Qual {
                         }
                         _ => format!("{} {} {}", self.field, self.operator, cell),
                     },
+                    "~~" => format!("{} like {}", self.field, cell),
+                    "!~~" => format!("{} not like {}", self.field, cell),
                     _ => format!("{} {} {}", self.field, self.operator, cell),
                 },
                 Value::Array(_) => unreachable!(),
