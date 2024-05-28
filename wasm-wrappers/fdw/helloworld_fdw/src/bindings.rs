@@ -56,9 +56,9 @@ pub mod supabase {
                 I64(i64),
                 Numeric(f64),
                 String(_rt::String),
-                /// seconds since unix epoch
+                /// seconds since Unix epoch
                 Date(i64),
-                /// microseconds since unix epoch
+                /// microseconds since Unix epoch
                 Timestamp(i64),
                 Json(_rt::String),
             }

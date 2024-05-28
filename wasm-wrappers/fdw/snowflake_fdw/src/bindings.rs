@@ -1070,8 +1070,11 @@ pub mod supabase {
             static __FORCE_SECTION_REF: fn() =
                 super::super::super::__link_custom_section_describing_imports;
             use super::super::super::_rt;
+            pub type TimeError = _rt::String;
+            pub type TimeResult = Result<i64, TimeError>;
             #[allow(unused_unsafe, clippy::all)]
-            pub fn epoch_secs() -> u64 {
+            /// get seconds since Unix epoch
+            pub fn epoch_secs() -> i64 {
                 unsafe {
                     #[cfg(target_arch = "wasm32")]
                     #[link(wasm_import_module = "supabase:wrappers/time@0.1.0")]
@@ -1085,10 +1088,110 @@ pub mod supabase {
                         unreachable!()
                     }
                     let ret = wit_import();
-                    ret as u64
+                    ret
                 }
             }
             #[allow(unused_unsafe, clippy::all)]
+            /// parse RFC3339 string to microseconds since Unix epoch
+            pub fn parse_from_rfc3339(s: &str) -> TimeResult {
+                unsafe {
+                    #[repr(align(8))]
+                    struct RetArea([::core::mem::MaybeUninit<u8>; 16]);
+                    let mut ret_area = RetArea([::core::mem::MaybeUninit::uninit(); 16]);
+                    let vec0 = s;
+                    let ptr0 = vec0.as_ptr().cast::<u8>();
+                    let len0 = vec0.len();
+                    let ptr1 = ret_area.0.as_mut_ptr().cast::<u8>();
+                    #[cfg(target_arch = "wasm32")]
+                    #[link(wasm_import_module = "supabase:wrappers/time@0.1.0")]
+                    extern "C" {
+                        #[link_name = "parse-from-rfc3339"]
+                        fn wit_import(_: *mut u8, _: usize, _: *mut u8);
+                    }
+
+                    #[cfg(not(target_arch = "wasm32"))]
+                    fn wit_import(_: *mut u8, _: usize, _: *mut u8) {
+                        unreachable!()
+                    }
+                    wit_import(ptr0.cast_mut(), len0, ptr1);
+                    let l2 = i32::from(*ptr1.add(0).cast::<u8>());
+                    match l2 {
+                        0 => {
+                            let e = {
+                                let l3 = *ptr1.add(8).cast::<i64>();
+
+                                l3
+                            };
+                            Ok(e)
+                        }
+                        1 => {
+                            let e = {
+                                let l4 = *ptr1.add(8).cast::<*mut u8>();
+                                let l5 = *ptr1.add(12).cast::<usize>();
+                                let len6 = l5;
+                                let bytes6 = _rt::Vec::from_raw_parts(l4.cast(), len6, len6);
+
+                                _rt::string_lift(bytes6)
+                            };
+                            Err(e)
+                        }
+                        _ => _rt::invalid_enum_discriminant(),
+                    }
+                }
+            }
+            #[allow(unused_unsafe, clippy::all)]
+            /// parse string from an user-specified format to microseconds since Unix epoch
+            pub fn parse_from_str(s: &str, fmt: &str) -> TimeResult {
+                unsafe {
+                    #[repr(align(8))]
+                    struct RetArea([::core::mem::MaybeUninit<u8>; 16]);
+                    let mut ret_area = RetArea([::core::mem::MaybeUninit::uninit(); 16]);
+                    let vec0 = s;
+                    let ptr0 = vec0.as_ptr().cast::<u8>();
+                    let len0 = vec0.len();
+                    let vec1 = fmt;
+                    let ptr1 = vec1.as_ptr().cast::<u8>();
+                    let len1 = vec1.len();
+                    let ptr2 = ret_area.0.as_mut_ptr().cast::<u8>();
+                    #[cfg(target_arch = "wasm32")]
+                    #[link(wasm_import_module = "supabase:wrappers/time@0.1.0")]
+                    extern "C" {
+                        #[link_name = "parse-from-str"]
+                        fn wit_import(_: *mut u8, _: usize, _: *mut u8, _: usize, _: *mut u8);
+                    }
+
+                    #[cfg(not(target_arch = "wasm32"))]
+                    fn wit_import(_: *mut u8, _: usize, _: *mut u8, _: usize, _: *mut u8) {
+                        unreachable!()
+                    }
+                    wit_import(ptr0.cast_mut(), len0, ptr1.cast_mut(), len1, ptr2);
+                    let l3 = i32::from(*ptr2.add(0).cast::<u8>());
+                    match l3 {
+                        0 => {
+                            let e = {
+                                let l4 = *ptr2.add(8).cast::<i64>();
+
+                                l4
+                            };
+                            Ok(e)
+                        }
+                        1 => {
+                            let e = {
+                                let l5 = *ptr2.add(8).cast::<*mut u8>();
+                                let l6 = *ptr2.add(12).cast::<usize>();
+                                let len7 = l6;
+                                let bytes7 = _rt::Vec::from_raw_parts(l5.cast(), len7, len7);
+
+                                _rt::string_lift(bytes7)
+                            };
+                            Err(e)
+                        }
+                        _ => _rt::invalid_enum_discriminant(),
+                    }
+                }
+            }
+            #[allow(unused_unsafe, clippy::all)]
+            /// sleep for a while
             pub fn sleep(millis: u64) {
                 unsafe {
                     #[cfg(target_arch = "wasm32")]
@@ -1159,9 +1262,9 @@ pub mod supabase {
                 I64(i64),
                 Numeric(f64),
                 String(_rt::String),
-                /// seconds since unix epoch
+                /// seconds since Unix epoch
                 Date(i64),
-                /// microseconds since unix epoch
+                /// microseconds since Unix epoch
                 Timestamp(i64),
                 Json(_rt::String),
             }
@@ -4453,8 +4556,8 @@ pub(crate) use __export_snowflake_impl as export;
 #[cfg(target_arch = "wasm32")]
 #[link_section = "component-type:wit-bindgen:0.24.0:snowflake:encoded world"]
 #[doc(hidden)]
-pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 3464] = *b"\
-\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\x88\x1a\x01A\x02\x01\
+pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 3527] = *b"\
+\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\xc7\x1a\x01A\x02\x01\
 A\x13\x01B\x15\x01o\x02ss\x01p\0\x04\0\x07headers\x03\0\x01\x01q\x02\x03get\0\0\x04\
 post\0\0\x04\0\x06method\x03\0\x03\x01r\x04\x06method\x04\x03urls\x07headers\x02\
 \x04bodys\x04\0\x07request\x03\0\x05\x01r\x04\x03urls\x0bstatus-code{\x07headers\
@@ -4470,68 +4573,70 @@ payload\x05\x04algos\x03keys\x09ttl-hoursy\0\x03\x04\0\x06encode\x01\x06\x03\x01
 bytes-out\0\0\x04\0\x06metric\x03\0\x02\x01@\x03\x08fdw-names\x06metric\x03\x03i\
 ncx\x01\0\x04\0\x09inc-stats\x01\x04\x01@\x01\x08fdw-names\0\x01\x04\0\x0cget-me\
 tadata\x01\x05\x01@\x02\x08fdw-names\x08metadata\x01\x01\0\x04\0\x0cset-metadata\
-\x01\x06\x03\x01\x1dsupabase:wrappers/stats@0.1.0\x05\x02\x01B\x08\x01s\x04\0\x0a\
-time-error\x03\0\0\x01j\x01s\x01\x01\x04\0\x0btime-result\x03\0\x02\x01@\0\0w\x04\
-\0\x0aepoch-secs\x01\x04\x01@\x01\x06millisw\x01\0\x04\0\x05sleep\x01\x05\x03\x01\
-\x1csupabase:wrappers/time@0.1.0\x05\x03\x01Br\x01q\x0c\x04bool\0\0\x02i8\0\0\x03\
-i16\0\0\x03f32\0\0\x03i32\0\0\x03f64\0\0\x03i64\0\0\x07numeric\0\0\x06string\0\0\
-\x04date\0\0\x09timestamp\0\0\x04json\0\0\x04\0\x08type-oid\x03\0\0\x01q\x0c\x04\
-bool\x01\x7f\0\x02i8\x01~\0\x03i16\x01|\0\x03f32\x01v\0\x03i32\x01z\0\x03f64\x01\
-u\0\x03i64\x01x\0\x07numeric\x01u\0\x06string\x01s\0\x04date\x01x\0\x09timestamp\
-\x01x\0\x04json\x01s\0\x04\0\x04cell\x03\0\x02\x04\0\x03row\x03\x01\x04\0\x06col\
-umn\x03\x01\x01p\x03\x01q\x02\x04cell\x01\x03\0\x05array\x01\x06\0\x04\0\x05valu\
-e\x03\0\x07\x01r\x02\x02idy\x08type-oidy\x04\0\x05param\x03\0\x09\x04\0\x04qual\x03\
-\x01\x04\0\x04sort\x03\x01\x04\0\x05limit\x03\x01\x01q\x02\x06server\0\0\x05tabl\
-e\0\0\x04\0\x0coptions-type\x03\0\x0e\x04\0\x07options\x03\x01\x04\0\x07context\x03\
-\x01\x01s\x04\0\x09fdw-error\x03\0\x12\x01j\0\x01\x13\x04\0\x0afdw-result\x03\0\x14\
-\x01i\x04\x01@\0\0\x16\x04\0\x10[constructor]row\x01\x17\x01h\x04\x01ps\x01@\x01\
-\x04self\x18\0\x19\x04\0\x10[method]row.cols\x01\x1a\x01k\x03\x01p\x1b\x01@\x01\x04\
-self\x18\0\x1c\x04\0\x11[method]row.cells\x01\x1d\x01@\x02\x04self\x18\x04cell\x1b\
-\x01\0\x04\0\x10[method]row.push\x01\x1e\x01i\x05\x01@\x01\x05indexy\0\x1f\x04\0\
-\x13[constructor]column\x01\x20\x01h\x05\x01@\x01\x04self!\0s\x04\0\x13[method]c\
-olumn.name\x01\"\x01@\x01\x04self!\0y\x04\0\x12[method]column.num\x01#\x01@\x01\x04\
-self!\0\x01\x04\0\x17[method]column.type-oid\x01$\x01i\x0b\x01@\x01\x05indexy\0%\
-\x04\0\x11[constructor]qual\x01&\x01h\x0b\x01@\x01\x04self'\0s\x04\0\x12[method]\
-qual.field\x01(\x04\0\x15[method]qual.operator\x01(\x01@\x01\x04self'\0\x08\x04\0\
-\x12[method]qual.value\x01)\x01@\x01\x04self'\0\x7f\x04\0\x13[method]qual.use-or\
-\x01*\x01k\x0a\x01@\x01\x04self'\0+\x04\0\x12[method]qual.param\x01,\x04\0\x14[m\
-ethod]qual.deparse\x01(\x01i\x0c\x01@\x01\x05indexy\0-\x04\0\x11[constructor]sor\
-t\x01.\x01h\x0c\x01@\x01\x04self/\0s\x04\0\x12[method]sort.field\x010\x01@\x01\x04\
-self/\0y\x04\0\x15[method]sort.field-no\x011\x01@\x01\x04self/\0\x7f\x04\0\x15[m\
-ethod]sort.reversed\x012\x04\0\x18[method]sort.nulls-first\x012\x01ks\x01@\x01\x04\
-self/\03\x04\0\x14[method]sort.collate\x014\x04\0\x14[method]sort.deparse\x010\x04\
-\0![method]sort.deparse-with-collate\x010\x01i\x0d\x01@\0\05\x04\0\x12[construct\
-or]limit\x016\x01h\x0d\x01@\x01\x04self7\0x\x04\0\x13[method]limit.count\x018\x04\
-\0\x14[method]limit.offset\x018\x01@\x01\x04self7\0s\x04\0\x15[method]limit.depa\
-rse\x019\x01i\x10\x01@\x01\x0coptions-type\x0f\0:\x04\0\x14[constructor]options\x01\
-;\x01h\x10\x01@\x02\x04self<\x03keys\03\x04\0\x13[method]options.get\x01=\x01j\x01\
-s\x01\x13\x01@\x02\x04self<\x03keys\0>\x04\0\x17[method]options.require\x01?\x01\
-@\x03\x04self<\x03keys\x07defaults\0s\x04\0\x1a[method]options.require-or\x01@\x01\
-i\x11\x01@\0\0\xc1\0\x04\0\x14[constructor]context\x01B\x01h\x11\x01@\x02\x04sel\
-f\xc3\0\x0coptions-type\x0f\0:\x04\0\x1b[method]context.get-options\x01D\x01p%\x01\
-@\x01\x04self\xc3\0\0\xc5\0\x04\0\x19[method]context.get-quals\x01F\x01p\x1f\x01\
-@\x01\x04self\xc3\0\0\xc7\0\x04\0\x1b[method]context.get-columns\x01H\x01p-\x01@\
-\x01\x04self\xc3\0\0\xc9\0\x04\0\x19[method]context.get-sorts\x01J\x01k5\x01@\x01\
-\x04self\xc3\0\0\xcb\0\x04\0\x19[method]context.get-limit\x01L\x03\x01\x1dsupaba\
-se:wrappers/types@0.1.0\x05\x04\x02\x03\0\x04\x04cell\x01B\x0d\x02\x03\x02\x01\x05\
-\x04\0\x04cell\x03\0\0\x01@\x01\x03msgs\x01\0\x04\0\x0breport-info\x01\x02\x04\0\
-\x0dreport-notice\x01\x02\x04\0\x0ereport-warning\x01\x02\x04\0\x0creport-error\x01\
-\x02\x01k\x01\x01@\x01\x04cell\x03\0s\x04\0\x0ecell-to-string\x01\x04\x01ks\x01@\
-\x01\x09secret-ids\0\x05\x04\0\x10get-vault-secret\x01\x06\x03\x01\x1dsupabase:w\
-rappers/utils@0.1.0\x05\x06\x02\x03\0\x04\x03row\x02\x03\0\x04\x07context\x02\x03\
-\0\x04\x09fdw-error\x02\x03\0\x04\x0afdw-result\x01B\x1d\x02\x03\x02\x01\x05\x04\
-\0\x04cell\x03\0\0\x02\x03\x02\x01\x07\x04\0\x03row\x03\0\x02\x02\x03\x02\x01\x08\
-\x04\0\x07context\x03\0\x04\x02\x03\x02\x01\x09\x04\0\x09fdw-error\x03\0\x06\x02\
-\x03\x02\x01\x0a\x04\0\x0afdw-result\x03\0\x08\x01h\x05\x01@\x01\x03ctx\x0a\0\x09\
-\x04\0\x04init\x01\x0b\x04\0\x0abegin-scan\x01\x0b\x01h\x03\x01ky\x01j\x01\x0d\x01\
-\x07\x01@\x02\x03ctx\x0a\x03row\x0c\0\x0e\x04\0\x09iter-scan\x01\x0f\x04\0\x07re\
--scan\x01\x0b\x04\0\x08end-scan\x01\x0b\x04\0\x0cbegin-modify\x01\x0b\x01@\x02\x03\
-ctx\x0a\x03row\x0c\0\x09\x04\0\x06insert\x01\x10\x01@\x03\x03ctx\x0a\x05rowid\x01\
-\x07new-row\x0c\0\x09\x04\0\x06update\x01\x11\x01@\x02\x03ctx\x0a\x05rowid\x01\0\
-\x09\x04\0\x06delete\x01\x12\x04\0\x0aend-modify\x01\x0b\x04\x01\x20supabase:wra\
-ppers/routines@0.1.0\x05\x0b\x04\x01&supabase:snowflake-fdw/snowflake@0.1.0\x04\0\
-\x0b\x0f\x01\0\x09snowflake\x03\0\0\0G\x09producers\x01\x0cprocessed-by\x02\x0dw\
-it-component\x070.202.0\x10wit-bindgen-rust\x060.24.0";
+\x01\x06\x03\x01\x1dsupabase:wrappers/stats@0.1.0\x05\x02\x01B\x0c\x01s\x04\0\x0a\
+time-error\x03\0\0\x01j\x01x\x01\x01\x04\0\x0btime-result\x03\0\x02\x01@\0\0x\x04\
+\0\x0aepoch-secs\x01\x04\x01@\x01\x01ss\0\x03\x04\0\x12parse-from-rfc3339\x01\x05\
+\x01@\x02\x01ss\x03fmts\0\x03\x04\0\x0eparse-from-str\x01\x06\x01@\x01\x06millis\
+w\x01\0\x04\0\x05sleep\x01\x07\x03\x01\x1csupabase:wrappers/time@0.1.0\x05\x03\x01\
+Br\x01q\x0c\x04bool\0\0\x02i8\0\0\x03i16\0\0\x03f32\0\0\x03i32\0\0\x03f64\0\0\x03\
+i64\0\0\x07numeric\0\0\x06string\0\0\x04date\0\0\x09timestamp\0\0\x04json\0\0\x04\
+\0\x08type-oid\x03\0\0\x01q\x0c\x04bool\x01\x7f\0\x02i8\x01~\0\x03i16\x01|\0\x03\
+f32\x01v\0\x03i32\x01z\0\x03f64\x01u\0\x03i64\x01x\0\x07numeric\x01u\0\x06string\
+\x01s\0\x04date\x01x\0\x09timestamp\x01x\0\x04json\x01s\0\x04\0\x04cell\x03\0\x02\
+\x04\0\x03row\x03\x01\x04\0\x06column\x03\x01\x01p\x03\x01q\x02\x04cell\x01\x03\0\
+\x05array\x01\x06\0\x04\0\x05value\x03\0\x07\x01r\x02\x02idy\x08type-oidy\x04\0\x05\
+param\x03\0\x09\x04\0\x04qual\x03\x01\x04\0\x04sort\x03\x01\x04\0\x05limit\x03\x01\
+\x01q\x02\x06server\0\0\x05table\0\0\x04\0\x0coptions-type\x03\0\x0e\x04\0\x07op\
+tions\x03\x01\x04\0\x07context\x03\x01\x01s\x04\0\x09fdw-error\x03\0\x12\x01j\0\x01\
+\x13\x04\0\x0afdw-result\x03\0\x14\x01i\x04\x01@\0\0\x16\x04\0\x10[constructor]r\
+ow\x01\x17\x01h\x04\x01ps\x01@\x01\x04self\x18\0\x19\x04\0\x10[method]row.cols\x01\
+\x1a\x01k\x03\x01p\x1b\x01@\x01\x04self\x18\0\x1c\x04\0\x11[method]row.cells\x01\
+\x1d\x01@\x02\x04self\x18\x04cell\x1b\x01\0\x04\0\x10[method]row.push\x01\x1e\x01\
+i\x05\x01@\x01\x05indexy\0\x1f\x04\0\x13[constructor]column\x01\x20\x01h\x05\x01\
+@\x01\x04self!\0s\x04\0\x13[method]column.name\x01\"\x01@\x01\x04self!\0y\x04\0\x12\
+[method]column.num\x01#\x01@\x01\x04self!\0\x01\x04\0\x17[method]column.type-oid\
+\x01$\x01i\x0b\x01@\x01\x05indexy\0%\x04\0\x11[constructor]qual\x01&\x01h\x0b\x01\
+@\x01\x04self'\0s\x04\0\x12[method]qual.field\x01(\x04\0\x15[method]qual.operato\
+r\x01(\x01@\x01\x04self'\0\x08\x04\0\x12[method]qual.value\x01)\x01@\x01\x04self\
+'\0\x7f\x04\0\x13[method]qual.use-or\x01*\x01k\x0a\x01@\x01\x04self'\0+\x04\0\x12\
+[method]qual.param\x01,\x04\0\x14[method]qual.deparse\x01(\x01i\x0c\x01@\x01\x05\
+indexy\0-\x04\0\x11[constructor]sort\x01.\x01h\x0c\x01@\x01\x04self/\0s\x04\0\x12\
+[method]sort.field\x010\x01@\x01\x04self/\0y\x04\0\x15[method]sort.field-no\x011\
+\x01@\x01\x04self/\0\x7f\x04\0\x15[method]sort.reversed\x012\x04\0\x18[method]so\
+rt.nulls-first\x012\x01ks\x01@\x01\x04self/\03\x04\0\x14[method]sort.collate\x01\
+4\x04\0\x14[method]sort.deparse\x010\x04\0![method]sort.deparse-with-collate\x01\
+0\x01i\x0d\x01@\0\05\x04\0\x12[constructor]limit\x016\x01h\x0d\x01@\x01\x04self7\
+\0x\x04\0\x13[method]limit.count\x018\x04\0\x14[method]limit.offset\x018\x01@\x01\
+\x04self7\0s\x04\0\x15[method]limit.deparse\x019\x01i\x10\x01@\x01\x0coptions-ty\
+pe\x0f\0:\x04\0\x14[constructor]options\x01;\x01h\x10\x01@\x02\x04self<\x03keys\0\
+3\x04\0\x13[method]options.get\x01=\x01j\x01s\x01\x13\x01@\x02\x04self<\x03keys\0\
+>\x04\0\x17[method]options.require\x01?\x01@\x03\x04self<\x03keys\x07defaults\0s\
+\x04\0\x1a[method]options.require-or\x01@\x01i\x11\x01@\0\0\xc1\0\x04\0\x14[cons\
+tructor]context\x01B\x01h\x11\x01@\x02\x04self\xc3\0\x0coptions-type\x0f\0:\x04\0\
+\x1b[method]context.get-options\x01D\x01p%\x01@\x01\x04self\xc3\0\0\xc5\0\x04\0\x19\
+[method]context.get-quals\x01F\x01p\x1f\x01@\x01\x04self\xc3\0\0\xc7\0\x04\0\x1b\
+[method]context.get-columns\x01H\x01p-\x01@\x01\x04self\xc3\0\0\xc9\0\x04\0\x19[\
+method]context.get-sorts\x01J\x01k5\x01@\x01\x04self\xc3\0\0\xcb\0\x04\0\x19[met\
+hod]context.get-limit\x01L\x03\x01\x1dsupabase:wrappers/types@0.1.0\x05\x04\x02\x03\
+\0\x04\x04cell\x01B\x0d\x02\x03\x02\x01\x05\x04\0\x04cell\x03\0\0\x01@\x01\x03ms\
+gs\x01\0\x04\0\x0breport-info\x01\x02\x04\0\x0dreport-notice\x01\x02\x04\0\x0ere\
+port-warning\x01\x02\x04\0\x0creport-error\x01\x02\x01k\x01\x01@\x01\x04cell\x03\
+\0s\x04\0\x0ecell-to-string\x01\x04\x01ks\x01@\x01\x09secret-ids\0\x05\x04\0\x10\
+get-vault-secret\x01\x06\x03\x01\x1dsupabase:wrappers/utils@0.1.0\x05\x06\x02\x03\
+\0\x04\x03row\x02\x03\0\x04\x07context\x02\x03\0\x04\x09fdw-error\x02\x03\0\x04\x0a\
+fdw-result\x01B\x1d\x02\x03\x02\x01\x05\x04\0\x04cell\x03\0\0\x02\x03\x02\x01\x07\
+\x04\0\x03row\x03\0\x02\x02\x03\x02\x01\x08\x04\0\x07context\x03\0\x04\x02\x03\x02\
+\x01\x09\x04\0\x09fdw-error\x03\0\x06\x02\x03\x02\x01\x0a\x04\0\x0afdw-result\x03\
+\0\x08\x01h\x05\x01@\x01\x03ctx\x0a\0\x09\x04\0\x04init\x01\x0b\x04\0\x0abegin-s\
+can\x01\x0b\x01h\x03\x01ky\x01j\x01\x0d\x01\x07\x01@\x02\x03ctx\x0a\x03row\x0c\0\
+\x0e\x04\0\x09iter-scan\x01\x0f\x04\0\x07re-scan\x01\x0b\x04\0\x08end-scan\x01\x0b\
+\x04\0\x0cbegin-modify\x01\x0b\x01@\x02\x03ctx\x0a\x03row\x0c\0\x09\x04\0\x06ins\
+ert\x01\x10\x01@\x03\x03ctx\x0a\x05rowid\x01\x07new-row\x0c\0\x09\x04\0\x06updat\
+e\x01\x11\x01@\x02\x03ctx\x0a\x05rowid\x01\0\x09\x04\0\x06delete\x01\x12\x04\0\x0a\
+end-modify\x01\x0b\x04\x01\x20supabase:wrappers/routines@0.1.0\x05\x0b\x04\x01&s\
+upabase:snowflake-fdw/snowflake@0.1.0\x04\0\x0b\x0f\x01\0\x09snowflake\x03\0\0\0\
+G\x09producers\x01\x0cprocessed-by\x02\x0dwit-component\x070.202.0\x10wit-bindge\
+n-rust\x060.24.0";
 
 #[inline(never)]
 #[doc(hidden)]

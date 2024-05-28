@@ -239,7 +239,9 @@ wasmtime = { version = "21.0.1", features = [
 warg-client = { version = "0.7.0", optional = true }
 warg-protocol = { version = "0.7.0", optional = true }
 semver = { version = "1.0.23", optional = true }
-jwt-simple = { version = "0.12.9", optional = true }
+jwt-simple = { version = "0.12.9", default-features = false, features = [
+    "pure-rust"
+], optional = true }
 dirs = { version = "5.0.1", optional = true }
 sha2 = { version = "0.10.8", optional = true }
 hex = { version = "0.4.3", optional = true }
