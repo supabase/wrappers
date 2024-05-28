@@ -136,6 +136,16 @@ wasm_fdw = [
     "serde_json",
     "jwt-simple",
 ]
+notion_fdw = [
+    "reqwest",
+    "reqwest-middleware",
+    "reqwest-retry",
+    "http",
+    "serde_json",
+    "serde",
+    "url",
+    "thiserror",
+]
 # Does not include helloworld_fdw because of its general uselessness
 all_fdws = [
     "airtable_fdw",
@@ -149,6 +159,7 @@ all_fdws = [
     "mssql_fdw",
     "redis_fdw",
     "cognito_fdw",
+    "notion_fdw",
 ]
 
 [dependencies]

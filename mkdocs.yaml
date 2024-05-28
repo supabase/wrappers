@@ -16,6 +16,7 @@ nav:
       - ClickHouse: 'clickhouse.md'
       - Firebase: 'firebase.md'
       - Logflare: 'logflare.md'
+      - Notion: 'notion.md'
       - Redis: 'redis.md'
       - S3: 's3.md'
       - Stripe: 'stripe.md'

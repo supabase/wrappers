@@ -36,3 +36,6 @@ mod cognito_fdw;
 
 #[cfg(feature = "wasm_fdw")]
 mod wasm_fdw;
+
+#[cfg(feature = "notion_fdw")]
+mod notion_fdw;

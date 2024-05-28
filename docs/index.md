@@ -47,6 +47,7 @@ Currently `supabase/wrappers` supports:
 | ClickHouse  |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
 | Firebase    |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
 | Logflare    |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Notion      |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
 | Redis       |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
 | S3          |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
 | Stripe      |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
