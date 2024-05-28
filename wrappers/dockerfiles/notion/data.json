@@ -1,0 +1,28 @@
+{
+    "users": [
+        {
+            "object": "user",
+            "id": "d40e767c-d7af-4b18-a86d-55c61f1e39a4",
+            "name": "John Doe",
+            "avatar_url": "https://s3-us-west-2.amazonaws.com/public.notion-static.com/e6a352a8-8381-44d0-a1dc-9ed80e62b53d.jpg",
+            "type": "person",
+            "person": {
+                "email": "john@doe.com"
+            }
+        },
+        {
+            "object": "user",
+            "id": "9a3b5ae0-c6e6-482d-b0e1-ed315ee6dc57",
+            "name": "Beep Boop",
+            "type": "bot",
+            "avatar_url": null,
+            "bot": {
+                "owner": {
+                    "type": "workspace",
+                    "workspace": true
+                },
+                "workspace_name": "John's Workspace"
+            }
+        }
+    ]
+}

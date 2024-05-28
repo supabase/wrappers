@@ -130,3 +130,14 @@ services:
       timeout: 5s
       retries: 20
 
+  notion:
+    container_name: notion-local
+    build:
+      context: ../dockerfiles/notion
+    ports:
+      - "4242:4242"
+    healthcheck:
+      test: curl --fail http://0.0.0.0:4242/ || exit 1
+      interval: 11s
+      timeout: 6s
+      retries: 3
