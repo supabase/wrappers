@@ -213,6 +213,19 @@ impl AirtableRecord {
                         }
                     },
                 ),
+                pg_sys::TIMESTAMPTZOID => self.fields.0.get(&col.name).map_or_else(
+                    || Ok(None),
+                    |val| {
+                        if let Value::String(v) = val {
+                            let n = pgrx::TimestampWithTimeZone::from_str(v.as_str())
+                                .ok()
+                                .map(Cell::Timestamptz);
+                            Ok(n)
+                        } else {
+                            Err(())
+                        }
+                    },
+                ),
                 // TODO: Think about adding support for BOOLARRAYOID, NUMERICARRAYOID, TEXTARRAYOID and rest of array types.
                 pg_sys::JSONBOID => self.fields.0.get(&col.name).map_or_else(
                     || Ok(None),

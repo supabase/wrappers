@@ -3,7 +3,7 @@
 
 use crate::FdwRoutine;
 use pgrx::pg_sys::panic::ErrorReport;
-use pgrx::prelude::{Date, Timestamp};
+use pgrx::prelude::{Date, Timestamp, TimestampWithTimeZone};
 use pgrx::{
     fcinfo,
     pg_sys::{self, BuiltinOid, Datum, Oid},
@@ -44,6 +44,7 @@ pub enum Cell {
     String(String),
     Date(Date),
     Timestamp(Timestamp),
+    Timestamptz(TimestampWithTimeZone),
     Json(JsonB),
 }
 
@@ -61,6 +62,7 @@ impl Clone for Cell {
             Cell::String(v) => Cell::String(v.clone()),
             Cell::Date(v) => Cell::Date(*v),
             Cell::Timestamp(v) => Cell::Timestamp(*v),
+            Cell::Timestamptz(v) => Cell::Timestamptz(*v),
             Cell::Json(v) => Cell::Json(JsonB(v.0.clone())),
         }
     }
@@ -94,6 +96,15 @@ impl fmt::Display for Cell {
                 let ts_cstr = CStr::from_ptr(ts.cast_mut_ptr());
                 write!(f, "'{}'", ts_cstr.to_str().unwrap())
             },
+            Cell::Timestamptz(v) => unsafe {
+                let ts = fcinfo::direct_function_call_as_datum(
+                    pg_sys::timestamptz_out,
+                    &[(*v).into_datum()],
+                )
+                .unwrap();
+                let ts_cstr = CStr::from_ptr(ts.cast_mut_ptr());
+                write!(f, "'{}'", ts_cstr.to_str().unwrap())
+            },
             Cell::Json(v) => write!(f, "{:?}", v),
         }
     }
@@ -113,6 +124,7 @@ impl IntoDatum for Cell {
             Cell::String(v) => v.into_datum(),
             Cell::Date(v) => v.into_datum(),
             Cell::Timestamp(v) => v.into_datum(),
+            Cell::Timestamptz(v) => v.into_datum(),
             Cell::Json(v) => v.into_datum(),
         }
     }
@@ -134,6 +146,7 @@ impl IntoDatum for Cell {
             || other == pg_sys::TEXTOID
             || other == pg_sys::DATEOID
             || other == pg_sys::TIMESTAMPOID
+            || other == pg_sys::TIMESTAMPTZOID
             || other == pg_sys::JSONBOID
     }
 }
@@ -180,6 +193,9 @@ impl FromDatum for Cell {
             }
             PgOid::BuiltIn(PgBuiltInOids::TIMESTAMPOID) => Some(Cell::Timestamp(
                 Timestamp::from_datum(datum, false).unwrap(),
+            )),
+            PgOid::BuiltIn(PgBuiltInOids::TIMESTAMPTZOID) => Some(Cell::Timestamptz(
+                TimestampWithTimeZone::from_datum(datum, false).unwrap(),
             )),
             PgOid::BuiltIn(PgBuiltInOids::JSONBOID) => {
                 Some(Cell::Json(JsonB::from_datum(datum, false).unwrap()))

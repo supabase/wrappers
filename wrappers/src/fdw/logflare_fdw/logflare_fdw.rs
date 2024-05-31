@@ -1,7 +1,7 @@
 use crate::stats;
 use pgrx::{
     pg_sys,
-    prelude::{AnyNumeric, Date, Timestamp},
+    prelude::{AnyNumeric, Date, Timestamp, TimestampWithTimeZone},
 };
 use reqwest::{
     self,
@@ -75,6 +75,10 @@ fn json_value_to_cell(tgt_col: &Column, v: &JsonValue) -> LogflareFdwResult<Cell
             .as_str()
             .and_then(|s| Timestamp::from_str(s).ok())
             .map(Cell::Timestamp),
+        pg_sys::TIMESTAMPTZOID => v
+            .as_str()
+            .and_then(|s| TimestampWithTimeZone::from_str(s).ok())
+            .map(Cell::Timestamptz),
         _ => {
             return Err(LogflareFdwError::UnsupportedColumnType(
                 tgt_col.name.clone(),
@@ -118,6 +122,9 @@ impl LogflareFdw {
                         Cell::String(s) => s.clone(),
                         Cell::Date(d) => d.to_string().as_str().trim_matches('\'').to_owned(),
                         Cell::Timestamp(t) => t.to_string().as_str().trim_matches('\'').to_owned(),
+                        Cell::Timestamptz(t) => {
+                            t.to_string().as_str().trim_matches('\'').to_owned()
+                        }
                         _ => cell.to_string(),
                     };
                     url.query_pairs_mut().append_pair(param_name, &value);

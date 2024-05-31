@@ -339,6 +339,20 @@ impl S3Parquet {
                             })
                         }
                     }
+                    pg_sys::TIMESTAMPTZOID => {
+                        let arr = col
+                            .as_any()
+                            .downcast_ref::<array::TimestampNanosecondArray>()
+                            .ok_or(S3FdwError::ColumnTypeNotMatch(tgt_col.name.clone()))?;
+                        if arr.is_null(self.batch_idx) {
+                            None
+                        } else {
+                            arr.value_as_datetime(self.batch_idx).map(|ts| {
+                                let ts = to_timestamp(ts.timestamp() as f64);
+                                Cell::Timestamptz(ts)
+                            })
+                        }
+                    }
                     _ => return Err(S3FdwError::UnsupportedColumnType(tgt_col.name.clone())),
                 };
                 row.push(&tgt_col.name, cell);
