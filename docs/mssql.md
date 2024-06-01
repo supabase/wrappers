@@ -17,6 +17,7 @@ The SQL Server Wrapper allows you to read data from Microsoft SQL Server within 
 | text               | varchar/char/text                |
 | date               | date                             |
 | timestamp          | datetime/datetime2/smalldatetime |
+| timestamptz        | datetime/datetime2/smalldatetime |
 
 ## Preparation
 
