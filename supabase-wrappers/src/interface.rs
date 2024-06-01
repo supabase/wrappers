@@ -83,27 +83,43 @@ impl fmt::Display for Cell {
             Cell::Date(v) => unsafe {
                 let dt =
                     fcinfo::direct_function_call_as_datum(pg_sys::date_out, &[(*v).into_datum()])
-                        .unwrap();
+                        .expect("cell should be a valid date");
                 let dt_cstr = CStr::from_ptr(dt.cast_mut_ptr());
-                write!(f, "'{}'", dt_cstr.to_str().unwrap())
+                write!(
+                    f,
+                    "'{}'",
+                    dt_cstr.to_str().expect("date should be a valid string")
+                )
             },
             Cell::Timestamp(v) => unsafe {
                 let ts = fcinfo::direct_function_call_as_datum(
                     pg_sys::timestamp_out,
                     &[(*v).into_datum()],
                 )
-                .unwrap();
+                .expect("cell should be a valid timestamp");
                 let ts_cstr = CStr::from_ptr(ts.cast_mut_ptr());
-                write!(f, "'{}'", ts_cstr.to_str().unwrap())
+                write!(
+                    f,
+                    "'{}'",
+                    ts_cstr
+                        .to_str()
+                        .expect("timestamp should be a valid string")
+                )
             },
             Cell::Timestamptz(v) => unsafe {
                 let ts = fcinfo::direct_function_call_as_datum(
                     pg_sys::timestamptz_out,
                     &[(*v).into_datum()],
                 )
-                .unwrap();
+                .expect("cell should be a valid timestamptz");
                 let ts_cstr = CStr::from_ptr(ts.cast_mut_ptr());
-                write!(f, "'{}'", ts_cstr.to_str().unwrap())
+                write!(
+                    f,
+                    "'{}'",
+                    ts_cstr
+                        .to_str()
+                        .expect("timestamptz should be a valid string")
+                )
             },
             Cell::Json(v) => write!(f, "{:?}", v),
         }
@@ -156,49 +172,44 @@ impl FromDatum for Cell {
     where
         Self: Sized,
     {
-        if is_null {
-            return None;
-        }
         let oid = PgOid::from(typoid);
         match oid {
             PgOid::BuiltIn(PgBuiltInOids::BOOLOID) => {
-                Some(Cell::Bool(bool::from_datum(datum, false).unwrap()))
+                bool::from_datum(datum, is_null).map(Cell::Bool)
             }
-            PgOid::BuiltIn(PgBuiltInOids::CHAROID) => {
-                Some(Cell::I8(i8::from_datum(datum, false).unwrap()))
-            }
+            PgOid::BuiltIn(PgBuiltInOids::CHAROID) => i8::from_datum(datum, is_null).map(Cell::I8),
             PgOid::BuiltIn(PgBuiltInOids::INT2OID) => {
-                Some(Cell::I16(i16::from_datum(datum, false).unwrap()))
+                i16::from_datum(datum, is_null).map(Cell::I16)
             }
             PgOid::BuiltIn(PgBuiltInOids::FLOAT4OID) => {
-                Some(Cell::F32(f32::from_datum(datum, false).unwrap()))
+                f32::from_datum(datum, is_null).map(Cell::F32)
             }
             PgOid::BuiltIn(PgBuiltInOids::INT4OID) => {
-                Some(Cell::I32(i32::from_datum(datum, false).unwrap()))
+                i32::from_datum(datum, is_null).map(Cell::I32)
             }
             PgOid::BuiltIn(PgBuiltInOids::FLOAT8OID) => {
-                Some(Cell::F64(f64::from_datum(datum, false).unwrap()))
+                f64::from_datum(datum, is_null).map(Cell::F64)
             }
             PgOid::BuiltIn(PgBuiltInOids::INT8OID) => {
-                Some(Cell::I64(i64::from_datum(datum, false).unwrap()))
+                i64::from_datum(datum, is_null).map(Cell::I64)
             }
             PgOid::BuiltIn(PgBuiltInOids::NUMERICOID) => {
-                Some(Cell::Numeric(AnyNumeric::from_datum(datum, false).unwrap()))
+                AnyNumeric::from_datum(datum, is_null).map(Cell::Numeric)
             }
             PgOid::BuiltIn(PgBuiltInOids::TEXTOID) => {
-                Some(Cell::String(String::from_datum(datum, false).unwrap()))
+                String::from_datum(datum, is_null).map(Cell::String)
             }
             PgOid::BuiltIn(PgBuiltInOids::DATEOID) => {
-                Some(Cell::Date(Date::from_datum(datum, false).unwrap()))
+                Date::from_datum(datum, is_null).map(Cell::Date)
             }
-            PgOid::BuiltIn(PgBuiltInOids::TIMESTAMPOID) => Some(Cell::Timestamp(
-                Timestamp::from_datum(datum, false).unwrap(),
-            )),
-            PgOid::BuiltIn(PgBuiltInOids::TIMESTAMPTZOID) => Some(Cell::Timestamptz(
-                TimestampWithTimeZone::from_datum(datum, false).unwrap(),
-            )),
+            PgOid::BuiltIn(PgBuiltInOids::TIMESTAMPOID) => {
+                Timestamp::from_datum(datum, is_null).map(Cell::Timestamp)
+            }
+            PgOid::BuiltIn(PgBuiltInOids::TIMESTAMPTZOID) => {
+                TimestampWithTimeZone::from_datum(datum, is_null).map(Cell::Timestamptz)
+            }
             PgOid::BuiltIn(PgBuiltInOids::JSONBOID) => {
-                Some(Cell::Json(JsonB::from_datum(datum, false).unwrap()))
+                JsonB::from_datum(datum, is_null).map(Cell::Json)
             }
             _ => None,
         }
@@ -242,9 +253,9 @@ impl Row {
     {
         let keep: Vec<bool> = self.iter().map(f).collect();
         let mut iter = keep.iter();
-        self.cols.retain(|_| *iter.next().unwrap());
+        self.cols.retain(|_| *iter.next().unwrap_or(&true));
         iter = keep.iter();
-        self.cells.retain(|_| *iter.next().unwrap());
+        self.cells.retain(|_| *iter.next().unwrap_or(&true));
     }
 
     /// Replace `self` with the source row
