@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://supabase.github.io/wrappers/auth0/">
+        <link rel="canonical" href="https://supabase.github.io/wrappers/notion/">
       
       
-        <link rel="prev" href="../airtable/">
+        <link rel="prev" href="../logflare/">
       
       
-        <link rel="next" href="../cognito/">
+        <link rel="next" href="../redis/">
       
       
       <link rel="icon" href="../assets/favicon.ico">
@@ -24,7 +24,7 @@
     
     
       
-        <title>Auth0 - wrappers</title>
+        <title>Notion - wrappers</title>
       
     
     
@@ -75,7 +75,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#auth0-is-a-flexible-drop-in-solution-to-add-authentication-and-authorization-services-to-your-applications" class="md-skip">
+        <a href="#notion-provides-a-versatile-ready-to-use-solution-for-managing-your-data" class="md-skip">
           Skip to content
         </a>
       
@@ -110,7 +110,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Auth0
+              Notion
             
           </span>
         </div>
@@ -316,29 +316,9 @@
                 
   
   
-    
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    Auth0
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../auth0/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -347,100 +327,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#preparation" class="md-nav__link">
-    Preparation
-  </a>
-  
-    <nav class="md-nav" aria-label="Preparation">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#secure-your-credentials-optional" class="md-nav__link">
-    Secure your credentials (optional)
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#connecting-to-auth0" class="md-nav__link">
-    Connecting to Auth0
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#creating-foreign-tables" class="md-nav__link">
-    Creating Foreign Tables
-  </a>
-  
-    <nav class="md-nav" aria-label="Creating Foreign Tables">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#foreign-table-options" class="md-nav__link">
-    Foreign table options
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#query-pushdown-support" class="md-nav__link">
-    Query Pushdown Support
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#examples" class="md-nav__link">
-    Examples
-  </a>
-  
-    <nav class="md-nav" aria-label="Examples">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#basic-example" class="md-nav__link">
-    Basic example
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -550,9 +436,29 @@
                 
   
   
+    
   
-    <li class="md-nav__item">
-      <a href="../notion/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Notion
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   <span class="md-ellipsis">
@@ -561,6 +467,87 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#preparation" class="md-nav__link">
+    Preparation
+  </a>
+  
+    <nav class="md-nav" aria-label="Preparation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#secure-your-credentials-optional" class="md-nav__link">
+    Secure your credentials (optional)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#connecting-to-notion" class="md-nav__link">
+    Connecting to Notion
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#creating-foreign-tables" class="md-nav__link">
+    Creating Foreign Tables
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#query-pushdown-support" class="md-nav__link">
+    Query Pushdown Support
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    Examples
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#users-foreign-table" class="md-nav__link">
+    Users foreign table
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -714,8 +701,8 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#connecting-to-auth0" class="md-nav__link">
-    Connecting to Auth0
+  <a href="#connecting-to-notion" class="md-nav__link">
+    Connecting to Notion
   </a>
   
 </li>
@@ -729,19 +716,6 @@
   <a href="#creating-foreign-tables" class="md-nav__link">
     Creating Foreign Tables
   </a>
-  
-    <nav class="md-nav" aria-label="Creating Foreign Tables">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#foreign-table-options" class="md-nav__link">
-    Foreign table options
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -761,8 +735,8 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#basic-example" class="md-nav__link">
-    Basic example
+  <a href="#users-foreign-table" class="md-nav__link">
+    Users foreign table
   </a>
   
 </li>
@@ -790,79 +764,81 @@
   
 
 
-<h1 id="auth0-is-a-flexible-drop-in-solution-to-add-authentication-and-authorization-services-to-your-applications"><a href="https://auth0.com/">Auth0</a> is a flexible, drop-in solution to add authentication and authorization services to your applications</h1>
-<p>The Auth0 Wrapper allows you to read data from your Auth0 tenant for use within your Postgres database.</p>
+<h1 id="notion-provides-a-versatile-ready-to-use-solution-for-managing-your-data"><a href="https://notion.so/">Notion</a> provides a versatile, ready-to-use solution for managing your data.</h1>
+<p>The Notion Wrapper allows you to read data from your Notion workspace for use within your Postgres database. Only the users endpoint is supported at the moment.</p>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
 <p>Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.</p>
 </div>
 <h2 id="preparation">Preparation</h2>
 <p>Before you get started, make sure the <code>wrappers</code> extension is installed on your database:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">extension</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">wrappers</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">extensions</span><span class="p">;</span>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">CREATE</span><span class="w"> </span><span class="n">extension</span><span class="w"> </span><span class="k">IF</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">EXISTS</span><span class="w"> </span><span class="n">wrappers</span><span class="w"> </span><span class="k">SCHEMA</span><span class="w"> </span><span class="n">extensions</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
-<p>and then create the foreign data wrapper:</p>
+<p>Then, create the foreign data wrapper:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
-<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">auth0_wrapper</span>
-<span class="w">  </span><span class="k">handler</span><span class="w"> </span><span class="n">auth0_fdw_handler</span>
-<span class="w">  </span><span class="k">validator</span><span class="w"> </span><span class="n">auth0_fdw_validator</span><span class="p">;</span>
+<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">CREATE</span><span class="w"> </span><span class="k">FOREIGN</span><span class="w"> </span><span class="k">DATA</span><span class="w"> </span><span class="n">WRAPPER</span><span class="w"> </span><span class="n">notion_wrapper</span>
+<span class="w">  </span><span class="k">HANDLER</span><span class="w"> </span><span class="n">notion_fdw_handler</span>
+<span class="w">  </span><span class="k">VALIDATOR</span><span class="w"> </span><span class="n">notion_fdw_validator</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 <h3 id="secure-your-credentials-optional">Secure your credentials (optional)</h3>
-<p>By default, Postgres stores FDW credentials inide <code>pg_catalog.pg_foreign_server</code> in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with <a href="https://supabase.com/docs/guides/database/vault">Vault</a>, which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.</p>
+<p>By default, Postgres stores FDW credentials in plain text within the <code>pg_catalog.pg_foreign_server</code> table, making them visible to anyone with access to this table. To enhance security, it is advisable to use <a href="https://supabase.com/docs/guides/database/vault">Vault</a> for credential storage. Vault integrates seamlessly with Wrappers to provide a secure storage solution for sensitive information. We strongly recommend utilizing Vault to safeguard your credentials.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
 <span class="normal">4</span>
 <span class="normal">5</span>
 <span class="normal">6</span>
-<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Save your Auth0 API key in Vault and retrieve the `key_id`</span>
-<span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">secrets</span><span class="w"> </span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">secret</span><span class="p">)</span>
-<span class="k">values</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="s1">&#39;auth0&#39;</span><span class="p">,</span>
-<span class="w">  </span><span class="s1">&#39;&lt;Auth0 API Key or PAT&gt;&#39;</span><span class="w"> </span><span class="c1">-- Auth0 API key or Personal Access Token (PAT)</span>
+<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Save your Notion API key in Vault and retrieve the `key_id`</span>
+<span class="k">INSERT</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">secrets</span><span class="w"> </span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">secret</span><span class="p">)</span>
+<span class="k">VALUES</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="s1">&#39;notion&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="s1">&#39;&lt;Notion API Key&gt;&#39;</span><span class="w"> </span><span class="c1">-- Notion API key</span>
 <span class="p">)</span>
-<span class="n">returning</span><span class="w"> </span><span class="n">key_id</span><span class="p">;</span>
+<span class="n">RETURNING</span><span class="w"> </span><span class="n">key_id</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
-<h3 id="connecting-to-auth0">Connecting to Auth0</h3>
-<p>We need to provide Postgres with the credentials to connect to Airtable, and any additional options. We can do this using the <code>create server</code> command:</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">With Vault</label><label for="__tabbed_1_2">Without Vault</label></div>
-<div class="tabbed-content">
-<div class="tabbed-block">
+<h3 id="connecting-to-notion">Connecting to Notion</h3>
+<p>We need to provide Postgres with the credentials to connect to Notion, and any additional options. We can do this using the <code>CREATE SERVER</code> command:</p>
+<ul>
+<li>With Vault (recommended)</li>
+</ul>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
 <span class="normal">4</span>
-<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">auth0_server</span>
-<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">auth0_wrapper</span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">api_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;key_ID&gt;&#39;</span><span class="w"> </span><span class="c1">-- The Key ID from above.</span>
+<span class="normal">5</span>
+<span class="normal">6</span>
+<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">CREATE</span><span class="w"> </span><span class="n">SERVER</span><span class="w"> </span><span class="n">notion_server</span>
+<span class="w">  </span><span class="k">FOREIGN</span><span class="w"> </span><span class="k">DATA</span><span class="w"> </span><span class="n">WRAPPER</span><span class="w"> </span><span class="n">notion_wrapper</span>
+<span class="w">  </span><span class="k">OPTIONS</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">api_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;key_ID&gt;&#39;</span><span class="p">,</span><span class="w"> </span><span class="c1">-- The Key ID from the Vault</span>
+<span class="w">    </span><span class="n">notion_version</span><span class="w"> </span><span class="s1">&#39;&lt;notion_version&gt;&#39;</span><span class="p">,</span><span class="w"> </span><span class="c1">-- optional, default is &#39;2022-06-28&#39;</span>
+<span class="w">    </span><span class="n">api_url</span><span class="w"> </span><span class="s1">&#39;&lt;api_url&gt;&#39;</span><span class="w"> </span><span class="c1">-- optional, default is &#39;https://api.notion.com/v1/&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
-</div>
-<div class="tabbed-block">
+<ul>
+<li>Without Vault</li>
+</ul>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
 <span class="normal">4</span>
 <span class="normal">5</span>
 <span class="normal">6</span>
-<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- create server and specify custom options</span>
-<span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">auth0_server</span>
-<span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">auth0_wrapper</span>
-<span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">url</span><span class="w"> </span><span class="s1">&#39;https://dev-&lt;tenant-id&gt;.us.auth0.com/api/v2/users&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">api_key</span><span class="w"> </span><span class="s1">&#39;&lt;your_api_key&gt;&#39;</span>
+<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">CREATE</span><span class="w"> </span><span class="n">SERVER</span><span class="w"> </span><span class="n">notion_server</span>
+<span class="w">  </span><span class="k">FOREIGN</span><span class="w"> </span><span class="k">DATA</span><span class="w"> </span><span class="n">WRAPPER</span><span class="w"> </span><span class="n">notion_wrapper</span>
+<span class="w">  </span><span class="k">OPTIONS</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">api_key</span><span class="w"> </span><span class="s1">&#39;&lt;your_api_key&gt;&#39;</span><span class="p">,</span><span class="w"> </span><span class="c1">-- Your Notion API key</span>
+<span class="w">    </span><span class="n">notion_version</span><span class="w"> </span><span class="s1">&#39;&lt;notion_version&gt;&#39;</span><span class="p">,</span><span class="w"> </span><span class="c1">-- optional, default is &#39;2022-06-28&#39;</span>
+<span class="w">    </span><span class="n">api_url</span><span class="w"> </span><span class="s1">&#39;&lt;api_url&gt;&#39;</span><span class="w"> </span><span class="c1">-- optional, default is &#39;https://api.notion.com/v1/&#39;</span>
 <span class="p">);</span>
 </code></pre></div></td></tr></table></div>
-</div>
-</div>
-</div>
 <h2 id="creating-foreign-tables">Creating Foreign Tables</h2>
-<p>The Auth0 Wrapper supports data reads from Auth0's <a href="https://auth0.com/docs/api/management/v2/users/get-users">Management API List users endpoint</a> endpoint (<em>read only</em>).</p>
+<p>The Notion Wrapper supports data reads from the <a href="https://developers.notion.com/reference">Notion API</a>.</p>
 <table>
 <thead>
 <tr>
-<th>Auth0</th>
+<th>Object</th>
 <th style="text-align: center;">Select</th>
 <th style="text-align: center;">Insert</th>
 <th style="text-align: center;">Update</th>
@@ -872,7 +848,7 @@
 </thead>
 <tbody>
 <tr>
-<td>Records</td>
+<td><a href="https://developers.notion.com/reference/get-users">Users</a></td>
 <td style="text-align: center;">✅</td>
 <td style="text-align: center;">❌</td>
 <td style="text-align: center;">❌</td>
@@ -882,33 +858,6 @@
 </tbody>
 </table>
 <p>For example:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span>
-<span class="normal">7</span>
-<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">my_foreign_table</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span>
-<span class="w">  </span><span class="c1">-- other fields</span>
-<span class="p">)</span>
-<span class="n">server</span><span class="w"> </span><span class="n">auth0_server</span>
-<span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;users&#39;</span><span class="p">,</span>
-<span class="p">);</span>
-</code></pre></div></td></tr></table></div>
-<h3 id="foreign-table-options">Foreign table options</h3>
-<p>The full list of foreign table options are below:</p>
-<ul>
-<li><code>objects</code> - Auth0 object to select from. Currently only supports <code>users</code></li>
-</ul>
-<h2 id="query-pushdown-support">Query Pushdown Support</h2>
-<p>This FDW doesn't support query pushdown.</p>
-<h2 id="examples">Examples</h2>
-<p>Some examples on how to use Auth0 foreign tables.</p>
-<h3 id="basic-example">Basic example</h3>
-<p>This will create a "foreign table" inside your Postgres database called <code>auth0_table</code>:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -918,19 +867,58 @@
 <span class="normal"> 7</span>
 <span class="normal"> 8</span>
 <span class="normal"> 9</span>
-<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">auth0_table</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">email</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">email_verified</span><span class="w"> </span><span class="n">bool</span><span class="p">,</span>
-<span class="w">  </span><span class="n">identities</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">CREATE</span><span class="w"> </span><span class="k">FOREIGN</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">my_foreign_table</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="k">type</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">person</span><span class="w"> </span><span class="n">jsonb</span><span class="p">,</span>
+<span class="w">  </span><span class="n">bot</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="w">  </span><span class="c1">-- other fields</span>
 <span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">auth0_server</span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">SERVER</span><span class="w"> </span><span class="n">notion_server</span>
+<span class="w">  </span><span class="k">OPTIONS</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;users&#39;</span><span class="p">,</span>
+<span class="p">);</span>
+</code></pre></div></td></tr></table></div>
+<h2 id="query-pushdown-support">Query Pushdown Support</h2>
+<p>This FDW supports <code>where</code> clause pushdown. You can specify a filter in <code>where</code> clause and it will be passed to Notion API call.</p>
+<p>For example, this query</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">notion_users</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;xxx&#39;</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<p>will be translated Notion API call: <code>https://api.notion.com/v1/users/xxx</code>.</p>
+<h2 id="examples">Examples</h2>
+<p>Some examples on how to use Notion foreign tables.</p>
+<h3 id="users-foreign-table">Users foreign table</h3>
+<p>The following command creates a "foreign table" in your Postgres database named <code>notion_users</code>:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">CREATE</span><span class="w"> </span><span class="k">FOREIGN</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">notion_users</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="k">type</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">person</span><span class="w"> </span><span class="n">jsonb</span><span class="p">,</span>
+<span class="w">  </span><span class="n">bot</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="p">)</span>
+<span class="w">  </span><span class="n">SERVER</span><span class="w"> </span><span class="n">notion_server</span>
+<span class="w">  </span><span class="k">OPTIONS</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;users&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
-<p>You can now fetch your Auth0 data from within your Postgres database:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">auth0</span><span class="p">;</span>
+<p>You can now fetch your Notion data from within your Postgres database:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">notion_users</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<p>You can also query with filters:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">notion_users</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;xxx&#39;</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 
 
