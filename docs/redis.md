@@ -2,6 +2,10 @@
 
 The Redis Wrapper allows you to read data from Redis within your Postgres database.
 
+!!! warning
+
+    Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
+
 ## Supported Redis Data Types
 
 All Redis value will be stored as `text` or `jsonb` column in Postgres, below are the supported Redis data types:

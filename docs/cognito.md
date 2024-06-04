@@ -2,6 +2,10 @@
 
 The Cognito wrapper allows you to read data from your Cognito Userpool within your Postgres database.
 
+!!! warning
+
+    Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
+
 ## Preparation
 
 Before you get started, make sure the `wrappers` extension is installed on your database:
