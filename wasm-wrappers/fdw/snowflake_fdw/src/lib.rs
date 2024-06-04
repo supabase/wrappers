@@ -129,6 +129,12 @@ impl SnowflakeFdw {
                 let msecs_since_epoch = secs_since_epoch * 1_000_000.0;
                 Some(Cell::Timestamp(msecs_since_epoch.round() as i64))
             }
+            TypeOid::Timestamptz => {
+                let parts: Vec<&str> = src_str.split(' ').collect();
+                let secs_since_epoch = parts[0].parse::<f64>().map_err(|e| e.to_string())?;
+                let msecs_since_epoch = secs_since_epoch * 1_000_000.0;
+                Some(Cell::Timestamptz(msecs_since_epoch.round() as i64))
+            }
             _ => {
                 return Err(format!(
                     "column '{}' data type is not supported",

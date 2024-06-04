@@ -181,6 +181,14 @@ impl PaddleFdw {
                     None
                 }
             }
+            TypeOid::Timestamptz => {
+                if let Some(s) = src.as_str() {
+                    let ts = time::parse_from_rfc3339(s)?;
+                    Some(Cell::Timestamptz(ts))
+                } else {
+                    None
+                }
+            }
             TypeOid::Json => src.as_str().map(|v| Cell::Json(v.to_owned())),
         };
 

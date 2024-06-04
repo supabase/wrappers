@@ -1231,6 +1231,7 @@ pub mod supabase {
                 String,
                 Date,
                 Timestamp,
+                Timestamptz,
                 Json,
             }
             impl ::core::fmt::Debug for TypeOid {
@@ -1247,6 +1248,7 @@ pub mod supabase {
                         TypeOid::String => f.debug_tuple("TypeOid::String").finish(),
                         TypeOid::Date => f.debug_tuple("TypeOid::Date").finish(),
                         TypeOid::Timestamp => f.debug_tuple("TypeOid::Timestamp").finish(),
+                        TypeOid::Timestamptz => f.debug_tuple("TypeOid::Timestamptz").finish(),
                         TypeOid::Json => f.debug_tuple("TypeOid::Json").finish(),
                     }
                 }
@@ -1266,6 +1268,7 @@ pub mod supabase {
                 Date(i64),
                 /// microseconds since Unix epoch
                 Timestamp(i64),
+                Timestamptz(i64),
                 Json(_rt::String),
             }
             impl ::core::fmt::Debug for Cell {
@@ -1282,6 +1285,9 @@ pub mod supabase {
                         Cell::String(e) => f.debug_tuple("Cell::String").field(e).finish(),
                         Cell::Date(e) => f.debug_tuple("Cell::Date").field(e).finish(),
                         Cell::Timestamp(e) => f.debug_tuple("Cell::Timestamp").field(e).finish(),
+                        Cell::Timestamptz(e) => {
+                            f.debug_tuple("Cell::Timestamptz").field(e).finish()
+                        }
                         Cell::Json(e) => f.debug_tuple("Cell::Json").field(e).finish(),
                     }
                 }
@@ -1723,12 +1729,12 @@ pub mod supabase {
                         wit_import((self).handle() as i32, ptr0);
                         let l1 = *ptr0.add(0).cast::<*mut u8>();
                         let l2 = *ptr0.add(4).cast::<usize>();
-                        let base22 = l1;
-                        let len22 = l2;
-                        let mut result22 = _rt::Vec::with_capacity(len22);
-                        for i in 0..len22 {
-                            let base = base22.add(i * 24);
-                            let e22 = {
+                        let base23 = l1;
+                        let len23 = l2;
+                        let mut result23 = _rt::Vec::with_capacity(len23);
+                        for i in 0..len23 {
+                            let base = base23.add(i * 24);
+                            let e23 = {
                                 let l3 = i32::from(*base.add(0).cast::<u8>());
 
                                 match l3 {
@@ -1736,76 +1742,76 @@ pub mod supabase {
                                     1 => {
                                         let e = {
                                             let l4 = i32::from(*base.add(8).cast::<u8>());
-                                            let v21 = match l4 {
+                                            let v22 = match l4 {
                                                 0 => {
-                                                    let e21 = {
+                                                    let e22 = {
                                                         let l5 =
                                                             i32::from(*base.add(16).cast::<u8>());
 
                                                         _rt::bool_lift(l5 as u8)
                                                     };
-                                                    Cell::Bool(e21)
+                                                    Cell::Bool(e22)
                                                 }
                                                 1 => {
-                                                    let e21 = {
+                                                    let e22 = {
                                                         let l6 =
                                                             i32::from(*base.add(16).cast::<i8>());
 
                                                         l6 as i8
                                                     };
-                                                    Cell::I8(e21)
+                                                    Cell::I8(e22)
                                                 }
                                                 2 => {
-                                                    let e21 = {
+                                                    let e22 = {
                                                         let l7 =
                                                             i32::from(*base.add(16).cast::<i16>());
 
                                                         l7 as i16
                                                     };
-                                                    Cell::I16(e21)
+                                                    Cell::I16(e22)
                                                 }
                                                 3 => {
-                                                    let e21 = {
+                                                    let e22 = {
                                                         let l8 = *base.add(16).cast::<f32>();
 
                                                         l8
                                                     };
-                                                    Cell::F32(e21)
+                                                    Cell::F32(e22)
                                                 }
                                                 4 => {
-                                                    let e21 = {
+                                                    let e22 = {
                                                         let l9 = *base.add(16).cast::<i32>();
 
                                                         l9
                                                     };
-                                                    Cell::I32(e21)
+                                                    Cell::I32(e22)
                                                 }
                                                 5 => {
-                                                    let e21 = {
+                                                    let e22 = {
                                                         let l10 = *base.add(16).cast::<f64>();
 
                                                         l10
                                                     };
-                                                    Cell::F64(e21)
+                                                    Cell::F64(e22)
                                                 }
                                                 6 => {
-                                                    let e21 = {
+                                                    let e22 = {
                                                         let l11 = *base.add(16).cast::<i64>();
 
                                                         l11
                                                     };
-                                                    Cell::I64(e21)
+                                                    Cell::I64(e22)
                                                 }
                                                 7 => {
-                                                    let e21 = {
+                                                    let e22 = {
                                                         let l12 = *base.add(16).cast::<f64>();
 
                                                         l12
                                                     };
-                                                    Cell::Numeric(e21)
+                                                    Cell::Numeric(e22)
                                                 }
                                                 8 => {
-                                                    let e21 = {
+                                                    let e22 = {
                                                         let l13 = *base.add(16).cast::<*mut u8>();
                                                         let l14 = *base.add(20).cast::<usize>();
                                                         let len15 = l14;
@@ -1817,56 +1823,64 @@ pub mod supabase {
 
                                                         _rt::string_lift(bytes15)
                                                     };
-                                                    Cell::String(e21)
+                                                    Cell::String(e22)
                                                 }
                                                 9 => {
-                                                    let e21 = {
+                                                    let e22 = {
                                                         let l16 = *base.add(16).cast::<i64>();
 
                                                         l16
                                                     };
-                                                    Cell::Date(e21)
+                                                    Cell::Date(e22)
                                                 }
                                                 10 => {
-                                                    let e21 = {
+                                                    let e22 = {
                                                         let l17 = *base.add(16).cast::<i64>();
 
                                                         l17
                                                     };
-                                                    Cell::Timestamp(e21)
+                                                    Cell::Timestamp(e22)
+                                                }
+                                                11 => {
+                                                    let e22 = {
+                                                        let l18 = *base.add(16).cast::<i64>();
+
+                                                        l18
+                                                    };
+                                                    Cell::Timestamptz(e22)
                                                 }
                                                 n => {
                                                     debug_assert_eq!(
-                                                        n, 11,
+                                                        n, 12,
                                                         "invalid enum discriminant"
                                                     );
-                                                    let e21 = {
-                                                        let l18 = *base.add(16).cast::<*mut u8>();
-                                                        let l19 = *base.add(20).cast::<usize>();
-                                                        let len20 = l19;
-                                                        let bytes20 = _rt::Vec::from_raw_parts(
-                                                            l18.cast(),
-                                                            len20,
-                                                            len20,
+                                                    let e22 = {
+                                                        let l19 = *base.add(16).cast::<*mut u8>();
+                                                        let l20 = *base.add(20).cast::<usize>();
+                                                        let len21 = l20;
+                                                        let bytes21 = _rt::Vec::from_raw_parts(
+                                                            l19.cast(),
+                                                            len21,
+                                                            len21,
                                                         );
 
-                                                        _rt::string_lift(bytes20)
+                                                        _rt::string_lift(bytes21)
                                                     };
-                                                    Cell::Json(e21)
+                                                    Cell::Json(e22)
                                                 }
                                             };
 
-                                            v21
+                                            v22
                                         };
                                         Some(e)
                                     }
                                     _ => _rt::invalid_enum_discriminant(),
                                 }
                             };
-                            result22.push(e22);
+                            result23.push(e23);
                         }
-                        _rt::cabi_dealloc(base22, len22 * 24, 8);
-                        result22
+                        _rt::cabi_dealloc(base23, len23 * 24, 8);
+                        result23
                     }
                 }
             }
@@ -1962,13 +1976,18 @@ pub mod supabase {
                                         ::core::mem::MaybeUninit::new(_rt::as_i64(e) as u64),
                                         0usize,
                                     ),
+                                    Cell::Timestamptz(e) => (
+                                        11i32,
+                                        ::core::mem::MaybeUninit::new(_rt::as_i64(e) as u64),
+                                        0usize,
+                                    ),
                                     Cell::Json(e) => {
                                         let vec1 = e;
                                         let ptr1 = vec1.as_ptr().cast::<u8>();
                                         let len1 = vec1.len();
 
                                         (
-                                            11i32,
+                                            12i32,
                                             {
                                                 let mut t =
                                                     ::core::mem::MaybeUninit::<u64>::uninit();
@@ -2120,8 +2139,9 @@ pub mod supabase {
                             8 => TypeOid::String,
                             9 => TypeOid::Date,
                             10 => TypeOid::Timestamp,
+                            11 => TypeOid::Timestamptz,
                             n => {
-                                debug_assert_eq!(n, 11, "invalid enum discriminant");
+                                debug_assert_eq!(n, 12, "invalid enum discriminant");
                                 TypeOid::Json
                             }
                         };
@@ -2226,77 +2246,77 @@ pub mod supabase {
                         }
                         wit_import((self).handle() as i32, ptr0);
                         let l1 = i32::from(*ptr0.add(0).cast::<u8>());
-                        let v41 = match l1 {
+                        let v43 = match l1 {
                             0 => {
-                                let e41 = {
+                                let e43 = {
                                     let l2 = i32::from(*ptr0.add(8).cast::<u8>());
-                                    let v19 = match l2 {
+                                    let v20 = match l2 {
                                         0 => {
-                                            let e19 = {
+                                            let e20 = {
                                                 let l3 = i32::from(*ptr0.add(16).cast::<u8>());
 
                                                 _rt::bool_lift(l3 as u8)
                                             };
-                                            Cell::Bool(e19)
+                                            Cell::Bool(e20)
                                         }
                                         1 => {
-                                            let e19 = {
+                                            let e20 = {
                                                 let l4 = i32::from(*ptr0.add(16).cast::<i8>());
 
                                                 l4 as i8
                                             };
-                                            Cell::I8(e19)
+                                            Cell::I8(e20)
                                         }
                                         2 => {
-                                            let e19 = {
+                                            let e20 = {
                                                 let l5 = i32::from(*ptr0.add(16).cast::<i16>());
 
                                                 l5 as i16
                                             };
-                                            Cell::I16(e19)
+                                            Cell::I16(e20)
                                         }
                                         3 => {
-                                            let e19 = {
+                                            let e20 = {
                                                 let l6 = *ptr0.add(16).cast::<f32>();
 
                                                 l6
                                             };
-                                            Cell::F32(e19)
+                                            Cell::F32(e20)
                                         }
                                         4 => {
-                                            let e19 = {
+                                            let e20 = {
                                                 let l7 = *ptr0.add(16).cast::<i32>();
 
                                                 l7
                                             };
-                                            Cell::I32(e19)
+                                            Cell::I32(e20)
                                         }
                                         5 => {
-                                            let e19 = {
+                                            let e20 = {
                                                 let l8 = *ptr0.add(16).cast::<f64>();
 
                                                 l8
                                             };
-                                            Cell::F64(e19)
+                                            Cell::F64(e20)
                                         }
                                         6 => {
-                                            let e19 = {
+                                            let e20 = {
                                                 let l9 = *ptr0.add(16).cast::<i64>();
 
                                                 l9
                                             };
-                                            Cell::I64(e19)
+                                            Cell::I64(e20)
                                         }
                                         7 => {
-                                            let e19 = {
+                                            let e20 = {
                                                 let l10 = *ptr0.add(16).cast::<f64>();
 
                                                 l10
                                             };
-                                            Cell::Numeric(e19)
+                                            Cell::Numeric(e20)
                                         }
                                         8 => {
-                                            let e19 = {
+                                            let e20 = {
                                                 let l11 = *ptr0.add(16).cast::<*mut u8>();
                                                 let l12 = *ptr0.add(20).cast::<usize>();
                                                 let len13 = l12;
@@ -2308,190 +2328,206 @@ pub mod supabase {
 
                                                 _rt::string_lift(bytes13)
                                             };
-                                            Cell::String(e19)
+                                            Cell::String(e20)
                                         }
                                         9 => {
-                                            let e19 = {
+                                            let e20 = {
                                                 let l14 = *ptr0.add(16).cast::<i64>();
 
                                                 l14
                                             };
-                                            Cell::Date(e19)
+                                            Cell::Date(e20)
                                         }
                                         10 => {
-                                            let e19 = {
+                                            let e20 = {
                                                 let l15 = *ptr0.add(16).cast::<i64>();
 
                                                 l15
                                             };
-                                            Cell::Timestamp(e19)
+                                            Cell::Timestamp(e20)
+                                        }
+                                        11 => {
+                                            let e20 = {
+                                                let l16 = *ptr0.add(16).cast::<i64>();
+
+                                                l16
+                                            };
+                                            Cell::Timestamptz(e20)
                                         }
                                         n => {
-                                            debug_assert_eq!(n, 11, "invalid enum discriminant");
-                                            let e19 = {
-                                                let l16 = *ptr0.add(16).cast::<*mut u8>();
-                                                let l17 = *ptr0.add(20).cast::<usize>();
-                                                let len18 = l17;
-                                                let bytes18 = _rt::Vec::from_raw_parts(
-                                                    l16.cast(),
-                                                    len18,
-                                                    len18,
+                                            debug_assert_eq!(n, 12, "invalid enum discriminant");
+                                            let e20 = {
+                                                let l17 = *ptr0.add(16).cast::<*mut u8>();
+                                                let l18 = *ptr0.add(20).cast::<usize>();
+                                                let len19 = l18;
+                                                let bytes19 = _rt::Vec::from_raw_parts(
+                                                    l17.cast(),
+                                                    len19,
+                                                    len19,
                                                 );
 
-                                                _rt::string_lift(bytes18)
+                                                _rt::string_lift(bytes19)
                                             };
-                                            Cell::Json(e19)
+                                            Cell::Json(e20)
                                         }
                                     };
 
-                                    v19
+                                    v20
                                 };
-                                Value::Cell(e41)
+                                Value::Cell(e43)
                             }
                             n => {
                                 debug_assert_eq!(n, 1, "invalid enum discriminant");
-                                let e41 = {
-                                    let l20 = *ptr0.add(8).cast::<*mut u8>();
-                                    let l21 = *ptr0.add(12).cast::<usize>();
-                                    let base40 = l20;
-                                    let len40 = l21;
-                                    let mut result40 = _rt::Vec::with_capacity(len40);
-                                    for i in 0..len40 {
-                                        let base = base40.add(i * 16);
-                                        let e40 = {
-                                            let l22 = i32::from(*base.add(0).cast::<u8>());
-                                            let v39 = match l22 {
+                                let e43 = {
+                                    let l21 = *ptr0.add(8).cast::<*mut u8>();
+                                    let l22 = *ptr0.add(12).cast::<usize>();
+                                    let base42 = l21;
+                                    let len42 = l22;
+                                    let mut result42 = _rt::Vec::with_capacity(len42);
+                                    for i in 0..len42 {
+                                        let base = base42.add(i * 16);
+                                        let e42 = {
+                                            let l23 = i32::from(*base.add(0).cast::<u8>());
+                                            let v41 = match l23 {
                                                 0 => {
-                                                    let e39 = {
-                                                        let l23 =
+                                                    let e41 = {
+                                                        let l24 =
                                                             i32::from(*base.add(8).cast::<u8>());
 
-                                                        _rt::bool_lift(l23 as u8)
+                                                        _rt::bool_lift(l24 as u8)
                                                     };
-                                                    Cell::Bool(e39)
+                                                    Cell::Bool(e41)
                                                 }
                                                 1 => {
-                                                    let e39 = {
-                                                        let l24 =
+                                                    let e41 = {
+                                                        let l25 =
                                                             i32::from(*base.add(8).cast::<i8>());
 
-                                                        l24 as i8
+                                                        l25 as i8
                                                     };
-                                                    Cell::I8(e39)
+                                                    Cell::I8(e41)
                                                 }
                                                 2 => {
-                                                    let e39 = {
-                                                        let l25 =
+                                                    let e41 = {
+                                                        let l26 =
                                                             i32::from(*base.add(8).cast::<i16>());
 
-                                                        l25 as i16
+                                                        l26 as i16
                                                     };
-                                                    Cell::I16(e39)
+                                                    Cell::I16(e41)
                                                 }
                                                 3 => {
-                                                    let e39 = {
-                                                        let l26 = *base.add(8).cast::<f32>();
-
-                                                        l26
-                                                    };
-                                                    Cell::F32(e39)
-                                                }
-                                                4 => {
-                                                    let e39 = {
-                                                        let l27 = *base.add(8).cast::<i32>();
+                                                    let e41 = {
+                                                        let l27 = *base.add(8).cast::<f32>();
 
                                                         l27
                                                     };
-                                                    Cell::I32(e39)
+                                                    Cell::F32(e41)
                                                 }
-                                                5 => {
-                                                    let e39 = {
-                                                        let l28 = *base.add(8).cast::<f64>();
+                                                4 => {
+                                                    let e41 = {
+                                                        let l28 = *base.add(8).cast::<i32>();
 
                                                         l28
                                                     };
-                                                    Cell::F64(e39)
+                                                    Cell::I32(e41)
                                                 }
-                                                6 => {
-                                                    let e39 = {
-                                                        let l29 = *base.add(8).cast::<i64>();
+                                                5 => {
+                                                    let e41 = {
+                                                        let l29 = *base.add(8).cast::<f64>();
 
                                                         l29
                                                     };
-                                                    Cell::I64(e39)
+                                                    Cell::F64(e41)
                                                 }
-                                                7 => {
-                                                    let e39 = {
-                                                        let l30 = *base.add(8).cast::<f64>();
+                                                6 => {
+                                                    let e41 = {
+                                                        let l30 = *base.add(8).cast::<i64>();
 
                                                         l30
                                                     };
-                                                    Cell::Numeric(e39)
+                                                    Cell::I64(e41)
+                                                }
+                                                7 => {
+                                                    let e41 = {
+                                                        let l31 = *base.add(8).cast::<f64>();
+
+                                                        l31
+                                                    };
+                                                    Cell::Numeric(e41)
                                                 }
                                                 8 => {
-                                                    let e39 = {
-                                                        let l31 = *base.add(8).cast::<*mut u8>();
-                                                        let l32 = *base.add(12).cast::<usize>();
-                                                        let len33 = l32;
-                                                        let bytes33 = _rt::Vec::from_raw_parts(
-                                                            l31.cast(),
-                                                            len33,
-                                                            len33,
+                                                    let e41 = {
+                                                        let l32 = *base.add(8).cast::<*mut u8>();
+                                                        let l33 = *base.add(12).cast::<usize>();
+                                                        let len34 = l33;
+                                                        let bytes34 = _rt::Vec::from_raw_parts(
+                                                            l32.cast(),
+                                                            len34,
+                                                            len34,
                                                         );
 
-                                                        _rt::string_lift(bytes33)
+                                                        _rt::string_lift(bytes34)
                                                     };
-                                                    Cell::String(e39)
+                                                    Cell::String(e41)
                                                 }
                                                 9 => {
-                                                    let e39 = {
-                                                        let l34 = *base.add(8).cast::<i64>();
-
-                                                        l34
-                                                    };
-                                                    Cell::Date(e39)
-                                                }
-                                                10 => {
-                                                    let e39 = {
+                                                    let e41 = {
                                                         let l35 = *base.add(8).cast::<i64>();
 
                                                         l35
                                                     };
-                                                    Cell::Timestamp(e39)
+                                                    Cell::Date(e41)
+                                                }
+                                                10 => {
+                                                    let e41 = {
+                                                        let l36 = *base.add(8).cast::<i64>();
+
+                                                        l36
+                                                    };
+                                                    Cell::Timestamp(e41)
+                                                }
+                                                11 => {
+                                                    let e41 = {
+                                                        let l37 = *base.add(8).cast::<i64>();
+
+                                                        l37
+                                                    };
+                                                    Cell::Timestamptz(e41)
                                                 }
                                                 n => {
                                                     debug_assert_eq!(
-                                                        n, 11,
+                                                        n, 12,
                                                         "invalid enum discriminant"
                                                     );
-                                                    let e39 = {
-                                                        let l36 = *base.add(8).cast::<*mut u8>();
-                                                        let l37 = *base.add(12).cast::<usize>();
-                                                        let len38 = l37;
-                                                        let bytes38 = _rt::Vec::from_raw_parts(
-                                                            l36.cast(),
-                                                            len38,
-                                                            len38,
+                                                    let e41 = {
+                                                        let l38 = *base.add(8).cast::<*mut u8>();
+                                                        let l39 = *base.add(12).cast::<usize>();
+                                                        let len40 = l39;
+                                                        let bytes40 = _rt::Vec::from_raw_parts(
+                                                            l38.cast(),
+                                                            len40,
+                                                            len40,
                                                         );
 
-                                                        _rt::string_lift(bytes38)
+                                                        _rt::string_lift(bytes40)
                                                     };
-                                                    Cell::Json(e39)
+                                                    Cell::Json(e41)
                                                 }
                                             };
 
-                                            v39
+                                            v41
                                         };
-                                        result40.push(e40);
+                                        result42.push(e42);
                                     }
-                                    _rt::cabi_dealloc(base40, len40 * 16, 8);
+                                    _rt::cabi_dealloc(base42, len42 * 16, 8);
 
-                                    result40
+                                    result42
                                 };
-                                Value::Array(e41)
+                                Value::Array(e43)
                             }
                         };
-                        v41
+                        v43
                     }
                 }
             }
@@ -3427,13 +3463,18 @@ pub mod supabase {
                                     ::core::mem::MaybeUninit::new(_rt::as_i64(e) as u64),
                                     0usize,
                                 ),
+                                V2::Timestamptz(e) => (
+                                    11i32,
+                                    ::core::mem::MaybeUninit::new(_rt::as_i64(e) as u64),
+                                    0usize,
+                                ),
                                 V2::Json(e) => {
                                     let vec1 = e;
                                     let ptr1 = vec1.as_ptr().cast::<u8>();
                                     let len1 = vec1.len();
 
                                     (
-                                        11i32,
+                                        12i32,
                                         {
                                             let mut t = ::core::mem::MaybeUninit::<u64>::uninit();
                                             t.as_mut_ptr().cast::<*mut u8>().write(ptr1.cast_mut());
@@ -3919,8 +3960,12 @@ pub mod exports {
                             let e3 = arg2.assume_init() as i64;
                             V3::Timestamp(e3)
                         }
+                        11 => {
+                            let e3 = arg2.assume_init() as i64;
+                            V3::Timestamptz(e3)
+                        }
                         n => {
-                            debug_assert_eq!(n, 11, "invalid enum discriminant");
+                            debug_assert_eq!(n, 12, "invalid enum discriminant");
                             let e3 = {
                                 let len2 = arg3;
                                 let bytes2 = _rt::Vec::from_raw_parts(
@@ -4041,8 +4086,12 @@ pub mod exports {
                             let e3 = arg2.assume_init() as i64;
                             V3::Timestamp(e3)
                         }
+                        11 => {
+                            let e3 = arg2.assume_init() as i64;
+                            V3::Timestamptz(e3)
+                        }
                         n => {
-                            debug_assert_eq!(n, 11, "invalid enum discriminant");
+                            debug_assert_eq!(n, 12, "invalid enum discriminant");
                             let e3 = {
                                 let len2 = arg3;
                                 let bytes2 = _rt::Vec::from_raw_parts(
@@ -4556,8 +4605,8 @@ pub(crate) use __export_paddle_impl as export;
 #[cfg(target_arch = "wasm32")]
 #[link_section = "component-type:wit-bindgen:0.24.0:paddle:encoded world"]
 #[doc(hidden)]
-pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 3518] = *b"\
-\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\xc1\x1a\x01A\x02\x01\
+pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 3547] = *b"\
+\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\xde\x1a\x01A\x02\x01\
 A\x13\x01B\x15\x01o\x02ss\x01p\0\x04\0\x07headers\x03\0\x01\x01q\x02\x03get\0\0\x04\
 post\0\0\x04\0\x06method\x03\0\x03\x01r\x04\x06method\x04\x03urls\x07headers\x02\
 \x04bodys\x04\0\x07request\x03\0\x05\x01r\x04\x03urls\x0bstatus-code{\x07headers\
@@ -4578,65 +4627,65 @@ time-error\x03\0\0\x01j\x01x\x01\x01\x04\0\x0btime-result\x03\0\x02\x01@\0\0x\x0
 \0\x0aepoch-secs\x01\x04\x01@\x01\x01ss\0\x03\x04\0\x12parse-from-rfc3339\x01\x05\
 \x01@\x02\x01ss\x03fmts\0\x03\x04\0\x0eparse-from-str\x01\x06\x01@\x01\x06millis\
 w\x01\0\x04\0\x05sleep\x01\x07\x03\x01\x1csupabase:wrappers/time@0.1.0\x05\x03\x01\
-Br\x01q\x0c\x04bool\0\0\x02i8\0\0\x03i16\0\0\x03f32\0\0\x03i32\0\0\x03f64\0\0\x03\
-i64\0\0\x07numeric\0\0\x06string\0\0\x04date\0\0\x09timestamp\0\0\x04json\0\0\x04\
-\0\x08type-oid\x03\0\0\x01q\x0c\x04bool\x01\x7f\0\x02i8\x01~\0\x03i16\x01|\0\x03\
-f32\x01v\0\x03i32\x01z\0\x03f64\x01u\0\x03i64\x01x\0\x07numeric\x01u\0\x06string\
-\x01s\0\x04date\x01x\0\x09timestamp\x01x\0\x04json\x01s\0\x04\0\x04cell\x03\0\x02\
-\x04\0\x03row\x03\x01\x04\0\x06column\x03\x01\x01p\x03\x01q\x02\x04cell\x01\x03\0\
-\x05array\x01\x06\0\x04\0\x05value\x03\0\x07\x01r\x02\x02idy\x08type-oidy\x04\0\x05\
-param\x03\0\x09\x04\0\x04qual\x03\x01\x04\0\x04sort\x03\x01\x04\0\x05limit\x03\x01\
-\x01q\x02\x06server\0\0\x05table\0\0\x04\0\x0coptions-type\x03\0\x0e\x04\0\x07op\
-tions\x03\x01\x04\0\x07context\x03\x01\x01s\x04\0\x09fdw-error\x03\0\x12\x01j\0\x01\
-\x13\x04\0\x0afdw-result\x03\0\x14\x01i\x04\x01@\0\0\x16\x04\0\x10[constructor]r\
-ow\x01\x17\x01h\x04\x01ps\x01@\x01\x04self\x18\0\x19\x04\0\x10[method]row.cols\x01\
-\x1a\x01k\x03\x01p\x1b\x01@\x01\x04self\x18\0\x1c\x04\0\x11[method]row.cells\x01\
-\x1d\x01@\x02\x04self\x18\x04cell\x1b\x01\0\x04\0\x10[method]row.push\x01\x1e\x01\
-i\x05\x01@\x01\x05indexy\0\x1f\x04\0\x13[constructor]column\x01\x20\x01h\x05\x01\
-@\x01\x04self!\0s\x04\0\x13[method]column.name\x01\"\x01@\x01\x04self!\0y\x04\0\x12\
-[method]column.num\x01#\x01@\x01\x04self!\0\x01\x04\0\x17[method]column.type-oid\
-\x01$\x01i\x0b\x01@\x01\x05indexy\0%\x04\0\x11[constructor]qual\x01&\x01h\x0b\x01\
-@\x01\x04self'\0s\x04\0\x12[method]qual.field\x01(\x04\0\x15[method]qual.operato\
-r\x01(\x01@\x01\x04self'\0\x08\x04\0\x12[method]qual.value\x01)\x01@\x01\x04self\
-'\0\x7f\x04\0\x13[method]qual.use-or\x01*\x01k\x0a\x01@\x01\x04self'\0+\x04\0\x12\
-[method]qual.param\x01,\x04\0\x14[method]qual.deparse\x01(\x01i\x0c\x01@\x01\x05\
-indexy\0-\x04\0\x11[constructor]sort\x01.\x01h\x0c\x01@\x01\x04self/\0s\x04\0\x12\
-[method]sort.field\x010\x01@\x01\x04self/\0y\x04\0\x15[method]sort.field-no\x011\
-\x01@\x01\x04self/\0\x7f\x04\0\x15[method]sort.reversed\x012\x04\0\x18[method]so\
-rt.nulls-first\x012\x01ks\x01@\x01\x04self/\03\x04\0\x14[method]sort.collate\x01\
-4\x04\0\x14[method]sort.deparse\x010\x04\0![method]sort.deparse-with-collate\x01\
-0\x01i\x0d\x01@\0\05\x04\0\x12[constructor]limit\x016\x01h\x0d\x01@\x01\x04self7\
-\0x\x04\0\x13[method]limit.count\x018\x04\0\x14[method]limit.offset\x018\x01@\x01\
-\x04self7\0s\x04\0\x15[method]limit.deparse\x019\x01i\x10\x01@\x01\x0coptions-ty\
-pe\x0f\0:\x04\0\x14[constructor]options\x01;\x01h\x10\x01@\x02\x04self<\x03keys\0\
-3\x04\0\x13[method]options.get\x01=\x01j\x01s\x01\x13\x01@\x02\x04self<\x03keys\0\
->\x04\0\x17[method]options.require\x01?\x01@\x03\x04self<\x03keys\x07defaults\0s\
-\x04\0\x1a[method]options.require-or\x01@\x01i\x11\x01@\0\0\xc1\0\x04\0\x14[cons\
-tructor]context\x01B\x01h\x11\x01@\x02\x04self\xc3\0\x0coptions-type\x0f\0:\x04\0\
-\x1b[method]context.get-options\x01D\x01p%\x01@\x01\x04self\xc3\0\0\xc5\0\x04\0\x19\
-[method]context.get-quals\x01F\x01p\x1f\x01@\x01\x04self\xc3\0\0\xc7\0\x04\0\x1b\
-[method]context.get-columns\x01H\x01p-\x01@\x01\x04self\xc3\0\0\xc9\0\x04\0\x19[\
-method]context.get-sorts\x01J\x01k5\x01@\x01\x04self\xc3\0\0\xcb\0\x04\0\x19[met\
-hod]context.get-limit\x01L\x03\x01\x1dsupabase:wrappers/types@0.1.0\x05\x04\x02\x03\
-\0\x04\x04cell\x01B\x0d\x02\x03\x02\x01\x05\x04\0\x04cell\x03\0\0\x01@\x01\x03ms\
-gs\x01\0\x04\0\x0breport-info\x01\x02\x04\0\x0dreport-notice\x01\x02\x04\0\x0ere\
-port-warning\x01\x02\x04\0\x0creport-error\x01\x02\x01k\x01\x01@\x01\x04cell\x03\
-\0s\x04\0\x0ecell-to-string\x01\x04\x01ks\x01@\x01\x09secret-ids\0\x05\x04\0\x10\
-get-vault-secret\x01\x06\x03\x01\x1dsupabase:wrappers/utils@0.1.0\x05\x06\x02\x03\
-\0\x04\x03row\x02\x03\0\x04\x07context\x02\x03\0\x04\x09fdw-error\x02\x03\0\x04\x0a\
-fdw-result\x01B\x1d\x02\x03\x02\x01\x05\x04\0\x04cell\x03\0\0\x02\x03\x02\x01\x07\
-\x04\0\x03row\x03\0\x02\x02\x03\x02\x01\x08\x04\0\x07context\x03\0\x04\x02\x03\x02\
-\x01\x09\x04\0\x09fdw-error\x03\0\x06\x02\x03\x02\x01\x0a\x04\0\x0afdw-result\x03\
-\0\x08\x01h\x05\x01@\x01\x03ctx\x0a\0\x09\x04\0\x04init\x01\x0b\x04\0\x0abegin-s\
-can\x01\x0b\x01h\x03\x01ky\x01j\x01\x0d\x01\x07\x01@\x02\x03ctx\x0a\x03row\x0c\0\
-\x0e\x04\0\x09iter-scan\x01\x0f\x04\0\x07re-scan\x01\x0b\x04\0\x08end-scan\x01\x0b\
-\x04\0\x0cbegin-modify\x01\x0b\x01@\x02\x03ctx\x0a\x03row\x0c\0\x09\x04\0\x06ins\
-ert\x01\x10\x01@\x03\x03ctx\x0a\x05rowid\x01\x07new-row\x0c\0\x09\x04\0\x06updat\
-e\x01\x11\x01@\x02\x03ctx\x0a\x05rowid\x01\0\x09\x04\0\x06delete\x01\x12\x04\0\x0a\
-end-modify\x01\x0b\x04\x01\x20supabase:wrappers/routines@0.1.0\x05\x0b\x04\x01\x20\
-supabase:paddle-fdw/paddle@0.1.0\x04\0\x0b\x0c\x01\0\x06paddle\x03\0\0\0G\x09pro\
-ducers\x01\x0cprocessed-by\x02\x0dwit-component\x070.202.0\x10wit-bindgen-rust\x06\
-0.24.0";
+Br\x01q\x0d\x04bool\0\0\x02i8\0\0\x03i16\0\0\x03f32\0\0\x03i32\0\0\x03f64\0\0\x03\
+i64\0\0\x07numeric\0\0\x06string\0\0\x04date\0\0\x09timestamp\0\0\x0btimestamptz\
+\0\0\x04json\0\0\x04\0\x08type-oid\x03\0\0\x01q\x0d\x04bool\x01\x7f\0\x02i8\x01~\
+\0\x03i16\x01|\0\x03f32\x01v\0\x03i32\x01z\0\x03f64\x01u\0\x03i64\x01x\0\x07nume\
+ric\x01u\0\x06string\x01s\0\x04date\x01x\0\x09timestamp\x01x\0\x0btimestamptz\x01\
+x\0\x04json\x01s\0\x04\0\x04cell\x03\0\x02\x04\0\x03row\x03\x01\x04\0\x06column\x03\
+\x01\x01p\x03\x01q\x02\x04cell\x01\x03\0\x05array\x01\x06\0\x04\0\x05value\x03\0\
+\x07\x01r\x02\x02idy\x08type-oidy\x04\0\x05param\x03\0\x09\x04\0\x04qual\x03\x01\
+\x04\0\x04sort\x03\x01\x04\0\x05limit\x03\x01\x01q\x02\x06server\0\0\x05table\0\0\
+\x04\0\x0coptions-type\x03\0\x0e\x04\0\x07options\x03\x01\x04\0\x07context\x03\x01\
+\x01s\x04\0\x09fdw-error\x03\0\x12\x01j\0\x01\x13\x04\0\x0afdw-result\x03\0\x14\x01\
+i\x04\x01@\0\0\x16\x04\0\x10[constructor]row\x01\x17\x01h\x04\x01ps\x01@\x01\x04\
+self\x18\0\x19\x04\0\x10[method]row.cols\x01\x1a\x01k\x03\x01p\x1b\x01@\x01\x04s\
+elf\x18\0\x1c\x04\0\x11[method]row.cells\x01\x1d\x01@\x02\x04self\x18\x04cell\x1b\
+\x01\0\x04\0\x10[method]row.push\x01\x1e\x01i\x05\x01@\x01\x05indexy\0\x1f\x04\0\
+\x13[constructor]column\x01\x20\x01h\x05\x01@\x01\x04self!\0s\x04\0\x13[method]c\
+olumn.name\x01\"\x01@\x01\x04self!\0y\x04\0\x12[method]column.num\x01#\x01@\x01\x04\
+self!\0\x01\x04\0\x17[method]column.type-oid\x01$\x01i\x0b\x01@\x01\x05indexy\0%\
+\x04\0\x11[constructor]qual\x01&\x01h\x0b\x01@\x01\x04self'\0s\x04\0\x12[method]\
+qual.field\x01(\x04\0\x15[method]qual.operator\x01(\x01@\x01\x04self'\0\x08\x04\0\
+\x12[method]qual.value\x01)\x01@\x01\x04self'\0\x7f\x04\0\x13[method]qual.use-or\
+\x01*\x01k\x0a\x01@\x01\x04self'\0+\x04\0\x12[method]qual.param\x01,\x04\0\x14[m\
+ethod]qual.deparse\x01(\x01i\x0c\x01@\x01\x05indexy\0-\x04\0\x11[constructor]sor\
+t\x01.\x01h\x0c\x01@\x01\x04self/\0s\x04\0\x12[method]sort.field\x010\x01@\x01\x04\
+self/\0y\x04\0\x15[method]sort.field-no\x011\x01@\x01\x04self/\0\x7f\x04\0\x15[m\
+ethod]sort.reversed\x012\x04\0\x18[method]sort.nulls-first\x012\x01ks\x01@\x01\x04\
+self/\03\x04\0\x14[method]sort.collate\x014\x04\0\x14[method]sort.deparse\x010\x04\
+\0![method]sort.deparse-with-collate\x010\x01i\x0d\x01@\0\05\x04\0\x12[construct\
+or]limit\x016\x01h\x0d\x01@\x01\x04self7\0x\x04\0\x13[method]limit.count\x018\x04\
+\0\x14[method]limit.offset\x018\x01@\x01\x04self7\0s\x04\0\x15[method]limit.depa\
+rse\x019\x01i\x10\x01@\x01\x0coptions-type\x0f\0:\x04\0\x14[constructor]options\x01\
+;\x01h\x10\x01@\x02\x04self<\x03keys\03\x04\0\x13[method]options.get\x01=\x01j\x01\
+s\x01\x13\x01@\x02\x04self<\x03keys\0>\x04\0\x17[method]options.require\x01?\x01\
+@\x03\x04self<\x03keys\x07defaults\0s\x04\0\x1a[method]options.require-or\x01@\x01\
+i\x11\x01@\0\0\xc1\0\x04\0\x14[constructor]context\x01B\x01h\x11\x01@\x02\x04sel\
+f\xc3\0\x0coptions-type\x0f\0:\x04\0\x1b[method]context.get-options\x01D\x01p%\x01\
+@\x01\x04self\xc3\0\0\xc5\0\x04\0\x19[method]context.get-quals\x01F\x01p\x1f\x01\
+@\x01\x04self\xc3\0\0\xc7\0\x04\0\x1b[method]context.get-columns\x01H\x01p-\x01@\
+\x01\x04self\xc3\0\0\xc9\0\x04\0\x19[method]context.get-sorts\x01J\x01k5\x01@\x01\
+\x04self\xc3\0\0\xcb\0\x04\0\x19[method]context.get-limit\x01L\x03\x01\x1dsupaba\
+se:wrappers/types@0.1.0\x05\x04\x02\x03\0\x04\x04cell\x01B\x0d\x02\x03\x02\x01\x05\
+\x04\0\x04cell\x03\0\0\x01@\x01\x03msgs\x01\0\x04\0\x0breport-info\x01\x02\x04\0\
+\x0dreport-notice\x01\x02\x04\0\x0ereport-warning\x01\x02\x04\0\x0creport-error\x01\
+\x02\x01k\x01\x01@\x01\x04cell\x03\0s\x04\0\x0ecell-to-string\x01\x04\x01ks\x01@\
+\x01\x09secret-ids\0\x05\x04\0\x10get-vault-secret\x01\x06\x03\x01\x1dsupabase:w\
+rappers/utils@0.1.0\x05\x06\x02\x03\0\x04\x03row\x02\x03\0\x04\x07context\x02\x03\
+\0\x04\x09fdw-error\x02\x03\0\x04\x0afdw-result\x01B\x1d\x02\x03\x02\x01\x05\x04\
+\0\x04cell\x03\0\0\x02\x03\x02\x01\x07\x04\0\x03row\x03\0\x02\x02\x03\x02\x01\x08\
+\x04\0\x07context\x03\0\x04\x02\x03\x02\x01\x09\x04\0\x09fdw-error\x03\0\x06\x02\
+\x03\x02\x01\x0a\x04\0\x0afdw-result\x03\0\x08\x01h\x05\x01@\x01\x03ctx\x0a\0\x09\
+\x04\0\x04init\x01\x0b\x04\0\x0abegin-scan\x01\x0b\x01h\x03\x01ky\x01j\x01\x0d\x01\
+\x07\x01@\x02\x03ctx\x0a\x03row\x0c\0\x0e\x04\0\x09iter-scan\x01\x0f\x04\0\x07re\
+-scan\x01\x0b\x04\0\x08end-scan\x01\x0b\x04\0\x0cbegin-modify\x01\x0b\x01@\x02\x03\
+ctx\x0a\x03row\x0c\0\x09\x04\0\x06insert\x01\x10\x01@\x03\x03ctx\x0a\x05rowid\x01\
+\x07new-row\x0c\0\x09\x04\0\x06update\x01\x11\x01@\x02\x03ctx\x0a\x05rowid\x01\0\
+\x09\x04\0\x06delete\x01\x12\x04\0\x0aend-modify\x01\x0b\x04\x01\x20supabase:wra\
+ppers/routines@0.1.0\x05\x0b\x04\x01\x20supabase:paddle-fdw/paddle@0.1.0\x04\0\x0b\
+\x0c\x01\0\x06paddle\x03\0\0\0G\x09producers\x01\x0cprocessed-by\x02\x0dwit-comp\
+onent\x070.202.0\x10wit-bindgen-rust\x060.24.0";
 
 #[inline(never)]
 #[doc(hidden)]

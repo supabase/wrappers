@@ -11,6 +11,7 @@ interface types {
         %string,
         date,
         timestamp,
+        timestamptz,
         json,
     }
 
@@ -28,6 +29,7 @@ interface types {
         date(s64),
         // microseconds since Unix epoch
         timestamp(s64),
+        timestamptz(s64),
         json(string),
     }
 

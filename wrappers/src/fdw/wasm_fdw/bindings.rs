@@ -1,6 +1,6 @@
 use pgrx::{
     datum::datetime_support::to_timestamp,
-    prelude::{Date, Timestamp},
+    prelude::{Date, Timestamp, TimestampWithTimeZone},
     AnyNumeric, JsonB,
 };
 use wasmtime::component::bindgen;
@@ -41,6 +41,10 @@ impl TryFrom<GuestCell> for HostCell {
             GuestCell::Timestamp(v) => {
                 Ok(Self::Timestamp(Timestamp::from(v - 946_684_800_000_000)))
             }
+            GuestCell::Timestamptz(v) => {
+                let ts = Timestamp::from(v - 946_684_800_000_000);
+                Ok(Self::Timestamptz(TimestampWithTimeZone::from(ts)))
+            }
             GuestCell::Json(v) => {
                 let ret = serde_json::from_str(&v).map(|j| Self::Json(JsonB(j)))?;
                 Ok(ret)
@@ -69,6 +73,10 @@ impl From<&HostCell> for GuestCell {
             HostCell::Timestamp(v) => {
                 // convert 'pg epoch' (2000-01-01 00:00:00) in macroseconds to unix epoch
                 Self::Timestamp(v.into_inner() + 946_684_800_000_000)
+            }
+            HostCell::Timestamptz(v) => {
+                // convert 'pg epoch' (2000-01-01 00:00:00) in macroseconds to unix epoch
+                Self::Timestamptz(v.into_inner() + 946_684_800_000_000)
             }
             HostCell::Json(v) => Self::Json(v.0.to_string()),
         }

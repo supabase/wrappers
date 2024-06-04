@@ -8,7 +8,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 bitflags = "2.5.0"
-wit-bindgen-rt = "0.25.0"
+wit-bindgen-rt = "0.26.0"
 
 [package.metadata.component]
 package = "supabase:helloworld-fdw"
