@@ -15,6 +15,7 @@ The BigQuery Wrapper allows you to read and write data from BigQuery within your
 | date             | DATE          |
 | timestamp        | DATETIME      |
 | timestamp        | TIMESTAMP     |
+| timestamptz      | TIMESTAMP     |
 
 ## Preparation
 

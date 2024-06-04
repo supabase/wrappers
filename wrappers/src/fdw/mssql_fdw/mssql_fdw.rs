@@ -66,6 +66,12 @@ fn field_to_cell(src_row: &tiberius::Row, tgt_col: &Column) -> MssqlFdwResult<Op
                 Cell::Timestamp(ts.to_utc())
             })
         }
+        PgOid::BuiltIn(PgBuiltInOids::TIMESTAMPTZOID) => {
+            src_row.try_get::<NaiveDateTime, &str>(col_name)?.map(|v| {
+                let ts = to_timestamp(v.timestamp() as f64);
+                Cell::Timestamptz(ts)
+            })
+        }
         _ => {
             return Err(MssqlFdwError::UnsupportedColumnType(tgt_col.name.clone()));
         }
