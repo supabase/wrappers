@@ -20,6 +20,10 @@
 | [AWS Cognito](./wrappers/src/fdw/cognito_fdw)   | A FDW for [AWS Cognito](https://aws.amazon.com/cognito/)                      | ✅   | ❌     |
 | [Notion](./wrappers/src/fdw/notion_fdw)         | A FDW for [Notion](https://www.notion.so/)                                    | ✅   | ❌     |
 
+### Warning
+
+Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
+
 ## Features
 
 - Minimum interface and easy to implement.
