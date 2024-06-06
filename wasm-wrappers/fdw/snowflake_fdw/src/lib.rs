@@ -266,6 +266,10 @@ impl SnowflakeFdw {
 }
 
 impl Guest for SnowflakeFdw {
+    fn host_version_requirement() -> String {
+        ">=0.1.0".to_string()
+    }
+
     fn init(ctx: &Context) -> FdwResult {
         let opts = ctx.get_options(OptionsType::Server);
         let acc_id = opts.require("account_identifier")?.to_uppercase();

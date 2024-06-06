@@ -1,4 +1,5 @@
 use pgrx::pg_sys;
+use semver::{Version, VersionReq};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::fs;
@@ -15,6 +16,22 @@ use super::bindings::{
 };
 use super::host::FdwHost;
 use super::{WasmFdwError, WasmFdwResult};
+
+// check minimal host version requirement, e.g, ">=1.2.3"
+fn check_version_requirement(ver_req: &str) -> WasmFdwResult<()> {
+    let req = VersionReq::parse(ver_req)?;
+    let meta = __wasm_fdw_pgrx::wasm_fdw_get_meta();
+    let host_ver = meta.get("version").expect("version should be defined");
+    let version = Version::parse(&host_ver)?;
+    if !req.matches(&version) {
+        return Err(format!(
+            "host version {} not match requirement {}",
+            host_ver, ver_req
+        )
+        .into());
+    }
+    Ok(())
+}
 
 // Download wasm component package from warg registry or custom url.
 // The url protoal can be 'file://', 'warg(s)://' or 'http(s)://'.
@@ -103,6 +120,7 @@ impl ForeignDataWrapper<WasmFdwError> for WasmFdw {
         let pkg_version = require_option("fdw_package_version", options)?;
 
         let rt = create_async_runtime()?;
+
         let mut config = Config::new();
         config.wasm_component_model(true);
         let engine = Engine::new(&config)?;
@@ -111,6 +129,7 @@ impl ForeignDataWrapper<WasmFdwError> for WasmFdw {
 
         let mut linker = Linker::new(&engine);
         Wrappers::add_to_linker(&mut linker, |host: &mut FdwHost| host)?;
+
         let mut fdw_host = FdwHost::new(rt);
         fdw_host.svr_opts = options.clone();
 
@@ -118,6 +137,15 @@ impl ForeignDataWrapper<WasmFdwError> for WasmFdw {
         let (bindings, _) = Wrappers::instantiate(&mut store, &component, &linker)?;
 
         let mut wasm_fdw = Self { store, bindings };
+
+        // check version requirement
+        let ver_req = wasm_fdw
+            .bindings
+            .supabase_wrappers_routines()
+            .call_host_version_requirement(&mut wasm_fdw.store)?;
+        check_version_requirement(&ver_req)?;
+
+        // call wasm fdw's init() function
         let ctx = wasm_fdw.get_context();
         wasm_fdw
             .bindings

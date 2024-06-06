@@ -28,6 +28,10 @@ impl HelloWorldFdw {
 }
 
 impl Guest for HelloWorldFdw {
+    fn host_version_requirement() -> String {
+        ">=0.1.0".to_string()
+    }
+
     fn init(_ctx: &Context) -> FdwResult {
         Self::init();
         Ok(())
@@ -80,23 +84,23 @@ impl Guest for HelloWorldFdw {
     }
 
     fn begin_modify(_ctx: &Context) -> FdwResult {
-        unimplemented!();
+        unimplemented!("update on foreign table is not supported");
     }
 
     fn insert(_ctx: &Context, _row: &Row) -> FdwResult {
-        unimplemented!();
+        unimplemented!("update on foreign table is not supported");
     }
 
     fn update(_ctx: &Context, _rowid: Cell, _row: &Row) -> FdwResult {
-        unimplemented!();
+        unimplemented!("update on foreign table is not supported");
     }
 
     fn delete(_ctx: &Context, _rowid: Cell) -> FdwResult {
-        unimplemented!();
+        unimplemented!("update on foreign table is not supported");
     }
 
     fn end_modify(_ctx: &Context) -> FdwResult {
-        unimplemented!();
+        unimplemented!("update on foreign table is not supported");
     }
 }
 

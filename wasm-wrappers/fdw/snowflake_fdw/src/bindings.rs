@@ -3591,6 +3591,28 @@ pub mod exports {
                     super::super::super::super::supabase::wrappers::types::FdwResult;
                 #[doc(hidden)]
                 #[allow(non_snake_case)]
+                pub unsafe fn _export_host_version_requirement_cabi<T: Guest>() -> *mut u8 {
+                    #[cfg(target_arch = "wasm32")]
+                    _rt::run_ctors_once();
+                    let result0 = T::host_version_requirement();
+                    let ptr1 = _RET_AREA.0.as_mut_ptr().cast::<u8>();
+                    let vec2 = (result0.into_bytes()).into_boxed_slice();
+                    let ptr2 = vec2.as_ptr().cast::<u8>();
+                    let len2 = vec2.len();
+                    ::core::mem::forget(vec2);
+                    *ptr1.add(4).cast::<usize>() = len2;
+                    *ptr1.add(0).cast::<*mut u8>() = ptr2.cast_mut();
+                    ptr1
+                }
+                #[doc(hidden)]
+                #[allow(non_snake_case)]
+                pub unsafe fn __post_return_host_version_requirement<T: Guest>(arg0: *mut u8) {
+                    let l0 = *arg0.add(0).cast::<*mut u8>();
+                    let l1 = *arg0.add(4).cast::<usize>();
+                    _rt::cabi_dealloc(l0, l1, 1);
+                }
+                #[doc(hidden)]
+                #[allow(non_snake_case)]
                 pub unsafe fn _export_init_cabi<T: Guest>(arg0: i32) -> *mut u8 {
                     #[cfg(target_arch = "wasm32")]
                     _rt::run_ctors_once();
@@ -4186,6 +4208,8 @@ pub mod exports {
                     /// ----------------------------------------------
                     /// foreign data wrapper interface functions
                     /// ----------------------------------------------
+                    /// define minimal host version requirement, e.g, ">=1.2.3"
+                    fn host_version_requirement() -> _rt::String;
                     /// fdw initialization
                     fn init(ctx: &Context) -> FdwResult;
                     /// data scan
@@ -4205,6 +4229,14 @@ pub mod exports {
                 macro_rules! __export_supabase_wrappers_routines_0_1_0_cabi{
   ($ty:ident with_types_in $($path_to_types:tt)*) => (const _: () = {
 
+    #[export_name = "supabase:wrappers/routines@0.1.0#host-version-requirement"]
+    unsafe extern "C" fn export_host_version_requirement() -> *mut u8 {
+      $($path_to_types)*::_export_host_version_requirement_cabi::<$ty>()
+    }
+    #[export_name = "cabi_post_supabase:wrappers/routines@0.1.0#host-version-requirement"]
+    unsafe extern "C" fn _post_return_host_version_requirement(arg0: *mut u8,) {
+      $($path_to_types)*::__post_return_host_version_requirement::<$ty>(arg0)
+    }
     #[export_name = "supabase:wrappers/routines@0.1.0#init"]
     unsafe extern "C" fn export_init(arg0: i32,) -> *mut u8 {
       $($path_to_types)*::_export_init_cabi::<$ty>(arg0)
@@ -4605,8 +4637,8 @@ pub(crate) use __export_snowflake_impl as export;
 #[cfg(target_arch = "wasm32")]
 #[link_section = "component-type:wit-bindgen:0.24.0:snowflake:encoded world"]
 #[doc(hidden)]
-pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 3556] = *b"\
-\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\xe4\x1a\x01A\x02\x01\
+pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 3590] = *b"\
+\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\x86\x1b\x01A\x02\x01\
 A\x13\x01B\x15\x01o\x02ss\x01p\0\x04\0\x07headers\x03\0\x01\x01q\x02\x03get\0\0\x04\
 post\0\0\x04\0\x06method\x03\0\x03\x01r\x04\x06method\x04\x03urls\x07headers\x02\
 \x04bodys\x04\0\x07request\x03\0\x05\x01r\x04\x03urls\x0bstatus-code{\x07headers\
@@ -4673,19 +4705,20 @@ se:wrappers/types@0.1.0\x05\x04\x02\x03\0\x04\x04cell\x01B\x0d\x02\x03\x02\x01\x
 \x02\x01k\x01\x01@\x01\x04cell\x03\0s\x04\0\x0ecell-to-string\x01\x04\x01ks\x01@\
 \x01\x09secret-ids\0\x05\x04\0\x10get-vault-secret\x01\x06\x03\x01\x1dsupabase:w\
 rappers/utils@0.1.0\x05\x06\x02\x03\0\x04\x03row\x02\x03\0\x04\x07context\x02\x03\
-\0\x04\x09fdw-error\x02\x03\0\x04\x0afdw-result\x01B\x1d\x02\x03\x02\x01\x05\x04\
+\0\x04\x09fdw-error\x02\x03\0\x04\x0afdw-result\x01B\x1f\x02\x03\x02\x01\x05\x04\
 \0\x04cell\x03\0\0\x02\x03\x02\x01\x07\x04\0\x03row\x03\0\x02\x02\x03\x02\x01\x08\
 \x04\0\x07context\x03\0\x04\x02\x03\x02\x01\x09\x04\0\x09fdw-error\x03\0\x06\x02\
-\x03\x02\x01\x0a\x04\0\x0afdw-result\x03\0\x08\x01h\x05\x01@\x01\x03ctx\x0a\0\x09\
-\x04\0\x04init\x01\x0b\x04\0\x0abegin-scan\x01\x0b\x01h\x03\x01ky\x01j\x01\x0d\x01\
-\x07\x01@\x02\x03ctx\x0a\x03row\x0c\0\x0e\x04\0\x09iter-scan\x01\x0f\x04\0\x07re\
--scan\x01\x0b\x04\0\x08end-scan\x01\x0b\x04\0\x0cbegin-modify\x01\x0b\x01@\x02\x03\
-ctx\x0a\x03row\x0c\0\x09\x04\0\x06insert\x01\x10\x01@\x03\x03ctx\x0a\x05rowid\x01\
-\x07new-row\x0c\0\x09\x04\0\x06update\x01\x11\x01@\x02\x03ctx\x0a\x05rowid\x01\0\
-\x09\x04\0\x06delete\x01\x12\x04\0\x0aend-modify\x01\x0b\x04\x01\x20supabase:wra\
-ppers/routines@0.1.0\x05\x0b\x04\x01&supabase:snowflake-fdw/snowflake@0.1.0\x04\0\
-\x0b\x0f\x01\0\x09snowflake\x03\0\0\0G\x09producers\x01\x0cprocessed-by\x02\x0dw\
-it-component\x070.202.0\x10wit-bindgen-rust\x060.24.0";
+\x03\x02\x01\x0a\x04\0\x0afdw-result\x03\0\x08\x01@\0\0s\x04\0\x18host-version-r\
+equirement\x01\x0a\x01h\x05\x01@\x01\x03ctx\x0b\0\x09\x04\0\x04init\x01\x0c\x04\0\
+\x0abegin-scan\x01\x0c\x01h\x03\x01ky\x01j\x01\x0e\x01\x07\x01@\x02\x03ctx\x0b\x03\
+row\x0d\0\x0f\x04\0\x09iter-scan\x01\x10\x04\0\x07re-scan\x01\x0c\x04\0\x08end-s\
+can\x01\x0c\x04\0\x0cbegin-modify\x01\x0c\x01@\x02\x03ctx\x0b\x03row\x0d\0\x09\x04\
+\0\x06insert\x01\x11\x01@\x03\x03ctx\x0b\x05rowid\x01\x07new-row\x0d\0\x09\x04\0\
+\x06update\x01\x12\x01@\x02\x03ctx\x0b\x05rowid\x01\0\x09\x04\0\x06delete\x01\x13\
+\x04\0\x0aend-modify\x01\x0c\x04\x01\x20supabase:wrappers/routines@0.1.0\x05\x0b\
+\x04\x01&supabase:snowflake-fdw/snowflake@0.1.0\x04\0\x0b\x0f\x01\0\x09snowflake\
+\x03\0\0\0G\x09producers\x01\x0cprocessed-by\x02\x0dwit-component\x070.202.0\x10\
+wit-bindgen-rust\x060.24.0";
 
 #[inline(never)]
 #[doc(hidden)]

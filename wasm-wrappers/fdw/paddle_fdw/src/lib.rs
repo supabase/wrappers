@@ -197,6 +197,10 @@ impl PaddleFdw {
 }
 
 impl Guest for PaddleFdw {
+    fn host_version_requirement() -> String {
+        ">=0.1.0".to_string()
+    }
+
     fn init(ctx: &Context) -> FdwResult {
         Self::init();
         let this = Self::this_mut();
@@ -280,23 +284,23 @@ impl Guest for PaddleFdw {
     }
 
     fn begin_modify(_ctx: &Context) -> FdwResult {
-        unimplemented!();
+        unimplemented!("update on foreign table is not supported");
     }
 
     fn insert(_ctx: &Context, _row: &Row) -> FdwResult {
-        unimplemented!();
+        unimplemented!("update on foreign table is not supported");
     }
 
     fn update(_ctx: &Context, _rowid: Cell, _row: &Row) -> FdwResult {
-        unimplemented!();
+        unimplemented!("update on foreign table is not supported");
     }
 
     fn delete(_ctx: &Context, _rowid: Cell) -> FdwResult {
-        unimplemented!();
+        unimplemented!("update on foreign table is not supported");
     }
 
     fn end_modify(_ctx: &Context) -> FdwResult {
-        unimplemented!();
+        unimplemented!("update on foreign table is not supported");
     }
 }
 
