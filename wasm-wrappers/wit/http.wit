@@ -4,6 +4,9 @@ interface http {
     variant method {
         get,
         post,
+        put,
+        patch,
+        delete,
     }
 
     record request {
@@ -26,6 +29,7 @@ interface http {
     get: func(req: request) -> http-result;
     post: func(req: request) -> http-result;
     put: func(req: request) -> http-result;
+    patch: func(req: request) -> http-result;
     delete: func(req: request) -> http-result;
 
     error-for-status: func(resp: response) -> result<_, http-error>;

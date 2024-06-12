@@ -24,6 +24,12 @@ impl time::Host for FdwHost {
             .map_err(|e| e.to_string())
     }
 
+    fn epoch_ms_to_rfc3339(&mut self, msecs: i64) -> Result<String, time::TimeError> {
+        DateTime::from_timestamp_micros(msecs)
+            .map(|ts| ts.to_rfc3339())
+            .ok_or("invalid microseconds since Unix Epoch".to_string())
+    }
+
     fn sleep(&mut self, millis: u64) {
         std::thread::sleep(std::time::Duration::from_millis(millis));
     }

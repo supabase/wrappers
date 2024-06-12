@@ -1,6 +1,6 @@
 #[allow(warnings)]
 mod bindings;
-use serde_json::{json, Value as JsonValue};
+use serde_json::{json, Map as JsonMap, Value as JsonValue};
 
 use bindings::{
     exports::supabase::wrappers::routines::Guest,
@@ -19,6 +19,7 @@ struct PaddleFdw {
     object: String,
     src_rows: Vec<JsonValue>,
     src_idx: usize,
+    rowid_col: String,
 }
 
 static mut INSTANCE: *mut PaddleFdw = std::ptr::null_mut::<PaddleFdw>();
@@ -100,7 +101,7 @@ impl PaddleFdw {
             return Ok(());
         }
 
-        http::error_for_status(&resp)?;
+        http::error_for_status(&resp).map_err(|err| format!("{}: {}", err, resp.body))?;
 
         // save source rows
         self.src_rows = resp_json
@@ -189,10 +190,37 @@ impl PaddleFdw {
                     None
                 }
             }
-            TypeOid::Json => src.as_str().map(|v| Cell::Json(v.to_owned())),
+            TypeOid::Json => src.as_object().map(|_| Cell::Json(src.to_string())),
         };
 
         Ok(cell)
+    }
+
+    // convert a row to JSON string, which is used as request body for row update
+    fn row_to_body(&self, row: &Row) -> Result<String, FdwError> {
+        let mut map = JsonMap::new();
+
+        for (col_name, cell) in row.cols().iter().zip(row.cells().iter()) {
+            if let Some(cell) = cell {
+                let value = match cell {
+                    Cell::Bool(v) => JsonValue::Bool(*v),
+                    Cell::I64(v) => JsonValue::String(v.to_string()),
+                    Cell::String(v) => JsonValue::String(v.to_string()),
+                    Cell::Date(v) => JsonValue::String(time::epoch_ms_to_rfc3339(v * 1_000_000)?),
+                    Cell::Timestamp(v) => JsonValue::String(time::epoch_ms_to_rfc3339(*v)?),
+                    Cell::Timestamptz(v) => JsonValue::String(time::epoch_ms_to_rfc3339(*v)?),
+                    Cell::Json(v) => {
+                        serde_json::from_str::<JsonValue>(v).map_err(|e| e.to_string())?
+                    }
+                    _ => {
+                        return Err(format!("column '{}' type is not supported", col_name));
+                    }
+                };
+                map.insert(col_name.to_owned(), value);
+            }
+        }
+
+        Ok(JsonValue::Object(map).to_string())
     }
 }
 
@@ -283,24 +311,56 @@ impl Guest for PaddleFdw {
         Ok(())
     }
 
-    fn begin_modify(_ctx: &Context) -> FdwResult {
-        unimplemented!("update on foreign table is not supported");
+    fn begin_modify(ctx: &Context) -> FdwResult {
+        let this = Self::this_mut();
+        let opts = ctx.get_options(OptionsType::Table);
+        this.object = opts.require("object")?;
+        this.rowid_col = opts.require("rowid_column")?;
+        Ok(())
     }
 
-    fn insert(_ctx: &Context, _row: &Row) -> FdwResult {
-        unimplemented!("update on foreign table is not supported");
+    fn insert(_ctx: &Context, row: &Row) -> FdwResult {
+        let this = Self::this_mut();
+        let url = format!("{}/{}", this.base_url, this.object);
+        let body = this.row_to_body(row)?;
+        let req = http::Request {
+            method: http::Method::Post,
+            url,
+            headers: this.headers.clone(),
+            body,
+        };
+        let resp = http::post(&req)?;
+        http::error_for_status(&resp).map_err(|err| format!("{}: {}", err, resp.body))?;
+        stats::inc_stats(FDW_NAME, stats::Metric::RowsOut, 1);
+        Ok(())
     }
 
-    fn update(_ctx: &Context, _rowid: Cell, _row: &Row) -> FdwResult {
-        unimplemented!("update on foreign table is not supported");
+    fn update(_ctx: &Context, rowid: Cell, row: &Row) -> FdwResult {
+        let this = Self::this_mut();
+        let id = match rowid {
+            Cell::String(s) => s.clone(),
+            _ => return Err("invalid rowid column value".to_string()),
+        };
+        let url = format!("{}/{}/{}", this.base_url, this.object, id);
+        let body = this.row_to_body(row)?;
+        let req = http::Request {
+            method: http::Method::Patch,
+            url,
+            headers: this.headers.clone(),
+            body,
+        };
+        let resp = http::patch(&req)?;
+        http::error_for_status(&resp).map_err(|err| format!("{}: {}", err, resp.body))?;
+        stats::inc_stats(FDW_NAME, stats::Metric::RowsOut, 1);
+        Ok(())
     }
 
     fn delete(_ctx: &Context, _rowid: Cell) -> FdwResult {
-        unimplemented!("update on foreign table is not supported");
+        unimplemented!("delete on foreign table is not supported");
     }
 
     fn end_modify(_ctx: &Context) -> FdwResult {
-        unimplemented!("update on foreign table is not supported");
+        Ok(())
     }
 }
 
