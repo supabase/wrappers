@@ -160,6 +160,7 @@ all_fdws = [
     "redis_fdw",
     "cognito_fdw",
     "notion_fdw",
+    "wasm_fdw",
 ]
 
 [dependencies]

@@ -22,7 +22,7 @@ fn check_version_requirement(ver_req: &str) -> WasmFdwResult<()> {
     let req = VersionReq::parse(ver_req)?;
     let meta = __wasm_fdw_pgrx::wasm_fdw_get_meta();
     let host_ver = meta.get("version").expect("version should be defined");
-    let version = Version::parse(&host_ver)?;
+    let version = Version::parse(host_ver)?;
     if !req.matches(&version) {
         return Err(format!(
             "host version {} not match requirement {}",

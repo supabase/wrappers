@@ -55,6 +55,7 @@ impl SnowflakeFdw {
         let resp = match method {
             http::Method::Get => http::get(&req),
             http::Method::Post => http::post(&req),
+            _ => unreachable!(),
         }?;
         let json_value = serde_json::from_str(&resp.body).map_err(|e| e.to_string())?;
 
@@ -272,6 +273,10 @@ impl Guest for SnowflakeFdw {
 
     fn init(ctx: &Context) -> FdwResult {
         let opts = ctx.get_options(OptionsType::Server);
+        let api_url = opts.require_or(
+            "api_url",
+            "https://{}.snowflakecomputing.com/api/v2/statements",
+        );
         let acc_id = opts.require("account_identifier")?.to_uppercase();
         let user = opts.require("user")?.to_uppercase();
         let pub_key_fp = opts.require("public_key_fingerprint")?;
@@ -299,10 +304,7 @@ impl Guest for SnowflakeFdw {
         let this = Self::this_mut();
 
         // setup request url and headers
-        this.base_url = format!(
-            "https://{}.snowflakecomputing.com/api/v2/statements",
-            acc_id
-        );
+        this.base_url = api_url.replacen("{}", &acc_id, 1);
         this.headers.push((
             "user-agent".to_owned(),
             "Wrappers Snowflake FDW".to_string(),

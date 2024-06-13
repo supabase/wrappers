@@ -50,7 +50,6 @@ fn create_client(req: &http::Request) -> Result<ClientWithMiddleware, String> {
 impl FdwHost {
     // make a http request
     fn http_request(&mut self, req: http::Request) -> http::HttpResult {
-        supabase_wrappers::prelude::report_info(&format!("req: {:?}", req));
         let client = create_client(&req)?;
         let resp = self
             .rt
@@ -75,12 +74,13 @@ impl FdwHost {
         let status_code = resp.status().as_u16();
         let headers = header_map_to_guest(resp.headers());
         let body = self.rt.block_on(resp.text()).map_err(|e| e.to_string())?;
-        Ok(http::Response {
+        let resp = http::Response {
             url,
             status_code,
             headers,
             body,
-        })
+        };
+        Ok(resp)
     }
 }
 

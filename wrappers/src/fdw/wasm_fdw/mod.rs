@@ -1,6 +1,7 @@
 #![allow(clippy::module_inception)]
 mod bindings;
 mod host;
+mod tests;
 mod wasm_fdw;
 
 use pgrx::pg_sys::panic::ErrorReport;
