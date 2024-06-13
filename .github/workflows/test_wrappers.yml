@@ -73,4 +73,4 @@ jobs:
         cargo component build --manifest-path ./snowflake_fdw/Cargo.toml --release --target wasm32-unknown-unknown
 
     - name: Perform test
-    - run: cd wrappers && cargo pgrx test --features "all_fdws pg15"
+      run: cd wrappers && cargo pgrx test --features "all_fdws pg15"
