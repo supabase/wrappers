@@ -131,7 +131,7 @@ impl ForeignDataWrapper<WasmFdwError> for WasmFdw {
         Wrappers::add_to_linker(&mut linker, |host: &mut FdwHost| host)?;
 
         let mut fdw_host = FdwHost::new(rt);
-        fdw_host.svr_opts = options.clone();
+        fdw_host.svr_opts.clone_from(options);
 
         let mut store = Store::new(&engine, fdw_host);
         let (bindings, _) = Wrappers::instantiate(&mut store, &component, &linker)?;
@@ -167,8 +167,8 @@ impl ForeignDataWrapper<WasmFdwError> for WasmFdw {
         fdw_state.quals = quals.to_vec();
         fdw_state.columns = columns.to_vec();
         fdw_state.sorts = sorts.to_vec();
-        fdw_state.limit = limit.clone();
-        fdw_state.tbl_opts = options.clone();
+        fdw_state.limit.clone_from(limit);
+        fdw_state.tbl_opts.clone_from(options);
 
         let ctx = self.get_context();
         self.bindings
@@ -212,7 +212,7 @@ impl ForeignDataWrapper<WasmFdwError> for WasmFdw {
 
     fn begin_modify(&mut self, options: &HashMap<String, String>) -> WasmFdwResult<()> {
         let fdw_state = self.store.data_mut();
-        fdw_state.tbl_opts = options.clone();
+        fdw_state.tbl_opts.clone_from(options);
         let ctx = self.get_context();
         self.bindings
             .supabase_wrappers_routines()
