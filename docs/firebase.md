@@ -3,6 +3,10 @@
 1. [Authentication Users](https://firebase.google.com/docs/auth/users) (_read only_)
 2. [Firestore Database Documents](https://firebase.google.com/docs/firestore) (_read only_)
 
+!!! warning
+
+    Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
+
 ## Preparation
 
 Before you get started, make sure the `wrappers` extension is installed on your database:

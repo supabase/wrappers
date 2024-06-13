@@ -2,6 +2,10 @@
 
 The ClickHouse Wrapper allows you to read and write data from ClickHouse within your Postgres database.
 
+!!! warning
+
+    Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
+
 ## Supported Data Types
 
 | Postgres Type    | ClickHouse Type |
