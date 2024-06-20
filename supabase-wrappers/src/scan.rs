@@ -98,6 +98,11 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwState<E, W> {
     }
 
     #[inline]
+    fn explain(&self) -> Result<Option<Vec<(String, String)>>, E> {
+        self.instance.explain()
+    }
+
+    #[inline]
     fn iter_scan(&mut self) -> Result<Option<()>, E> {
         self.instance.iter_scan(&mut self.row)
     }
@@ -250,22 +255,29 @@ pub(super) extern "C" fn explain_foreign_scan<E: Into<ErrorReport>, W: ForeignDa
         }
 
         let state = PgBox::<FdwState<E, W>>::from_pg(fdw_state);
-
         let ctx = PgMemoryContexts::CurrentMemoryContext;
 
-        let label = ctx.pstrdup("Wrappers");
+        if let Some(iter) = state.explain().report_unwrap() {
+            for (label, value) in iter {
+                let label = ctx.pstrdup(&label);
+                let value = ctx.pstrdup(&value);
+                pg_sys::ExplainPropertyText(label, value, es);
+            }
+        } else {
+            let label = ctx.pstrdup("Wrappers");
 
-        let value = ctx.pstrdup(&format!("quals = {:?}", state.quals));
-        pg_sys::ExplainPropertyText(label, value, es);
+            let value = ctx.pstrdup(&format!("quals = {:?}", state.quals));
+            pg_sys::ExplainPropertyText(label, value, es);
 
-        let value = ctx.pstrdup(&format!("tgts = {:?}", state.tgts));
-        pg_sys::ExplainPropertyText(label, value, es);
+            let value = ctx.pstrdup(&format!("tgts = {:?}", state.tgts));
+            pg_sys::ExplainPropertyText(label, value, es);
 
-        let value = ctx.pstrdup(&format!("sorts = {:?}", state.sorts));
-        pg_sys::ExplainPropertyText(label, value, es);
+            let value = ctx.pstrdup(&format!("sorts = {:?}", state.sorts));
+            pg_sys::ExplainPropertyText(label, value, es);
 
-        let value = ctx.pstrdup(&format!("limit = {:?}", state.limit));
-        pg_sys::ExplainPropertyText(label, value, es);
+            let value = ctx.pstrdup(&format!("limit = {:?}", state.limit));
+            pg_sys::ExplainPropertyText(label, value, es);
+        }
     }
 }
 
@@ -310,30 +322,27 @@ pub(super) extern "C" fn begin_foreign_scan<E: Into<ErrorReport>, W: ForeignData
         // assign parameter values to qual
         assign_paramenter_value(node, &mut state);
 
-        // begin scan if it is not EXPLAIN statement
-        if eflags & pg_sys::EXEC_FLAG_EXPLAIN_ONLY as c_int <= 0 {
-            let rel = scan_state.ss_currentRelation;
-            let tup_desc = (*rel).rd_att;
-            let natts = (*tup_desc).natts as usize;
+        let rel = scan_state.ss_currentRelation;
+        let tup_desc = (*rel).rd_att;
+        let natts = (*tup_desc).natts as usize;
 
-            // pass begin_scan OID values for the table, schema, and database
-            let pg_rel = PgRelation::from_pg(rel);
-            let database_oid = pg_sys::MyDatabaseId.as_u32().to_string();
-            let namespace_oid = pg_rel.namespace_oid().as_u32().to_string();
-            let table_oid = pg_rel.oid().as_u32().to_string();
-            let extra_opts = HashMap::from([
-                (OPTS_DATABASE_KEY.into(), database_oid),
-                (OPTS_NAMESPACE_KEY.into(), namespace_oid),
-                (OPTS_TABLE_KEY.into(), table_oid),
-            ]);
-            state.begin_scan(Some(extra_opts)).report_unwrap();
+        // pass begin_scan OID values for the table, schema, and database
+        let pg_rel = PgRelation::from_pg(rel);
+        let database_oid = pg_sys::MyDatabaseId.as_u32().to_string();
+        let namespace_oid = pg_rel.namespace_oid().as_u32().to_string();
+        let table_oid = pg_rel.oid().as_u32().to_string();
+        let extra_opts = HashMap::from([
+            (OPTS_DATABASE_KEY.into(), database_oid),
+            (OPTS_NAMESPACE_KEY.into(), namespace_oid),
+            (OPTS_TABLE_KEY.into(), table_oid),
+        ]);
+        state.begin_scan(Some(extra_opts)).report_unwrap();
 
-            // initialize scan result lists
-            state
-                .values
-                .extend_from_slice(&vec![0.into_datum().unwrap(); natts]);
-            state.nulls.extend_from_slice(&vec![true; natts]);
-        }
+        // initialize scan result lists
+        state
+            .values
+            .extend_from_slice(&vec![0.into_datum().unwrap(); natts]);
+        state.nulls.extend_from_slice(&vec![true; natts]);
 
         (*node).fdw_state = state.into_pg() as _;
     }

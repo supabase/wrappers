@@ -614,6 +614,9 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
         Ok(())
     }
 
+    /// Called when EXPLAIN is run
+    fn explain(&self) -> Result<Option<Vec<(String, String)>>, E>;
+
     /// Called when end the scan
     ///
     /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-SCAN).
