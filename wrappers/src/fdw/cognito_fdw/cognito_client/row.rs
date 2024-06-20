@@ -28,6 +28,7 @@ pub struct CognitoUser {
 
 #[derive(Debug)]
 pub enum IntoRowError {
+    #[allow(dead_code)]
     UnsupportedColumnType(String),
 }
 
