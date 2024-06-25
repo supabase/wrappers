@@ -1,5 +1,6 @@
 use pgrx::{prelude::*, JsonB};
 use std::fmt;
+use supabase_wrappers::prelude::report_warning;
 
 // fdw stats table name
 const FDW_STATS_TABLE: &str = "wrappers_fdw_stats";
@@ -102,11 +103,13 @@ pub(crate) fn set_metadata(fdw_name: &str, metadata: Option<JsonB>) {
             updated_at = timezone('utc'::text, now())",
         get_stats_table()
     );
-    let _ = Spi::run_with_args(
+    if let Err(err) = Spi::run_with_args(
         &sql,
         Some(vec![
             (PgBuiltInOids::TEXTOID.oid(), fdw_name.into_datum()),
             (PgBuiltInOids::JSONBOID.oid(), metadata.into_datum()),
         ]),
-    );
+    ) {
+        report_warning(&format!("set fdw stats metadata failed: {}", err));
+    };
 }
