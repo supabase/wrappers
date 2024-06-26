@@ -1,5 +1,6 @@
 use pgrx::{prelude::*, JsonB};
 use std::fmt;
+use supabase_wrappers::prelude::report_warning;
 
 // fdw stats table name
 const FDW_STATS_TABLE: &str = "wrappers_fdw_stats";
@@ -36,8 +37,8 @@ fn get_stats_table() -> String {
         FDW_STATS_TABLE
     );
     Spi::get_one(&sql)
-        .unwrap()
-        .unwrap_or_else(|| panic!("cannot find fdw stats table '{}'", FDW_STATS_TABLE))
+        .expect("wrappers extension should be installed")
+        .expect("fdw stats table should be created")
 }
 
 fn is_txn_read_only() -> bool {
@@ -70,7 +71,7 @@ pub(crate) fn inc_stats(fdw_name: &str, metric: Metric, inc: i64) {
             (PgBuiltInOids::INT8OID.oid(), inc.into_datum()),
         ]),
     )
-    .unwrap();
+    .expect("should insert into fdw stats table");
 }
 
 // get metadata
@@ -84,7 +85,7 @@ pub(crate) fn get_metadata(fdw_name: &str) -> Option<JsonB> {
         &sql,
         vec![(PgBuiltInOids::TEXTOID.oid(), fdw_name.into_datum())],
     )
-    .unwrap()
+    .unwrap_or_default()
 }
 
 // set metadata
@@ -102,12 +103,13 @@ pub(crate) fn set_metadata(fdw_name: &str, metadata: Option<JsonB>) {
             updated_at = timezone('utc'::text, now())",
         get_stats_table()
     );
-    Spi::run_with_args(
+    if let Err(err) = Spi::run_with_args(
         &sql,
         Some(vec![
             (PgBuiltInOids::TEXTOID.oid(), fdw_name.into_datum()),
             (PgBuiltInOids::JSONBOID.oid(), metadata.into_datum()),
         ]),
-    )
-    .unwrap();
+    ) {
+        report_warning(&format!("set fdw stats metadata failed: {}", err));
+    };
 }
