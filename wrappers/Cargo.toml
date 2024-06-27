@@ -118,6 +118,24 @@ redis_fdw = [
     "serde_json",
     "thiserror",
 ]
+wasm_fdw = [
+    "wasmtime",
+    "warg-client",
+    "warg-protocol",
+    "chrono",
+    "dirs",
+    "sha2",
+    "hex",
+    "thiserror",
+    "anyhow",
+    "reqwest",
+    "reqwest-middleware",
+    "reqwest-retry",
+    "semver",
+    "serde",
+    "serde_json",
+    "jwt-simple",
+]
 notion_fdw = [
     "reqwest",
     "reqwest-middleware",
@@ -142,6 +160,7 @@ all_fdws = [
     "redis_fdw",
     "cognito_fdw",
     "notion_fdw",
+    "wasm_fdw",
 ]
 
 [dependencies]
@@ -165,7 +184,7 @@ wiremock = { version = "0.5", optional = true }
 futures = { version = "0.3", optional = true }
 
 # for stripe_fdw, firebase_fdw, logflare_fdw and etc.
-reqwest = { version = "0.11.20", features = ["json"], optional = true }
+reqwest = { version = "0.11.20", features = ["json", "gzip"], optional = true }
 reqwest-middleware = { version = "0.2.3", optional = true }
 reqwest-retry = { version = "0.2.2", optional = true }
 
@@ -212,7 +231,24 @@ num-traits = { version = "0.2.17", optional = true }
 # for redis_fdw
 redis = { version = "0.24.0", features = ["streams"], optional = true }
 
+# for wasm_fdw
+wasmtime = { version = "21.0.1", features = [
+    "runtime",
+    "cranelift",
+    "component-model",
+], default-features = false, optional = true }
+warg-client = { version = "0.7.0", optional = true }
+warg-protocol = { version = "0.7.0", optional = true }
+semver = { version = "1.0.23", optional = true }
+jwt-simple = { version = "0.12.9", default-features = false, features = [
+    "pure-rust"
+], optional = true }
+dirs = { version = "5.0.1", optional = true }
+sha2 = { version = "0.10.8", optional = true }
+hex = { version = "0.4.3", optional = true }
+
 thiserror = { version = "1.0.48", optional = true }
+anyhow  = { version = "1.0.81", optional = true }
 
 [dev-dependencies]
 pgrx-tests = "=0.11.3"

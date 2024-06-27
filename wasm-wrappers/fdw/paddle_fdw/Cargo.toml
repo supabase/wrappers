@@ -1,0 +1,24 @@
+[package]
+name = "paddle_fdw"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+bitflags = "2.5.0"
+wit-bindgen-rt = "0.26.0"
+serde_json = "1.0"
+chrono = "0.4.38"
+
+[package.metadata.component]
+package = "supabase:paddle-fdw"
+
+[package.metadata.component.dependencies]
+
+[package.metadata.component.target]
+path = "wit"
+
+[package.metadata.component.target.dependencies]
+"supabase:wrappers" = { path = "../../wit" }

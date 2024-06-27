@@ -1,0 +1,124 @@
+interface types {
+    variant type-oid {
+        %bool,
+        i8,
+        i16,
+        %f32,
+        i32,
+        %f64,
+        i64,
+        numeric,
+        %string,
+        date,
+        timestamp,
+        timestamptz,
+        json,
+    }
+
+    variant cell {
+        %bool(bool),
+        i8(s8),
+        i16(s16),
+        %f32(f32),
+        i32(s32),
+        %f64(f64),
+        i64(s64),
+        numeric(f64),
+        %string(string),
+        // seconds since Unix epoch
+        date(s64),
+        // microseconds since Unix epoch
+        timestamp(s64),
+        timestamptz(s64),
+        json(string),
+    }
+
+    resource row {
+        constructor();
+
+        cols: func() -> list<string>;
+        cells: func() -> list<option<cell>>;
+
+        push: func(cell: option<cell>);
+    }
+
+    resource column {
+        constructor(index: u32);
+
+        name: func() -> string;
+        num: func() -> u32;
+        type-oid: func() -> type-oid;
+    }
+
+    variant value {
+        cell(cell),
+        array(list<cell>),
+    }
+
+    record param {
+        id: u32,
+        type-oid: u32,
+    }
+
+    resource qual {
+        constructor(index: u32);
+
+        field: func() -> string;
+        operator: func() -> string;
+        value: func() -> value;
+        use-or: func() -> bool;
+        param: func() -> option<param>;
+
+        deparse: func() -> string;
+    }
+
+    resource sort {
+        constructor(index: u32);
+
+        field: func() -> string;
+        field-no: func() -> u32;
+        reversed: func() -> bool;
+        nulls-first: func() -> bool;
+        collate: func() -> option<string>;
+
+        deparse: func() -> string;
+        deparse-with-collate: func() -> string;
+    }
+
+    resource limit {
+        constructor();
+
+        count: func() -> s64;
+        offset: func() -> s64;
+
+        deparse: func() -> string;
+    }
+
+    variant options-type {
+        server,
+        table,
+    }
+
+    resource options {
+        constructor(options-type: options-type);
+
+        get: func(key: string) -> option<string>;
+        require: func(key: string) -> result<string, fdw-error>;
+        require-or: func(key: string, default: string) -> string;
+    }
+
+    resource context {
+        constructor();
+
+        get-options: func(options-type: options-type) -> options;
+        get-quals: func() -> list<qual>;
+        get-columns: func() -> list<column>;
+        get-sorts: func() -> list<sort>;
+        get-limit: func() -> option<limit>;
+    }
+
+    type fdw-error = string;
+    type fdw-result = result<_, fdw-error>;
+}
+
+

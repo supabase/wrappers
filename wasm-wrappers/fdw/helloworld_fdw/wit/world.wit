@@ -1,0 +1,5 @@
+package supabase:helloworld-fdw@0.1.0;
+
+world helloworld {
+    export supabase:wrappers/routines@0.1.0;
+}

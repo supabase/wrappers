@@ -62,7 +62,7 @@ fn field_to_cell(src_row: &tiberius::Row, tgt_col: &Column) -> MssqlFdwResult<Op
         }
         PgOid::BuiltIn(PgBuiltInOids::TIMESTAMPOID) => {
             src_row.try_get::<NaiveDateTime, &str>(col_name)?.map(|v| {
-                let ts = to_timestamp(v.timestamp() as f64);
+                let ts = to_timestamp(v.and_utc().timestamp() as f64);
                 Cell::Timestamp(ts.to_utc())
             })
         }

@@ -1,0 +1,15 @@
+interface stats {
+    type metadata = option<string>;
+
+    variant metric {
+        create-times,
+        rows-in,
+        rows-out,
+        bytes-in,
+        bytes-out,
+    }
+
+    inc-stats: func(fdw-name: string, metric: metric, inc: s64);
+    get-metadata: func(fdw-name: string) -> metadata;
+    set-metadata: func(fdw-name: string, metadata: metadata);
+}

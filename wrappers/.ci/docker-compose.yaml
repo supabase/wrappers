@@ -36,6 +36,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 20
+
   cognito:
     image: jagregory/cognito-local
     ports:
@@ -47,6 +48,7 @@ services:
       interval: 11s
       timeout: 6s
       retries: 3
+
   stripe:
     image: stripe/stripe-mock:v0.144.0
     container_name: stripe-mock
@@ -140,4 +142,16 @@ services:
       test: curl --fail http://0.0.0.0:4242/ || exit 1
       interval: 11s
       timeout: 6s
+      retries: 3
+
+  wasm:
+    container_name: wasm-local
+    build:
+      context: ../dockerfiles/wasm
+    ports:
+      - "8096:8096"
+    healthcheck:
+      test: curl --fail http://0.0.0.0:8096/paddle || exit 1
+      interval: 10s
+      timeout: 5s
       retries: 3
