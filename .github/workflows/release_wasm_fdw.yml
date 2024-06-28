@@ -1,0 +1,80 @@
+name: Wasm FDW Release
+
+on:
+  push:
+    tags:
+      - 'wasm_*_fdw_v[0-9]+.[0-9]+.[0-9]+' # Push events to matching wasm fdw tag, i.e. wasm_snowflake_fdw_v1.0.2
+  workflow_dispatch:
+    inputs:
+      project:
+        description: 'Wasm FDW Project to release'
+        required: true
+      version:
+        description: 'Version number'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create Wasm FDW Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract project and version from tag
+        id: extract_info
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          PROJECT=`echo "${TAG}" | sed -E 's/wasm_(.*_fdw)_v.*/\1/'`
+          VERSION=`echo "${TAG}" | sed -E 's/wasm_.*_fdw_(v.*)/\1/'`
+          echo "PROJECT=$PROJECT" >> "$GITHUB_OUTPUT"
+          echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Rust
+        run: |
+          # install Rust
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile minimal --default-toolchain stable && \
+            rustup --version && \
+            rustc --version && \
+            cargo --version
+
+          # add wasm32-unknown-unknown target
+          rustup target add wasm32-unknown-unknown
+
+          # install Wasm component
+          cargo install cargo-component --locked
+
+      - name: Build Wasm FDW
+        run: |
+          cd wasm-wrappers/fdw/${{ steps.extract_info.outputs.PROJECT }}
+          cargo component build --release --target wasm32-unknown-unknown
+
+      - name: Create release
+        id: create_release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$TAG" \
+              --repo="$GITHUB_REPOSITORY" \
+              --title=${{ steps.extract_info.outputs.PROJECT }}_${{ steps.extract_info.outputs.VERSION }} \
+              --generate-notes
+
+      - name: Get upload url
+        run: echo UPLOAD_URL=$(curl --silent https://api.github.com/repos/${{ github.repository }}/releases/latest | jq .upload_url --raw-output) >> $GITHUB_ENV
+
+      - name: Upload release asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PROJECT: ${{ steps.extract_info.outputs.PROJECT }}
+        with:
+          upload_url: ${{ env.UPLOAD_URL }}
+          asset_path: ./wasm-wrappers/fdw/${{ env.PROJECT }}/target/wasm32-unknown-unknown/release/${{ env.PROJECT }}.wasm
+          asset_name: ${{ env.PROJECT }}.wasm
+          asset_content_type: application/wasm
+
