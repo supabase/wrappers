@@ -4,14 +4,6 @@ on:
   push:
     tags:
       - 'wasm_*_fdw_v[0-9]+.[0-9]+.[0-9]+' # Push events to matching wasm fdw tag, i.e. wasm_snowflake_fdw_v1.0.2
-  workflow_dispatch:
-    inputs:
-      project:
-        description: 'Wasm FDW Project to release'
-        required: true
-      version:
-        description: 'Version number'
-        required: true
 
 permissions:
   contents: write
