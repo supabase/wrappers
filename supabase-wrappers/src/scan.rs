@@ -310,7 +310,7 @@ unsafe fn assign_paramenter_value<E: Into<ErrorReport>, W: ForeignDataWrapper<E>
 #[pg_guard]
 pub(super) extern "C" fn begin_foreign_scan<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     node: *mut pg_sys::ForeignScanState,
-    eflags: c_int,
+    _eflags: c_int,
 ) {
     debug2!("---> begin_foreign_scan");
     unsafe {
