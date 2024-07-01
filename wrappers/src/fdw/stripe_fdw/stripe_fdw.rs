@@ -10,12 +10,18 @@ use supabase_wrappers::prelude::*;
 
 use super::{StripeFdwError, StripeFdwResult};
 
-fn create_client(api_key: &str) -> StripeFdwResult<ClientWithMiddleware> {
+fn create_client(
+    api_key: &str,
+    api_version: Option<&str>,
+) -> StripeFdwResult<ClientWithMiddleware> {
     let mut headers = header::HeaderMap::new();
     let value = format!("Bearer {}", api_key);
     let mut auth_value = header::HeaderValue::from_str(&value)?;
     auth_value.set_sensitive(true);
     headers.insert(header::AUTHORIZATION, auth_value);
+    if let Some(version) = api_version {
+        headers.insert("Stripe-Version", header::HeaderValue::from_str(version)?);
+    }
     let client = reqwest::Client::builder()
         .default_headers(headers)
         .build()?;
@@ -249,7 +255,7 @@ fn inc_stats_request_cnt(stats_metadata: &mut JsonB) -> StripeFdwResult<()> {
 }
 
 #[wrappers_fdw(
-    version = "0.1.8",
+    version = "0.1.9",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/stripe_fdw",
     error_type = "StripeFdwError"
@@ -628,11 +634,12 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
                 }
             })
             .unwrap_or_else(|| "https://api.stripe.com/v1/".to_string());
+        let api_version = options.get("api_version").map(|t| t.as_str());
         let client = match options.get("api_key") {
-            Some(api_key) => Some(create_client(api_key)),
+            Some(api_key) => Some(create_client(api_key, api_version)),
             None => {
                 let key_id = require_option("api_key_id", options)?;
-                get_vault_secret(key_id).map(|api_key| create_client(&api_key))
+                get_vault_secret(key_id).map(|api_key| create_client(&api_key, api_version))
             }
         }
         .transpose()?;
