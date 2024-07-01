@@ -57,6 +57,15 @@ pub(crate) unsafe fn form_array_from_datum(
         PgOid::BuiltIn(PgBuiltInOids::JSONBARRAYOID) => {
             Vec::<Cell>::from_polymorphic_datum(datum, false, pg_sys::JSONBOID)
         }
+        PgOid::BuiltIn(PgBuiltInOids::INTERVALARRAYOID) => {
+            Vec::<Cell>::from_polymorphic_datum(datum, false, pg_sys::INTERVALOID)
+        }
+        PgOid::BuiltIn(PgBuiltInOids::BYTEAARRAYOID) => {
+            Vec::<Cell>::from_polymorphic_datum(datum, false, pg_sys::BYTEAOID)
+        }
+        PgOid::BuiltIn(PgBuiltInOids::UUIDARRAYOID) => {
+            Vec::<Cell>::from_polymorphic_datum(datum, false, pg_sys::UUIDOID)
+        }
         _ => None,
     }
 }
