@@ -26,7 +26,7 @@ The Snowflake Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows y
 
 | Version | Wasm Package URL |
 | --------| ---------------- |
-| 0.1.0   | https://github.com/supabase/wrappers/releases/download/v0.4.0/snowflake_fdw.wasm |
+| 0.1.0   | https://github.com/supabase/wrappers/releases/download/wasm_snowflake_fdw_v0.1.0/snowflake_fdw.wasm |
 
 ## Preparation
 
@@ -70,7 +70,7 @@ We need to provide Postgres with the credentials to connect to Snowflake, and an
     create server snowflake_server
       foreign data wrapper wasm_wrapper
       options (
-        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/v0.4.0/snowflake_fdw.wasm',
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_snowflake_fdw_v0.1.0/snowflake_fdw.wasm',
         fdw_package_name 'supabase:snowflake-fdw',
         fdw_package_version '0.1.0',
         account_identifier 'MYORGANIZATION-MYACCOUNT',
@@ -86,7 +86,7 @@ We need to provide Postgres with the credentials to connect to Snowflake, and an
     create server snowflake_server
       foreign data wrapper wasm_wrapper
       options (
-        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/v0.4.0/snowflake_fdw.wasm',
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_snowflake_fdw_v0.1.0/snowflake_fdw.wasm',
         fdw_package_name 'supabase:snowflake-fdw',
         fdw_package_version '0.1.0',
         account_identifier 'MYORGANIZATION-MYACCOUNT',
@@ -198,7 +198,7 @@ This example will modify data in a "foreign table" inside your Postgres database
 ```sql
 -- insert new data
 insert into snowflake.mytable (id, name, num, dt, ts)
-values ('44', 'hello', 456.123, '2024-05-20', '2024-05-20 12:34:56');
+values (42, 'hello', 456.123, '2024-05-20', '2024-05-20 12:34:56');
 
 -- update existing data
 update snowflake.mytable
