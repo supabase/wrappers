@@ -28,7 +28,7 @@ The Paddle API uses JSON formatted data, please refer to [Paddle docs](https://d
 
 | Version | Wasm Package URL |
 | --------| ---------------- |
-| 0.1.0   | https://github.com/supabase/wrappers/releases/download/v0.4.0/paddle_fdw.wasm |
+| 0.1.0   | https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.1.0/paddle_fdw.wasm |
 
 ## Preparation
 
@@ -70,7 +70,7 @@ We need to provide Postgres with the credentials to access Paddle, and any addit
     create server paddle_server
       foreign data wrapper wasm_wrapper
       options (
-        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/v0.4.0/paddle_fdw.wasm',
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.1.0/paddle_fdw.wasm',
         fdw_package_name 'supabase:paddle-fdw',
         fdw_package_version '0.1.0',
         api_url 'https://sandbox-api.paddle.com', -- Use https://api.paddle.com for live account
@@ -84,7 +84,7 @@ We need to provide Postgres with the credentials to access Paddle, and any addit
     create server paddle_server
       foreign data wrapper wasm_wrapper
       options (
-        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/v0.4.0/paddle_fdw.wasm',
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.1.0/paddle_fdw.wasm',
         fdw_package_name 'supabase:paddle-fdw',
         fdw_package_version '0.1.0',
         api_url 'https://sandbox-api.paddle.com', -- Use https://api.paddle.com for live account
