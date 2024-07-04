@@ -86,7 +86,11 @@ fn download_component(
         // download component wasm from remote and save it to local cache
         let resp = rt.block_on(reqwest::get(url))?;
         let bytes = rt.block_on(resp.bytes())?;
-        fs::write(&path, bytes)?;
+        if let Some(parent) = path.parent() {
+            // create all parent directories if they do not exist
+            fs::create_dir_all(parent).expect("should create cache folder");
+        }
+        fs::write(&path, bytes).expect("should save fdw package");
     }
 
     Ok(Component::from_file(engine, &path).map_err(|err| {
@@ -97,7 +101,7 @@ fn download_component(
 }
 
 #[wrappers_fdw(
-    version = "0.1.0",
+    version = "0.1.1",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/wasm_fdw",
     error_type = "WasmFdwError"
