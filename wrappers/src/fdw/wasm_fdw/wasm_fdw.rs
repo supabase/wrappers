@@ -88,9 +88,9 @@ fn download_component(
         let bytes = rt.block_on(resp.bytes())?;
         if let Some(parent) = path.parent() {
             // create all parent directories if they do not exist
-            fs::create_dir_all(parent).expect("should create cache folder");
+            fs::create_dir_all(parent)?;
         }
-        fs::write(&path, bytes).expect("should save fdw package");
+        fs::write(&path, bytes)?;
     }
 
     Ok(Component::from_file(engine, &path).map_err(|err| {
