@@ -19,6 +19,8 @@
 | [Redis](./wrappers/src/fdw/redis_fdw)           | A FDW for [Redis](https://redis.io/)                                          | ✅   | ❌     |
 | [AWS Cognito](./wrappers/src/fdw/cognito_fdw)   | A FDW for [AWS Cognito](https://aws.amazon.com/cognito/)                      | ✅   | ❌     |
 | [Notion](./wrappers/src/fdw/notion_fdw)         | A FDW for [Notion](https://www.notion.so/)                                    | ✅   | ❌     |
+| [Snowflake](./wasm-wrappers/fdw/snowflake_fdw)  | A FDW for [Snowflake](https://www.snowflake.com/)                             | ✅   | ✅     |
+| [Paddle](./wasm-wrappers/fdw/paddle_fdw)        | A FDW for [Paddle](https://www.paddle.com/)                                   | ✅   | ✅     |
 
 ### Warning
 
