@@ -845,3 +845,30 @@ update stripe.customers set description='hello fdw' where id ='cus_xxx';
 update stripe.customers set attrs='{"metadata[foo]": "bar"}' where id ='cus_xxx';
 delete from stripe.customers where id ='cus_xxx';
 ```
+
+To insert into an object with sub-fields, we need to create the foreign table with column name exactly same as the API required. For example, to insert a `subscription` object we can define the foreign table following [the Stripe API docs](https://docs.stripe.com/api/subscriptions/create):
+
+```sql
+-- create the subscription table for data insertion, the 'customer'
+-- and 'items[0][price]' fields are required.
+create foreign table stripe.subscriptions (
+  id text,
+  customer text,
+  "items[0][price]" text  -- column name will be used in API Post request
+)
+  server stripe_server
+  options (
+    object 'subscriptions',
+    rowid_column 'id'
+  );
+```
+
+And then we can insert a subscription like below:
+
+```sql
+insert into stripe.subscriptions (customer, "items[0][price]")
+values ('cus_Na6dX7aXxi11N4', 'price_1MowQULkdIwHu7ixraBm864M');
+```
+
+Note this foreign table is only for data insertion, it cannot be used in `select` statement.
+
