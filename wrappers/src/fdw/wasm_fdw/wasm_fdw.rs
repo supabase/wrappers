@@ -75,8 +75,9 @@ fn download_component(
 
     // calculate file name hash and make up cache path
     let hash = Sha256::digest(format!(
-        "{}:{}@{}",
+        "{}:{}:{}@{}",
         unsafe { pg_sys::GetUserId().as_u32() },
+        url,
         name,
         version
     ));
