@@ -74,9 +74,13 @@ fn download_component(
     // otherwise, download from custom url if it is not in local cache
 
     // calculate file name hash and make up cache path
-    let mut hasher = Sha256::new();
-    hasher.update(format!("{}@{}", name, version));
-    let hash = hasher.finalize();
+    let hash = Sha256::digest(format!(
+        "{}:{}:{}@{}",
+        unsafe { pg_sys::GetUserId().as_u32() },
+        url,
+        name,
+        version
+    ));
     let file_name = hex::encode(hash);
     let mut path = dirs::cache_dir().expect("no cache dir found");
     path.push(file_name);
