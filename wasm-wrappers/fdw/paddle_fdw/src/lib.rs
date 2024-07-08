@@ -226,7 +226,8 @@ impl PaddleFdw {
 
 impl Guest for PaddleFdw {
     fn host_version_requirement() -> String {
-        ">=0.1.0".to_string()
+        // semver ref: https://docs.rs/semver/latest/semver/enum.Op.html
+        "^0.1.0".to_string()
     }
 
     fn init(ctx: &Context) -> FdwResult {

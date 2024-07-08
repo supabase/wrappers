@@ -4434,7 +4434,7 @@ pub mod exports {
                     /// ----------------------------------------------
                     /// foreign data wrapper interface functions
                     /// ----------------------------------------------
-                    /// define minimal host version requirement, e.g, ">=1.2.3"
+                    /// define host version requirement, e.g, "^1.2.3"
                     fn host_version_requirement() -> _rt::String;
                     /// fdw initialization
                     fn init(ctx: &Context) -> FdwResult;
