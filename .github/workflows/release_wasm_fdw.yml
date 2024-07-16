@@ -22,7 +22,7 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           PROJECT=`echo "${TAG}" | sed -E 's/wasm_(.*_fdw)_v.*/\1/'`
-          VERSION=`echo "${TAG}" | sed -E 's/wasm_.*_fdw_(v.*)/\1/'`
+          VERSION=`echo "${TAG}" | sed -E 's/wasm_.*_fdw_v(.*)/\1/'`
           echo "PROJECT=$PROJECT" >> "$GITHUB_OUTPUT"
           echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
 
@@ -45,28 +45,63 @@ jobs:
           cd wasm-wrappers/fdw/${{ steps.extract_info.outputs.PROJECT }}
           cargo component build --release --target wasm32-unknown-unknown
 
+      - name: Calculate Wasm file checksum
+        uses: jmgilman/actions-generate-checksum@v1
+        with:
+          method: sha256
+          output: wasm-wrappers/fdw/${{ steps.extract_info.outputs.PROJECT }}/checksum.txt
+          patterns: |
+            ./wasm-wrappers/fdw/${{ steps.extract_info.outputs.PROJECT }}/target/wasm32-unknown-unknown/release/*.wasm
+
+      - name: Get project metadata JSON
+        id: metadata
+        run: |
+          cd wasm-wrappers/fdw/${{ steps.extract_info.outputs.PROJECT }}
+          METADATA_JSON=`cargo metadata --format-version 1 --no-deps --offline`
+          echo "METADATA_JSON=$METADATA_JSON" >> "$GITHUB_OUTPUT"
+
+      - name: Extract package info
+        id: extract
+        run: |
+          cd wasm-wrappers/fdw/${{ steps.extract_info.outputs.PROJECT }}
+          PACKAGE="${{ fromJson(steps.metadata.outputs.METADATA_JSON).packages[0].metadata.component.package }}"
+          CHECKSUM=`head -1 checksum.txt | sed -E 's/^(.*) .*/\1/'`
+          echo "PACKAGE=$PACKAGE" >> "$GITHUB_OUTPUT"
+          echo "CHECKSUM=$CHECKSUM" >> "$GITHUB_OUTPUT"
+
+      - name: Create README.txt
+        env:
+          TAG: ${{ github.ref_name }}
+          PROJECT: ${{ steps.extract_info.outputs.PROJECT }}
+          VERSION: ${{ steps.extract_info.outputs.VERSION }}
+          PACKAGE: ${{ steps.extract.outputs.PACKAGE }}
+          CHECKSUM: ${{ steps.extract.outputs.CHECKSUM }}
+        run: |
+          cd wasm-wrappers/fdw/${{ steps.extract_info.outputs.PROJECT }}
+          cat > README.txt <<EOF
+          To use this Wasm foreign data wrapper on Supabase, create a foreign server like below,
+
+          create server example_server
+            foreign data wrapper wasm_wrapper
+            options (
+              fdw_package_url 'https://github.com/supabase/wrappers/releases/download/${TAG}/${PROJECT}.wasm',
+              fdw_package_name '${PACKAGE}',
+              fdw_package_version '${VERSION}',
+              fdw_package_checksum '${CHECKSUM}',
+              ...
+            );
+
+          For more detials, please visit https://supabase.github.io/wrappers/wasm/.
+          EOF
+
       - name: Create release
         id: create_release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.ref_name }}
-        run: |
-          gh release create "$TAG" \
-              --repo="$GITHUB_REPOSITORY" \
-              --title=${{ steps.extract_info.outputs.PROJECT }}_${{ steps.extract_info.outputs.VERSION }} \
-              --generate-notes
-
-      - name: Get upload url
-        run: echo UPLOAD_URL=$(curl --silent https://api.github.com/repos/${{ github.repository }}/releases/latest | jq .upload_url --raw-output) >> $GITHUB_ENV
-
-      - name: Upload release asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PROJECT: ${{ steps.extract_info.outputs.PROJECT }}
+        uses: softprops/action-gh-release@v2
         with:
-          upload_url: ${{ env.UPLOAD_URL }}
-          asset_path: ./wasm-wrappers/fdw/${{ env.PROJECT }}/target/wasm32-unknown-unknown/release/${{ env.PROJECT }}.wasm
-          asset_name: ${{ env.PROJECT }}.wasm
-          asset_content_type: application/wasm
+          generate_release_notes: true
+          make_latest: true
+          files: |
+            ./wasm-wrappers/fdw/${{ steps.extract_info.outputs.PROJECT }}/README.txt
+            ./wasm-wrappers/fdw/${{ steps.extract_info.outputs.PROJECT }}/checksum.txt
+            ./wasm-wrappers/fdw/${{ steps.extract_info.outputs.PROJECT }}/target/wasm32-unknown-unknown/release/*.wasm
 
