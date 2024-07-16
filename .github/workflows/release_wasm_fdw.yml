@@ -91,7 +91,7 @@ jobs:
               ...
             );
 
-          For more detials, please visit https://supabase.github.io/wrappers/wasm/.
+          For more details, please visit https://supabase.github.io/wrappers/wasm/.
           EOF
 
       - name: Create release
