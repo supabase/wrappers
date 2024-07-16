@@ -89,14 +89,14 @@ fn download_component(
 
     if !path.exists() {
         // package checksum must be specified
-        let option_checksum = checksum.ok_or("pacakge checksum option not specified".to_owned())?;
+        let option_checksum = checksum.ok_or("package checksum option not specified".to_owned())?;
 
         // download component wasm from remote and check its checksum
         let resp = rt.block_on(reqwest::get(url))?;
         let bytes = rt.block_on(resp.bytes())?;
         let bytes_checksum = hex::encode(Sha256::digest(&bytes));
         if bytes_checksum != option_checksum {
-            return Err("pacakge checksum not match".to_string().into());
+            return Err("package checksum not match".to_string().into());
         }
 
         // save the component wasm to local cache
