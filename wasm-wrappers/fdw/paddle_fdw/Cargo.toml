@@ -7,7 +7,6 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-bitflags = "2.5.0"
 wit-bindgen-rt = "0.26.0"
 serde_json = "1.0"
 chrono = "0.4.38"
