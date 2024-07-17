@@ -49,6 +49,13 @@ jobs:
     - run: cargo install cargo-component --version 0.13.2
     - run: rustup target add wasm32-unknown-unknown
 
+    - name: Build WASM FDWs
+      run: |
+        cd wasm-wrappers/fdw
+        cargo component build --manifest-path ./helloworld_fdw/Cargo.toml --release --target wasm32-unknown-unknown
+        cargo component build --manifest-path ./paddle_fdw/Cargo.toml --release --target wasm32-unknown-unknown
+        cargo component build --manifest-path ./snowflake_fdw/Cargo.toml --release --target wasm32-unknown-unknown
+
     - name: Format code
       run: |
         cd wrappers && cargo fmt --check
@@ -64,13 +71,6 @@ jobs:
         RUSTFLAGS="-D warnings" cargo clippy --manifest-path ./helloworld_fdw/Cargo.toml --all --tests --no-deps
         RUSTFLAGS="-D warnings" cargo clippy --manifest-path ./paddle_fdw/Cargo.toml --all --tests --no-deps
         RUSTFLAGS="-D warnings" cargo clippy --manifest-path ./snowflake_fdw/Cargo.toml --all --tests --no-deps
-
-    - name: Build WASM FDWs
-      run: |
-        cd wasm-wrappers/fdw
-        cargo component build --manifest-path ./helloworld_fdw/Cargo.toml --release --target wasm32-unknown-unknown
-        cargo component build --manifest-path ./paddle_fdw/Cargo.toml --release --target wasm32-unknown-unknown
-        cargo component build --manifest-path ./snowflake_fdw/Cargo.toml --release --target wasm32-unknown-unknown
 
     - name: Perform test
       run: cd wrappers && cargo pgrx test --features "all_fdws pg15"
