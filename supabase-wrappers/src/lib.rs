@@ -303,6 +303,7 @@ pub mod prelude {
     pub use crate::utils::*;
     pub use crate::wrappers_fdw;
     pub use tokio::runtime::Runtime;
+    pub use crate::import_foreign_schema::*;
 }
 
 use pgrx::prelude::*;
