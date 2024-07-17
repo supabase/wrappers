@@ -308,6 +308,7 @@ pub mod prelude {
 use pgrx::prelude::*;
 use pgrx::AllocatedByPostgres;
 
+mod import_foreign_schema;
 mod instance;
 mod limit;
 mod memctx;

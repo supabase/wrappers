@@ -621,6 +621,19 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
         Ok(())
     }
 
+    /// Obtain a list of foreign table creation commands
+    ///
+    /// Return a list of string, each of which must contain a CREATE FOREIGN TABLE
+    /// which will be executed by the core server.
+    ///
+    /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-IMPORT).
+    fn import_foreign_schema(
+        _stmt: crate::import_foreign_schema::ImportForeignSchemaStmt,
+        _server_oid: pg_sys::Oid,
+    ) -> Vec<String> {
+        return Vec::new();
+    }
+
     /// Returns a FdwRoutine for the FDW
     ///
     /// Not to be used directly, use [`wrappers_fdw`](crate::wrappers_fdw) macro instead.
@@ -629,9 +642,13 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
         Self: Sized,
     {
         unsafe {
-            use crate::{modify, scan};
+            use crate::{import_foreign_schema, modify, scan};
             let mut fdw_routine =
                 FdwRoutine::<AllocatedByRust>::alloc_node(pg_sys::NodeTag::T_FdwRoutine);
+
+            // import foreign schema
+            fdw_routine.ImportForeignSchema =
+                Some(import_foreign_schema::import_foreign_schema::<E, Self>);
 
             // plan phase
             fdw_routine.GetForeignRelSize = Some(scan::get_foreign_rel_size::<E, Self>);
