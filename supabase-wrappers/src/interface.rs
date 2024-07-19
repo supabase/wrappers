@@ -631,7 +631,7 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
         _stmt: crate::import_foreign_schema::ImportForeignSchemaStmt,
         _server_oid: pg_sys::Oid,
     ) -> Vec<String> {
-        return Vec::new();
+        Vec::new()
     }
 
     /// Returns a FdwRoutine for the FDW

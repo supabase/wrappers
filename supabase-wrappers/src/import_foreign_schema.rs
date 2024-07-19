@@ -84,5 +84,5 @@ pub(super) extern "C" fn import_foreign_schema<E: Into<ErrorReport>, W: ForeignD
         ret.push(command.as_pg_cstr());
     }
 
-    return ret.into_pg();
+    ret.into_pg()
 }
