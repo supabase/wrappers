@@ -298,12 +298,12 @@ pub mod utils;
 
 /// The prelude includes all necessary imports to make Wrappers work
 pub mod prelude {
+    pub use crate::import_foreign_schema::*;
     pub use crate::interface::*;
     pub use crate::options::*;
     pub use crate::utils::*;
     pub use crate::wrappers_fdw;
     pub use tokio::runtime::Runtime;
-    pub use crate::import_foreign_schema::*;
 }
 
 use pgrx::prelude::*;
