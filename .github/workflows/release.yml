@@ -47,7 +47,10 @@ jobs:
     runs-on: ${{ matrix.box.runner }}
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v3
+      - name: checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: build release artifacts
         run: |
@@ -90,21 +93,12 @@ jobs:
           deb_version=${extension_version:1}
 
           # copy schema file to version update sql files
-          # Note: some version numbers may be skipped
-          cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--0.1.6--${deb_version}.sql
-          cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--0.1.7--${deb_version}.sql
-          cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--0.1.8--${deb_version}.sql
-          cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--0.1.9--${deb_version}.sql
-          cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--0.1.10--${deb_version}.sql
-          cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--0.1.11--${deb_version}.sql
-          cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--0.1.14--${deb_version}.sql
-          cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--0.1.15--${deb_version}.sql
-          cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--0.1.16--${deb_version}.sql
-          cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--0.1.17--${deb_version}.sql
-          cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--0.1.18--${deb_version}.sql
-          cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--0.1.19--${deb_version}.sql
-          cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--0.2.0--${deb_version}.sql
-          cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--0.3.1--${deb_version}.sql
+          for tag in $(git tag -l "v*"); do
+            if [[ $tag != $extension_version ]]; then
+              prev_version=${tag:1}
+              cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--${prev_version}--${deb_version}.sql
+            fi
+          done
 
           # Create installable package
           mkdir archive
