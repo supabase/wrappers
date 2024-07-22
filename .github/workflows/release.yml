@@ -94,8 +94,10 @@ jobs:
 
           # copy schema file to version update sql files
           for tag in $(git tag -l "v*"); do
-            prev_version=`echo ${tag} | sed -E "s/v(.*)/\1/"`
-            cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--${prev_version}--${deb_version}.sql
+            if [[ $tag != $extension_version ]]; then
+              prev_version=${tag:1}
+              cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--${prev_version}--${deb_version}.sql
+            fi
           done
 
           # Create installable package
