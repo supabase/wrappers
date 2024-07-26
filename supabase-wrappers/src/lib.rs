@@ -298,6 +298,7 @@ pub mod utils;
 
 /// The prelude includes all necessary imports to make Wrappers work
 pub mod prelude {
+    pub use crate::import_foreign_schema::*;
     pub use crate::interface::*;
     pub use crate::options::*;
     pub use crate::utils::*;
@@ -308,6 +309,7 @@ pub mod prelude {
 use pgrx::prelude::*;
 use pgrx::AllocatedByPostgres;
 
+mod import_foreign_schema;
 mod instance;
 mod limit;
 mod memctx;
