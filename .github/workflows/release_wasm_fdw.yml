@@ -81,6 +81,12 @@ jobs:
           cat > README.txt <<EOF
           To use this Wasm foreign data wrapper on Supabase, create a foreign server like below,
 
+          create extension if not exists wrappers with schema extensions;
+
+          create foreign data wrapper wasm_wrapper
+            handler wasm_fdw_handler
+            validator wasm_fdw_validator;
+
           create server example_server
             foreign data wrapper wasm_wrapper
             options (
@@ -91,7 +97,7 @@ jobs:
               ...
             );
 
-          For more details, please visit https://supabase.github.io/wrappers/wasm/.
+          For more details, please visit https://supabase.github.io/wrappers/.
           EOF
 
       - name: Create release
