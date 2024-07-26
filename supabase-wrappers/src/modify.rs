@@ -32,6 +32,9 @@ struct FdwModifyState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
     // memory context
     tmp_ctx: PgMemoryContexts,
     _phantom: PhantomData<E>,
+
+    #[cfg(feature = "pg13")]
+    update_cols: Vec<String>,
 }
 
 impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwModifyState<E, W> {
@@ -44,6 +47,8 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwModifyState<E, W> {
             opts: HashMap::new(),
             tmp_ctx,
             _phantom: PhantomData,
+            #[cfg(feature = "pg13")]
+            update_cols: Vec::new(),
         }
     }
 
@@ -104,7 +109,6 @@ pub(super) extern "C" fn add_foreign_update_targets(
 ) {
     debug2!("---> add_foreign_update_targets");
     unsafe {
-        warning!("===target rte kind: {}", ((*_target_rte).rtekind));
         if let Some(attr) = find_rowid_column(target_relation) {
             // make a Var representing the desired value
             let var = pg_sys::makeVar(
@@ -209,6 +213,22 @@ pub(super) extern "C" fn plan_foreign_modify<E: Into<ErrorReport>, W: ForeignDat
                 state.rowid_name = rowid_name.to_string();
                 state.rowid_typid = attr.atttypid;
                 state.opts = opts;
+
+                #[cfg(feature = "pg13")]
+                {
+                    // get update column list
+                    let tgts: pgrx::PgList<pg_sys::TargetEntry> =
+                        pgrx::PgList::from_pg((*(*root).parse).targetList);
+                    for tgt in tgts.iter_ptr() {
+                        let col_name = std::ffi::CStr::from_ptr((*tgt).resname)
+                            .to_str()
+                            .unwrap()
+                            .to_owned();
+                        if !(*tgt).resjunk {
+                            state.update_cols.push(col_name);
+                        }
+                    }
+                }
 
                 // install callback to drop the state when memory context is reset
                 let mut ctx = PgMemoryContexts::For(state.tmp_ctx.value());
@@ -326,22 +346,26 @@ pub(super) extern "C" fn exec_foreign_update<E: Into<ErrorReport>, W: ForeignDat
         let rowid_cell = get_rowid_cell(&state, plan_slot);
         if let Some(rowid) = rowid_cell {
             let mut new_row = utils::tuple_table_slot_to_row(plan_slot);
-            let old_row = utils::tuple_table_slot_to_row(slot);
-            warning!("====new_row: {:?}, ", new_row);
-            warning!("====old_row: {:?}, ", old_row);
 
             // remove junk attributes, including rowid attribute, from the new row
             // so we only keep the updated new attributes
             let tup_desc = PgTupleDesc::from_pg_copy((*slot).tts_tupleDescriptor);
-            warning!("====tup_desc.len: {}", tup_desc.len());
             new_row.retain(|(col, _)| {
-                tup_desc.iter().filter(|a| !a.attisdropped).any(|a| {
+                let is_ft_col = tup_desc.iter().filter(|a| !a.attisdropped).any(|a| {
                     let attr_name = pgrx::name_data_to_str(&a.attname);
-                warning!("====attr_name: {}, col: {}", attr_name, col.as_str());
                     attr_name == col.as_str()
-                }) && state.rowid_name != col.as_str()
+                });
+
+                #[cfg(not(feature = "pg13"))]
+                {
+                    is_ft_col && state.rowid_name != col.as_str()
+                }
+
+                #[cfg(feature = "pg13")]
+                {
+                    is_ft_col && state.update_cols.iter().any(|c| c == col.as_str())
+                }
             });
-            warning!("====new_row: {:?}", new_row);
 
             state.update(&rowid, &new_row).report_unwrap();
         }
