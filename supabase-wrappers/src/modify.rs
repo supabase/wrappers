@@ -70,6 +70,67 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwModifyState<E, W> {
 
 impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> utils::SerdeList for FdwModifyState<E, W> {}
 
+// find rowid column in relation description
+unsafe fn find_rowid_column(
+    target_relation: pg_sys::Relation,
+) -> Option<pg_sys::FormData_pg_attribute> {
+    // get rowid column name from table options
+    let ftable = pg_sys::GetForeignTable((*target_relation).rd_id);
+    let opts = options_to_hashmap((*ftable).options).report_unwrap();
+    let rowid_name = require_option("rowid_column", &opts).report_unwrap();
+
+    // find rowid attribute
+    let tup_desc = PgTupleDesc::from_pg_copy((*target_relation).rd_att);
+    for attr in tup_desc.iter().filter(|a| !a.is_dropped()) {
+        if pgrx::name_data_to_str(&attr.attname) == rowid_name {
+            return Some(*attr);
+        }
+    }
+
+    report_error(
+        PgSqlErrorCode::ERRCODE_FDW_UNABLE_TO_CREATE_EXECUTION,
+        "cannot find rowid_column attribute in the foreign table",
+    );
+
+    None
+}
+
+#[cfg(feature = "pg13")]
+#[pg_guard]
+pub(super) extern "C" fn add_foreign_update_targets(
+    parsetree: *mut pg_sys::Query,
+    _target_rte: *mut pg_sys::RangeTblEntry,
+    target_relation: pg_sys::Relation,
+) {
+    debug2!("---> add_foreign_update_targets");
+    unsafe {
+        warning!("===target rte kind: {}", ((*_target_rte).rtekind));
+        if let Some(attr) = find_rowid_column(target_relation) {
+            // make a Var representing the desired value
+            let var = pg_sys::makeVar(
+                (*parsetree).resultRelation as _,
+                attr.attnum,
+                attr.atttypid,
+                attr.atttypmod,
+                attr.attcollation,
+                0,
+            );
+
+            // wrap the var in a resjunk TLE
+            let tle = pg_sys::makeTargetEntry(
+                var as _,
+                ((*(*parsetree).targetList).length + 1) as _,
+                pg_sys::pstrdup(attr.attname.data.as_ptr()),
+                true,
+            );
+
+            // add it to the query's target list
+            (*parsetree).targetList = pg_sys::lappend((*parsetree).targetList, tle as _);
+        }
+    }
+}
+
+#[cfg(not(feature = "pg13"))]
 #[pg_guard]
 pub(super) extern "C" fn add_foreign_update_targets(
     root: *mut pg_sys::PlannerInfo,
@@ -79,35 +140,20 @@ pub(super) extern "C" fn add_foreign_update_targets(
 ) {
     debug2!("---> add_foreign_update_targets");
     unsafe {
-        // get rowid column name from table options
-        let ftable = pg_sys::GetForeignTable((*target_relation).rd_id);
-        let opts = options_to_hashmap((*ftable).options).report_unwrap();
-        let rowid_name = require_option("rowid_column", &opts).report_unwrap();
+        if let Some(attr) = find_rowid_column(target_relation) {
+            // make a Var representing the desired value
+            let var = pg_sys::makeVar(
+                rtindex as _,
+                attr.attnum,
+                attr.atttypid,
+                attr.atttypmod,
+                attr.attcollation,
+                0,
+            );
 
-        // find rowid attribute
-        let tup_desc = PgTupleDesc::from_pg_copy((*target_relation).rd_att);
-        for attr in tup_desc.iter().filter(|a| !a.attisdropped) {
-            if pgrx::name_data_to_str(&attr.attname) == rowid_name {
-                // make a Var representing the desired value
-                let var = pg_sys::makeVar(
-                    rtindex.try_into().unwrap(),
-                    attr.attnum,
-                    attr.atttypid,
-                    attr.atttypmod,
-                    attr.attcollation,
-                    0,
-                );
-
-                // register it as a row-identity column needed by this target rel
-                pg_sys::add_row_identity_var(root, var, rtindex, &attr.attname.data as _);
-                return;
-            }
+            // register it as a row-identity column needed by this target rel
+            pg_sys::add_row_identity_var(root, var, rtindex, &attr.attname.data as _);
         }
-
-        report_error(
-            PgSqlErrorCode::ERRCODE_FDW_UNABLE_TO_CREATE_EXECUTION,
-            "cannot find rowid_column attribute in the foreign table",
-        )
     }
 }
 
@@ -199,6 +245,9 @@ pub(super) extern "C" fn begin_foreign_modify<E: Into<ErrorReport>, W: ForeignDa
         assert!(!state.is_null());
 
         // search for rowid attribute number
+        #[cfg(feature = "pg13")]
+        let subplan = (*(*(*mtstate).mt_plans.offset(_subplan_index as _))).plan;
+        #[cfg(not(feature = "pg13"))]
         let subplan = (*polyfill::outer_plan_state(&mut (*mtstate).ps)).plan;
         let rowid_name_c = PgMemoryContexts::CurrentMemoryContext.pstrdup(&state.rowid_name);
         state.rowid_attno =
@@ -277,16 +326,22 @@ pub(super) extern "C" fn exec_foreign_update<E: Into<ErrorReport>, W: ForeignDat
         let rowid_cell = get_rowid_cell(&state, plan_slot);
         if let Some(rowid) = rowid_cell {
             let mut new_row = utils::tuple_table_slot_to_row(plan_slot);
+            let old_row = utils::tuple_table_slot_to_row(slot);
+            warning!("====new_row: {:?}, ", new_row);
+            warning!("====old_row: {:?}, ", old_row);
 
             // remove junk attributes, including rowid attribute, from the new row
             // so we only keep the updated new attributes
             let tup_desc = PgTupleDesc::from_pg_copy((*slot).tts_tupleDescriptor);
+            warning!("====tup_desc.len: {}", tup_desc.len());
             new_row.retain(|(col, _)| {
                 tup_desc.iter().filter(|a| !a.attisdropped).any(|a| {
                     let attr_name = pgrx::name_data_to_str(&a.attname);
+                warning!("====attr_name: {}, col: {}", attr_name, col.as_str());
                     attr_name == col.as_str()
                 }) && state.rowid_name != col.as_str()
             });
+            warning!("====new_row: {:?}", new_row);
 
             state.update(&rowid, &new_row).report_unwrap();
         }

@@ -243,7 +243,7 @@ pub(super) unsafe fn extract_target_columns(
     // get column names from var list
     let col_vars: PgList<pg_sys::Var> = PgList::from_pg(col_vars);
     for var in col_vars.iter_ptr() {
-        let rte = pg_sys::planner_rt_fetch((*var).varno as u32, root);
+        let rte = pg_sys::planner_rt_fetch((*var).varno as _, root);
         let attno = (*var).varattno;
         let attname = pg_sys::get_attname((*rte).relid, attno, true);
         if !attname.is_null() {
