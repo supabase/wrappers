@@ -1,9 +1,27 @@
-use pg_sys::AsPgCStr;
+use pg_sys::{AsPgCStr, Oid};
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::{debug2, prelude::*, PgList};
+use std::marker::PhantomData;
 
+use crate::instance;
 use crate::options::options_to_hashmap;
 use crate::prelude::ForeignDataWrapper;
+
+// Fdw private state for import_foreign_schema
+struct FdwState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
+    // foreign data wrapper instance
+    instance: W,
+    _phantom: PhantomData<E>,
+}
+
+impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwState<E, W> {
+    unsafe fn new(foreignserverid: Oid) -> Self {
+        Self {
+            instance: instance::create_fdw_instance_from_server_id(foreignserverid),
+            _phantom: PhantomData,
+        }
+    }
+}
 
 #[repr(u32)]
 #[derive(Debug, Clone)]
@@ -30,10 +48,10 @@ pub(super) extern "C" fn import_foreign_schema<E: Into<ErrorReport>, W: ForeignD
 ) -> *mut pg_sys::List {
     debug2!("---> import_foreign_schema");
 
-    let import_foreign_schema_stmt: ImportForeignSchemaStmt;
+    let create_stmts: Vec<String>;
 
     unsafe {
-        import_foreign_schema_stmt = ImportForeignSchemaStmt {
+        let import_foreign_schema_stmt = ImportForeignSchemaStmt {
             server_name: std::ffi::CStr::from_ptr((*stmt).server_name)
                 .to_str()
                 .unwrap()
@@ -76,11 +94,16 @@ pub(super) extern "C" fn import_foreign_schema<E: Into<ErrorReport>, W: ForeignD
             },
 
             options: options_to_hashmap((*stmt).options).unwrap(),
-        }
+        };
+
+        let mut state = FdwState::<E, W>::new(server_oid);
+        create_stmts = state
+            .instance
+            .import_foreign_schema(import_foreign_schema_stmt);
     }
 
     let mut ret: PgList<i8> = PgList::new();
-    for command in W::import_foreign_schema(import_foreign_schema_stmt, server_oid) {
+    for command in create_stmts {
         ret.push(command.as_pg_cstr());
     }
 

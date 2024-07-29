@@ -628,8 +628,8 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     ///
     /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-IMPORT).
     fn import_foreign_schema(
+        &mut self,
         _stmt: crate::import_foreign_schema::ImportForeignSchemaStmt,
-        _server_oid: pg_sys::Oid,
     ) -> Vec<String> {
         Vec::new()
     }
