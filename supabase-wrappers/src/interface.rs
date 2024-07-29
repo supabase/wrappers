@@ -8,7 +8,8 @@ use pgrx::{
     datum::Uuid,
     fcinfo,
     pg_sys::{self, BuiltinOid, Datum, Oid},
-    AllocatedByRust, AnyNumeric, FromDatum, IntoDatum, JsonB, PgBuiltInOids, PgOid,
+    varlena_to_byte_slice, AllocatedByRust, AnyNumeric, FromDatum, IntoDatum, JsonB, PgBuiltInOids,
+    PgOid,
 };
 use std::collections::HashMap;
 use std::ffi::CStr;
@@ -155,15 +156,6 @@ impl fmt::Display for Cell {
                         .expect("timestamptz should be a valid string")
                 )
             },
-            Cell::TimestampTz(v) => unsafe {
-                let ts = fcinfo::direct_function_call_as_datum(
-                    pg_sys::timestamptz_out,
-                    &[(*v).into_datum()],
-                )
-                .unwrap();
-                let ts_cstr = CStr::from_ptr(ts.cast_mut_ptr());
-                write!(f, "'{}'", ts_cstr.to_str().unwrap())
-            },
             Cell::Json(v) => write!(f, "{:?}", v),
             Cell::Interval(v) => unsafe {
                 let i = fcinfo::direct_function_call_as_datum(
@@ -174,17 +166,42 @@ impl fmt::Display for Cell {
                 let i_cstr = CStr::from_ptr(i.cast_mut_ptr());
                 write!(f, "'{}'", i_cstr.to_str().unwrap())
             },
-            Cell::Bytea(v) => write!(f, "{:?}", v),
-            Cell::Uuid(v) => write!(f, "{:?}", v),
-            Cell::BoolArray(v) => write!(f, "{:?}", v),
-            Cell::StringArray(v) => write!(f, "{:?}", v),
-            Cell::I16Array(v) => write!(f, "{:?}", v),
-            Cell::I32Array(v) => write!(f, "{:?}", v),
-            Cell::I64Array(v) => write!(f, "{:?}", v),
-            Cell::F32Array(v) => write!(f, "{:?}", v),
-            Cell::F64Array(v) => write!(f, "{:?}", v),
+            Cell::Bytea(v) => {
+                let byte_u8 = unsafe { varlena_to_byte_slice(*v) };
+                let hex = byte_u8
+                    .iter()
+                    .map(|b| format!("{:02X}", b))
+                    .collect::<Vec<String>>()
+                    .join("");
+                write!(f, r#"\x{}"#, hex)
+            }
+            Cell::Uuid(v) => {
+                write!(f, "'{}'", v)
+            }
+            Cell::BoolArray(v) => write_array(v, f),
+            Cell::StringArray(v) => write_array(v, f),
+            Cell::I16Array(v) => write_array(v, f),
+            Cell::I32Array(v) => write_array(v, f),
+            Cell::I64Array(v) => write_array(v, f),
+            Cell::F32Array(v) => write_array(v, f),
+            Cell::F64Array(v) => write_array(v, f),
         }
     }
+}
+
+fn write_array<T: std::fmt::Display>(
+    array: &[Option<T>],
+    f: &mut fmt::Formatter<'_>,
+) -> fmt::Result {
+    let res = array
+        .iter()
+        .map(|e| match e {
+            Some(val) => format!("{}", val),
+            None => "null".to_owned(),
+        })
+        .collect::<Vec<String>>()
+        .join(",");
+    write!(f, "[{}]", res)
 }
 
 impl IntoDatum for Cell {
