@@ -55,7 +55,7 @@ struct FdwState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
 impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwState<E, W> {
     unsafe fn new(foreigntableid: Oid, tmp_ctx: PgMemoryContexts) -> Self {
         Self {
-            instance: instance::create_fdw_instance(foreigntableid),
+            instance: instance::create_fdw_instance_from_table_id(foreigntableid),
             quals: Vec::new(),
             tgts: Vec::new(),
             sorts: Vec::new(),

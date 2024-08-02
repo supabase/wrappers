@@ -40,7 +40,7 @@ struct FdwModifyState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
 impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwModifyState<E, W> {
     unsafe fn new(foreigntableid: Oid, tmp_ctx: PgMemoryContexts) -> Self {
         Self {
-            instance: instance::create_fdw_instance(foreigntableid),
+            instance: instance::create_fdw_instance_from_table_id(foreigntableid),
             rowid_name: String::default(),
             rowid_attno: 0,
             rowid_typid: Oid::INVALID,
