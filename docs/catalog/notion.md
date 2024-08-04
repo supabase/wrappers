@@ -1,5 +1,15 @@
-# [Notion](https://notion.so/) provides a versatile, ready-to-use solution for managing your data.
+---
+source:
+documentation:
+author: supabase
+tags:
+  - native
+  - official
+---
 
+# Notion
+
+[Notion](https://notion.so/) provides a versatile, ready-to-use solution for managing your data.
 
 The Notion Wrapper allows you to read data from your Notion workspace for use within your Postgres database. Only the users endpoint is supported at the moment.
 

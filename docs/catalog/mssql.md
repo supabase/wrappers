@@ -1,3 +1,14 @@
+---
+source:
+documentation:
+author: supabase
+tags:
+  - native
+  - official
+---
+
+# SQL Server
+
 [Microsoft SQL Server](https://www.microsoft.com/en-au/sql-server/) is a proprietary relational database management system developed by Microsoft.
 
 The SQL Server Wrapper allows you to read data from Microsoft SQL Server within your Postgres database.
@@ -8,20 +19,20 @@ The SQL Server Wrapper allows you to read data from Microsoft SQL Server within 
 
 ## Supported Data Types
 
-| Postgres Type      | SQL Server Type                  |
-| ------------------ | -------------------------------- |
-| boolean            | bit                              |
-| char               | tinyint                          |
-| smallint           | smallint                         |
-| real               | float(24)                        |
-| integer            | int                              |
-| double precision   | float(53)                        |
-| bigint             | bigint                           |
-| numeric            | numeric/decimal                  |
-| text               | varchar/char/text                |
-| date               | date                             |
-| timestamp          | datetime/datetime2/smalldatetime |
-| timestamptz        | datetime/datetime2/smalldatetime |
+| Postgres Type    | SQL Server Type                  |
+| ---------------- | -------------------------------- |
+| boolean          | bit                              |
+| char             | tinyint                          |
+| smallint         | smallint                         |
+| real             | float(24)                        |
+| integer          | int                              |
+| double precision | float(53)                        |
+| bigint           | bigint                           |
+| numeric          | numeric/decimal                  |
+| text             | varchar/char/text                |
+| date             | date                             |
+| timestamp        | datetime/datetime2/smalldatetime |
+| timestamptz      | datetime/datetime2/smalldatetime |
 
 ## Preparation
 
@@ -83,17 +94,16 @@ The connection string is an [ADO.NET connection string](https://learn.microsoft.
 
 All parameter keys are handled case-insensitive.
 
-| Parameter              | Allowed Values        | Description                     |
-| ---------------------- | --------------------- | ------------------------------- |
-| Server                 | `<string>` | The name or network address of the instance of SQL Server to which to connect. Format: `host,port` |
-| User                   | `<string>` | The SQL Server login account. |
-| Password               | `<string>` | The password for the SQL Server account logging on. |
-| Database               | `<string>` | The name of the database. |
-| IntegratedSecurity     | false    | Windows/Kerberos authentication and SQL authentication.|
-| TrustServerCertificate | true, false | Specifies whether the driver trusts the server certificate when connecting using TLS. |
-| Encrypt                | true, false, DANGER_PLAINTEXT | Specifies whether the driver uses TLS to encrypt communication.|
-| ApplicationName        | `<string>` | Sets the application name for the connection. |
-
+| Parameter              | Allowed Values                | Description                                                                                        |
+| ---------------------- | ----------------------------- | -------------------------------------------------------------------------------------------------- |
+| Server                 | `<string>`                    | The name or network address of the instance of SQL Server to which to connect. Format: `host,port` |
+| User                   | `<string>`                    | The SQL Server login account.                                                                      |
+| Password               | `<string>`                    | The password for the SQL Server account logging on.                                                |
+| Database               | `<string>`                    | The name of the database.                                                                          |
+| IntegratedSecurity     | false                         | Windows/Kerberos authentication and SQL authentication.                                            |
+| TrustServerCertificate | true, false                   | Specifies whether the driver trusts the server certificate when connecting using TLS.              |
+| Encrypt                | true, false, DANGER_PLAINTEXT | Specifies whether the driver uses TLS to encrypt communication.                                    |
+| ApplicationName        | `<string>`                    | Sets the application name for the connection.                                                      |
 
 ## Creating Foreign Tables
 
@@ -123,11 +133,11 @@ The full list of foreign table options are below:
 
 - `table` - Source table or view name in SQL Server, required.
 
-   This can also be a subquery enclosed in parentheses, for example,
+  This can also be a subquery enclosed in parentheses, for example,
 
-   ```sql
-   table '(select * from users where id = 42 or id = 43)'
-   ```
+  ```sql
+  table '(select * from users where id = 42 or id = 43)'
+  ```
 
 ## Query Pushdown Support
 
@@ -188,4 +198,3 @@ create foreign table mssql_users_subquery (
 
 select * from mssql_users_subquery;
 ```
-

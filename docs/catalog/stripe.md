@@ -1,3 +1,14 @@
+---
+source:
+documentation:
+author: supabase
+tags:
+  - native
+  - official
+---
+
+# Stripe
+
 [Stripe](https://stripe.com) is an API driven online payment processing utility. `supabase/wrappers` exposes below endpoints.
 
 !!! warning
@@ -6,13 +17,19 @@
 
 ## Preparation
 
-Before you get started, make sure the `wrappers` extension is installed on your database:
+Before you can query Stripe, you need to enable the Wrappers extension and store your credentials in Postgres.
+
+### Enable Wrappers
+
+Make sure the `wrappers` extension is installed on your database:
 
 ```sql
 create extension if not exists wrappers with schema extensions;
 ```
 
-and then create the foreign data wrapper:
+### Enable the Stripe Wrapper
+
+Enable the `stripe_wrapper` FDW:
 
 ```sql
 create foreign data wrapper stripe_wrapper
@@ -20,35 +37,9 @@ create foreign data wrapper stripe_wrapper
   validator stripe_fdw_validator;
 ```
 
-### Secure your credentials (optional)
-
-By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
-
-```sql
--- Save your Stripe API key in Vault and retrieve the `key_id`
-insert into vault.secrets (name, secret)
-values (
-  'stripe',
-  'YOUR_SECRET'
-)
-returning key_id;
-```
-
-### Connecting to Stripe
+### Store your credentials
 
 We need to provide Postgres with the credentials to connect to Stripe, and any additional options. We can do this using the `create server` command:
-
-=== "With Vault"
-
-    ```sql
-    create server stripe_server
-      foreign data wrapper stripe_wrapper
-      options (
-        api_key_id '<key_ID>', -- The Key ID from above, required.
-        api_url 'https://api.stripe.com/v1/',  -- Stripe API base URL, optional. Default is 'https://api.stripe.com/v1/'
-        api_version '2024-06-20'  -- Stripe API version, optional. Default is your Stripe account’s default API version.
-      );
-    ```
 
 === "Without Vault"
 
@@ -61,6 +52,41 @@ We need to provide Postgres with the credentials to connect to Stripe, and any a
         api_version '2024-06-20'  -- Stripe API version, optional. Default is your Stripe account’s default API version.
       );
     ```
+
+=== "With Vault"
+
+    By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials.
+
+    Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
+
+    ```sql
+    -- Save your Stripe API key in Vault and retrieve the `key_id`
+    insert into vault.secrets (name, secret)
+    values (
+      'stripe',
+      'YOUR_SECRET'
+    )
+    returning key_id;
+    ```
+    Reference the credentials using the Key ID:
+
+    ```sql
+    create server stripe_server
+      foreign data wrapper stripe_wrapper
+      options (
+        api_key_id '<key_ID>', -- The Key ID from above, required.
+        api_url 'https://api.stripe.com/v1/',  -- Stripe API base URL, optional. Default is 'https://api.stripe.com/v1/'
+        api_version '2024-06-20'  -- Stripe API version, optional. Default is your Stripe account’s default API version.
+      );
+    ```
+
+### Create a schema
+
+We recommend creating a schema to hold all the foreign tables:
+
+```sql
+create schema stripe;
+```
 
 ## Creating Foreign Tables
 
@@ -92,13 +118,9 @@ The Stripe Wrapper supports data read and modify from Stripe API.
 | [Topups](https://stripe.com/docs/api/topups/list)                             |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
 | [Transfers](https://stripe.com/docs/api/transfers/list)                       |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
 
-The Stripe foreign tables mirror Stripe's API. We can create a schema to hold all the Stripe tables.
+The Stripe foreign tables mirror Stripe's API.
 
-```sql
-create schema stripe;
-```
-
-Then create the foreign table, for example:
+We can then create the foreign table, for example:
 
 ```sql
 create foreign table stripe.accounts (
@@ -120,11 +142,17 @@ create foreign table stripe.accounts (
 
 ### Accounts
 
-_read only_
-
 This is an object representing a Stripe account.
 
 Ref: [Stripe docs](https://stripe.com/docs/api/accounts/list)
+
+#### Operations
+
+| Object                                                | Select | Insert | Update | Delete | Truncate |
+| ----------------------------------------------------- | :----: | :----: | :----: | :----: | :------: |
+| [Accounts](https://stripe.com/docs/api/accounts/list) |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
 
 ```sql
 create foreign table stripe.accounts (
@@ -142,9 +170,9 @@ create foreign table stripe.accounts (
   );
 ```
 
-While any column is allowed in a where clause, it is most efficient to filter by:
+#### Notes
 
-- id
+- While any column is allowed in a where clause, it is most efficient to filter by `id`.
 
 ### Balance
 
@@ -871,4 +899,3 @@ values ('cus_Na6dX7aXxi11N4', 'price_1MowQULkdIwHu7ixraBm864M');
 ```
 
 Note this foreign table is only for data insertion, it cannot be used in `select` statement.
-

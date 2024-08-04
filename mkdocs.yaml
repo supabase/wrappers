@@ -6,24 +6,37 @@ repo_name: supabase/wrappers
 repo_url: https://github.com/supabase/wrappers
 
 nav:
-    - Welcome: 'index.md'
-    - Installation: 'installation.md'
-    - Wrappers:
-      - Airtable: 'airtable.md'
-      - Auth0: 'auth0.md'
-      - AWS Cognito: 'cognito.md'
-      - BigQuery: 'bigquery.md'
-      - ClickHouse: 'clickhouse.md'
-      - Firebase: 'firebase.md'
-      - Logflare: 'logflare.md'
-      - Notion: 'notion.md'
-      - Paddle: 'paddle.md'
-      - Redis: 'redis.md'
-      - S3: 's3.md'
-      - Snowflake: 'snowflake.md'
-      - Stripe: 'stripe.md'
-      - SQL Server: 'mssql.md'
-    - Contributing: 'contributing.md'
+    - Home:  
+        - 'index.md'
+    - Catalog: 
+        - catalog/index.md
+        - Airtable: 'catalog/airtable.md'
+        - Auth0: 'catalog/auth0.md'
+        - AWS Cognito: 'catalog/cognito.md'
+        - BigQuery: 'catalog/bigquery.md'
+        - ClickHouse: 'catalog/clickhouse.md'
+        - Firebase: 'catalog/firebase.md'
+        - Logflare: 'catalog/logflare.md'
+        - Notion: 'catalog/notion.md'
+        - Paddle: 'catalog/paddle.md'
+        - Redis: 'catalog/redis.md'
+        - S3 (CSV, JSON, Parquet): 'catalog/s3.md'
+        - Snowflake: 'catalog/snowflake.md'
+        - Stripe: 'catalog/stripe.md'
+        - SQL Server: 'catalog/mssql.md'
+    - Guides:
+        - Native vs Wasm Wrappers: 'guides/native-wasm.md'
+        - Installing Wrappers in Postgres: 'guides/installation.md'
+        - Limitations: 'guides/limitations.md'
+    - Contributing: 
+       - Core Development: 'contributing/core.md'
+       - Developing a Native Wrapper: 'contributing/native.md'
+       - Developing a Wasm Wrapper: 'contributing/wasm.md'
+       - Documentation: 'contributing/documentation.md'
+
+plugins:
+  - tags:
+      tags_file: tags.md
 
 theme:
     name: 'material'
@@ -32,9 +45,18 @@ theme:
     homepage: https://supabase.github.io/wrappers
     features:
       - navigation.expand  
+      - navigation.tabs
+      - navigation.tabs.sticky
+      - navigation.sections
+      - navigation.indexes
     palette:
+        scheme: slate
         primary: black
-        accent: light green
+        accent: light blue
+
+extra_css:
+    - stylesheets/extra.css
+
 
 markdown_extensions:
     - pymdownx.highlight:
