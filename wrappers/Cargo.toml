@@ -148,7 +148,7 @@ notion_fdw = [
     "thiserror",
 ]
 # Does not include helloworld_fdw because of its general uselessness
-all_fdws = [
+native_fdws = [
     "airtable_fdw",
     "bigquery_fdw",
     "clickhouse_fdw",
@@ -160,6 +160,9 @@ all_fdws = [
     "mssql_fdw",
     "redis_fdw",
     "cognito_fdw",
+]
+all_fdws = [
+    "native_fdws",
     "wasm_fdw",
 ]
 
