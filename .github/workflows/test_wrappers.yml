@@ -6,8 +6,11 @@ on:
       - main
 
 jobs:
-  test:
-    name: Run wrappers tests
+  # =============================================================
+  # Native wrappers test
+  # =============================================================
+  test_native:
+    name: Run native wrappers tests
     runs-on: ubuntu-20.04
 
     steps:
@@ -46,31 +49,71 @@ jobs:
 
     - run: cargo install cargo-pgrx --version 0.11.3
     - run: cargo pgrx init --pg15 /usr/lib/postgresql/15/bin/pg_config
-    - run: cargo install cargo-component --version 0.13.2
-    - run: rustup target add wasm32-unknown-unknown
-
-    - name: Build WASM FDWs
-      run: |
-        cd wasm-wrappers/fdw
-        cargo component build --manifest-path ./helloworld_fdw/Cargo.toml --release --target wasm32-unknown-unknown
-        cargo component build --manifest-path ./paddle_fdw/Cargo.toml --release --target wasm32-unknown-unknown
-        cargo component build --manifest-path ./snowflake_fdw/Cargo.toml --release --target wasm32-unknown-unknown
 
     - name: Format code
       run: |
         cd wrappers && cargo fmt --check
-        cd ../wasm-wrappers/fdw
-        cargo fmt --manifest-path ./helloworld_fdw/Cargo.toml --check
-        cargo fmt --manifest-path ./paddle_fdw/Cargo.toml --check
-        cargo fmt --manifest-path ./snowflake_fdw/Cargo.toml --check
 
     - name: Run clippy
       run: |
-        cd wrappers && RUSTFLAGS="-D warnings" cargo clippy --all --tests --no-deps --features all_fdws,helloworld_fdw
-        cd ../wasm-wrappers/fdw
-        RUSTFLAGS="-D warnings" cargo clippy --manifest-path ./helloworld_fdw/Cargo.toml --all --tests --no-deps
-        RUSTFLAGS="-D warnings" cargo clippy --manifest-path ./paddle_fdw/Cargo.toml --all --tests --no-deps
-        RUSTFLAGS="-D warnings" cargo clippy --manifest-path ./snowflake_fdw/Cargo.toml --all --tests --no-deps
+        cd wrappers && RUSTFLAGS="-D warnings" cargo clippy --all --tests --no-deps --features native_fdws,helloworld_fdw
 
     - name: Perform test
-      run: cd wrappers && cargo pgrx test --features "all_fdws pg15"
+      run: cd wrappers && cargo pgrx test --features "native_fdws pg15"
+
+  # =============================================================
+  # Wasm wrappers test
+  # =============================================================
+  test_wasm:
+    name: Run Wasm wrappers tests
+    runs-on: ubuntu-20.04
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+
+    - run: |
+        sudo apt remove -y postgres*
+        sudo apt-get install -y wget gnupg
+        sudo sh -c 'echo "deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+        wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+        sudo apt-get update -y -qq --fix-missing
+        sudo apt-get install -y \
+          clang-10 \
+          llvm-10 \
+          clang \
+          gcc \
+          make \
+          build-essential \
+          libz-dev \
+          zlib1g-dev \
+          strace \
+          libssl-dev \
+          pkg-config \
+          postgresql-15 \
+          postgresql-server-dev-15
+        sudo chmod a+rwx `/usr/lib/postgresql/15/bin/pg_config --pkglibdir` `/usr/lib/postgresql/15/bin/pg_config --sharedir`/extension /var/run/postgresql/
+
+    - run: cargo install cargo-pgrx --version 0.11.3
+    - run: cargo pgrx init --pg15 /usr/lib/postgresql/15/bin/pg_config
+    - run: cargo install cargo-component --version 0.13.2
+    - run: rustup target add wasm32-unknown-unknown
+
+    - name: Format code
+      run: |
+        find ./wasm-wrappers/fdw/ -name "Cargo.toml" -exec cargo fmt --check --manifest-path {} \;
+
+    - name: Run clippy
+      run: |
+        RUSTFLAGS="-D warnings" find ./wasm-wrappers/fdw/ -name "Cargo.toml" -exec cargo clippy --all --tests --no-deps --manifest-path {} \;
+
+    - name: Build Wasm FDWs
+      run: |
+        find ./wasm-wrappers/fdw/ -name "Cargo.toml" -exec cargo component build --release --target wasm32-unknown-unknown --manifest-path {} \;
+
+    - name: Perform test
+      run: cd wrappers && cargo pgrx test --features "wasm_fdw pg15"
