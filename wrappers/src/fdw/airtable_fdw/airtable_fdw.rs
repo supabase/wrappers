@@ -91,7 +91,8 @@ impl AirtableFdw {
 // TODO Add support for INSERT, UPDATE, DELETE
 impl ForeignDataWrapper<AirtableFdwError> for AirtableFdw {
     fn new(server: ForeignServer) -> AirtableFdwResult<Self> {
-        let base_url = server.options
+        let base_url = server
+            .options
             .get("api_url")
             .map(|t| t.to_owned())
             .unwrap_or_else(|| "https://api.airtable.com/v0".to_string());

@@ -9,7 +9,7 @@ pub struct ForeignServer {
     pub server_name: String,
     pub server_type: String,
     pub server_version: String,
-    pub options: HashMap<String, String>
+    pub options: HashMap<String, String>,
 }
 
 // create a fdw instance from its id
@@ -21,11 +21,15 @@ pub(super) unsafe fn create_fdw_instance_from_server_id<
 ) -> W {
     let to_string = |raw: *mut std::ffi::c_char| -> String {
         let c_str = CStr::from_ptr(raw);
-        c_str.to_str().map_err(|_| {
-            OptionsError::OptionValueIsInvalidUtf8(
-                String::from_utf8_lossy(c_str.to_bytes()).to_string(),
-            )
-        }).report_unwrap().to_string()
+        c_str
+            .to_str()
+            .map_err(|_| {
+                OptionsError::OptionValueIsInvalidUtf8(
+                    String::from_utf8_lossy(c_str.to_bytes()).to_string(),
+                )
+            })
+            .report_unwrap()
+            .to_string()
     };
     let fserver = pg_sys::GetForeignServer(fserver_id);
     let server = ForeignServer {

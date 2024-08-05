@@ -106,7 +106,8 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
             if let Some(aws_secret_access_key) = server.options.get("aws_secret_access_key") {
                 aws_secret_access_key.clone()
             } else {
-                let aws_secret_access_key = server.options
+                let aws_secret_access_key = server
+                    .options
                     .get("api_key_id")
                     .expect("`api_key_id` must be set if `aws_secret_access_key` is not");
                 get_vault_secret(aws_secret_access_key).ok_or(CognitoFdwError::SecretNotFound(

@@ -163,7 +163,8 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
         let region = if is_mock {
             default_region
         } else {
-            server.options
+            server
+                .options
                 .get("aws_region")
                 .map(|t| t.to_owned())
                 .unwrap_or(default_region)

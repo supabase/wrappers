@@ -194,7 +194,8 @@ impl LogflareFdw {
 
 impl ForeignDataWrapper<LogflareFdwError> for LogflareFdw {
     fn new(server: ForeignServer) -> LogflareFdwResult<Self> {
-        let base_url = server.options
+        let base_url = server
+            .options
             .get("api_url")
             .map(|t| t.to_owned())
             .map(|s| {

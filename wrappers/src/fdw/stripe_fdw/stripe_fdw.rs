@@ -621,7 +621,8 @@ impl StripeFdw {
 
 impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
     fn new(server: ForeignServer) -> StripeFdwResult<Self> {
-        let base_url = server.options
+        let base_url = server
+            .options
             .get("api_url")
             .map(|t| t.to_owned())
             // Ensure trailing slash is always present, otherwise /v1 will get obliterated when

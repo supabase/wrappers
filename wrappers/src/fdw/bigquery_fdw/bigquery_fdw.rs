@@ -160,13 +160,15 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
         };
 
         // Is authentication mocked
-        let mock_auth: bool = server.options
+        let mock_auth: bool = server
+            .options
             .get("mock_auth")
             .map(|t| t.to_owned())
             .unwrap_or_else(|| "false".to_string())
             == *"true";
 
-        let api_endpoint = server.options
+        let api_endpoint = server
+            .options
             .get("api_endpoint")
             .map(|t| t.to_owned())
             .unwrap_or_else(|| "https://bigquery.googleapis.com/bigquery/v2".to_string());

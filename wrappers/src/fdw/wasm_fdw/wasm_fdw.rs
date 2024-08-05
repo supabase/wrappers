@@ -136,7 +136,10 @@ impl ForeignDataWrapper<WasmFdwError> for WasmFdw {
         let pkg_url = require_option("fdw_package_url", &server.options)?;
         let pkg_name = require_option("fdw_package_name", &server.options)?;
         let pkg_version = require_option("fdw_package_version", &server.options)?;
-        let pkg_checksum = server.options.get("fdw_package_checksum").map(|t| t.as_str());
+        let pkg_checksum = server
+            .options
+            .get("fdw_package_checksum")
+            .map(|t| t.as_str());
 
         let rt = create_async_runtime()?;
 
