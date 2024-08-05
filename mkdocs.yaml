@@ -26,12 +26,18 @@ nav:
         - SQL Server: 'catalog/mssql.md'
     - Guides:
         - Native vs Wasm Wrappers: 'guides/native-wasm.md'
+        - Query Pushdown: 'guides/query-pushdown.md'
+        - Remote Subqueries: 'guides/remote-subqueries.md'
+        - Security: 'guides/security.md'
+        - FDW Statistics: 'guides/usage-statistics.md'
         - Installing Wrappers in Postgres: 'guides/installation.md'
         - Limitations: 'guides/limitations.md'
+        - Developing a Wasm Wrapper: 
+            - Quick Start: 'guides/create-wasm-wrapper.md'
+            - Advanced guide: 'guides/wasm-advanced.md'
     - Contributing: 
        - Core Development: 'contributing/core.md'
        - Developing a Native Wrapper: 'contributing/native.md'
-       - Developing a Wasm Wrapper: 'contributing/wasm.md'
        - Documentation: 'contributing/documentation.md'
 
 plugins:

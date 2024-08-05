@@ -1,6 +1,5 @@
 ---
 hide:
-  - toc
   - navigation
 ---
 
@@ -26,3 +25,43 @@ returns
  cus_MJiBtCqOF1Bb3F | usd
 (1 row)
 ```
+
+## What is a Foreign Data Wrapper?
+
+Foreign Data Wrappers (FDW) are a core feature of Postgres that allow you to access and query data stored in external data sources as if they were native Postgres tables.
+
+Postgres includes several built-in foreign data wrappers, such as `postgres_fdw` for accessing other PostgreSQL databases, and `file_fdw` for reading data from files. The Wrappers framework extends this feature to query other databases or any other external systems.
+
+## Concepts
+
+Postgres FDWs introduce the concept of a "remote server" and "foreign table":
+
+![FDW](/wrappers/assets/fdw-light.png)
+
+### Remote servers
+
+A Remote Server is an external database, API, or any system containing data that you want to query from your Postgres database. Examples include:
+
+- An external database, like Postgres or Firebase.
+- A remote data warehouse, like ClickHouse, BigQuery, or Snowflake.
+- An API, like Stripe or GitHub.
+
+It's possible to connect to multiple remote servers of the same type. For example, you can connect to two different Firebase projects within the same Postgres database.
+
+### Foreign tables
+
+A table in your database which maps to some data inside a Remote Server.
+
+Examples:
+
+- An `analytics` table which maps to a table inside your data warehouse.
+- A `subscriptions` table which maps to your Stripe subscriptions.
+- A `collections` table which maps to a Firebase collection.
+
+Although a foreign table behaves like any other table, the data is not stored inside your database. The data remains inside the Remote Server.
+
+## Supported platforms
+
+The following Postgres providers support Wrappers:
+
+- [supabase.com](https://supabase.com)
