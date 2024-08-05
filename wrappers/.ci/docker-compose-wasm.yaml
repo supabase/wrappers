@@ -1,0 +1,13 @@
+services:
+
+  wasm:
+    container_name: wasm-local
+    build:
+      context: ../dockerfiles/wasm
+    ports:
+      - "8096:8096"
+    healthcheck:
+      test: curl --fail http://0.0.0.0:8096/paddle || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 3
