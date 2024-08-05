@@ -107,6 +107,10 @@ jobs:
     - run: cargo install cargo-component --version 0.13.2
     - run: rustup target add wasm32-unknown-unknown
 
+    - name: Build Wasm FDWs
+      run: |
+        find ./wasm-wrappers/fdw/ -name "Cargo.toml" -exec cargo component build --release --target wasm32-unknown-unknown --manifest-path {} \;
+
     - name: Format code
       run: |
         find ./wasm-wrappers/fdw/ -name "Cargo.toml" -exec cargo fmt --check --manifest-path {} \;
@@ -114,10 +118,6 @@ jobs:
     - name: Run clippy
       run: |
         RUSTFLAGS="-D warnings" find ./wasm-wrappers/fdw/ -name "Cargo.toml" -exec cargo clippy --all --tests --no-deps --manifest-path {} \;
-
-    - name: Build Wasm FDWs
-      run: |
-        find ./wasm-wrappers/fdw/ -name "Cargo.toml" -exec cargo component build --release --target wasm32-unknown-unknown --manifest-path {} \;
 
     - name: Perform test
       run: cd wrappers && cargo pgrx test --features "wasm_fdw pg15"
