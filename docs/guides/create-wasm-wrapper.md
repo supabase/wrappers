@@ -2,11 +2,11 @@
 
 This guide will create a GitHub FDW which you can use to query the GitHub Events API using Postgres.
 
-## Install pre-reqs
+## Install pre-requisites
 
 The template uses [The WebAssembly Component Model](https://component-model.bytecodealliance.org/) to build the WebAssembly package, so we need to install various dependencies.
 
-- Install the Rust Toolchain if it is not already installed on your machine.
+- Install the [Rust Toolchain](https://www.rust-lang.org/tools/install) if it is not already installed on your machine.
 - Add `wasm32-unknown-unknown` target:
   ```bash
   rustup target add wasm32-unknown-unknown
