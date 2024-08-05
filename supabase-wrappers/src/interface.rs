@@ -1,6 +1,7 @@
 //! Provides interface types and trait to develop Postgres foreign data wrapper
 //!
 
+use crate::instance::ForeignServer;
 use crate::FdwRoutine;
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::{Date, Timestamp, TimestampWithTimeZone};
@@ -502,7 +503,7 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     /// You can do any initalization in this function, like saving connection
     /// info or API url in an variable, but don't do heavy works like database
     /// connection or API call.
-    fn new(options: &HashMap<String, String>) -> Result<Self, E>
+    fn new(server: ForeignServer) -> Result<Self, E>
     where
         Self: Sized;
 

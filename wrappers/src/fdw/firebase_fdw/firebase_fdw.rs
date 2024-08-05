@@ -211,23 +211,23 @@ impl FirebaseFdw {
 }
 
 impl ForeignDataWrapper<FirebaseFdwError> for FirebaseFdw {
-    fn new(options: &HashMap<String, String>) -> FirebaseFdwResult<Self> {
+    fn new(server: ForeignServer) -> FirebaseFdwResult<Self> {
         let mut ret = Self {
             rt: create_async_runtime()?,
-            project_id: require_option("project_id", options)?.to_string(),
+            project_id: require_option("project_id", &server.options)?.to_string(),
             client: None,
             scan_result: Vec::default(),
         };
 
         // get oauth2 access token if it is directly defined in options
-        let token = if let Some(access_token) = options.get("access_token") {
+        let token = if let Some(access_token) = server.options.get("access_token") {
             access_token.to_owned()
         } else {
             // otherwise, get it from the options or Vault
-            let sa_key = match options.get("sa_key") {
+            let sa_key = match server.options.get("sa_key") {
                 Some(sa_key) => sa_key.to_owned(),
                 None => {
-                    let sa_key_id = require_option("sa_key_id", options)?;
+                    let sa_key_id = require_option("sa_key_id", &server.options)?;
                     match get_vault_secret(sa_key_id) {
                         Some(sa_key) => sa_key,
                         None => return Ok(ret),

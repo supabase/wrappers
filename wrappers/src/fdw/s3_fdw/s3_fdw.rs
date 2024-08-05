@@ -112,7 +112,7 @@ impl S3Fdw {
 }
 
 impl ForeignDataWrapper<S3FdwError> for S3Fdw {
-    fn new(options: &HashMap<String, String>) -> S3FdwResult<Self> {
+    fn new(server: ForeignServer) -> S3FdwResult<Self> {
         // cannot use create_async_runtime() as the runtime needs to be created
         // for multiple threads
         let rt = tokio::runtime::Runtime::new()
@@ -128,27 +128,27 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
         };
 
         // get is_mock flag
-        let is_mock: bool = options.get("is_mock") == Some(&"true".to_string());
+        let is_mock: bool = server.options.get("is_mock") == Some(&"true".to_string());
 
         // get credentials
         let creds = if is_mock {
             // LocalStack uses hardcoded credentials
             Some(("test".to_string(), "test".to_string()))
         } else {
-            match options.get("vault_access_key_id") {
+            match server.options.get("vault_access_key_id") {
                 Some(vault_access_key_id) => {
                     // if using credentials stored in Vault
                     let vault_secret_access_key =
-                        require_option("vault_secret_access_key", options)?;
+                        require_option("vault_secret_access_key", &server.options)?;
                     get_vault_secret(vault_access_key_id)
                         .zip(get_vault_secret(vault_secret_access_key))
                 }
                 None => {
                     // if using credentials directly specified
                     let aws_access_key_id =
-                        require_option("aws_access_key_id", options)?.to_string();
+                        require_option("aws_access_key_id", &server.options)?.to_string();
                     let aws_secret_access_key =
-                        require_option("aws_secret_access_key", options)?.to_string();
+                        require_option("aws_secret_access_key", &server.options)?.to_string();
                     Some((aws_access_key_id, aws_secret_access_key))
                 }
             }
@@ -163,7 +163,7 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
         let region = if is_mock {
             default_region
         } else {
-            options
+            server.options
                 .get("aws_region")
                 .map(|t| t.to_owned())
                 .unwrap_or(default_region)
@@ -177,7 +177,7 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
         let mut config_loader = aws_config::defaults(BehaviorVersion::latest());
 
         // endpoint_url not supported as env var in rust https://github.com/awslabs/aws-sdk-rust/issues/932
-        if let Some(endpoint_url) = options.get("endpoint_url") {
+        if let Some(endpoint_url) = server.options.get("endpoint_url") {
             config_loader = config_loader.endpoint_url(endpoint_url);
         }
 

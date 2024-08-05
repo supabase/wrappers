@@ -193,8 +193,8 @@ impl LogflareFdw {
 }
 
 impl ForeignDataWrapper<LogflareFdwError> for LogflareFdw {
-    fn new(options: &HashMap<String, String>) -> LogflareFdwResult<Self> {
-        let base_url = options
+    fn new(server: ForeignServer) -> LogflareFdwResult<Self> {
+        let base_url = server.options
             .get("api_url")
             .map(|t| t.to_owned())
             .map(|s| {
@@ -205,10 +205,10 @@ impl ForeignDataWrapper<LogflareFdwError> for LogflareFdw {
                 }
             })
             .unwrap_or_else(|| LogflareFdw::BASE_URL.to_string());
-        let client = match options.get("api_key") {
+        let client = match server.options.get("api_key") {
             Some(api_key) => Some(create_client(api_key)),
             None => {
-                let key_id = require_option("api_key_id", options)?;
+                let key_id = require_option("api_key_id", &server.options)?;
                 get_vault_secret(key_id).map(|api_key| create_client(&api_key))
             }
         }
