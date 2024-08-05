@@ -19,7 +19,7 @@ jobs:
 
     - name: Build docker images
       run: |
-        docker compose -f wrappers/.ci/docker-compose.yaml up -d
+        docker compose -f wrappers/.ci/docker-compose-native.yaml up -d
 
     - uses: actions-rs/toolchain@v1
       with:
@@ -71,6 +71,10 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+
+    - name: Build docker images
+      run: |
+        docker compose -f wrappers/.ci/docker-compose-wasm.yaml up -d
 
     - uses: actions-rs/toolchain@v1
       with:
