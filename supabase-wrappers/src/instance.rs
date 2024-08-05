@@ -7,8 +7,8 @@ use pgrx::prelude::*;
 
 pub struct ForeignServer {
     pub server_name: String,
-    pub server_type: String,
-    pub server_version: String,
+    pub server_type: Option<String>,
+    pub server_version: Option<String>,
     pub options: HashMap<String, String>,
 }
 
@@ -19,9 +19,12 @@ pub(super) unsafe fn create_fdw_instance_from_server_id<
 >(
     fserver_id: pg_sys::Oid,
 ) -> W {
-    let to_string = |raw: *mut std::ffi::c_char| -> String {
+    let to_string = |raw: *mut std::ffi::c_char| -> Option<String> {
+        if raw.is_null() {
+            return None;
+        }
         let c_str = CStr::from_ptr(raw);
-        c_str
+        let value = c_str
             .to_str()
             .map_err(|_| {
                 OptionsError::OptionValueIsInvalidUtf8(
@@ -29,11 +32,12 @@ pub(super) unsafe fn create_fdw_instance_from_server_id<
                 )
             })
             .report_unwrap()
-            .to_string()
+            .to_string();
+        Some(value)
     };
     let fserver = pg_sys::GetForeignServer(fserver_id);
     let server = ForeignServer {
-        server_name: to_string((*fserver).servername),
+        server_name: to_string((*fserver).servername).unwrap(),
         server_type: to_string((*fserver).servertype),
         server_version: to_string((*fserver).serverversion),
         options: options_to_hashmap((*fserver).options).report_unwrap(),
