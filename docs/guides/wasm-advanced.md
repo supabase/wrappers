@@ -40,6 +40,12 @@ version = "0.3.0" # The version number.
 package = "my-company:sheets-fdw" # A namespaced identifier
 ```
 
+Open `wit/world.wit` and update the package name and version:
+
+```
+package my-company:sheets-fdw@0.3.0;
+```
+
 ## Modify the source code
 
 !!! tip
@@ -57,25 +63,117 @@ To do this, we need our Wrapper to accept a `sheet_id` instead of a GitHub `api_
 
 Replace the `init()` function with the following code:
 
-```rs title="lib.rs"
+```rs title="src/lib.rs"
 fn init(ctx: &Context) -> FdwResult {
     Self::init_instance();
     let this = Self::this_mut();
 
+    // get API URL from foreign server options if it is specified
     let opts = ctx.get_options(OptionsType::Server);
     this.base_url = opts.require_or("api_url", "https://docs.google.com/spreadsheets/d");
-    let sheet_id = match opts.get("sheet_id") {
-        Some(key) => key,
-        None => opts.require("sheet_id")?,
-    };
-
-    // Construct the full URL
-    this.base_url = format!(
-        "{}/{}/gviz/tq?tqx=out:json",
-        this.base_url, sheet_id
-    );
 
     Ok(())
+}
+```
+
+Replace the `begin_scan()` function with the following code, this function will be called before the foreign table is queried.
+
+```rs title="src/lib.rs"
+fn begin_scan(ctx: &Context) -> FdwResult {
+    let this = Self::this_mut();
+
+    // get sheet id from foreign table options and make the request URL
+    let opts = ctx.get_options(OptionsType::Table);
+    let sheet_id = opts.require("sheet_id")?;
+    let url = format!("{}/{}/gviz/tq?tqx=out:json", this.base_url, sheet_id);
+
+    // make up request headers
+    let headers: Vec<(String, String)> = vec![
+        ("user-agent".to_owned(), "Sheets FDW".to_owned()),
+        // header to make JSON response more cleaner
+        ("x-datasource-auth".to_owned(), "true".to_owned()),
+    ];
+
+    // make a request to Google API and parse response as JSON
+    let req = http::Request {
+        method: http::Method::Get,
+        url,
+        headers,
+        body: String::default(),
+    };
+    let resp = http::get(&req)?;
+    // remove invalid prefix from response to make a valid JSON string
+    let body = resp.body.strip_prefix(")]}'\n").ok_or("invalid response")?;
+    let resp_json: JsonValue = serde_json::from_str(body).map_err(|e| e.to_string())?;
+
+    // extract source rows from response
+    this.src_rows = resp_json
+        .pointer("/table/rows")
+        .ok_or("cannot get rows from response")
+        .map(|v| v.as_array().unwrap().to_owned())?;
+
+    // output a Postgres INFO to user (visible in psql), also useful for debugging
+    utils::report_info(&format!(
+        "We got response array length: {}",
+        this.src_rows.len()
+    ));
+
+    Ok(())
+}
+```
+
+Replace the `iter_scan()` function with the following code, this function will be called for each source row.
+
+```rs title="src/lib.rs"
+fn iter_scan(ctx: &Context, row: &Row) -> Result<Option<u32>, FdwError> {
+    let this = Self::this_mut();
+
+    // if all source rows are consumed, stop data scan
+    if this.src_idx >= this.src_rows.len() {
+        return Ok(None);
+    }
+
+    // extract current source row, an example of the source row in JSON:
+    // {
+    //   "c": [{
+    //      "v": 1.0,
+    //      "f": "1"
+    //    }, {
+    //      "v": "Erlich Bachman"
+    //    }, null, null, null, null, { "v": null }
+    //    ]
+    // }
+    let src_row = &this.src_rows[this.src_idx];
+
+    // loop through each target column, map source cell to target cell
+    for (idx, tgt_col) in ctx.get_columns().iter().enumerate() {
+        let tgt_col_name = tgt_col.name();
+        let src = src_row
+            .pointer(&format!("/c/{}/v", idx))
+            .ok_or(format!("source column '{}' not found", tgt_col_name))?;
+
+        // we only support I64 and String cell types here, add more type
+        // conversions if you need
+        let cell = match tgt_col.type_oid() {
+            TypeOid::I64 => src.as_f64().map(|v| Cell::I64(v as _)),
+            TypeOid::String => src.as_str().map(|v| Cell::String(v.to_owned())),
+            _ => {
+                return Err(format!(
+                    "column {} data type is not supported",
+                    tgt_col_name
+                ));
+            }
+        };
+
+        // push the cell to target row
+        row.push(cell.as_ref());
+    }
+
+    // advance to next source row
+    this.src_idx += 1;
+
+    // tell Postgres we've done one row, and need to scan the next row
+    Ok(Some(0))
 }
 ```
 
@@ -121,25 +219,18 @@ create server example_server
     -- use 'file://' schema to reference the local wasm file in container
     fdw_package_url 'file:///sheets_fdw.wasm',
     fdw_package_name 'my-company:sheets-fdw',
-    fdw_package_version '0.2.0',
-    api_url 'https://api.github.com'
+    fdw_package_version '0.3.0'
   );
 
-create schema google;
+create schema if not exists google;
 
 create foreign table google.sheets (
-  id text,
-  type text,
-  actor jsonb,
-  repo jsonb,
-  payload jsonb,
-  public boolean,
-  created_at timestamp
+  id bigint,
+  name text
 )
 server example_server
 options (
-  object 'events',
-  rowid_column 'id'
+  sheet_id '1OWi0x39w9FhVFP0EmSRRWWKkzhVXpYeTZJLmvaSKy-o'
 );
 ```
 
@@ -151,14 +242,9 @@ Now you can query the foreign table like below to see result:
 
 ```sql
 select
-  id,
-  type,
-  actor->>'login' as login,
-  repo->>'name' as repo,
-  created_at
+  *
 from
-  github.events
-limit 5;
+  google.sheets
 ```
 
 ## Wrap up
