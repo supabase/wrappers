@@ -9,6 +9,7 @@
     --md-default-bg-color:#121212;
     --md-default-fg-color--light: white;
     --md-code-bg-color: #2a2929;
+    --md-code-hl-keyword-color: #569cd6;
 }
 
 .md-header, .md-tabs {
