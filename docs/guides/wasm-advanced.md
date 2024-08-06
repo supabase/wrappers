@@ -70,7 +70,7 @@ fn init(ctx: &Context) -> FdwResult {
 
     // get API URL from foreign server options if it is specified
     let opts = ctx.get_options(OptionsType::Server);
-    this.base_url = opts.require_or("api_url", "https://docs.google.com/spreadsheets/d");
+    this.base_url = opts.require_or("sheet_id", "https://docs.google.com/spreadsheets/d");
 
     Ok(())
 }
