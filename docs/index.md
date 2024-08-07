@@ -7,22 +7,22 @@ hide:
 
 Wrappers is a framework for PostgreSQL Foreign Data Wrappers.
 
-It helps developers to integrate with external sources using SQL. For example, developers can use the Stripe wrapper to query Stripe data and join the data with customer data inside Postgres:
+It helps developers to integrate with external sources using SQL. For example, developers can use the [Stripe wrapper](catalog/stripe) to query Stripe data and join the data with customer data inside Postgres:
 
 ```sql
 select
-  customer_id
-  currency
+  customer_id,
+  name
 from
-   stripe.customers;
+  stripe.customers;
 ```
 
 returns
 
 ```
-    customer_id     | currency
+    customer_id     | name
 --------------------+-----------
- cus_MJiBtCqOF1Bb3F | usd
+ cus_NffrFeUfNV2Hib | Jenny Rosen
 (1 row)
 ```
 

@@ -4,7 +4,7 @@ documentation:
 author: supabase
 tags:
   - native
-  - official
+  - private alpha
 ---
 
 # Notion

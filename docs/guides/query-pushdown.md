@@ -10,7 +10,7 @@ Query pushdown is a technique that enhances query performance by executing parts
 
 ### Using Query Pushdown
 
-In Wrappers, the pushdown logic is integrated into each extension. You don’t need to modify your queries to benefit from this feature. For example, the [Stripe FDW](https://supabase.com/docs/guides/database/extensions/wrappers/stripe) automatically applies query pushdown for `id` within the `customer` object:
+In Wrappers, the pushdown logic is integrated into each FDW. You don’t need to modify your queries to benefit from this feature. For example, the [Stripe FDW](https://supabase.com/docs/guides/database/extensions/wrappers/stripe) automatically applies query pushdown for `id` within the `customer` object:
 
 ```sql
 select *

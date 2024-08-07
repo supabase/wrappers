@@ -6,7 +6,7 @@
 
     In the meantime you can develop a Wasm wrapper, which can be installed on any Postgres instance with `wrappers v0.4.0+`.
 
-To develop a FDW using `Wrappers`, you only need to implement the [ForeignDataWrapper](./supabase-wrappers/src/interface.rs) trait.
+To develop a FDW using `Wrappers`, you only need to implement the [ForeignDataWrapper](https://github.com/supabase/wrappers/blob/main/supabase-wrappers/src/interface.rs) trait.
 
 ```rust
 pub trait ForeignDataWrapper {

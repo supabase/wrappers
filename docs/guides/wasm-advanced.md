@@ -1,6 +1,6 @@
 # Developing a Wasm Wrapper (Advanced)
 
-If you followed the Quick Start, you should have:
+If you followed the [Quick Start](../create-wasm-wrapper), you should have:
 
 1. Built a GitHub FDW
 2. Installed it on Postgres
@@ -10,10 +10,10 @@ This guide will show you how to develop the Wasm Wrapper locally to iterate fast
 
 ## Install pre-requisites
 
-- If you haven't already completed the quickstart, do that first.
-- For local development:
-  - install the [Supabase CLI](https://supabase.com/docs/guides/cli/getting-started) (version `>= 1.187.10` is needed).
-  - install Docker
+If you haven't already completed the [Quick Start](../create-wasm-wrapper), do that first. For local development:
+
+- install the [Supabase CLI](https://supabase.com/docs/guides/cli/getting-started) (version `>= 1.187.10` is needed).
+- install [Docker](https://www.docker.com/get-started/)
 
 ## Create a Google Sheet
 

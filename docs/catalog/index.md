@@ -10,17 +10,19 @@ hide:
 | Integration | Select | Insert | Update | Delete | Truncate | Push Down |
 | ----------- | :----: | :----: | :----: | :----: | :------: | :-------: |
 | Airtable    |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
-| BigQuery    |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |    ❌     |
-| ClickHouse  |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |    ❌     |
+| Auth0       |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
+| AWS Cognito |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
+| BigQuery    |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |    ✅     |
+| ClickHouse  |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |    ✅     |
 | Firebase    |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
 | Logflare    |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
 | Notion      |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
-| Paddle      |   ✅   |   ✅   |   ✅   |   ❌   |    ❌    |    ❌     |
+| Paddle      |   ✅   |   ✅   |   ✅   |   ❌   |    ❌    |    ✅     |
 | Redis       |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
 | S3          |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
-| Snowflake   |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |    ❌     |
-| Stripe      |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |    ❌     |
-| SQL Server  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
+| Snowflake   |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |    ✅     |
+| Stripe      |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |    ✅     |
+| SQL Server  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ✅     |
 
 ## Community
 
