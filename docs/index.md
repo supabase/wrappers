@@ -20,17 +20,17 @@ The Wrappers framework extends the Postgres FDW feature. You can use it to query
 ```sql
 select
   customer_id,
-  currency
+  name
 from
-   stripe.customers;
+  stripe.customers;
 ```
 
 returns
 
 ```
-    customer_id     | currency
+    customer_id     | name
 --------------------+-----------
- cus_MJiBtCqOF1Bb3F | usd
+ cus_NffrFeUfNV2Hib | Jenny Rosen
 (1 row)
 ```
 

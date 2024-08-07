@@ -19,19 +19,13 @@ The Airtable Wrapper allows you to read data from your Airtable bases/tables wit
 
 ## Preparation
 
-Before you can query Airtable, you need to enable the Wrappers extension and store your credentials in Postgres.
-
-### Enable Wrappers
-
-Make sure the `wrappers` extension is installed on your database:
+Before you get started, make sure the `wrappers` extension is installed on your database:
 
 ```sql
 create extension if not exists wrappers with schema extensions;
 ```
 
-### Enable the Airtable Wrapper
-
-Enable the `airtable_wrapper` FDW:
+and then create the foreign data wrapper:
 
 ```sql
 create foreign data wrapper airtable_wrapper
@@ -39,11 +33,26 @@ create foreign data wrapper airtable_wrapper
   validator airtable_fdw_validator;
 ```
 
-### Store your credentials
+### Secure your credentials (optional)
+
+By default, Postgres stores FDW credentials inide `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
+
+```sql
+-- Save your Airtable API key in Vault and retrieve the `key_id`
+insert into vault.secrets (name, secret)
+values (
+  'airtable',
+  '<Airtable API Key or PAT>' -- Airtable API key or Personal Access Token (PAT)
+)
+returning key_id;
+```
+
+### Connecting to Airtable
 
 We need to provide Postgres with the credentials to connect to Airtable, and any additional options. We can do this using the `create server` command:
 
-=== "Without Vault"
+
+=== "With Vault"
 
     ```sql
     create server airtable_server
@@ -53,28 +62,13 @@ We need to provide Postgres with the credentials to connect to Airtable, and any
       );
     ```
 
-=== "With Vault"
-
-    By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials.
-
-    Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
-
-    ```sql
-    -- Save your credentials in Vault and retrieve the `key_id`
-    insert into vault.secrets (name, secret)
-    values (
-      'airtable',
-      '<Airtable API Key or PAT>' -- Airtable API key or Personal Access Token (PAT)
-    )
-    returning key_id;
-    ```
-    Reference the credentials using the Key ID:
+=== "Without Vault"
 
     ```sql
     create server airtable_server
       foreign data wrapper airtable_wrapper
       options (
-        api_key_id '<key_ID>' -- The Key ID from above.
+        api_key '<your_api_key>'
       );
     ```
 

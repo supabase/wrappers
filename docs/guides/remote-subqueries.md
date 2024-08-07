@@ -1,4 +1,4 @@
-# Query Pushdown
+# Remote Subqueries
 
 Remote subqueries enable the use of prepared data on a remote server, which is beneficial for complex queries or sensitive data protection.
 

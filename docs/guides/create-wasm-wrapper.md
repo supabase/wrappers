@@ -1,6 +1,6 @@
 # Developing a Wasm Wrapper
 
-This guide will create a GitHub FDW which you can use to query the GitHub Events API using Postgres.
+This guide will create a GitHub FDW which you can use to query the [GitHub Events API](https://api.github.com/events) using Postgres.
 
 ## Install pre-requisites
 
@@ -13,12 +13,12 @@ The template uses [The WebAssembly Component Model](https://component-model.byte
   ```
 - Install the [WebAssembly Component Model subcommand](https://github.com/bytecodealliance/cargo-component):
   ```bash
-  cargo install cargo-component
+  cargo install cargo-component --locked --version 0.13.2
   ```
 
 ## Fork the Wasm FDW Template
 
-Our quickstart template will allow you to create a new Wasm Wrapper that can query the GitHub API. To get started:
+Our quickstart template will allow you to create a new Wasm Wrapper that can query the GitHub Events API. To get started:
 
 1. Go to [github.com/supabase-community/postgres-wasm-fdw](https://github.com/supabase-community/postgres-wasm-fdw)
 2. Fork the repo to your own GitHub account by by clicking the `Use this template` button on top right of this page
@@ -48,11 +48,17 @@ version = "0.2.0" # The version number.
 package = "my-company:github-fdw-quickstart" # A namespaced identifier
 ```
 
+Open `wit/world.wit` and update the package name and version:
+
+```
+package my-company:github-fdw-quickstart@0.2.0;
+```
+
 Save and commit your code:
 
 ```
 git add .
-git commit -m 'v0.2.0 rename'
+git commit -m 'rename package'
 git push
 ```
 
@@ -140,6 +146,10 @@ options (
 );
 ```
 
+!!! tip
+
+    You can copy the DDL from released `READE.txt` file, which can be downloaded from the release page like: `https://github.com/<ORG>/<REPO>/releases/tag/v0.2.0`
+
 ### Query your wrapper
 
 Query the foreign table to see what's happening on GitHub:
@@ -158,7 +168,7 @@ limit 5;
 
 <img width="812" alt="image" src="https://github.com/user-attachments/assets/53e963cb-6e8f-44f8-9f2e-f0edc73ddf3a">
 
-:clap: :clap: Congratulations! You have built your first Wasm FDW.
+👏 👏 Congratulations! You have built your first Wasm FDW.
 
 ## Clean up
 
