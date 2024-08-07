@@ -1,7 +1,7 @@
 site_name: Wrappers
 site_url: https://supabase.github.io/wrappers
 site_description: A PostgreSQL extension for connecting to external data sources
-
+copyright: Copyright &copy; Supabase
 repo_name: supabase/wrappers
 repo_url: https://github.com/supabase/wrappers
 
@@ -47,7 +47,7 @@ plugins:
 theme:
     name: 'material'
     favicon: 'assets/favicon.ico'
-    logo: 'assets/wrappers-icon_container.svg'
+    logo: 'assets/wrappers.svg'
     homepage: https://supabase.github.io/wrappers
     features:
       - navigation.expand  
@@ -55,13 +55,26 @@ theme:
       - navigation.tabs.sticky
       - navigation.sections
       - navigation.indexes
+      - navigation.footer
     palette:
         scheme: slate
-        primary: purple
-        accent: purple
+        primary: green
+        accent: green
 
 extra_css:
     - stylesheets/extra.css
+
+extra:
+  social:
+    - icon: fontawesome/brands/twitter
+      link: https://x.com/supabase
+      name: Supabase on Twitter
+    - icon: fontawesome/brands/reddit
+      link: https://reddit.com/r/supabase
+      name: Supabase on Reddit
+    - icon: fontawesome/brands/github
+      link: https://github.com/supabase/wrappers
+      name: Wrappers on GitHub
 
 
 markdown_extensions:

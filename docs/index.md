@@ -5,13 +5,21 @@ hide:
 
 # Postgres Wrappers
 
-Wrappers is a framework for PostgreSQL Foreign Data Wrappers.
+Wrappers is a Rust framework for developing PostgreSQL Foreign Data Wrappers.
 
-It helps developers to integrate with external sources using SQL. For example, developers can use the Stripe wrapper to query Stripe data and join the data with customer data inside Postgres:
+## What is a Foreign Data Wrapper?
+
+Foreign Data Wrappers (FDW) are a core feature of Postgres that allow you to access and query data stored in external data sources as if they were native Postgres tables.
+
+Postgres includes several built-in foreign data wrappers, such as `postgres_fdw` for accessing other PostgreSQL databases, and `file_fdw` for reading data from files.
+
+## The Wrappers Framework
+
+The Wrappers framework extends the Postgres FDW feature. You can use it to query other databases or any other external systems. For example, developers can use the Stripe wrapper to query Stripe data and join the data with customer data inside Postgres:
 
 ```sql
 select
-  customer_id
+  customer_id,
   currency
 from
    stripe.customers;
@@ -25,12 +33,6 @@ returns
  cus_MJiBtCqOF1Bb3F | usd
 (1 row)
 ```
-
-## What is a Foreign Data Wrapper?
-
-Foreign Data Wrappers (FDW) are a core feature of Postgres that allow you to access and query data stored in external data sources as if they were native Postgres tables.
-
-Postgres includes several built-in foreign data wrappers, such as `postgres_fdw` for accessing other PostgreSQL databases, and `file_fdw` for reading data from files. The Wrappers framework extends this feature to query other databases or any other external systems.
 
 ## Concepts
 
