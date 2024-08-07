@@ -146,27 +146,27 @@ fn iter_scan(ctx: &Context, row: &Row) -> Result<Option<u32>, FdwError> {
     let src_row = &this.src_rows[this.src_idx];
 
     // loop through each target column, map source cell to target cell
-    for (idx, tgt_col) in ctx.get_columns().iter().enumerate() {
-        let tgt_col_name = tgt_col.name();
-        let src = src_row
-            .pointer(&format!("/c/{}/v", idx))
-            .ok_or(format!("source column '{}' not found", tgt_col_name))?;
+    for tgt_col in ctx.get_columns() {
+        let (tgt_col_num, tgt_col_name) = (tgt_col.num(), tgt_col.name());
+        if let Some(src) = src_row.pointer(&format!("/c/{}/v", tgt_col_num - 1)) {
+            // we only support I64 and String cell types here, add more type
+            // conversions if you need
+            let cell = match tgt_col.type_oid() {
+                TypeOid::I64 => src.as_f64().map(|v| Cell::I64(v as _)),
+                TypeOid::String => src.as_str().map(|v| Cell::String(v.to_owned())),
+                _ => {
+                    return Err(format!(
+                        "column {} data type is not supported",
+                        tgt_col_name
+                    ));
+                }
+            };
 
-        // we only support I64 and String cell types here, add more type
-        // conversions if you need
-        let cell = match tgt_col.type_oid() {
-            TypeOid::I64 => src.as_f64().map(|v| Cell::I64(v as _)),
-            TypeOid::String => src.as_str().map(|v| Cell::String(v.to_owned())),
-            _ => {
-                return Err(format!(
-                    "column {} data type is not supported",
-                    tgt_col_name
-                ));
-            }
-        };
-
-        // push the cell to target row
-        row.push(cell.as_ref());
+            // push the cell to target row
+            row.push(cell.as_ref());
+        } else {
+            row.push(None);
+        }
     }
 
     // advance to next source row
