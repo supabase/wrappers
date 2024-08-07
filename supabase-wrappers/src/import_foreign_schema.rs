@@ -79,7 +79,7 @@ pub(super) extern "C" fn import_foreign_schema<E: Into<ErrorReport>, W: ForeignD
         }
     }
 
-    let mut ret: PgList<c_char> = PgList::new();
+    let mut ret: PgList<std::os::raw::c_char> = PgList::new();
     for command in W::import_foreign_schema(import_foreign_schema_stmt, server_oid) {
         ret.push(command.as_pg_cstr() as *mut std::os::raw::c_char);
     }
