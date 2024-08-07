@@ -59,7 +59,7 @@ curl -L \
   'https://docs.google.com/spreadsheets/d/1OWi0x39w9FhVFP0EmSRRWWKkzhVXpYeTZJLmvaSKy-o/gviz/tq?tqx=out:json'
 ```
 
-To do this, we need our Wrapper to accept a `sheet_id` instead of a GitHub `api_url`.
+To do this, we need our Wrapper to accept a `sheet_id` instead of a GitHub `api_url`. The `sheet_id` can be found in above Google Sheet URL, in this example it is **`1OWi0x39w9FhVFP0EmSRRWWKkzhVXpYeTZJLmvaSKy-o`**.
 
 Replace the `init()` function with the following code:
 
@@ -70,7 +70,7 @@ fn init(ctx: &Context) -> FdwResult {
 
     // get API URL from foreign server options if it is specified
     let opts = ctx.get_options(OptionsType::Server);
-    this.base_url = opts.require_or("sheet_id", "https://docs.google.com/spreadsheets/d");
+    this.base_url = opts.require_or("base_url", "https://docs.google.com/spreadsheets/d");
 
     Ok(())
 }
@@ -230,6 +230,7 @@ create foreign table google.sheets (
 )
 server example_server
 options (
+  -- replace sheet_id with yours
   sheet_id '1OWi0x39w9FhVFP0EmSRRWWKkzhVXpYeTZJLmvaSKy-o'
 );
 ```
