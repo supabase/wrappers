@@ -4,6 +4,7 @@ site_description: A PostgreSQL extension for connecting to external data sources
 copyright: Copyright &copy; Supabase
 repo_name: supabase/wrappers
 repo_url: https://github.com/supabase/wrappers
+edit_uri: blob/main/docs/
 
 nav:
     - Home:  
