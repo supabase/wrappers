@@ -6,7 +6,7 @@ Query pushdown is a technique that enhances query performance by executing parts
 
 Query pushdown is a technique that enhances query performance by executing parts of the query directly on the data source. It reduces data transfer between the database and the application, enabling faster execution and improved performance.
 
-![assets/query-pushdown-dark.png](/wrappers/assets/query-pushdown-dark.png)
+![assets/query-pushdown-dark.png](../assets/query-pushdown-dark.png)
 
 ### Using Query Pushdown
 

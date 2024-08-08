@@ -25,7 +25,7 @@ In this example, we're going to create a Wrapper that can query a Google Sheet.
 
 You should have your own Google Sheet:
 
-![Google Sheet](/wrappers/assets/google-sheet.png)
+![Google Sheet](../assets/google-sheet.png)
 
 ## Rename your Wrapper
 
