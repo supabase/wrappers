@@ -987,7 +987,7 @@
 <p>Query pushdown is a technique that enhances query performance by executing parts of the query directly on the data source. It reduces data transfer between the database and the application, enabling faster execution and improved performance.</p>
 <h3 id="what-is-query-pushdown">What is Query Pushdown?</h3>
 <p>Query pushdown is a technique that enhances query performance by executing parts of the query directly on the data source. It reduces data transfer between the database and the application, enabling faster execution and improved performance.</p>
-<p><img alt="assets/query-pushdown-dark.png" src="/wrappers/assets/query-pushdown-dark.png" /></p>
+<p><img alt="assets/query-pushdown-dark.png" src="../../assets/query-pushdown-dark.png" /></p>
 <h3 id="using-query-pushdown">Using Query Pushdown</h3>
 <p>In Wrappers, the pushdown logic is integrated into each FDW. You don’t need to modify your queries to benefit from this feature. For example, the <a href="https://supabase.com/docs/guides/database/extensions/wrappers/stripe">Stripe FDW</a> automatically applies query pushdown for <code>id</code> within the <code>customer</code> object:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
