@@ -19,8 +19,8 @@
 | [Redis](./wrappers/src/fdw/redis_fdw)           | A FDW for [Redis](https://redis.io/)                                          | ✅   | ❌     |
 | [AWS Cognito](./wrappers/src/fdw/cognito_fdw)   | A FDW for [AWS Cognito](https://aws.amazon.com/cognito/)                      | ✅   | ❌     |
 | [Notion](./wrappers/src/fdw/notion_fdw)         | A FDW for [Notion](https://www.notion.so/)                                    | ✅   | ❌     |
-| [Snowflake](./wasm-wrappers/fdw/snowflake_fdw)  | A FDW for [Snowflake](https://www.snowflake.com/)                             | ✅   | ✅     |
-| [Paddle](./wasm-wrappers/fdw/paddle_fdw)        | A FDW for [Paddle](https://www.paddle.com/)                                   | ✅   | ✅     |
+| [Snowflake](./wasm-wrappers/fdw/snowflake_fdw)  | A Wasm FDW for [Snowflake](https://www.snowflake.com/)                        | ✅   | ✅     |
+| [Paddle](./wasm-wrappers/fdw/paddle_fdw)        | A Wasm FDW for [Paddle](https://www.paddle.com/)                              | ✅   | ✅     |
 
 ### Warning
 
@@ -51,108 +51,7 @@ cargo pgrx install --pg-config [path_to_pg_config] --features stripe_fdw
 
 ## Developing a FDW
 
-To develop a FDW using `Wrappers`, you only need to implement the [ForeignDataWrapper](./supabase-wrappers/src/interface.rs) trait.
-
-```rust
-pub trait ForeignDataWrapper {
-    // create a FDW instance
-    fn new(...) -> Self;
-
-    // functions for data scan, e.g. select
-    fn begin_scan(...);
-    fn iter_scan(...) -> Option<Row>;
-    fn end_scan(...);
-
-    // functions for data modify, e.g. insert, update and delete
-    fn begin_modify(...);
-    fn insert(...);
-    fn update(...);
-    fn delete(...);
-    fn end_modify(...);
-
-    // other optional functions
-    ...
-}
-```
-
-In a minimum FDW, which supports data scan only, `new()`, `begin_scan()`, `iter_scan()` and `end_scan()` are required, all the other functions are optional.
-
-To know more about FDW development, please visit the [Wrappers documentation](https://docs.rs/supabase-wrappers/latest/supabase_wrappers/).
-
-## Basic usage
-
-These steps outline how to use the a demo FDW [HelloWorldFdw](./wrappers/src/fdw/helloworld_fdw), which only outputs a single line of fake data:
-
-1. Clone this repo
-
-```bash
-git clone https://github.com/supabase/wrappers.git
-```
-
-2. Run it using pgrx with feature:
-
-```bash
-cd wrappers/wrappers
-cargo pgrx run pg15 --features helloworld_fdw
-```
-
-3. Create the extension, foreign data wrapper and related objects:
-
-```sql
--- create extension
-create extension wrappers;
-
--- create foreign data wrapper and enable 'HelloWorldFdw'
-create foreign data wrapper helloworld_wrapper
-  handler hello_world_fdw_handler
-  validator hello_world_fdw_validator;
-
--- create server and specify custom options
-create server my_helloworld_server
-  foreign data wrapper helloworld_wrapper
-  options (
-    foo 'bar'
-  );
-
--- create an example foreign table
-create foreign table hello (
-  id bigint,
-  col text
-)
-  server my_helloworld_server
-  options (
-    foo 'bar'
-  );
-```
-
-4. Run a query to check if it is working:
-
-```sql
-wrappers=# select * from hello;
- id |    col
-----+-------------
-  0 | Hello world
-(1 row)
-```
-
-## Running tests
-
-In order to run tests in `wrappers`:
-
-```bash
-docker-compose -f .ci/docker-compose.yaml up -d
-cargo pgrx test --features all_fdws,pg15
-```
-
-## Limitations
-
-- Windows is not supported, that limitation inherits from [pgrx](https://github.com/tcdi/pgrx).
-- Currently only supports PostgreSQL v14, v15 and v16.
-- Generated column is not supported.
-
-## Contribution
-
-All contributions, feature requests, bug report or ideas are welcomed.
+Visit [Wrappers Docs](https://supabase.github.io/wrappers/) for more details.
 
 ## License
 

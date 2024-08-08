@@ -1,72 +1,69 @@
-# `supabase/wrappers`
-
-<p>
-<a href=""><img src="https://img.shields.io/badge/postgresql-14+-blue.svg" alt="PostgreSQL version" height="18"></a>
-<a href="https://github.com/supabase/wrappers/blob/master/LICENSE"><img src="https://img.shields.io/pypi/l/markdown-subtemplate.svg" alt="License" height="18"></a>
-<a href="https://github.com/supabase/wrappers/actions"><img src="https://github.com/supabase/wrappers/actions/workflows/test_wrappers.yml/badge.svg" alt="Tests" height="18"></a>
-
-</p>
-
+---
+hide:
+  - navigation
 ---
 
-**Documentation**: <a href="https://supabase.github.io/wrappers" target="_blank">https://supabase.github.io/wrappers</a>
+# Postgres Wrappers
 
-**Source Code**: <a href="https://github.com/supabase/wrappers" target="_blank">https://github.com/supabase/wrappers</a>
+Wrappers is a Rust framework for developing PostgreSQL Foreign Data Wrappers.
 
----
+## What is a Foreign Data Wrapper?
 
-## Overview
+Foreign Data Wrappers (FDW) are a core feature of Postgres that allow you to access and query data stored in external data sources as if they were native Postgres tables.
 
-`supabase/wrappers` is a PostgreSQL extension that provides integrations with external sources so you can interact with third-party data using SQL.
+Postgres includes several built-in foreign data wrappers, such as `postgres_fdw` for accessing other PostgreSQL databases, and `file_fdw` for reading data from files.
 
-For example, the Stripe wrapper allows you to query and join against your Stripe customer data straight from PostgreSQL:
+## The Wrappers Framework
+
+The Wrappers framework extends the Postgres FDW feature. You can use it to query other databases or any other external systems. For example, developers can use the Stripe wrapper to query Stripe data and join the data with customer data inside Postgres:
 
 ```sql
 select
-  customer_id
-  currency
+  customer_id,
+  name
 from
-   stripe.customers;
+  stripe.customers;
 ```
 
 returns
 
 ```
-    customer_id     | currency
+    customer_id     | name
 --------------------+-----------
- cus_MJiBtCqOF1Bb3F | usd
+ cus_NffrFeUfNV2Hib | Jenny Rosen
 (1 row)
 ```
 
-Currently `supabase/wrappers` supports:
+## Concepts
 
-| Integration | Select | Insert | Update | Delete | Truncate |
-| ----------- | :----: | :----: | :----: | :----: | :------: |
-| Airtable    |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
-| BigQuery    |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
-| ClickHouse  |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
-| Firebase    |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
-| Logflare    |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
-| Notion      |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
-| Paddle      |   ✅   |   ✅   |   ✅   |   ❌   |    ❌    |
-| Redis       |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
-| S3          |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
-| Snowflake   |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
-| Stripe      |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
-| SQL Server  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+Postgres FDWs introduce the concept of a "remote server" and "foreign table":
 
-## WebAssembly(Wasm) foreign data wrapper
+![FDW](/wrappers/assets/fdw-light.png)
 
-Since v0.4.0, `supabase/wrappers` supports WebAssembly (Wasm) foreign data wrapper. It enhances flexibility and performance by enabling seamless integration and execution of WebAssembly modules within PostgreSQL.
+### Remote servers
 
-The Wasm foreign data wrappers are dynamically loaded during query, so they are not required to be built into Wrappers extension. Currently supported Wasm foreign data wrappers are listed below:
+A Remote Server is an external database, API, or any system containing data that you want to query from your Postgres database. Examples include:
 
-| Integration | Select | Insert | Update | Delete | Truncate |
-| ----------- | :----: | :----: | :----: | :----: | :------: |
-| Paddle      |   ✅   |   ✅   |   ✅   |   ❌   |    ❌    |
-| Snowflake   |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
+- An external database, like Postgres or Firebase.
+- A remote data warehouse, like ClickHouse, BigQuery, or Snowflake.
+- An API, like Stripe or GitHub.
 
+It's possible to connect to multiple remote servers of the same type. For example, you can connect to two different Firebase projects within the same Postgres database.
 
-!!! warning
+### Foreign tables
 
-    Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
+A table in your database which maps to some data inside a Remote Server.
+
+Examples:
+
+- An `analytics` table which maps to a table inside your data warehouse.
+- A `subscriptions` table which maps to your Stripe subscriptions.
+- A `collections` table which maps to a Firebase collection.
+
+Although a foreign table behaves like any other table, the data is not stored inside your database. The data remains inside the Remote Server.
+
+## Supported platforms
+
+The following Postgres providers support Wrappers:
+
+- [supabase.com](https://supabase.com)

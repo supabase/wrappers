@@ -1,3 +1,14 @@
+---
+source:
+documentation:
+author: supabase
+tags:
+  - native
+  - official
+---
+
+# Redis
+
 [Redis](https://redis.io/) is an open-source in-memory storage, used as a distributed, in-memory key–value database, cache and message broker, with optional durability.
 
 The Redis Wrapper allows you to read data from Redis within your Postgres database.
@@ -10,17 +21,17 @@ The Redis Wrapper allows you to read data from Redis within your Postgres databa
 
 All Redis value will be stored as `text` or `jsonb` column in Postgres, below are the supported Redis data types:
 
-| Redis Type          | Foreign Table Type (src_type)   |
-| ------------------- | ------------------------------- |
-| List                | list                            |
-| Set                 | set                             |
-| Hash                | hash                            |
-| Sorted Set          | zset                            |
-| Stream              | stream                          |
-| Multiple List       | multi_list                      |
-| Multiple Set        | multi_set                       |
-| Multiple Hash       | multi_hash                      |
-| Multiple Sorted Set | multi_zset                      |
+| Redis Type          | Foreign Table Type (src_type) |
+| ------------------- | ----------------------------- |
+| List                | list                          |
+| Set                 | set                           |
+| Hash                | hash                          |
+| Sorted Set          | zset                          |
+| Stream              | stream                        |
+| Multiple List       | multi_list                    |
+| Multiple Set        | multi_set                     |
+| Multiple Hash       | multi_hash                    |
+| Multiple Sorted Set | multi_zset                    |
 
 **See below for more descriptions for the `Multiple *` types and `src_type` foreign table option.**
 
@@ -107,15 +118,15 @@ create foreign table redis_list (
 
 The foreign table columns names and types must be fixed for each source type, as listed below:
 
-| src_type        | Column name  | Column type  |
-| --------------- | ------------ | -------------|
-| list, set, zset | `element`    | text         |
-| hash            | `key`        | text         |
-|                 | `value`      | text         |
-| stream          | `id`         | text         |
-|                 | `items`      | jsonb        |
-| multi_*         | `key`        | text         |
-|                 | `items`      | jsonb        |
+| src_type        | Column name | Column type |
+| --------------- | ----------- | ----------- |
+| list, set, zset | `element`   | text        |
+| hash            | `key`       | text        |
+|                 | `value`     | text        |
+| stream          | `id`        | text        |
+|                 | `items`     | jsonb       |
+| multi\_\*       | `key`       | text        |
+|                 | `items`     | jsonb       |
 
 **See below for the full list of `src_type` and descriptions.**
 
@@ -125,28 +136,28 @@ The full list of foreign table options are below:
 
 - `src_type` - Foreign table source type in Redis, required.
 
-   This can be one of below types,
+  This can be one of below types,
 
-   | Source type | Description                                                |
-   | ----------- | ---------------------------------------------------------- |
-   | list        | [Single list](https://redis.io/docs/data-types/lists/)     |
-   | set         | [Single set](https://redis.io/docs/data-types/sets/)       |
-   | hash        | [Single hash](https://redis.io/docs/data-types/hashes/)    |
-   | zset        | [Single sorted set](https://redis.io/docs/data-types/sorted-sets/)  |
-   | stream      | [Stream](https://redis.io/docs/data-types/streams/)        |
-   | multi_list  | Multiple lists, specified by `src_key` pattern             |
-   | multi_set   | Multiple sets, specified by `src_key` pattern              |
-   | multi_hash  | Multiple hashes, specified by `src_key` pattern            |
-   | multi_zset  | Multiple sorted sets, specified by `src_key` pattern       |
+  | Source type | Description                                                        |
+  | ----------- | ------------------------------------------------------------------ |
+  | list        | [Single list](https://redis.io/docs/data-types/lists/)             |
+  | set         | [Single set](https://redis.io/docs/data-types/sets/)               |
+  | hash        | [Single hash](https://redis.io/docs/data-types/hashes/)            |
+  | zset        | [Single sorted set](https://redis.io/docs/data-types/sorted-sets/) |
+  | stream      | [Stream](https://redis.io/docs/data-types/streams/)                |
+  | multi_list  | Multiple lists, specified by `src_key` pattern                     |
+  | multi_set   | Multiple sets, specified by `src_key` pattern                      |
+  | multi_hash  | Multiple hashes, specified by `src_key` pattern                    |
+  | multi_zset  | Multiple sorted sets, specified by `src_key` pattern               |
 
 - `src_key` - Source object key in Redis, required.
 
-   This key can be a pattern for `multi_*` type of foreign table. For other types, this key must return exact one value. For example,
+  This key can be a pattern for `multi_*` type of foreign table. For other types, this key must return exact one value. For example,
 
-   | Source Type                    | `src_key` examples                                      |
-   | ------------------------------ | ------------------------------------------------------- |
-   | list, set, hash, zset, stream  | `my_list`, `list:001`, `hash_foo`, `zset:1000` and etc. |
-   | multi_list, multi_set, multi_hash, multi_zset  | `my_list:*`, `set:*`, `zset:*` and etc. |
+  | Source Type                                   | `src_key` examples                                      |
+  | --------------------------------------------- | ------------------------------------------------------- |
+  | list, set, hash, zset, stream                 | `my_list`, `list:001`, `hash_foo`, `zset:1000` and etc. |
+  | multi_list, multi_set, multi_hash, multi_zset | `my_list:*`, `set:*`, `zset:*` and etc.                 |
 
 ## Query Pushdown Support
 
@@ -199,6 +210,7 @@ This example will create foreign tables inside your Postgres database and query 
   ```
 
   Query result:
+
   ```
    element
   ---------
@@ -224,6 +236,7 @@ This example will create foreign tables inside your Postgres database and query 
   ```
 
   Query result:
+
   ```
    element
   ---------
@@ -250,6 +263,7 @@ This example will create foreign tables inside your Postgres database and query 
   ```
 
   Query result:
+
   ```
    key | value
   -----+-------
@@ -274,6 +288,7 @@ This example will create foreign tables inside your Postgres database and query 
   ```
 
   Query result:
+
   ```
    element
   ---------
@@ -300,6 +315,7 @@ This example will create foreign tables inside your Postgres database and query 
   ```
 
   Query result:
+
   ```
          id        |          items
   -----------------+--------------------------
@@ -324,11 +340,12 @@ This example will create several foreign tables using pattern in key and query m
       src_type 'multi_list',
       src_key 'list:*'
     );
-  
+
   select * from redis_multi_lists;
   ```
 
   Query result:
+
   ```
      key    |     items
   ----------+----------------
@@ -349,11 +366,12 @@ This example will create several foreign tables using pattern in key and query m
       src_type 'multi_set',
       src_key 'set:*'
     );
-  
+
   select * from redis_multi_sets;
   ```
 
   Query result:
+
   ```
      key   |  items
   ---------+---------
@@ -374,11 +392,12 @@ This example will create several foreign tables using pattern in key and query m
       src_type 'multi_hash',
       src_key 'hash:*'
     );
-  
+
   select * from redis_multi_hashes;
   ```
 
   Query result:
+
   ```
      key    |     items
   ----------+----------------
@@ -399,11 +418,12 @@ This example will create several foreign tables using pattern in key and query m
       src_type 'multi_zset',
       src_key 'zset:*'
     );
-  
+
   select * from redis_multi_zsets;
   ```
 
   Query result:
+
   ```
      key    |     items
   ----------+----------------

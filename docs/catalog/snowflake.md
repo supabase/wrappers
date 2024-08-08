@@ -1,3 +1,14 @@
+---
+source:
+documentation:
+author: supabase
+tags:
+  - wasm
+  - official
+---
+
+# Snowflake
+
 [Snowflake](https://www.snowflake.com) is a cloud-based data platform provided as a DaaS (Data-as-a-Service) solution with data storage and analytics service.
 
 The Snowflake Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you to read and write data from Snowflake within your Postgres database.
@@ -24,8 +35,8 @@ The Snowflake Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows y
 
 ## Available Versions
 
-| Version | Wasm Package URL | Checksum |
-| --------| ---------------- | -------- |
+| Version | Wasm Package URL                                                                                      | Checksum                                                           |
+| ------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
 | 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_snowflake_fdw_v0.1.0/snowflake_fdw.wasm` | `2fb46fd8afa63f3975dadf772338106b609b131861849356e0c09dde032d1af8` |
 
 ## Preparation
@@ -211,4 +222,3 @@ where id = 42;
 delete from snowflake.mytable
 where id = 42;
 ```
-

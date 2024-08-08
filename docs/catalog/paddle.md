@@ -1,3 +1,14 @@
+---
+source:
+documentation:
+author: supabase
+tags:
+  - wasm
+  - official
+---
+
+# Paddle
+
 [Paddle](https://www.paddle.com) is a merchant of record that acts to provide a payment infrastructure to thousands of software companies around the world.
 
 The Paddle Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you to read and write data from Paddle within your Postgres database.
@@ -26,8 +37,8 @@ The Paddle API uses JSON formatted data, please refer to [Paddle docs](https://d
 
 ## Available Versions
 
-| Version | Wasm Package URL | Checksum |
-| --------| ---------------- | -------- |
+| Version | Wasm Package URL                                                                                | Checksum                                                           |
+| ------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
 | 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.1.0/paddle_fdw.wasm` | `7d0b902440ac2ef1af85d09807145247f14d1d8fd4d700227e5a4d84c8145409` |
 
 ## Preparation
@@ -130,18 +141,18 @@ The full list of foreign table options are below:
 
 - `object` - Object name in Paddle, required.
 
-    Supported objects are listed below:
+  Supported objects are listed below:
 
-    | Object name           |
-    | --------------------- |
-    | products              |
-    | prices                |
-    | discounts             |
-    | customers             |
-    | transactions          |
-    | reports               |
-    | notification-settings |
-    | notifications         |
+  | Object name           |
+  | --------------------- |
+  | products              |
+  | prices                |
+  | discounts             |
+  | customers             |
+  | transactions          |
+  | reports               |
+  | notification-settings |
+  | notifications         |
 
 - `rowid_column` - Primary key column name, optional for data scan, required for data modify
 
@@ -244,5 +255,3 @@ update paddle.products
 set name = 'my prod'
 where id = 'pro_01hzrr95qz1g0cys1f9sgj4t3h';
 ```
-
-

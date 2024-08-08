@@ -1,4 +1,15 @@
-[AWS Cognito](https://docs.aws.amazon.com/cognito/latest/developerguide/what-is-amazon-cognito.html) is an identity platform for web and mobile apps. 
+---
+source:
+documentation:
+author: supabase
+tags:
+  - native
+  - official
+---
+
+# AWS Cognito
+
+[AWS Cognito](https://docs.aws.amazon.com/cognito/latest/developerguide/what-is-amazon-cognito.html) is an identity platform for web and mobile apps.
 
 The Cognito wrapper allows you to read data from your Cognito Userpool within your Postgres database.
 
@@ -69,9 +80,9 @@ We need to provide Postgres with the credentials to connect to Cognito, and any 
 
 The Cognito Wrapper supports data reads from Cognito's [User Records](https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-identity-pools.html) endpoint (_read only_).
 
-| Cognito  | Select | Insert | Update | Delete | Truncate |
-| -------- | :----: | :----: | :----: | :----: | :------: |
-| Records  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Cognito | Select | Insert | Update | Delete | Truncate |
+| ------- | :----: | :----: | :----: | :----: | :------: |
+| Records |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
 
 For example:
 
@@ -91,7 +102,6 @@ options (
 The full list of foreign table options are below:
 
 - `object`: type of object we are querying. For now, only `users` is supported
-
 
 ## Query Pushdown Support
 

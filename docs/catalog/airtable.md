@@ -1,3 +1,14 @@
+---
+source:
+documentation:
+author: supabase
+tags:
+  - native
+  - official
+---
+
+# Airtable
+
 [Airtable](https://www.airtable.com) is an easy-to-use online platform for creating and sharing relational databases.
 
 The Airtable Wrapper allows you to read data from your Airtable bases/tables within your Postgres database.
@@ -40,6 +51,7 @@ returning key_id;
 
 We need to provide Postgres with the credentials to connect to Airtable, and any additional options. We can do this using the `create server` command:
 
+
 === "With Vault"
 
     ```sql
@@ -56,20 +68,25 @@ We need to provide Postgres with the credentials to connect to Airtable, and any
     create server airtable_server
       foreign data wrapper airtable_wrapper
       options (
-        api_url 'https://api.airtable.com/v0',  -- Airtable API url, optional
-        api_key '<Airtable API Key or PAT>'  -- Airtable API key or Personal Access Token (PAT), required
+        api_key '<your_api_key>'
       );
     ```
 
 ## Creating Foreign Tables
 
+The Airtable Wrapper supports data reads from the Airtable API.
+
+### Records
+
 The Airtable Wrapper supports data reads from Airtable's [Records](https://airtable.com/developers/web/api/list-records) endpoint (_read only_).
+
+#### Operations
 
 | Airtable | Select | Insert | Update | Delete | Truncate |
 | -------- | :----: | :----: | :----: | :----: | :------: |
 | Records  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
 
-For example:
+#### Usage
 
 ```sql
 create foreign table my_foreign_table (
@@ -83,7 +100,7 @@ options (
 );
 ```
 
-### Foreign table options
+#### Options
 
 The full list of foreign table options are below:
 
@@ -99,7 +116,7 @@ This FDW doesn't support query pushdown.
 
 Some examples on how to use Airtable foreign tables.
 
-### Basic example
+### Query an Airtable table
 
 This will create a "foreign table" inside your Postgres database called `airtable_table`:
 
@@ -124,6 +141,8 @@ You can now fetch your Airtable data from within your Postgres database:
 select * from airtable_table;
 ```
 
+### Query an Airtable view
+
 We can also create a foreign table from an Airtable View called `airtable_view`:
 
 ```sql
@@ -140,6 +159,10 @@ options (
   table_id 'tbltiLinE56l3YKfn',
   view_id 'viwY8si0zcEzw3ntZ'
 );
+```
 
+You can now fetch your Airtable data from within your Postgres database:
+
+```sql
 select * from airtable_view;
 ```
