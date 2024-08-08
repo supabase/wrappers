@@ -73,7 +73,7 @@ git push origin v0.2.0
 
 This will trigger a GitHub workflow to build the package and create a release on your repo. It may take a few minutes:
 
-![GitHub Build](/wrappers/assets/wasm-build.png)
+![GitHub Build](../assets/wasm-build.png)
 
 After the GitHub action has completed, expand the `Create README.txt` step, which will have your installation instructions at the bottom - something like:
 
