@@ -94,12 +94,13 @@ impl ForeignDataWrapper<Auth0FdwError> for Auth0Fdw {
     // info or API url in an variable, but don't do any heavy works like making a
     // database connection or API call.
 
-    fn new(options: &HashMap<String, String>) -> Result<Self, Auth0FdwError> {
-        let url = require_option("url", options)?.to_string();
-        let api_key = if let Some(api_key) = options.get("api_key") {
+    fn new(server: ForeignServer) -> Result<Self, Auth0FdwError> {
+        let url = require_option("url", &server.options)?.to_string();
+        let api_key = if let Some(api_key) = server.options.get("api_key") {
             api_key.clone()
         } else {
-            let api_key_id = options
+            let api_key_id = server
+                .options
                 .get("api_key_id")
                 .expect("`api_key_id` must be set if `api_key` is not");
             get_vault_secret(api_key_id).ok_or(Auth0FdwError::SecretNotFound(api_key_id.clone()))?

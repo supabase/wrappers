@@ -90,8 +90,8 @@
 //! type HelloWorldFdwResult<T> = Result<T, HelloWorldFdwError>;
 //!
 //! impl ForeignDataWrapper<HelloWorldFdwError> for HelloWorldFdw {
-//!     fn new(options: &HashMap<String, String>) -> HelloWorldFdwResult<Self> {
-//!         // 'options' is the key-value pairs defined in `CREATE SERVER` SQL, for example,
+//!     fn new(server: ForeignServer) -> HelloWorldFdwResult<Self> {
+//!         // 'server.options' is the key-value pairs defined in `CREATE SERVER` SQL, for example,
 //!         //
 //!         // create server my_helloworld_server
 //!         //   foreign data wrapper wrappers_helloworld
@@ -172,7 +172,7 @@
 //! }
 //!
 //! impl ForeignDataWrapper<HelloWorldFdwError> for HelloWorldFdw {
-//!     fn new(options: &HashMap<String, String>) -> Result<Self, HelloWorldFdwError> {
+//!     fn new(server: ForeignServer) -> Result<Self, HelloWorldFdwError> {
 //!         Ok(Self {
 //!             row_cnt: 0,
 //!             tgt_cols: Vec::new(),
@@ -299,6 +299,7 @@ pub mod utils;
 /// The prelude includes all necessary imports to make Wrappers work
 pub mod prelude {
     pub use crate::import_foreign_schema::*;
+    pub use crate::instance::ForeignServer;
     pub use crate::interface::*;
     pub use crate::options::*;
     pub use crate::utils::*;

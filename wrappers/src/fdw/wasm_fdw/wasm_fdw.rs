@@ -132,11 +132,14 @@ impl WasmFdw {
 }
 
 impl ForeignDataWrapper<WasmFdwError> for WasmFdw {
-    fn new(options: &HashMap<String, String>) -> WasmFdwResult<Self> {
-        let pkg_url = require_option("fdw_package_url", options)?;
-        let pkg_name = require_option("fdw_package_name", options)?;
-        let pkg_version = require_option("fdw_package_version", options)?;
-        let pkg_checksum = options.get("fdw_package_checksum").map(|t| t.as_str());
+    fn new(server: ForeignServer) -> WasmFdwResult<Self> {
+        let pkg_url = require_option("fdw_package_url", &server.options)?;
+        let pkg_name = require_option("fdw_package_name", &server.options)?;
+        let pkg_version = require_option("fdw_package_version", &server.options)?;
+        let pkg_checksum = server
+            .options
+            .get("fdw_package_checksum")
+            .map(|t| t.as_str());
 
         let rt = create_async_runtime()?;
 
@@ -151,7 +154,7 @@ impl ForeignDataWrapper<WasmFdwError> for WasmFdw {
         Wrappers::add_to_linker(&mut linker, |host: &mut FdwHost| host)?;
 
         let mut fdw_host = FdwHost::new(rt);
-        fdw_host.svr_opts.clone_from(options);
+        fdw_host.svr_opts.clone_from(&server.options);
 
         let mut store = Store::new(&engine, fdw_host);
         let (bindings, _) = Wrappers::instantiate(&mut store, &component, &linker)?;

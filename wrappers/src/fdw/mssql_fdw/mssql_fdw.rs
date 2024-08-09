@@ -170,12 +170,12 @@ impl MssqlFdw {
 }
 
 impl ForeignDataWrapper<MssqlFdwError> for MssqlFdw {
-    fn new(options: &HashMap<String, String>) -> MssqlFdwResult<Self> {
+    fn new(server: ForeignServer) -> MssqlFdwResult<Self> {
         let rt = create_async_runtime()?;
-        let conn_str = match options.get("conn_string") {
+        let conn_str = match server.options.get("conn_string") {
             Some(conn_str) => conn_str.to_owned(),
             None => {
-                let conn_str_id = require_option("conn_string_id", options)?;
+                let conn_str_id = require_option("conn_string_id", &server.options)?;
                 get_vault_secret(conn_str_id).unwrap_or_default()
             }
         };

@@ -90,16 +90,17 @@ impl AirtableFdw {
 
 // TODO Add support for INSERT, UPDATE, DELETE
 impl ForeignDataWrapper<AirtableFdwError> for AirtableFdw {
-    fn new(options: &HashMap<String, String>) -> AirtableFdwResult<Self> {
-        let base_url = options
+    fn new(server: ForeignServer) -> AirtableFdwResult<Self> {
+        let base_url = server
+            .options
             .get("api_url")
             .map(|t| t.to_owned())
             .unwrap_or_else(|| "https://api.airtable.com/v0".to_string());
 
-        let client = match options.get("api_key") {
+        let client = match server.options.get("api_key") {
             Some(api_key) => Some(create_client(api_key)?),
             None => {
-                let key_id = require_option("api_key_id", options)?;
+                let key_id = require_option("api_key_id", &server.options)?;
                 if let Some(api_key) = get_vault_secret(key_id) {
                     Some(create_client(&api_key)?)
                 } else {
