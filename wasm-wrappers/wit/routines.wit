@@ -7,7 +7,7 @@ interface routines {
     // foreign data wrapper interface functions
     // ----------------------------------------------
 
-    // define minimal host version requirement, e.g, ">=1.2.3"
+    // define host version requirement, e.g, "^1.2.3"
     host-version-requirement: func() -> string;
 
     // fdw initialization
