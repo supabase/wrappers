@@ -97,16 +97,17 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
     // info or API url in an variable, but don't do any heavy works like making a
     // database connection or API call.
 
-    fn new(options: &HashMap<String, String>) -> Result<Self, CognitoFdwError> {
-        let user_pool_id = require_option("user_pool_id", options)?.to_string();
-        let aws_region = require_option("region", options)?.to_string();
+    fn new(server: ForeignServer) -> Result<Self, CognitoFdwError> {
+        let user_pool_id = require_option("user_pool_id", &server.options)?.to_string();
+        let aws_region = require_option("region", &server.options)?.to_string();
 
-        let aws_access_key_id = require_option("aws_access_key_id", options)?.to_string();
+        let aws_access_key_id = require_option("aws_access_key_id", &server.options)?.to_string();
         let aws_secret_access_key =
-            if let Some(aws_secret_access_key) = options.get("aws_secret_access_key") {
+            if let Some(aws_secret_access_key) = server.options.get("aws_secret_access_key") {
                 aws_secret_access_key.clone()
             } else {
-                let aws_secret_access_key = options
+                let aws_secret_access_key = server
+                    .options
                     .get("api_key_id")
                     .expect("`api_key_id` must be set if `aws_secret_access_key` is not");
                 get_vault_secret(aws_secret_access_key).ok_or(CognitoFdwError::SecretNotFound(
@@ -122,7 +123,7 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
             let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
 
             let mut builder = config.to_builder();
-            if let Some(endpoint_url) = options.get("endpoint_url") {
+            if let Some(endpoint_url) = server.options.get("endpoint_url") {
                 if !endpoint_url.is_empty() {
                     builder.set_endpoint_url(Some(endpoint_url.clone()));
                 }

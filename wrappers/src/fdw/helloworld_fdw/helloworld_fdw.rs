@@ -42,7 +42,7 @@ impl ForeignDataWrapper<HelloWorldFdwError> for HelloWorldFdw {
     // You can do any initalization in this new() function, like saving connection
     // info or API url in an variable, but don't do any heavy works like making a
     // database connection or API call.
-    fn new(_options: &HashMap<String, String>) -> HelloWorldFdwResult<Self> {
+    fn new(_server: ForeignServer) -> HelloWorldFdwResult<Self> {
         Ok(Self {
             row_cnt: 0,
             tgt_cols: Vec::new(),

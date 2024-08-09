@@ -240,11 +240,11 @@ impl RedisFdw {
 }
 
 impl ForeignDataWrapper<RedisFdwError> for RedisFdw {
-    fn new(options: &HashMap<String, String>) -> RedisFdwResult<Self> {
-        let conn_url = match options.get("conn_url") {
+    fn new(server: ForeignServer) -> RedisFdwResult<Self> {
+        let conn_url = match server.options.get("conn_url") {
             Some(url) => url.to_owned(),
             None => {
-                let conn_url_id = require_option("conn_url_id", options)?;
+                let conn_url_id = require_option("conn_url_id", &server.options)?;
                 get_vault_secret(conn_url_id).unwrap_or_default()
             }
         };

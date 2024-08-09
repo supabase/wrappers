@@ -1,3 +1,14 @@
+---
+source:
+documentation:
+author: supabase
+tags:
+  - native
+  - official
+---
+
+# Firebase
+
 [Firebase](https://firebase.google.com/) is an app development platform built around non-relational technologies. The Firebase Wrapper supports connecting to below objects.
 
 1. [Authentication Users](https://firebase.google.com/docs/auth/users) (_read only_)

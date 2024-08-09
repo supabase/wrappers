@@ -30,6 +30,7 @@ pub(super) unsafe fn slot_getattr(
     values[attnum - 1]
 }
 
+#[cfg(not(feature = "pg13"))]
 #[inline]
 pub(super) unsafe fn outer_plan_state(node: *mut pg_sys::PlanState) -> *mut pg_sys::PlanState {
     (*node).lefttree

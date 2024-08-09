@@ -146,12 +146,12 @@ impl BigQueryFdw {
 }
 
 impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
-    fn new(options: &HashMap<String, String>) -> Result<Self, BigQueryFdwError> {
+    fn new(server: ForeignServer) -> Result<Self, BigQueryFdwError> {
         let mut ret = BigQueryFdw {
             rt: create_async_runtime()?,
             client: None,
-            project_id: require_option("project_id", options)?.to_string(),
-            dataset_id: require_option("dataset_id", options)?.to_string(),
+            project_id: require_option("project_id", &server.options)?.to_string(),
+            dataset_id: require_option("dataset_id", &server.options)?.to_string(),
             table: "".to_string(),
             rowid_col: "".to_string(),
             tgt_cols: Vec::new(),
@@ -160,13 +160,15 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
         };
 
         // Is authentication mocked
-        let mock_auth: bool = options
+        let mock_auth: bool = server
+            .options
             .get("mock_auth")
             .map(|t| t.to_owned())
             .unwrap_or_else(|| "false".to_string())
             == *"true";
 
-        let api_endpoint = options
+        let api_endpoint = server
+            .options
             .get("api_endpoint")
             .map(|t| t.to_owned())
             .unwrap_or_else(|| "https://bigquery.googleapis.com/bigquery/v2".to_string());
@@ -182,10 +184,10 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
                 serde_json::to_string_pretty(&dummy_auth_config)
                     .expect("dummy auth config should not fail to serialize")
             }
-            false => match options.get("sa_key") {
+            false => match server.options.get("sa_key") {
                 Some(sa_key) => sa_key.to_owned(),
                 None => {
-                    let sa_key_id = require_option("sa_key_id", options)?;
+                    let sa_key_id = require_option("sa_key_id", &server.options)?;
                     match get_vault_secret(sa_key_id) {
                         Some(sa_key) => sa_key,
                         None => return Ok(ret),

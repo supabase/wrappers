@@ -1,4 +1,15 @@
-# [Auth0](https://auth0.com/) is a flexible, drop-in solution to add authentication and authorization services to your applications
+---
+source:
+documentation:
+author: supabase
+tags:
+  - native
+  - official
+---
+
+# Auth0
+
+[Auth0](https://auth0.com/) is a flexible, drop-in solution to add authentication and authorization services to your applications
 
 The Auth0 Wrapper allows you to read data from your Auth0 tenant for use within your Postgres database.
 
@@ -66,9 +77,9 @@ We need to provide Postgres with the credentials to connect to Airtable, and any
 
 The Auth0 Wrapper supports data reads from Auth0's [Management API List users endpoint](https://auth0.com/docs/api/management/v2/users/get-users) endpoint (_read only_).
 
-| Auth0 | Select | Insert | Update | Delete | Truncate |
-| -------- | :----: | :----: | :----: | :----: | :------: |
-| Records  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Auth0   | Select | Insert | Update | Delete | Truncate |
+| ------- | :----: | :----: | :----: | :----: | :------: |
+| Records |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
 
 For example:
 
@@ -120,4 +131,3 @@ You can now fetch your Auth0 data from within your Postgres database:
 ```sql
 select * from auth0;
 ```
-

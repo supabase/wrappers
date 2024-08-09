@@ -620,8 +620,9 @@ impl StripeFdw {
 }
 
 impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
-    fn new(options: &HashMap<String, String>) -> StripeFdwResult<Self> {
-        let base_url = options
+    fn new(server: ForeignServer) -> StripeFdwResult<Self> {
+        let base_url = server
+            .options
             .get("api_url")
             .map(|t| t.to_owned())
             // Ensure trailing slash is always present, otherwise /v1 will get obliterated when
@@ -634,11 +635,11 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
                 }
             })
             .unwrap_or_else(|| "https://api.stripe.com/v1/".to_string());
-        let api_version = options.get("api_version").map(|t| t.as_str());
-        let client = match options.get("api_key") {
+        let api_version = server.options.get("api_version").map(|t| t.as_str());
+        let client = match server.options.get("api_key") {
             Some(api_key) => Some(create_client(api_key, api_version)),
             None => {
-                let key_id = require_option("api_key_id", options)?;
+                let key_id = require_option("api_key_id", &server.options)?;
                 get_vault_secret(key_id).map(|api_key| create_client(&api_key, api_version))
             }
         }

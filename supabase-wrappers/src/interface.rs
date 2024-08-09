@@ -1,6 +1,7 @@
 //! Provides interface types and trait to develop Postgres foreign data wrapper
 //!
 
+use crate::instance::ForeignServer;
 use crate::FdwRoutine;
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::{Date, Timestamp, TimestampWithTimeZone};
@@ -216,6 +217,23 @@ impl FromDatum for Cell {
     }
 }
 
+pub trait CellFormatter {
+    fn fmt_cell(&mut self, cell: &Cell) -> String;
+}
+
+struct DefaultFormatter {}
+
+impl DefaultFormatter {
+    fn new() -> Self {
+        Self {}
+    }
+}
+
+impl CellFormatter for DefaultFormatter {
+    fn fmt_cell(&mut self, cell: &Cell) -> String {
+        format!("{}", cell)
+    }
+}
 /// A data row in a table
 ///
 /// The row contains a column name list and cell list with same number of
@@ -352,13 +370,20 @@ pub struct Qual {
 
 impl Qual {
     pub fn deparse(&self) -> String {
+        let mut formatter = DefaultFormatter::new();
+        self.deparse_with_fmt(&mut formatter)
+    }
+
+    pub fn deparse_with_fmt<T: CellFormatter>(&self, t: &mut T) -> String {
         if self.use_or {
             match &self.value {
                 Value::Cell(_) => unreachable!(),
                 Value::Array(cells) => {
                     let conds: Vec<String> = cells
                         .iter()
-                        .map(|cell| format!("{} {} {}", self.field, self.operator, cell))
+                        .map(|cell| {
+                            format!("{} {} {}", self.field, self.operator, t.fmt_cell(cell))
+                        })
                         .collect();
                     conds.join(" or ")
                 }
@@ -370,11 +395,11 @@ impl Qual {
                         Cell::String(cell) if cell == "null" => {
                             format!("{} {} null", self.field, self.operator)
                         }
-                        _ => format!("{} {} {}", self.field, self.operator, cell),
+                        _ => format!("{} {} {}", self.field, self.operator, t.fmt_cell(cell)),
                     },
-                    "~~" => format!("{} like {}", self.field, cell),
-                    "!~~" => format!("{} not like {}", self.field, cell),
-                    _ => format!("{} {} {}", self.field, self.operator, cell),
+                    "~~" => format!("{} like {}", self.field, t.fmt_cell(cell)),
+                    "!~~" => format!("{} not like {}", self.field, t.fmt_cell(cell)),
+                    _ => format!("{} {} {}", self.field, self.operator, t.fmt_cell(cell)),
                 },
                 Value::Array(_) => unreachable!(),
             }
@@ -502,7 +527,7 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     /// You can do any initalization in this function, like saving connection
     /// info or API url in an variable, but don't do heavy works like database
     /// connection or API call.
-    fn new(options: &HashMap<String, String>) -> Result<Self, E>
+    fn new(server: ForeignServer) -> Result<Self, E>
     where
         Self: Sized;
 
@@ -621,6 +646,19 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
         Ok(())
     }
 
+    /// Obtain a list of foreign table creation commands
+    ///
+    /// Return a list of string, each of which must contain a CREATE FOREIGN TABLE
+    /// which will be executed by the core server.
+    ///
+    /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-IMPORT).
+    fn import_foreign_schema(
+        &mut self,
+        _stmt: crate::import_foreign_schema::ImportForeignSchemaStmt,
+    ) -> Vec<String> {
+        Vec::new()
+    }
+
     /// Returns a FdwRoutine for the FDW
     ///
     /// Not to be used directly, use [`wrappers_fdw`](crate::wrappers_fdw) macro instead.
@@ -629,9 +667,13 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
         Self: Sized,
     {
         unsafe {
-            use crate::{modify, scan};
+            use crate::{import_foreign_schema, modify, scan};
             let mut fdw_routine =
                 FdwRoutine::<AllocatedByRust>::alloc_node(pg_sys::NodeTag::T_FdwRoutine);
+
+            // import foreign schema
+            fdw_routine.ImportForeignSchema =
+                Some(import_foreign_schema::import_foreign_schema::<E, Self>);
 
             // plan phase
             fdw_routine.GetForeignRelSize = Some(scan::get_foreign_rel_size::<E, Self>);

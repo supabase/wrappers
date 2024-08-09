@@ -41,6 +41,7 @@ fn download_component(
     url: &str,
     name: &str,
     version: &str,
+    checksum: Option<&str>,
 ) -> WasmFdwResult<Component> {
     if let Some(file_path) = url.strip_prefix("file://") {
         return Ok(Component::from_file(engine, file_path)?);
@@ -87,9 +88,18 @@ fn download_component(
     path.set_extension("wasm");
 
     if !path.exists() {
-        // download component wasm from remote and save it to local cache
+        // package checksum must be specified
+        let option_checksum = checksum.ok_or("package checksum option not specified".to_owned())?;
+
+        // download component wasm from remote and check its checksum
         let resp = rt.block_on(reqwest::get(url))?;
         let bytes = rt.block_on(resp.bytes())?;
+        let bytes_checksum = hex::encode(Sha256::digest(&bytes));
+        if bytes_checksum != option_checksum {
+            return Err("package checksum not match".to_string().into());
+        }
+
+        // save the component wasm to local cache
         if let Some(parent) = path.parent() {
             // create all parent directories if they do not exist
             fs::create_dir_all(parent)?;
@@ -105,7 +115,7 @@ fn download_component(
 }
 
 #[wrappers_fdw(
-    version = "0.1.1",
+    version = "0.1.2",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/wasm_fdw",
     error_type = "WasmFdwError"
@@ -122,10 +132,14 @@ impl WasmFdw {
 }
 
 impl ForeignDataWrapper<WasmFdwError> for WasmFdw {
-    fn new(options: &HashMap<String, String>) -> WasmFdwResult<Self> {
-        let pkg_url = require_option("fdw_package_url", options)?;
-        let pkg_name = require_option("fdw_package_name", options)?;
-        let pkg_version = require_option("fdw_package_version", options)?;
+    fn new(server: ForeignServer) -> WasmFdwResult<Self> {
+        let pkg_url = require_option("fdw_package_url", &server.options)?;
+        let pkg_name = require_option("fdw_package_name", &server.options)?;
+        let pkg_version = require_option("fdw_package_version", &server.options)?;
+        let pkg_checksum = server
+            .options
+            .get("fdw_package_checksum")
+            .map(|t| t.as_str());
 
         let rt = create_async_runtime()?;
 
@@ -133,13 +147,14 @@ impl ForeignDataWrapper<WasmFdwError> for WasmFdw {
         config.wasm_component_model(true);
         let engine = Engine::new(&config)?;
 
-        let component = download_component(&rt, &engine, pkg_url, pkg_name, pkg_version)?;
+        let component =
+            download_component(&rt, &engine, pkg_url, pkg_name, pkg_version, pkg_checksum)?;
 
         let mut linker = Linker::new(&engine);
         Wrappers::add_to_linker(&mut linker, |host: &mut FdwHost| host)?;
 
         let mut fdw_host = FdwHost::new(rt);
-        fdw_host.svr_opts.clone_from(options);
+        fdw_host.svr_opts.clone_from(&server.options);
 
         let mut store = Store::new(&engine, fdw_host);
         let (bindings, _) = Wrappers::instantiate(&mut store, &component, &linker)?;
