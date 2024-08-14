@@ -9,8 +9,6 @@ tags:
 
 # Wasm Wrappers
 
-<!-- md:version 8.3.0 -->
-
 Foreign data wrappers built with Wasm which can be used on Supabase platform.
 
 <div class="grid cards" markdown>
