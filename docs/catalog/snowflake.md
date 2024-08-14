@@ -37,6 +37,7 @@ The Snowflake Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows y
 
 | Version | Wasm Package URL                                                                                      | Checksum                                                           |
 | ------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| 0.1.1   | `https://github.com/supabase/wrappers/releases/download/wasm_snowflake_fdw_v0.1.1/snowflake_fdw.wasm` | `7aaafc7edc1726bc93ddc04452d41bda9e1a264a1df2ea9bf1b00b267543b860` |
 | 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_snowflake_fdw_v0.1.0/snowflake_fdw.wasm` | `2fb46fd8afa63f3975dadf772338106b609b131861849356e0c09dde032d1af8` |
 
 ## Preparation
@@ -81,10 +82,10 @@ We need to provide Postgres with the credentials to connect to Snowflake, and an
     create server snowflake_server
       foreign data wrapper wasm_wrapper
       options (
-        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_snowflake_fdw_v0.1.0/snowflake_fdw.wasm',
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_snowflake_fdw_v0.1.1/snowflake_fdw.wasm',
         fdw_package_name 'supabase:snowflake-fdw',
-        fdw_package_version '0.1.0',
-        fdw_package_checksum '2fb46fd8afa63f3975dadf772338106b609b131861849356e0c09dde032d1af8',
+        fdw_package_version '0.1.1',
+        fdw_package_checksum '7aaafc7edc1726bc93ddc04452d41bda9e1a264a1df2ea9bf1b00b267543b860',
         account_identifier 'MYORGANIZATION-MYACCOUNT',
         user 'MYUSER',
         public_key_fingerprint 'SizgPofeFX0jwC8IhbOfGFyOggFgo8oTOS1uPLZhzUQ=',
@@ -98,10 +99,10 @@ We need to provide Postgres with the credentials to connect to Snowflake, and an
     create server snowflake_server
       foreign data wrapper wasm_wrapper
       options (
-        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_snowflake_fdw_v0.1.0/snowflake_fdw.wasm',
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_snowflake_fdw_v0.1.1/snowflake_fdw.wasm',
         fdw_package_name 'supabase:snowflake-fdw',
-        fdw_package_version '0.1.0',
-        fdw_package_checksum '2fb46fd8afa63f3975dadf772338106b609b131861849356e0c09dde032d1af8',
+        fdw_package_version '0.1.1',
+        fdw_package_checksum '7aaafc7edc1726bc93ddc04452d41bda9e1a264a1df2ea9bf1b00b267543b860',
         account_identifier 'MYORGANIZATION-MYACCOUNT',
         user 'MYUSER',
         public_key_fingerprint 'SizgPofeFX0jwC8IhbOfGFyOggFgo8oTOS1uPLZhzUQ=',
