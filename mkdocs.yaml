@@ -25,6 +25,7 @@ nav:
         - Snowflake: 'catalog/snowflake.md'
         - Stripe: 'catalog/stripe.md'
         - SQL Server: 'catalog/mssql.md'
+        - Wasm: 'catalog/wasm.md'
     - Guides:
         - Native vs Wasm Wrappers: 'guides/native-wasm.md'
         - Query Pushdown: 'guides/query-pushdown.md'
@@ -79,6 +80,8 @@ extra:
 
 
 markdown_extensions:
+    - attr_list
+    - md_in_html
     - pymdownx.highlight:
         linenums: true
         guess_lang: false
