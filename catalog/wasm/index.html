@@ -9,29 +9,31 @@
         <meta name="description" content="A PostgreSQL extension for connecting to external data sources">
       
       
-      
-        <link rel="canonical" href="https://supabase.github.io/wrappers/catalog/">
-      
-      
-        <link rel="prev" href="..">
+        <meta name="author" content="supabase">
       
       
-        <link rel="next" href="airtable/">
+        <link rel="canonical" href="https://supabase.github.io/wrappers/catalog/wasm/">
       
       
-      <link rel="icon" href="../assets/favicon.ico">
+        <link rel="prev" href="../mssql/">
+      
+      
+        <link rel="next" href="../../guides/native-wasm/">
+      
+      
+      <link rel="icon" href="../../assets/favicon.ico">
       <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.31">
     
     
       
-        <title>Catalog - Wrappers</title>
+        <title>Wasm - Wrappers</title>
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.3cba04c6.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.3cba04c6.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
       
       
 
@@ -50,9 +52,9 @@
       
     
     
-      <link rel="stylesheet" href="../stylesheets/extra.css">
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
     
-    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -76,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#catalog" class="md-skip">
+        <a href="#wasm-wrappers" class="md-skip">
           Skip to content
         </a>
       
@@ -92,9 +94,9 @@
 
 <header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="Wrappers" class="md-header__button md-logo" aria-label="Wrappers" data-md-component="logo">
+    <a href="../.." title="Wrappers" class="md-header__button md-logo" aria-label="Wrappers" data-md-component="logo">
       
-  <img src="../assets/wrappers.svg" alt="logo">
+  <img src="../../assets/wrappers.svg" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -111,7 +113,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Catalog
+              Wasm
             
           </span>
         </div>
@@ -151,7 +153,7 @@
     
     
       <li class="md-tabs__item">
-        <a href=".." class="md-tabs__link">
+        <a href="../.." class="md-tabs__link">
           
   
     
@@ -173,7 +175,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="./" class="md-tabs__link">
+        <a href="../" class="md-tabs__link">
           
   
     
@@ -193,7 +195,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../guides/native-wasm/" class="md-tabs__link">
+        <a href="../../guides/native-wasm/" class="md-tabs__link">
           
   
     
@@ -213,7 +215,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../contributing/core/" class="md-tabs__link">
+        <a href="../../contributing/core/" class="md-tabs__link">
           
   
     
@@ -243,8 +245,6 @@
           
             
               
-                
-              
               <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
                 <div class="md-sidebar__scrollwrap">
                   <div class="md-sidebar__inner">
@@ -256,9 +256,9 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="Wrappers" class="md-nav__button md-logo" aria-label="Wrappers" data-md-component="logo">
+    <a href="../.." title="Wrappers" class="md-nav__button md-logo" aria-label="Wrappers" data-md-component="logo">
       
-  <img src="../assets/wrappers.svg" alt="logo">
+  <img src="../../assets/wrappers.svg" alt="logo">
 
     </a>
     Wrappers
@@ -310,7 +310,7 @@
           
           
           <div class="md-nav__link md-nav__container">
-            <a href=".." class="md-nav__link ">
+            <a href="../.." class="md-nav__link ">
               
   
   <span class="md-ellipsis">
@@ -403,7 +403,7 @@
           
           
           <div class="md-nav__link md-nav__container">
-            <a href="./" class="md-nav__link md-nav__link--active">
+            <a href="../" class="md-nav__link ">
               
   
   <span class="md-ellipsis">
@@ -414,7 +414,7 @@
             </a>
             
               
-              <label class="md-nav__link md-nav__link--active" for="__nav_2" id="__nav_2_label" tabindex="">
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
@@ -436,7 +436,7 @@
   
   
     <li class="md-nav__item">
-      <a href="airtable/" class="md-nav__link">
+      <a href="../airtable/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -457,7 +457,7 @@
   
   
     <li class="md-nav__item">
-      <a href="auth0/" class="md-nav__link">
+      <a href="../auth0/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -478,7 +478,7 @@
   
   
     <li class="md-nav__item">
-      <a href="cognito/" class="md-nav__link">
+      <a href="../cognito/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -499,7 +499,7 @@
   
   
     <li class="md-nav__item">
-      <a href="bigquery/" class="md-nav__link">
+      <a href="../bigquery/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -520,7 +520,7 @@
   
   
     <li class="md-nav__item">
-      <a href="clickhouse/" class="md-nav__link">
+      <a href="../clickhouse/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -541,7 +541,7 @@
   
   
     <li class="md-nav__item">
-      <a href="firebase/" class="md-nav__link">
+      <a href="../firebase/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -562,7 +562,7 @@
   
   
     <li class="md-nav__item">
-      <a href="logflare/" class="md-nav__link">
+      <a href="../logflare/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -583,7 +583,7 @@
   
   
     <li class="md-nav__item">
-      <a href="notion/" class="md-nav__link">
+      <a href="../notion/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -604,7 +604,7 @@
   
   
     <li class="md-nav__item">
-      <a href="paddle/" class="md-nav__link">
+      <a href="../paddle/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -625,7 +625,7 @@
   
   
     <li class="md-nav__item">
-      <a href="redis/" class="md-nav__link">
+      <a href="../redis/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -646,7 +646,7 @@
   
   
     <li class="md-nav__item">
-      <a href="s3/" class="md-nav__link">
+      <a href="../s3/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -667,7 +667,7 @@
   
   
     <li class="md-nav__item">
-      <a href="snowflake/" class="md-nav__link">
+      <a href="../snowflake/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -688,7 +688,7 @@
   
   
     <li class="md-nav__item">
-      <a href="stripe/" class="md-nav__link">
+      <a href="../stripe/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -709,7 +709,7 @@
   
   
     <li class="md-nav__item">
-      <a href="mssql/" class="md-nav__link">
+      <a href="../mssql/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -727,10 +727,19 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="wasm/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   <span class="md-ellipsis">
@@ -739,6 +748,7 @@
   
 
       </a>
+      
     </li>
   
 
@@ -818,7 +828,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../guides/native-wasm/" class="md-nav__link">
+      <a href="../../guides/native-wasm/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -839,7 +849,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../guides/query-pushdown/" class="md-nav__link">
+      <a href="../../guides/query-pushdown/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -860,7 +870,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../guides/remote-subqueries/" class="md-nav__link">
+      <a href="../../guides/remote-subqueries/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -881,7 +891,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../guides/security/" class="md-nav__link">
+      <a href="../../guides/security/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -902,7 +912,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../guides/usage-statistics/" class="md-nav__link">
+      <a href="../../guides/usage-statistics/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -923,7 +933,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../guides/installation/" class="md-nav__link">
+      <a href="../../guides/installation/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -944,7 +954,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../guides/limitations/" class="md-nav__link">
+      <a href="../../guides/limitations/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1013,7 +1023,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../guides/create-wasm-wrapper/" class="md-nav__link">
+      <a href="../../guides/create-wasm-wrapper/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1034,7 +1044,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../guides/wasm-advanced/" class="md-nav__link">
+      <a href="../../guides/wasm-advanced/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1120,7 +1130,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../contributing/core/" class="md-nav__link">
+      <a href="../../contributing/core/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1141,7 +1151,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../contributing/native/" class="md-nav__link">
+      <a href="../../contributing/native/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1162,7 +1172,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../contributing/documentation/" class="md-nav__link">
+      <a href="../../contributing/documentation/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -1191,9 +1201,7 @@
             
             
               
-                
-              
-              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" hidden>
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
                 <div class="md-sidebar__scrollwrap">
                   <div class="md-sidebar__inner">
                     
@@ -1204,32 +1212,6 @@
   
     
   
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#official" class="md-nav__link">
-    <span class="md-ellipsis">
-      Official
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#community" class="md-nav__link">
-    <span class="md-ellipsis">
-      Community
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
   
 </nav>
                   </div>
@@ -1242,181 +1224,52 @@
               <article class="md-content__inner md-typeset">
                 
                   
+  
+<nav class="md-tags" >
+  
+    
+    
+    
+      <a href="../../tags/#wasm" class="md-tag">wasm</a>
+    
+  
+    
+    
+    
+      <a href="../../tags/#official" class="md-tag">official</a>
+    
+  
+</nav>
+
 
   
   
 
 
-<h1 id="catalog">Catalog</h1>
-<h2 id="official">Official</h2>
-<table>
-<thead>
-<tr>
-<th>Integration</th>
-<th style="text-align: center;">Select</th>
-<th style="text-align: center;">Insert</th>
-<th style="text-align: center;">Update</th>
-<th style="text-align: center;">Delete</th>
-<th style="text-align: center;">Truncate</th>
-<th style="text-align: center;">Push Down</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Airtable</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-</tr>
-<tr>
-<td>Auth0</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-</tr>
-<tr>
-<td>AWS Cognito</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-</tr>
-<tr>
-<td>BigQuery</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">✅</td>
-</tr>
-<tr>
-<td>ClickHouse</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">✅</td>
-</tr>
-<tr>
-<td>Firebase</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-</tr>
-<tr>
-<td>Logflare</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-</tr>
-<tr>
-<td>Notion</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-</tr>
-<tr>
-<td>Paddle</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">✅</td>
-</tr>
-<tr>
-<td>Redis</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-</tr>
-<tr>
-<td>S3</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-</tr>
-<tr>
-<td>Snowflake</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">✅</td>
-</tr>
-<tr>
-<td>Stripe</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">✅</td>
-</tr>
-<tr>
-<td>SQL Server</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">✅</td>
-</tr>
-</tbody>
-</table>
-<h2 id="community">Community</h2>
-<p>Wasm wrappers can be installed directly from GitHub or any external source.</p>
-<p>See <a href="/wrappers/guides/create-wasm-wrapper/">Developing a Wasm Wrapper</a> for instructions on how to build and develop your own.</p>
-<table>
-<thead>
-<tr>
-<th>Integration</th>
-<th style="text-align: center;">Developer</th>
-<th style="text-align: center;">Docs</th>
-<th style="text-align: center;">Source</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Paddle</td>
-<td style="text-align: center;"><a href="https://supabase.com">Supabase</a></td>
-<td style="text-align: center;"><a href="/wrappers/catalog/paddle/">Link</a></td>
-<td style="text-align: center;"><a href="https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/paddle_fdw">Link</a></td>
-</tr>
-<tr>
-<td>Snowflake</td>
-<td style="text-align: center;"><a href="https://supabase.com">Supabase</a></td>
-<td style="text-align: center;"><a href="/wrappers/catalog/snowflake/">Link</a></td>
-<td style="text-align: center;"><a href="https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/snowflake_fdw">Link</a></td>
-</tr>
-</tbody>
-</table>
+<h1 id="wasm-wrappers">Wasm Wrappers</h1>
+<p>Foreign data wrappers built with Wasm which can be used on Supabase platform.</p>
+<div class="grid cards">
+<ul>
+<li>
+<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14.745 0v.129a2.752 2.752 0 1 1-5.504 0V0H0v24h24V0h-9.255zm-3.291 21.431-1.169-5.783h-.02l-1.264 5.783H7.39l-1.824-8.497h1.59l1.088 5.783h.02l1.311-5.783h1.487l1.177 5.854h.02l1.242-5.854h1.561l-2.027 8.497h-1.581zm8.755 0-.542-1.891h-2.861l-.417 1.891h-1.59l2.056-8.497h2.509l2.5 8.497h-1.655zm-2.397-6.403-.694 3.118h2.159l-.796-3.118h-.669z"/></svg></span> &nbsp; <strong><a href="../paddle">Paddle</a></strong></p>
+<hr />
+<p>Foreign data wrapper for <a href="https://www.paddle.com/">Paddle</a>.</p>
+<p>Supported by <a href="https://www.supabase.com">Supabase</a></p>
+<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7.75 6.5a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5Z"/><path d="M2.5 1h8.44a1.5 1.5 0 0 1 1.06.44l10.25 10.25a1.5 1.5 0 0 1 0 2.12l-8.44 8.44a1.5 1.5 0 0 1-2.12 0L1.44 12A1.497 1.497 0 0 1 1 10.94V2.5A1.5 1.5 0 0 1 2.5 1Zm0 1.5v8.44l10.25 10.25 8.44-8.44L10.94 2.5Z"/></svg></span> <a href="https://github.com/supabase/wrappers/releases/tag/wasm_paddle_fdw_v0.1.0">v0.1.0</a> &nbsp;
+<span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M15.22 4.97a.75.75 0 0 1 1.06 0l6.5 6.5a.75.75 0 0 1 0 1.06l-6.5 6.5a.749.749 0 0 1-1.275-.326.749.749 0 0 1 .215-.734L21.19 12l-5.97-5.97a.75.75 0 0 1 0-1.06Zm-6.44 0a.75.75 0 0 1 0 1.06L2.81 12l5.97 5.97a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215l-6.5-6.5a.75.75 0 0 1 0-1.06l6.5-6.5a.75.75 0 0 1 1.06 0Z"/></svg></span> <a href="https://github.com/supabase/wrappers/tree/wasm_paddle_fdw_v0.1.0/wasm-wrappers/fdw/paddle_fdw">source</a> &nbsp;
+<span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 9h5.5L13 3.5V9M6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4c0-1.11.89-2 2-2m9 16v-2H6v2h9m3-4v-2H6v2h12Z"/></svg></span> <a href="../paddle">docs</a></p>
+</li>
+<li>
+<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14.745 0v.129a2.752 2.752 0 1 1-5.504 0V0H0v24h24V0h-9.255zm-3.291 21.431-1.169-5.783h-.02l-1.264 5.783H7.39l-1.824-8.497h1.59l1.088 5.783h.02l1.311-5.783h1.487l1.177 5.854h.02l1.242-5.854h1.561l-2.027 8.497h-1.581zm8.755 0-.542-1.891h-2.861l-.417 1.891h-1.59l2.056-8.497h2.509l2.5 8.497h-1.655zm-2.397-6.403-.694 3.118h2.159l-.796-3.118h-.669z"/></svg></span> &nbsp; <strong><a href="../snowflake">Snowflake</a></strong></p>
+<hr />
+<p>Foreign data wrapper for <a href="https://www.snowflake.com/en/">Snowflake</a>.</p>
+<p>Supported by <a href="https://www.supabase.com">Supabase</a></p>
+<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7.75 6.5a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5Z"/><path d="M2.5 1h8.44a1.5 1.5 0 0 1 1.06.44l10.25 10.25a1.5 1.5 0 0 1 0 2.12l-8.44 8.44a1.5 1.5 0 0 1-2.12 0L1.44 12A1.497 1.497 0 0 1 1 10.94V2.5A1.5 1.5 0 0 1 2.5 1Zm0 1.5v8.44l10.25 10.25 8.44-8.44L10.94 2.5Z"/></svg></span> <a href="https://github.com/supabase/wrappers/releases/tag/wasm_snowflake_fdw_v0.1.0">v0.1.0</a> &nbsp;
+<span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M15.22 4.97a.75.75 0 0 1 1.06 0l6.5 6.5a.75.75 0 0 1 0 1.06l-6.5 6.5a.749.749 0 0 1-1.275-.326.749.749 0 0 1 .215-.734L21.19 12l-5.97-5.97a.75.75 0 0 1 0-1.06Zm-6.44 0a.75.75 0 0 1 0 1.06L2.81 12l5.97 5.97a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215l-6.5-6.5a.75.75 0 0 1 0-1.06l6.5-6.5a.75.75 0 0 1 1.06 0Z"/></svg></span> <a href="https://github.com/supabase/wrappers/tree/wasm_snowflake_fdw_v0.1.0/wasm-wrappers/fdw/snowflake_fdw">source</a> &nbsp;
+<span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 9h5.5L13 3.5V9M6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4c0-1.11.89-2 2-2m9 16v-2H6v2h9m3-4v-2H6v2h12Z"/></svg></span> <a href="../snowflake">docs</a></p>
+</li>
+</ul>
+</div>
 
 
 
@@ -1429,8 +1282,6 @@
 
 
 
-
-  
 
 
 
@@ -1448,12 +1299,10 @@
   
     
       
-        
-      
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href=".." class="md-footer__link md-footer__link--prev" aria-label="Previous: Postgres Wrappers">
+          <a href="../mssql/" class="md-footer__link md-footer__link--prev" aria-label="Previous: SQL Server">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
@@ -1463,20 +1312,20 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                Postgres Wrappers
+                SQL Server
               </div>
             </div>
           </a>
         
         
           
-          <a href="airtable/" class="md-footer__link md-footer__link--next" aria-label="Next: Airtable">
+          <a href="../../guides/native-wasm/" class="md-footer__link md-footer__link--next" aria-label="Next: Native vs Wasm Wrappers">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Airtable
+                Native vs Wasm Wrappers
               </div>
             </div>
             <div class="md-footer__button md-icon">
@@ -1542,10 +1391,10 @@
     </div>
     
     
-    <script id="__config" type="application/json">{"base": "..", "features": ["navigation.expand", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.indexes", "navigation.footer"], "search": "../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.expand", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.indexes", "navigation.footer"], "search": "../../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.fe8b6f2b.min.js"></script>
+      <script src="../../assets/javascripts/bundle.fe8b6f2b.min.js"></script>
       
     
   </body>
