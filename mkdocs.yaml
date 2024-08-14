@@ -11,21 +11,23 @@ nav:
         - 'index.md'
     - Catalog: 
         - catalog/index.md
-        - Airtable: 'catalog/airtable.md'
-        - Auth0: 'catalog/auth0.md'
-        - AWS Cognito: 'catalog/cognito.md'
-        - BigQuery: 'catalog/bigquery.md'
-        - ClickHouse: 'catalog/clickhouse.md'
-        - Firebase: 'catalog/firebase.md'
-        - Logflare: 'catalog/logflare.md'
-        - Notion: 'catalog/notion.md'
-        - Paddle: 'catalog/paddle.md'
-        - Redis: 'catalog/redis.md'
-        - S3 (CSV, JSON, Parquet): 'catalog/s3.md'
-        - Snowflake: 'catalog/snowflake.md'
-        - Stripe: 'catalog/stripe.md'
-        - SQL Server: 'catalog/mssql.md'
-        - Wasm: 'catalog/wasm.md'
+        - Native:
+          - Airtable: 'catalog/airtable.md'
+          - Auth0: 'catalog/auth0.md'
+          - AWS Cognito: 'catalog/cognito.md'
+          - BigQuery: 'catalog/bigquery.md'
+          - ClickHouse: 'catalog/clickhouse.md'
+          - Firebase: 'catalog/firebase.md'
+          - Logflare: 'catalog/logflare.md'
+          - Notion: 'catalog/notion.md'
+          - Redis: 'catalog/redis.md'
+          - S3 (CSV, JSON, Parquet): 'catalog/s3.md'
+          - Stripe: 'catalog/stripe.md'
+          - SQL Server: 'catalog/mssql.md'
+        - Wasm:
+          - catalog/wasm/index.md
+          - Paddle: 'catalog/paddle.md'
+          - Snowflake: 'catalog/snowflake.md'
     - Guides:
         - Native vs Wasm Wrappers: 'guides/native-wasm.md'
         - Query Pushdown: 'guides/query-pushdown.md'
