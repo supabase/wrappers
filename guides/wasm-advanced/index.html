@@ -1258,9 +1258,78 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#considerations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Considerations
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Considerations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#version-compatibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      Version compatibility
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#security" class="md-nav__link">
+    <span class="md-ellipsis">
+      Security
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#performance" class="md-nav__link">
+    <span class="md-ellipsis">
+      Performance
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#automation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Automation
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Limitations
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#wrap-up" class="md-nav__link">
     <span class="md-ellipsis">
       Wrap up
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#more-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      More examples
     </span>
   </a>
   
@@ -1515,9 +1584,78 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#considerations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Considerations
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Considerations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#version-compatibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      Version compatibility
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#security" class="md-nav__link">
+    <span class="md-ellipsis">
+      Security
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#performance" class="md-nav__link">
+    <span class="md-ellipsis">
+      Performance
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#automation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Automation
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Limitations
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#wrap-up" class="md-nav__link">
     <span class="md-ellipsis">
       Wrap up
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#more-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      More examples
     </span>
   </a>
   
@@ -1542,7 +1680,7 @@
 
 
 <h1 id="developing-a-wasm-wrapper-advanced">Developing a Wasm Wrapper (Advanced)</h1>
-<p>If you followed the <a href="../create-wasm-wrapper">Quick Start</a>, you should have:</p>
+<p>If you followed the <a href="../create-wasm-wrapper/">Quick Start</a>, you should have:</p>
 <ol>
 <li>Built a GitHub FDW</li>
 <li>Installed it on Postgres</li>
@@ -1550,7 +1688,7 @@
 </ol>
 <p>This guide will show you how to develop the Wasm Wrapper locally to iterate faster. We will adapt GitHub wrapper and instead we will query a Google Sheet.</p>
 <h2 id="install-pre-requisites">Install pre-requisites</h2>
-<p>If you haven't already completed the <a href="../create-wasm-wrapper">Quick Start</a>, do that first. For local development:</p>
+<p>If you haven't already completed the <a href="../create-wasm-wrapper/">Quick Start</a>, do that first. For local development:</p>
 <ul>
 <li>install the <a href="https://supabase.com/docs/guides/cli/getting-started">Supabase CLI</a> (version <code>&gt;= 1.187.10</code> is needed).</li>
 <li>install <a href="https://www.docker.com/get-started/">Docker</a></li>
@@ -1880,8 +2018,52 @@ supabase<span class="w"> </span>start
 <span class="k">from</span>
 <span class="w">  </span><span class="n">google</span><span class="p">.</span><span class="n">sheets</span>
 </code></pre></div></td></tr></table></div>
+<h2 id="considerations">Considerations</h2>
+<h3 id="version-compatibility">Version compatibility</h3>
+<p>The Wasm FDW (guest) runs inside a Wasm runtime (host) which is provided by the <a href="https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/wasm_fdw">Wrappers Wasm FDW framework</a>. The guest and host versions need to be compatible. We can define the required host version in the guest's <code>host_version_requirement()</code> function like below:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">impl</span><span class="w"> </span><span class="n">Guest</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">ExampleFdw</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">fn</span><span class="w"> </span><span class="nf">host_version_requirement</span><span class="p">()</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nb">String</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="s">&quot;^0.1.0&quot;</span><span class="p">.</span><span class="n">to_string</span><span class="p">()</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></td></tr></table></div>
+<p>Both guest and host are using <a href="https://docs.rs/semver/latest/semver/enum.Op.html">Semantic Versioning</a>. The above code means the guest is compatible with host version greater or equal <code>0.1.0</code> but less than <code>0.2.0</code>. If the version isn't comatible, the Wasm FDW cannot run on that version of host.</p>
+<p>All the available host versions are listed <a href="https://github.com/supabase/wrappers/blob/main/wrappers/src/fdw/wasm_fdw/README.md">here</a>. When you develop your own Wasm FDW, always choose compatible host version properly.</p>
+<h3 id="security">Security</h3>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Never use untrusted Wasm FDW on your database.</p>
+</div>
+<p>Although we have implemented security measures and limited the Wasm runtime environment to a minimal interface, ultimately you are responsible for your data. Never install a Wasm FDW from untrusted source. Always use official sources, like <a href="../../catalog/wasm/">Supabase Wasm FDW</a>, or sources over which you have full visibility and control.</p>
+<h3 id="performance">Performance</h3>
+<p>The Wasm package will be dynamically downloaded and loaded to run on Postgres, so you should make sure the Wasm FDW is small to improve performance. Always build your project in <code>release</code> mode using the profile specified in the <code>Cargo.toml</code> file:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">[profile.release]</span>
+<span class="n">strip</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;debuginfo&quot;</span>
+<span class="n">lto</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+</code></pre></div></td></tr></table></div>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1"># build in release mode and target wasm32-unknown-unknown</span>
+cargo<span class="w"> </span>component<span class="w"> </span>build<span class="w"> </span>--release<span class="w"> </span>--target<span class="w"> </span>wasm32-unknown-unknown
+</code></pre></div></td></tr></table></div>
+<h3 id="automation">Automation</h3>
+<p>If you host source code on GitHub, the building and release process can be automated, take a look at <a href="https://github.com/supabase-community/postgres-wasm-fdw/blob/main/.github/workflows/release_wasm_fdw.yml">the example CI workflow file</a> for more details.</p>
+<h2 id="limitations">Limitations</h2>
+<p>The Wasm FDW currently only supports data sources which have HTTP(s) based JSON API, other sources such like TCP based DBMS or local files are not supported.</p>
+<p>Another limitation is that many 3rd-party Rust libraries don't support <code>wasm32-unknown-unknown</code> target, we cannot use them in the Wasm FDW project.</p>
 <h2 id="wrap-up">Wrap up</h2>
-<p>When you're ready, you can follow the <a href="/wrappers/guides/create-wasm-wrapper/#release-the-wasm-fdw-package">Release process</a> in the quickstart guide to release a new version of your wrapper.</p>
+<p>When you're ready, you can follow the <a href="../create-wasm-wrapper/#release-the-wasm-fdw-package">Release process</a> in the quickstart guide to release a new version of your wrapper.</p>
+<h2 id="more-examples">More examples</h2>
+<p>Some other Wasm foreign data wrapper projects developed by Supabase team:</p>
+<ul>
+<li><a href="https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/snowflake_fdw">Snowflake Wasm FDW</a></li>
+<li><a href="https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/paddle_fdw">Paddle Wasm FDW</a></li>
+</ul>
 
 
 
@@ -2000,7 +2182,7 @@ supabase<span class="w"> </span>start
     </div>
     
     
-    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.expand", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.indexes", "navigation.footer"], "search": "../../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../..", "features": ["content.code.annotate", "content.code.copy", "navigation.expand", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.indexes", "navigation.footer"], "search": "../../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
       <script src="../../assets/javascripts/bundle.fe8b6f2b.min.js"></script>

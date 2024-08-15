@@ -918,6 +918,15 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#create-a-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      Create a schema
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1517,6 +1526,15 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#create-a-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      Create a schema
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1696,6 +1714,11 @@
 </thead>
 <tbody>
 <tr>
+<td>0.1.1</td>
+<td><code>https://github.com/supabase/wrappers/releases/download/wasm_snowflake_fdw_v0.1.1/snowflake_fdw.wasm</code></td>
+<td><code>7aaafc7edc1726bc93ddc04452d41bda9e1a264a1df2ea9bf1b00b267543b860</code></td>
+</tr>
+<tr>
 <td>0.1.0</td>
 <td><code>https://github.com/supabase/wrappers/releases/download/wasm_snowflake_fdw_v0.1.0/snowflake_fdw.wasm</code></td>
 <td><code>2fb46fd8afa63f3975dadf772338106b609b131861849356e0c09dde032d1af8</code></td>
@@ -1749,10 +1772,10 @@
 <span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">snowflake_server</span>
 <span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_snowflake_fdw_v0.1.0/snowflake_fdw.wasm&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_snowflake_fdw_v0.1.1/snowflake_fdw.wasm&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;supabase:snowflake-fdw&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.1.0&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;2fb46fd8afa63f3975dadf772338106b609b131861849356e0c09dde032d1af8&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.1.1&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;7aaafc7edc1726bc93ddc04452d41bda9e1a264a1df2ea9bf1b00b267543b860&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">account_identifier</span><span class="w"> </span><span class="s1">&#39;MYORGANIZATION-MYACCOUNT&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="k">user</span><span class="w"> </span><span class="s1">&#39;MYUSER&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">public_key_fingerprint</span><span class="w"> </span><span class="s1">&#39;SizgPofeFX0jwC8IhbOfGFyOggFgo8oTOS1uPLZhzUQ=&#39;</span><span class="p">,</span>
@@ -1775,10 +1798,10 @@
 <span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">snowflake_server</span>
 <span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_snowflake_fdw_v0.1.0/snowflake_fdw.wasm&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_snowflake_fdw_v0.1.1/snowflake_fdw.wasm&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;supabase:snowflake-fdw&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.1.0&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;2fb46fd8afa63f3975dadf772338106b609b131861849356e0c09dde032d1af8&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.1.1&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;7aaafc7edc1726bc93ddc04452d41bda9e1a264a1df2ea9bf1b00b267543b860&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">account_identifier</span><span class="w"> </span><span class="s1">&#39;MYORGANIZATION-MYACCOUNT&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="k">user</span><span class="w"> </span><span class="s1">&#39;MYUSER&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">public_key_fingerprint</span><span class="w"> </span><span class="s1">&#39;SizgPofeFX0jwC8IhbOfGFyOggFgo8oTOS1uPLZhzUQ=&#39;</span><span class="p">,</span>
@@ -1789,6 +1812,10 @@
 </div>
 </div>
 <p>Note the <code>fdw_package_*</code> options are required, which specify the Wasm package metadata. You can get the available package version list from <a href="#available-versions">above</a>.</p>
+<h3 id="create-a-schema">Create a schema</h3>
+<p>We recommend creating a schema to hold all the foreign tables:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">snowflake</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
 <h2 id="creating-foreign-tables">Creating Foreign Tables</h2>
 <p>The Snowflake Wrapper supports data reads and writes from Snowflake.</p>
 <table>
@@ -1825,7 +1852,7 @@
 <span class="normal"> 9</span>
 <span class="normal">10</span>
 <span class="normal">11</span>
-<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">snowflake_mytable</span><span class="w"> </span><span class="p">(</span>
+<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">snowflake</span><span class="p">.</span><span class="n">mytable</span><span class="w"> </span><span class="p">(</span>
 <span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
 <span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
 <span class="w">  </span><span class="n">num</span><span class="w"> </span><span class="nb">numeric</span><span class="p">,</span>
@@ -1867,7 +1894,13 @@
 <span class="normal">11</span>
 <span class="normal">12</span>
 <span class="normal">13</span>
-<span class="normal">14</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Run below SQLs on Snowflake to create source table</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Create a database</span>
+<span class="k">create</span><span class="w"> </span><span class="k">database</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">mydatabase</span><span class="p">;</span>
+
+<span class="c1">-- Run below SQLs on Snowflake to create source table</span>
 <span class="k">create</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">mydatabase</span><span class="p">.</span><span class="k">public</span><span class="p">.</span><span class="n">mytable</span><span class="w"> </span><span class="p">(</span>
 <span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">number</span><span class="p">(</span><span class="mi">38</span><span class="p">,</span><span class="mi">0</span><span class="p">),</span>
 <span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">varchar</span><span class="p">(</span><span class="mi">16777216</span><span class="p">),</span>
@@ -1884,7 +1917,7 @@
 </code></pre></div></td></tr></table></div>
 <h3 id="basic-example">Basic example</h3>
 <p>This example will create a "foreign table" inside your Postgres database and query its data. First, we can create a schema to hold all the Snowflake foreign tables.</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">snowflake</span><span class="p">;</span>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">snowflake</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 <p>Then create the foreign table and query it, for example:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
@@ -2062,7 +2095,7 @@
     </div>
     
     
-    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.expand", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.indexes", "navigation.footer"], "search": "../../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../..", "features": ["content.code.annotate", "content.code.copy", "navigation.expand", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.indexes", "navigation.footer"], "search": "../../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
       <script src="../../assets/javascripts/bundle.fe8b6f2b.min.js"></script>
