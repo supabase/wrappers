@@ -301,3 +301,10 @@ Another limitation is that many 3rd-party Rust libraries don't support `wasm32-u
 ## Wrap up
 
 When you're ready, you can follow the [Release process](../guides/create-wasm-wrapper.md#release-the-wasm-fdw-package) in the quickstart guide to release a new version of your wrapper.
+
+## More examples
+
+Some other Wasm foreign data wrapper projects developed by Supabase team:
+
+- [Snowflake Wasm FDW](https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/snowflake_fdw)
+- [Paddle Wasm FDW](https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/paddle_fdw)
