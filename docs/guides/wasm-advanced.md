@@ -271,7 +271,7 @@ All the available host versions are listed [here](https://github.com/supabase/wr
 !!! warning
     Never use untrusted Wasm FDW on your database.
 
-Although we have implemented security measures and limited the Wasm runtime environment to a minimal interface, ultimately you are responsible for your data. Never install a Wasm FDW from untrusted source. Always use official sources, like [Supabase Wasm FDW](../catalog/wasm/index.md), or sources which you have full visibility and control.
+Although we have implemented security measures and limited the Wasm runtime environment to a minimal interface, ultimately you are responsible for your data. Never install a Wasm FDW from untrusted source. Always use official sources, like [Supabase Wasm FDW](../catalog/wasm/index.md), or sources over which you have full visibility and control.
 
 ### Performance
 
