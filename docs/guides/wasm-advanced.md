@@ -1,6 +1,6 @@
 # Developing a Wasm Wrapper (Advanced)
 
-If you followed the [Quick Start](../create-wasm-wrapper), you should have:
+If you followed the [Quick Start](create-wasm-wrapper.md), you should have:
 
 1. Built a GitHub FDW
 2. Installed it on Postgres
@@ -10,7 +10,7 @@ This guide will show you how to develop the Wasm Wrapper locally to iterate fast
 
 ## Install pre-requisites
 
-If you haven't already completed the [Quick Start](../create-wasm-wrapper), do that first. For local development:
+If you haven't already completed the [Quick Start](create-wasm-wrapper.md), do that first. For local development:
 
 - install the [Supabase CLI](https://supabase.com/docs/guides/cli/getting-started) (version `>= 1.187.10` is needed).
 - install [Docker](https://www.docker.com/get-started/)
@@ -250,4 +250,4 @@ from
 
 ## Wrap up
 
-When you're ready, you can follow the [Release process](/wrappers/guides/create-wasm-wrapper/#release-the-wasm-fdw-package) in the quickstart guide to release a new version of your wrapper.
+When you're ready, you can follow the [Release process](../guides/create-wasm-wrapper.md#release-the-wasm-fdw-package) in the quickstart guide to release a new version of your wrapper.

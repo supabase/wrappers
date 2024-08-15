@@ -87,7 +87,7 @@ env:
 
 ## Install your FDW
 
-You can install the FDW on any Postgres [platform that supports](/wrappers/#supported-platforms) Wrappers `>=0.4.1`.
+You can install the FDW on any Postgres [platform that supports](../index.md#supported-platforms) Wrappers `>=0.4.1`.
 
 <details>
 
@@ -103,7 +103,7 @@ where name = 'wrappers';
 
 ### Enable Wrappers
 
-Enable the Wrappers extension and initialize the Wasm FDW on any platform that [supports Wrappers](/wrappers/#supported-platforms):
+Enable the Wrappers extension and initialize the Wasm FDW on any platform that [supports Wrappers](../index.md#supported-platforms):
 
 ```sql
 create extension if not exists wrappers with schema extensions;

@@ -28,9 +28,9 @@ hide:
 
 Wasm wrappers can be installed directly from GitHub or any external source.
 
-See [Developing a Wasm Wrapper](/wrappers/guides/create-wasm-wrapper/) for instructions on how to build and develop your own.
+See [Developing a Wasm Wrapper](../guides/create-wasm-wrapper.md) for instructions on how to build and develop your own.
 
 | Integration |            Developer             |                 Docs                 |                                         Source                                         |
 | ----------- | :------------------------------: | :----------------------------------: | :------------------------------------------------------------------------------------: |
-| Paddle      | [Supabase](https://supabase.com) |  [Link](/wrappers/catalog/paddle/)   |  [Link](https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/paddle_fdw)   |
-| Snowflake   | [Supabase](https://supabase.com) | [Link](/wrappers/catalog/snowflake/) | [Link](https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/snowflake_fdw) |
+| Paddle      | [Supabase](https://supabase.com) | [Link](paddle.md)    | [Link](https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/paddle_fdw)   |
+| Snowflake   | [Supabase](https://supabase.com) | [Link](snowflake.md) | [Link](https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/snowflake_fdw) |

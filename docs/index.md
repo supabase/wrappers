@@ -38,7 +38,7 @@ returns
 
 Postgres FDWs introduce the concept of a "remote server" and "foreign table":
 
-![FDW](assets/fdw-light.png)
+![FDW](assets/fdw-dark.png)
 
 ### Remote servers
 

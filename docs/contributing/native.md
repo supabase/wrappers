@@ -36,7 +36,7 @@ To know more about FDW development, please visit the [Wrappers documentation](ht
 
 ## Basic usage
 
-These steps outline how to use the a demo FDW [HelloWorldFdw](./wrappers/src/fdw/helloworld_fdw), which only outputs a single line of fake data:
+These steps outline how to use the a demo FDW [HelloWorldFdw](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/helloworld_fdw), which only outputs a single line of fake data:
 
 1. Clone this repo
 

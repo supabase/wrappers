@@ -6,6 +6,9 @@ repo_name: supabase/wrappers
 repo_url: https://github.com/supabase/wrappers
 edit_uri: edit/main/docs/
 
+not_in_nav: |
+  tags.md
+
 nav:
     - Home:  
         - 'index.md'
@@ -96,5 +99,5 @@ markdown_extensions:
     - pymdownx.tasklist
     - admonition
     - pymdownx.emoji:
-        emoji_index: !!python/name:materialx.emoji.twemoji
-        emoji_generator: !!python/name:materialx.emoji.to_svg
+        emoji_index: !!python/name:material.extensions.emoji.twemoji
+        emoji_generator: !!python/name:material.extensions.emoji.to_svg
