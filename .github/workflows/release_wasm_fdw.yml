@@ -97,7 +97,7 @@ jobs:
               ...
             );
 
-          For more details, please visit https://supabase.github.io/wrappers/.
+          For more details, please visit https://fdw.dev.
           EOF
 
       - name: Create release

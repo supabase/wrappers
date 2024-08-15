@@ -39,6 +39,7 @@ The Paddle API uses JSON formatted data, please refer to [Paddle docs](https://d
 
 | Version | Wasm Package URL                                                                                | Checksum                                                           |
 | ------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| 0.1.1   | `https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.1.1/paddle_fdw.wasm` | `c5ac70bb2eef33693787b7d4efce9a83cde8d4fa40889d2037403a51263ba657` |
 | 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.1.0/paddle_fdw.wasm` | `7d0b902440ac2ef1af85d09807145247f14d1d8fd4d700227e5a4d84c8145409` |
 
 ## Preparation
@@ -81,10 +82,10 @@ We need to provide Postgres with the credentials to access Paddle, and any addit
     create server paddle_server
       foreign data wrapper wasm_wrapper
       options (
-        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.1.0/paddle_fdw.wasm',
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.1.1/paddle_fdw.wasm',
         fdw_package_name 'supabase:paddle-fdw',
-        fdw_package_version '0.1.0',
-        fdw_package_checksum '7d0b902440ac2ef1af85d09807145247f14d1d8fd4d700227e5a4d84c8145409',
+        fdw_package_version '0.1.1',
+        fdw_package_checksum 'c5ac70bb2eef33693787b7d4efce9a83cde8d4fa40889d2037403a51263ba657',
         api_url 'https://sandbox-api.paddle.com', -- Use https://api.paddle.com for live account
         api_key_id '<key_ID>' -- The Key ID from above.
       );
@@ -96,16 +97,24 @@ We need to provide Postgres with the credentials to access Paddle, and any addit
     create server paddle_server
       foreign data wrapper wasm_wrapper
       options (
-        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.1.0/paddle_fdw.wasm',
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.1.1/paddle_fdw.wasm',
         fdw_package_name 'supabase:paddle-fdw',
-        fdw_package_version '0.1.0',
-        fdw_package_checksum '7d0b902440ac2ef1af85d09807145247f14d1d8fd4d700227e5a4d84c8145409',
+        fdw_package_version '0.1.1',
+        fdw_package_checksum 'c5ac70bb2eef33693787b7d4efce9a83cde8d4fa40889d2037403a51263ba657',
         api_url 'https://sandbox-api.paddle.com', -- Use https://api.paddle.com for live account
         api_key 'bb4e69088ea07a98a90565ac610c63654423f8f1e2d48b39b5'
       );
     ```
 
 Note the `fdw_package_*` options are required, which specify the Wasm package metadata. You can get the available package version list from [above](#available-versions).
+
+### Create a schema
+
+We recommend creating a schema to hold all the foreign tables:
+
+```sql
+create schema if not exists paddle;
+```
 
 ## Creating Foreign Tables
 
@@ -118,7 +127,7 @@ The Paddle Wrapper supports data reads and writes from Paddle.
 For example:
 
 ```sql
-create foreign table paddle_customers (
+create foreign table paddle.customers (
   id text,
   name text,
   email text,
@@ -161,7 +170,7 @@ The full list of foreign table options are below:
 This FDW supports `where` clause pushdown with `id` as the filter. For example,
 
 ```sql
-select * from paddle_customers where id = 'ctm_01hymwgpkx639a6mkvg99563sp';
+select * from paddle.customers where id = 'ctm_01hymwgpkx639a6mkvg99563sp';
 ```
 
 ## Examples
@@ -173,7 +182,7 @@ Below are Some examples on how to use Paddle foreign tables.
 This example will create a "foreign table" inside your Postgres database and query its data. First, we can create a schema to hold all the Paddle foreign tables.
 
 ```sql
-create schema paddle;
+create schema if not exists paddle;
 ```
 
 Then create the foreign table and query it, for example:

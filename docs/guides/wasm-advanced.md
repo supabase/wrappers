@@ -1,6 +1,6 @@
 # Developing a Wasm Wrapper (Advanced)
 
-If you followed the [Quick Start](../create-wasm-wrapper), you should have:
+If you followed the [Quick Start](create-wasm-wrapper.md), you should have:
 
 1. Built a GitHub FDW
 2. Installed it on Postgres
@@ -10,7 +10,7 @@ This guide will show you how to develop the Wasm Wrapper locally to iterate fast
 
 ## Install pre-requisites
 
-If you haven't already completed the [Quick Start](../create-wasm-wrapper), do that first. For local development:
+If you haven't already completed the [Quick Start](create-wasm-wrapper.md), do that first. For local development:
 
 - install the [Supabase CLI](https://supabase.com/docs/guides/cli/getting-started) (version `>= 1.187.10` is needed).
 - install [Docker](https://www.docker.com/get-started/)
@@ -248,6 +248,63 @@ from
   google.sheets
 ```
 
+## Considerations
+
+### Version compatibility
+
+The Wasm FDW (guest) runs inside a Wasm runtime (host) which is provided by the [Wrappers Wasm FDW framework](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/wasm_fdw). The guest and host versions need to be compatible. We can define the required host version in the guest's `host_version_requirement()` function like below:
+
+```rust
+impl Guest for ExampleFdw {
+    fn host_version_requirement() -> String {
+        "^0.1.0".to_string()
+    }
+}
+```
+
+Both guest and host are using [Semantic Versioning](https://docs.rs/semver/latest/semver/enum.Op.html). The above code means the guest is compatible with host version greater or equal `0.1.0` but less than `0.2.0`. If the version isn't comatible, the Wasm FDW cannot run on that version of host.
+
+All the available host versions are listed [here](https://github.com/supabase/wrappers/blob/main/wrappers/src/fdw/wasm_fdw/README.md). When you develop your own Wasm FDW, always choose compatible host version properly.
+
+### Security
+
+!!! warning
+    Never use untrusted Wasm FDW on your database.
+
+Although we have implemented security measures and limited the Wasm runtime environment to a minimal interface, ultimately you are responsible for your data. Never install a Wasm FDW from untrusted source. Always use official sources, like [Supabase Wasm FDW](../catalog/wasm/index.md), or sources over which you have full visibility and control.
+
+### Performance
+
+The Wasm package will be dynamically downloaded and loaded to run on Postgres, so you should make sure the Wasm FDW is small to improve performance. Always build your project in `release` mode using the profile specified in the `Cargo.toml` file:
+
+```toml
+[profile.release]
+strip = "debuginfo"
+lto = true
+```
+
+```bash
+# build in release mode and target wasm32-unknown-unknown
+cargo component build --release --target wasm32-unknown-unknown
+```
+
+### Automation
+
+If you host source code on GitHub, the building and release process can be automated, take a look at [the example CI workflow file](https://github.com/supabase-community/postgres-wasm-fdw/blob/main/.github/workflows/release_wasm_fdw.yml) for more details.
+
+## Limitations
+
+The Wasm FDW currently only supports data sources which have HTTP(s) based JSON API, other sources such like TCP based DBMS or local files are not supported.
+
+Another limitation is that many 3rd-party Rust libraries don't support `wasm32-unknown-unknown` target, we cannot use them in the Wasm FDW project.
+
 ## Wrap up
 
-When you're ready, you can follow the [Release process](/wrappers/guides/create-wasm-wrapper/#release-the-wasm-fdw-package) in the quickstart guide to release a new version of your wrapper.
+When you're ready, you can follow the [Release process](../guides/create-wasm-wrapper.md#release-the-wasm-fdw-package) in the quickstart guide to release a new version of your wrapper.
+
+## More examples
+
+Some other Wasm foreign data wrapper projects developed by Supabase team:
+
+- [Snowflake Wasm FDW](https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/snowflake_fdw)
+- [Paddle Wasm FDW](https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/paddle_fdw)
