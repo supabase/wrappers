@@ -108,6 +108,14 @@ We need to provide Postgres with the credentials to access Paddle, and any addit
 
 Note the `fdw_package_*` options are required, which specify the Wasm package metadata. You can get the available package version list from [above](#available-versions).
 
+### Create a schema
+
+We recommend creating a schema to hold all the foreign tables:
+
+```sql
+create schema if not exists paddle;
+```
+
 ## Creating Foreign Tables
 
 The Paddle Wrapper supports data reads and writes from Paddle.
@@ -119,7 +127,7 @@ The Paddle Wrapper supports data reads and writes from Paddle.
 For example:
 
 ```sql
-create foreign table paddle_customers (
+create foreign table paddle.customers (
   id text,
   name text,
   email text,
@@ -162,7 +170,7 @@ The full list of foreign table options are below:
 This FDW supports `where` clause pushdown with `id` as the filter. For example,
 
 ```sql
-select * from paddle_customers where id = 'ctm_01hymwgpkx639a6mkvg99563sp';
+select * from paddle.customers where id = 'ctm_01hymwgpkx639a6mkvg99563sp';
 ```
 
 ## Examples
@@ -174,7 +182,7 @@ Below are Some examples on how to use Paddle foreign tables.
 This example will create a "foreign table" inside your Postgres database and query its data. First, we can create a schema to hold all the Paddle foreign tables.
 
 ```sql
-create schema paddle;
+create schema if not exists paddle;
 ```
 
 Then create the foreign table and query it, for example:

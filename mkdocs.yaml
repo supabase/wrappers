@@ -57,6 +57,8 @@ theme:
     logo: 'assets/wrappers.svg'
     homepage: https://supabase.github.io/wrappers
     features:
+      - content.code.annotate
+      - content.code.copy
       - navigation.expand  
       - navigation.tabs
       - navigation.tabs.sticky
