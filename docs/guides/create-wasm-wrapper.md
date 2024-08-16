@@ -148,7 +148,7 @@ options (
 
 !!! tip
 
-    You can copy the DDL from released `READE.txt` file, which can be downloaded from the release page like: `https://github.com/<ORG>/<REPO>/releases/tag/v0.2.0`
+    You can copy the DDL from released `README.txt` file, which can be downloaded from the release page like: `https://github.com/<ORG>/<REPO>/releases/tag/v0.2.0`
 
 ### Query your wrapper
 
