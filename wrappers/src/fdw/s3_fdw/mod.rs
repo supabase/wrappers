@@ -3,9 +3,9 @@ mod parquet;
 mod s3_fdw;
 mod tests;
 
+use aws_sdk_s3::config::http::HttpResponse;
 use aws_sdk_s3::error::SdkError;
 use aws_sdk_s3::operation::get_object::GetObjectError;
-use aws_smithy_runtime_api::client::orchestrator::HttpResponse;
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::PgSqlErrorCode;
 use thiserror::Error;

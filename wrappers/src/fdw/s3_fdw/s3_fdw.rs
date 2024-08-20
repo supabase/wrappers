@@ -25,7 +25,7 @@ enum Parser {
 }
 
 #[wrappers_fdw(
-    version = "0.1.3",
+    version = "0.1.4",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/s3_fdw",
     error_type = "S3FdwError"
@@ -179,22 +179,40 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
 
         // endpoint_url not supported as env var in rust https://github.com/awslabs/aws-sdk-rust/issues/932
         if let Some(endpoint_url) = server.options.get("endpoint_url") {
-            config_loader = config_loader.endpoint_url(endpoint_url);
+            if endpoint_url.ends_with('/') {
+                config_loader = config_loader.endpoint_url(endpoint_url);
+            } else {
+                config_loader = config_loader.endpoint_url(format!("{}/", endpoint_url));
+            };
         }
+
+        // get path_style_url flag
+        //
+        // path style has been deprecated, but other s3-compatible services are
+        // still using it.
+        //
+        // Examples:
+        // path_style: https://s3.amazonaws.com/bucket/image.png
+        // virtual-hosted style: https://bucket.s3.amazonaws.com/image.png
+        //
+        // ref: https://docs.aws.amazon.com/AmazonS3/latest/userguide/VirtualHosting.html
+        let path_style_url: bool =
+            server.options.get("path_style_url") == Some(&"true".to_string());
 
         let config = ret.rt.block_on(config_loader.load());
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
 
         // create S3 client
+        let mut s3_config_builder = s3::config::Builder::from(&config);
         let client = if is_mock {
-            let mut s3_config_builder = s3::config::Builder::from(&config);
             s3_config_builder = s3_config_builder
                 .endpoint_url("http://localhost:4566/")
                 .force_path_style(true);
             s3::Client::from_conf(s3_config_builder.build())
         } else {
-            s3::Client::new(&config)
+            s3_config_builder = s3_config_builder.force_path_style(path_style_url);
+            s3::Client::from_conf(s3_config_builder.build())
         };
         ret.client = Some(client);
 

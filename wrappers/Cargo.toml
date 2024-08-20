@@ -51,8 +51,6 @@ s3_fdw = [
     "reqwest-retry",
     "aws-config",
     "aws-sdk-s3",
-    "aws-smithy-http",
-    "aws-smithy-runtime-api",
     "tokio",
     "tokio-util",
     "csv",
@@ -199,10 +197,8 @@ regex = { version = "1", optional = true }
 url = { version = "2.3", optional = true }
 
 # for s3_fdw
-aws-config = { version = "1.1.1", optional = true }
-aws-sdk-s3 = { version = "1.11.0", optional = true }
-aws-smithy-http = { version = "0.60.1", optional = true }
-aws-smithy-runtime-api = { version = "1.1.1", optional = true }
+aws-config = { version = "1.1.7", features = ["behavior-version-latest"], optional = true }
+aws-sdk-s3 = { version = "1.45.0", optional = true }
 
 # for cognito fdw
 aws-sdk-cognitoidentityprovider = {version ="1.10.0", optional = true}
@@ -219,8 +215,8 @@ async-compression = { version = "0.3.15", features = [
     "zlib",
 ], optional = true }
 http = { version = "0.2", optional = true }
-parquet = { version = "41.0.0", features = ["async"], optional = true }
-arrow-array = { version = "41.0.0", optional = true }
+parquet = { version = "52.2.0", features = ["async"], optional = true }
+arrow-array = { version = "52.2.0", optional = true }
 
 # for mssql_fdw
 tiberius = { version = "0.12.2", features = [
