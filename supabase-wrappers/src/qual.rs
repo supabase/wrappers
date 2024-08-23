@@ -48,11 +48,17 @@ pub(crate) unsafe fn form_array_from_datum(
         PgOid::BuiltIn(PgBuiltInOids::TIMEARRAYOID) => {
             Cell::from_polymorphic_datum(datum, false, pg_sys::TIMEOID)
         }
+        PgOid::BuiltIn(PgBuiltInOids::TIMEARRAYOID) => {
+            Vec::<Cell>::from_polymorphic_datum(datum, false, pg_sys::TIMEOID)
+        }
         PgOid::BuiltIn(PgBuiltInOids::TIMESTAMPARRAYOID) => {
             Cell::from_polymorphic_datum(datum, false, pg_sys::TIMESTAMPOID)
         }
         PgOid::BuiltIn(PgBuiltInOids::TIMESTAMPTZARRAYOID) => {
             Cell::from_polymorphic_datum(datum, false, pg_sys::TIMESTAMPTZOID)
+        }
+        PgOid::BuiltIn(PgBuiltInOids::TIMESTAMPTZARRAYOID) => {
+            Vec::<Cell>::from_polymorphic_datum(datum, false, pg_sys::TIMESTAMPTZOID)
         }
         PgOid::BuiltIn(PgBuiltInOids::JSONBARRAYOID) => {
             Cell::from_polymorphic_datum(datum, false, pg_sys::JSONBOID)
@@ -65,6 +71,15 @@ pub(crate) unsafe fn form_array_from_datum(
         }
         PgOid::BuiltIn(PgBuiltInOids::UUIDARRAYOID) => {
             Cell::from_polymorphic_datum(datum, false, pg_sys::UUIDOID)
+        }
+        PgOid::BuiltIn(PgBuiltInOids::INTERVALARRAYOID) => {
+            Vec::<Cell>::from_polymorphic_datum(datum, false, pg_sys::INTERVALOID)
+        }
+        PgOid::BuiltIn(PgBuiltInOids::BYTEAARRAYOID) => {
+            Vec::<Cell>::from_polymorphic_datum(datum, false, pg_sys::BYTEAOID)
+        }
+        PgOid::BuiltIn(PgBuiltInOids::UUIDARRAYOID) => {
+            Vec::<Cell>::from_polymorphic_datum(datum, false, pg_sys::UUIDOID)
         }
         _ => None,
     };
