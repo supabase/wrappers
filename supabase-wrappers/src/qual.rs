@@ -17,67 +17,69 @@ pub(crate) unsafe fn form_array_from_datum(
     }
 
     let oid = PgOid::from(typoid);
-    match oid {
+    let opt_cell = match oid {
         PgOid::BuiltIn(PgBuiltInOids::BOOLARRAYOID) => {
-            Vec::<Cell>::from_polymorphic_datum(datum, false, pg_sys::BOOLOID)
+            Cell::from_polymorphic_datum(datum, false, pg_sys::BOOLOID)
         }
         PgOid::BuiltIn(PgBuiltInOids::CHARARRAYOID) => {
-            Vec::<Cell>::from_polymorphic_datum(datum, false, pg_sys::CHAROID)
+            Cell::from_polymorphic_datum(datum, false, pg_sys::CHAROID)
         }
         PgOid::BuiltIn(PgBuiltInOids::INT2ARRAYOID) => {
-            Vec::<Cell>::from_polymorphic_datum(datum, false, pg_sys::INT2OID)
+            Cell::from_polymorphic_datum(datum, false, pg_sys::INT2OID)
         }
         PgOid::BuiltIn(PgBuiltInOids::FLOAT4ARRAYOID) => {
-            Vec::<Cell>::from_polymorphic_datum(datum, false, pg_sys::FLOAT4OID)
+            Cell::from_polymorphic_datum(datum, false, pg_sys::FLOAT4OID)
         }
         PgOid::BuiltIn(PgBuiltInOids::INT4ARRAYOID) => {
-            Vec::<Cell>::from_polymorphic_datum(datum, false, pg_sys::INT4OID)
+            Cell::from_polymorphic_datum(datum, false, pg_sys::INT4OID)
         }
         PgOid::BuiltIn(PgBuiltInOids::FLOAT8ARRAYOID) => {
-            Vec::<Cell>::from_polymorphic_datum(datum, false, pg_sys::FLOAT8OID)
+            Cell::from_polymorphic_datum(datum, false, pg_sys::FLOAT8OID)
         }
         PgOid::BuiltIn(PgBuiltInOids::INT8ARRAYOID) => {
-            Vec::<Cell>::from_polymorphic_datum(datum, false, pg_sys::INT8OID)
+            Cell::from_polymorphic_datum(datum, false, pg_sys::INT8OID)
         }
         PgOid::BuiltIn(PgBuiltInOids::TEXTARRAYOID) => {
-            Vec::<Cell>::from_polymorphic_datum(datum, false, pg_sys::TEXTOID)
+            Cell::from_polymorphic_datum(datum, false, pg_sys::TEXTOID)
         }
         PgOid::BuiltIn(PgBuiltInOids::DATEARRAYOID) => {
-            Vec::<Cell>::from_polymorphic_datum(datum, false, pg_sys::DATEOID)
+            Cell::from_polymorphic_datum(datum, false, pg_sys::DATEOID)
         }
         PgOid::BuiltIn(PgBuiltInOids::TIMEARRAYOID) => {
-            Vec::<Cell>::from_polymorphic_datum(datum, false, pg_sys::TIMEOID)
+            Cell::from_polymorphic_datum(datum, false, pg_sys::TIMEOID)
         }
         PgOid::BuiltIn(PgBuiltInOids::TIMESTAMPARRAYOID) => {
-            Vec::<Cell>::from_polymorphic_datum(datum, false, pg_sys::TIMESTAMPOID)
+            Cell::from_polymorphic_datum(datum, false, pg_sys::TIMESTAMPOID)
         }
         PgOid::BuiltIn(PgBuiltInOids::TIMESTAMPTZARRAYOID) => {
-            Vec::<Cell>::from_polymorphic_datum(datum, false, pg_sys::TIMESTAMPTZOID)
+            Cell::from_polymorphic_datum(datum, false, pg_sys::TIMESTAMPTZOID)
         }
         PgOid::BuiltIn(PgBuiltInOids::JSONBARRAYOID) => {
-            Vec::<Cell>::from_polymorphic_datum(datum, false, pg_sys::JSONBOID)
+            Cell::from_polymorphic_datum(datum, false, pg_sys::JSONBOID)
         }
         PgOid::BuiltIn(PgBuiltInOids::INTERVALARRAYOID) => {
-            Vec::<Cell>::from_polymorphic_datum(datum, false, pg_sys::INTERVALOID)
+            Cell::from_polymorphic_datum(datum, false, pg_sys::INTERVALOID)
         }
         PgOid::BuiltIn(PgBuiltInOids::BYTEAARRAYOID) => {
-            Vec::<Cell>::from_polymorphic_datum(datum, false, pg_sys::BYTEAOID)
+            Cell::from_polymorphic_datum(datum, false, pg_sys::BYTEAOID)
         }
         PgOid::BuiltIn(PgBuiltInOids::UUIDARRAYOID) => {
-            Vec::<Cell>::from_polymorphic_datum(datum, false, pg_sys::UUIDOID)
+            Cell::from_polymorphic_datum(datum, false, pg_sys::UUIDOID)
         }
         _ => None,
-    }
+    };
+
+    opt_cell.map(|cell| vec![cell])
 }
 
 pub(crate) unsafe fn get_operator(opno: pg_sys::Oid) -> pg_sys::Form_pg_operator {
     let htup = pg_sys::SearchSysCache1(
-        pg_sys::SysCacheIdentifier_OPEROID.try_into().unwrap(),
+        pg_sys::SysCacheIdentifier::OPEROID.try_into().unwrap(),
         opno.into(),
     );
     if htup.is_null() {
         pg_sys::ReleaseSysCache(htup);
-        pgrx::error!("cache lookup operator {} failed", opno);
+        pgrx::error!("cache lookup operator {:?} failed", opno);
     }
     let op = pg_sys::GETSTRUCT(htup) as pg_sys::Form_pg_operator;
     pg_sys::ReleaseSysCache(htup);
@@ -183,7 +185,7 @@ pub(crate) unsafe fn extract_from_null_test(
 
     let field = pg_sys::get_attname(baserel_id, (*var).varattno, false);
 
-    let opname = if (*expr).nulltesttype == pg_sys::NullTestType_IS_NULL {
+    let opname = if (*expr).nulltesttype == pg_sys::NullTestType::IS_NULL {
         "is".to_string()
     } else {
         "is not".to_string()
@@ -289,7 +291,7 @@ pub(crate) unsafe fn extract_from_bool_expr(
 ) -> Option<Qual> {
     let args: PgList<pg_sys::Node> = PgList::from_pg((*expr).args);
 
-    if (*expr).boolop != pg_sys::BoolExprType_NOT_EXPR || args.len() != 1 {
+    if (*expr).boolop != pg_sys::BoolExprType::NOT_EXPR || args.len() != 1 {
         return None;
     }
 

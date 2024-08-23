@@ -26,9 +26,9 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwState<E, W> {
 #[repr(u32)]
 #[derive(Debug, Clone)]
 pub enum ListType {
-    FdwImportSchemaAll = pgrx::pg_sys::ImportForeignSchemaType_FDW_IMPORT_SCHEMA_ALL,
-    FdwImportSchemaLimitTo = pgrx::pg_sys::ImportForeignSchemaType_FDW_IMPORT_SCHEMA_LIMIT_TO,
-    FdwImportSchemaExcept = pgrx::pg_sys::ImportForeignSchemaType_FDW_IMPORT_SCHEMA_EXCEPT,
+    FdwImportSchemaAll = pgrx::pg_sys::ImportForeignSchemaType::FDW_IMPORT_SCHEMA_ALL,
+    FdwImportSchemaLimitTo = pgrx::pg_sys::ImportForeignSchemaType::FDW_IMPORT_SCHEMA_LIMIT_TO,
+    FdwImportSchemaExcept = pgrx::pg_sys::ImportForeignSchemaType::FDW_IMPORT_SCHEMA_EXCEPT,
 }
 
 #[derive(Debug, Clone)]
@@ -66,13 +66,13 @@ pub(super) extern "C" fn import_foreign_schema<E: Into<ErrorReport>, W: ForeignD
                 .to_string(),
 
             list_type: match (*stmt).list_type {
-                pgrx::pg_sys::ImportForeignSchemaType_FDW_IMPORT_SCHEMA_ALL => {
+                pgrx::pg_sys::ImportForeignSchemaType::FDW_IMPORT_SCHEMA_ALL => {
                     ListType::FdwImportSchemaAll
                 }
-                pgrx::pg_sys::ImportForeignSchemaType_FDW_IMPORT_SCHEMA_LIMIT_TO => {
+                pgrx::pg_sys::ImportForeignSchemaType::FDW_IMPORT_SCHEMA_LIMIT_TO => {
                     ListType::FdwImportSchemaLimitTo
                 }
-                pgrx::pg_sys::ImportForeignSchemaType_FDW_IMPORT_SCHEMA_EXCEPT => {
+                pgrx::pg_sys::ImportForeignSchemaType::FDW_IMPORT_SCHEMA_EXCEPT => {
                     ListType::FdwImportSchemaExcept
                 }
                 // This should not happen, it's okay to default to FdwImportSchemaAll

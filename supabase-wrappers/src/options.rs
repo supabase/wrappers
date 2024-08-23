@@ -124,14 +124,14 @@ pub unsafe fn user_mapping_options(fserver: *mut pg_sys::ForeignServer) -> HashM
     let user_id = pg_sys::GetUserId();
 
     let mut tup = pg_sys::SearchSysCache2(
-        pg_sys::SysCacheIdentifier_USERMAPPINGUSERSERVER as i32,
+        pg_sys::SysCacheIdentifier::USERMAPPINGUSERSERVER as i32,
         pg_sys::Datum::from(user_id),
         pg_sys::Datum::from((*fserver).serverid),
     );
 
     if tup.is_null() {
         tup = pg_sys::SearchSysCache2(
-            pg_sys::SysCacheIdentifier_USERMAPPINGUSERSERVER as i32,
+            pg_sys::SysCacheIdentifier::USERMAPPINGUSERSERVER as i32,
             pg_sys::Datum::from(pg_sys::InvalidOid),
             pg_sys::Datum::from((*fserver).serverid),
         );
