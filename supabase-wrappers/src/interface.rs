@@ -1,7 +1,6 @@
 //! Provides interface types and trait to develop Postgres foreign data wrapper
 //!
 
-use crate::instance::ForeignServer;
 use crate::FdwRoutine;
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::{Date, Interval, Time, Timestamp, TimestampWithTimeZone};
