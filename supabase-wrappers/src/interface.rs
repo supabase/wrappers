@@ -32,6 +32,9 @@ pub const FOREIGN_SERVER_RELATION_ID: Oid = BuiltinOid::ForeignServerRelationId.
 /// Constant can be used in [validator](ForeignDataWrapper::validator)
 pub const FOREIGN_TABLE_RELATION_ID: Oid = BuiltinOid::ForeignTableRelationId.value();
 
+/// Constant can be used in [validator](ForeignDataWrapper::validator)
+pub const USER_MAPPING_RELATION_ID: Oid = BuiltinOid::UserMappingRelationId.value();
+
 pub const OPTS_DATABASE_KEY: &str = "database_oid";
 pub const OPTS_NAMESPACE_KEY: &str = "namespace_oid";
 pub const OPTS_TABLE_KEY: &str = "table_oid";
