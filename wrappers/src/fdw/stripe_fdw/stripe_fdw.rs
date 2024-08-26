@@ -638,10 +638,17 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
         let api_version = server.options.get("api_version").map(|t| t.as_str());
         let client = match server.options.get("api_key") {
             Some(api_key) => Some(create_client(api_key, api_version)),
-            None => {
-                let key_id = require_option("api_key_id", &server.options)?;
-                get_vault_secret(key_id).map(|api_key| create_client(&api_key, api_version))
-            }
+            None => server
+                .options
+                .get("api_key_id")
+                .and_then(|key_id| get_vault_secret(key_id))
+                .or_else(|| {
+                    server
+                        .options
+                        .get("api_key_name")
+                        .and_then(|key_name| get_vault_secret_by_name(key_name))
+                })
+                .map(|api_key| create_client(&api_key, api_version)),
         }
         .transpose()?;
 
