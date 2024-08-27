@@ -648,7 +648,14 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
                         .get("api_key_name")
                         .and_then(|key_name| get_vault_secret_by_name(key_name))
                 })
-                .map(|api_key| create_client(&api_key, api_version)),
+                .map(|api_key| create_client(&api_key, api_version))
+                .or_else(|| {
+                    report_error(
+                        pgrx::PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                        "either api_key_id or api_key_name option is required",
+                    );
+                    None
+                }),
         }
         .transpose()?;
 
