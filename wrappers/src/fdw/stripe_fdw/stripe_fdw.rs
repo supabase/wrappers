@@ -255,7 +255,7 @@ fn inc_stats_request_cnt(stats_metadata: &mut JsonB) -> StripeFdwResult<()> {
 }
 
 #[wrappers_fdw(
-    version = "0.1.9",
+    version = "0.1.10",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/stripe_fdw",
     error_type = "StripeFdwError"
