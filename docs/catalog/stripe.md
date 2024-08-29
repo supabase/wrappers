@@ -41,18 +41,6 @@ create foreign data wrapper stripe_wrapper
 
 We need to provide Postgres with the credentials to connect to Stripe, and any additional options. We can do this using the `create server` command:
 
-=== "Without Vault"
-
-    ```sql
-    create server stripe_server
-      foreign data wrapper stripe_wrapper
-      options (
-        api_key '<Stripe API Key>',  -- Stripe API key, required
-        api_url 'https://api.stripe.com/v1/',  -- Stripe API base URL, optional. Default is 'https://api.stripe.com/v1/'
-        api_version '2024-06-20'  -- Stripe API version, optional. Default is your Stripe account’s default API version.
-      );
-    ```
-
 === "With Vault"
 
     By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials.
@@ -68,13 +56,26 @@ We need to provide Postgres with the credentials to connect to Stripe, and any a
     )
     returning key_id;
     ```
-    Reference the credentials using the Key ID:
+    Reference the credentials using the Key ID or Key Name:
 
     ```sql
     create server stripe_server
       foreign data wrapper stripe_wrapper
       options (
-        api_key_id '<key_ID>', -- The Key ID from above, required.
+        api_key_id '<key_ID>', -- The Key ID from above, required if api_key_name is not specified.
+        api_key_name '<key_Name>', -- The Key Name from above, required if api_key_id is not specified.
+        api_url 'https://api.stripe.com/v1/',  -- Stripe API base URL, optional. Default is 'https://api.stripe.com/v1/'
+        api_version '2024-06-20'  -- Stripe API version, optional. Default is your Stripe account’s default API version.
+      );
+    ```
+
+=== "Without Vault"
+
+    ```sql
+    create server stripe_server
+      foreign data wrapper stripe_wrapper
+      options (
+        api_key '<Stripe API Key>',  -- Stripe API key, required
         api_url 'https://api.stripe.com/v1/',  -- Stripe API base URL, optional. Default is 'https://api.stripe.com/v1/'
         api_version '2024-06-20'  -- Stripe API version, optional. Default is your Stripe account’s default API version.
       );

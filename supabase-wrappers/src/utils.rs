@@ -154,9 +154,9 @@ pub fn create_async_runtime() -> Result<Runtime, CreateRuntimeError> {
     Ok(Builder::new_current_thread().enable_all().build()?)
 }
 
-/// Get decrypted secret from Vault
+/// Get decrypted secret from Vault by secret ID
 ///
-/// Get decrypted secret as string from Vault. Vault is an extension for storing
+/// Get decrypted secret as string from Vault by secret ID. Vault is an extension for storing
 /// encrypted secrets, [see more details](https://github.com/supabase/vault).
 pub fn get_vault_secret(secret_id: &str) -> Option<String> {
     match Uuid::try_parse(secret_id) {
@@ -169,11 +169,11 @@ pub fn get_vault_secret(secret_id: &str) -> Option<String> {
                     pgrx::Uuid::from_bytes(sid).into_datum(),
                 )],
             ) {
-                Ok(sid) => sid,
+                Ok(decrypted) => decrypted,
                 Err(err) => {
                     report_error(
                         PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                        &format!("invalid secret id \"{}\": {}", secret_id, err),
+                        &format!("query vault failed \"{}\": {}", secret_id, err),
                     );
                     None
                 }
@@ -183,6 +183,26 @@ pub fn get_vault_secret(secret_id: &str) -> Option<String> {
             report_error(
                 PgSqlErrorCode::ERRCODE_FDW_ERROR,
                 &format!("invalid secret id \"{}\": {}", secret_id, err),
+            );
+            None
+        }
+    }
+}
+
+/// Get decrypted secret from Vault by secret name
+///
+/// Get decrypted secret as string from Vault by secret name. Vault is an extension for storing
+/// encrypted secrets, [see more details](https://github.com/supabase/vault).
+pub fn get_vault_secret_by_name(secret_name: &str) -> Option<String> {
+    match Spi::get_one_with_args::<String>(
+        "select decrypted_secret from vault.decrypted_secrets where name = $1",
+        vec![(PgBuiltInOids::TEXTOID.oid(), secret_name.into_datum())],
+    ) {
+        Ok(decrypted) => decrypted,
+        Err(err) => {
+            report_error(
+                PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                &format!("query vault failed \"{}\": {}", secret_name, err),
             );
             None
         }
