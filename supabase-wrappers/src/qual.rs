@@ -54,6 +54,9 @@ pub(crate) unsafe fn form_array_from_datum(
         PgOid::BuiltIn(PgBuiltInOids::TIMESTAMPTZARRAYOID) => {
             Cell::from_polymorphic_datum(datum, false, pg_sys::TIMESTAMPTZOID)
         }
+        PgOid::BuiltIn(PgBuiltInOids::JSONARRAYOID) => {
+            Cell::from_polymorphic_datum(datum, false, pg_sys::JSONOID)
+        }
         PgOid::BuiltIn(PgBuiltInOids::JSONBARRAYOID) => {
             Cell::from_polymorphic_datum(datum, false, pg_sys::JSONBOID)
         }

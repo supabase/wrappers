@@ -8,8 +8,8 @@ use pgrx::{
     datum::Uuid,
     fcinfo,
     pg_sys::{self, BuiltinOid, Datum, Oid},
-    varlena_to_byte_slice, AllocatedByRust, AnyNumeric, FromDatum, IntoDatum, JsonB, PgBuiltInOids,
-    PgOid,
+    varlena_to_byte_slice, AllocatedByRust, AnyNumeric, FromDatum, IntoDatum, Json, JsonB,
+    PgBuiltInOids, PgOid,
 };
 use std::collections::HashMap;
 use std::ffi::CStr;
@@ -55,7 +55,8 @@ pub enum Cell {
     Time(Time),
     Timestamp(Timestamp),
     Timestamptz(TimestampWithTimeZone),
-    Json(JsonB),
+    Json(Json),
+    JsonB(JsonB),
     Interval(Interval),
     Bytea(*mut pg_sys::varlena),
     Uuid(Uuid),
@@ -84,7 +85,8 @@ impl Clone for Cell {
             Cell::Time(v) => Cell::Time(*v),
             Cell::Timestamp(v) => Cell::Timestamp(*v),
             Cell::Timestamptz(v) => Cell::Timestamptz(*v),
-            Cell::Json(v) => Cell::Json(JsonB(v.0.clone())),
+            Cell::Json(v) => Cell::Json(Json(v.0.clone())),
+            Cell::JsonB(v) => Cell::JsonB(JsonB(v.0.clone())),
             Cell::Interval(v) => Cell::Interval(v.clone()),
             Cell::Bytea(v) => Cell::Bytea(*v as *mut pg_sys::varlena),
             Cell::Uuid(v) => Cell::Uuid(v.clone()),
@@ -160,6 +162,7 @@ impl fmt::Display for Cell {
                 )
             },
             Cell::Json(v) => write!(f, "{:?}", v),
+            Cell::JsonB(v) => write!(f, "{:?}", v),
             Cell::Interval(v) => unsafe {
                 let i = fcinfo::direct_function_call_as_datum(
                     pg_sys::interval_out,
@@ -228,6 +231,7 @@ impl IntoDatum for Cell {
             Cell::Timestamp(v) => v.into_datum(),
             Cell::Timestamptz(v) => v.into_datum(),
             Cell::Json(v) => v.into_datum(),
+            Cell::JsonB(v) => v.into_datum(),
             Cell::Interval(v) => v.into_datum(),
             Cell::Bytea(v) => Some(Datum::from(v as *mut pg_sys::varlena)),
             Cell::Uuid(v) => v.into_datum(),
@@ -260,6 +264,7 @@ impl IntoDatum for Cell {
             || other == pg_sys::TIMEOID
             || other == pg_sys::TIMESTAMPOID
             || other == pg_sys::TIMESTAMPTZOID
+            || other == pg_sys::JSONOID
             || other == pg_sys::JSONBOID
             || other == pg_sys::INTERVALOID
             || other == pg_sys::BYTEAOID
@@ -318,8 +323,11 @@ impl FromDatum for Cell {
             PgOid::BuiltIn(PgBuiltInOids::TIMESTAMPTZOID) => {
                 TimestampWithTimeZone::from_datum(datum, is_null).map(Cell::Timestamptz)
             }
+            PgOid::BuiltIn(PgBuiltInOids::JSONOID) => {
+                Json::from_datum(datum, is_null).map(Cell::Json)
+            }
             PgOid::BuiltIn(PgBuiltInOids::JSONBOID) => {
-                JsonB::from_datum(datum, is_null).map(Cell::Json)
+                JsonB::from_datum(datum, is_null).map(Cell::JsonB)
             }
             PgOid::BuiltIn(PgBuiltInOids::INTERVALOID) => {
                 Some(Cell::Interval(Interval::from_datum(datum, false).unwrap()))
