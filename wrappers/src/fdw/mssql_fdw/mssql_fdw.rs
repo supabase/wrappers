@@ -80,8 +80,20 @@ fn field_to_cell(src_row: &tiberius::Row, tgt_col: &Column) -> MssqlFdwResult<Op
     Ok(ret)
 }
 
+struct MssqlCellFormatter {}
+
+impl CellFormatter for MssqlCellFormatter {
+    fn fmt_cell(&mut self, cell: &Cell) -> String {
+        match cell {
+            // format boolean type to 0 or 1
+            Cell::Bool(v) => format!("{}", *v as u8),
+            _ => format!("{}", cell),
+        }
+    }
+}
+
 #[wrappers_fdw(
-    version = "0.1.0",
+    version = "0.1.1",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/mssql_fdw",
     error_type = "MssqlFdwError"
@@ -120,7 +132,21 @@ impl MssqlFdw {
         if !quals.is_empty() {
             let cond = quals
                 .iter()
-                .map(|q| q.deparse())
+                .map(|q| {
+                    let oper = q.operator.as_str();
+                    let mut fmt = MssqlCellFormatter {};
+                    if let Value::Cell(cell) = &q.value {
+                        // deparse boolean test qual, e.g. "bool_col is true" => "bool_col = 1"
+                        if let Cell::Bool(_) = cell {
+                            if oper == "is" {
+                                return format!("{} = {}", q.field, fmt.fmt_cell(cell));
+                            } else if oper == "is not" {
+                                return format!("{} <> {}", q.field, fmt.fmt_cell(cell));
+                            }
+                        }
+                    }
+                    q.deparse_with_fmt(&mut fmt)
+                })
                 .collect::<Vec<String>>()
                 .join(" and ");
 

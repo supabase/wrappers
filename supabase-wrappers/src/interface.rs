@@ -234,6 +234,7 @@ impl CellFormatter for DefaultFormatter {
         format!("{}", cell)
     }
 }
+
 /// A data row in a table
 ///
 /// The row contains a column name list and cell list with same number of
@@ -350,6 +351,11 @@ pub struct Param {
 /// ```sql
 /// where bool_col
 /// -- [Qual { field: "bool_col", operator: "=", value: Cell(Bool(true)), use_or: false }]
+/// ```
+///
+/// ```sql
+/// where bool_col is true
+/// -- [Qual { field: "bool_col", operator: "is", value: Cell(Bool(true)), use_or: false }]
 /// ```
 ///
 /// ```sql

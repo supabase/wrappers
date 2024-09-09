@@ -10,5 +10,6 @@ This is a foreign data wrapper for [Microsoft SQL Server](https://www.microsoft.
 
 | Version | Date       | Notes                                                |
 | ------- | ---------- | ---------------------------------------------------- |
+| 0.1.1   | 2024-09-09 | Add boolean test qual support                        |
 | 0.1.0   | 2023-12-27 | Initial version                                      |
 
