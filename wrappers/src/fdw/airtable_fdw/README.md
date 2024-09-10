@@ -4,7 +4,7 @@ This is a foreign data wrapper for [Airtable](https://www.airtable.com). It is d
 
 ## Documentation
 
-[https://supabase.github.io/wrappers/airtable/](https://supabase.github.io/wrappers/airtable/)
+[https://fdw.dev/catalog/airtable/](https://fdw.dev/catalog/airtable/)
 
 
 ## Changelog

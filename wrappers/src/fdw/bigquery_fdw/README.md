@@ -4,7 +4,7 @@ This is a foreign data wrapper for [BigQuery](https://cloud.google.com/bigquery)
 
 ## Documentation
 
-[https://supabase.github.io/wrappers/bigquery/](https://supabase.github.io/wrappers/bigquery/)
+[https://fdw.dev/catalog/bigquery/](https://fdw.dev/catalog/bigquery/)
 
 
 ## Changelog

@@ -4,7 +4,7 @@ This is a foreign data wrapper for [Redis](https://redis.io/). It is developed u
 
 ## Documentation
 
-[https://supabase.github.io/wrappers/redis/](https://supabase.github.io/wrappers/redis/)
+[https://fdw.dev/catalog/redis/](https://fdw.dev/catalog/redis/)
 
 ## Changelog
 

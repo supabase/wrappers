@@ -4,7 +4,7 @@ This is a foreign data wrapper for [Logflare](https://logflare.app/). It is deve
 
 ## Documentation
 
-[https://supabase.github.io/wrappers/logflare/](https://supabase.github.io/wrappers/logflare/)
+[https://fdw.dev/catalog/logflare/](https://fdw.dev/catalog/logflare/)
 
 ## Changelog
 

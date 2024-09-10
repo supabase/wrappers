@@ -4,7 +4,7 @@ This is a foreign data wrapper for [Stripe](https://stripe.com/) developed using
 
 ## Documentation
 
-[https://supabase.github.io/wrappers/stripe/](https://supabase.github.io/wrappers/stripe/)
+[https://fdw.dev/catalog/stripe/](https://fdw.dev/catalog/stripe/)
 
 ## Changelog
 

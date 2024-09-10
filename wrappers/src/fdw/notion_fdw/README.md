@@ -4,7 +4,7 @@ This is a foreign data wrapper for [Notion](https://notion.so/) developed using 
 
 ## Documentation
 
-[https://supabase.github.io/wrappers/notion](https://supabase.github.io/wrappers/notion/)
+[https://fdw.dev/catalog/notion](https://fdw.dev/catalog/notion/)
 
 ## Basic usage
 

@@ -4,7 +4,7 @@ This is a foreign data wrapper for [AWS S3](https://aws.amazon.com/s3/). It is d
 
 ## Documentation
 
-[https://supabase.github.io/wrappers/s3/](https://supabase.github.io/wrappers/s3/)
+[https://fdw.dev/catalog/s3/](https://fdw.dev/catalog/s3/)
 
 ## Changelog
 
