@@ -4,7 +4,7 @@ This is a foreign data wrapper for [Microsoft SQL Server](https://www.microsoft.
 
 ## Documentation
 
-[https://supabase.github.io/wrappers/mssql/](https://supabase.github.io/wrappers/mssql/)
+[https://fdw.dev/catalog/mssql/](https://fdw.dev/catalog/mssql/)
 
 ## Changelog
 

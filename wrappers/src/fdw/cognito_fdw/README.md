@@ -4,7 +4,7 @@ This is a demo foreign data wrapper which is developed using [Wrappers](https://
 
 ## Documentation
 
-[https://supabase.github.io/wrappers/cognito/](https://supabase.github.io/wrappers/cognito/)
+[https://fdw.dev/catalog/cognito/](https://fdw.dev/catalog/cognito/)
 
 ## Changelog
 

@@ -4,7 +4,7 @@ This is a foreign data wrapper for [ClickHouse](https://clickhouse.com/). It is 
 
 ## Documentation
 
-[https://supabase.github.io/wrappers/clickhouse/](https://supabase.github.io/wrappers/clickhouse/)
+[https://fdw.dev/catalog/clickhouse/](https://fdw.dev/catalog/clickhouse/)
 
 
 ## Changelog

@@ -36,7 +36,7 @@ Restoring a logical backup of a database with a materialized view using a foreig
 
 ## Documentation
 
-- [Usage Docs](https://supabase.github.io/wrappers/)
+- [Usage Docs](https://fdw.dev/)
 - [Developer Docs (docs.rs)](https://docs.rs/supabase-wrappers/latest/supabase_wrappers/)
 
 ## Installation
@@ -51,7 +51,7 @@ cargo pgrx install --pg-config [path_to_pg_config] --features stripe_fdw
 
 ## Developing a FDW
 
-Visit [Wrappers Docs](https://supabase.github.io/wrappers/) for more details.
+Visit [Wrappers Docs](https://fdw.dev/) for more details.
 
 ## License
 
