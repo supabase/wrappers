@@ -1,7 +1,6 @@
 use crate::stats;
 #[allow(deprecated)]
-use chrono::{Date, DateTime, Datelike, NaiveDate, NaiveDateTime, Utc};
-use chrono_tz::Tz;
+use chrono::{DateTime, Datelike, NaiveDate, NaiveDateTime, Utc};
 use clickhouse_rs::{types, types::Block, types::SqlType, ClientHandle, Pool};
 use pgrx::to_timestamp;
 use regex::{Captures, Regex};
@@ -56,8 +55,7 @@ fn field_to_cell(row: &types::Row<types::Complex>, i: usize) -> ClickHouseFdwRes
             Ok(Some(Cell::String(value)))
         }
         SqlType::Date => {
-            #[allow(deprecated)]
-            let value = row.get::<Date<_>, usize>(i)?;
+            let value = row.get::<NaiveDate, usize>(i)?;
             let dt = pgrx::Date::new(value.year(), value.month() as u8, value.day() as u8)?;
             Ok(Some(Cell::Date(dt)))
         }
@@ -66,6 +64,65 @@ fn field_to_cell(row: &types::Row<types::Complex>, i: usize) -> ClickHouseFdwRes
             let ts = to_timestamp(value.timestamp() as f64);
             Ok(Some(Cell::Timestamp(ts.to_utc())))
         }
+        SqlType::Nullable(v) => match v {
+            SqlType::UInt8 => {
+                let value = row.get::<Option<u8>, usize>(i)?;
+                Ok(value.map(|t| Cell::Bool(t != 0)))
+            }
+            SqlType::Int16 => {
+                let value = row.get::<Option<i16>, usize>(i)?;
+                Ok(value.map(Cell::I16))
+            }
+            SqlType::UInt16 => {
+                let value = row.get::<Option<u16>, usize>(i)?;
+                Ok(value.map(|t| Cell::I32(t as _)))
+            }
+            SqlType::Int32 => {
+                let value = row.get::<Option<i32>, usize>(i)?;
+                Ok(value.map(Cell::I32))
+            }
+            SqlType::UInt32 => {
+                let value = row.get::<Option<u32>, usize>(i)?;
+                Ok(value.map(|t| Cell::I64(t as _)))
+            }
+            SqlType::Float32 => {
+                let value = row.get::<Option<f32>, usize>(i)?;
+                Ok(value.map(Cell::F32))
+            }
+            SqlType::Float64 => {
+                let value = row.get::<Option<f64>, usize>(i)?;
+                Ok(value.map(Cell::F64))
+            }
+            SqlType::UInt64 => {
+                let value = row.get::<Option<u64>, usize>(i)?;
+                Ok(value.map(|t| Cell::I64(t as _)))
+            }
+            SqlType::Int64 => {
+                let value = row.get::<Option<i64>, usize>(i)?;
+                Ok(value.map(Cell::I64))
+            }
+            SqlType::String => {
+                let value = row.get::<Option<String>, usize>(i)?;
+                Ok(value.map(Cell::String))
+            }
+            SqlType::Date => {
+                let value = row.get::<Option<NaiveDate>, usize>(i)?;
+                Ok(value
+                    .map(|t| pgrx::Date::new(t.year(), t.month() as u8, t.day() as u8))
+                    .transpose()?
+                    .map(Cell::Date))
+            }
+            SqlType::DateTime(_) => {
+                let value = row.get::<Option<DateTime<_>>, usize>(i)?;
+                Ok(value.map(|t| {
+                    let ts = to_timestamp(t.timestamp() as f64);
+                    Cell::Timestamp(ts.to_utc())
+                }))
+            }
+            _ => Err(ClickHouseFdwError::UnsupportedColumnType(
+                sql_type.to_string().into(),
+            )),
+        },
         _ => Err(ClickHouseFdwError::UnsupportedColumnType(
             sql_type.to_string().into(),
         )),
@@ -73,7 +130,7 @@ fn field_to_cell(row: &types::Row<types::Complex>, i: usize) -> ClickHouseFdwRes
 }
 
 #[wrappers_fdw(
-    version = "0.1.3",
+    version = "0.1.4",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/clickhouse_fdw",
     error_type = "ClickHouseFdwError"
@@ -283,9 +340,6 @@ impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
                         .unwrap();
                     let cell = field_to_cell(&src_row, i)?;
                     let col_name = src_row.name(i).unwrap();
-                    if cell.as_ref().is_none() {
-                        return Ok(None);
-                    }
                     row.push(col_name, cell);
                 }
                 self.row_idx += 1;
@@ -324,7 +378,7 @@ impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
                             let tm = NaiveDate::parse_from_str(&s, "%Y-%m-%d")?;
                             let epoch = NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
                             let duration = tm - epoch;
-                            let dt = types::Value::Date(duration.num_days() as u16, Tz::UTC);
+                            let dt = types::Value::Date(duration.num_days() as u16);
                             row.push((col_name, dt));
                         }
                         Cell::Timestamp(_) => {

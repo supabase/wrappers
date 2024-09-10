@@ -170,7 +170,7 @@ pgrx = { version = "=0.11.3" }
 supabase-wrappers = { path = "../supabase-wrappers", default-features = false }
 
 # for clickhouse_fdw
-clickhouse-rs = { git = "https://github.com/suharev7/clickhouse-rs", rev = "ecf28f4677", features = [
+clickhouse-rs = { git = "https://github.com/suharev7/clickhouse-rs", rev = "abfe517101eefe36bfdb7da248690659aa284ad3", features = [
     "tls",
 ], optional = true }
 chrono = { version = "0.4", optional = true }
