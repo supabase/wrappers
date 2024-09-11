@@ -364,33 +364,84 @@ impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
 
     fn insert(&mut self, src: &Row) -> ClickHouseFdwResult<()> {
         if let Some(ref mut client) = self.client {
+            // use a dummy query to probe column types
+            let sql = format!("select * from {} where false", self.table);
+            let probe = self.rt.block_on(client.query(&sql).fetch_all())?;
+
+            // add row to block
             let mut row = Vec::new();
             for (col_name, cell) in src.iter() {
                 let col_name = col_name.to_owned();
-                if let Some(cell) = cell {
-                    match cell {
-                        Cell::Bool(v) => row.push((col_name, types::Value::from(*v))),
-                        Cell::F64(v) => row.push((col_name, types::Value::from(*v))),
-                        Cell::I64(v) => row.push((col_name, types::Value::from(*v))),
-                        Cell::String(v) => row.push((col_name, types::Value::from(v.as_str()))),
+                let tgt_col = probe.get_column(col_name.as_ref())?;
+                let is_nullable = matches!(tgt_col.sql_type(), SqlType::Nullable(_));
+
+                let value = cell
+                    .as_ref()
+                    .map(|c| match c {
+                        Cell::Bool(v) => {
+                            let val = if is_nullable {
+                                types::Value::from(Some(*v))
+                            } else {
+                                types::Value::from(*v)
+                            };
+                            Ok(val)
+                        }
+                        Cell::F64(v) => {
+                            let val = if is_nullable {
+                                types::Value::from(Some(*v))
+                            } else {
+                                types::Value::from(*v)
+                            };
+                            Ok(val)
+                        }
+                        Cell::I64(v) => {
+                            let val = if is_nullable {
+                                types::Value::from(Some(*v))
+                            } else {
+                                types::Value::from(*v)
+                            };
+                            Ok(val)
+                        }
+                        Cell::String(v) => {
+                            let s = v.as_str();
+                            let val = if is_nullable {
+                                types::Value::from(Some(s))
+                            } else {
+                                types::Value::from(s)
+                            };
+                            Ok(val)
+                        }
                         Cell::Date(_) => {
-                            let s = cell.to_string().replace('\'', "");
+                            let s = c.to_string().replace('\'', "");
                             let tm = NaiveDate::parse_from_str(&s, "%Y-%m-%d")?;
                             let epoch = NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
                             let duration = tm - epoch;
-                            let dt = types::Value::Date(duration.num_days() as u16);
-                            row.push((col_name, dt));
+                            let dt = duration.num_days() as u16;
+                            let val = if is_nullable {
+                                types::Value::from(Some(dt))
+                            } else {
+                                types::Value::Date(dt)
+                            };
+                            Ok(val)
                         }
                         Cell::Timestamp(_) => {
-                            let s = cell.to_string().replace('\'', "");
-                            let tm = NaiveDateTime::parse_from_str(&s, "%Y-%m-%d %H:%M:%S")?;
-                            let tm: DateTime<Utc> = DateTime::from_naive_utc_and_offset(tm, Utc);
-                            row.push((col_name, types::Value::from(tm)));
+                            let s = c.to_string().replace('\'', "");
+                            let naive_tm = NaiveDateTime::parse_from_str(&s, "%Y-%m-%d %H:%M:%S")?;
+                            let tm: DateTime<Utc> =
+                                DateTime::from_naive_utc_and_offset(naive_tm, Utc);
+                            let val = if is_nullable {
+                                types::Value::Nullable(either::Either::Right(Box::new(tm.into())))
+                            } else {
+                                types::Value::from(tm)
+                            };
+                            Ok(val)
                         }
-                        _ => {
-                            return Err(ClickHouseFdwError::UnsupportedColumnType(cell.to_string()))
-                        }
-                    }
+                        _ => Err(ClickHouseFdwError::UnsupportedColumnType(c.to_string())),
+                    })
+                    .transpose()?;
+
+                if let Some(v) = value {
+                    row.push((col_name, v));
                 }
             }
             let mut block = Block::new();
