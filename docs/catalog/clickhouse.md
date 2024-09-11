@@ -33,6 +33,7 @@ The ClickHouse Wrapper allows you to read and write data from ClickHouse within 
 | text             | String          |
 | date             | Date            |
 | timestamp        | DateTime        |
+| *                | Nullable<T>     |
 
 ## Preparation
 

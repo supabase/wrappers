@@ -19,7 +19,9 @@ mod tests {
             rt.block_on(async {
                 handle.execute("DROP TABLE IF EXISTS test_table").await?;
                 handle
-                    .execute("CREATE TABLE test_table (id INT, name TEXT) engine = Memory")
+                    .execute(
+                        "CREATE TABLE test_table (id Int64, name Nullable(TEXT)) engine = Memory",
+                    )
                     .await
             })
             .expect("test_table in ClickHouse");
@@ -133,6 +135,18 @@ mod tests {
                 )]),
             )
             .unwrap();
+            c.update(
+                "INSERT INTO test_table (id, name) VALUES ($1, $2)",
+                None,
+                Some(vec![
+                    (PgOid::BuiltIn(PgBuiltInOids::INT4OID), 42.into_datum()),
+                    (
+                        PgOid::BuiltIn(PgBuiltInOids::TEXTOID),
+                        None::<String>.into_datum(),
+                    ),
+                ]),
+            )
+            .unwrap();
             assert_eq!(
                 c.select("SELECT name FROM test_table ORDER BY name", None, None)
                     .unwrap()
@@ -230,7 +244,7 @@ mod tests {
                 "test3"
             );
 
-            let remote_value: String = rt
+            let remote_value: Option<String> = rt
                 .block_on(async {
                     handle
                         .query("SELECT name FROM test_table ORDER BY name LIMIT 1")
@@ -242,7 +256,7 @@ mod tests {
                         .get("name")
                 })
                 .expect("value");
-            assert_eq!(remote_value, "test");
+            assert_eq!(remote_value, Some("test".to_string()));
         });
     }
 }
