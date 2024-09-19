@@ -79,6 +79,7 @@ impl From<&HostCell> for GuestCell {
                 Self::Timestamptz(v.into_inner() + 946_684_800_000_000)
             }
             HostCell::Json(v) => Self::Json(v.0.to_string()),
+            _ => todo!(),
         }
     }
 }

@@ -47,6 +47,13 @@ pub enum Cell {
     Timestamp(Timestamp),
     Timestamptz(TimestampWithTimeZone),
     Json(JsonB),
+    BoolArray(Vec<Option<bool>>),
+    I16Array(Vec<Option<i16>>),
+    I32Array(Vec<Option<i32>>),
+    I64Array(Vec<Option<i64>>),
+    F32Array(Vec<Option<f32>>),
+    F64Array(Vec<Option<f64>>),
+    StringArray(Vec<Option<String>>),
 }
 
 impl Clone for Cell {
@@ -65,8 +72,30 @@ impl Clone for Cell {
             Cell::Timestamp(v) => Cell::Timestamp(*v),
             Cell::Timestamptz(v) => Cell::Timestamptz(*v),
             Cell::Json(v) => Cell::Json(JsonB(v.0.clone())),
+            Cell::BoolArray(v) => Cell::BoolArray(v.clone()),
+            Cell::I16Array(v) => Cell::I16Array(v.clone()),
+            Cell::I32Array(v) => Cell::I32Array(v.clone()),
+            Cell::I64Array(v) => Cell::I64Array(v.clone()),
+            Cell::F32Array(v) => Cell::F32Array(v.clone()),
+            Cell::F64Array(v) => Cell::F64Array(v.clone()),
+            Cell::StringArray(v) => Cell::StringArray(v.clone()),
         }
     }
+}
+
+fn write_array<T: std::fmt::Display>(
+    array: &[Option<T>],
+    f: &mut fmt::Formatter<'_>,
+) -> fmt::Result {
+    let res = array
+        .iter()
+        .map(|e| match e {
+            Some(val) => format!("{}", val),
+            None => "null".to_owned(),
+        })
+        .collect::<Vec<String>>()
+        .join(",");
+    write!(f, "[{}]", res)
 }
 
 impl fmt::Display for Cell {
@@ -123,6 +152,13 @@ impl fmt::Display for Cell {
                 )
             },
             Cell::Json(v) => write!(f, "{:?}", v),
+            Cell::BoolArray(v) => write_array(v, f),
+            Cell::I16Array(v) => write_array(v, f),
+            Cell::I32Array(v) => write_array(v, f),
+            Cell::I64Array(v) => write_array(v, f),
+            Cell::F32Array(v) => write_array(v, f),
+            Cell::F64Array(v) => write_array(v, f),
+            Cell::StringArray(v) => write_array(v, f),
         }
     }
 }
@@ -143,6 +179,13 @@ impl IntoDatum for Cell {
             Cell::Timestamp(v) => v.into_datum(),
             Cell::Timestamptz(v) => v.into_datum(),
             Cell::Json(v) => v.into_datum(),
+            Cell::BoolArray(v) => v.into_datum(),
+            Cell::I16Array(v) => v.into_datum(),
+            Cell::I32Array(v) => v.into_datum(),
+            Cell::I64Array(v) => v.into_datum(),
+            Cell::F32Array(v) => v.into_datum(),
+            Cell::F64Array(v) => v.into_datum(),
+            Cell::StringArray(v) => v.into_datum(),
         }
     }
 
@@ -165,6 +208,13 @@ impl IntoDatum for Cell {
             || other == pg_sys::TIMESTAMPOID
             || other == pg_sys::TIMESTAMPTZOID
             || other == pg_sys::JSONBOID
+            || other == pg_sys::BOOLARRAYOID
+            || other == pg_sys::TEXTARRAYOID
+            || other == pg_sys::INT2ARRAYOID
+            || other == pg_sys::INT4ARRAYOID
+            || other == pg_sys::INT8ARRAYOID
+            || other == pg_sys::FLOAT4ARRAYOID
+            || other == pg_sys::FLOAT8ARRAYOID
     }
 }
 
@@ -212,6 +262,27 @@ impl FromDatum for Cell {
             PgOid::BuiltIn(PgBuiltInOids::JSONBOID) => {
                 JsonB::from_datum(datum, is_null).map(Cell::Json)
             }
+            PgOid::BuiltIn(PgBuiltInOids::BOOLARRAYOID) => {
+                Vec::<Option<bool>>::from_datum(datum, false).map(Cell::BoolArray)
+            }
+            PgOid::BuiltIn(PgBuiltInOids::INT2ARRAYOID) => {
+                Vec::<Option<i16>>::from_datum(datum, false).map(Cell::I16Array)
+            }
+            PgOid::BuiltIn(PgBuiltInOids::INT4ARRAYOID) => {
+                Vec::<Option<i32>>::from_datum(datum, false).map(Cell::I32Array)
+            }
+            PgOid::BuiltIn(PgBuiltInOids::INT8ARRAYOID) => {
+                Vec::<Option<i64>>::from_datum(datum, false).map(Cell::I64Array)
+            }
+            PgOid::BuiltIn(PgBuiltInOids::FLOAT4ARRAYOID) => {
+                Vec::<Option<f32>>::from_datum(datum, false).map(Cell::F32Array)
+            }
+            PgOid::BuiltIn(PgBuiltInOids::FLOAT8ARRAYOID) => {
+                Vec::<Option<f64>>::from_datum(datum, false).map(Cell::F64Array)
+            }
+            PgOid::BuiltIn(PgBuiltInOids::TEXTARRAYOID) => {
+                Vec::<Option<String>>::from_datum(datum, false).map(Cell::StringArray)
+            }
             _ => None,
         }
     }
@@ -234,6 +305,7 @@ impl CellFormatter for DefaultFormatter {
         format!("{}", cell)
     }
 }
+
 /// A data row in a table
 ///
 /// The row contains a column name list and cell list with same number of
