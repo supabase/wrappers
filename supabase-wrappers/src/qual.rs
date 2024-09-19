@@ -303,6 +303,36 @@ pub(crate) unsafe fn extract_from_bool_expr(
     Some(qual)
 }
 
+pub(crate) unsafe fn extract_from_boolean_test(
+    baserel_id: pg_sys::Oid,
+    expr: *mut pg_sys::BooleanTest,
+) -> Option<Qual> {
+    let var = (*expr).arg as *mut pg_sys::Var;
+    if !is_a(var as _, pg_sys::NodeTag::T_Var) || (*var).varattno < 1 {
+        return None;
+    }
+
+    let field = pg_sys::get_attname(baserel_id, (*var).varattno, false);
+
+    let (opname, value) = match (*expr).booltesttype {
+        pg_sys::BoolTestType_IS_TRUE => ("is".to_string(), true),
+        pg_sys::BoolTestType_IS_FALSE => ("is".to_string(), false),
+        pg_sys::BoolTestType_IS_NOT_TRUE => ("is not".to_string(), true),
+        pg_sys::BoolTestType_IS_NOT_FALSE => ("is not".to_string(), false),
+        _ => return None,
+    };
+
+    let qual = Qual {
+        field: CStr::from_ptr(field).to_str().unwrap().to_string(),
+        operator: opname,
+        value: Value::Cell(Cell::Bool(value)),
+        use_or: false,
+        param: None,
+    };
+
+    Some(qual)
+}
+
 pub(crate) unsafe fn extract_quals(
     root: *mut pg_sys::PlannerInfo,
     baserel: *mut pg_sys::RelOptInfo,
@@ -323,6 +353,8 @@ pub(crate) unsafe fn extract_quals(
             extract_from_var(root, baserel_id, (*baserel).relids, expr as _)
         } else if is_a(expr, pg_sys::NodeTag::T_BoolExpr) {
             extract_from_bool_expr(root, baserel_id, (*baserel).relids, expr as _)
+        } else if is_a(expr, pg_sys::NodeTag::T_BooleanTest) {
+            extract_from_boolean_test(baserel_id, expr as _)
         } else {
             if let Some(stm) = pgrx::nodes::node_to_string(expr) {
                 report_warning(&format!("unsupported qual: {}", stm));

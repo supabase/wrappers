@@ -34,6 +34,7 @@ mod tests {
                     r#"CREATE TABLE users (
                         id bigint,
                         name varchar(30),
+                        is_admin bit,
                         dt datetime2
                     )"#,
                     &[],
@@ -46,9 +47,9 @@ mod tests {
             client
                 .execute(
                     r#"
-                    INSERT INTO users(id, name, dt) VALUES (42, 'foo', '2023-12-28');
-                    INSERT INTO users(id, name, dt) VALUES (43, 'bar', '2023-12-27');
-                    INSERT INTO users(id, name, dt) VALUES (44, 'baz', '2023-12-26');
+                    INSERT INTO users(id, name, is_admin, dt) VALUES (42, 'foo', 0, '2023-12-28');
+                    INSERT INTO users(id, name, is_admin, dt) VALUES (43, 'bar', 1, '2023-12-27');
+                    INSERT INTO users(id, name, is_admin, dt) VALUES (44, 'baz', 0, '2023-12-26');
                     "#,
                     &[],
                 )
@@ -79,6 +80,7 @@ mod tests {
                   CREATE FOREIGN TABLE mssql_users (
                     id bigint,
                     name text,
+                    is_admin boolean,
                     dt timestamp
                   )
                   SERVER mssql_server
@@ -163,6 +165,17 @@ mod tests {
                 .filter_map(|r| r.get_by_name::<&str, _>("name").unwrap())
                 .collect::<Vec<_>>();
             assert_eq!(results, vec!["foo", "bar"]);
+
+            let results = c
+                .select(
+                    "SELECT name FROM mssql_users WHERE is_admin is true",
+                    None,
+                    None,
+                )
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("name").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(results, vec!["bar"]);
         });
 
         let result = std::panic::catch_unwind(|| {
