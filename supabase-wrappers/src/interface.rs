@@ -209,12 +209,12 @@ impl IntoDatum for Cell {
             || other == pg_sys::TIMESTAMPTZOID
             || other == pg_sys::JSONBOID
             || other == pg_sys::BOOLARRAYOID
-            || other == pg_sys::TEXTARRAYOID
             || other == pg_sys::INT2ARRAYOID
             || other == pg_sys::INT4ARRAYOID
             || other == pg_sys::INT8ARRAYOID
             || other == pg_sys::FLOAT4ARRAYOID
             || other == pg_sys::FLOAT8ARRAYOID
+            || other == pg_sys::TEXTARRAYOID
     }
 }
 
