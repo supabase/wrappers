@@ -255,7 +255,7 @@ fn inc_stats_request_cnt(stats_metadata: &mut JsonB) -> StripeFdwResult<()> {
 }
 
 #[wrappers_fdw(
-    version = "0.1.10",
+    version = "0.1.11",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/stripe_fdw",
     error_type = "StripeFdwError"
@@ -307,6 +307,7 @@ impl StripeFdw {
             "tokens" => vec![],
             "topups" => vec!["status"],
             "transfers" => vec!["destination"],
+            "billing/meters" => vec![],
             "checkout/sessions" => vec!["customer", "payment_intent", "subscription"],
             _ => {
                 return Err(StripeFdwError::ObjectNotImplemented(obj.to_string()));
@@ -600,6 +601,17 @@ impl StripeFdw {
                     ("description", "string"),
                     ("destination", "string"),
                     ("created", "timestamp"),
+                ],
+                tgt_cols,
+            ),
+            "billing/meters" => body_to_rows(
+                resp_body,
+                vec![
+                    ("id", "string"),
+                    ("display_name", "string"),
+                    ("event_name", "string"),
+                    ("event_time_window", "string"),
+                    ("status", "string"),
                 ],
                 tgt_cols,
             ),

@@ -466,6 +466,26 @@ mod tests {
 
             c.update(
                 r#"
+                CREATE FOREIGN TABLE billing_meters (
+                  id text,
+                  display_name text,
+                  event_name text,
+                  event_time_window text,
+                  status text,
+                  attrs jsonb
+                )
+                SERVER my_stripe_server
+                OPTIONS (
+                  object 'billing/meters'
+                )
+             "#,
+                None,
+                None,
+            )
+            .unwrap();
+
+            c.update(
+                r#"
                 CREATE FOREIGN TABLE checkout_sessions (
                   id text,
                   customer text,
@@ -552,7 +572,7 @@ mod tests {
                 .collect::<Vec<_>>();
             assert_eq!(
                 results,
-                vec![("cus_MJiBgSUgeWFN0z", Timestamp::from(287883090000000i64))]
+                vec![("cus_QXg1o8vcGmoR32", Timestamp::from(287883090000000i64))]
             );
 
             let results = c
@@ -564,7 +584,21 @@ mod tests {
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("id").unwrap())
                 .collect::<Vec<_>>();
-            assert_eq!(results, vec!["cus_MJiBgSUgeWFN0z"]);
+            assert_eq!(results, vec!["cus_QXg1o8vcGmoR32"]);
+
+            let results = c
+                .select(
+                    "SELECT id, display_name FROM billing_meters",
+                    None,
+                    None,
+                )
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("id").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(
+                results,
+                vec!["meter_123"]
+            );
 
             let results = c
                 .select(
@@ -577,7 +611,7 @@ mod tests {
                 .collect::<Vec<_>>();
             assert_eq!(
                 results,
-                vec!["cs_test_a1DmlfbOPqmbKHfpwpFQ0RM3pVXmKoESZbJxnKrPdMsLDPPMGYtEBcHGPR"]
+                vec!["cs_test_a1YS1URlnyQCN5fUUduORoQ7Pw41PJqDWkIVQCpJPqkfIhd6tVY8XB1OLY"]
             );
 
             // Stripe mock service cannot return 404 error code correctly for
@@ -605,7 +639,7 @@ mod tests {
                 .collect::<Vec<_>>();
             assert_eq!(
                 results,
-                vec![(("dp_1Lb4lXDciZwYG8GPXn1Bh0MY", 1000), "usd")]
+                vec![(("dp_1Pgc71B7WZ01zgkWMevJiAUx", 1000), "usd")]
             );
 
             let results = c
@@ -619,7 +653,7 @@ mod tests {
                 .collect::<Vec<_>>();
             assert_eq!(
                 results,
-                vec![("evt_1Lb4lfDciZwYG8GPHARl3JTf", "plan.created")]
+                vec![("evt_1Pgc76B7WZ01zgkWwyRHS12y", "plan.created")]
             );
 
             let results = c
@@ -638,8 +672,8 @@ mod tests {
                 vec![(
                     (
                         (
-                            "file_1Lb4liDciZwYG8GPvkwgZXix",
-                            "file_1Lb4liDciZwYG8GPvkwgZXix"
+                            "file_1Pgag2B7WZ01zgkWITx3dIQc",
+                            "file_1Pgag2B7WZ01zgkWITx3dIQc"
                         ),
                         "dispute_evidence"
                     ),
@@ -660,10 +694,10 @@ mod tests {
             assert_eq!(
                 results,
                 vec![((
-                            "link_1Lb4liDciZwYG8GPQ8qAqnEa",
-                            "file_1Lb4liDciZwYG8GP2VGapbrq"
+                            "link_1Pgc76B7WZ01zgkWPhd77i13",
+                            "file_1Pgag2B7WZ01zgkWITx3dIQc"
                         ),
-                        "https://dcr-upload-mydev.dev.stripe.me/links/MDB8YWNjdF8xTGI0bEREY2lad1lHOEdQfGZsX3Rlc3RfbFNhUld1aDYzdDd6eDYzU01RUzNzZWlE00zJ1o9SLI"
+                        "https://sangeekp-15t6ai--upload-mydev.dev.stripe.me/links/MDB8YWNjdF8xUGdhZlRCN1daMDF6Z2tXfGZsX3Rlc3Rfb0Jkam9sNHdEZUpXRHUzSGhXNTRkZDI500qGiHOxxv"
                     )
                 ]
             );
@@ -681,7 +715,7 @@ mod tests {
                 .collect::<Vec<_>>();
             assert_eq!(
                 results,
-                vec![((("cus_MJiBgSUgeWFN0z", 1000), "usd"), "draft")]
+                vec![((("cus_QXg1o8vcGmoR32", 1000), "usd"), "draft")]
             );
 
             let results = c
@@ -708,7 +742,7 @@ mod tests {
                 .collect::<Vec<_>>();
             assert_eq!(
                 results,
-                vec![((("po_1Lb4lcDciZwYG8GPa5iKACTe", 1100), "usd"), "in_transit")]
+                vec![((("po_1Pgc79B7WZ01zgkWu1KToYf4", 1100), "usd"), "in_transit")]
             );
 
             let results = c
@@ -727,8 +761,8 @@ mod tests {
                 results,
                 vec![(
                     (
-                        (("price_1Lb4lXDciZwYG8GPenVxKLUQ", true), "usd"),
-                        "prod_MJiB8qAdQc9hgR"
+                        (("price_1PgafmB7WZ01zgkW6dKueIc5", true), "usd"),
+                        "prod_QXg1hqf4jFNsqG"
                     ),
                     "recurring"
                 )]
@@ -762,11 +796,11 @@ mod tests {
                 .collect::<Vec<_>>();
             assert_eq!(
                 results,
-                vec![((("re_1Lb4lXDciZwYG8GPkrV42Kaz", 100), "usd"), "succeeded")]
+                vec![((("re_1Pgc72B7WZ01zgkWqPvrRrPE", 100), "usd"), "succeeded")]
             );
 
             let results = c
-                .select("SELECT * FROM stripe_setup_attempts where setup_intent='seti_1Lb4lgDciZwYG8GPdEjT5Ico'", None, None).unwrap()
+                .select("SELECT * FROM stripe_setup_attempts where setup_intent='seti_1Pgag7B7WZ01zgkWSgwGdb8Z'", None, None).unwrap()
                 .filter_map(|r| {
                     r.get_by_name::<&str, _>("id")
                         .unwrap()
@@ -795,7 +829,7 @@ mod tests {
             assert_eq!(
                 results,
                 vec![(
-                    ("seti_1Lb4lgDciZwYG8GPdEjT5Ico", "requires_payment_method"),
+                    ("seti_1Pgag7B7WZ01zgkWSgwGdb8Z", "requires_payment_method"),
                     "off_session"
                 )]
             );
@@ -818,7 +852,7 @@ mod tests {
                 results,
                 vec![(
                     (
-                        ("cus_MJiBtCqOF1Bb3F", "usd"),
+                        ("cus_QXg1o8vcGmoR32", "usd"),
                         Timestamp::from(287883090000000i64)
                     ),
                     Timestamp::from(287883090000000i64)
@@ -838,7 +872,7 @@ mod tests {
                 .collect::<Vec<_>>();
             assert_eq!(
                 results,
-                vec![((("tu_1Lb4leDciZwYG8GPbKaCK9X3", 1000), "usd"), "pending")]
+                vec![((("tu_1Pgc7BB7WZ01zgkWwH7rkBgR", 1000), "usd"), "pending")]
             );
 
             let results = c
@@ -855,8 +889,8 @@ mod tests {
             assert_eq!(
                 results,
                 vec![(
-                    (("tr_1Lb4lcDciZwYG8GPNq6RhhYq", 1100), "usd"),
-                    "acct_1Lb4lDDciZwYG8GP"
+                    (("tr_1Pgc7BB7WZ01zgkWVJfE40RX", 1100), "usd"),
+                    "acct_1PgafTB7WZ01zgkW"
                 )]
             );
 
