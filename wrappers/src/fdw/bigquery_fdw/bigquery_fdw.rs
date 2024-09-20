@@ -42,7 +42,9 @@ fn field_to_cell(rs: &ResultSet, field: &TableFieldSchema) -> BigQueryFdwResult<
             Cell::Timestamp(ts.to_utc())
         }),
         _ => {
-            return Err(BigQueryFdwError::UnsupportedFieldType(field.r#type.clone()));
+            return Err(BigQueryFdwError::UnsupportedFieldType(
+                field.name.to_owned(),
+            ));
         }
     })
 }
@@ -397,6 +399,11 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
                         Cell::Timestamp(v) => row_json[col_name] = json!(v),
                         Cell::Timestamptz(v) => row_json[col_name] = json!(v),
                         Cell::Json(v) => row_json[col_name] = json!(v),
+                        _ => {
+                            return Err(BigQueryFdwError::UnsupportedFieldType(
+                                col_name.to_owned(),
+                            ));
+                        }
                     }
                 }
             }
