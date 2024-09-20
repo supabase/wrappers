@@ -587,18 +587,11 @@ mod tests {
             assert_eq!(results, vec!["cus_QXg1o8vcGmoR32"]);
 
             let results = c
-                .select(
-                    "SELECT id, display_name FROM billing_meters",
-                    None,
-                    None,
-                )
+                .select("SELECT id, display_name FROM billing_meters", None, None)
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("id").unwrap())
                 .collect::<Vec<_>>();
-            assert_eq!(
-                results,
-                vec!["meter_123"]
-            );
+            assert_eq!(results, vec!["meter_123"]);
 
             let results = c
                 .select(
