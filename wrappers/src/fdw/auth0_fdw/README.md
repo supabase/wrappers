@@ -82,5 +82,6 @@ identities     | [{"user_id": "<my_user_id>", "isSocial": false, "provider": "au
 
 | Version | Date       | Notes                                                |
 | ------- | ---------- | ---------------------------------------------------- |
+| 0.1.2   | 2024-09-23 | Make User object fields nullable                     |
 | 0.1.1   | 2023-09-20 | Error reporting refactoring                          |
 | 0.1.0   | 2022-11-30 | Initial version                                      |
