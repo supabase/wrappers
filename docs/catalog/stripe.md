@@ -107,6 +107,7 @@ The Stripe Wrapper supports data read and modify from Stripe API.
 | [File Links](https://stripe.com/docs/api/file_links/list)                     |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
 | [Invoices](https://stripe.com/docs/api/invoices/list)                         |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
 | [Mandates](https://stripe.com/docs/api/mandates)                              |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| [Meters](https://docs.stripe.com/api/billing/meter/list)                      |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
 | [PaymentIntents](https://stripe.com/docs/api/payment_intents/list)            |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
 | [Payouts](https://stripe.com/docs/api/payouts/list)                           |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
 | [Prices](https://stripe.com/docs/api/prices/list)                             |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
@@ -487,6 +488,33 @@ create foreign table stripe.mandates (
   server stripe_server
   options (
     object 'mandates'
+  );
+```
+
+While any column is allowed in a where clause, it is most efficient to filter by:
+
+- id
+
+### Meters
+
+_read only_
+
+A billing meter is a resource that allows you to track usage of a particular event.
+
+Ref: [Stripe docs](https://docs.stripe.com/api/billing/meter)
+
+```sql
+create foreign table stripe.meter (
+  id text,
+  display_name text,
+  event_name text,
+  event_time_window text,
+  status text,
+  attrs jsonb
+)
+  server stripe_server
+  options (
+    object 'billing/meters'
   );
 ```
 

@@ -49,7 +49,7 @@ services:
       retries: 3
 
   stripe:
-    image: stripe/stripe-mock:v0.144.0
+    image: stripe/stripe-mock:v0.188.0
     container_name: stripe-mock
     ports:
       - "12111:12111"
