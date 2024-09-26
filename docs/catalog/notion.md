@@ -60,7 +60,7 @@ By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server
 insert into vault.secrets (name, secret)
 values (
   'notion',
-  'bb4e69088ea07a98a90565ac610c63654423f8f1e2d48b39b5'
+  '<Notion API Key>' -- Notion API key
 )
 returning key_id;
 ```
@@ -97,7 +97,7 @@ We need to provide Postgres with the credentials to access Notion, and any addit
         fdw_package_checksum 'tbd',
         api_url 'https://api.notion.com/v1',  -- optional
         api_version '2022-06-28',  -- optional
-        api_key 'bb4e69088ea07a98a90565ac610c63654423f8f1e2d48b39b5'
+        api_key 'secret_xxxxx'  -- Notion API key
       );
     ```
 
