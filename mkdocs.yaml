@@ -22,7 +22,6 @@ nav:
           - ClickHouse: 'catalog/clickhouse.md'
           - Firebase: 'catalog/firebase.md'
           - Logflare: 'catalog/logflare.md'
-          - Notion: 'catalog/notion.md'
           - Redis: 'catalog/redis.md'
           - S3 (CSV, JSON, Parquet): 'catalog/s3.md'
           - Stripe: 'catalog/stripe.md'
@@ -31,6 +30,7 @@ nav:
           - catalog/wasm/index.md
           - Paddle: 'catalog/paddle.md'
           - Snowflake: 'catalog/snowflake.md'
+          - Notion: 'catalog/notion.md'
     - Guides:
         - Native vs Wasm Wrappers: 'guides/native-wasm.md'
         - Query Pushdown: 'guides/query-pushdown.md'

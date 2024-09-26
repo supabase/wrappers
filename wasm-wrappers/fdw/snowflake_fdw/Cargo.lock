@@ -65,7 +65,7 @@ dependencies = [
 
 [[package]]
 name = "snowflake_fdw"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "serde_json",
  "wit-bindgen-rt",
