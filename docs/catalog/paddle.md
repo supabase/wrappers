@@ -175,7 +175,7 @@ select * from paddle.customers where id = 'ctm_01hymwgpkx639a6mkvg99563sp';
 
 ## Examples
 
-Below are Some examples on how to use Paddle foreign tables.
+Below are some examples on how to use Paddle foreign tables.
 
 ### Basic example
 

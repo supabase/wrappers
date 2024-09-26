@@ -107,6 +107,55 @@ mod tests {
                 .filter_map(|r| r.get_by_name::<&str, _>("email").unwrap())
                 .collect::<Vec<_>>();
             assert_eq!(results, vec!["test@test.com"]);
+
+            // Notion FDW test
+            c.update(
+                r#"CREATE SERVER notion_server
+                     FOREIGN DATA WRAPPER wasm_wrapper
+                     OPTIONS (
+                       fdw_package_url 'file://../../wasm-wrappers/fdw/notion_fdw/target/wasm32-unknown-unknown/release/notion_fdw.wasm',
+                       fdw_package_name 'supabase:notion-fdw',
+                       fdw_package_version '>=0.1.0',
+                       api_url 'http://localhost:8096/notion',
+                       api_key '1234567890'
+                     )"#,
+                None,
+                None,
+            )
+            .unwrap();
+            c.update(
+                r#"
+                  CREATE FOREIGN TABLE notion_pages (
+                    id text,
+                    url text,
+                    created_time timestamp,
+                    last_edited_time timestamp,
+                    archived boolean,
+                    attrs jsonb
+                  )
+                  SERVER notion_server
+                  OPTIONS (
+                    object 'page'
+                  )
+             "#,
+                None,
+                None,
+            )
+            .unwrap();
+
+            let results = c
+                .select(
+                    "SELECT * FROM notion_pages WHERE id = '5a67c86f-d0da-4d0a-9dd7-f4cf164e6247'",
+                    None,
+                    None,
+                )
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("url").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(
+                results,
+                vec!["https://www.notion.so/test-page3-5a67c86fd0da4d0a9dd7f4cf164e6247"]
+            );
         });
     }
 }

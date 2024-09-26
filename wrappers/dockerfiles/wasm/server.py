@@ -67,6 +67,59 @@ class MockServer(BaseHTTPRequestHandler):
     }
 }
             '''
+        elif fdw == "notion":
+            body = '''
+{
+  "object": "page",
+  "id": "5a67c86f-d0da-4d0a-9dd7-f4cf164e6247",
+  "created_time": "2021-10-15T05:41:00.000Z",
+  "last_edited_time": "2021-10-15T05:49:00.000Z",
+  "created_by": {
+    "object": "user",
+    "id": "fd0ed76c-44bd-413a-9448-18ff4b1d6a5e"
+  },
+  "last_edited_by": {
+    "object": "user",
+    "id": "fd0ed76c-44bd-413a-9448-18ff4b1d6a5e"
+  },
+  "cover": null,
+  "icon": null,
+  "parent": {
+    "type": "workspace",
+    "workspace": true
+  },
+  "archived": false,
+  "in_trash": false,
+  "properties": {
+    "title": {
+      "id": "title",
+      "type": "title",
+      "title": [
+        {
+          "type": "text",
+          "text": {
+            "content": "test page3",
+            "link": null
+          },
+          "annotations": {
+            "bold": false,
+            "italic": false,
+            "strikethrough": false,
+            "underline": false,
+            "code": false,
+            "color": "default"
+          },
+          "plain_text": "test page3",
+          "href": null
+        }
+      ]
+    }
+  },
+  "url": "https://www.notion.so/test-page3-5a67c86fd0da4d0a9dd7f4cf164e6247",
+  "public_url": null,
+  "request_id": "85a75f82-bd22-414e-a3a7-5c00a9451a1c"
+}
+            '''
         else:
             self.send_response(404)
             return

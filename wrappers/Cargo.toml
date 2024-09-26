@@ -135,16 +135,6 @@ wasm_fdw = [
     "serde_json",
     "jwt-simple",
 ]
-notion_fdw = [
-    "reqwest",
-    "reqwest-middleware",
-    "reqwest-retry",
-    "http",
-    "serde_json",
-    "serde",
-    "url",
-    "thiserror",
-]
 # Does not include helloworld_fdw because of its general uselessness
 native_fdws = [
     "airtable_fdw",

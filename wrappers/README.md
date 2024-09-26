@@ -14,4 +14,3 @@ This is a collection of FDWs built by [Supabase](https://www.supabase.com). We c
 - [Cognito](./src/fdw/cognito_fdw): A FDW for [AWS Cogntio](https://aws.amazon.com/pm/cognito/).
 - [SQL Server](./src/fdw/mssql_fdw): A FDW for [Microsoft SQL Server](https://www.microsoft.com/en-au/sql-server/) which supports data read only.
 - [Redis](./src/fdw/redis_fdw): A FDW for [Redis](https://redis.io/) which supports data read only.
-- [Notion](./src/fdw/notion_fdw): A FDW for [Notion](https://notion.so/) which supports users read only.
