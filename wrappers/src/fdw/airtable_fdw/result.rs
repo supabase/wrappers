@@ -194,7 +194,9 @@ impl AirtableRecord {
                     || Ok(None),
                     |val| {
                         if let Value::String(v) = val {
-                            Ok(pgrx::Date::from_str(v.as_str()).ok().map(Cell::Date))
+                            Ok(pgrx::prelude::Date::from_str(v.as_str())
+                                .ok()
+                                .map(Cell::Date))
                         } else {
                             Err(())
                         }
@@ -204,7 +206,7 @@ impl AirtableRecord {
                     || Ok(None),
                     |val| {
                         if let Value::String(v) = val {
-                            let n = pgrx::Timestamp::from_str(v.as_str())
+                            let n = pgrx::prelude::Timestamp::from_str(v.as_str())
                                 .ok()
                                 .map(Cell::Timestamp);
                             Ok(n)
@@ -217,7 +219,7 @@ impl AirtableRecord {
                     || Ok(None),
                     |val| {
                         if let Value::String(v) = val {
-                            let n = pgrx::TimestampWithTimeZone::from_str(v.as_str())
+                            let n = pgrx::prelude::TimestampWithTimeZone::from_str(v.as_str())
                                 .ok()
                                 .map(Cell::Timestamptz);
                             Ok(n)

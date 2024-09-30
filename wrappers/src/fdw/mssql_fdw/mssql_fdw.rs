@@ -1,6 +1,6 @@
 use crate::stats;
 use num_traits::cast::ToPrimitive;
-use pgrx::{to_timestamp, PgBuiltInOids, PgOid};
+use pgrx::{prelude::to_timestamp, PgBuiltInOids, PgOid};
 use std::collections::HashMap;
 use tiberius::{
     numeric::Decimal,
@@ -57,7 +57,7 @@ fn field_to_cell(src_row: &tiberius::Row, tgt_col: &Column) -> MssqlFdwResult<Op
                 let epoch = NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
                 let seconds_from_epoch = v.signed_duration_since(epoch).num_seconds();
                 let ts = to_timestamp(seconds_from_epoch as f64);
-                Cell::Date(pgrx::Date::from(ts))
+                Cell::Date(pgrx::prelude::Date::from(ts))
             })
         }
         PgOid::BuiltIn(PgBuiltInOids::TIMESTAMPOID) => {
@@ -93,7 +93,7 @@ impl CellFormatter for MssqlCellFormatter {
 }
 
 #[wrappers_fdw(
-    version = "0.1.1",
+    version = "0.1.2",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/mssql_fdw",
     error_type = "MssqlFdwError"

@@ -2,7 +2,7 @@ use crate::stats;
 #[allow(deprecated)]
 use chrono::{DateTime, Datelike, NaiveDate, NaiveDateTime, Utc};
 use clickhouse_rs::{types, types::Block, types::SqlType, ClientHandle, Pool};
-use pgrx::to_timestamp;
+use pgrx::prelude::to_timestamp;
 use regex::{Captures, Regex};
 use std::collections::HashMap;
 
@@ -56,7 +56,8 @@ fn field_to_cell(row: &types::Row<types::Complex>, i: usize) -> ClickHouseFdwRes
         }
         SqlType::Date => {
             let value = row.get::<NaiveDate, usize>(i)?;
-            let dt = pgrx::Date::new(value.year(), value.month() as u8, value.day() as u8)?;
+            let dt =
+                pgrx::prelude::Date::new(value.year(), value.month() as u8, value.day() as u8)?;
             Ok(Some(Cell::Date(dt)))
         }
         SqlType::DateTime(_) => {
@@ -108,7 +109,7 @@ fn field_to_cell(row: &types::Row<types::Complex>, i: usize) -> ClickHouseFdwRes
             SqlType::Date => {
                 let value = row.get::<Option<NaiveDate>, usize>(i)?;
                 Ok(value
-                    .map(|t| pgrx::Date::new(t.year(), t.month() as u8, t.day() as u8))
+                    .map(|t| pgrx::prelude::Date::new(t.year(), t.month() as u8, t.day() as u8))
                     .transpose()?
                     .map(Cell::Date))
             }
@@ -130,7 +131,7 @@ fn field_to_cell(row: &types::Row<types::Complex>, i: usize) -> ClickHouseFdwRes
 }
 
 #[wrappers_fdw(
-    version = "0.1.4",
+    version = "0.1.5",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/clickhouse_fdw",
     error_type = "ClickHouseFdwError"

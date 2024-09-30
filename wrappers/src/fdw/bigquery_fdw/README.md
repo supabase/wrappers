@@ -11,6 +11,7 @@ This is a foreign data wrapper for [BigQuery](https://cloud.google.com/bigquery)
 
 | Version | Date       | Notes                                                |
 | ------- | ---------- | ---------------------------------------------------- |
+| 0.1.5   | 2024-09-30 | Support for pgrx 0.12.5                              |
 | 0.1.4   | 2023-07-13 | Added fdw stats collection                           |
 | 0.1.3   | 2023-04-03 | Added support for `NUMERIC` type                     |
 | 0.1.2   | 2023-03-15 | Added subquery support for `table` option            |

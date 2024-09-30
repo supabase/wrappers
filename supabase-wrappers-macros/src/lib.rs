@@ -96,7 +96,7 @@ pub fn wrappers_fdw(attr: TokenStream, item: TokenStream) -> TokenStream {
             fn #fn_validator_ident(options: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) {
                 #ident::validator(options, catalog)
                     .map_err(|e| <super::#error_type_ident as Into<ErrorReport>>::into(e))
-                    .report();
+                    .unwrap_or_report();
             }
 
             pub(super) fn #fn_get_meta_ident() -> HashMap<String, String> {
