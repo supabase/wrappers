@@ -71,10 +71,9 @@ impl IntoRow for UserType {
                     if let Some(created_at) = self.extract_attribute_value("created_at") {
                         let parsed_date = DateTime::parse_from_rfc3339(&created_at)
                             .expect("Failed to parse date");
-                        row.push(
-                            "created_at",
-                            Some(Cell::Timestamp(parsed_date.timestamp().into())),
-                        );
+                        let ts = pgrx::prelude::Timestamp::try_from(parsed_date.timestamp())
+                            .expect("valid timestamp");
+                        row.push("created_at", Some(Cell::Timestamp(ts)));
                     }
                 }
                 "email" => {

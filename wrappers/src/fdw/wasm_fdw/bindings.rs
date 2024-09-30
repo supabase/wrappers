@@ -38,13 +38,12 @@ impl TryFrom<GuestCell> for HostCell {
                 Ok(Self::Date(Date::from(ts)))
             }
             // convert 'pg epoch' (2000-01-01 00:00:00) to unix epoch
-            GuestCell::Timestamp(v) => {
-                Ok(Self::Timestamp(Timestamp::from(v - 946_684_800_000_000)))
-            }
-            GuestCell::Timestamptz(v) => {
-                let ts = Timestamp::from(v - 946_684_800_000_000);
-                Ok(Self::Timestamptz(TimestampWithTimeZone::from(ts)))
-            }
+            GuestCell::Timestamp(v) => Timestamp::try_from(v - 946_684_800_000_000)
+                .map(Self::Timestamp)
+                .map_err(Self::Error::msg),
+            GuestCell::Timestamptz(v) => TimestampWithTimeZone::try_from(v - 946_684_800_000_000)
+                .map(Self::Timestamptz)
+                .map_err(Self::Error::msg),
             GuestCell::Json(v) => {
                 let ret = serde_json::from_str(&v).map(|j| Self::Json(JsonB(j)))?;
                 Ok(ret)
