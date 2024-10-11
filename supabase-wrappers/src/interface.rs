@@ -6,6 +6,7 @@ use crate::FdwRoutine;
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::{Date, Timestamp, TimestampWithTimeZone};
 use pgrx::{
+    datum::Uuid,
     fcinfo,
     pg_sys::{self, BuiltinOid, Datum, Oid},
     AllocatedByRust, AnyNumeric, FromDatum, IntoDatum, JsonB, PgBuiltInOids, PgOid,
@@ -47,6 +48,7 @@ pub enum Cell {
     Timestamp(Timestamp),
     Timestamptz(TimestampWithTimeZone),
     Json(JsonB),
+    Uuid(Uuid),
     BoolArray(Vec<Option<bool>>),
     I16Array(Vec<Option<i16>>),
     I32Array(Vec<Option<i32>>),
@@ -72,6 +74,7 @@ impl Clone for Cell {
             Cell::Timestamp(v) => Cell::Timestamp(*v),
             Cell::Timestamptz(v) => Cell::Timestamptz(*v),
             Cell::Json(v) => Cell::Json(JsonB(v.0.clone())),
+            Cell::Uuid(v) => Cell::Uuid(*v),
             Cell::BoolArray(v) => Cell::BoolArray(v.clone()),
             Cell::I16Array(v) => Cell::I16Array(v.clone()),
             Cell::I32Array(v) => Cell::I32Array(v.clone()),
@@ -152,6 +155,7 @@ impl fmt::Display for Cell {
                 )
             },
             Cell::Json(v) => write!(f, "{:?}", v),
+            Cell::Uuid(v) => write!(f, "{}", v),
             Cell::BoolArray(v) => write_array(v, f),
             Cell::I16Array(v) => write_array(v, f),
             Cell::I32Array(v) => write_array(v, f),
@@ -179,6 +183,7 @@ impl IntoDatum for Cell {
             Cell::Timestamp(v) => v.into_datum(),
             Cell::Timestamptz(v) => v.into_datum(),
             Cell::Json(v) => v.into_datum(),
+            Cell::Uuid(v) => v.into_datum(),
             Cell::BoolArray(v) => v.into_datum(),
             Cell::I16Array(v) => v.into_datum(),
             Cell::I32Array(v) => v.into_datum(),
@@ -208,6 +213,7 @@ impl IntoDatum for Cell {
             || other == pg_sys::TIMESTAMPOID
             || other == pg_sys::TIMESTAMPTZOID
             || other == pg_sys::JSONBOID
+            || other == pg_sys::UUIDOID
             || other == pg_sys::BOOLARRAYOID
             || other == pg_sys::INT2ARRAYOID
             || other == pg_sys::INT4ARRAYOID
@@ -261,6 +267,9 @@ impl FromDatum for Cell {
             }
             PgOid::BuiltIn(PgBuiltInOids::JSONBOID) => {
                 JsonB::from_datum(datum, is_null).map(Cell::Json)
+            }
+            PgOid::BuiltIn(PgBuiltInOids::UUIDOID) => {
+                Uuid::from_datum(datum, is_null).map(Cell::Uuid)
             }
             PgOid::BuiltIn(PgBuiltInOids::BOOLARRAYOID) => {
                 Vec::<Option<bool>>::from_datum(datum, false).map(Cell::BoolArray)
