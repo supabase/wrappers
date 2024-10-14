@@ -572,7 +572,10 @@ mod tests {
                 .collect::<Vec<_>>();
             assert_eq!(
                 results,
-                vec![("cus_QXg1o8vcGmoR32", Timestamp::from(287883090000000i64))]
+                vec![(
+                    "cus_QXg1o8vcGmoR32",
+                    Timestamp::try_from(287883090000000i64).unwrap()
+                )]
             );
 
             let results = c
@@ -846,9 +849,9 @@ mod tests {
                 vec![(
                     (
                         ("cus_QXg1o8vcGmoR32", "usd"),
-                        Timestamp::from(287883090000000i64)
+                        Timestamp::try_from(287883090000000i64).unwrap()
                     ),
-                    Timestamp::from(287883090000000i64)
+                    Timestamp::try_from(287883090000000i64).unwrap()
                 )]
             );
 

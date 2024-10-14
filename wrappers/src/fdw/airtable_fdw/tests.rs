@@ -113,7 +113,7 @@ mod tests {
                 .select("SELECT timestamp_field FROM airtable_table", None, None)
                 .expect("No results for a given query")
                 .filter_map(|r| {
-                    r.get_by_name::<pgrx::Timestamp, _>("timestamp_field")
+                    r.get_by_name::<pgrx::prelude::Timestamp, _>("timestamp_field")
                         .expect("timestamp_field is missing")
                         .map(|v| v.to_iso_string())
                 })
