@@ -11,7 +11,7 @@ This is a foreign data wrapper for [Airtable](https://www.airtable.com). It is d
 
 | Version | Date       | Notes                                                |
 | ------- | ---------- | ---------------------------------------------------- |
-| 0.1.4   | 2024-09-30 | Support for pgrx 0.12.5                              |
+| 0.1.4   | 2024-09-30 | Support for pgrx 0.12.6                              |
 | 0.1.3   | 2023-10-20 | Added jsonb data types support                       |
 | 0.1.2   | 2023-07-19 | Added more data types support                        |
 | 0.1.1   | 2023-07-13 | Added fdw stats collection                           |

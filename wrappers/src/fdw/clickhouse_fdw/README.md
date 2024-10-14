@@ -11,7 +11,7 @@ This is a foreign data wrapper for [ClickHouse](https://clickhouse.com/). It is 
 
 | Version | Date       | Notes                                                |
 | ------- | ---------- | ---------------------------------------------------- |
-| 0.1.5   | 2024-09-30 | Support for pgrx 0.12.5                              |
+| 0.1.5   | 2024-09-30 | Support for pgrx 0.12.6                              |
 | 0.1.4   | 2024-09-10 | Added Nullable type suppport                         |
 | 0.1.3   | 2023-07-17 | Added sort and limit pushdown suppport               |
 | 0.1.2   | 2023-07-13 | Added fdw stats collection                           |
