@@ -160,7 +160,7 @@ all_fdws = [
 ]
 
 [dependencies]
-pgrx = { version = "=0.12.5" }
+pgrx = { version = "=0.12.6" }
 #supabase-wrappers = "0.1"
 supabase-wrappers = { path = "../supabase-wrappers", default-features = false }
 
@@ -246,4 +246,4 @@ thiserror = { version = "1.0.48", optional = true }
 anyhow  = { version = "1.0.81", optional = true }
 
 [dev-dependencies]
-pgrx-tests = "=0.12.5"
+pgrx-tests = "=0.12.6"
