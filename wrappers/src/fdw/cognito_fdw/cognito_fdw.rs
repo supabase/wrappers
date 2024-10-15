@@ -16,7 +16,7 @@ use pgrx::PgSqlErrorCode;
 use thiserror::Error;
 
 #[wrappers_fdw(
-    version = "0.1.1",
+    version = "0.1.2",
     author = "Joel",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/cognito_fdw",
     error_type = "CognitoFdwError"

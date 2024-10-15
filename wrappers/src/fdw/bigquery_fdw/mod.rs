@@ -2,7 +2,7 @@
 
 use gcp_bigquery_client::error::BQError;
 use pgrx::pg_sys::panic::ErrorReport;
-use pgrx::{DateTimeConversionError, PgSqlErrorCode};
+use pgrx::{prelude::DateTimeConversionError, PgSqlErrorCode};
 use supabase_wrappers::prelude::{CreateRuntimeError, OptionsError};
 use thiserror::Error;
 

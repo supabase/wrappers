@@ -38,7 +38,7 @@ fn field_to_cell(rs: &ResultSet, field: &TableFieldSchema) -> BigQueryFdwResult<
             None => None,
         },
         FieldType::Timestamp => rs.get_f64_by_name(&field.name)?.map(|v| {
-            let ts = pgrx::to_timestamp(v);
+            let ts = pgrx::prelude::to_timestamp(v);
             Cell::Timestamp(ts.to_utc())
         }),
         _ => {
@@ -50,7 +50,7 @@ fn field_to_cell(rs: &ResultSet, field: &TableFieldSchema) -> BigQueryFdwResult<
 }
 
 #[wrappers_fdw(
-    version = "0.1.4",
+    version = "0.1.5",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/bigquery_fdw",
     error_type = "BigQueryFdwError"

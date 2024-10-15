@@ -107,15 +107,14 @@ fn download_component(
         fs::write(&path, bytes)?;
     }
 
-    Ok(Component::from_file(engine, &path).map_err(|err| {
+    Ok(Component::from_file(engine, &path).inspect_err(|_| {
         // remove the cache file if it cannot be loaded as component
         let _ = fs::remove_file(&path);
-        err
     })?)
 }
 
 #[wrappers_fdw(
-    version = "0.1.2",
+    version = "0.1.3",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/wasm_fdw",
     error_type = "WasmFdwError"

@@ -338,6 +338,6 @@ impl<T, E: Into<ErrorReport>> ReportableError for Result<T, E> {
     type Output = T;
 
     fn report_unwrap(self) -> Self::Output {
-        self.map_err(|e| e.into()).report()
+        self.map_err(|e| e.into()).unwrap_or_report()
     }
 }
