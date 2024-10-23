@@ -146,6 +146,7 @@ impl ForeignDataWrapper<WasmFdwError> for WasmFdw {
         config.wasm_component_model(true);
         let engine = Engine::new(&config)?;
 
+        report_info(&format!("==curr dir {}", std::env::current_dir().unwrap().display()));
         let component =
             download_component(&rt, &engine, pkg_url, pkg_name, pkg_version, pkg_checksum)?;
 
