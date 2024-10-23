@@ -14,7 +14,7 @@ mod tests {
             )
             .unwrap();
 
-            // Snowflake FDW test
+            // Snowflake FDW test, test
             c.update(
                 r#"CREATE SERVER snowflake_server
                      FOREIGN DATA WRAPPER wasm_wrapper
