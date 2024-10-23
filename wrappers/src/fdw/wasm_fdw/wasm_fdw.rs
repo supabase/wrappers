@@ -43,14 +43,16 @@ fn download_component(
     version: &str,
     checksum: Option<&str>,
 ) -> WasmFdwResult<Component> {
-    if let Some(file_path) = url.strip_prefix("file://") {
-        return Ok(Component::from_file(engine, file_path)?);
-    }
-
     report_info(&format!(
         "==curr dir {}",
         std::env::current_dir().unwrap().display()
     ));
+
+    report_info(&format!("==url {}", url));
+
+    if let Some(file_path) = url.strip_prefix("file://") {
+        return Ok(Component::from_file(engine, file_path)?);
+    }
 
     if url.starts_with("warg://") || url.starts_with("wargs://") {
         let url = url
@@ -111,8 +113,6 @@ fn download_component(
         }
         fs::write(&path, bytes)?;
     }
-
-    report_info(&format!("==path {}", path.display()));
 
     Ok(Component::from_file(engine, &path).inspect_err(|_| {
         // remove the cache file if it cannot be loaded as component
