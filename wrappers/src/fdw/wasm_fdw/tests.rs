@@ -19,9 +19,10 @@ mod tests {
                 r#"CREATE SERVER snowflake_server
                      FOREIGN DATA WRAPPER wasm_wrapper
                      OPTIONS (
-                       fdw_package_url 'file://../../../wasm-wrappers/fdw/snowflake_fdw/target/wasm32-unknown-unknown/release/snowflake_fdw.wasm',
+                       fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_snowflake_fdw_v0.1.1/snowflake_fdw.wasm',
                        fdw_package_name 'supabase:snowflake-fdw',
-                       fdw_package_version '>=0.1.0',
+                       fdw_package_version '0.1.1',
+                       fdw_package_checksum '7aaafc7edc1726bc93ddc04452d41bda9e1a264a1df2ea9bf1b00b267543b860',
                        api_url 'http://localhost:8096/snowflake/{}',
                        account_identifier 'TEST-ABC1234',
                        user 'TESTUSER',
