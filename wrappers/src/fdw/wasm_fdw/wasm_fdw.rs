@@ -51,6 +51,8 @@ fn download_component(
     report_info(&format!("==url {}", url));
 
     if let Some(file_path) = url.strip_prefix("file://") {
+        let md = std::fs::metadata(file_path).unwrap();
+        report_info(&format!("==file len {}", md.len()));
         return Ok(Component::from_file(engine, file_path)?);
     }
 
