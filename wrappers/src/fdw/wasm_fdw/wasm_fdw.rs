@@ -47,6 +47,11 @@ fn download_component(
         return Ok(Component::from_file(engine, file_path)?);
     }
 
+    report_info(&format!(
+        "==curr dir {}",
+        std::env::current_dir().unwrap().display()
+    ));
+
     if url.starts_with("warg://") || url.starts_with("wargs://") {
         let url = url
             .replacen("warg://", "http://", 1)
@@ -107,6 +112,8 @@ fn download_component(
         fs::write(&path, bytes)?;
     }
 
+    report_info(&format!("==path {}", path.display()));
+
     Ok(Component::from_file(engine, &path).inspect_err(|_| {
         // remove the cache file if it cannot be loaded as component
         let _ = fs::remove_file(&path);
@@ -146,10 +153,6 @@ impl ForeignDataWrapper<WasmFdwError> for WasmFdw {
         config.wasm_component_model(true);
         let engine = Engine::new(&config)?;
 
-        report_info(&format!(
-            "==curr dir {}",
-            std::env::current_dir().unwrap().display()
-        ));
         let component =
             download_component(&rt, &engine, pkg_url, pkg_name, pkg_version, pkg_checksum)?;
 
