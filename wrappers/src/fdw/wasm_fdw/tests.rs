@@ -19,7 +19,7 @@ mod tests {
                 r#"CREATE SERVER snowflake_server
                      FOREIGN DATA WRAPPER wasm_wrapper
                      OPTIONS (
-                       fdw_package_url 'file:///home/runner/work/wrappers/wrappers/wasm-wrappers/fdw/snowflake_fdw/target/wasm32-unknown-unknown/release/snowflake_fdw.wasm',
+                       fdw_package_url 'file://../../../wasm-wrappers/fdw/snowflake_fdw/target/wasm32-unknown-unknown/release/snowflake_fdw.wasm',
                        fdw_package_name 'supabase:snowflake-fdw',
                        fdw_package_version '>=0.1.0',
                        api_url 'http://localhost:8096/snowflake/{}',
@@ -64,7 +64,7 @@ mod tests {
                 r#"CREATE SERVER paddle_server
                      FOREIGN DATA WRAPPER wasm_wrapper
                      OPTIONS (
-                       fdw_package_url 'file:///home/runner/work/wrappers/wrappers/wasm-wrappers/fdw/paddle_fdw/target/wasm32-unknown-unknown/release/paddle_fdw.wasm',
+                       fdw_package_url 'file://../../../wasm-wrappers/fdw/paddle_fdw/target/wasm32-unknown-unknown/release/paddle_fdw.wasm',
                        fdw_package_name 'supabase:paddle-fdw',
                        fdw_package_version '>=0.1.0',
                        api_url 'http://localhost:8096/paddle',
@@ -113,7 +113,7 @@ mod tests {
                 r#"CREATE SERVER notion_server
                      FOREIGN DATA WRAPPER wasm_wrapper
                      OPTIONS (
-                       fdw_package_url 'file:///home/runner/work/wrappers/wrappers/wasm-wrappers/fdw/notion_fdw/target/wasm32-unknown-unknown/release/notion_fdw.wasm',
+                       fdw_package_url 'file://../../../wasm-wrappers/fdw/notion_fdw/target/wasm32-unknown-unknown/release/notion_fdw.wasm',
                        fdw_package_name 'supabase:notion-fdw',
                        fdw_package_version '>=0.1.0',
                        api_url 'http://localhost:8096/notion',
