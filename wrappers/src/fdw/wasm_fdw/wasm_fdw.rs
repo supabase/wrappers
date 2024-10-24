@@ -156,7 +156,7 @@ impl ForeignDataWrapper<WasmFdwError> for WasmFdw {
         fdw_host.svr_opts.clone_from(&server.options);
 
         let mut store = Store::new(&engine, fdw_host);
-        let (bindings, _) = Wrappers::instantiate(&mut store, &component, &linker)?;
+        let bindings = Wrappers::instantiate(&mut store, &component, &linker)?;
 
         let mut wasm_fdw = Self { store, bindings };
 
