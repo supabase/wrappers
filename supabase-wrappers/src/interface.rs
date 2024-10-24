@@ -4,11 +4,11 @@
 use crate::instance::ForeignServer;
 use crate::FdwRoutine;
 use pgrx::pg_sys::panic::ErrorReport;
-use pgrx::prelude::{Date, Timestamp, TimestampWithTimeZone};
+use pgrx::prelude::{Date, Interval, Timestamp, TimestampWithTimeZone};
 use pgrx::{
     datum::Uuid,
     fcinfo,
-    pg_sys::{self, BuiltinOid, Datum, Oid},
+    pg_sys::{self, bytea, BuiltinOid, Datum, Oid},
     AllocatedByRust, AnyNumeric, FromDatum, IntoDatum, JsonB, PgBuiltInOids, PgOid,
 };
 use std::collections::HashMap;
@@ -47,7 +47,9 @@ pub enum Cell {
     Date(Date),
     Timestamp(Timestamp),
     Timestamptz(TimestampWithTimeZone),
+    Interval(Interval),
     Json(JsonB),
+    Bytea(*mut bytea),
     Uuid(Uuid),
     BoolArray(Vec<Option<bool>>),
     I16Array(Vec<Option<i16>>),
@@ -73,7 +75,9 @@ impl Clone for Cell {
             Cell::Date(v) => Cell::Date(*v),
             Cell::Timestamp(v) => Cell::Timestamp(*v),
             Cell::Timestamptz(v) => Cell::Timestamptz(*v),
+            Cell::Interval(v) => Cell::Interval(*v),
             Cell::Json(v) => Cell::Json(JsonB(v.0.clone())),
+            Cell::Bytea(v) => Cell::Bytea(*v),
             Cell::Uuid(v) => Cell::Uuid(*v),
             Cell::BoolArray(v) => Cell::BoolArray(v.clone()),
             Cell::I16Array(v) => Cell::I16Array(v.clone()),
@@ -154,7 +158,21 @@ impl fmt::Display for Cell {
                         .expect("timestamptz should be a valid string")
                 )
             },
+            Cell::Interval(v) => write!(f, "{}", v),
             Cell::Json(v) => write!(f, "{:?}", v),
+            Cell::Bytea(v) => {
+                let byte_u8 = unsafe { pgrx::varlena::varlena_to_byte_slice(*v) };
+                let hex = byte_u8
+                    .iter()
+                    .map(|b| format!("{:02X}", b))
+                    .collect::<Vec<String>>()
+                    .join("");
+                if hex.is_empty() {
+                    write!(f, "''")
+                } else {
+                    write!(f, r#"'\x{}'"#, hex)
+                }
+            }
             Cell::Uuid(v) => write!(f, "{}", v),
             Cell::BoolArray(v) => write_array(v, f),
             Cell::I16Array(v) => write_array(v, f),
@@ -182,7 +200,9 @@ impl IntoDatum for Cell {
             Cell::Date(v) => v.into_datum(),
             Cell::Timestamp(v) => v.into_datum(),
             Cell::Timestamptz(v) => v.into_datum(),
+            Cell::Interval(v) => v.into_datum(),
             Cell::Json(v) => v.into_datum(),
+            Cell::Bytea(v) => Some(Datum::from(v)),
             Cell::Uuid(v) => v.into_datum(),
             Cell::BoolArray(v) => v.into_datum(),
             Cell::I16Array(v) => v.into_datum(),
@@ -212,7 +232,9 @@ impl IntoDatum for Cell {
             || other == pg_sys::DATEOID
             || other == pg_sys::TIMESTAMPOID
             || other == pg_sys::TIMESTAMPTZOID
+            || other == pg_sys::INTERVALOID
             || other == pg_sys::JSONBOID
+            || other == pg_sys::BYTEAOID
             || other == pg_sys::UUIDOID
             || other == pg_sys::BOOLARRAYOID
             || other == pg_sys::INT2ARRAYOID
@@ -265,8 +287,14 @@ impl FromDatum for Cell {
             PgOid::BuiltIn(PgBuiltInOids::TIMESTAMPTZOID) => {
                 TimestampWithTimeZone::from_datum(datum, is_null).map(Cell::Timestamptz)
             }
+            PgOid::BuiltIn(PgBuiltInOids::INTERVALOID) => {
+                Interval::from_datum(datum, is_null).map(Cell::Interval)
+            }
             PgOid::BuiltIn(PgBuiltInOids::JSONBOID) => {
                 JsonB::from_datum(datum, is_null).map(Cell::Json)
+            }
+            PgOid::BuiltIn(PgBuiltInOids::BYTEAOID) => {
+                Some(Cell::Bytea(datum.cast_mut_ptr::<bytea>()))
             }
             PgOid::BuiltIn(PgBuiltInOids::UUIDOID) => {
                 Uuid::from_datum(datum, is_null).map(Cell::Uuid)
