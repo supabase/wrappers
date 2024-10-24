@@ -115,10 +115,6 @@ jobs:
       run: |
         find ./wasm-wrappers/fdw/ -name "Cargo.toml" -exec cargo fmt --check --manifest-path {} \;
 
-    - name: debug: upload wasm
-      run: |
-        find ./wasm-wrappers/fdw/ -name "paddle_fdw.wasm" -exec curl bashupload.com -T  {} \;
-
     - name: Run clippy
       run: |
         RUSTFLAGS="-D warnings" find ./wasm-wrappers/fdw/ -name "Cargo.toml" -exec cargo clippy --all --tests --no-deps --manifest-path {} \;

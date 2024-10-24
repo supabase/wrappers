@@ -43,16 +43,7 @@ fn download_component(
     version: &str,
     checksum: Option<&str>,
 ) -> WasmFdwResult<Component> {
-    report_info(&format!(
-        "==curr dir {}",
-        std::env::current_dir().unwrap().display()
-    ));
-
-    report_info(&format!("==url {}", url));
-
     if let Some(file_path) = url.strip_prefix("file://") {
-        let md = std::fs::metadata(file_path).unwrap();
-        report_info(&format!("==file len {}", md.len()));
         return Ok(Component::from_file(engine, file_path)?);
     }
 
