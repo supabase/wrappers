@@ -78,7 +78,7 @@ We need to provide Postgres with the credentials to access Notion, and any addit
         fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_notion_fdw_v0.1.0/notion_fdw.wasm',
         fdw_package_name 'supabase:notion-fdw',
         fdw_package_version '0.1.0',
-        fdw_package_checksum 'tbd',
+        fdw_package_checksum 'e31483cda6a3b36d38a09298bd5d00baf75cf705a533ecdc03a079c349f42d07',
         api_url 'https://api.notion.com/v1',  -- optional
         api_version '2022-06-28',  -- optional
         api_key_id '<key_ID>' -- The Key ID from above.
@@ -94,7 +94,7 @@ We need to provide Postgres with the credentials to access Notion, and any addit
         fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_notion_fdw_v0.1.0/notion_fdw.wasm',
         fdw_package_name 'supabase:notion-fdw',
         fdw_package_version '0.1.0',
-        fdw_package_checksum 'tbd',
+        fdw_package_checksum 'e31483cda6a3b36d38a09298bd5d00baf75cf705a533ecdc03a079c349f42d07',
         api_url 'https://api.notion.com/v1',  -- optional
         api_version '2022-06-28',  -- optional
         api_key 'secret_xxxxx'  -- Notion API key
