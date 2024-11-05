@@ -19,7 +19,7 @@ The Redis Wrapper allows you to read data from Redis within your Postgres databa
 
 ## Supported Redis Data Types
 
-All Redis value will be stored as `text` or `jsonb` column in Postgres, below are the supported Redis data types:
+All Redis values will be stored as `text` or `jsonb` columns in Postgres, below are the supported Redis data types:
 
 | Redis Type          | Foreign Table Type (src_type) |
 | ------------------- | ----------------------------- |
