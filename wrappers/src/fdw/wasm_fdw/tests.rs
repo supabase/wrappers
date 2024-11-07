@@ -192,11 +192,7 @@ mod tests {
             .unwrap();
 
             let results = c
-                .select(
-                    "SELECT * FROM calendly_event_types",
-                    None,
-                    None,
-                )
+                .select("SELECT * FROM calendly_event_types", None, None)
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("uri").unwrap())
                 .collect::<Vec<_>>();
