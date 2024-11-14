@@ -22,6 +22,7 @@
 | [Snowflake](./wasm-wrappers/fdw/snowflake_fdw)  | A Wasm FDW for [Snowflake](https://www.snowflake.com/)                        | ✅   | ✅     |
 | [Paddle](./wasm-wrappers/fdw/paddle_fdw)        | A Wasm FDW for [Paddle](https://www.paddle.com/)                              | ✅   | ✅     |
 | [Calendly](./wasm-wrappers/fdw/calendly_fdw)    | A Wasm FDW for [Calendly](https://www.calendly.com/)                          | ✅   | ❌     |
+| [Cal.com](./wasm-wrappers/fdw/cal_fdw)          | A Wasm FDW for [Cal.com](https://www.cal.com/)                                | ✅   | ❌     |
 
 ### Warning
 

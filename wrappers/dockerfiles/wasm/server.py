@@ -174,6 +174,22 @@ class MockServer(BaseHTTPRequestHandler):
   }
 }
             '''
+        elif fdw == "cal":
+            body = '''
+{
+    "status": "success",
+    "data": {
+        "id": 1234567,
+        "email": "test@test.com",
+        "timeFormat": 12,
+        "defaultScheduleId": 123456,
+        "weekStart": "Sunday",
+        "timeZone": "Australia/Sydney",
+        "username": "test",
+        "organizationId": null
+    }
+}
+            '''
         else:
             self.send_response(404)
             return

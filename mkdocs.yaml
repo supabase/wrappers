@@ -28,6 +28,7 @@ nav:
           - SQL Server: 'catalog/mssql.md'
         - Wasm:
           - catalog/wasm/index.md
+          - Cal.com: 'catalog/cal.md'
           - Calendly: 'catalog/calendly.md'
           - Notion: 'catalog/notion.md'
           - Paddle: 'catalog/paddle.md'
