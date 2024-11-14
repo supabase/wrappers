@@ -5,6 +5,7 @@ members = [
     "wrappers",
 ]
 exclude = [
+    "wasm-wrappers/fdw/cal_fdw",
     "wasm-wrappers/fdw/helloworld_fdw",
     "wasm-wrappers/fdw/snowflake_fdw",
     "wasm-wrappers/fdw/paddle_fdw",
