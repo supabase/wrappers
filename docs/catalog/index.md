@@ -13,6 +13,7 @@ hide:
 | Auth0       |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
 | AWS Cognito |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
 | BigQuery    |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |    ✅     |
+| Calendly    |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
 | ClickHouse  |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |    ✅     |
 | Firebase    |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
 | Logflare    |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
@@ -32,6 +33,7 @@ See [Developing a Wasm Wrapper](../guides/create-wasm-wrapper.md) for instructio
 
 | Integration |            Developer             |                 Docs                 |                                         Source                                         |
 | ----------- | :------------------------------: | :----------------------------------: | :------------------------------------------------------------------------------------: |
+| Calendly     | [Supabase](https://supabase.com) | [Link](calendly.md) | [Link](https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/calendly_fdw) |
+| Notion      | [Supabase](https://supabase.com) | [Link](notion.md)    | [Link](https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/notion_fdw) |
 | Paddle      | [Supabase](https://supabase.com) | [Link](paddle.md)    | [Link](https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/paddle_fdw)   |
 | Snowflake   | [Supabase](https://supabase.com) | [Link](snowflake.md) | [Link](https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/snowflake_fdw) |
-| Notion      | [Supabase](https://supabase.com) | [Link](notion.md) | [Link](https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/notion_fdw) |

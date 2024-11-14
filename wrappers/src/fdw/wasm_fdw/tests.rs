@@ -156,6 +156,50 @@ mod tests {
                 results,
                 vec!["https://www.notion.so/test-page3-5a67c86fd0da4d0a9dd7f4cf164e6247"]
             );
+
+            // Calendly FDW test
+            c.update(
+                r#"CREATE SERVER calendly_server
+                     FOREIGN DATA WRAPPER wasm_wrapper
+                     OPTIONS (
+                       fdw_package_url 'file://../../../wasm-wrappers/fdw/calendly_fdw/target/wasm32-unknown-unknown/release/calendly_fdw.wasm',
+                       fdw_package_name 'supabase:calendly-fdw',
+                       fdw_package_version '>=0.1.0',
+                       organization 'https://api.calendly.com/organizations/xxx',
+                       api_url 'http://localhost:8096/calendly',
+                       api_key '1234567890'
+                     )"#,
+                None,
+                None,
+            )
+            .unwrap();
+            c.update(
+                r#"
+                  CREATE FOREIGN TABLE calendly_event_types (
+                    uri text,
+                    created_at timestamp,
+                    updated_at timestamp,
+                    attrs jsonb
+                  )
+                  SERVER calendly_server
+                  OPTIONS (
+                    object 'event_types'
+                  )
+             "#,
+                None,
+                None,
+            )
+            .unwrap();
+
+            let results = c
+                .select("SELECT * FROM calendly_event_types", None, None)
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("uri").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(
+                results,
+                vec!["https://api.calendly.com/event_types/158ecbf6-79bb-4205-a5fc-a7fefa5883a2"]
+            );
         });
     }
 }

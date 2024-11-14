@@ -28,9 +28,10 @@ nav:
           - SQL Server: 'catalog/mssql.md'
         - Wasm:
           - catalog/wasm/index.md
+          - Calendly: 'catalog/calendly.md'
+          - Notion: 'catalog/notion.md'
           - Paddle: 'catalog/paddle.md'
           - Snowflake: 'catalog/snowflake.md'
-          - Notion: 'catalog/notion.md'
     - Guides:
         - Native vs Wasm Wrappers: 'guides/native-wasm.md'
         - Query Pushdown: 'guides/query-pushdown.md'
