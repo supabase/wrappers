@@ -120,6 +120,76 @@ class MockServer(BaseHTTPRequestHandler):
   "request_id": "85a75f82-bd22-414e-a3a7-5c00a9451a1c"
 }
             '''
+        elif fdw == "calendly":
+            body = '''
+{
+  "collection": [
+    {
+      "active": true,
+      "admin_managed": false,
+      "booking_method": "instant",
+      "color": "#8247f5",
+      "created_at": "2024-11-06T07:22:55.937829Z",
+      "custom_questions": [
+        {
+          "answer_choices": [],
+          "enabled": true,
+          "include_other": false,
+          "name": "Please share anything that will help prepare for our meeting.",
+          "position": 0,
+          "required": false,
+          "type": "text"
+        }
+      ],
+      "deleted_at": null,
+      "description_html": null,
+      "description_plain": null,
+      "duration": 30,
+      "duration_options": null,
+      "internal_note": null,
+      "kind": "solo",
+      "locations": null,
+      "name": "30 Minute Meeting",
+      "pooling_type": null,
+      "position": 0,
+      "profile": {
+        "name": "Test User",
+        "owner": "https://api.calendly.com/users/3ea2f4a7-8d91-4342-aeb0-32a13b2236dc",
+        "type": "User"
+      },
+      "scheduling_url": "https://calendly.com/test-user/30min",
+      "secret": false,
+      "slug": "30min",
+      "type": "StandardEventType",
+      "updated_at": "2024-11-06T07:22:55.937829Z",
+      "uri": "https://api.calendly.com/event_types/158ecbf6-79bb-4205-a5fc-a7fefa5883a2"
+    }
+  ],
+  "pagination": {
+    "count": 1,
+    "next_page": null,
+    "next_page_token": null,
+    "previous_page": null,
+    "previous_page_token": null
+  }
+}
+            '''
+        elif fdw == "cal":
+            body = '''
+{
+    "status": "success",
+    "data": {
+        "id": 1234567,
+        "email": "test@test.com",
+        "timeFormat": 12,
+        "defaultScheduleId": 123456,
+        "weekStart": "Sunday",
+        "timeZone": "Australia/Sydney",
+        "username": "test",
+        "organizationId": null
+    }
+}
+            '''
         else:
             self.send_response(404)
             return
