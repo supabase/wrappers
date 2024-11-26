@@ -35,7 +35,7 @@ The Calendly API uses JSON formatted data, please refer to [Calendly API docs](h
 
 | Version | Wasm Package URL                                                                                | Checksum                                                           |
 | ------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_calendly_fdw_v0.1.0/calendly_fdw.wasm` | `tbd` |
+| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_calendly_fdw_v0.1.0/calendly_fdw.wasm` | `aa17f1ce2b48b5d8d6cee4f61df4d6b23e9a333c3e5c7a10cec9aae619c156b9` |
 
 ## Preparation
 
@@ -80,7 +80,7 @@ We need to provide Postgres with the credentials to access Calendly and any addi
         fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_calendly_fdw_v0.1.0/calendly_fdw.wasm',
         fdw_package_name 'supabase:calendly-fdw',
         fdw_package_version '0.1.0',
-        fdw_package_checksum 'tbd',
+        fdw_package_checksum 'aa17f1ce2b48b5d8d6cee4f61df4d6b23e9a333c3e5c7a10cec9aae619c156b9',
         -- find your organization uri using foreign table 'calendly.current_user', see below example for details
         organization 'https://api.calendly.com/organizations/81da9c7f-3e19-434a-c3d2-0325e375cdef',
         api_url 'https://api.calendly.com',  -- optional
@@ -97,7 +97,7 @@ We need to provide Postgres with the credentials to access Calendly and any addi
         fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_calendly_fdw_v0.1.0/calendly_fdw.wasm',
         fdw_package_name 'supabase:calendly-fdw',
         fdw_package_version '0.1.0',
-        fdw_package_checksum 'tbd',
+        fdw_package_checksum 'aa17f1ce2b48b5d8d6cee4f61df4d6b23e9a333c3e5c7a10cec9aae619c156b9',
         -- find your organization uri using foreign table 'calendly.current_user', see below example for details
         organization 'https://api.calendly.com/organizations/81da9c7f-3e19-434a-c3d2-0325e375cdef',
         api_url 'https://api.calendly.com',  -- optional
