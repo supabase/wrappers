@@ -1,6 +1,6 @@
 use crate::stats;
 use pgrx::{JsonB, PgBuiltInOids};
-use redis::{Client, Commands, Connection};
+use redis::{Client, Commands, Connection, TlsCertificates};
 use serde_json::json;
 use serde_json::value::Value as JsonValue;
 use std::collections::HashMap;
@@ -41,7 +41,7 @@ fn check_target_columns(
 }
 
 #[wrappers_fdw(
-    version = "0.1.0",
+    version = "0.1.1",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/redis_fdw",
     error_type = "RedisFdwError"
@@ -248,7 +248,18 @@ impl ForeignDataWrapper<RedisFdwError> for RedisFdw {
                 get_vault_secret(conn_url_id).unwrap_or_default()
             }
         };
-        let client = Client::open(conn_url)?;
+
+        let client = if conn_url.starts_with("rediss://") {
+            Client::build_with_tls(
+                conn_url,
+                TlsCertificates {
+                    client_tls: None,
+                    root_cert: None,
+                },
+            )
+        } else {
+            Client::open(conn_url)
+        }?;
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
 

@@ -95,6 +95,22 @@ The connection URL format is:
 redis://[<username>][:<password>@]<hostname>[:port][/<db>]
 ```
 
+The connection URL also supports TLS:
+
+```
+rediss://[<username>][:<password>@]<hostname>[:port][/<db>]
+```
+
+To enable insecure mode, append `#insecure` at the end of the URL:
+
+```
+rediss://[<username>][:<password>@]<hostname>[:port]/[<db>]#insecure
+```
+
+!!! note
+
+    Client certificate and custom root certificates are not supported when using TLS.
+
 ## Creating Foreign Tables
 
 The Redis Wrapper supports data reads from Redis.
