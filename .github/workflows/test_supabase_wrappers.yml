@@ -16,7 +16,7 @@ jobs:
 
     - uses: actions-rs/toolchain@v1
       with:
-        toolchain: stable
+        toolchain: 1.81.0
 
     - run: |
         sudo apt remove -y postgres*
