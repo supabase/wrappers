@@ -40,6 +40,12 @@ jobs:
           # install Wasm component
           cargo install cargo-component --version 0.13.2
 
+          # install rustfmt for the toolchain
+          rustup component add rustfmt
+
+          # show all installed packagies
+          cargo install --list
+
       - name: Build Wasm FDW
         run: |
           cd wasm-wrappers/fdw/${{ steps.extract_info.outputs.PROJECT }}
