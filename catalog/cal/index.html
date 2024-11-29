@@ -12,13 +12,13 @@
         <meta name="author" content="supabase">
       
       
-        <link rel="canonical" href="https://supabase.github.io/wrappers/catalog/mssql/">
+        <link rel="canonical" href="https://supabase.github.io/wrappers/catalog/cal/">
       
       
-        <link rel="prev" href="../stripe/">
+        <link rel="prev" href="../wasm/">
       
       
-        <link rel="next" href="../wasm/">
+        <link rel="next" href="../calendly/">
       
       
       <link rel="icon" href="../../assets/favicon.ico">
@@ -26,7 +26,7 @@
     
     
       
-        <title>SQL Server - Wrappers</title>
+        <title>Cal.com - Wrappers</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#sql-server" class="md-skip">
+        <a href="#calcom" class="md-skip">
           Skip to content
         </a>
       
@@ -113,7 +113,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              SQL Server
+              Cal.com
             
           </span>
         </div>
@@ -407,8 +407,6 @@
                 
   
   
-    
-  
   
   
     
@@ -447,11 +445,13 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_2" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2_2" >
         
           
           <label class="md-nav__link" for="__nav_2_2" id="__nav_2_2_label" tabindex="">
@@ -465,7 +465,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_2_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_2_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_2_2">
             <span class="md-nav__icon md-icon"></span>
             Native
@@ -686,6 +686,106 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../mssql/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    SQL Server
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_3" checked>
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../wasm/" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    Wasm
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_2_3" id="__nav_2_3_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2_3">
+            <span class="md-nav__icon md-icon"></span>
+            Wasm
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
     
   
   
@@ -702,7 +802,7 @@
           
   
   <span class="md-ellipsis">
-    SQL Server
+    Cal.com
   </span>
   
 
@@ -713,7 +813,7 @@
         
   
   <span class="md-ellipsis">
-    SQL Server
+    Cal.com
   </span>
   
 
@@ -744,6 +844,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#available-versions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Available Versions
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#preparation" class="md-nav__link">
     <span class="md-ellipsis">
       Preparation
@@ -763,9 +872,18 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#connecting-to-sql-server" class="md-nav__link">
+  <a href="#connecting-to-calcom" class="md-nav__link">
     <span class="md-ellipsis">
-      Connecting to SQL Server
+      Connecting to Cal.com
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create-a-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      Create a schema
     </span>
   </a>
   
@@ -829,9 +947,9 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#remote-subquery-example" class="md-nav__link">
+  <a href="#query-json-attributes" class="md-nav__link">
     <span class="md-ellipsis">
-      Remote subquery example
+      Query JSON attributes
     </span>
   </a>
   
@@ -846,106 +964,6 @@
   
 </nav>
       
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    
-    
-      
-        
-          
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-    
-    
-      
-      
-        
-          
-          
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2_3" >
-        
-          
-          
-          <div class="md-nav__link md-nav__container">
-            <a href="../wasm/" class="md-nav__link ">
-              
-  
-  <span class="md-ellipsis">
-    Wasm
-  </span>
-  
-
-            </a>
-            
-              
-              <label class="md-nav__link " for="__nav_2_3" id="__nav_2_3_label" tabindex="">
-                <span class="md-nav__icon md-icon"></span>
-              </label>
-            
-          </div>
-        
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_3">
-            <span class="md-nav__icon md-icon"></span>
-            Wasm
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../cal/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Cal.com
-  </span>
-  
-
-      </a>
     </li>
   
 
@@ -1518,6 +1536,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#available-versions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Available Versions
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#preparation" class="md-nav__link">
     <span class="md-ellipsis">
       Preparation
@@ -1537,9 +1564,18 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#connecting-to-sql-server" class="md-nav__link">
+  <a href="#connecting-to-calcom" class="md-nav__link">
     <span class="md-ellipsis">
-      Connecting to SQL Server
+      Connecting to Cal.com
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create-a-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      Create a schema
     </span>
   </a>
   
@@ -1603,9 +1639,9 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#remote-subquery-example" class="md-nav__link">
+  <a href="#query-json-attributes" class="md-nav__link">
     <span class="md-ellipsis">
-      Remote subquery example
+      Query JSON attributes
     </span>
   </a>
   
@@ -1635,7 +1671,7 @@
     
     
     
-      <a href="../../tags/#native" class="md-tag">native</a>
+      <a href="../../tags/#wasm" class="md-tag">wasm</a>
     
   
     
@@ -1651,9 +1687,9 @@
   
 
 
-<h1 id="sql-server">SQL Server</h1>
-<p><a href="https://www.microsoft.com/en-au/sql-server/">Microsoft SQL Server</a> is a proprietary relational database management system developed by Microsoft.</p>
-<p>The SQL Server Wrapper allows you to read data from Microsoft SQL Server within your Postgres database.</p>
+<h1 id="calcom">Cal.com</h1>
+<p><a href="https://cal.com/">Cal.com</a> is an open source scheduling platform.</p>
+<p>The Cal Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you to read data from your Cal.com account for use within your Postgres database.</p>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
 <p>Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.</p>
@@ -1662,58 +1698,52 @@
 <table>
 <thead>
 <tr>
-<th>Postgres Type</th>
-<th>SQL Server Type</th>
+<th>Postgres Data Type</th>
+<th>Cal.com Data Type</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>boolean</td>
-<td>bit</td>
+<td>Boolean</td>
 </tr>
 <tr>
-<td>char</td>
-<td>tinyint</td>
-</tr>
-<tr>
-<td>smallint</td>
-<td>smallint</td>
-</tr>
-<tr>
-<td>real</td>
-<td>float(24)</td>
-</tr>
-<tr>
-<td>integer</td>
-<td>int</td>
+<td>bigint</td>
+<td>Number</td>
 </tr>
 <tr>
 <td>double precision</td>
-<td>float(53)</td>
-</tr>
-<tr>
-<td>bigint</td>
-<td>bigint</td>
-</tr>
-<tr>
-<td>numeric</td>
-<td>numeric/decimal</td>
+<td>Number</td>
 </tr>
 <tr>
 <td>text</td>
-<td>varchar/char/text</td>
+<td>String</td>
 </tr>
 <tr>
-<td>date</td>
-<td>date</td>
+<td>jsonb</td>
+<td>Json</td>
 </tr>
+</tbody>
+</table>
+<p>The Cal.com API uses JSON formatted data, please refer to <a href="https://cal.com/docs/api-reference/v2/introduction">Cal.com API docs</a> for more details.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This foreign data wrapper only supports Cal.com API v2.</p>
+</div>
+<h2 id="available-versions">Available Versions</h2>
+<table>
+<thead>
 <tr>
-<td>timestamp</td>
-<td>datetime/datetime2/smalldatetime</td>
+<th>Version</th>
+<th>Wasm Package URL</th>
+<th>Checksum</th>
 </tr>
+</thead>
+<tbody>
 <tr>
-<td>timestamptz</td>
-<td>datetime/datetime2/smalldatetime</td>
+<td>0.1.0</td>
+<td><code>https://github.com/supabase/wrappers/releases/download/wasm_cal_fdw_v0.1.0/cal_fdw.wasm</code></td>
+<td><code>bca8a82d6c5f8da0aa58011940c4ddb40bb2c909c02dd89b488289c4fff890c1</code></td>
 </tr>
 </tbody>
 </table>
@@ -1721,12 +1751,12 @@
 <p>Before you get started, make sure the <code>wrappers</code> extension is installed on your database:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">extension</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">wrappers</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">extensions</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
-<p>and then create the foreign data wrapper:</p>
+<p>and then create the Wasm foreign data wrapper:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
-<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">mssql_wrapper</span>
-<span class="w">  </span><span class="k">handler</span><span class="w"> </span><span class="n">mssql_fdw_handler</span>
-<span class="w">  </span><span class="k">validator</span><span class="w"> </span><span class="n">mssql_fdw_validator</span><span class="p">;</span>
+<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
+<span class="w">  </span><span class="k">handler</span><span class="w"> </span><span class="n">wasm_fdw_handler</span>
+<span class="w">  </span><span class="k">validator</span><span class="w"> </span><span class="n">wasm_fdw_validator</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 <h3 id="secure-your-credentials-optional">Secure your credentials (optional)</h3>
 <p>By default, Postgres stores FDW credentials inside <code>pg_catalog.pg_foreign_server</code> in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with <a href="https://supabase.com/docs/guides/database/vault">Vault</a>, which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.</p>
@@ -1736,100 +1766,71 @@
 <span class="normal">4</span>
 <span class="normal">5</span>
 <span class="normal">6</span>
-<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Save your SQL Server connection string in Vault and retrieve the `key_id`</span>
+<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Save your Cal.com API key in Vault and retrieve the `key_id`</span>
 <span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">secrets</span><span class="w"> </span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">secret</span><span class="p">)</span>
 <span class="k">values</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="s1">&#39;mssql&#39;</span><span class="p">,</span>
-<span class="w">  </span><span class="s1">&#39;Server=localhost,1433;User=sa;Password=my_password;Database=master;IntegratedSecurity=false;TrustServerCertificate=true;encrypt=DANGER_PLAINTEXT;ApplicationName=wrappers&#39;</span>
+<span class="w">  </span><span class="s1">&#39;cal&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="s1">&#39;&lt;Cal.com API Key&gt;&#39;</span><span class="w"> </span><span class="c1">-- Cal.com API key</span>
 <span class="p">)</span>
 <span class="n">returning</span><span class="w"> </span><span class="n">key_id</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
-<h3 id="connecting-to-sql-server">Connecting to SQL Server</h3>
-<p>We need to provide Postgres with the credentials to connect to SQL Server. We can do this using the <code>create server</code> command:</p>
+<h3 id="connecting-to-calcom">Connecting to Cal.com</h3>
+<p>We need to provide Postgres with the credentials to access Cal.com and any additional options. We can do this using the <code>create server</code> command:</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">With Vault</label><label for="__tabbed_1_2">Without Vault</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">mssql_server</span>
-<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">mssql_wrapper</span>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">cal_server</span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">conn_string_id</span><span class="w"> </span><span class="s1">&#39;&lt;key_ID&gt;&#39;</span><span class="w"> </span><span class="c1">-- The Key ID from above.</span>
+<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_cal_fdw_v0.1.0/cal_fdw.wasm&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;supabase:cal-fdw&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.1.0&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;bca8a82d6c5f8da0aa58011940c4ddb40bb2c909c02dd89b488289c4fff890c1&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">api_url</span><span class="w"> </span><span class="s1">&#39;https://api.cal.com/v2&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- optional</span>
+<span class="w">    </span><span class="n">api_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;key_ID&gt;&#39;</span><span class="w"> </span><span class="c1">-- The Key ID from above.</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">mssql_server</span>
-<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">mssql_wrapper</span>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">cal_server</span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">conn_string</span><span class="w"> </span><span class="s1">&#39;Server=localhost,1433;User=sa;Password=my_password;Database=master;IntegratedSecurity=false;TrustServerCertificate=true;encrypt=DANGER_PLAINTEXT;ApplicationName=wrappers&#39;</span>
+<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_cal_fdw_v0.1.0/cal_fdw.wasm&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;supabase:cal-fdw&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.1.0&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;bca8a82d6c5f8da0aa58011940c4ddb40bb2c909c02dd89b488289c4fff890c1&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">api_url</span><span class="w"> </span><span class="s1">&#39;https://api.cal.com/v2&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- optional</span>
+<span class="w">    </span><span class="n">api_key</span><span class="w"> </span><span class="s1">&#39;cal_live_1234...&#39;</span><span class="w">  </span><span class="c1">-- Cal.com API key</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 </div>
 </div>
 </div>
-<p>The connection string is an <a href="https://learn.microsoft.com/en-us/dotnet/framework/data/adonet/connection-strings">ADO.NET connection string</a>, which specifies connection parameters in semicolon-delimited string.</p>
-<p><strong>Supported parameters</strong></p>
-<p>All parameter keys are handled case-insensitive.</p>
-<table>
-<thead>
-<tr>
-<th>Parameter</th>
-<th>Allowed Values</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Server</td>
-<td><code>&lt;string&gt;</code></td>
-<td>The name or network address of the instance of SQL Server to which to connect. Format: <code>host,port</code></td>
-</tr>
-<tr>
-<td>User</td>
-<td><code>&lt;string&gt;</code></td>
-<td>The SQL Server login account.</td>
-</tr>
-<tr>
-<td>Password</td>
-<td><code>&lt;string&gt;</code></td>
-<td>The password for the SQL Server account logging on.</td>
-</tr>
-<tr>
-<td>Database</td>
-<td><code>&lt;string&gt;</code></td>
-<td>The name of the database.</td>
-</tr>
-<tr>
-<td>IntegratedSecurity</td>
-<td>false</td>
-<td>Windows/Kerberos authentication and SQL authentication.</td>
-</tr>
-<tr>
-<td>TrustServerCertificate</td>
-<td>true, false</td>
-<td>Specifies whether the driver trusts the server certificate when connecting using TLS.</td>
-</tr>
-<tr>
-<td>Encrypt</td>
-<td>true, false, DANGER_PLAINTEXT</td>
-<td>Specifies whether the driver uses TLS to encrypt communication.</td>
-</tr>
-<tr>
-<td>ApplicationName</td>
-<td><code>&lt;string&gt;</code></td>
-<td>Sets the application name for the connection.</td>
-</tr>
-</tbody>
-</table>
+<p>Note the <code>fdw_package_*</code> options are required, which specify the Wasm package metadata. You can get the available package version list from <a href="#available-versions">above</a>.</p>
+<h3 id="create-a-schema">Create a schema</h3>
+<p>We recommend creating a schema to hold all the foreign tables:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">cal</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
 <h2 id="creating-foreign-tables">Creating Foreign Tables</h2>
-<p>The SQL Server Wrapper supports data reads from SQL Server.</p>
+<p>The Cal.com Wrapper supports data reads from below objects in Cal.com.</p>
 <table>
 <thead>
 <tr>
@@ -1843,7 +1844,47 @@
 </thead>
 <tbody>
 <tr>
-<td>SQL Server</td>
+<td>My Profile</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+</tr>
+<tr>
+<td>Event Types</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+</tr>
+<tr>
+<td>Bookings</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+</tr>
+<tr>
+<td>Calendars</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+</tr>
+<tr>
+<td>Schedules</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+</tr>
+<tr>
+<td>Conferencing</td>
 <td style="text-align: center;">✅</td>
 <td style="text-align: center;">❌</td>
 <td style="text-align: center;">❌</td>
@@ -1853,85 +1894,161 @@
 </tbody>
 </table>
 <p>For example:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span>
-<span class="normal">7</span>
-<span class="normal">8</span>
-<span class="normal">9</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">mssql_users</span><span class="w"> </span><span class="p">(</span>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span>
+<span class="normal">40</span>
+<span class="normal">41</span>
+<span class="normal">42</span>
+<span class="normal">43</span>
+<span class="normal">44</span>
+<span class="normal">45</span>
+<span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span>
+<span class="normal">52</span>
+<span class="normal">53</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">cal</span><span class="p">.</span><span class="n">my_profile</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
+<span class="w">  </span><span class="n">username</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">email</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="p">)</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">cal_server</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;my_profile&#39;</span>
+<span class="w">  </span><span class="p">);</span>
+
+<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">cal</span><span class="p">.</span><span class="n">event_types</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="p">)</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">cal_server</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;event-types&#39;</span>
+<span class="w">  </span><span class="p">);</span>
+
+<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">cal</span><span class="p">.</span><span class="n">bookings</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="p">)</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">cal_server</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;bookings&#39;</span>
+<span class="w">  </span><span class="p">);</span>
+
+<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">cal</span><span class="p">.</span><span class="n">calendars</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="p">)</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">cal_server</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;calendars&#39;</span>
+<span class="w">  </span><span class="p">);</span>
+
+<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">cal</span><span class="p">.</span><span class="n">schedules</span><span class="w"> </span><span class="p">(</span>
 <span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
 <span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">dt</span><span class="w"> </span><span class="k">timestamp</span>
+<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
 <span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">mssql_server</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">cal_server</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">table</span><span class="w"> </span><span class="s1">&#39;users&#39;</span>
+<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;schedules&#39;</span>
+<span class="w">  </span><span class="p">);</span>
+
+<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">cal</span><span class="p">.</span><span class="n">conferencing</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
+<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="p">)</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">cal_server</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;conferencing&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<ul>
+<li>All the supported columns are listed above, other columns are not allowd.</li>
+<li>The <code>attrs</code> is a special column which stores all the object attributes in JSON format, you can extract any attributes needed from it. See more examples below.</li>
+</ul>
+</div>
 <h3 id="foreign-table-options">Foreign table options</h3>
 <p>The full list of foreign table options are below:</p>
 <ul>
-<li><code>table</code> - Source table or view name in SQL Server, required.</li>
+<li><code>object</code> - Object name in Cal.com, required.</li>
 </ul>
-<p>This can also be a subquery enclosed in parentheses, for example,</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">table</span><span class="w"> </span><span class="s1">&#39;(select * from users where id = 42 or id = 43)&#39;</span>
-</code></pre></div></td></tr></table></div>
+<p>Supported objects are listed below:</p>
+<table>
+<thead>
+<tr>
+<th>Object name</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>my_profile</td>
+</tr>
+<tr>
+<td>event-types</td>
+</tr>
+<tr>
+<td>bookings</td>
+</tr>
+<tr>
+<td>calendars</td>
+</tr>
+<tr>
+<td>schedules</td>
+</tr>
+<tr>
+<td>conferencing</td>
+</tr>
+</tbody>
+</table>
 <h2 id="query-pushdown-support">Query Pushdown Support</h2>
-<p>This FDW supports <code>where</code>, <code>order by</code> and <code>limit</code> clause pushdown.</p>
+<p>This FDW doesn't support query pushdown.</p>
 <h2 id="examples">Examples</h2>
-<p>Some examples on how to use SQL Server foreign tables.</p>
-<p>Let's prepare the source table in SQL Server first:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Run below SQLs on SQL Server to create source table</span>
-<span class="k">create</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
-<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">varchar</span><span class="p">(</span><span class="mi">30</span><span class="p">),</span>
-<span class="w">  </span><span class="n">dt</span><span class="w"> </span><span class="n">datetime2</span>
-<span class="p">);</span>
-
-<span class="c1">-- Add some test data</span>
-<span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">users</span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">dt</span><span class="p">)</span><span class="w"> </span><span class="k">values</span><span class="w"> </span><span class="p">(</span><span class="mi">42</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Foo&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;2023-12-28&#39;</span><span class="p">);</span>
-<span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">users</span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">dt</span><span class="p">)</span><span class="w"> </span><span class="k">values</span><span class="w"> </span><span class="p">(</span><span class="mi">43</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Bar&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;2023-12-27&#39;</span><span class="p">);</span>
-<span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">users</span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">dt</span><span class="p">)</span><span class="w"> </span><span class="k">values</span><span class="w"> </span><span class="p">(</span><span class="mi">44</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Baz&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;2023-12-26&#39;</span><span class="p">);</span>
-</code></pre></div></td></tr></table></div>
+<p>Below are some examples on how to use Cal.com foreign tables.</p>
 <h3 id="basic-example">Basic example</h3>
-<p>This example will create a foreign table inside your Postgres database and query its data:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">mssql_users</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
-<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">dt</span><span class="w"> </span><span class="k">timestamp</span>
-<span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">mssql_server</span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">table</span><span class="w"> </span><span class="s1">&#39;users&#39;</span>
-<span class="w">  </span><span class="p">);</span>
-
-<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">mssql_users</span><span class="p">;</span>
+<p>This example will create a "foreign table" inside your Postgres database and query its data. First, we can create a schema to hold all the Cal.com foreign tables.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">cal</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
-<h3 id="remote-subquery-example">Remote subquery example</h3>
-<p>This example will create a foreign table based on a remote subquery and query its data:</p>
+<p>Then create the foreign table and query it, for example:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -1942,17 +2059,87 @@
 <span class="normal"> 8</span>
 <span class="normal"> 9</span>
 <span class="normal">10</span>
-<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">mssql_users_subquery</span><span class="w"> </span><span class="p">(</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">cal</span><span class="p">.</span><span class="n">my_profile</span><span class="w"> </span><span class="p">(</span>
 <span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
-<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">dt</span><span class="w"> </span><span class="k">timestamp</span>
+<span class="w">  </span><span class="n">username</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">email</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
 <span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">mssql_server</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">cal_server</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">table</span><span class="w"> </span><span class="s1">&#39;(select * from users where id = 42 or id = 43)&#39;</span>
+<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;my_profile&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 
-<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">mssql_users_subquery</span><span class="p">;</span>
+<span class="c1">-- query current user used for the Cal.com API request</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">cal</span><span class="p">.</span><span class="n">my_profile</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<p><code>attrs</code> is a special column which stores all the object attributes in JSON format, you can extract any attributes needed from it. See more examples below.</p>
+<h3 id="query-json-attributes">Query JSON attributes</h3>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">cal</span><span class="p">.</span><span class="n">bookings</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="p">)</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">cal_server</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;bookings&#39;</span>
+<span class="w">  </span><span class="p">);</span>
+
+<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">cal</span><span class="p">.</span><span class="n">event_types</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="p">)</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">cal_server</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;event-types&#39;</span>
+<span class="w">  </span><span class="p">);</span>
+
+<span class="c1">-- extract bookings</span>
+<span class="k">select</span>
+<span class="w">  </span><span class="n">bk</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;id&#39;</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">id</span><span class="p">,</span>
+<span class="w">  </span><span class="n">bk</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;title&#39;</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">title</span><span class="p">,</span>
+<span class="w">  </span><span class="n">bk</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;userPrimaryEmail&#39;</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">email</span>
+<span class="k">from</span><span class="w"> </span><span class="n">cal</span><span class="p">.</span><span class="n">bookings</span><span class="w"> </span><span class="n">t</span>
+<span class="w">  </span><span class="k">cross</span><span class="w"> </span><span class="k">join</span><span class="w"> </span><span class="n">json_array_elements</span><span class="p">((</span><span class="n">attrs</span><span class="o">-&gt;</span><span class="s1">&#39;bookings&#39;</span><span class="p">)::</span><span class="n">json</span><span class="p">)</span><span class="w"> </span><span class="n">bk</span><span class="p">;</span>
+
+<span class="c1">-- extract event types</span>
+<span class="k">select</span>
+<span class="w">  </span><span class="n">etg</span><span class="o">-&gt;</span><span class="s1">&#39;profile&#39;</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;name&#39;</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">profile</span><span class="p">,</span>
+<span class="w">  </span><span class="n">et</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;id&#39;</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">id</span><span class="p">,</span>
+<span class="w">  </span><span class="n">et</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;title&#39;</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">title</span>
+<span class="k">from</span><span class="w"> </span><span class="n">cal</span><span class="p">.</span><span class="n">event_types</span><span class="w"> </span><span class="n">t</span>
+<span class="w">  </span><span class="k">cross</span><span class="w"> </span><span class="k">join</span><span class="w"> </span><span class="n">json_array_elements</span><span class="p">((</span><span class="n">attrs</span><span class="o">-&gt;</span><span class="s1">&#39;eventTypeGroups&#39;</span><span class="p">)::</span><span class="n">json</span><span class="p">)</span><span class="w"> </span><span class="n">etg</span>
+<span class="w">  </span><span class="k">cross</span><span class="w"> </span><span class="k">join</span><span class="w"> </span><span class="n">json_array_elements</span><span class="p">((</span><span class="n">etg</span><span class="o">-&gt;</span><span class="s1">&#39;eventTypes&#39;</span><span class="p">)::</span><span class="n">json</span><span class="p">)</span><span class="w"> </span><span class="n">et</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 
 
@@ -1986,7 +2173,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../stripe/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Stripe">
+          <a href="../wasm/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Wasm Wrappers">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -1996,20 +2183,20 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                Stripe
+                Wasm Wrappers
               </div>
             </div>
           </a>
         
         
           
-          <a href="../wasm/" class="md-footer__link md-footer__link--next" aria-label="Next: Wasm Wrappers">
+          <a href="../calendly/" class="md-footer__link md-footer__link--next" aria-label="Next: Calendly">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Wasm Wrappers
+                Calendly
               </div>
             </div>
             <div class="md-footer__button md-icon">
