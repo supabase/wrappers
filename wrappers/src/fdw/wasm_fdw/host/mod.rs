@@ -115,8 +115,9 @@ impl HostColumn for FdwHost {
             pg_sys::TEXTOID => TypeOid::String,
             pg_sys::DATEOID => TypeOid::Date,
             pg_sys::TIMESTAMPOID => TypeOid::Timestamp,
+            pg_sys::TIMESTAMPTZOID => TypeOid::Timestamptz,
             pg_sys::JSONBOID => TypeOid::Json,
-            _ => unimplemented!(),
+            _ => unimplemented!("column type oid not supported"),
         }
     }
 
