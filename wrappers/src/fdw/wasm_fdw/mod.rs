@@ -14,6 +14,9 @@ use self::bindings::supabase::wrappers::types::FdwError as GuestFdwError;
 
 #[derive(Error, Debug)]
 enum WasmFdwError {
+    #[error("invalid WebAssembly component")]
+    InvalidWasmComponent,
+
     #[error("guest fdw error: {0}")]
     GuestFdw(GuestFdwError),
 

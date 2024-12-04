@@ -33,6 +33,14 @@ fn check_version_requirement(ver_req: &str) -> WasmFdwResult<()> {
     Ok(())
 }
 
+// compiles a new WebAssembly component from a wasm file
+fn load_component_from_file(
+    engine: &Engine,
+    file_path: impl AsRef<std::path::Path>,
+) -> WasmFdwResult<Component> {
+    Component::from_file(engine, file_path).map_err(|_| WasmFdwError::InvalidWasmComponent)
+}
+
 // Download wasm component package from warg registry or custom url.
 // The url protoal can be 'file://', 'warg(s)://' or 'http(s)://'.
 fn download_component(
@@ -44,7 +52,7 @@ fn download_component(
     checksum: Option<&str>,
 ) -> WasmFdwResult<Component> {
     if let Some(file_path) = url.strip_prefix("file://") {
-        return Ok(Component::from_file(engine, file_path)?);
+        return load_component_from_file(engine, file_path);
     }
 
     if url.starts_with("warg://") || url.starts_with("wargs://") {
@@ -69,7 +77,7 @@ fn download_component(
             .block_on(client.download(&pkg_name, &ver))?
             .ok_or(format!("{}@{} not found on {}", name, version, url))?;
 
-        return Ok(Component::from_file(engine, pkg.path)?);
+        return load_component_from_file(engine, pkg.path);
     }
 
     // otherwise, download from custom url if it is not in local cache
@@ -107,10 +115,10 @@ fn download_component(
         fs::write(&path, bytes)?;
     }
 
-    Ok(Component::from_file(engine, &path).inspect_err(|_| {
+    load_component_from_file(engine, &path).inspect_err(|_| {
         // remove the cache file if it cannot be loaded as component
         let _ = fs::remove_file(&path);
-    })?)
+    })
 }
 
 #[wrappers_fdw(
@@ -147,10 +155,7 @@ impl ForeignDataWrapper<WasmFdwError> for WasmFdw {
         let engine = Engine::new(&config)?;
 
         let component =
-            match download_component(&rt, &engine, pkg_url, pkg_name, pkg_version, pkg_checksum) {
-                Ok(c) => c,
-                Err(_) => panic!("wasmtime error: failed to parse WebAssembly module"),
-            };
+            download_component(&rt, &engine, pkg_url, pkg_name, pkg_version, pkg_checksum)?;
 
         let mut linker = Linker::new(&engine);
         Wrappers::add_to_linker(&mut linker, |host: &mut FdwHost| host)?;
