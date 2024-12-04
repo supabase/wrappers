@@ -147,7 +147,10 @@ impl ForeignDataWrapper<WasmFdwError> for WasmFdw {
         let engine = Engine::new(&config)?;
 
         let component =
-            download_component(&rt, &engine, pkg_url, pkg_name, pkg_version, pkg_checksum)?;
+            match download_component(&rt, &engine, pkg_url, pkg_name, pkg_version, pkg_checksum) {
+                Ok(c) => c,
+                Err(_) => panic!("wasmtime error: failed to parse WebAssembly module"),
+            };
 
         let mut linker = Linker::new(&engine);
         Wrappers::add_to_linker(&mut linker, |host: &mut FdwHost| host)?;
