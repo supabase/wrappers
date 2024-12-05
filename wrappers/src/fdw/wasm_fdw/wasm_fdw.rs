@@ -1,8 +1,10 @@
+use bytes::Bytes;
 use pgrx::pg_sys;
 use semver::{Version, VersionReq};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::fs;
+use std::path::{Path, PathBuf};
 use warg_client as warg;
 use wasmtime::component::*;
 use wasmtime::{Config, Engine, Store};
@@ -41,8 +43,6 @@ fn load_component_from_file(
     Component::from_file(engine, file_path).map_err(|_| WasmFdwError::InvalidWasmComponent)
 }
 
-// Download wasm component package from warg registry or custom url.
-// The url protoal can be 'file://', 'warg(s)://' or 'http(s)://'.
 fn download_component(
     rt: &Runtime,
     engine: &Engine,
@@ -51,38 +51,97 @@ fn download_component(
     version: &str,
     checksum: Option<&str>,
 ) -> WasmFdwResult<Component> {
+    // Handle local file paths
     if let Some(file_path) = url.strip_prefix("file://") {
         return load_component_from_file(engine, file_path);
     }
 
+    // Handle warg registry URLs
     if url.starts_with("warg://") || url.starts_with("wargs://") {
-        let url = url
-            .replacen("warg://", "http://", 1)
-            .replacen("wargs://", "https://", 1);
-
-        // download from warg registry
-        let config = warg::Config {
-            disable_interactive: true,
-            ..Default::default()
-        };
-        let client = rt.block_on(warg::FileSystemClient::new_with_config(
-            Some(&url),
-            &config,
-            None,
-        ))?;
-
-        let pkg_name = warg_protocol::registry::PackageName::new(name)?;
-        let ver = semver::VersionReq::parse(version)?;
-        let pkg = rt
-            .block_on(client.download(&pkg_name, &ver))?
-            .ok_or(format!("{}@{} not found on {}", name, version, url))?;
-
-        return load_component_from_file(engine, pkg.path);
+        return Ok(download_from_warg(rt, engine, url, name, version)?);
     }
 
-    // otherwise, download from custom url if it is not in local cache
+    // Handle direct URLs with caching
+    download_from_url(rt, engine, url, name, version, checksum)
+}
 
-    // calculate file name hash and make up cache path
+fn download_from_warg(
+    rt: &Runtime,
+    engine: &Engine,
+    url: &str,
+    name: &str,
+    version: &str,
+) -> WasmFdwResult<Component> {
+    let url = url
+        .replacen("warg://", "http://", 1)
+        .replacen("wargs://", "https://", 1);
+
+    let config = warg::Config {
+        disable_interactive: true,
+        ..Default::default()
+    };
+
+    let client = rt.block_on(warg::FileSystemClient::new_with_config(
+        Some(&url),
+        &config,
+        None,
+    ))?;
+
+    let pkg_name = warg_protocol::registry::PackageName::new(name)
+        .map_err(|e| format!("Invalid package name '{}': {}", name, e))?;
+
+    let ver = semver::VersionReq::parse(version)
+        .map_err(|e| format!("Invalid version requirement '{}': {}", version, e))?;
+
+    let pkg = rt
+        .block_on(client.download(&pkg_name, &ver))?
+        .ok_or_else(|| format!("{}@{} not found on {}", name, version, url))?;
+
+    load_component_from_file(engine, pkg.path)
+}
+
+fn download_from_url(
+    rt: &Runtime,
+    engine: &Engine,
+    url: &str,
+    name: &str,
+    version: &str,
+    checksum: Option<&str>,
+) -> WasmFdwResult<Component> {
+    // Validate URL
+    let url = url
+        .parse::<reqwest::Url>()
+        .map_err(|e| format!("Invalid URL '{}': {}", url, e))?;
+
+    // Calculate cache path
+    let cache_path = get_cache_path(url.as_str(), name, version)?;
+
+    // Return cached component if it exists and is valid
+    if cache_path.exists() {
+        if let Ok(component) = load_component_from_file(engine, &cache_path) {
+            return Ok(component);
+        }
+        // If loading fails, remove invalid cache file
+        let _ = fs::remove_file(&cache_path);
+    }
+
+    // Ensure checksum is provided for remote downloads
+    let checksum = checksum
+        .ok_or_else(|| "Package checksum must be specified for remote downloads".to_string())?;
+
+    // Download and verify component
+    let bytes = download_and_verify(rt, url, checksum)?;
+
+    // Save to cache
+    save_to_cache(&cache_path, &bytes)?;
+
+    // Load component
+    load_component_from_file(engine, &cache_path).inspect_err(|_| {
+        let _ = fs::remove_file(&cache_path);
+    })
+}
+
+fn get_cache_path(url: &str, name: &str, version: &str) -> WasmFdwResult<PathBuf> {
     let hash = Sha256::digest(format!(
         "{}:{}:{}@{}",
         unsafe { pg_sys::GetUserId().as_u32() },
@@ -90,35 +149,54 @@ fn download_component(
         name,
         version
     ));
+
     let file_name = hex::encode(hash);
-    let mut path = dirs::cache_dir().expect("no cache dir found");
+    let mut path = dirs::cache_dir().ok_or_else(|| "No cache directory found".to_string())?;
+
     path.push(file_name);
     path.set_extension("wasm");
 
-    if !path.exists() {
-        // package checksum must be specified
-        let option_checksum = checksum.ok_or("package checksum option not specified".to_owned())?;
+    Ok(path)
+}
 
-        // download component wasm from remote and check its checksum
-        let resp = rt.block_on(reqwest::get(url))?;
-        let bytes = rt.block_on(resp.bytes())?;
-        let bytes_checksum = hex::encode(Sha256::digest(&bytes));
-        if bytes_checksum != option_checksum {
-            return Err("package checksum not match".to_string().into());
-        }
+fn download_and_verify(
+    rt: &Runtime,
+    url: reqwest::Url,
+    expected_checksum: &str,
+) -> WasmFdwResult<Bytes> {
+    let resp = rt
+        .block_on(reqwest::get(url.clone()))
+        .map_err(|e| format!("Failed to download from {}: {}", url, e))?;
 
-        // save the component wasm to local cache
-        if let Some(parent) = path.parent() {
-            // create all parent directories if they do not exist
-            fs::create_dir_all(parent)?;
-        }
-        fs::write(&path, bytes)?;
+    if !resp.status().is_success() {
+        return Err(format!("Failed to download from {}: HTTP {}", url, resp.status()).into());
     }
 
-    load_component_from_file(engine, &path).inspect_err(|_| {
-        // remove the cache file if it cannot be loaded as component
-        let _ = fs::remove_file(&path);
-    })
+    let bytes = rt
+        .block_on(resp.bytes())
+        .map_err(|e| format!("Failed to read response from {}: {}", url, e))?;
+
+    let actual_checksum = hex::encode(Sha256::digest(&bytes));
+    if actual_checksum != expected_checksum {
+        return Err(format!(
+            "Checksum mismatch for {}: expected {}, got {}",
+            url, expected_checksum, actual_checksum
+        )
+        .into());
+    }
+
+    Ok(bytes)
+}
+
+fn save_to_cache(path: &Path, bytes: &[u8]) -> WasmFdwResult<()> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create cache directory: {}", e))?;
+    }
+
+    fs::write(path, bytes).map_err(|e| format!("Failed to write cache file: {}", e))?;
+
+    Ok(())
 }
 
 #[wrappers_fdw(
