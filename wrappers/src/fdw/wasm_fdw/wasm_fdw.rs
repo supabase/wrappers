@@ -166,23 +166,21 @@ fn download_and_verify(
 ) -> WasmFdwResult<Bytes> {
     let resp = rt
         .block_on(reqwest::get(url.clone()))
-        .map_err(|e| format!("Failed to download from {}: {}", url, e))?;
+        .map_err(|_| "failed to download component".to_string())?;
 
     if !resp.status().is_success() {
-        return Err(format!("Failed to download from {}: HTTP {}", url, resp.status()).into());
+        return Err("Component download failed - server error"
+            .to_string()
+            .into());
     }
 
     let bytes = rt
         .block_on(resp.bytes())
-        .map_err(|e| format!("Failed to read response from {}: {}", url, e))?;
+        .map_err(|_| "Failed to read component data".to_string())?;
 
     let actual_checksum = hex::encode(Sha256::digest(&bytes));
     if actual_checksum != expected_checksum {
-        return Err(format!(
-            "Checksum mismatch for {}: expected {}, got {}",
-            url, expected_checksum, actual_checksum
-        )
-        .into());
+        return Err("Component verification failed".to_string().into());
     }
 
     Ok(bytes)
@@ -190,11 +188,10 @@ fn download_and_verify(
 
 fn save_to_cache(path: &Path, bytes: &[u8]) -> WasmFdwResult<()> {
     if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|e| format!("Failed to create cache directory: {}", e))?;
+        fs::create_dir_all(parent).map_err(|_| "Cache access error".to_string())?;
     }
 
-    fs::write(path, bytes).map_err(|e| format!("Failed to write cache file: {}", e))?;
+    fs::write(path, bytes).map_err(|_| "Cache write error".to_string())?;
 
     Ok(())
 }
