@@ -13,7 +13,7 @@ hide:
 | Auth0       |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
 | AWS Cognito |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
 | BigQuery    |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |    ✅     |
-| Cal.com     |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
+| Cal.com     |   ✅   |   ✅   |   ❌   |   ❌   |    ❌    |    ❌     |
 | Calendly    |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
 | ClickHouse  |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |    ✅     |
 | Firebase    |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |

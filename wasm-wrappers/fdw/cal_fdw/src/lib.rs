@@ -260,20 +260,50 @@ impl Guest for CalFdw {
         Ok(())
     }
 
-    fn begin_modify(_ctx: &Context) -> FdwResult {
-        Err("modify on foreign table is not supported".to_owned())
+    fn begin_modify(ctx: &Context) -> FdwResult {
+        let this = Self::this_mut();
+        let opts = ctx.get_options(OptionsType::Table);
+        let object = opts.require("object")?;
+        if object != "bookings" {
+            return Err("only insert on foreign table 'bookings' is supported".to_owned());
+        }
+        this.object = object;
+        Ok(())
     }
 
-    fn insert(_ctx: &Context, _row: &Row) -> FdwResult {
+    fn insert(_ctx: &Context, row: &Row) -> FdwResult {
+        let this = Self::this_mut();
+        if let Some(cell) = &row.cells()[0] {
+            match cell {
+                Cell::Json(body) => {
+                    let url = format!("{}/{}", this.base_url, this.object);
+                    let mut headers = this.headers.clone();
+                    headers.push(("cal-api-version".to_owned(), "2024-08-13".to_owned()));
+                    let req = http::Request {
+                        method: http::Method::Post,
+                        url,
+                        headers,
+                        body: body.to_owned(),
+                    };
+                    let resp = http::post(&req)?;
+                    http::error_for_status(&resp)
+                        .map_err(|err| format!("{}: {}", err, resp.body))?;
+                    stats::inc_stats(FDW_NAME, stats::Metric::RowsOut, 1);
+                }
+                _ => {
+                    return Err("column type other than JSON is not supported".to_owned());
+                }
+            }
+        }
         Ok(())
     }
 
     fn update(_ctx: &Context, _rowid: Cell, _row: &Row) -> FdwResult {
-        Ok(())
+        Err("update on foreign table is not supported".to_owned())
     }
 
     fn delete(_ctx: &Context, _rowid: Cell) -> FdwResult {
-        Ok(())
+        Err("delete on foreign table is not supported".to_owned())
     }
 
     fn end_modify(_ctx: &Context) -> FdwResult {
