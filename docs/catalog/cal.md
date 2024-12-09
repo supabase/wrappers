@@ -37,7 +37,7 @@ The Cal.com API uses JSON formatted data, please refer to [Cal.com API docs](htt
 
 | Version | Wasm Package URL                                                                                | Checksum                                                           |
 | ------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_cal_fdw_v0.1.0/cal_fdw.wasm` | `4b8661caae0e4f7b5a1480ea297cf5681101320712cde914104b82f2b0954003` |
+| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_cal_fdw_v0.1.0/cal_fdw.wasm` | `tbd` |
 
 ## Preparation
 
@@ -121,7 +121,7 @@ The Cal.com Wrapper supports data reads from below objects in Cal.com.
 | -------------| :----: | :----: | :----: | :----: | :------: |
 | My Profile   |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
 | Event Types  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
-| Bookings     |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Bookings     |   ✅   |   ✅   |   ❌   |   ❌   |    ❌    |
 | Calendars    |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
 | Schedules    |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
 | Conferencing |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
@@ -153,7 +153,8 @@ create foreign table cal.bookings (
 )
   server cal_server
   options (
-    object 'bookings'
+    object 'bookings',
+    rowid_column 'attrs'
   );
 
 create foreign table cal.calendars (
@@ -188,6 +189,7 @@ create foreign table cal.conferencing (
 
     - All the supported columns are listed above, other columns are not allowd.
     - The `attrs` is a special column which stores all the object attributes in JSON format, you can extract any attributes needed from it. See more examples below.
+    - `bookings` table support data insertion, see an example below.
 
 ### Foreign table options
 
@@ -250,7 +252,8 @@ create foreign table cal.bookings (
 )
   server cal_server
   options (
-    object 'bookings'
+    object 'bookings',
+    rowid_column 'attrs'
   );
 
 create foreign table cal.event_types (
@@ -278,3 +281,24 @@ from cal.event_types t
   cross join json_array_elements((attrs->'eventTypeGroups')::json) etg
   cross join json_array_elements((etg->'eventTypes')::json) et;
 ```
+
+### Make a booking
+
+Once we know an event type ID (we can get it from above example, here we suppose it is `123456`), we can make a booking using below SQL.
+
+```
+insert into cal.bookings(attrs)
+values (
+	'{
+		"start": "2024-12-12T10:30:00.000Z",
+		"eventTypeId": 123456,
+		"attendee": {
+			"name": "Test Name",
+			"email": "test.name@example.com",
+			"timeZone": "America/New_York"
+		}
+	}'::jsonb
+);
+```
+
+To add more details to the booking, such as `guests` or `metadata`, refer to [Cal.com documentation](https://cal.com/docs/api-reference/v2/bookings/create-a-booking).
