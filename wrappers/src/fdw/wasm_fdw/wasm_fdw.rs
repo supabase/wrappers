@@ -51,17 +51,17 @@ fn download_component(
     version: &str,
     checksum: Option<&str>,
 ) -> WasmFdwResult<Component> {
-    // Handle local file paths
+    // handle local file paths
     if let Some(file_path) = url.strip_prefix("file://") {
         return load_component_from_file(engine, file_path);
     }
 
-    // Handle warg registry URLs
+    // handle warg registry URLs
     if url.starts_with("warg://") || url.starts_with("wargs://") {
-        return Ok(download_from_warg(rt, engine, url, name, version)?);
+        return download_from_warg(rt, engine, url, name, version);
     }
 
-    // Handle direct URLs with caching
+    // handle direct URLs with caching
     download_from_url(rt, engine, url, name, version, checksum)
 }
 
@@ -88,10 +88,10 @@ fn download_from_warg(
     ))?;
 
     let pkg_name = warg_protocol::registry::PackageName::new(name)
-        .map_err(|e| format!("Invalid package name '{}': {}", name, e))?;
+        .map_err(|e| format!("invalid package name '{}': {}", name, e))?;
 
     let ver = semver::VersionReq::parse(version)
-        .map_err(|e| format!("Invalid version requirement '{}': {}", version, e))?;
+        .map_err(|e| format!("invalid version requirement '{}': {}", version, e))?;
 
     let pkg = rt
         .block_on(client.download(&pkg_name, &ver))?
@@ -108,34 +108,34 @@ fn download_from_url(
     version: &str,
     checksum: Option<&str>,
 ) -> WasmFdwResult<Component> {
-    // Validate URL
+    // validate URL
     let url = url
         .parse::<reqwest::Url>()
-        .map_err(|e| format!("Invalid URL '{}': {}", url, e))?;
+        .map_err(|e| format!("invalid URL '{}': {}", url, e))?;
 
-    // Calculate cache path
+    // calculate cache path
     let cache_path = get_cache_path(url.as_str(), name, version)?;
 
-    // Return cached component if it exists and is valid
+    // return cached component if it exists and is valid
     if cache_path.exists() {
         if let Ok(component) = load_component_from_file(engine, &cache_path) {
             return Ok(component);
         }
-        // If loading fails, remove invalid cache file
+        // if loading fails, remove invalid cache file
         let _ = fs::remove_file(&cache_path);
     }
 
-    // Ensure checksum is provided for remote downloads
+    // ensure checksum is provided for remote downloads
     let checksum = checksum
-        .ok_or_else(|| "Package checksum must be specified for remote downloads".to_string())?;
+        .ok_or_else(|| "package checksum must be specified for remote downloads".to_string())?;
 
-    // Download and verify component
+    // download and verify component
     let bytes = download_and_verify(rt, url, checksum)?;
 
-    // Save to cache
+    // save to cache
     save_to_cache(&cache_path, &bytes)?;
 
-    // Load component
+    // load component
     load_component_from_file(engine, &cache_path).inspect_err(|_| {
         let _ = fs::remove_file(&cache_path);
     })
@@ -151,7 +151,7 @@ fn get_cache_path(url: &str, name: &str, version: &str) -> WasmFdwResult<PathBuf
     ));
 
     let file_name = hex::encode(hash);
-    let mut path = dirs::cache_dir().ok_or_else(|| "No cache directory found".to_string())?;
+    let mut path = dirs::cache_dir().ok_or_else(|| "no cache directory found".to_string())?;
 
     path.push(file_name);
     path.set_extension("wasm");
@@ -169,18 +169,18 @@ fn download_and_verify(
         .map_err(|_| "failed to download component".to_string())?;
 
     if !resp.status().is_success() {
-        return Err("Component download failed - server error"
+        return Err("component download failed - server error"
             .to_string()
             .into());
     }
 
     let bytes = rt
         .block_on(resp.bytes())
-        .map_err(|_| "Failed to read component data".to_string())?;
+        .map_err(|_| "failed to read component data".to_string())?;
 
     let actual_checksum = hex::encode(Sha256::digest(&bytes));
     if actual_checksum != expected_checksum {
-        return Err("Component verification failed".to_string().into());
+        return Err("component verification failed".to_string().into());
     }
 
     Ok(bytes)
@@ -188,16 +188,16 @@ fn download_and_verify(
 
 fn save_to_cache(path: &Path, bytes: &[u8]) -> WasmFdwResult<()> {
     if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).map_err(|_| "Cache access error".to_string())?;
+        fs::create_dir_all(parent).map_err(|_| "cache access error".to_string())?;
     }
 
-    fs::write(path, bytes).map_err(|_| "Cache write error".to_string())?;
+    fs::write(path, bytes).map_err(|_| "cache write error".to_string())?;
 
     Ok(())
 }
 
 #[wrappers_fdw(
-    version = "0.1.3",
+    version = "0.1.4",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/wasm_fdw",
     error_type = "WasmFdwError"
