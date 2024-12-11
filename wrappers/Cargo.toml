@@ -89,7 +89,6 @@ cognito_fdw = [
     "serde",
     "url",
     "thiserror",
-    "chrono",
 ]
 logflare_fdw = [
     "http",
@@ -198,8 +197,7 @@ aws-config = { version = "1.1.7", features = ["behavior-version-latest"], option
 aws-sdk-s3 = { version = "1.45.0", optional = true }
 
 # for cognito fdw
-aws-sdk-cognitoidentityprovider = {version ="1.10.0", optional = true}
-
+aws-sdk-cognitoidentityprovider = { version ="1.60.0", optional = true }
 
 csv = { version = "1.2", optional = true }
 tokio = { version = "1", features = ["full"], optional = true }

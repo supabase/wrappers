@@ -82,20 +82,29 @@ The Cognito Wrapper supports data reads from Cognito's [User Records](https://do
 
 | Cognito | Select | Insert | Update | Delete | Truncate |
 | ------- | :----: | :----: | :----: | :----: | :------: |
-| Records |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Users   |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
 
 For example:
 
 ```sql
 create foreign table cognito (
-    email text,
-    username text
+  username text,
+  email text,
+  status text,
+  enabled boolean,
+  created_at timestamp,
+  updated_at timestamp,
+  attributes jsonb
 )
 server cognito_server
 options (
-    object 'users'
+  object 'users'
 );
 ```
+
+!!! note
+
+    Only columns listed above are accepted in the foreign table.
 
 ### Foreign table options
 
@@ -117,8 +126,13 @@ This will create a "foreign table" inside your Postgres database called `cognito
 
 ```sql
 create foreign table cognito_table (
+  username text,
   email text,
-  username text
+  status text,
+  enabled boolean,
+  created_at timestamp,
+  updated_at timestamp,
+  attributes jsonb
 )
 server cognito_server
 options (
