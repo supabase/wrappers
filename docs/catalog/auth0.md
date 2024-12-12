@@ -77,11 +77,17 @@ We need to provide Postgres with the credentials to connect to Airtable, and any
 
 The Auth0 Wrapper supports data reads from Auth0's [Management API List users endpoint](https://auth0.com/docs/api/management/v2/users/get-users) endpoint (_read only_).
 
-| Auth0   | Select | Insert | Update | Delete | Truncate |
-| ------- | :----: | :----: | :----: | :----: | :------: |
-| Records |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+### Users
 
-For example:
+The Auth0 Wrapper supports data reads from Auth0's [Management API List users endpoint](https://auth0.com/docs/api/management/v2/users/get-users) endpoint (_read only_).
+
+#### Operations
+
+| Object | Select | Insert | Update | Delete | Truncate |
+| ------ | :----: | :----: | :----: | :----: | :------: |
+| Users  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
 
 ```sql
 create foreign table my_foreign_table (
@@ -90,27 +96,28 @@ create foreign table my_foreign_table (
 )
 server auth0_server
 options (
-  object 'users',
+  object 'users'
 );
 ```
 
-### Foreign table options
+#### Notes
 
-The full list of foreign table options are below:
-
-- `objects` - Auth0 object to select from. Currently only supports `users`
-
-## Query Pushdown Support
-
-This FDW doesn't support query pushdown.
+- Currently only supports the `users` object
+- This FDW doesn't support query pushdown
 
 ## Examples
 
-Some examples on how to use Auth0 foreign tables.
+### Basic Auth0 Users Query
 
-### Basic example
+This example demonstrates querying Auth0 users data.
 
-This will create a "foreign table" inside your Postgres database called `auth0_table`:
+#### Operations
+
+| Object | Select | Insert | Update | Delete | Truncate |
+| ------ | :----: | :----: | :----: | :----: | :------: |
+| Users  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
 
 ```sql
 create foreign table auth0_table (
@@ -123,11 +130,10 @@ create foreign table auth0_table (
   options (
     object 'users'
   );
-
 ```
 
-You can now fetch your Auth0 data from within your Postgres database:
+#### Notes
 
-```sql
-select * from auth0;
-```
+- The `object` option must be set to 'users'
+- Query the table using standard SQL: `select * from auth0_table;`
+- The table provides read-only access to Auth0 user data

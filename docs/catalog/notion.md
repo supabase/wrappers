@@ -111,24 +111,23 @@ We recommend creating a schema to hold all the foreign tables:
 create schema if not exists notion;
 ```
 
-## Creating Foreign Tables
+## Entities
 
-The Notion Wrapper supports data reads from below objects in Notion.
+### Block
 
-| Integration | Select | Insert | Update | Delete | Truncate |
-| ----------- | :----: | :----: | :----: | :----: | :------: |
-| Block       |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
-| Page        |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
-| Database    |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
-| User        |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+This is an object representing Notion Block content.
 
-For example:
+Ref: [Notion API docs](https://developers.notion.com/reference/intro)
+
+#### Operations
+
+| Object | Select | Insert | Update | Delete | Truncate |
+| ------ | :----: | :----: | :----: | :----: | :------: |
+| Block  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
 
 ```sql
--- Note: the 'page_id' isn't presented in the Notion Block's fields, it is
--- added by the foreign data wrapper for development convenience. All blocks,
--- including nested children blocks, belong to one page will have a same
--- 'page_id' of that page.
 create foreign table notion.blocks (
   id text,
   page_id text,
@@ -142,7 +141,31 @@ create foreign table notion.blocks (
   options (
     object 'block'
   );
+```
 
+#### Notes
+
+- The `page_id` field is added by the FDW for development convenience
+- All blocks, including nested children blocks, belonging to one page will have the same `page_id`
+- Query pushdown supported for both `id` and `page_id` columns
+- Use `page_id` filter to fetch all blocks of a specific page recursively
+- Querying all blocks without filters may take a long time due to recursive fetching
+
+### Page
+
+This is an object representing Notion Pages.
+
+Ref: [Notion API docs](https://developers.notion.com/reference/intro)
+
+#### Operations
+
+| Object | Select | Insert | Update | Delete | Truncate |
+| ------ | :----: | :----: | :----: | :----: | :------: |
+| Page   |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
+
+```sql
 create foreign table notion.pages (
   id text,
   url text,
@@ -155,7 +178,28 @@ create foreign table notion.pages (
   options (
     object 'page'
   );
+```
 
+#### Notes
+
+- Query pushdown supported for `id` column
+- The `attrs` column contains all page attributes in JSON format
+
+### Database
+
+This is an object representing Notion Databases.
+
+Ref: [Notion API docs](https://developers.notion.com/reference/intro)
+
+#### Operations
+
+| Object   | Select | Insert | Update | Delete | Truncate |
+| -------- | :----: | :----: | :----: | :----: | :------: |
+| Database |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
+
+```sql
 create foreign table notion.databases (
   id text,
   url text,
@@ -168,7 +212,28 @@ create foreign table notion.databases (
   options (
     object 'database'
   );
+```
 
+#### Notes
+
+- Query pushdown supported for `id` column
+- The `attrs` column contains all database attributes in JSON format
+
+### User
+
+This is an object representing Notion Users.
+
+Ref: [Notion API docs](https://developers.notion.com/reference/intro)
+
+#### Operations
+
+| Object | Select | Insert | Update | Delete | Truncate |
+| ------ | :----: | :----: | :----: | :----: | :------: |
+| User   |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
+
+```sql
 create foreign table notion.users (
   id text,
   name text,
@@ -182,14 +247,13 @@ create foreign table notion.users (
   );
 ```
 
-!!! note
+#### Notes
 
-    - All the supported columns are listed above, other columns are not allowd.
-    - The `attrs` is a special column which stores all the object attributes in JSON format, you can extract any attributes needed from it. See more examples below.
+- Query pushdown supported for `id` column
+- The `attrs` column contains all user attributes in JSON format
+- User email can be extracted using: `attrs->'person'->>'email'`
 
-### Foreign table options
-
-The full list of foreign table options are below:
+## Foreign Table Options
 
 - `object` - Object name in Notion, required.
 
@@ -232,9 +296,7 @@ will recursively fetch all children blocks of the Page with id '5a67c86f-d0da-4d
 
 ## Examples
 
-Below are some examples on how to use Notion foreign tables.
-
-### Basic example
+### Basic Example
 
 This example will create a "foreign table" inside your Postgres database and query its data. First, we can create a schema to hold all the Notion foreign tables.
 
@@ -268,7 +330,7 @@ where id = '5a67c86f-d0da-4d0a-9dd7-f4cf164e6247';
 
 `attrs` is a special column which stores all the object attributes in JSON format, you can extract any attributes needed from it. See more examples below.
 
-### Query JSON attributes
+### Query JSON Attributes
 
 ```sql
 create foreign table notion.users (

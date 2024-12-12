@@ -84,16 +84,21 @@ We need to provide Postgres with the credentials to connect to Firebase, and any
        );
     ```
 
-## Creating Foreign Tables
+## Entities
 
-The Firebase Wrapper supports reading data from below Firebase's objects:
+### Authentication Users
 
-| Firebase                     | Select | Insert | Update | Delete | Truncate |
-| ---------------------------- | :----: | :----: | :----: | :----: | :------: |
-| Authentication Users         |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
-| Firestore Database Documents |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+This is an object representing Firebase Authentication Users.
 
-For example:
+Ref: [Firebase Authentication Users](https://firebase.google.com/docs/auth/users)
+
+#### Operations
+
+| Object              | Select | Insert | Update | Delete | Truncate |
+| ------------------- | :----: | :----: | :----: | :----: | :------: |
+| Authentication Users|   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
 
 ```sql
 create foreign table firebase_users (
@@ -108,9 +113,48 @@ create foreign table firebase_users (
   );
 ```
 
-Note there is a meta column `attrs` in the foreign table, which contains all the returned data from Firebase as json format.
+#### Notes
 
-### Foreign table options
+- The `attrs` column contains all user attributes in JSON format
+- This is a special collection with unique metadata fields
+
+### Firestore Database Documents
+
+This is an object representing Firestore Database Documents.
+
+Ref: [Firestore Database](https://firebase.google.com/docs/firestore)
+
+#### Operations
+
+| Object                     | Select | Insert | Update | Delete | Truncate |
+| -------------------------- | :----: | :----: | :----: | :----: | :------: |
+| Firestore Database Documents|   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
+
+```sql
+create foreign table firebase_docs (
+  name text,
+  created_at timestamp,
+  updated_at timestamp,
+  attrs jsonb
+)
+  server firebase_server
+  options (
+    object 'firestore/user-profiles'
+  );
+```
+
+#### Notes
+
+- The `name`, `created_at`, and `updated_at` are automatic metadata fields on all Firestore collections
+- Collection ID must be a full path ID in the format `firestore/<collection_id>`
+- Examples of valid collection paths:
+  - `firestore/my-collection`
+  - `firestore/my-collection/my-document/another-collection`
+- The `attrs` column contains all document attributes in JSON format
+
+## Foreign Table Options
 
 The full list of foreign table options are below:
 

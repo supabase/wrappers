@@ -105,15 +105,21 @@ All parameter keys are handled case-insensitive.
 | Encrypt                | true, false, DANGER_PLAINTEXT | Specifies whether the driver uses TLS to encrypt communication.                                    |
 | ApplicationName        | `<string>`                    | Sets the application name for the connection.                                                      |
 
-## Creating Foreign Tables
+## Entities
 
-The SQL Server Wrapper supports data reads from SQL Server.
+### SQL Server Tables
 
-| Integration | Select | Insert | Update | Delete | Truncate |
-| ----------- | :----: | :----: | :----: | :----: | :------: |
-| SQL Server  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+This is an object representing SQL Server tables and views.
 
-For example:
+Ref: [Microsoft SQL Server docs](https://www.microsoft.com/en-au/sql-server/)
+
+#### Operations
+
+| Object          | Select | Insert | Update | Delete | Truncate |
+| --------------- | :----: | :----: | :----: | :----: | :------: |
+| SQL Server      |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
 
 ```sql
 create foreign table mssql_users (
@@ -127,7 +133,17 @@ create foreign table mssql_users (
   );
 ```
 
-### Foreign table options
+#### Notes
+
+- Supports both tables and views as data sources
+- Can use subqueries in the `table` option
+- Query pushdown supported for:
+  - `where` clauses
+  - `order by` clauses
+  - `limit` clauses
+- See Data Types section for type mappings between PostgreSQL and SQL Server
+
+## Foreign Table Options
 
 The full list of foreign table options are below:
 
@@ -145,9 +161,9 @@ This FDW supports `where`, `order by` and `limit` clause pushdown.
 
 ## Examples
 
-Some examples on how to use SQL Server foreign tables.
+### Basic Example
 
-Let's prepare the source table in SQL Server first:
+First, create a source table in SQL Server:
 
 ```sql
 -- Run below SQLs on SQL Server to create source table
@@ -163,9 +179,7 @@ insert into users(id, name, dt) values (43, 'Bar', '2023-12-27');
 insert into users(id, name, dt) values (44, 'Baz', '2023-12-26');
 ```
 
-### Basic example
-
-This example will create a foreign table inside your Postgres database and query its data:
+Then create and query the foreign table in PostgreSQL:
 
 ```sql
 create foreign table mssql_users (
@@ -181,9 +195,9 @@ create foreign table mssql_users (
 select * from mssql_users;
 ```
 
-### Remote subquery example
+### Remote Subquery Example
 
-This example will create a foreign table based on a remote subquery and query its data:
+Create a foreign table using a subquery:
 
 ```sql
 create foreign table mssql_users_subquery (

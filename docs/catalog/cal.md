@@ -113,20 +113,21 @@ We recommend creating a schema to hold all the foreign tables:
 create schema if not exists cal;
 ```
 
-## Creating Foreign Tables
+## Entities
 
-The Cal.com Wrapper supports data reads from below objects in Cal.com.
+### My Profile
 
-| Integration  | Select | Insert | Update | Delete | Truncate |
-| -------------| :----: | :----: | :----: | :----: | :------: |
-| My Profile   |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
-| Event Types  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
-| Bookings     |   ✅   |   ✅   |   ❌   |   ❌   |    ❌    |
-| Calendars    |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
-| Schedules    |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
-| Conferencing |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+This is an object representing your Cal.com user profile.
 
-For example:
+Ref: [Cal.com API docs](https://cal.com/docs/api-reference/v2/introduction)
+
+#### Operations
+
+| Object     | Select | Insert | Update | Delete | Truncate |
+| ---------- | :----: | :----: | :----: | :----: | :------: |
+| My Profile |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
 
 ```sql
 create foreign table cal.my_profile (
@@ -139,7 +140,28 @@ create foreign table cal.my_profile (
   options (
     object 'my_profile'
   );
+```
 
+#### Notes
+
+- The `attrs` column contains all profile attributes in JSON format
+- Query using standard SQL: `select * from cal.my_profile`
+
+### Event Types
+
+This is an object representing Cal.com event types.
+
+Ref: [Cal.com API docs](https://cal.com/docs/api-reference/v2/introduction)
+
+#### Operations
+
+| Object      | Select | Insert | Update | Delete | Truncate |
+| ----------- | :----: | :----: | :----: | :----: | :------: |
+| Event Types |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
+
+```sql
 create foreign table cal.event_types (
   attrs jsonb
 )
@@ -147,7 +169,38 @@ create foreign table cal.event_types (
   options (
     object 'event-types'
   );
-  
+```
+
+#### Notes
+
+- The `attrs` column contains all event type attributes in JSON format
+- Extract specific fields using JSON operators
+- Example:
+  ```sql
+  select
+    etg->'profile'->>'name' as profile,
+    et->>'id' as id,
+    et->>'title' as title
+  from cal.event_types t
+    cross join json_array_elements((attrs->'eventTypeGroups')::json) etg
+    cross join json_array_elements((etg->'eventTypes')::json) et;
+  ```
+
+### Bookings
+
+This is an object representing Cal.com bookings.
+
+Ref: [Cal.com API docs](https://cal.com/docs/api-reference/v2/bookings/create-a-booking)
+
+#### Operations
+
+| Object   | Select | Insert | Update | Delete | Truncate |
+| -------- | :----: | :----: | :----: | :----: | :------: |
+| Bookings |   ✅   |   ✅   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
+
+```sql
 create foreign table cal.bookings (
   attrs jsonb
 )
@@ -156,7 +209,45 @@ create foreign table cal.bookings (
     object 'bookings',
     rowid_column 'attrs'
   );
+```
 
+#### Notes
+
+- Supports both reading and creating bookings
+- The `attrs` column contains all booking attributes in JSON format
+- Example of creating a booking:
+  ```sql
+  insert into cal.bookings(attrs)
+  values (
+    '{
+      "start": "2024-12-12T10:30:00.000Z",
+      "eventTypeId": 123456,
+      "attendee": {
+        "name": "Test Name",
+        "email": "test.name@example.com",
+        "timeZone": "America/New_York"
+      }
+    }'::jsonb
+  );
+  ```
+- Additional fields like `guests` or `metadata` can be added to the booking JSON
+- For more details on booking options, refer to [Cal.com documentation](https://cal.com/docs/api-reference/v2/bookings/create-a-booking)
+
+### Calendars
+
+This is an object representing Cal.com calendars.
+
+Ref: [Cal.com API docs](https://cal.com/docs/api-reference/v2/introduction)
+
+#### Operations
+
+| Object    | Select | Insert | Update | Delete | Truncate |
+| --------- | :----: | :----: | :----: | :----: | :------: |
+| Calendars |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
+
+```sql
 create foreign table cal.calendars (
   attrs jsonb
 )
@@ -164,7 +255,27 @@ create foreign table cal.calendars (
   options (
     object 'calendars'
   );
+```
 
+#### Notes
+
+- The `attrs` column contains all calendar attributes in JSON format
+
+### Schedules
+
+This is an object representing Cal.com schedules.
+
+Ref: [Cal.com API docs](https://cal.com/docs/api-reference/v2/introduction)
+
+#### Operations
+
+| Object    | Select | Insert | Update | Delete | Truncate |
+| --------- | :----: | :----: | :----: | :----: | :------: |
+| Schedules |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
+
+```sql
 create foreign table cal.schedules (
   id bigint,
   name text,
@@ -174,7 +285,27 @@ create foreign table cal.schedules (
   options (
     object 'schedules'
   );
+```
 
+#### Notes
+
+- The `attrs` column contains additional schedule attributes in JSON format
+
+### Conferencing
+
+This is an object representing Cal.com conferencing settings.
+
+Ref: [Cal.com API docs](https://cal.com/docs/api-reference/v2/introduction)
+
+#### Operations
+
+| Object       | Select | Insert | Update | Delete | Truncate |
+| ------------ | :----: | :----: | :----: | :----: | :------: |
+| Conferencing |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
+
+```sql
 create foreign table cal.conferencing (
   id bigint,
   attrs jsonb
@@ -185,13 +316,11 @@ create foreign table cal.conferencing (
   );
 ```
 
-!!! note
+#### Notes
 
-    - All the supported columns are listed above, other columns are not allowd.
-    - The `attrs` is a special column which stores all the object attributes in JSON format, you can extract any attributes needed from it. See more examples below.
-    - `bookings` table support data insertion, see an example below.
+- The `attrs` column contains all conferencing attributes in JSON format
 
-### Foreign table options
+## Foreign Table Options
 
 The full list of foreign table options are below:
 
@@ -263,7 +392,7 @@ create foreign table cal.event_types (
   options (
     object 'event-types'
   );
-  
+
 -- extract bookings
 select
   bk->>'id' as id,

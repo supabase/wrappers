@@ -76,15 +76,21 @@ We need to provide Postgres with the credentials to connect to Cognito, and any 
       );
     ```
 
-## Creating Foreign Tables
+## Entities
 
-The Cognito Wrapper supports data reads from Cognito's [User Records](https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-identity-pools.html) endpoint (_read only_).
+### Users
 
-| Cognito | Select | Insert | Update | Delete | Truncate |
-| ------- | :----: | :----: | :----: | :----: | :------: |
-| Users   |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+This is an object representing Cognito User Records.
 
-For example:
+Ref: [AWS Cognito User Records](https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-identity-pools.html)
+
+#### Operations
+
+| Object | Select | Insert | Update | Delete | Truncate |
+| ------ | :----: | :----: | :----: | :----: | :------: |
+| Users  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
 
 ```sql
 create foreign table cognito (
@@ -102,13 +108,12 @@ options (
 );
 ```
 
-!!! note
+#### Notes
 
-    Only columns listed above are accepted in the foreign table.
+- Only the columns listed above are accepted in the foreign table
+- The `attributes` column contains additional user attributes in JSON format
 
-### Foreign table options
-
-The full list of foreign table options are below:
+## Foreign Table Options
 
 - `object`: type of object we are querying. For now, only `users` is supported
 
@@ -117,8 +122,6 @@ The full list of foreign table options are below:
 This FDW doesn't support query pushdown.
 
 ## Examples
-
-Some examples on how to use Cognito foreign tables.
 
 ### Basic example
 

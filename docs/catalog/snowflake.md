@@ -120,15 +120,21 @@ We recommend creating a schema to hold all the foreign tables:
 create schema if not exists snowflake;
 ```
 
-## Creating Foreign Tables
+## Entities
 
-The Snowflake Wrapper supports data reads and writes from Snowflake.
+### Snowflake Tables
 
-| Integration | Select | Insert | Update | Delete | Truncate |
-| ----------- | :----: | :----: | :----: | :----: | :------: |
-| Snowflake   |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
+This is an object representing a Snowflake table or view.
 
-For example:
+Ref: [Snowflake docs](https://docs.snowflake.com/en/sql-reference/sql/create-table)
+
+#### Operations
+
+| Object | Select | Insert | Update | Delete | Truncate |
+| ------ | :----: | :----: | :----: | :----: | :------: |
+| Table  |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
+
+#### Usage
 
 ```sql
 create foreign table snowflake.mytable (
@@ -145,17 +151,19 @@ create foreign table snowflake.mytable (
   );
 ```
 
-### Foreign table options
+#### Notes
 
-The full list of foreign table options are below:
+- Supports both tables and views as data sources
+- Can use subqueries in table option
+- Requires rowid_column for data modification operations
+- Supports query pushdown for where, order by, and limit clauses
+- Column names must match between Snowflake and foreign table
+- Data types must be compatible according to type mapping table
+
+## Foreign Table Options
 
 - `table` - Source table or view name in Snowflake, required.
-
-  This can also be a subquery enclosed in parentheses, for example,
-
-  ```sql
-  table '(select * from mydatabase.public.mytable where id = 42)'
-  ```
+  Can also be a subquery enclosed in parentheses.
 
 - `rowid_column` - Primary key column name, optional for data scan, required for data modify
 
@@ -165,7 +173,7 @@ This FDW supports `where`, `order by` and `limit` clause pushdown.
 
 ## Examples
 
-Some examples on how to use Snowflake foreign tables.
+### Basic Example
 
 Let's prepare the source table in Snowflake first:
 
@@ -188,8 +196,6 @@ values (42, 'foo', 12.34, '2024-05-18', '2024-05-18 12:34:56');
 insert into mydatabase.public.mytable(id, name, num, dt, ts)
 values (43, 'bar', 56.78, '2024-05-19', '2024-05-19 12:34:56');
 ```
-
-### Basic example
 
 This example will create a "foreign table" inside your Postgres database and query its data. First, we can create a schema to hold all the Snowflake foreign tables.
 
@@ -216,7 +222,7 @@ create foreign table snowflake.mytable (
 select * from snowflake.mytable;
 ```
 
-### Data modify example
+### Data Modify Example
 
 This example will modify data in a "foreign table" inside your Postgres database, note that `rowid_column` option is mandatory for data modify:
 

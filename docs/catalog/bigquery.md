@@ -106,13 +106,17 @@ We need to provide Postgres with the credentials to connect to BigQuery, and any
 
 ## Creating Foreign Tables
 
-The BigQuery Wrapper supports data reads and writes from BigQuery.
+### Tables
 
-| Integration | Select | Insert | Update | Delete | Truncate |
-| ----------- | :----: | :----: | :----: | :----: | :------: |
-| BigQuery    |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
+The BigQuery Wrapper supports data reads and writes from BigQuery tables and views.
 
-For example:
+#### Operations
+
+| Object | Select | Insert | Update | Delete | Truncate |
+| ------ | :----: | :----: | :----: | :----: | :------: |
+| Tables |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
+
+#### Usage
 
 ```sql
 create foreign table my_bigquery_table (
@@ -127,23 +131,28 @@ create foreign table my_bigquery_table (
   );
 ```
 
-### Foreign table options
+#### Notes
 
-The full list of foreign table options are below:
+- Supports `where`, `order by` and `limit` clause pushdown
+- When using `rowid_column`, it must be specified for data modification operations
+- Data in the streaming buffer cannot be updated or deleted until the buffer is flushed (up to 90 minutes)
 
-- `table` - Source table or view name in BigQuery, required.
+### Foreign Table Options
 
-  This can also be a subquery enclosed in parentheses, for example,
+The following options are available when creating BigQuery foreign tables:
 
-  ```sql
-  table '(select * except(props), to_json_string(props) as props from `my_project.my_dataset.my_table`)'
-  ```
+- `table` - Source table or view name in BigQuery, required
+- `location` - Source table location (default: 'US')
+- `timeout` - Query request timeout in milliseconds (default: 30000)
+- `rowid_column` - Primary key column name (required for data modification)
 
-  **Note**: When using subquery in this option, full qualitified table name must be used.
+You can also use a subquery as the table option:
 
-- `location` - Source table location, optional. Default is 'US'.
-- `timeout` - Query request timeout in milliseconds, optional. Default is '30000' (30 seconds).
-- `rowid_column` - Primary key column name, optional for data scan, required for data modify
+```sql
+table '(select * except(props), to_json_string(props) as props from `my_project.my_dataset.my_table`)'
+```
+
+Note: When using subquery, full qualified table name must be used.
 
 ## Query Pushdown Support
 

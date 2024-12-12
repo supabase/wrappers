@@ -82,9 +82,9 @@ The Airtable Wrapper supports data reads from Airtable's [Records](https://airta
 
 #### Operations
 
-| Airtable | Select | Insert | Update | Delete | Truncate |
-| -------- | :----: | :----: | :----: | :----: | :------: |
-| Records  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Object  | Select | Insert | Update | Delete | Truncate |
+| ------- | :----: | :----: | :----: | :----: | :------: |
+| Records |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
 
 #### Usage
 
@@ -100,25 +100,25 @@ options (
 );
 ```
 
-#### Options
+#### Notes
 
-The full list of foreign table options are below:
-
-- `base_id` - Airtable Base ID the table belongs to, required.
-- `table_id` - Airtable table ID, required.
-- `view_id` - Airtable view ID, optional.
-
-## Query Pushdown Support
-
-This FDW doesn't support query pushdown.
+- The table requires both `base_id` and `table_id` options
+- Optional `view_id` can be specified to query a specific view
+- This FDW doesn't support query pushdown
 
 ## Examples
-
-Some examples on how to use Airtable foreign tables.
 
 ### Query an Airtable table
 
 This will create a "foreign table" inside your Postgres database called `airtable_table`:
+
+#### Operations
+
+| Object | Select | Insert | Update | Delete | Truncate |
+| ------ | :----: | :----: | :----: | :----: | :------: |
+| Tables |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
 
 ```sql
 create foreign table airtable_table (
@@ -135,11 +135,11 @@ options (
 );
 ```
 
-You can now fetch your Airtable data from within your Postgres database:
+#### Notes
 
-```sql
-select * from airtable_table;
-```
+- The `base_id` option specifies the Airtable Base ID the table belongs to
+- The `table_id` option specifies the Airtable table ID
+- You can fetch data using standard SQL: `select * from airtable_table;`
 
 ### Query an Airtable view
 

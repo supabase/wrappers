@@ -98,13 +98,17 @@ Check [more connection string parameters](https://github.com/suharev7/clickhouse
 
 ## Creating Foreign Tables
 
-The ClickHouse Wrapper supports data reads and writes from ClickHouse.
+### Tables
 
-| Integration | Select | Insert | Update | Delete | Truncate |
-| ----------- | :----: | :----: | :----: | :----: | :------: |
-| ClickHouse  |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
+The ClickHouse Wrapper supports data reads and writes from ClickHouse tables.
 
-For example:
+#### Operations
+
+| Object | Select | Insert | Update | Delete | Truncate |
+| ------ | :----: | :----: | :----: | :----: | :------: |
+| Tables |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
+
+#### Usage
 
 ```sql
 create foreign table my_clickhouse_table (
@@ -117,11 +121,17 @@ create foreign table my_clickhouse_table (
   );
 ```
 
-### Foreign table options
+#### Notes
 
-The full list of foreign table options are below:
+- Supports `where`, `order by` and `limit` clause pushdown
+- Supports parametrized views in subqueries
+- When using `rowid_column`, it must be specified for data modification operations
 
-- `table` - Source table name in ClickHouse, required.
+### Foreign Table Options
+
+The following options are available when creating ClickHouse foreign tables:
+
+- `table` - Source table name in ClickHouse, required
 
   This can also be a subquery enclosed in parentheses, for example,
 
@@ -155,27 +165,17 @@ This FDW supports `where`, `order by` and `limit` clause pushdown, as well as pa
 
 ## Examples
 
-Some examples on how to use ClickHouse foreign tables.
+### Basic Query Example
 
-### Basic example
+This example demonstrates basic ClickHouse table operations.
 
-This will create a "foreign table" inside your Postgres database called `people`:
+#### Operations
 
-```sql
--- Run below SQLs on ClickHouse to create source table
-drop table if exists people;
-create table people (
-    id Int64,
-    name String
-)
-engine=MergeTree()
-order by id;
+| Object | Select | Insert | Update | Delete | Truncate |
+| ------ | :----: | :----: | :----: | :----: | :------: |
+| Tables |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
 
--- Add some test data
-insert into people values (1, 'Luke Skywalker'), (2, 'Leia Organa'), (3, 'Han Solo');
-```
-
-Create foreign table on Postgres database:
+#### Usage
 
 ```sql
 create foreign table people (
@@ -186,12 +186,15 @@ create foreign table people (
   options (
     table 'people'
   );
-
--- data scan
-select * from people;
-
--- data modify
-insert into people values (4, 'Yoda');
-update people set name = 'Princess Leia' where id = 2;
-delete from people where id = 3;
 ```
+
+#### Notes
+
+- Query the table using standard SQL: `select * from people;`
+- Supports data modification operations with `rowid_column`
+- Example operations:
+  ```sql
+  insert into people values (4, 'Yoda');
+  update people set name = 'Princess Leia' where id = 2;
+  delete from people where id = 3;
+  ```

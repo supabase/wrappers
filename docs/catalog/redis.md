@@ -111,15 +111,21 @@ rediss://[<username>][:<password>@]<hostname>[:port]/[<db>]#insecure
 
     Client certificate and custom root certificates are not supported when using TLS.
 
-## Creating Foreign Tables
+## Entities
 
-The Redis Wrapper supports data reads from Redis.
+### List
 
-| Integration | Select | Insert | Update | Delete | Truncate |
-| ----------- | :----: | :----: | :----: | :----: | :------: |
-| Redis       |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+This is an object representing a Redis List.
 
-For example:
+Ref: [Redis docs](https://redis.io/docs/data-types/lists/)
+
+#### Operations
+
+| Object | Select | Insert | Update | Delete | Truncate |
+| ------ | :----: | :----: | :----: | :----: | :------: |
+| List   |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
 
 ```sql
 create foreign table redis_list (
@@ -127,28 +133,179 @@ create foreign table redis_list (
 )
   server redis_server
   options (
-	src_type 'list',
+    src_type 'list',
     src_key 'my_list'
   );
 ```
 
-The foreign table columns names and types must be fixed for each source type, as listed below:
+#### Notes
 
-| src_type        | Column name | Column type |
-| --------------- | ----------- | ----------- |
-| list, set, zset | `element`   | text        |
-| hash            | `key`       | text        |
-|                 | `value`     | text        |
-| stream          | `id`        | text        |
-|                 | `items`     | jsonb       |
-| multi\_\*       | `key`       | text        |
-|                 | `items`     | jsonb       |
+- Elements are stored in insertion order
+- Query returns all elements in the list
+- No query pushdown support
 
-**See below for the full list of `src_type` and descriptions.**
+### Set
 
-### Foreign table options
+This is an object representing a Redis Set.
 
-The full list of foreign table options are below:
+Ref: [Redis docs](https://redis.io/docs/data-types/sets/)
+
+#### Operations
+
+| Object | Select | Insert | Update | Delete | Truncate |
+| ------ | :----: | :----: | :----: | :----: | :------: |
+| Set    |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
+
+```sql
+create foreign table redis_set (
+  element text
+)
+  server redis_server
+  options (
+    src_type 'set',
+    src_key 'set'
+  );
+```
+
+#### Notes
+
+- Elements are unique within the set
+- No guaranteed order of elements
+- No query pushdown support
+
+### Hash
+
+This is an object representing a Redis Hash.
+
+Ref: [Redis docs](https://redis.io/docs/data-types/hashes/)
+
+#### Operations
+
+| Object | Select | Insert | Update | Delete | Truncate |
+| ------ | :----: | :----: | :----: | :----: | :------: |
+| Hash   |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
+
+```sql
+create foreign table redis_hash (
+  key text,
+  value text
+)
+  server redis_server
+  options (
+    src_type 'hash',
+    src_key 'hash'
+  );
+```
+
+#### Notes
+
+- Key-value pairs within the hash
+- No query pushdown support
+- Both key and value are returned as text
+
+### Sorted Set
+
+This is an object representing a Redis Sorted Set.
+
+Ref: [Redis docs](https://redis.io/docs/data-types/sorted-sets/)
+
+#### Operations
+
+| Object     | Select | Insert | Update | Delete | Truncate |
+| ---------- | :----: | :----: | :----: | :----: | :------: |
+| Sorted Set |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
+
+```sql
+create foreign table redis_zset (
+  element text
+)
+  server redis_server
+  options (
+    src_type 'zset',
+    src_key 'zset'
+  );
+```
+
+#### Notes
+
+- Elements are ordered by their score
+- Elements are unique within the set
+- Score information is not exposed in the foreign table
+
+### Stream
+
+This is an object representing a Redis Stream.
+
+Ref: [Redis docs](https://redis.io/docs/data-types/streams/)
+
+#### Operations
+
+| Object | Select | Insert | Update | Delete | Truncate |
+| ------ | :----: | :----: | :----: | :----: | :------: |
+| Stream |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
+
+```sql
+create foreign table redis_stream (
+  id text,
+  items jsonb
+)
+  server redis_server
+  options (
+    src_type 'stream',
+    src_key 'stream'
+  );
+```
+
+#### Notes
+
+- Stream entries have unique IDs
+- Items are stored in JSONB format
+- Entries are ordered by their IDs
+
+### Multiple Objects
+
+Redis wrapper supports querying multiple objects of the same type using pattern matching.
+
+#### Operations
+
+| Object Type    | Select | Insert | Update | Delete | Truncate |
+| ------------- | :----: | :----: | :----: | :----: | :------: |
+| Multiple List  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Multiple Set   |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Multiple Hash  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Multiple ZSet  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
+
+```sql
+create foreign table redis_multi_lists (
+  key text,
+  items jsonb
+)
+  server redis_server
+  options (
+    src_type 'multi_list',
+    src_key 'list:*'
+  );
+
+select * from redis_multi_lists;
+```
+
+#### Notes
+
+- Use pattern matching in `src_key` option
+- Results include object key and items in JSONB format
+- Items format varies by object type
+
+## Foreign Table Options
 
 - `src_type` - Foreign table source type in Redis, required.
 
@@ -177,7 +334,7 @@ The full list of foreign table options are below:
 
 ## Query Pushdown Support
 
-This FDW doesn't supports pushdown.
+This FDW doesn't support pushdown.
 
 ## Examples
 

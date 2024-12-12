@@ -115,25 +115,23 @@ We recommend creating a schema to hold all the foreign tables:
 create schema if not exists calendly;
 ```
 
-## Creating Foreign Tables
+## Entities
 
-The Calendly Wrapper supports data reads from below objects in calendly.
+### Current User
 
-| Integration             | Select | Insert | Update | Delete | Truncate |
-| ----------------------- | :----: | :----: | :----: | :----: | :------: |
-| Current User            |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
-| Event Types             |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
-| Groups                  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
-| Organization Membership |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
-| Scheduled Events        |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+This is an object representing your Calendly user profile.
 
-For example:
+Ref: [Calendly API docs](https://developer.calendly.com/api-docs)
+
+#### Operations
+
+| Object       | Select | Insert | Update | Delete | Truncate |
+| ------------ | :----: | :----: | :----: | :----: | :------: |
+| Current User |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
 
 ```sql
--- Get the current user used for the API request
--- Note: we can query this table to retrieve the organization uri:
---   select attrs->>'current_organization' as org_uri
---   from calendly.current_user;
 create foreign table calendly.current_user (
   uri text,
   slug text,
@@ -145,7 +143,33 @@ create foreign table calendly.current_user (
   options (
     object 'current_user'
   );
+```
 
+#### Notes
+
+- Use this table to retrieve the organization URI for server configuration
+- Example:
+  ```sql
+  select attrs->>'current_organization' as org_uri
+  from calendly.current_user;
+  ```
+- The `attrs` column contains additional user attributes in JSON format
+
+### Event Types
+
+This is an object representing Calendly event types.
+
+Ref: [Calendly API docs](https://developer.calendly.com/api-docs)
+
+#### Operations
+
+| Object      | Select | Insert | Update | Delete | Truncate |
+| ----------- | :----: | :----: | :----: | :----: | :------: |
+| Event Types |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
+
+```sql
 create foreign table calendly.event_types (
   uri text,
   created_at timestamp,
@@ -156,7 +180,33 @@ create foreign table calendly.event_types (
   options (
     object 'event_types'
   );
-  
+```
+
+#### Notes
+
+- The `attrs` column contains all event type attributes in JSON format
+- Access profile and custom questions through JSON attributes:
+  ```sql
+  select attrs->'profile'->>'name' as profile_name,
+         attrs->'custom_questions'->0->>'name' as first_question_name
+  from calendly.event_types;
+  ```
+
+### Groups
+
+This is an object representing Calendly groups.
+
+Ref: [Calendly API docs](https://developer.calendly.com/api-docs)
+
+#### Operations
+
+| Object | Select | Insert | Update | Delete | Truncate |
+| ------ | :----: | :----: | :----: | :----: | :------: |
+| Groups |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
+
+```sql
 create foreign table calendly.groups (
   uri text,
   created_at timestamp,
@@ -167,7 +217,27 @@ create foreign table calendly.groups (
   options (
     object 'groups'
   );
+```
 
+#### Notes
+
+- The `attrs` column contains all group attributes in JSON format
+
+### Organization Memberships
+
+This is an object representing Calendly organization memberships.
+
+Ref: [Calendly API docs](https://developer.calendly.com/api-docs)
+
+#### Operations
+
+| Object                  | Select | Insert | Update | Delete | Truncate |
+| ----------------------- | :----: | :----: | :----: | :----: | :------: |
+| Organization Membership |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
+
+```sql
 create foreign table calendly.organization_memberships (
   uri text,
   created_at timestamp,
@@ -178,7 +248,27 @@ create foreign table calendly.organization_memberships (
   options (
     object 'organization_memberships'
   );
+```
 
+#### Notes
+
+- The `attrs` column contains all membership attributes in JSON format
+
+### Scheduled Events
+
+This is an object representing Calendly scheduled events.
+
+Ref: [Calendly API docs](https://developer.calendly.com/api-docs)
+
+#### Operations
+
+| Object           | Select | Insert | Update | Delete | Truncate |
+| ---------------- | :----: | :----: | :----: | :----: | :------: |
+| Scheduled Events |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
+
+```sql
 create foreign table calendly.scheduled_events (
   uri text,
   created_at timestamp,
@@ -191,12 +281,11 @@ create foreign table calendly.scheduled_events (
   );
 ```
 
-!!! note
+#### Notes
 
-    - All the supported columns are listed above, other columns are not allowd.
-    - The `attrs` is a special column which stores all the object attributes in JSON format, you can extract any attributes needed from it. See more examples below.
+- The `attrs` column contains all event attributes in JSON format
 
-### Foreign table options
+## Foreign Table Options
 
 The full list of foreign table options are below:
 
@@ -273,7 +362,7 @@ create foreign table calendly.event_types (
   options (
     object 'event_types'
   );
-  
+
 select attrs->'profile'->>'name' as profile_name
 from calendly.event_types;
 
