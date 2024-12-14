@@ -178,11 +178,17 @@ create foreign table stripe.accounts (
 
 ### Balance
 
-_read only_
-
-Shows the balance currently on your Stripe account.
+This is an object representing your Stripe account's current balance.
 
 Ref: [Stripe docs](https://stripe.com/docs/api/balance)
+
+#### Operations
+
+| Object                                            | Select | Insert | Update | Delete | Truncate |
+| ------------------------------------------------- | :----: | :----: | :----: | :----: | :------: |
+| [Balance](https://stripe.com/docs/api/balance)    |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
 
 ```sql
 create foreign table stripe.balance (
@@ -197,13 +203,26 @@ create foreign table stripe.balance (
   );
 ```
 
+#### Notes
+
+- Balance is a read-only object that shows the current funds in your Stripe account
+- The balance is broken down by source types (e.g., card, bank account) and currencies
+- Use the `attrs` jsonb column to access additional balance details like pending amounts
+- While any column is allowed in a where clause, filtering options are limited as this is a singleton object
+
 ### Balance Transactions
 
-_read only_
-
-Balance transactions represent funds moving through your Stripe account. They're created for every type of transaction that comes into or flows out of your Stripe account balance.
+This is an object representing funds moving through your Stripe account. Balance transactions are created for every type of transaction that comes into or flows out of your Stripe account balance.
 
 Ref: [Stripe docs](https://stripe.com/docs/api/balance_transactions/list)
+
+#### Operations
+
+| Object                                                                        | Select | Insert | Update | Delete | Truncate |
+| ----------------------------------------------------------------------------- | :----: | :----: | :----: | :----: | :------: |
+| [Balance Transactions](https://stripe.com/docs/api/balance_transactions/list) |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
 
 ```sql
 create foreign table stripe.balance_transactions (
@@ -224,18 +243,28 @@ create foreign table stripe.balance_transactions (
   );
 ```
 
-While any column is allowed in a where clause, it is most efficient to filter by:
+#### Notes
 
-- id
-- type
+- Balance transactions are read-only records of all funds movement in your Stripe account
+- Each transaction includes amount, currency, fees, and net amount information
+- Use the `attrs` jsonb column to access additional transaction details
+- While any column is allowed in a where clause, it is most efficient to filter by:
+  - id
+  - type
 
 ### Charges
 
-_read only_
-
-To charge a credit or a debit card, you create a Charge object. You can retrieve and refund individual charges as well as list all charges. Charges are identified by a unique, random ID.
+This is an object representing a charge on a credit or debit card. You can retrieve and refund individual charges as well as list all charges. Charges are identified by a unique, random ID.
 
 Ref: [Stripe docs](https://stripe.com/docs/api/charges/list)
+
+#### Operations
+
+| Object                                            | Select | Insert | Update | Delete | Truncate |
+| ------------------------------------------------- | :----: | :----: | :----: | :----: | :------: |
+| [Charges](https://stripe.com/docs/api/charges/list) |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
 
 ```sql
 create foreign table stripe.charges (
@@ -256,18 +285,28 @@ create foreign table stripe.charges (
   );
 ```
 
-While any column is allowed in a where clause, it is most efficient to filter by:
+#### Notes
 
-- id
-- customer
+- Charges are read-only records of payment transactions in your Stripe account
+- Each charge includes amount, currency, customer, and payment status information
+- Use the `attrs` jsonb column to access additional charge details
+- While any column is allowed in a where clause, it is most efficient to filter by:
+  - id
+  - customer
 
 ### Checkout Sessions
 
-_read only_
-
-A Checkout Session represents your customer's session as they pay for one-time purchases or subscriptions through Checkout or Payment Links. We recommend creating a new Session each time your customer attempts to pay.
+This is an object representing your customer's session as they pay for one-time purchases or subscriptions through Checkout or Payment Links. We recommend creating a new Session each time your customer attempts to pay.
 
 Ref: [Stripe docs](https://stripe.com/docs/api/checkout/sessions/list)
+
+#### Operations
+
+| Object                                                              | Select | Insert | Update | Delete | Truncate |
+| ------------------------------------------------------------------- | :----: | :----: | :----: | :----: | :------: |
+| [Checkout Sessions](https://stripe.com/docs/api/checkout/sessions/list) |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
 
 ```sql
 create foreign table stripe.checkout_sessions (
@@ -284,20 +323,30 @@ create foreign table stripe.checkout_sessions (
   );
 ```
 
-While any column is allowed in a where clause, it is most efficient to filter by:
+#### Notes
 
-- id
-- customer
-- payment_intent
-- subscription
+- Checkout Sessions are read-only records of customer payment sessions in your Stripe account
+- Each session includes customer, payment intent, and subscription information
+- Use the `attrs` jsonb column to access additional session details
+- While any column is allowed in a where clause, it is most efficient to filter by:
+  - id
+  - customer
+  - payment_intent
+  - subscription
 
 ### Customers
 
-_read and modify_
-
-Contains customers known to Stripe.
+This is an object representing your Stripe customers. You can create, retrieve, update, and delete customers.
 
 Ref: [Stripe docs](https://stripe.com/docs/api/customers/list)
+
+#### Operations
+
+| Object                                              | Select | Insert | Update | Delete | Truncate |
+| --------------------------------------------------- | :----: | :----: | :----: | :----: | :------: |
+| [Customers](https://stripe.com/docs/api/customers/list) |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
+
+#### Usage
 
 ```sql
 create foreign table stripe.customers (
@@ -315,18 +364,45 @@ create foreign table stripe.customers (
   );
 ```
 
-While any column is allowed in a where clause, it is most efficient to filter by:
+Example operations:
 
-- id
-- email
+```sql
+-- Create a new customer
+INSERT INTO stripe.customers (email, name, description)
+VALUES ('jane@example.com', 'Jane Smith', 'Premium customer');
+
+-- Update a customer
+UPDATE stripe.customers
+SET name = 'Jane Doe'
+WHERE email = 'jane@example.com';
+
+-- Delete a customer
+DELETE FROM stripe.customers
+WHERE id = 'cus_xxx';
+```
+
+#### Notes
+
+- Customers can be created, retrieved, updated, and deleted through SQL operations
+- Each customer can have an email, name, and description
+- Use the `attrs` jsonb column to access additional customer details
+- While any column is allowed in a where clause, it is most efficient to filter by:
+  - id
+  - email
 
 ### Disputes
 
-_read only_
-
-A dispute occurs when a customer questions your charge with their card issuer.
+This is an object representing a dispute that occurs when a customer questions your charge with their card issuer.
 
 Ref: [Stripe docs](https://stripe.com/docs/api/disputes/list)
+
+#### Operations
+
+| Object                                            | Select | Insert | Update | Delete | Truncate |
+| ------------------------------------------------- | :----: | :----: | :----: | :----: | :------: |
+| [Disputes](https://stripe.com/docs/api/disputes/list) |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
 
 ```sql
 create foreign table stripe.disputes (
@@ -346,19 +422,29 @@ create foreign table stripe.disputes (
   );
 ```
 
-While any column is allowed in a where clause, it is most efficient to filter by:
+#### Notes
 
-- id
-- charge
-- payment_intent
+- Disputes are read-only records of customer payment disputes in your Stripe account
+- Each dispute includes amount, currency, charge, and payment intent information
+- Use the `attrs` jsonb column to access additional dispute details
+- While any column is allowed in a where clause, it is most efficient to filter by:
+  - id
+  - charge
+  - payment_intent
 
 ### Events
 
-_read only_
-
-Events are our way of letting you know when something interesting happens in your account.
+This is an object representing events that occur in your Stripe account, letting you know when something interesting happens.
 
 Ref: [Stripe docs](https://stripe.com/docs/api/events/list)
+
+#### Operations
+
+| Object                                          | Select | Insert | Update | Delete | Truncate |
+| ----------------------------------------------- | :----: | :----: | :----: | :----: | :------: |
+| [Events](https://stripe.com/docs/api/events/list) |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
 
 ```sql
 create foreign table stripe.events (
@@ -374,18 +460,28 @@ create foreign table stripe.events (
   );
 ```
 
-While any column is allowed in a where clause, it is most efficient to filter by:
+#### Notes
 
-- id
-- type
+- Events are read-only records of activities in your Stripe account
+- Each event includes type, API version, and timestamp information
+- Use the `attrs` jsonb column to access additional event details
+- While any column is allowed in a where clause, it is most efficient to filter by:
+  - id
+  - type
 
 ### Files
-
-_read only_
 
 This is an object representing a file hosted on Stripe's servers.
 
 Ref: [Stripe docs](https://stripe.com/docs/api/files/list)
+
+#### Operations
+
+| Object                                        | Select | Insert | Update | Delete | Truncate |
+| --------------------------------------------- | :----: | :----: | :----: | :----: | :------: |
+| [Files](https://stripe.com/docs/api/files/list) |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
 
 ```sql
 create foreign table stripe.files (
@@ -406,18 +502,29 @@ create foreign table stripe.files (
   );
 ```
 
-While any column is allowed in a where clause, it is most efficient to filter by:
+#### Notes
 
-- id
-- purpose
+- Files are read-only records of files hosted on Stripe's servers
+- Each file includes filename, purpose, size, type, and URL information
+- Files may have an expiration date specified in expires_at
+- Use the `attrs` jsonb column to access additional file details
+- While any column is allowed in a where clause, it is most efficient to filter by:
+  - id
+  - purpose
 
 ### File Links
 
-_read only_
-
-To share the contents of a `File` object with non-Stripe users, you can create a `FileLink`.
+This is an object representing a link that can be used to share the contents of a `File` object with non-Stripe users.
 
 Ref: [Stripe docs](https://stripe.com/docs/api/file_links/list)
+
+#### Operations
+
+| Object                                                | Select | Insert | Update | Delete | Truncate |
+| ----------------------------------------------------- | :----: | :----: | :----: | :----: | :------: |
+| [File Links](https://stripe.com/docs/api/file_links/list) |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
 
 ```sql
 create foreign table stripe.file_links (
@@ -435,13 +542,30 @@ create foreign table stripe.file_links (
   );
 ```
 
+#### Notes
+
+- File Links are read-only records that provide shareable access to Stripe files
+- Each link includes a reference to the file and a public URL
+- Links can be configured to expire at a specific time
+- Use the `expired` boolean to check if a link has expired
+- Use the `attrs` jsonb column to access additional link details
+- While any column is allowed in a where clause, it is most efficient to filter by:
+  - id
+  - file
+
 ### Invoices
 
-_read only_
-
-Invoices are statements of amounts owed by a customer, and are either generated one-off, or generated periodically from a subscription.
+This is an object representing statements of amounts owed by a customer, which are either generated one-off or periodically from a subscription.
 
 Ref: [Stripe docs](https://stripe.com/docs/api/invoices/list)
+
+#### Operations
+
+| Object                                            | Select | Insert | Update | Delete | Truncate |
+| ------------------------------------------------- | :----: | :----: | :----: | :----: | :------: |
+| [Invoices](https://stripe.com/docs/api/invoices/list) |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
 
 ```sql
 create foreign table stripe.invoices (
@@ -459,23 +583,33 @@ create foreign table stripe.invoices (
   options (
     object 'invoices'
   );
-
 ```
 
-While any column is allowed in a where clause, it is most efficient to filter by:
+#### Notes
 
-- id
-- customer
-- status
-- subscription
+- Invoices are read-only records of amounts owed by customers
+- Each invoice includes customer, subscription, status, and amount information
+- Invoices track billing periods with period_start and period_end timestamps
+- Use the `attrs` jsonb column to access additional invoice details
+- While any column is allowed in a where clause, it is most efficient to filter by:
+  - id
+  - customer
+  - status
+  - subscription
 
 ### Mandates
 
-_read only_
-
-A Mandate is a record of the permission a customer has given you to debit their payment method.
+This is an object representing a record of the permission a customer has given you to debit their payment method.
 
 Ref: [Stripe docs](https://stripe.com/docs/api/mandates)
+
+#### Operations
+
+| Object                                            | Select | Insert | Update | Delete | Truncate |
+| ------------------------------------------------- | :----: | :----: | :----: | :----: | :------: |
+| [Mandates](https://stripe.com/docs/api/mandates) |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
 
 ```sql
 create foreign table stripe.mandates (
@@ -491,17 +625,27 @@ create foreign table stripe.mandates (
   );
 ```
 
-While any column is allowed in a where clause, it is most efficient to filter by:
+#### Notes
 
-- id
+- Mandates are read-only records of customer payment permissions
+- Each mandate includes payment method, status, and type information
+- Use the `attrs` jsonb column to access additional mandate details
+- While any column is allowed in a where clause, it is most efficient to filter by:
+  - id
 
 ### Meters
 
-_read only_
-
-A billing meter is a resource that allows you to track usage of a particular event.
+This is an object representing a billing meter that allows you to track usage of a particular event.
 
 Ref: [Stripe docs](https://docs.stripe.com/api/billing/meter)
+
+#### Operations
+
+| Object                                                | Select | Insert | Update | Delete | Truncate |
+| ----------------------------------------------------- | :----: | :----: | :----: | :----: | :------: |
+| [Meters](https://docs.stripe.com/api/billing/meter) |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
 
 ```sql
 create foreign table stripe.meter (
@@ -518,17 +662,28 @@ create foreign table stripe.meter (
   );
 ```
 
-While any column is allowed in a where clause, it is most efficient to filter by:
+#### Notes
 
-- id
+- Meters are read-only records for tracking event usage in billing
+- Each meter includes display name, event name, and time window information
+- The status field indicates whether the meter is active
+- Use the `attrs` jsonb column to access additional meter details
+- While any column is allowed in a where clause, it is most efficient to filter by:
+  - id
 
 ### Payment Intents
 
-_read only_
-
-A payment intent guides you through the process of collecting a payment from your customer.
+This is an object representing a guide through the process of collecting a payment from your customer.
 
 Ref: [Stripe docs](https://stripe.com/docs/api/payment_intents/list)
+
+#### Operations
+
+| Object                                                        | Select | Insert | Update | Delete | Truncate |
+| ------------------------------------------------------------- | :----: | :----: | :----: | :----: | :------: |
+| [Payment Intents](https://stripe.com/docs/api/payment_intents/list) |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
 
 ```sql
 create foreign table stripe.payment_intents (
@@ -546,18 +701,29 @@ create foreign table stripe.payment_intents (
   );
 ```
 
-While any column is allowed in a where clause, it is most efficient to filter by:
+#### Notes
 
-- id
-- customer
+- Payment Intents are read-only records that guide the payment collection process
+- Each intent includes customer, amount, currency, and payment method information
+- The created timestamp tracks when the payment intent was initiated
+- Use the `attrs` jsonb column to access additional payment intent details
+- While any column is allowed in a where clause, it is most efficient to filter by:
+  - id
+  - customer
 
 ### Payouts
 
-_read only_
-
-A `Payout` object is created when you receive funds from Stripe, or when you initiate a payout to either a bank account or debit card of a connected Stripe account.
+This is an object representing funds received from Stripe or initiated payouts to a bank account or debit card of a connected Stripe account.
 
 Ref: [Stripe docs](https://stripe.com/docs/api/payouts/list)
+
+#### Operations
+
+| Object                                            | Select | Insert | Update | Delete | Truncate |
+| ------------------------------------------------- | :----: | :----: | :----: | :----: | :------: |
+| [Payouts](https://stripe.com/docs/api/payouts/list) |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
 
 ```sql
 create foreign table stripe.payouts (
@@ -577,18 +743,30 @@ create foreign table stripe.payouts (
   );
 ```
 
-While any column is allowed in a where clause, it is most efficient to filter by:
+#### Notes
 
-- id
-- status
+- Payouts are read-only records of fund transfers
+- Each payout includes amount, currency, and status information
+- The arrival_date indicates when funds will be available
+- The statement_descriptor appears on your bank statement
+- Use the `attrs` jsonb column to access additional payout details
+- While any column is allowed in a where clause, it is most efficient to filter by:
+  - id
+  - status
 
 ### Prices
 
-_read only_
-
-A `Price` object is needed for all of your products to facilitate multiple currencies and pricing options.
+This is an object representing pricing configurations for products to facilitate multiple currencies and pricing options.
 
 Ref: [Stripe docs](https://stripe.com/docs/api/prices/list)
+
+#### Operations
+
+| Object                                            | Select | Insert | Update | Delete | Truncate |
+| ------------------------------------------------- | :----: | :----: | :----: | :----: | :------: |
+| [Prices](https://stripe.com/docs/api/prices/list) |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
 
 ```sql
 create foreign table stripe.prices (
@@ -607,18 +785,30 @@ create foreign table stripe.prices (
   );
 ```
 
-While any column is allowed in a where clause, it is most efficient to filter by:
+#### Notes
 
-- id
-- active
+- Prices are read-only records that define product pricing configurations
+- Each price includes currency, unit amount, and product reference
+- The active boolean indicates if the price can be used
+- The type field specifies the pricing model (e.g., one-time, recurring)
+- Use the `attrs` jsonb column to access additional price details
+- While any column is allowed in a where clause, it is most efficient to filter by:
+  - id
+  - active
 
 ### Products
 
-_read and modify_
-
-All products available in Stripe.
+This is an object representing all products available in Stripe.
 
 Ref: [Stripe docs](https://stripe.com/docs/api/products/list)
+
+#### Operations
+
+| Object                                            | Select | Insert | Update | Delete | Truncate |
+| ------------------------------------------------- | :----: | :----: | :----: | :----: | :------: |
+| [Products](https://stripe.com/docs/api/products/list) |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
+
+#### Usage
 
 ```sql
 create foreign table stripe.products (
@@ -638,18 +828,30 @@ create foreign table stripe.products (
   );
 ```
 
-While any column is allowed in a where clause, it is most efficient to filter by:
+#### Notes
 
-- id
-- active
+- Products can be created, read, updated, and deleted
+- Each product includes name, description, and active status
+- The default_price links to the product's default Price object
+- The updated timestamp tracks the last modification time
+- Use the `attrs` jsonb column to access additional product details
+- While any column is allowed in a where clause, it is most efficient to filter by:
+  - id
+  - active
 
 ### Refunds
 
-_read only_
-
-`Refund` objects allow you to refund a charge that has previously been created but not yet refunded.
+This is an object representing refunds for charges that have previously been created but not yet refunded.
 
 Ref: [Stripe docs](https://stripe.com/docs/api/refunds/list)
+
+#### Operations
+
+| Object                                            | Select | Insert | Update | Delete | Truncate |
+| ------------------------------------------------- | :----: | :----: | :----: | :----: | :------: |
+| [Refunds](https://stripe.com/docs/api/refunds/list) |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
 
 ```sql
 create foreign table stripe.refunds (
@@ -669,19 +871,31 @@ create foreign table stripe.refunds (
   );
 ```
 
-While any column is allowed in a where clause, it is most efficient to filter by:
+#### Notes
 
-- id
-- charge
-- payment_intent
+- Refunds are read-only records of charge reversals
+- Each refund includes amount, currency, and status information
+- The charge and payment_intent fields link to the original transaction
+- The reason field provides context for the refund
+- Use the `attrs` jsonb column to access additional refund details
+- While any column is allowed in a where clause, it is most efficient to filter by:
+  - id
+  - charge
+  - payment_intent
 
 ### SetupAttempts
 
-_read only_
-
-A `SetupAttempt` describes one attempted confirmation of a SetupIntent, whether that confirmation was successful or unsuccessful.
+This is an object representing attempted confirmations of SetupIntents, tracking both successful and unsuccessful attempts.
 
 Ref: [Stripe docs](https://stripe.com/docs/api/setup_attempts/list)
+
+#### Operations
+
+| Object                                                      | Select | Insert | Update | Delete | Truncate |
+| ----------------------------------------------------------- | :----: | :----: | :----: | :----: | :------: |
+| [SetupAttempts](https://stripe.com/docs/api/setup_attempts/list) |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
 
 ```sql
 create foreign table stripe.setup_attempts (
@@ -702,18 +916,30 @@ create foreign table stripe.setup_attempts (
   );
 ```
 
-While any column is allowed in a where clause, it is most efficient to filter by:
+#### Notes
 
-- id
-- setup_intent
+- SetupAttempts are read-only records of payment setup confirmation attempts
+- Each attempt includes customer, payment method, and status information
+- The setup_intent field links to the associated SetupIntent
+- The usage field indicates the intended payment method usage
+- Use the `attrs` jsonb column to access additional attempt details
+- While any column is allowed in a where clause, it is most efficient to filter by:
+  - id
+  - setup_intent
 
 ### SetupIntents
 
-_read only_
-
-A `SetupIntent` guides you through the process of setting up and saving a customer's payment credentials for future payments.
+This is an object representing a guide through the process of setting up and saving customer payment credentials for future payments.
 
 Ref: [Stripe docs](https://stripe.com/docs/api/setup_intents/list)
+
+#### Operations
+
+| Object                                                      | Select | Insert | Update | Delete | Truncate |
+| ----------------------------------------------------------- | :----: | :----: | :----: | :----: | :------: |
+| [SetupIntents](https://stripe.com/docs/api/setup_intents/list) |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
 
 ```sql
 create foreign table stripe.setup_intents (
@@ -733,19 +959,31 @@ create foreign table stripe.setup_intents (
   );
 ```
 
-While any column is allowed in a where clause, it is most efficient to filter by:
+#### Notes
 
-- id
-- customer
-- payment_method
+- SetupIntents are read-only records for saving customer payment credentials
+- Each intent includes customer, payment method, and status information
+- The client_secret is used for client-side confirmation
+- The usage field indicates how the payment method will be used
+- Use the `attrs` jsonb column to access additional intent details
+- While any column is allowed in a where clause, it is most efficient to filter by:
+  - id
+  - customer
+  - payment_method
 
 ### Subscriptions
 
-_read and modify_
-
-Customer recurring payment schedules.
+This is an object representing customer recurring payment schedules.
 
 Ref: [Stripe docs](https://stripe.com/docs/api/subscriptions/list)
+
+#### Operations
+
+| Object                                                      | Select | Insert | Update | Delete | Truncate |
+| ----------------------------------------------------------- | :----: | :----: | :----: | :----: | :------: |
+| [Subscriptions](https://stripe.com/docs/api/subscriptions/list) |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
+
+#### Usage
 
 ```sql
 create foreign table stripe.subscriptions (
@@ -763,28 +1001,41 @@ create foreign table stripe.subscriptions (
   );
 ```
 
-While any column is allowed in a where clause, it is most efficient to filter by:
+#### Notes
 
-- id
-- customer
-- price
-- status
+- Subscriptions can be created, read, updated, and deleted
+- Each subscription includes customer and currency information
+- The current_period_start and current_period_end track billing cycles
+- The rowid_column option enables modification operations
+- Use the `attrs` jsonb column to access additional subscription details
+- While any column is allowed in a where clause, it is most efficient to filter by:
+  - id
+  - customer
+  - price
+  - status
 
 ### Tokens
 
-_read only_
-
-Tokenization is the process Stripe uses to collect sensitive card or bank account details, or personally identifiable information (PII), directly from your customers in a secure manner.
+This is an object representing a secure way to collect sensitive card, bank account, or personally identifiable information (PII) from customers.
 
 Ref: [Stripe docs](https://stripe.com/docs/api/tokens)
+
+#### Operations
+
+| Object                                              | Select | Insert | Update | Delete | Truncate |
+| --------------------------------------------------- | :----: | :----: | :----: | :----: | :------: |
+| [Tokens](https://stripe.com/docs/api/tokens) |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
 
 ```sql
 create foreign table stripe.tokens (
   id text,
-  customer text,
-  currency text,
-  current_period_start timestamp,
-  current_period_end timestamp,
+  type text,
+  client_ip text,
+  created timestamp,
+  livemode boolean,
+  used boolean,
   attrs jsonb
 )
   server stripe_server
@@ -793,13 +1044,31 @@ create foreign table stripe.tokens (
   );
 ```
 
+#### Notes
+
+- Tokens are read-only, single-use objects for secure data collection
+- Each token includes type information (card, bank_account, pii, etc.)
+- The client_ip field records where the token was created
+- The used field indicates if the token has been used
+- Use the `attrs` jsonb column to access token details like card or bank information
+- While any column is allowed in a where clause, it is most efficient to filter by:
+  - id
+  - type
+  - used
+
 ### Top-ups
 
-_read only_
-
-To top up your Stripe balance, you create a top-up object.
+This is an object representing a way to add funds to your Stripe balance.
 
 Ref: [Stripe docs](https://stripe.com/docs/api/topups/list)
+
+#### Operations
+
+| Object                                              | Select | Insert | Update | Delete | Truncate |
+| --------------------------------------------------- | :----: | :----: | :----: | :----: | :------: |
+| [Top-ups](https://stripe.com/docs/api/topups/list) |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
 
 ```sql
 create foreign table stripe.topups (
@@ -817,18 +1086,29 @@ create foreign table stripe.topups (
   );
 ```
 
-While any column is allowed in a where clause, it is most efficient to filter by:
+#### Notes
 
-- id
-- status
+- Top-ups are read-only records of balance additions
+- Each top-up includes amount and currency information
+- The status field tracks the top-up state (e.g., succeeded, failed)
+- Use the `attrs` jsonb column to access additional top-up details
+- While any column is allowed in a where clause, it is most efficient to filter by:
+  - id
+  - status
 
 ### Transfers
 
-_read only_
-
-A Transfer object is created when you move funds between Stripe accounts as part of Connect.
+This is an object representing fund movements between Stripe accounts as part of Connect.
 
 Ref: [Stripe docs](https://stripe.com/docs/api/transfers/list)
+
+#### Operations
+
+| Object                                                  | Select | Insert | Update | Delete | Truncate |
+| ------------------------------------------------------- | :----: | :----: | :----: | :----: | :------: |
+| [Transfers](https://stripe.com/docs/api/transfers/list) |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
 
 ```sql
 create foreign table stripe.transfers (
@@ -846,10 +1126,15 @@ create foreign table stripe.transfers (
   );
 ```
 
-While any column is allowed in a where clause, it is most efficient to filter by:
+#### Notes
 
-- id
-- destination
+- Transfers are read-only records of fund movements between accounts
+- Each transfer includes amount, currency, and destination information
+- The destination field identifies the receiving Stripe account
+- Use the `attrs` jsonb column to access additional transfer details
+- While any column is allowed in a where clause, it is most efficient to filter by:
+  - id
+  - destination
 
 ## Query Pushdown Support
 
