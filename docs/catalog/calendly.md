@@ -39,13 +39,19 @@ The Calendly API uses JSON formatted data, please refer to [Calendly API docs](h
 
 ## Preparation
 
-Before you get started, make sure the `wrappers` extension is installed on your database:
+Before you can query Calendly, you need to enable the Wrappers extension and store your credentials in Postgres.
+
+### Enable Wrappers
+
+Make sure the `wrappers` extension is installed on your database:
 
 ```sql
 create extension if not exists wrappers with schema extensions;
 ```
 
-and then create the Wasm foreign data wrapper:
+### Enable the Calendly Wrapper
+
+Enable the Wasm foreign data wrapper:
 
 ```sql
 create foreign data wrapper wasm_wrapper
@@ -53,7 +59,7 @@ create foreign data wrapper wasm_wrapper
   validator wasm_fdw_validator;
 ```
 
-### Secure your credentials (optional)
+### Store your credentials (optional)
 
 By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
 
@@ -66,46 +72,6 @@ values (
 )
 returning key_id;
 ```
-
-### Connecting to Calendly
-
-We need to provide Postgres with the credentials to access Calendly and any additional options. We can do this using the `create server` command:
-
-=== "With Vault"
-
-    ```sql
-    create server calendly_server
-      foreign data wrapper wasm_wrapper
-      options (
-        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_calendly_fdw_v0.1.0/calendly_fdw.wasm',
-        fdw_package_name 'supabase:calendly-fdw',
-        fdw_package_version '0.1.0',
-        fdw_package_checksum '51a19fa4b8c40afb5dcf6dc2e009189aceeba65f30eec75d56a951d78fc8893f',
-        -- find your organization uri using foreign table 'calendly.current_user', see below example for details
-        organization 'https://api.calendly.com/organizations/81da9c7f-3e19-434a-c3d2-0325e375cdef',
-        api_url 'https://api.calendly.com',  -- optional
-        api_key_id '<key_ID>' -- The Key ID from above.
-      );
-    ```
-
-=== "Without Vault"
-
-    ```sql
-    create server calendly_server
-      foreign data wrapper wasm_wrapper
-      options (
-        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_calendly_fdw_v0.1.0/calendly_fdw.wasm',
-        fdw_package_name 'supabase:calendly-fdw',
-        fdw_package_version '0.1.0',
-        fdw_package_checksum '51a19fa4b8c40afb5dcf6dc2e009189aceeba65f30eec75d56a951d78fc8893f',
-        -- find your organization uri using foreign table 'calendly.current_user', see below example for details
-        organization 'https://api.calendly.com/organizations/81da9c7f-3e19-434a-c3d2-0325e375cdef',
-        api_url 'https://api.calendly.com',  -- optional
-        api_key 'eyJraWQiOiIxY2UxZ...'  -- Calendly personal access token
-      );
-    ```
-
-Note the `fdw_package_*` options are required, which specify the Wasm package metadata. You can get the available package version list from [above](#available-versions).
 
 ### Create a schema
 

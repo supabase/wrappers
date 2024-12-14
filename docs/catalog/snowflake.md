@@ -42,13 +42,19 @@ The Snowflake Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows y
 
 ## Preparation
 
-Before you get started, make sure the `wrappers` extension is installed on your database:
+Before you can query Snowflake, you need to enable the Wrappers extension and store your credentials in Postgres.
+
+### Enable Wrappers
+
+Make sure the `wrappers` extension is installed on your database:
 
 ```sql
 create extension if not exists wrappers with schema extensions;
 ```
 
-and then create the Wasm foreign data wrapper:
+### Enable the Snowflake Wrapper
+
+Enable the Wasm foreign data wrapper:
 
 ```sql
 create foreign data wrapper wasm_wrapper
@@ -56,7 +62,7 @@ create foreign data wrapper wasm_wrapper
   validator wasm_fdw_validator;
 ```
 
-### Secure your credentials (optional)
+### Store your credentials (optional)
 
 By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
 
@@ -72,9 +78,7 @@ values (
 returning key_id;
 ```
 
-### Connecting to Snowflake
-
-We need to provide Postgres with the credentials to connect to Snowflake, and any additional options. We can do this using the `create server` command:
+Once you have stored your credentials, you can create a server to connect to Snowflake:
 
 === "With Vault"
 
@@ -110,17 +114,15 @@ We need to provide Postgres with the credentials to connect to Snowflake, and an
       );
     ```
 
-Note the `fdw_package_*` options are required, which specify the Wasm package metadata. You can get the available package version list from [above](#available-versions).
+Note: The `fdw_package_*` options are required, which specify the Wasm package metadata. You can get the available package version list from [above](#available-versions).
 
 ### Create a schema
 
 We recommend creating a schema to hold all the foreign tables:
 
 ```sql
-create schema if not exists snowflake;
+create schema snowflake;
 ```
-
-## Entities
 
 ### Snowflake Tables
 

@@ -19,13 +19,19 @@ The Cognito wrapper allows you to read data from your Cognito Userpool within yo
 
 ## Preparation
 
-Before you get started, make sure the `wrappers` extension is installed on your database:
+Before you can query AWS Cognito, you need to enable the Wrappers extension and store your credentials in Postgres.
+
+### Enable Wrappers
+
+Make sure the `wrappers` extension is installed on your database:
 
 ```sql
 create extension if not exists wrappers with schema extensions;
 ```
 
-and then create the foreign data wrapper:
+### Enable the Cognito Wrapper
+
+Enable the `cognito_wrapper` FDW:
 
 ```sql
 create foreign data wrapper cognito_wrapper
@@ -33,9 +39,9 @@ create foreign data wrapper cognito_wrapper
   validator cognito_fdw_validator;
 ```
 
-### Secure your credentials (optional)
+### Store your credentials (optional)
 
-By default, Postgres stores FDW credentials inide `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers are designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
+By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers are designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
 
 ```sql
 insert into vault.secrets (name, secret)
@@ -46,35 +52,13 @@ values (
 returning key_id;
 ```
 
-### Connecting to Cognito
+### Create a schema
 
-We need to provide Postgres with the credentials to connect to Cognito, and any additional options. We can do this using the `create server` command:
+We recommend creating a schema to hold all the foreign tables:
 
-=== "With Vault"
-
-    ```sql
-    create server cognito_server
-      foreign data wrapper cognito_wrapper
-      options (
-        aws_access_key_id '<your_access_key>',
-        api_key_id '<your_secret_key_id_in_vault>',
-        region '<your_aws_region>',
-        user_pool_id '<your_user_pool_id>'
-      );
-    ```
-
-=== "Without Vault"
-
-    ```sql
-    create server cognito_server
-      foreign data wrapper cognito_wrapper
-      options (
-        aws_access_key_id '<your_access_key>',
-        aws_secret_access_key '<your_secret_key>',
-        region '<your_aws_region>',
-        user_pool_id '<your_user_pool_id>'
-      );
-    ```
+```sql
+create schema cognito;
+```
 
 ## Entities
 

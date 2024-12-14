@@ -37,13 +37,19 @@ The ClickHouse Wrapper allows you to read and write data from ClickHouse within 
 
 ## Preparation
 
-Before you get started, make sure the `wrappers` extension is installed on your database:
+Before you can query ClickHouse, you need to enable the Wrappers extension and store your credentials in Postgres.
+
+### Enable Wrappers
+
+Make sure the `wrappers` extension is installed on your database:
 
 ```sql
 create extension if not exists wrappers with schema extensions;
 ```
 
-and then create the foreign data wrapper:
+### Enable the ClickHouse Wrapper
+
+Enable the `clickhouse_wrapper` FDW:
 
 ```sql
 create foreign data wrapper clickhouse_wrapper
@@ -51,9 +57,9 @@ create foreign data wrapper clickhouse_wrapper
   validator click_house_fdw_validator;
 ```
 
-### Secure your credentials (optional)
+### Store your credentials (optional)
 
-By default, Postgres stores FDW credentials inide `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
+By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
 
 ```sql
 -- Save your ClickHouse credential in Vault and retrieve the `key_id`
@@ -65,36 +71,13 @@ values (
 returning key_id;
 ```
 
-### Connecting to ClickHouse
+### Create a schema
 
-We need to provide Postgres with the credentials to connect to ClickHouse, and any additional options. We can do this using the `create server` command:
+We recommend creating a schema to hold all the foreign tables:
 
-=== "With Vault"
-
-    ```sql
-    create server clickhouse_server
-      foreign data wrapper clickhouse_wrapper
-      options (
-        conn_string_id '<key_ID>' -- The Key ID from above.
-      );
-    ```
-
-=== "Without Vault"
-
-    ```sql
-    create server clickhouse_server
-      foreign data wrapper clickhouse_wrapper
-      options (
-        conn_string 'tcp://default:@localhost:9000/default'
-      );
-    ```
-
-Some connection string examples:
-
-- `tcp://user:password@host:9000/clicks?compression=lz4&ping_timeout=42ms`
-- `tcp://default:PASSWORD@abc.eu-west-1.aws.clickhouse.cloud:9440/default?connection_timeout=30s&ping_before_query=false&secure=true`
-
-Check [more connection string parameters](https://github.com/suharev7/clickhouse-rs#dns).
+```sql
+create schema clickhouse;
+```
 
 ## Creating Foreign Tables
 

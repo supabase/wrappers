@@ -19,13 +19,19 @@ The Auth0 Wrapper allows you to read data from your Auth0 tenant for use within 
 
 ## Preparation
 
-Before you get started, make sure the `wrappers` extension is installed on your database:
+Before you can query Auth0, you need to enable the Wrappers extension and store your credentials in Postgres.
+
+### Enable Wrappers
+
+Make sure the `wrappers` extension is installed on your database:
 
 ```sql
 create extension if not exists wrappers with schema extensions;
 ```
 
-and then create the foreign data wrapper:
+### Enable the Auth0 Wrapper
+
+Enable the `auth0_wrapper` FDW:
 
 ```sql
 create foreign data wrapper auth0_wrapper
@@ -33,9 +39,9 @@ create foreign data wrapper auth0_wrapper
   validator auth0_fdw_validator;
 ```
 
-### Secure your credentials (optional)
+### Store your credentials (optional)
 
-By default, Postgres stores FDW credentials inide `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
+By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
 
 ```sql
 -- Save your Auth0 API key in Vault and retrieve the `key_id`
@@ -47,31 +53,13 @@ values (
 returning key_id;
 ```
 
-### Connecting to Auth0
+### Create a schema
 
-We need to provide Postgres with the credentials to connect to Airtable, and any additional options. We can do this using the `create server` command:
+We recommend creating a schema to hold all the foreign tables:
 
-=== "With Vault"
-
-    ```sql
-    create server auth0_server
-      foreign data wrapper auth0_wrapper
-      options (
-        api_key_id '<key_ID>' -- The Key ID from above.
-      );
-    ```
-
-=== "Without Vault"
-
-    ```sql
-    -- create server and specify custom options
-    create server auth0_server
-    foreign data wrapper auth0_wrapper
-    options (
-        url 'https://dev-<tenant-id>.us.auth0.com/api/v2/users',
-        api_key '<your_api_key>'
-    );
-    ```
+```sql
+create schema auth0;
+```
 
 ## Creating Foreign Tables
 
