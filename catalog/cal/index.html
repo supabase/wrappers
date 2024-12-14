@@ -955,6 +955,15 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#make-a-booking" class="md-nav__link">
+    <span class="md-ellipsis">
+      Make a booking
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1647,6 +1656,15 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#make-a-booking" class="md-nav__link">
+    <span class="md-ellipsis">
+      Make a booking
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1743,7 +1761,7 @@
 <tr>
 <td>0.1.0</td>
 <td><code>https://github.com/supabase/wrappers/releases/download/wasm_cal_fdw_v0.1.0/cal_fdw.wasm</code></td>
-<td><code>4b8661caae0e4f7b5a1480ea297cf5681101320712cde914104b82f2b0954003</code></td>
+<td><code>4afe4fac8c51f2caa1de8483b3817d2cec3a14cd8a65a3942c8b4ff6c430f08a</code></td>
 </tr>
 </tbody>
 </table>
@@ -1794,7 +1812,7 @@
 <span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_cal_fdw_v0.1.0/cal_fdw.wasm&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;supabase:cal-fdw&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.1.0&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;4b8661caae0e4f7b5a1480ea297cf5681101320712cde914104b82f2b0954003&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;4afe4fac8c51f2caa1de8483b3817d2cec3a14cd8a65a3942c8b4ff6c430f08a&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">api_url</span><span class="w"> </span><span class="s1">&#39;https://api.cal.com/v2&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- optional</span>
 <span class="w">    </span><span class="n">api_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;key_ID&gt;&#39;</span><span class="w"> </span><span class="c1">-- The Key ID from above.</span>
 <span class="w">  </span><span class="p">);</span>
@@ -1816,7 +1834,7 @@
 <span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_cal_fdw_v0.1.0/cal_fdw.wasm&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;supabase:cal-fdw&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.1.0&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;4b8661caae0e4f7b5a1480ea297cf5681101320712cde914104b82f2b0954003&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;4afe4fac8c51f2caa1de8483b3817d2cec3a14cd8a65a3942c8b4ff6c430f08a&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">api_url</span><span class="w"> </span><span class="s1">&#39;https://api.cal.com/v2&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- optional</span>
 <span class="w">    </span><span class="n">api_key</span><span class="w"> </span><span class="s1">&#39;cal_live_1234...&#39;</span><span class="w">  </span><span class="c1">-- Cal.com API key</span>
 <span class="w">  </span><span class="p">);</span>
@@ -1862,7 +1880,7 @@
 <tr>
 <td>Bookings</td>
 <td style="text-align: center;">✅</td>
-<td style="text-align: center;">❌</td>
+<td style="text-align: center;">✅</td>
 <td style="text-align: center;">❌</td>
 <td style="text-align: center;">❌</td>
 <td style="text-align: center;">❌</td>
@@ -1946,7 +1964,8 @@
 <span class="normal">50</span>
 <span class="normal">51</span>
 <span class="normal">52</span>
-<span class="normal">53</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">cal</span><span class="p">.</span><span class="n">my_profile</span><span class="w"> </span><span class="p">(</span>
+<span class="normal">53</span>
+<span class="normal">54</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">cal</span><span class="p">.</span><span class="n">my_profile</span><span class="w"> </span><span class="p">(</span>
 <span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
 <span class="w">  </span><span class="n">username</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
 <span class="w">  </span><span class="n">email</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
@@ -1970,7 +1989,8 @@
 <span class="p">)</span>
 <span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">cal_server</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;bookings&#39;</span>
+<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;bookings&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">rowid_column</span><span class="w"> </span><span class="s1">&#39;attrs&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 
 <span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">cal</span><span class="p">.</span><span class="n">calendars</span><span class="w"> </span><span class="p">(</span>
@@ -2005,6 +2025,7 @@
 <ul>
 <li>All the supported columns are listed above, other columns are not allowd.</li>
 <li>The <code>attrs</code> is a special column which stores all the object attributes in JSON format, you can extract any attributes needed from it. See more examples below.</li>
+<li><code>bookings</code> table support data insertion, see an example below.</li>
 </ul>
 </div>
 <h3 id="foreign-table-options">Foreign table options</h3>
@@ -2108,12 +2129,14 @@
 <span class="normal">29</span>
 <span class="normal">30</span>
 <span class="normal">31</span>
-<span class="normal">32</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">cal</span><span class="p">.</span><span class="n">bookings</span><span class="w"> </span><span class="p">(</span>
+<span class="normal">32</span>
+<span class="normal">33</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">cal</span><span class="p">.</span><span class="n">bookings</span><span class="w"> </span><span class="p">(</span>
 <span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
 <span class="p">)</span>
 <span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">cal_server</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;bookings&#39;</span>
+<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;bookings&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">rowid_column</span><span class="w"> </span><span class="s1">&#39;attrs&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 
 <span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">cal</span><span class="p">.</span><span class="n">event_types</span><span class="w"> </span><span class="p">(</span>
@@ -2141,6 +2164,33 @@
 <span class="w">  </span><span class="k">cross</span><span class="w"> </span><span class="k">join</span><span class="w"> </span><span class="n">json_array_elements</span><span class="p">((</span><span class="n">attrs</span><span class="o">-&gt;</span><span class="s1">&#39;eventTypeGroups&#39;</span><span class="p">)::</span><span class="n">json</span><span class="p">)</span><span class="w"> </span><span class="n">etg</span>
 <span class="w">  </span><span class="k">cross</span><span class="w"> </span><span class="k">join</span><span class="w"> </span><span class="n">json_array_elements</span><span class="p">((</span><span class="n">etg</span><span class="o">-&gt;</span><span class="s1">&#39;eventTypes&#39;</span><span class="p">)::</span><span class="n">json</span><span class="p">)</span><span class="w"> </span><span class="n">et</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
+<h3 id="make-a-booking">Make a booking</h3>
+<p>Once we know an event type ID (we can get it from above example, here we suppose it is <code>123456</code>), we can make a booking using below SQL.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code>insert into cal.bookings(attrs)
+values (
+    &#39;{
+        &quot;start&quot;: &quot;2024-12-12T10:30:00.000Z&quot;,
+        &quot;eventTypeId&quot;: 123456,
+        &quot;attendee&quot;: {
+            &quot;name&quot;: &quot;Test Name&quot;,
+            &quot;email&quot;: &quot;test.name@example.com&quot;,
+            &quot;timeZone&quot;: &quot;America/New_York&quot;
+        }
+    }&#39;::jsonb
+);
+</code></pre></div></td></tr></table></div>
+<p>To add more details to the booking, such as <code>guests</code> or <code>metadata</code>, refer to <a href="https://cal.com/docs/api-reference/v2/bookings/create-a-booking">Cal.com documentation</a>.</p>
 
 
 

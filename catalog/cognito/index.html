@@ -1704,7 +1704,7 @@
 </thead>
 <tbody>
 <tr>
-<td>Records</td>
+<td>Users</td>
 <td style="text-align: center;">✅</td>
 <td style="text-align: center;">❌</td>
 <td style="text-align: center;">❌</td>
@@ -1714,22 +1714,36 @@
 </tbody>
 </table>
 <p>For example:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span>
-<span class="normal">7</span>
-<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">cognito</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">email</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">    </span><span class="n">username</span><span class="w"> </span><span class="nb">text</span>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">cognito</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">username</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">email</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">status</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">enabled</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span>
+<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
+<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
+<span class="w">  </span><span class="n">attributes</span><span class="w"> </span><span class="n">jsonb</span>
 <span class="p">)</span>
 <span class="n">server</span><span class="w"> </span><span class="n">cognito_server</span>
 <span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;users&#39;</span>
+<span class="w">  </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;users&#39;</span>
 <span class="p">);</span>
 </code></pre></div></td></tr></table></div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Only columns listed above are accepted in the foreign table.</p>
+</div>
 <h3 id="foreign-table-options">Foreign table options</h3>
 <p>The full list of foreign table options are below:</p>
 <ul>
@@ -1741,16 +1755,26 @@
 <p>Some examples on how to use Cognito foreign tables.</p>
 <h3 id="basic-example">Basic example</h3>
 <p>This will create a "foreign table" inside your Postgres database called <code>cognito_table</code>:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span>
-<span class="normal">7</span>
-<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">cognito_table</span><span class="w"> </span><span class="p">(</span>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">cognito_table</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">username</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
 <span class="w">  </span><span class="n">email</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">username</span><span class="w"> </span><span class="nb">text</span>
+<span class="w">  </span><span class="n">status</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">enabled</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span>
+<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
+<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
+<span class="w">  </span><span class="n">attributes</span><span class="w"> </span><span class="n">jsonb</span>
 <span class="p">)</span>
 <span class="n">server</span><span class="w"> </span><span class="n">cognito_server</span>
 <span class="k">options</span><span class="w"> </span><span class="p">(</span>
