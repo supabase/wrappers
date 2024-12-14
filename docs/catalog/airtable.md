@@ -93,7 +93,10 @@ options (
 
 - The table requires both `base_id` and `table_id` options
 - Optional `view_id` can be specified to query a specific view
-- This FDW doesn't support query pushdown
+
+## Query Pushdown Support
+
+This FDW doesn't support query pushdown.
 
 ## Examples
 

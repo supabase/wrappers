@@ -91,7 +91,10 @@ options (
 #### Notes
 
 - Currently only supports the `users` object
-- This FDW doesn't support query pushdown
+
+## Query Pushdown Support
+
+This FDW doesn't support query pushdown.
 
 ## Examples
 
