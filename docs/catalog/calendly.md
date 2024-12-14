@@ -33,8 +33,8 @@ The Calendly API uses JSON formatted data, please refer to [Calendly API docs](h
 
 ## Available Versions
 
-| Version | Wasm Package URL                                                                                | Checksum                                                           |
-| ------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Version | Wasm Package URL                                                                                    | Checksum                                                           |
+| ------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
 | 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_calendly_fdw_v0.1.0/calendly_fdw.wasm` | `51a19fa4b8c40afb5dcf6dc2e009189aceeba65f30eec75d56a951d78fc8893f` |
 
 ## Preparation
@@ -80,6 +80,21 @@ We recommend creating a schema to hold all the foreign tables:
 ```sql
 create schema if not exists calendly;
 ```
+## Options
+
+The full list of foreign table options are below:
+
+- `object` - Object name in Calendly, required.
+
+Supported objects are listed below:
+
+| Object name              |
+| ------------------------ |
+| current_user             |
+| event_types              |
+| groups                   |
+| organization_memberships |
+| scheduled_events         |
 
 ## Entities
 
@@ -93,7 +108,7 @@ Ref: [Calendly API docs](https://developer.calendly.com/api-docs)
 
 | Object       | Select | Insert | Update | Delete | Truncate |
 | ------------ | :----: | :----: | :----: | :----: | :------: |
-| Current User |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Current User |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
 
 #### Usage
 
@@ -131,7 +146,7 @@ Ref: [Calendly API docs](https://developer.calendly.com/api-docs)
 
 | Object      | Select | Insert | Update | Delete | Truncate |
 | ----------- | :----: | :----: | :----: | :----: | :------: |
-| Event Types |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Event Types |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
 
 #### Usage
 
@@ -168,7 +183,7 @@ Ref: [Calendly API docs](https://developer.calendly.com/api-docs)
 
 | Object | Select | Insert | Update | Delete | Truncate |
 | ------ | :----: | :----: | :----: | :----: | :------: |
-| Groups |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Groups |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
 
 #### Usage
 
@@ -199,7 +214,7 @@ Ref: [Calendly API docs](https://developer.calendly.com/api-docs)
 
 | Object                  | Select | Insert | Update | Delete | Truncate |
 | ----------------------- | :----: | :----: | :----: | :----: | :------: |
-| Organization Membership |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Organization Membership |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
 
 #### Usage
 
@@ -230,7 +245,7 @@ Ref: [Calendly API docs](https://developer.calendly.com/api-docs)
 
 | Object           | Select | Insert | Update | Delete | Truncate |
 | ---------------- | :----: | :----: | :----: | :----: | :------: |
-| Scheduled Events |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Scheduled Events |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
 
 #### Usage
 
@@ -250,22 +265,6 @@ create foreign table calendly.scheduled_events (
 #### Notes
 
 - The `attrs` column contains all event attributes in JSON format
-
-## Foreign Table Options
-
-The full list of foreign table options are below:
-
-- `object` - Object name in Calendly, required.
-
-  Supported objects are listed below:
-
-  | Object name              |
-  | ------------------------ |
-  | current_user             |
-  | event_types              |
-  | groups                   |
-  | organization_memberships |
-  | scheduled_events         |
 
 ## Query Pushdown Support
 

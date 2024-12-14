@@ -19,13 +19,13 @@ The Cal Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you to 
 
 ## Supported Data Types
 
-| Postgres Data Type | Cal.com Data Type  |
-| ------------------ | ------------------ |
-| boolean            | Boolean            |
-| bigint             | Number             |
-| double precision   | Number             |
-| text               | String             |
-| jsonb              | Json               |
+| Postgres Data Type | Cal.com Data Type |
+| ------------------ | ----------------- |
+| boolean            | Boolean           |
+| bigint             | Number            |
+| double precision   | Number            |
+| text               | String            |
+| jsonb              | Json              |
 
 The Cal.com API uses JSON formatted data, please refer to [Cal.com API docs](https://cal.com/docs/api-reference/v2/introduction) for more details.
 
@@ -35,9 +35,9 @@ The Cal.com API uses JSON formatted data, please refer to [Cal.com API docs](htt
 
 ## Available Versions
 
-| Version | Wasm Package URL                                                                                | Checksum                                                           |
-| ------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_cal_fdw_v0.1.0/cal_fdw.wasm` | `tbd` |
+| Version | Wasm Package URL                                                                          | Checksum |
+| ------- | ----------------------------------------------------------------------------------------- | -------- |
+| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_cal_fdw_v0.1.0/cal_fdw.wasm` | `tbd`    |
 
 ## Preparation
 
@@ -83,9 +83,26 @@ We recommend creating a schema to hold all the foreign tables:
 create schema if not exists cal;
 ```
 
+## Options
+
+The full list of foreign table options are below:
+
+- `object` - Object name in Cal.com, required.
+
+Supported objects are listed below:
+
+| Object name  |
+| ------------ |
+| my_profile   |
+| event-types  |
+| bookings     |
+| calendars    |
+| schedules    |
+| conferencing |
+
 ## Entities
 
-### My Profile
+### Profile
 
 This is an object representing your Cal.com user profile.
 
@@ -93,9 +110,9 @@ Ref: [Cal.com API docs](https://cal.com/docs/api-reference/v2/introduction)
 
 #### Operations
 
-| Object     | Select | Insert | Update | Delete | Truncate |
-| ---------- | :----: | :----: | :----: | :----: | :------: |
-| My Profile |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Object  | Select | Insert | Update | Delete | Truncate |
+| ------- | :----: | :----: | :----: | :----: | :------: |
+| Profile |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
 
 #### Usage
 
@@ -127,7 +144,7 @@ Ref: [Cal.com API docs](https://cal.com/docs/api-reference/v2/introduction)
 
 | Object      | Select | Insert | Update | Delete | Truncate |
 | ----------- | :----: | :----: | :----: | :----: | :------: |
-| Event Types |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Event Types |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
 
 #### Usage
 
@@ -166,7 +183,7 @@ Ref: [Cal.com API docs](https://cal.com/docs/api-reference/v2/bookings/create-a-
 
 | Object   | Select | Insert | Update | Delete | Truncate |
 | -------- | :----: | :----: | :----: | :----: | :------: |
-| Bookings |   ✅   |   ✅   |   ❌   |   ❌   |    ❌    |
+| Bookings |   ✅    |   ✅    |   ❌    |   ❌    |    ❌     |
 
 #### Usage
 
@@ -213,7 +230,7 @@ Ref: [Cal.com API docs](https://cal.com/docs/api-reference/v2/introduction)
 
 | Object    | Select | Insert | Update | Delete | Truncate |
 | --------- | :----: | :----: | :----: | :----: | :------: |
-| Calendars |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Calendars |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
 
 #### Usage
 
@@ -241,7 +258,7 @@ Ref: [Cal.com API docs](https://cal.com/docs/api-reference/v2/introduction)
 
 | Object    | Select | Insert | Update | Delete | Truncate |
 | --------- | :----: | :----: | :----: | :----: | :------: |
-| Schedules |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Schedules |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
 
 #### Usage
 
@@ -271,7 +288,7 @@ Ref: [Cal.com API docs](https://cal.com/docs/api-reference/v2/introduction)
 
 | Object       | Select | Insert | Update | Delete | Truncate |
 | ------------ | :----: | :----: | :----: | :----: | :------: |
-| Conferencing |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Conferencing |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
 
 #### Usage
 
@@ -289,23 +306,6 @@ create foreign table cal.conferencing (
 #### Notes
 
 - The `attrs` column contains all conferencing attributes in JSON format
-
-## Foreign Table Options
-
-The full list of foreign table options are below:
-
-- `object` - Object name in Cal.com, required.
-
-  Supported objects are listed below:
-
-  | Object name              |
-  | ------------------------ |
-  | my_profile               |
-  | event-types              |
-  | bookings                 |
-  | calendars                |
-  | schedules                |
-  | conferencing             |
 
 ## Query Pushdown Support
 

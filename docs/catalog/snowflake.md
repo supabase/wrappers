@@ -124,6 +124,15 @@ We recommend creating a schema to hold all the foreign tables:
 create schema snowflake;
 ```
 
+## Options
+
+- `table` - Source table or view name in Snowflake, required.
+  Can also be a subquery enclosed in parentheses.
+
+- `rowid_column` - Primary key column name, optional for data scan, required for data modify
+
+## Entities
+
 ### Snowflake Tables
 
 This is an object representing a Snowflake table or view.
@@ -134,7 +143,7 @@ Ref: [Snowflake docs](https://docs.snowflake.com/en/sql-reference/sql/create-tab
 
 | Object | Select | Insert | Update | Delete | Truncate |
 | ------ | :----: | :----: | :----: | :----: | :------: |
-| Table  |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
+| Table  |   ✅    |   ✅    |   ✅    |   ✅    |    ❌     |
 
 #### Usage
 
@@ -161,13 +170,6 @@ create foreign table snowflake.mytable (
 - Supports query pushdown for where, order by, and limit clauses
 - Column names must match between Snowflake and foreign table
 - Data types must be compatible according to type mapping table
-
-## Foreign Table Options
-
-- `table` - Source table or view name in Snowflake, required.
-  Can also be a subquery enclosed in parentheses.
-
-- `rowid_column` - Primary key column name, optional for data scan, required for data modify
 
 ## Query Pushdown Support
 

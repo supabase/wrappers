@@ -84,7 +84,24 @@ We recommend creating a schema to hold all the foreign tables:
 create schema bigquery;
 ```
 
-## Creating Foreign Tables
+## Options
+
+The following options are available when creating BigQuery foreign tables:
+
+- `table` - Source table or view name in BigQuery, required
+- `location` - Source table location (default: 'US')
+- `timeout` - Query request timeout in milliseconds (default: 30000)
+- `rowid_column` - Primary key column name (required for data modification)
+
+You can also use a subquery as the table option:
+
+```sql
+table '(select * except(props), to_json_string(props) as props from `my_project.my_dataset.my_table`)'
+```
+
+Note: When using subquery, full qualified table name must be used.
+
+## Entites
 
 ### Tables
 
@@ -94,7 +111,7 @@ The BigQuery Wrapper supports data reads and writes from BigQuery tables and vie
 
 | Object | Select | Insert | Update | Delete | Truncate |
 | ------ | :----: | :----: | :----: | :----: | :------: |
-| Tables |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
+| Tables |   ✅    |   ✅    |   ✅    |   ✅    |    ❌     |
 
 #### Usage
 
@@ -116,23 +133,6 @@ create foreign table my_bigquery_table (
 - Supports `where`, `order by` and `limit` clause pushdown
 - When using `rowid_column`, it must be specified for data modification operations
 - Data in the streaming buffer cannot be updated or deleted until the buffer is flushed (up to 90 minutes)
-
-### Foreign Table Options
-
-The following options are available when creating BigQuery foreign tables:
-
-- `table` - Source table or view name in BigQuery, required
-- `location` - Source table location (default: 'US')
-- `timeout` - Query request timeout in milliseconds (default: 30000)
-- `rowid_column` - Primary key column name (required for data modification)
-
-You can also use a subquery as the table option:
-
-```sql
-table '(select * except(props), to_json_string(props) as props from `my_project.my_dataset.my_table`)'
-```
-
-Note: When using subquery, full qualified table name must be used.
 
 ## Query Pushdown Support
 

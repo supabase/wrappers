@@ -61,7 +61,7 @@ We recommend creating a schema to hold all the foreign tables:
 create schema auth0;
 ```
 
-## Creating Foreign Tables
+## Entities
 
 The Auth0 Wrapper supports data reads from Auth0's [Management API List users endpoint](https://auth0.com/docs/api/management/v2/users/get-users) endpoint (_read only_).
 
@@ -73,7 +73,7 @@ The Auth0 Wrapper supports data reads from Auth0's [Management API List users en
 
 | Object | Select | Insert | Update | Delete | Truncate |
 | ------ | :----: | :----: | :----: | :----: | :------: |
-| Users  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Users  |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
 
 #### Usage
 
@@ -106,7 +106,7 @@ This example demonstrates querying Auth0 users data.
 
 | Object | Select | Insert | Update | Delete | Truncate |
 | ------ | :----: | :----: | :----: | :----: | :------: |
-| Users  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Users  |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
 
 #### Usage
 

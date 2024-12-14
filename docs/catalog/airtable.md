@@ -61,7 +61,7 @@ We recommend creating a schema to hold all the foreign tables:
 create schema airtable;
 ```
 
-## Creating Foreign Tables
+## Entities
 
 The Airtable Wrapper supports data reads from the Airtable API.
 
@@ -73,7 +73,7 @@ The Airtable Wrapper supports data reads from Airtable's [Records](https://airta
 
 | Object  | Select | Insert | Update | Delete | Truncate |
 | ------- | :----: | :----: | :----: | :----: | :------: |
-| Records |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Records |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
 
 #### Usage
 
@@ -108,7 +108,7 @@ This will create a "foreign table" inside your Postgres database called `airtabl
 
 | Object | Select | Insert | Update | Delete | Truncate |
 | ------ | :----: | :----: | :----: | :----: | :------: |
-| Tables |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Tables |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
 
 #### Usage
 

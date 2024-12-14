@@ -83,6 +83,10 @@ We recommend creating a schema to hold all the foreign tables:
 create schema logflare;
 ```
 
+## Options
+
+- `endpoint` - Logflare endpoint UUID or name, required.
+
 ## Entities
 
 ### Logflare
@@ -95,7 +99,7 @@ Ref: [Logflare docs](https://logflare.app)
 
 | Object   | Select | Insert | Update | Delete | Truncate |
 | -------- | :----: | :----: | :----: | :----: | :------: |
-| Logflare |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Logflare |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
 
 #### Usage
 
@@ -122,10 +126,6 @@ create foreign table my_logflare_table (
   - Use parameter columns with prefix `_param_`
   - Example: `_param_org_id`, `_param_iso_timestamp_start`
   - Parameters are passed to the Logflare endpoint
-
-## Foreign Table Options
-
-- `endpoint` - Logflare endpoint UUID or name, required.
 
 ## Query Pushdown Support
 

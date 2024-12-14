@@ -95,6 +95,18 @@ We recommend creating a schema to hold all the foreign tables:
 create schema mssql;
 ```
 
+## Options
+
+The full list of foreign table options are below:
+
+- `table` - Source table or view name in SQL Server, required.
+
+This can also be a subquery enclosed in parentheses, for example,
+
+```sql
+table '(select * from users where id = 42 or id = 43)'
+```
+
 ## Entities
 
 ### SQL Server Tables
@@ -105,9 +117,9 @@ Ref: [Microsoft SQL Server docs](https://www.microsoft.com/en-au/sql-server/)
 
 #### Operations
 
-| Object          | Select | Insert | Update | Delete | Truncate |
-| --------------- | :----: | :----: | :----: | :----: | :------: |
-| SQL Server      |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Object     | Select | Insert | Update | Delete | Truncate |
+| ---------- | :----: | :----: | :----: | :----: | :------: |
+| SQL Server |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
 
 #### Usage
 
@@ -132,18 +144,6 @@ create foreign table mssql_users (
   - `order by` clauses
   - `limit` clauses
 - See Data Types section for type mappings between PostgreSQL and SQL Server
-
-## Foreign Table Options
-
-The full list of foreign table options are below:
-
-- `table` - Source table or view name in SQL Server, required.
-
-  This can also be a subquery enclosed in parentheses, for example,
-
-  ```sql
-  table '(select * from users where id = 42 or id = 43)'
-  ```
 
 ## Query Pushdown Support
 

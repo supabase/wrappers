@@ -72,7 +72,7 @@ Ref: [AWS Cognito User Records](https://docs.aws.amazon.com/cognito/latest/devel
 
 | Object | Select | Insert | Update | Delete | Truncate |
 | ------ | :----: | :----: | :----: | :----: | :------: |
-| Users  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Users  |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
 
 #### Usage
 
@@ -96,10 +96,6 @@ options (
 
 - Only the columns listed above are accepted in the foreign table
 - The `attributes` column contains additional user attributes in JSON format
-
-## Foreign Table Options
-
-- `object`: type of object we are querying. For now, only `users` is supported
 
 ## Query Pushdown Support
 

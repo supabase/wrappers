@@ -66,6 +66,18 @@ We recommend creating a schema to hold all the foreign tables:
 create schema firebase;
 ```
 
+## Options
+
+The full list of foreign table options are below:
+
+- `object` - Object name in Firebase, required.
+
+  For Authenciation users, the object name is fixed to `auth/users`. For Firestore documents, its format is `firestore/<collection_id>`, note that collection id must be a full path id. For example,
+
+  - `firestore/my-collection`
+  - `firestore/my-collection/my-document/another-collection`
+
+
 ## Entities
 
 ### Authentication Users
@@ -76,9 +88,9 @@ Ref: [Firebase Authentication Users](https://firebase.google.com/docs/auth/users
 
 #### Operations
 
-| Object              | Select | Insert | Update | Delete | Truncate |
-| ------------------- | :----: | :----: | :----: | :----: | :------: |
-| Authentication Users|   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Object               | Select | Insert | Update | Delete | Truncate |
+| -------------------- | :----: | :----: | :----: | :----: | :------: |
+| Authentication Users |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
 
 #### Usage
 
@@ -108,9 +120,9 @@ Ref: [Firestore Database](https://firebase.google.com/docs/firestore)
 
 #### Operations
 
-| Object                     | Select | Insert | Update | Delete | Truncate |
-| -------------------------- | :----: | :----: | :----: | :----: | :------: |
-| Firestore Database Documents|   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Object                       | Select | Insert | Update | Delete | Truncate |
+| ---------------------------- | :----: | :----: | :----: | :----: | :------: |
+| Firestore Database Documents |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
 
 #### Usage
 
@@ -135,17 +147,6 @@ create foreign table firebase_docs (
   - `firestore/my-collection`
   - `firestore/my-collection/my-document/another-collection`
 - The `attrs` column contains all document attributes in JSON format
-
-## Foreign Table Options
-
-The full list of foreign table options are below:
-
-- `object` - Object name in Firebase, required.
-
-  For Authenciation users, the object name is fixed to `auth/users`. For Firestore documents, its format is `firestore/<collection_id>`, note that collection id must be a full path id. For example,
-
-  - `firestore/my-collection`
-  - `firestore/my-collection/my-document/another-collection`
 
 ## Query Pushdown Support
 

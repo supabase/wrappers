@@ -86,6 +86,27 @@ We recommend creating a schema to hold all the foreign tables:
 create schema if not exists paddle;
 ```
 
+## Options
+
+- `object` - Object name in Paddle, required.
+
+Supported objects are listed below:
+
+| Object name           |
+| --------------------- |
+| products              |
+| prices                |
+| discounts             |
+| customers             |
+| transactions          |
+| reports               |
+| notification-settings |
+| notifications         |
+
+- `rowid_column` - Primary key column name, optional for data scan, required for data modify
+
+## Entities
+
 ### Products
 
 This is an object representing Paddle Products.
@@ -96,7 +117,7 @@ Ref: [Paddle API docs](https://developer.paddle.com/api-reference/about/data-typ
 
 | Object   | Select | Insert | Update | Delete | Truncate |
 | -------- | :----: | :----: | :----: | :----: | :------: |
-| Products |   ✅   |   ✅   |   ✅   |   ❌   |    ❌    |
+| Products |   ✅    |   ✅    |   ✅    |   ❌    |    ❌     |
 
 #### Usage
 
@@ -134,7 +155,7 @@ Ref: [Paddle API docs](https://developer.paddle.com/api-reference/about/data-typ
 
 | Object    | Select | Insert | Update | Delete | Truncate |
 | --------- | :----: | :----: | :----: | :----: | :------: |
-| Customers |   ✅   |   ✅   |   ✅   |   ❌   |    ❌    |
+| Customers |   ✅    |   ✅    |   ✅    |   ❌    |    ❌     |
 
 #### Usage
 
@@ -172,7 +193,7 @@ Ref: [Paddle API docs](https://developer.paddle.com/api-reference/about/data-typ
 
 | Object        | Select | Insert | Update | Delete | Truncate |
 | ------------- | :----: | :----: | :----: | :----: | :------: |
-| Subscriptions |   ✅   |   ✅   |   ✅   |   ❌   |    ❌    |
+| Subscriptions |   ✅    |   ✅    |   ✅    |   ❌    |    ❌     |
 
 #### Usage
 
@@ -196,25 +217,6 @@ create foreign table paddle.subscriptions (
 - Requires `rowid_column` option for data modification operations
 - Query pushdown supported for `id` column
 - Subscription items status can be extracted using: `attrs#>'{items,status}'`
-
-## Foreign Table Options
-
-- `object` - Object name in Paddle, required.
-
-  Supported objects are listed below:
-
-  | Object name           |
-  | --------------------- |
-  | products              |
-  | prices                |
-  | discounts             |
-  | customers             |
-  | transactions          |
-  | reports               |
-  | notification-settings |
-  | notifications         |
-
-- `rowid_column` - Primary key column name, optional for data scan, required for data modify
 
 ## Query Pushdown Support
 

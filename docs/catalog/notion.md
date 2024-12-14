@@ -79,6 +79,20 @@ We recommend creating a schema to hold all the foreign tables:
 create schema if not exists notion;
 ```
 
+## Foreign Table Options
+
+- `object` - Object name in Notion, required.
+
+Supported objects are listed below:
+
+| Object name |
+| ----------- |
+| block       |
+| page        |
+| database    |
+| user        |
+
+
 ## Entities
 
 ### Block
@@ -91,7 +105,7 @@ Ref: [Notion API docs](https://developers.notion.com/reference/intro)
 
 | Object | Select | Insert | Update | Delete | Truncate |
 | ------ | :----: | :----: | :----: | :----: | :------: |
-| Block  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Block  |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
 
 #### Usage
 
@@ -129,7 +143,7 @@ Ref: [Notion API docs](https://developers.notion.com/reference/intro)
 
 | Object | Select | Insert | Update | Delete | Truncate |
 | ------ | :----: | :----: | :----: | :----: | :------: |
-| Page   |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Page   |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
 
 #### Usage
 
@@ -163,7 +177,7 @@ Ref: [Notion API docs](https://developers.notion.com/reference/intro)
 
 | Object   | Select | Insert | Update | Delete | Truncate |
 | -------- | :----: | :----: | :----: | :----: | :------: |
-| Database |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Database |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
 
 #### Usage
 
@@ -197,7 +211,7 @@ Ref: [Notion API docs](https://developers.notion.com/reference/intro)
 
 | Object | Select | Insert | Update | Delete | Truncate |
 | ------ | :----: | :----: | :----: | :----: | :------: |
-| User   |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| User   |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
 
 #### Usage
 
@@ -220,19 +234,6 @@ create foreign table notion.users (
 - Query pushdown supported for `id` column
 - The `attrs` column contains all user attributes in JSON format
 - User email can be extracted using: `attrs->'person'->>'email'`
-
-## Foreign Table Options
-
-- `object` - Object name in Notion, required.
-
-  Supported objects are listed below:
-
-  | Object name           |
-  | --------------------- |
-  | block                 |
-  | page                  |
-  | database              |
-  | user                  |
 
 ## Query Pushdown Support
 

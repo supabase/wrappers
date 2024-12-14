@@ -79,6 +79,37 @@ We recommend creating a schema to hold all the foreign tables:
 create schema redis;
 ```
 
+
+## Options
+
+- `src_type` - Foreign table source type in Redis, required.
+
+This can be one of below types,
+
+| Source type | Description                                                        |
+| ----------- | ------------------------------------------------------------------ |
+| list        | [Single list](https://redis.io/docs/data-types/lists/)             |
+| set         | [Single set](https://redis.io/docs/data-types/sets/)               |
+| hash        | [Single hash](https://redis.io/docs/data-types/hashes/)            |
+| zset        | [Single sorted set](https://redis.io/docs/data-types/sorted-sets/) |
+| stream      | [Stream](https://redis.io/docs/data-types/streams/)                |
+| multi_list  | Multiple lists, specified by `src_key` pattern                     |
+| multi_set   | Multiple sets, specified by `src_key` pattern                      |
+| multi_hash  | Multiple hashes, specified by `src_key` pattern                    |
+| multi_zset  | Multiple sorted sets, specified by `src_key` pattern               |
+
+- `src_key` - Source object key in Redis, required.
+
+This key can be a pattern for `multi_*` type of foreign table. For other types, this key must return exact one value. For example,
+
+| Source Type                                   | `src_key` examples                                      |
+| --------------------------------------------- | ------------------------------------------------------- |
+| list, set, hash, zset, stream                 | `my_list`, `list:001`, `hash_foo`, `zset:1000` and etc. |
+| multi_list, multi_set, multi_hash, multi_zset | `my_list:*`, `set:*`, `zset:*` and etc.                 |
+
+
+## Entities
+
 ### List
 
 This is an object representing a Redis List.
@@ -89,7 +120,7 @@ Ref: [Redis docs](https://redis.io/docs/data-types/lists/)
 
 | Object | Select | Insert | Update | Delete | Truncate |
 | ------ | :----: | :----: | :----: | :----: | :------: |
-| List   |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| List   |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
 
 #### Usage
 
@@ -120,7 +151,7 @@ Ref: [Redis docs](https://redis.io/docs/data-types/sets/)
 
 | Object | Select | Insert | Update | Delete | Truncate |
 | ------ | :----: | :----: | :----: | :----: | :------: |
-| Set    |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Set    |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
 
 #### Usage
 
@@ -151,7 +182,7 @@ Ref: [Redis docs](https://redis.io/docs/data-types/hashes/)
 
 | Object | Select | Insert | Update | Delete | Truncate |
 | ------ | :----: | :----: | :----: | :----: | :------: |
-| Hash   |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Hash   |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
 
 #### Usage
 
@@ -183,7 +214,7 @@ Ref: [Redis docs](https://redis.io/docs/data-types/sorted-sets/)
 
 | Object     | Select | Insert | Update | Delete | Truncate |
 | ---------- | :----: | :----: | :----: | :----: | :------: |
-| Sorted Set |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Sorted Set |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
 
 #### Usage
 
@@ -214,7 +245,7 @@ Ref: [Redis docs](https://redis.io/docs/data-types/streams/)
 
 | Object | Select | Insert | Update | Delete | Truncate |
 | ------ | :----: | :----: | :----: | :----: | :------: |
-| Stream |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Stream |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
 
 #### Usage
 
@@ -242,12 +273,12 @@ Redis wrapper supports querying multiple objects of the same type using pattern 
 
 #### Operations
 
-| Object Type    | Select | Insert | Update | Delete | Truncate |
+| Object Type   | Select | Insert | Update | Delete | Truncate |
 | ------------- | :----: | :----: | :----: | :----: | :------: |
-| Multiple List  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
-| Multiple Set   |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
-| Multiple Hash  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
-| Multiple ZSet  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Multiple List |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
+| Multiple Set  |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
+| Multiple Hash |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
+| Multiple ZSet |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
 
 #### Usage
 
@@ -270,33 +301,6 @@ select * from redis_multi_lists;
 - Use pattern matching in `src_key` option
 - Results include object key and items in JSONB format
 - Items format varies by object type
-
-## Foreign Table Options
-
-- `src_type` - Foreign table source type in Redis, required.
-
-  This can be one of below types,
-
-  | Source type | Description                                                        |
-  | ----------- | ------------------------------------------------------------------ |
-  | list        | [Single list](https://redis.io/docs/data-types/lists/)             |
-  | set         | [Single set](https://redis.io/docs/data-types/sets/)               |
-  | hash        | [Single hash](https://redis.io/docs/data-types/hashes/)            |
-  | zset        | [Single sorted set](https://redis.io/docs/data-types/sorted-sets/) |
-  | stream      | [Stream](https://redis.io/docs/data-types/streams/)                |
-  | multi_list  | Multiple lists, specified by `src_key` pattern                     |
-  | multi_set   | Multiple sets, specified by `src_key` pattern                      |
-  | multi_hash  | Multiple hashes, specified by `src_key` pattern                    |
-  | multi_zset  | Multiple sorted sets, specified by `src_key` pattern               |
-
-- `src_key` - Source object key in Redis, required.
-
-  This key can be a pattern for `multi_*` type of foreign table. For other types, this key must return exact one value. For example,
-
-  | Source Type                                   | `src_key` examples                                      |
-  | --------------------------------------------- | ------------------------------------------------------- |
-  | list, set, hash, zset, stream                 | `my_list`, `list:001`, `hash_foo`, `zset:1000` and etc. |
-  | multi_list, multi_set, multi_hash, multi_zset | `my_list:*`, `set:*`, `zset:*` and etc.                 |
 
 ## Query Pushdown Support
 
