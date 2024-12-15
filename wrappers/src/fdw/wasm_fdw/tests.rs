@@ -240,6 +240,47 @@ mod tests {
                 .filter_map(|r| r.get_by_name::<i64, _>("id").unwrap())
                 .collect::<Vec<_>>();
             assert_eq!(results, vec![1234567]);
+
+            // Cloudflare D1 FDW test
+            c.update(
+                r#"CREATE SERVER cfd1_server
+                     FOREIGN DATA WRAPPER wasm_wrapper
+                     OPTIONS (
+                       fdw_package_url 'file://../../../wasm-wrappers/fdw/cfd1_fdw/target/wasm32-unknown-unknown/release/cfd1_fdw.wasm',
+                       fdw_package_name 'supabase:cfd1-fdw',
+                       fdw_package_version '>=0.1.0',
+                       api_url 'http://localhost:8096/cfd1',
+                       account_id 'aaa',
+                       database_id 'bbb',
+                       api_token 'ccc'
+                     )"#,
+                None,
+                None,
+            )
+            .unwrap();
+            c.update(
+                r#"
+                  CREATE FOREIGN TABLE cfd1_table (
+                    id bigint,
+                    name text,
+                    _attrs jsonb
+                  )
+                  SERVER cfd1_server
+                  OPTIONS (
+                    table 'test_table'
+                  )
+             "#,
+                None,
+                None,
+            )
+            .unwrap();
+
+            let results = c
+                .select("SELECT * FROM cfd1_table order by id", None, None)
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<i64, _>("id").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(results, vec![42, 123]);
         });
     }
 }
