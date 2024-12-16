@@ -17,6 +17,42 @@ The Cal Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you to 
 
     Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
 
+## Limitations
+
+This section describes important limitations and considerations when using this FDW:
+
+- **Performance Limitations**:
+  - No query pushdown support, all filtering must be done locally
+  - API request latency affects query performance
+  - Large result sets may experience slower performance due to full data transfer requirement
+  - Performance depends on Cal.com API rate limits and response times
+  - WebAssembly execution overhead may impact query performance
+  - JSON parsing and processing overhead for complex data structures
+
+- **Feature Limitations**:
+  - Only supports Cal.com API v2
+  - Write operations limited to booking creation only
+  - Most objects are read-only (profiles, event types, calendars, schedules, conferencing)
+  - WebAssembly package version must match exactly with specified checksum
+  - Limited column customization (most data accessed through attrs JSON column)
+  - No support for custom API endpoints or operations
+
+- **Resource Usage**:
+  - WebAssembly module initialization requires additional memory overhead
+  - Full result sets must be loaded into memory before processing
+  - Each query requires complete API request-response cycle
+  - No connection pooling or caching support
+  - Memory usage scales with result set size and JSON complexity
+  - JSON parsing requires additional CPU resources
+
+- **Known Issues**:
+  - Materialized views using these foreign tables may fail during logical backups
+  - Complex JSON attributes require manual parsing and handling
+  - Time zone handling may affect booking creation accuracy
+  - WebAssembly binary must be downloaded and verified on each server restart
+  - Error messages from Cal.com API may not be fully preserved
+  - API version changes may impact data structure compatibility
+
 ## Supported Data Types
 
 | Postgres Data Type | Cal.com Data Type |

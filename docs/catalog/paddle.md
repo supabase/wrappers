@@ -17,6 +17,39 @@ The Paddle Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you 
 
     Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
 
+## Limitations
+
+This section describes important limitations and considerations when using this FDW:
+
+- **Performance Limitations**:
+  - Query pushdown is only supported for the `id` column, resulting in full table scans for other filters
+  - WebAssembly execution overhead may impact query performance
+  - API request latency affects query performance as each operation requires Paddle API calls
+  - Sandbox and live API environments have different rate limits and performance characteristics
+  - Large result sets may experience slower performance due to full data transfer requirement
+
+- **Feature Limitations**:
+  - Delete operations are not supported for any object type
+  - Truncate operations are not supported for any object type
+  - Complex JSON attributes must be accessed through the `attrs` jsonb column
+  - Custom data is only available in dedicated columns for specific objects (e.g., customers)
+  - Limited filtering capabilities outside of `id` column queries
+  - WebAssembly package version must match exactly with specified checksum
+
+- **Resource Usage**:
+  - WebAssembly module initialization requires additional memory overhead
+  - Full result sets must be loaded into memory before processing
+  - JSON data in `attrs` column increases memory usage per row
+  - Each query requires complete API request-response cycle
+  - No connection pooling or caching support
+
+- **Known Issues**:
+  - Materialized views using these foreign tables may fail during logical backups
+  - API version mismatches can cause unexpected data format issues
+  - WebAssembly binary must be downloaded and verified on each server restart
+  - Sandbox and live environments require different API URLs and configurations
+  - Error handling between WebAssembly and PostgreSQL may not preserve all error details
+
 ## Supported Data Types
 
 | Postgres Data Type | Paddle Data Type |

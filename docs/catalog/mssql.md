@@ -17,6 +17,42 @@ The SQL Server Wrapper allows you to read data from Microsoft SQL Server within 
 
     Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
 
+## Limitations
+
+This section describes important limitations and considerations when using this FDW:
+
+- **Performance Limitations**:
+  - Query performance depends on SQL Server's execution time and network latency
+  - Large result sets may experience slower performance due to full data transfer requirement
+  - Performance varies based on network conditions between Postgres and SQL Server
+  - Complex queries may face additional overhead during translation to T-SQL
+  - No connection pooling support, each query establishes a new connection
+  - Query execution time affected by SQL Server's resource governor settings
+
+- **Feature Limitations**:
+  - Read-only operations supported (no INSERT, UPDATE, DELETE, or TRUNCATE)
+  - Only supports specific data type mappings between Postgres and SQL Server
+  - Limited support for SQL Server-specific features (e.g., spatial types, XML)
+  - Windows authentication (Integrated Security) not supported
+  - Subqueries must be enclosed in parentheses in table option
+  - No support for temporary tables or table-valued functions
+
+- **Resource Usage**:
+  - Each query requires a separate connection to SQL Server
+  - Large result sets must be fully loaded into memory
+  - Connection management overhead for each query execution
+  - Memory usage scales with result set size and query complexity
+  - Network bandwidth consumption based on data transfer volume
+  - Resource usage affected by SQL Server's resource governor
+
+- **Known Issues**:
+  - Materialized views using foreign tables may fail during logical backups
+  - Time zone handling may require explicit conversion
+  - Error messages from SQL Server may not preserve full context
+  - Connection string requires careful security parameter configuration
+  - TLS certificate validation needs explicit configuration
+  - Some SQL Server collations may cause character encoding issues
+
 ## Supported Data Types
 
 | Postgres Type    | SQL Server Type                  |

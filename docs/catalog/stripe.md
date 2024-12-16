@@ -17,6 +17,38 @@ The Stripe Wrapper allows you to read data from Stripe within your Postgres data
 
     Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
 
+## Limitations
+
+This section describes important limitations and considerations when using this FDW:
+
+- **Performance Limitations**:
+  - API request latency affects query performance as each operation requires Stripe API calls
+  - No query pushdown support means all filtering happens locally after data retrieval
+  - Large result sets may experience slower performance due to full data transfer requirement
+  - API rate limits may affect performance during high-volume operations
+  - Pagination is handled internally with fixed buffer sizes
+
+- **Feature Limitations**:
+  - Most objects are read-only, with only Customers, Products, and Subscriptions supporting write operations
+  - Complex Stripe object relationships must be managed through separate queries
+  - Filtering is most efficient only when using specific fields for each object type
+  - Webhook events and real-time updates are not directly supported
+  - Some Stripe object fields are only accessible through the `attrs` jsonb column
+
+- **Resource Usage**:
+  - Full result sets must be loaded into memory before processing
+  - Each query requires a complete API request-response cycle
+  - Large result sets may require significant PostgreSQL memory
+  - Failed requests consume additional resources due to retry attempts
+  - Connection pooling and caching are not supported
+
+- **Known Issues**:
+  - Materialized views using these foreign tables may fail during logical backups
+  - Complex nested Stripe objects may require manual JSON parsing
+  - API version mismatches can cause unexpected data format issues
+  - Some Stripe events may not be immediately reflected in query results
+  - Error handling for API failures may return empty results instead of errors
+
 ## Preparation
 
 Before you can query Stripe, you need to enable the Wrappers extension and store your credentials in Postgres.

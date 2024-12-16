@@ -5,6 +5,8 @@ hide:
 
 # Catalog
 
+Each FDW documentation includes a detailed "Limitations" section that describes important considerations and potential pitfalls when using that specific FDW.
+
 ## Official
 
 | Integration   | Select | Insert | Update | Delete | Truncate | Push Down |

@@ -329,6 +329,37 @@ create foreign table redis.multi_lists (
 
 This FDW doesn't support pushdown.
 
+## Limitations
+
+This section describes important limitations and considerations when using this FDW:
+
+- **Performance Limitations**:
+  - Buffer size limited to 256 items per request for list and sorted set operations
+  - No query pushdown support means all filtering happens locally after data retrieval
+  - API requests use exponential backoff with maximum 3 retries on failures
+  - Stream entries are processed in batches, which may impact real-time data access
+
+- **Feature Limitations**:
+  - Read-only access to Redis data structures (no Insert, Update, Delete, or Truncate operations)
+  - Limited column type support (only text for basic types, jsonb for complex types)
+  - Pattern matching in `multi_*` types only supports basic Redis glob patterns
+  - Sorted set scores are not exposed in the foreign table structure
+  - Stream entries must be processed sequentially from the last known ID
+
+- **Resource Usage**:
+  - Full result sets are loaded into memory before processing
+  - Each query requires a complete Redis request-response cycle
+  - Multiple object queries (multi_*) load all matching keys into memory at once
+  - Failed requests consume additional resources due to retry attempts
+  - Large hash or stream results may require significant PostgreSQL memory
+
+- **Known Issues**:
+  - Materialized views using these foreign tables may fail during logical backups (use physical backups instead)
+  - 404 responses are treated as empty results rather than errors
+  - Column type mismatches in response data will result in null values
+  - Connection failures during scans may require re-establishing the connection
+  - Memory pressure can occur when dealing with large datasets due to full result set loading
+
 ## Examples
 
 Some examples on how to use Redis foreign tables.

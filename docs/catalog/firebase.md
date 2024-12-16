@@ -184,6 +184,30 @@ create foreign table firebase.docs (
 
 This FDW doesn't support query pushdown.
 
+## Limitations
+
+This section describes important limitations and considerations when using this FDW:
+
+- **Performance Limitations**:
+  - Page size is limited to 1000 items per request
+  - Query performance may be impacted when dealing with large collections due to pagination requirements
+  - No query pushdown support means all filtering happens locally after data retrieval
+
+- **Feature Limitations**:
+  - Read-only access to Authentication Users and Firestore Database Documents
+  - Write operations (Insert, Update, Delete, Truncate) are not supported
+  - Limited to basic collection queries; complex Firestore queries are not supported
+
+- **Resource Usage**:
+  - Default maximum row count limit is 10,000 records
+  - Each paginated request requires additional network and memory resources
+  - Full result sets are loaded into memory, which can impact PostgreSQL performance with large datasets
+
+- **Known Issues**:
+  - Authentication tokens need periodic renewal
+  - Materialized views using these foreign tables may fail during logical backups (use physical backups instead)
+  - Collection paths must be exact and complete; partial or wildcard paths are not supported
+
 ## Examples
 
 Some examples on how to use Firebase foreign tables.
