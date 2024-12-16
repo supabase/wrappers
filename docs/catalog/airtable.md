@@ -19,13 +19,19 @@ The Airtable Wrapper allows you to read data from your Airtable bases/tables wit
 
 ## Preparation
 
-Before you get started, make sure the `wrappers` extension is installed on your database:
+Before you can query Airtable, you need to enable the Wrappers extension and store your credentials in Postgres.
+
+### Enable Wrappers
+
+Make sure the `wrappers` extension is installed on your database:
 
 ```sql
 create extension if not exists wrappers with schema extensions;
 ```
 
-and then create the foreign data wrapper:
+### Enable the Airtable Wrapper
+
+Enable the `airtable_wrapper` FDW:
 
 ```sql
 create foreign data wrapper airtable_wrapper
@@ -33,9 +39,9 @@ create foreign data wrapper airtable_wrapper
   validator airtable_fdw_validator;
 ```
 
-### Secure your credentials (optional)
+### Store your credentials (optional)
 
-By default, Postgres stores FDW credentials inide `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
+By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
 
 ```sql
 -- Save your Airtable API key in Vault and retrieve the `key_id`
@@ -72,7 +78,15 @@ We need to provide Postgres with the credentials to connect to Airtable, and any
       );
     ```
 
-## Creating Foreign Tables
+### Create a schema
+
+We recommend creating a schema to hold all the foreign tables:
+
+```sql
+create schema if not exists airtable;
+```
+
+## Entities
 
 The Airtable Wrapper supports data reads from the Airtable API.
 
@@ -82,14 +96,14 @@ The Airtable Wrapper supports data reads from Airtable's [Records](https://airta
 
 #### Operations
 
-| Airtable | Select | Insert | Update | Delete | Truncate |
-| -------- | :----: | :----: | :----: | :----: | :------: |
-| Records  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Object  | Select | Insert | Update | Delete | Truncate |
+| ------- | :----: | :----: | :----: | :----: | :------: |
+| Records |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
 
 #### Usage
 
 ```sql
-create foreign table my_foreign_table (
+create foreign table airtable.my_foreign_table (
   name text
   -- other fields
 )
@@ -100,13 +114,10 @@ options (
 );
 ```
 
-#### Options
+#### Notes
 
-The full list of foreign table options are below:
-
-- `base_id` - Airtable Base ID the table belongs to, required.
-- `table_id` - Airtable table ID, required.
-- `view_id` - Airtable view ID, optional.
+- The table requires both `base_id` and `table_id` options
+- Optional `view_id` can be specified to query a specific view
 
 ## Query Pushdown Support
 
@@ -114,14 +125,12 @@ This FDW doesn't support query pushdown.
 
 ## Examples
 
-Some examples on how to use Airtable foreign tables.
-
 ### Query an Airtable table
 
 This will create a "foreign table" inside your Postgres database called `airtable_table`:
 
 ```sql
-create foreign table airtable_table (
+create foreign table airtable.airtable_table (
   name text,
   notes text,
   content text,
@@ -138,7 +147,7 @@ options (
 You can now fetch your Airtable data from within your Postgres database:
 
 ```sql
-select * from airtable_table;
+select * from airtable.airtable_table;
 ```
 
 ### Query an Airtable view
@@ -146,7 +155,7 @@ select * from airtable_table;
 We can also create a foreign table from an Airtable View called `airtable_view`:
 
 ```sql
-create foreign table airtable_view (
+create foreign table airtable.airtable_view (
   name text,
   notes text,
   content text,
@@ -164,5 +173,5 @@ options (
 You can now fetch your Airtable data from within your Postgres database:
 
 ```sql
-select * from airtable_view;
+select * from airtable.airtable_view;
 ```

@@ -34,13 +34,19 @@ The BigQuery Wrapper allows you to read and write data from BigQuery within your
 
 ## Preparation
 
-Before you get started, make sure the `wrappers` extension is installed on your database:
+Before you can query BigQuery, you need to enable the Wrappers extension and store your credentials in Postgres.
+
+### Enable Wrappers
+
+Make sure the `wrappers` extension is installed on your database:
 
 ```sql
 create extension if not exists wrappers with schema extensions;
 ```
 
-and then create the foreign data wrapper:
+### Enable the BigQuery Wrapper
+
+Enable the `bigquery_wrapper` FDW:
 
 ```sql
 create foreign data wrapper bigquery_wrapper
@@ -48,9 +54,9 @@ create foreign data wrapper bigquery_wrapper
   validator big_query_fdw_validator;
 ```
 
-### Secure your credentials (optional)
+### Store your credentials (optional)
 
-By default, Postgres stores FDW credentials inide `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
+By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
 
 ```sql
 -- Save your BigQuery service account json in Vault and retrieve the `key_id`
@@ -104,18 +110,47 @@ We need to provide Postgres with the credentials to connect to BigQuery, and any
       );
     ```
 
-## Creating Foreign Tables
+### Create a schema
 
-The BigQuery Wrapper supports data reads and writes from BigQuery.
-
-| Integration | Select | Insert | Update | Delete | Truncate |
-| ----------- | :----: | :----: | :----: | :----: | :------: |
-| BigQuery    |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
-
-For example:
+We recommend creating a schema to hold all the foreign tables:
 
 ```sql
-create foreign table my_bigquery_table (
+create schema if not exists bigquery;
+```
+
+## Options
+
+The following options are available when creating BigQuery foreign tables:
+
+- `table` - Source table or view name in BigQuery, required
+- `location` - Source table location (default: 'US')
+- `timeout` - Query request timeout in milliseconds (default: 30000)
+- `rowid_column` - Primary key column name (required for data modification)
+
+You can also use a subquery as the table option:
+
+```sql
+table '(select * except(props), to_json_string(props) as props from `my_project.my_dataset.my_table`)'
+```
+
+Note: When using subquery, full qualified table name must be used.
+
+## Entites
+
+### Tables
+
+The BigQuery Wrapper supports data reads and writes from BigQuery tables and views.
+
+#### Operations
+
+| Object | Select | Insert | Update | Delete | Truncate |
+| ------ | :----: | :----: | :----: | :----: | :------: |
+| Tables |   ✅    |   ✅    |   ✅    |   ✅    |    ❌     |
+
+#### Usage
+
+```sql
+create foreign table bigquery.my_bigquery_table (
   id bigint,
   name text,
   ts timestamp
@@ -127,23 +162,11 @@ create foreign table my_bigquery_table (
   );
 ```
 
-### Foreign table options
+#### Notes
 
-The full list of foreign table options are below:
-
-- `table` - Source table or view name in BigQuery, required.
-
-  This can also be a subquery enclosed in parentheses, for example,
-
-  ```sql
-  table '(select * except(props), to_json_string(props) as props from `my_project.my_dataset.my_table`)'
-  ```
-
-  **Note**: When using subquery in this option, full qualitified table name must be used.
-
-- `location` - Source table location, optional. Default is 'US'.
-- `timeout` - Query request timeout in milliseconds, optional. Default is '30000' (30 seconds).
-- `rowid_column` - Primary key column name, optional for data scan, required for data modify
+- Supports `where`, `order by` and `limit` clause pushdown
+- When using `rowid_column`, it must be specified for data modification operations
+- Data in the streaming buffer cannot be updated or deleted until the buffer is flushed (up to 90 minutes)
 
 ## Query Pushdown Support
 
@@ -151,7 +174,7 @@ This FDW supports `where`, `order by` and `limit` clause pushdown.
 
 ## Inserting Rows & the Streaming Buffer
 
-This foreign data wrapper uses BigQuery’s `insertAll` API method to create a `streamingBuffer` with an associated partition time. **Within that partition time, the data cannot be updated, deleted, or fully exported**. Only after the time has elapsed (up to 90 minutes according to [BigQuery’s documentation](https://cloud.google.com/bigquery/docs/streaming-data-into-bigquery)); can you perform operations.
+This foreign data wrapper uses BigQuery’s `insertAll` API method to create a `streamingBuffer` with an associated partition time. **Within that partition time, the data cannot be updated, deleted, or fully exported**. Only after the time has elapsed (up to 90 minutes according to [BigQuery’s documentation](https://cloud.google.com/bigquery/docs/streaming-data-into-bigquery)), can you perform operations.
 
 If you attempt an `UPDATE` or `DELETE` statement on rows while in the streamingBuffer, you will get an error of `UPDATE` or `DELETE` statement over table datasetName - note that tableName would affect rows in the streaming buffer, which is not supported.
 
@@ -181,7 +204,7 @@ insert into your_project_id.your_dataset_id.people values
 This example will create a "foreign table" inside your Postgres database called `people` and query its data:
 
 ```sql
-create foreign table people (
+create foreign table bigquery.people (
   id bigint,
   name text,
   ts timestamp
@@ -192,7 +215,7 @@ create foreign table people (
     location 'EU'
   );
 
-select * from people;
+select * from bigquery.people;
 ```
 
 ### Data modify example
@@ -200,7 +223,7 @@ select * from people;
 This example will modify data in a "foreign table" inside your Postgres database called `people`, note that `rowid_column` option is mandatory:
 
 ```sql
-create foreign table people (
+create foreign table bigquery.people (
   id bigint,
   name text,
   ts timestamp
@@ -213,15 +236,15 @@ create foreign table people (
   );
 
 -- insert new data
-insert into people(id, name, ts)
+insert into bigquery.people(id, name, ts)
 values (4, 'Yoda', '2023-01-01 12:34:56');
 
 -- update existing data
-update people
+update bigquery.people
 set name = 'Anakin Skywalker'
 where id = 1;
 
 -- delete data
-delete from people
+delete from bigquery.people
 where id = 2;
 ```

@@ -36,13 +36,19 @@ The SQL Server Wrapper allows you to read data from Microsoft SQL Server within 
 
 ## Preparation
 
-Before you get started, make sure the `wrappers` extension is installed on your database:
+Before you can query SQL Server, you need to enable the Wrappers extension and store your credentials in Postgres.
+
+### Enable Wrappers
+
+Make sure the `wrappers` extension is installed on your database:
 
 ```sql
 create extension if not exists wrappers with schema extensions;
 ```
 
-and then create the foreign data wrapper:
+### Enable the SQL Server Wrapper
+
+Enable the `mssql_wrapper` FDW:
 
 ```sql
 create foreign data wrapper mssql_wrapper
@@ -50,7 +56,7 @@ create foreign data wrapper mssql_wrapper
   validator mssql_fdw_validator;
 ```
 
-### Secure your credentials (optional)
+### Store your credentials (optional)
 
 By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
 
@@ -63,6 +69,23 @@ values (
 )
 returning key_id;
 ```
+
+The connection string is an [ADO.NET connection string](https://learn.microsoft.com/en-us/dotnet/framework/data/adonet/connection-strings), which specifies connection parameters in semicolon-delimited string.
+
+**Supported parameters**
+
+All parameter keys are handled case-insensitive.
+
+| Parameter              | Allowed Values                | Description                                                                                        |
+| ---------------------- | ----------------------------- | -------------------------------------------------------------------------------------------------- |
+| Server                 | `<string>`                    | The name or network address of the instance of SQL Server to which to connect. Format: `host,port` |
+| User                   | `<string>`                    | The SQL Server login account.                                                                      |
+| Password               | `<string>`                    | The password for the SQL Server account logging on.                                                |
+| Database               | `<string>`                    | The name of the database.                                                                          |
+| IntegratedSecurity     | false                         | Windows/Kerberos authentication and SQL authentication.                                            |
+| TrustServerCertificate | true, false                   | Specifies whether the driver trusts the server certificate when connecting using TLS.              |
+| Encrypt                | true, false, DANGER_PLAINTEXT | Specifies whether the driver uses TLS to encrypt communication.                                    |
+| ApplicationName        | `<string>`                    | Sets the application name for the connection.                                                      |
 
 ### Connecting to SQL Server
 
@@ -88,35 +111,44 @@ We need to provide Postgres with the credentials to connect to SQL Server. We ca
       );
     ```
 
-The connection string is an [ADO.NET connection string](https://learn.microsoft.com/en-us/dotnet/framework/data/adonet/connection-strings), which specifies connection parameters in semicolon-delimited string.
+### Create a schema
 
-**Supported parameters**
-
-All parameter keys are handled case-insensitive.
-
-| Parameter              | Allowed Values                | Description                                                                                        |
-| ---------------------- | ----------------------------- | -------------------------------------------------------------------------------------------------- |
-| Server                 | `<string>`                    | The name or network address of the instance of SQL Server to which to connect. Format: `host,port` |
-| User                   | `<string>`                    | The SQL Server login account.                                                                      |
-| Password               | `<string>`                    | The password for the SQL Server account logging on.                                                |
-| Database               | `<string>`                    | The name of the database.                                                                          |
-| IntegratedSecurity     | false                         | Windows/Kerberos authentication and SQL authentication.                                            |
-| TrustServerCertificate | true, false                   | Specifies whether the driver trusts the server certificate when connecting using TLS.              |
-| Encrypt                | true, false, DANGER_PLAINTEXT | Specifies whether the driver uses TLS to encrypt communication.                                    |
-| ApplicationName        | `<string>`                    | Sets the application name for the connection.                                                      |
-
-## Creating Foreign Tables
-
-The SQL Server Wrapper supports data reads from SQL Server.
-
-| Integration | Select | Insert | Update | Delete | Truncate |
-| ----------- | :----: | :----: | :----: | :----: | :------: |
-| SQL Server  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
-
-For example:
+We recommend creating a schema to hold all the foreign tables:
 
 ```sql
-create foreign table mssql_users (
+create schema if not exists mssql;
+```
+
+## Options
+
+The full list of foreign table options are below:
+
+- `table` - Source table or view name in SQL Server, required.
+
+This can also be a subquery enclosed in parentheses, for example,
+
+```sql
+table '(select * from users where id = 42 or id = 43)'
+```
+
+## Entities
+
+### SQL Server Tables
+
+This is an object representing SQL Server tables and views.
+
+Ref: [Microsoft SQL Server docs](https://www.microsoft.com/en-au/sql-server/)
+
+#### Operations
+
+| Object     | Select | Insert | Update | Delete | Truncate |
+| ---------- | :----: | :----: | :----: | :----: | :------: |
+| table/view |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
+
+```sql
+create foreign table mssql.users (
   id bigint,
   name text,
   dt timestamp
@@ -127,17 +159,15 @@ create foreign table mssql_users (
   );
 ```
 
-### Foreign table options
+#### Notes
 
-The full list of foreign table options are below:
-
-- `table` - Source table or view name in SQL Server, required.
-
-  This can also be a subquery enclosed in parentheses, for example,
-
-  ```sql
-  table '(select * from users where id = 42 or id = 43)'
-  ```
+- Supports both tables and views as data sources
+- Can use subqueries in the `table` option
+- Query pushdown supported for:
+      - `where` clauses
+      - `order by` clauses
+      - `limit` clauses
+- See Data Types section for type mappings between PostgreSQL and SQL Server
 
 ## Query Pushdown Support
 
@@ -145,9 +175,9 @@ This FDW supports `where`, `order by` and `limit` clause pushdown.
 
 ## Examples
 
-Some examples on how to use SQL Server foreign tables.
+### Basic Example
 
-Let's prepare the source table in SQL Server first:
+First, create a source table in SQL Server:
 
 ```sql
 -- Run below SQLs on SQL Server to create source table
@@ -163,12 +193,10 @@ insert into users(id, name, dt) values (43, 'Bar', '2023-12-27');
 insert into users(id, name, dt) values (44, 'Baz', '2023-12-26');
 ```
 
-### Basic example
-
-This example will create a foreign table inside your Postgres database and query its data:
+Then create and query the foreign table in PostgreSQL:
 
 ```sql
-create foreign table mssql_users (
+create foreign table mssql.users (
   id bigint,
   name text,
   dt timestamp
@@ -178,15 +206,15 @@ create foreign table mssql_users (
     table 'users'
   );
 
-select * from mssql_users;
+select * from mssql.users;
 ```
 
-### Remote subquery example
+### Remote Subquery Example
 
-This example will create a foreign table based on a remote subquery and query its data:
+Create a foreign table using a subquery:
 
 ```sql
-create foreign table mssql_users_subquery (
+create foreign table mssql.users_subquery (
   id bigint,
   name text,
   dt timestamp
@@ -196,5 +224,5 @@ create foreign table mssql_users_subquery (
     table '(select * from users where id = 42 or id = 43)'
   );
 
-select * from mssql_users_subquery;
+select * from mssql.users_subquery;
 ```
