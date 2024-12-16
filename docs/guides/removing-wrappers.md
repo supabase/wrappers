@@ -54,9 +54,3 @@ drop server if exists server_name cascade;
 ```sql
 drop extension if exists wrappers;
 ```
-
-## Common Issues
-
-- Always use cascade when dropping servers if you're unsure about dependencies
-- For production environments, take a backup before removing components
-- Some wrappers might have additional cleanup steps; check wrapper-specific documentation
