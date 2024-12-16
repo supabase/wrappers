@@ -535,9 +535,27 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#secure-your-credentials-optional" class="md-nav__link">
+  <a href="#enable-wrappers" class="md-nav__link">
     <span class="md-ellipsis">
-      Secure your credentials (optional)
+      Enable Wrappers
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#enable-the-airtable-wrapper" class="md-nav__link">
+    <span class="md-ellipsis">
+      Enable the Airtable Wrapper
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#store-your-credentials-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      Store your credentials (optional)
     </span>
   </a>
   
@@ -552,19 +570,28 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#create-a-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      Create a schema
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#creating-foreign-tables" class="md-nav__link">
+  <a href="#entities" class="md-nav__link">
     <span class="md-ellipsis">
-      Creating Foreign Tables
+      Entities
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Creating Foreign Tables">
+    <nav class="md-nav" aria-label="Entities">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -596,9 +623,9 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#options" class="md-nav__link">
+  <a href="#notes" class="md-nav__link">
     <span class="md-ellipsis">
-      Options
+      Notes
     </span>
   </a>
   
@@ -1543,9 +1570,27 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#secure-your-credentials-optional" class="md-nav__link">
+  <a href="#enable-wrappers" class="md-nav__link">
     <span class="md-ellipsis">
-      Secure your credentials (optional)
+      Enable Wrappers
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#enable-the-airtable-wrapper" class="md-nav__link">
+    <span class="md-ellipsis">
+      Enable the Airtable Wrapper
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#store-your-credentials-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      Store your credentials (optional)
     </span>
   </a>
   
@@ -1560,19 +1605,28 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#create-a-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      Create a schema
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#creating-foreign-tables" class="md-nav__link">
+  <a href="#entities" class="md-nav__link">
     <span class="md-ellipsis">
-      Creating Foreign Tables
+      Entities
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Creating Foreign Tables">
+    <nav class="md-nav" aria-label="Entities">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1604,9 +1658,9 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#options" class="md-nav__link">
+  <a href="#notes" class="md-nav__link">
     <span class="md-ellipsis">
-      Options
+      Notes
     </span>
   </a>
   
@@ -1707,18 +1761,21 @@
 <p>Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.</p>
 </div>
 <h2 id="preparation">Preparation</h2>
-<p>Before you get started, make sure the <code>wrappers</code> extension is installed on your database:</p>
+<p>Before you can query Airtable, you need to enable the Wrappers extension and store your credentials in Postgres.</p>
+<h3 id="enable-wrappers">Enable Wrappers</h3>
+<p>Make sure the <code>wrappers</code> extension is installed on your database:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">extension</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">wrappers</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">extensions</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
-<p>and then create the foreign data wrapper:</p>
+<h3 id="enable-the-airtable-wrapper">Enable the Airtable Wrapper</h3>
+<p>Enable the <code>airtable_wrapper</code> FDW:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">airtable_wrapper</span>
 <span class="w">  </span><span class="k">handler</span><span class="w"> </span><span class="n">airtable_fdw_handler</span>
 <span class="w">  </span><span class="k">validator</span><span class="w"> </span><span class="n">airtable_fdw_validator</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
-<h3 id="secure-your-credentials-optional">Secure your credentials (optional)</h3>
-<p>By default, Postgres stores FDW credentials inide <code>pg_catalog.pg_foreign_server</code> in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with <a href="https://supabase.com/docs/guides/database/vault">Vault</a>, which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.</p>
+<h3 id="store-your-credentials-optional">Store your credentials (optional)</h3>
+<p>By default, Postgres stores FDW credentials inside <code>pg_catalog.pg_foreign_server</code> in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with <a href="https://supabase.com/docs/guides/database/vault">Vault</a>, which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
@@ -1763,7 +1820,11 @@
 </div>
 </div>
 </div>
-<h2 id="creating-foreign-tables">Creating Foreign Tables</h2>
+<h3 id="create-a-schema">Create a schema</h3>
+<p>We recommend creating a schema to hold all the foreign tables:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">airtable</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<h2 id="entities">Entities</h2>
 <p>The Airtable Wrapper supports data reads from the Airtable API.</p>
 <h3 id="records">Records</h3>
 <p>The Airtable Wrapper supports data reads from Airtable's <a href="https://airtable.com/developers/web/api/list-records">Records</a> endpoint (<em>read only</em>).</p>
@@ -1771,7 +1832,7 @@
 <table>
 <thead>
 <tr>
-<th>Airtable</th>
+<th>Object</th>
 <th style="text-align: center;">Select</th>
 <th style="text-align: center;">Insert</th>
 <th style="text-align: center;">Update</th>
@@ -1799,7 +1860,7 @@
 <span class="normal">6</span>
 <span class="normal">7</span>
 <span class="normal">8</span>
-<span class="normal">9</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">my_foreign_table</span><span class="w"> </span><span class="p">(</span>
+<span class="normal">9</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">airtable</span><span class="p">.</span><span class="n">my_foreign_table</span><span class="w"> </span><span class="p">(</span>
 <span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span>
 <span class="w">  </span><span class="c1">-- other fields</span>
 <span class="p">)</span>
@@ -1809,17 +1870,14 @@
 <span class="w">  </span><span class="n">table_id</span><span class="w"> </span><span class="s1">&#39;tblXXXX&#39;</span>
 <span class="p">);</span>
 </code></pre></div></td></tr></table></div>
-<h4 id="options">Options</h4>
-<p>The full list of foreign table options are below:</p>
+<h4 id="notes">Notes</h4>
 <ul>
-<li><code>base_id</code> - Airtable Base ID the table belongs to, required.</li>
-<li><code>table_id</code> - Airtable table ID, required.</li>
-<li><code>view_id</code> - Airtable view ID, optional.</li>
+<li>The table requires both <code>base_id</code> and <code>table_id</code> options</li>
+<li>Optional <code>view_id</code> can be specified to query a specific view</li>
 </ul>
 <h2 id="query-pushdown-support">Query Pushdown Support</h2>
 <p>This FDW doesn't support query pushdown.</p>
 <h2 id="examples">Examples</h2>
-<p>Some examples on how to use Airtable foreign tables.</p>
 <h3 id="query-an-airtable-table">Query an Airtable table</h3>
 <p>This will create a "foreign table" inside your Postgres database called <code>airtable_table</code>:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
@@ -1833,7 +1891,7 @@
 <span class="normal"> 9</span>
 <span class="normal">10</span>
 <span class="normal">11</span>
-<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">airtable_table</span><span class="w"> </span><span class="p">(</span>
+<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">airtable</span><span class="p">.</span><span class="n">airtable_table</span><span class="w"> </span><span class="p">(</span>
 <span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
 <span class="w">  </span><span class="n">notes</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
 <span class="w">  </span><span class="n">content</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
@@ -1847,7 +1905,7 @@
 <span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 <p>You can now fetch your Airtable data from within your Postgres database:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">airtable_table</span><span class="p">;</span>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">airtable</span><span class="p">.</span><span class="n">airtable_table</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 <h3 id="query-an-airtable-view">Query an Airtable view</h3>
 <p>We can also create a foreign table from an Airtable View called <code>airtable_view</code>:</p>
@@ -1863,7 +1921,7 @@
 <span class="normal">10</span>
 <span class="normal">11</span>
 <span class="normal">12</span>
-<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">airtable_view</span><span class="w"> </span><span class="p">(</span>
+<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">airtable</span><span class="p">.</span><span class="n">airtable_view</span><span class="w"> </span><span class="p">(</span>
 <span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
 <span class="w">  </span><span class="n">notes</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
 <span class="w">  </span><span class="n">content</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
@@ -1878,7 +1936,7 @@
 <span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 <p>You can now fetch your Airtable data from within your Postgres database:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">airtable_view</span><span class="p">;</span>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">airtable</span><span class="p">.</span><span class="n">airtable_view</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 
 

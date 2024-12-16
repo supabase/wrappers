@@ -577,9 +577,27 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#secure-your-credentials-optional" class="md-nav__link">
+  <a href="#enable-wrappers" class="md-nav__link">
     <span class="md-ellipsis">
-      Secure your credentials (optional)
+      Enable Wrappers
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#enable-the-cognito-wrapper" class="md-nav__link">
+    <span class="md-ellipsis">
+      Enable the Cognito Wrapper
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#store-your-credentials-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      Store your credentials (optional)
     </span>
   </a>
   
@@ -594,27 +612,69 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#create-a-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      Create a schema
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#creating-foreign-tables" class="md-nav__link">
+  <a href="#entities" class="md-nav__link">
     <span class="md-ellipsis">
-      Creating Foreign Tables
+      Entities
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Creating Foreign Tables">
+    <nav class="md-nav" aria-label="Entities">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#foreign-table-options" class="md-nav__link">
+  <a href="#users" class="md-nav__link">
     <span class="md-ellipsis">
-      Foreign table options
+      Users
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Users">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
         
@@ -1501,9 +1561,27 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#secure-your-credentials-optional" class="md-nav__link">
+  <a href="#enable-wrappers" class="md-nav__link">
     <span class="md-ellipsis">
-      Secure your credentials (optional)
+      Enable Wrappers
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#enable-the-cognito-wrapper" class="md-nav__link">
+    <span class="md-ellipsis">
+      Enable the Cognito Wrapper
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#store-your-credentials-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      Store your credentials (optional)
     </span>
   </a>
   
@@ -1518,27 +1596,69 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#create-a-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      Create a schema
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#creating-foreign-tables" class="md-nav__link">
+  <a href="#entities" class="md-nav__link">
     <span class="md-ellipsis">
-      Creating Foreign Tables
+      Entities
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Creating Foreign Tables">
+    <nav class="md-nav" aria-label="Entities">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#foreign-table-options" class="md-nav__link">
+  <a href="#users" class="md-nav__link">
     <span class="md-ellipsis">
-      Foreign table options
+      Users
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Users">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
         
@@ -1623,18 +1743,21 @@
 <p>Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.</p>
 </div>
 <h2 id="preparation">Preparation</h2>
-<p>Before you get started, make sure the <code>wrappers</code> extension is installed on your database:</p>
+<p>Before you can query AWS Cognito, you need to enable the Wrappers extension and store your credentials in Postgres.</p>
+<h3 id="enable-wrappers">Enable Wrappers</h3>
+<p>Make sure the <code>wrappers</code> extension is installed on your database:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">extension</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">wrappers</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">extensions</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
-<p>and then create the foreign data wrapper:</p>
+<h3 id="enable-the-cognito-wrapper">Enable the Cognito Wrapper</h3>
+<p>Enable the <code>cognito_wrapper</code> FDW:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">cognito_wrapper</span>
 <span class="w">  </span><span class="k">handler</span><span class="w"> </span><span class="n">cognito_fdw_handler</span>
 <span class="w">  </span><span class="k">validator</span><span class="w"> </span><span class="n">cognito_fdw_validator</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
-<h3 id="secure-your-credentials-optional">Secure your credentials (optional)</h3>
-<p>By default, Postgres stores FDW credentials inide <code>pg_catalog.pg_foreign_server</code> in plain text. Anyone with access to this table will be able to view these credentials. Wrappers are designed to work with <a href="https://supabase.com/docs/guides/database/vault">Vault</a>, which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.</p>
+<h3 id="store-your-credentials-optional">Store your credentials (optional)</h3>
+<p>By default, Postgres stores FDW credentials inside <code>pg_catalog.pg_foreign_server</code> in plain text. Anyone with access to this table will be able to view these credentials. Wrappers are designed to work with <a href="https://supabase.com/docs/guides/database/vault">Vault</a>, which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
@@ -1689,12 +1812,19 @@
 </div>
 </div>
 </div>
-<h2 id="creating-foreign-tables">Creating Foreign Tables</h2>
-<p>The Cognito Wrapper supports data reads from Cognito's <a href="https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-identity-pools.html">User Records</a> endpoint (<em>read only</em>).</p>
+<h3 id="create-a-schema">Create a schema</h3>
+<p>We recommend creating a schema to hold all the foreign tables:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">cognito</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<h2 id="entities">Entities</h2>
+<h3 id="users">Users</h3>
+<p>This is an object representing Cognito User Records.</p>
+<p>Ref: <a href="https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-identity-pools.html">AWS Cognito User Records</a></p>
+<h4 id="operations">Operations</h4>
 <table>
 <thead>
 <tr>
-<th>Cognito</th>
+<th>Object</th>
 <th style="text-align: center;">Select</th>
 <th style="text-align: center;">Insert</th>
 <th style="text-align: center;">Update</th>
@@ -1713,7 +1843,7 @@
 </tr>
 </tbody>
 </table>
-<p>For example:</p>
+<h4 id="usage">Usage</h4>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -1726,7 +1856,7 @@
 <span class="normal">10</span>
 <span class="normal">11</span>
 <span class="normal">12</span>
-<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">cognito</span><span class="w"> </span><span class="p">(</span>
+<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">cognito</span><span class="p">.</span><span class="n">users</span><span class="w"> </span><span class="p">(</span>
 <span class="w">  </span><span class="n">username</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
 <span class="w">  </span><span class="n">email</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
 <span class="w">  </span><span class="n">status</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
@@ -1740,19 +1870,14 @@
 <span class="w">  </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;users&#39;</span>
 <span class="p">);</span>
 </code></pre></div></td></tr></table></div>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Only columns listed above are accepted in the foreign table.</p>
-</div>
-<h3 id="foreign-table-options">Foreign table options</h3>
-<p>The full list of foreign table options are below:</p>
+<h4 id="notes">Notes</h4>
 <ul>
-<li><code>object</code>: type of object we are querying. For now, only <code>users</code> is supported</li>
+<li>Only the columns listed above are accepted in the foreign table</li>
+<li>The <code>attributes</code> column contains additional user attributes in JSON format</li>
 </ul>
 <h2 id="query-pushdown-support">Query Pushdown Support</h2>
 <p>This FDW doesn't support query pushdown.</p>
 <h2 id="examples">Examples</h2>
-<p>Some examples on how to use Cognito foreign tables.</p>
 <h3 id="basic-example">Basic example</h3>
 <p>This will create a "foreign table" inside your Postgres database called <code>cognito_table</code>:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
@@ -1767,7 +1892,7 @@
 <span class="normal">10</span>
 <span class="normal">11</span>
 <span class="normal">12</span>
-<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">cognito_table</span><span class="w"> </span><span class="p">(</span>
+<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">cognito</span><span class="p">.</span><span class="n">users</span><span class="w"> </span><span class="p">(</span>
 <span class="w">  </span><span class="n">username</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
 <span class="w">  </span><span class="n">email</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
 <span class="w">  </span><span class="n">status</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
@@ -1782,7 +1907,7 @@
 <span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 <p>You can now fetch your Cognito data from within your Postgres database:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">cognito_table</span><span class="p">;</span>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">cognito</span><span class="p">.</span><span class="n">users</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 
 
