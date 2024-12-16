@@ -35,9 +35,9 @@ The Cal.com API uses JSON formatted data, please refer to [Cal.com API docs](htt
 
 ## Available Versions
 
-| Version | Wasm Package URL                                                                          | Checksum |
-| ------- | ----------------------------------------------------------------------------------------- | -------- |
-| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_cal_fdw_v0.1.0/cal_fdw.wasm` | `tbd`    |
+| Version | Wasm Package URL                                                                                | Checksum                                                           |
+| ------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_cal_fdw_v0.1.0/cal_fdw.wasm` | `4afe4fac8c51f2caa1de8483b3817d2cec3a14cd8a65a3942c8b4ff6c430f08a` |
 
 ## Preparation
 
@@ -74,6 +74,42 @@ values (
 )
 returning key_id;
 ```
+
+### Connecting to Cal.com
+
+We need to provide Postgres with the credentials to access Cal.com and any additional options. We can do this using the `create server` command:
+
+=== "With Vault"
+
+    ```sql
+    create server cal_server
+      foreign data wrapper wasm_wrapper
+      options (
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_cal_fdw_v0.1.0/cal_fdw.wasm',
+        fdw_package_name 'supabase:cal-fdw',
+        fdw_package_version '0.1.0',
+        fdw_package_checksum '4afe4fac8c51f2caa1de8483b3817d2cec3a14cd8a65a3942c8b4ff6c430f08a',
+        api_url 'https://api.cal.com/v2',  -- optional
+        api_key_id '<key_ID>' -- The Key ID from above.
+      );
+    ```
+
+=== "Without Vault"
+
+    ```sql
+    create server cal_server
+      foreign data wrapper wasm_wrapper
+      options (
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_cal_fdw_v0.1.0/cal_fdw.wasm',
+        fdw_package_name 'supabase:cal-fdw',
+        fdw_package_version '0.1.0',
+        fdw_package_checksum '4afe4fac8c51f2caa1de8483b3817d2cec3a14cd8a65a3942c8b4ff6c430f08a',
+        api_url 'https://api.cal.com/v2',  -- optional
+        api_key 'cal_live_1234...'  -- Cal.com API key
+      );
+    ```
+
+Note the `fdw_package_*` options are required, which specify the Wasm package metadata. You can get the available package version list from [above](#available-versions).
 
 ### Create a schema
 
