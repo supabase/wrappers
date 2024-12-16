@@ -10,7 +10,7 @@ When removing a foreign data wrapper, you need to remove several components in t
 
 1. Foreign Tables
 2. Foreign Servers
-3. Extension
+3. Wrappers Extension
 
 ## Step-by-Step Removal Process
 
