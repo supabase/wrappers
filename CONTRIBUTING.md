@@ -1,10 +1,4 @@
 # Contributing
 
-Contributing to wrappers.
+Any contributions to wrappers are welcome, please visit https://fdw.dev/contributing/core/ for more details.
 
-## Docs
-
-- `python -m venv .venv`
-- `source .venv/bin/activate`
-- `pip install -r docs/requirements_docs.txt`
-- `mkdocs serve`
