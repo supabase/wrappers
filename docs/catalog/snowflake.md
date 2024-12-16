@@ -17,57 +17,6 @@ The Snowflake Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows y
 
     Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
 
-## Limitations
-
-This section describes important limitations and considerations when using this FDW:
-
-- **Performance Limitations**:
-  - Query pushdown support is limited to `where`, `order by`, and `limit` clauses
-  - WebAssembly execution overhead may impact query performance
-  - API request latency affects query performance as each operation requires Snowflake API calls
-  - Large result sets may experience slower performance due to full data transfer requirement
-  - No support for parallel query execution
-  - Performance depends on Snowflake's execution time and data transfer speed
-
-- **Feature Limitations**:
-  - Truncate operations are not supported for any object type
-  - Column names must exactly match between Snowflake and foreign table
-  - WebAssembly package version must match exactly with specified checksum
-  - Key-pair authentication required, no support for other authentication methods
-  - Subqueries in table options may have limited functionality
-  - Database and schema management operations not supported via FDW
-
-- **Resource Usage**:
-  - WebAssembly module initialization requires additional memory overhead
-  - Full result sets must be loaded into memory before processing
-  - Each query requires complete API request-response cycle
-  - No connection pooling or caching support
-  - Memory usage scales with result set size and complexity
-  - Each operation incurs Snowflake compute costs
-
-- **Known Issues**:
-  - Materialized views using these foreign tables may fail during logical backups
-  - WebAssembly binary must be downloaded and verified on each server restart
-  - Complex data type conversions may result in precision loss
-  - Error handling between WebAssembly and PostgreSQL may not preserve all error details
-  - Time zone handling differences between Snowflake and PostgreSQL may affect timestamp data
-
-## Supported Data Types
-
-| Postgres Data Type | Snowflake Data Type |
-| ------------------ | ------------------- |
-| boolean            | BOOLEAN             |
-| smallint           | SMALLINT            |
-| integer            | INT                 |
-| bigint             | BIGINT              |
-| real               | FLOAT4              |
-| double precision   | FLOAT8              |
-| numeric            | NUMBER              |
-| text               | VARCHAR             |
-| date               | DATE                |
-| timestamp          | TIMESTAMP_NTZ       |
-| timestamptz        | TIMESTAMP_TZ        |
-
 ## Available Versions
 
 | Version | Wasm Package URL                                                                                      | Checksum                                                           |
@@ -214,6 +163,57 @@ create foreign table snowflake.mytable (
 ## Query Pushdown Support
 
 This FDW supports `where`, `order by` and `limit` clause pushdown.
+
+## Supported Data Types
+
+| Postgres Data Type | Snowflake Data Type |
+| ------------------ | ------------------- |
+| boolean            | BOOLEAN             |
+| smallint           | SMALLINT            |
+| integer            | INT                 |
+| bigint             | BIGINT              |
+| real               | FLOAT4              |
+| double precision   | FLOAT8              |
+| numeric            | NUMBER              |
+| text               | VARCHAR             |
+| date               | DATE                |
+| timestamp          | TIMESTAMP_NTZ       |
+| timestamptz        | TIMESTAMP_TZ        |
+
+## Limitations
+
+This section describes important limitations and considerations when using this FDW:
+
+- **Performance Limitations**:
+  - Query pushdown support is limited to `where`, `order by`, and `limit` clauses
+  - WebAssembly execution overhead may impact query performance
+  - API request latency affects query performance as each operation requires Snowflake API calls
+  - Large result sets may experience slower performance due to full data transfer requirement
+  - No support for parallel query execution
+  - Performance depends on Snowflake's execution time and data transfer speed
+
+- **Feature Limitations**:
+  - Truncate operations are not supported for any object type
+  - Column names must exactly match between Snowflake and foreign table
+  - WebAssembly package version must match exactly with specified checksum
+  - Key-pair authentication required, no support for other authentication methods
+  - Subqueries in table options may have limited functionality
+  - Database and schema management operations not supported via FDW
+
+- **Resource Usage**:
+  - WebAssembly module initialization requires additional memory overhead
+  - Full result sets must be loaded into memory before processing
+  - Each query requires complete API request-response cycle
+  - No connection pooling or caching support
+  - Memory usage scales with result set size and complexity
+  - Each operation incurs Snowflake compute costs
+
+- **Known Issues**:
+  - Materialized views using these foreign tables may fail during logical backups
+  - WebAssembly binary must be downloaded and verified on each server restart
+  - Complex data type conversions may result in precision loss
+  - Error handling between WebAssembly and PostgreSQL may not preserve all error details
+  - Time zone handling differences between Snowflake and PostgreSQL may affect timestamp data
 
 ## Examples
 
