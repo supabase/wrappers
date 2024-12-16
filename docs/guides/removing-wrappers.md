@@ -19,14 +19,11 @@ When removing a foreign data wrapper, you need to remove several components in t
 First, list all foreign tables associated with your wrapper:
 
 ```sql
-select pg_catalog.pg_class.relname as foreign_table_name,
-       pg_catalog.pg_namespace.nspname as schema_name,
-       pg_catalog.pg_foreign_data_wrapper.fdwname as wrapper_name
-from pg_catalog.pg_foreign_table
-join pg_catalog.pg_class on pg_catalog.pg_class.oid = pg_catalog.pg_foreign_table.ftrelid
-join pg_catalog.pg_namespace on pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace
-join pg_catalog.pg_foreign_server on pg_catalog.pg_foreign_server.oid = pg_catalog.pg_foreign_table.ftserver
-join pg_catalog.pg_foreign_data_wrapper on pg_catalog.pg_foreign_data_wrapper.oid = pg_catalog.pg_foreign_server.srvfdw;
+select c.relname as foreign_table_name,
+       n.nspname as schema_name
+from pg_catalog.pg_foreign_table ft
+join pg_catalog.pg_class c on c.oid = ft.ftrelid
+join pg_catalog.pg_namespace n on n.oid = c.relnamespace;
 ```
 
 Remove each foreign table:
@@ -40,10 +37,10 @@ drop foreign table if exists schema_name.table_name;
 List servers:
 
 ```sql
-select pg_catalog.pg_foreign_server.srvname as server_name,
-       pg_catalog.pg_foreign_data_wrapper.fdwname as wrapper_name
-from pg_catalog.pg_foreign_server
-join pg_catalog.pg_foreign_data_wrapper on pg_catalog.pg_foreign_data_wrapper.oid = pg_catalog.pg_foreign_server.srvfdw;
+select fs.srvname as server_name,
+       fdw.fdwname as wrapper_name
+from pg_catalog.pg_foreign_server fs
+join pg_catalog.pg_foreign_data_wrapper fdw on fdw.oid = fs.srvfdw;
 ```
 
 Remove each server:
@@ -56,30 +53,6 @@ drop server if exists server_name cascade;
 
 ```sql
 drop extension if exists wrappers;
-```
-
-## Verification
-
-After removal, verify that all components are gone:
-
-```sql
--- Check for remaining foreign tables
-select pg_catalog.pg_class.relname as foreign_table_name,
-       pg_catalog.pg_namespace.nspname as schema_name
-from pg_catalog.pg_foreign_table
-join pg_catalog.pg_class on pg_catalog.pg_class.oid = pg_catalog.pg_foreign_table.ftrelid
-join pg_catalog.pg_namespace on pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace;
-
--- Check for remaining servers
-select pg_catalog.pg_foreign_server.srvname as server_name,
-       pg_catalog.pg_foreign_data_wrapper.fdwname as wrapper_name
-from pg_catalog.pg_foreign_server
-join pg_catalog.pg_foreign_data_wrapper on pg_catalog.pg_foreign_data_wrapper.oid = pg_catalog.pg_foreign_server.srvfdw;
-
--- Check for the extension
-select extname, extversion
-from pg_catalog.pg_extension
-where extname = 'wrappers';
 ```
 
 ## Common Issues
