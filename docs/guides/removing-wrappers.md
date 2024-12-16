@@ -2,7 +2,6 @@
 
 This guide explains how to fully remove all foreign data wrappers from your PostgreSQL database.
 
-> **Warning**: Dropping the wrappers extension will impact all Foreign Data Wrappers and should only be executed if no wrapper FDWs are present on the system.
 
 ## Components to Remove
 
