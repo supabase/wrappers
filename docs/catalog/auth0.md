@@ -53,17 +53,43 @@ values (
 returning key_id;
 ```
 
+### Connecting to Auth0
+
+We need to provide Postgres with the credentials to connect to Airtable, and any additional options. We can do this using the `create server` command:
+
+=== "With Vault"
+
+    ```sql
+    create server auth0_server
+      foreign data wrapper auth0_wrapper
+      options (
+        api_key_id '<key_ID>' -- The Key ID from above.
+      );
+    ```
+
+=== "Without Vault"
+
+    ```sql
+    -- create server and specify custom options
+    create server auth0_server
+    foreign data wrapper auth0_wrapper
+    options (
+        url 'https://dev-<tenant-id>.us.auth0.com/api/v2/users',
+        api_key '<your_api_key>'
+    );
+    ```
+
 ### Create a schema
 
 We recommend creating a schema to hold all the foreign tables:
 
 ```sql
-create schema auth0;
+create schema if not exists auth0;
 ```
 
 ## Entities
 
-The Auth0 Wrapper supports data reads from Auth0's [Management API List users endpoint](https://auth0.com/docs/api/management/v2/users/get-users) endpoint (_read only_).
+The Auth0 Wrapper supports data reads from Auth0 API.
 
 ### Users
 
@@ -78,7 +104,7 @@ The Auth0 Wrapper supports data reads from Auth0's [Management API List users en
 #### Usage
 
 ```sql
-create foreign table my_foreign_table (
+create foreign table auth0.my_foreign_table (
   name text
   -- other fields
 )
@@ -102,16 +128,8 @@ This FDW doesn't support query pushdown.
 
 This example demonstrates querying Auth0 users data.
 
-#### Operations
-
-| Object | Select | Insert | Update | Delete | Truncate |
-| ------ | :----: | :----: | :----: | :----: | :------: |
-| Users  |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
-
-#### Usage
-
 ```sql
-create foreign table auth0_table (
+create foreign table auth0.auth0_table (
   created_at text,
   email text,
   email_verified bool,
@@ -123,8 +141,8 @@ create foreign table auth0_table (
   );
 ```
 
-#### Notes
+You can now fetch your Auth0 data from within your Postgres database:
 
-- The `object` option must be set to 'users'
-- Query the table using standard SQL: `select * from auth0_table;`
-- The table provides read-only access to Auth0 user data
+```sql
+select * from auth0.auth0_table;
+```

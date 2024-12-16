@@ -68,7 +68,7 @@ By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server
 insert into vault.secrets (name, secret)
 values (
   'calendly',
-  '<Calendly API Key>' -- Calendly personal access token
+  '<Calendly API key>' -- Calendly personal access token
 )
 returning key_id;
 ```
@@ -80,6 +80,7 @@ We recommend creating a schema to hold all the foreign tables:
 ```sql
 create schema if not exists calendly;
 ```
+
 ## Options
 
 The full list of foreign table options are below:
@@ -128,13 +129,12 @@ create foreign table calendly.current_user (
 
 #### Notes
 
-- Use this table to retrieve the organization URI for server configuration
-- Example:
+- The `attrs` column contains additional user attributes in JSON format
+- Use this table to retrieve the organization URI for server configuration, for example:
   ```sql
   select attrs->>'current_organization' as org_uri
   from calendly.current_user;
   ```
-- The `attrs` column contains additional user attributes in JSON format
 
 ### Event Types
 
@@ -276,13 +276,7 @@ Below are some examples on how to use Calendly foreign tables.
 
 ### Basic example
 
-This example will create a "foreign table" inside your Postgres database and query its data. First, we can create a schema to hold all the Calendly foreign tables.
-
-```sql
-create schema if not exists calendly;
-```
-
-Then create the foreign table and query it, for example:
+This example will create a "foreign table" inside your Postgres database and query its data.
 
 ```sql
 create foreign table calendly.current_user (

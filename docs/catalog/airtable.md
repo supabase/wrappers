@@ -53,12 +53,37 @@ values (
 returning key_id;
 ```
 
+### Connecting to Airtable
+
+We need to provide Postgres with the credentials to connect to Airtable, and any additional options. We can do this using the `create server` command:
+
+
+=== "With Vault"
+
+    ```sql
+    create server airtable_server
+      foreign data wrapper airtable_wrapper
+      options (
+        api_key_id '<key_ID>' -- The Key ID from above.
+      );
+    ```
+
+=== "Without Vault"
+
+    ```sql
+    create server airtable_server
+      foreign data wrapper airtable_wrapper
+      options (
+        api_key '<your_api_key>'
+      );
+    ```
+
 ### Create a schema
 
 We recommend creating a schema to hold all the foreign tables:
 
 ```sql
-create schema airtable;
+create schema if not exists airtable;
 ```
 
 ## Entities
@@ -78,7 +103,7 @@ The Airtable Wrapper supports data reads from Airtable's [Records](https://airta
 #### Usage
 
 ```sql
-create foreign table my_foreign_table (
+create foreign table airtable.my_foreign_table (
   name text
   -- other fields
 )
@@ -104,16 +129,8 @@ This FDW doesn't support query pushdown.
 
 This will create a "foreign table" inside your Postgres database called `airtable_table`:
 
-#### Operations
-
-| Object | Select | Insert | Update | Delete | Truncate |
-| ------ | :----: | :----: | :----: | :----: | :------: |
-| Tables |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
-
-#### Usage
-
 ```sql
-create foreign table airtable_table (
+create foreign table airtable.airtable_table (
   name text,
   notes text,
   content text,
@@ -127,18 +144,18 @@ options (
 );
 ```
 
-#### Notes
+You can now fetch your Airtable data from within your Postgres database:
 
-- The `base_id` option specifies the Airtable Base ID the table belongs to
-- The `table_id` option specifies the Airtable table ID
-- You can fetch data using standard SQL: `select * from airtable_table;`
+```sql
+select * from airtable.airtable_table;
+```
 
 ### Query an Airtable view
 
 We can also create a foreign table from an Airtable View called `airtable_view`:
 
 ```sql
-create foreign table airtable_view (
+create foreign table airtable.airtable_view (
   name text,
   notes text,
   content text,
@@ -156,5 +173,5 @@ options (
 You can now fetch your Airtable data from within your Postgres database:
 
 ```sql
-select * from airtable_view;
+select * from airtable.airtable_view;
 ```

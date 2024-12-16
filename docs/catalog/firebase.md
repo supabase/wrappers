@@ -58,12 +58,44 @@ values (
 returning key_id;
 ```
 
+### Connecting to Firebase
+
+We need to provide Postgres with the credentials to connect to Firebase, and any additional options. We can do this using the `create server` command:
+
+=== "With Vault"
+
+    ```sql
+    create server firebase_server
+      foreign data wrapper firebase_wrapper
+      options (
+        sa_key_id '<key_ID>', -- The Key ID from above.
+        project_id '<firebase_project_id>'
+    );
+    ```
+
+=== "Without Vault"
+
+    ```sql
+    create server firebase_server
+      foreign data wrapper firebase_wrapper
+       options (
+         sa_key '
+         {
+            "type": "service_account",
+            "project_id": "your_gcp_project_id",
+            ...
+         }
+        ',
+         project_id 'firebase_project_id'
+       );
+    ```
+
 ### Create a schema
 
 We recommend creating a schema to hold all the foreign tables:
 
 ```sql
-create schema firebase;
+create schema if not exists firebase;
 ```
 
 ## Options
@@ -95,7 +127,7 @@ Ref: [Firebase Authentication Users](https://firebase.google.com/docs/auth/users
 #### Usage
 
 ```sql
-create foreign table firebase_users (
+create foreign table firebase.users (
   uid text,
   email text,
   created_at timestamp,
@@ -127,7 +159,7 @@ Ref: [Firestore Database](https://firebase.google.com/docs/firestore)
 #### Usage
 
 ```sql
-create foreign table firebase_docs (
+create foreign table firebase.docs (
   name text,
   created_at timestamp,
   updated_at timestamp,
@@ -161,7 +193,7 @@ Some examples on how to use Firebase foreign tables.
 To map a Firestore collection provide its location using the format `firestore/<collection_id>` as the `object` option as shown below.
 
 ```sql
-create foreign table firebase_docs (
+create foreign table firebase.docs (
   name text,
   created_at timestamp,
   updated_at timestamp,
@@ -180,7 +212,7 @@ Note that `name`, `created_at`, and `updated_at`, are automatic metadata fields 
 The `auth/users` collection is a special case with unique metadata. The following shows how to map Firebase users to PostgreSQL table.
 
 ```sql
-create foreign table firebase_users (
+create foreign table firebase.users (
   uid text,
   email text,
   created_at timestamp,

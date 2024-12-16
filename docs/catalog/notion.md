@@ -66,7 +66,7 @@ By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server
 insert into vault.secrets (name, secret)
 values (
   'notion',
-  '<Notion API Key>' -- Notion API key
+  '<Notion API key>' -- Notion API key
 )
 returning key_id;
 ```
@@ -79,7 +79,9 @@ We recommend creating a schema to hold all the foreign tables:
 create schema if not exists notion;
 ```
 
-## Foreign Table Options
+## Options
+
+The full list of foreign table options are below:
 
 - `object` - Object name in Notion, required.
 
@@ -127,11 +129,12 @@ create foreign table notion.blocks (
 
 #### Notes
 
+- The `attrs` column contains all user attributes in JSON format
 - The `page_id` field is added by the FDW for development convenience
-- All blocks, including nested children blocks, belonging to one page will have the same `page_id`
+- All blocks, including nested children blocks, belong to one page will have the same `page_id`
 - Query pushdown supported for both `id` and `page_id` columns
 - Use `page_id` filter to fetch all blocks of a specific page recursively
-- Querying all blocks without filters may take a long time due to recursive fetching
+- Querying all blocks without filters may take a long time due to recursive data requests
 
 ### Page
 
@@ -164,8 +167,8 @@ create foreign table notion.pages (
 
 #### Notes
 
-- Query pushdown supported for `id` column
 - The `attrs` column contains all page attributes in JSON format
+- Query pushdown supported for `id` column
 
 ### Database
 
@@ -198,8 +201,8 @@ create foreign table notion.databases (
 
 #### Notes
 
-- Query pushdown supported for `id` column
 - The `attrs` column contains all database attributes in JSON format
+- Query pushdown supported for `id` column
 
 ### User
 
@@ -231,8 +234,8 @@ create foreign table notion.users (
 
 #### Notes
 
-- Query pushdown supported for `id` column
 - The `attrs` column contains all user attributes in JSON format
+- Query pushdown supported for `id` column
 - User email can be extracted using: `attrs->'person'->>'email'`
 
 ## Query Pushdown Support
@@ -244,7 +247,7 @@ select * from notion.pages
 where id = '5a67c86f-d0da-4d0a-9dd7-f4cf164e6247';
 ```
 
-will be translated Notion API call: `https://api.notion.com/v1/pages/5a67c86f-d0da-4d0a-9dd7-f4cf164e6247`.
+will be translated to a Notion API call: `https://api.notion.com/v1/pages/5a67c86f-d0da-4d0a-9dd7-f4cf164e6247`.
 
 In addition to `id` column pushdown, `page_id` column pushdown is also supported for `Block` object. For example,
 
@@ -253,7 +256,7 @@ select * from notion.blocks
 where page_id = '5a67c86f-d0da-4d0a-9dd7-f4cf164e6247';
 ```
 
-will recursively fetch all children blocks of the Page with id '5a67c86f-d0da-4d0a-9dd7-f4cf164e6247'. This can dramatically reduce number of API calls and improve query speed.
+will recursively fetch all children blocks of the Page with id '5a67c86f-d0da-4d0a-9dd7-f4cf164e6247'. This can dramatically reduce number of API calls and improve query performance.
 
 !!! note
 
@@ -267,13 +270,7 @@ will recursively fetch all children blocks of the Page with id '5a67c86f-d0da-4d
 
 ### Basic Example
 
-This example will create a "foreign table" inside your Postgres database and query its data. First, we can create a schema to hold all the Notion foreign tables.
-
-```sql
-create schema if not exists notion;
-```
-
-Then create the foreign table and query it, for example:
+This example will create a "foreign table" inside your Postgres database and query its data.
 
 ```sql
 create foreign table notion.pages (

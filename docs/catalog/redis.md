@@ -71,16 +71,41 @@ values (
 returning key_id;
 ```
 
+### Connecting to Redis
+
+We need to provide Postgres with the credentials to connect to Redis. We can do this using the `create server` command:
+
+=== "With Vault"
+
+    ```sql
+    create server redis_server
+      foreign data wrapper redis_wrapper
+      options (
+        conn_url_id '<key_ID>' -- The Key ID from above.
+      );
+    ```
+
+=== "Without Vault"
+
+    ```sql
+    create server redis_server
+      foreign data wrapper redis_wrapper
+      options (
+        conn_url 'redis://username:password@127.0.0.1:6379/db'
+      );
+    ```
+
 ### Create a schema
 
 We recommend creating a schema to hold all the foreign tables:
 
 ```sql
-create schema redis;
+create schema if not exists redis;
 ```
 
-
 ## Options
+
+The following options are available when creating Redis foreign tables:
 
 - `src_type` - Foreign table source type in Redis, required.
 
@@ -125,7 +150,7 @@ Ref: [Redis docs](https://redis.io/docs/data-types/lists/)
 #### Usage
 
 ```sql
-create foreign table redis_list (
+create foreign table redis.list (
   element text
 )
   server redis_server
@@ -156,7 +181,7 @@ Ref: [Redis docs](https://redis.io/docs/data-types/sets/)
 #### Usage
 
 ```sql
-create foreign table redis_set (
+create foreign table redis.set (
   element text
 )
   server redis_server
@@ -187,7 +212,7 @@ Ref: [Redis docs](https://redis.io/docs/data-types/hashes/)
 #### Usage
 
 ```sql
-create foreign table redis_hash (
+create foreign table redis.hash (
   key text,
   value text
 )
@@ -219,7 +244,7 @@ Ref: [Redis docs](https://redis.io/docs/data-types/sorted-sets/)
 #### Usage
 
 ```sql
-create foreign table redis_zset (
+create foreign table redis.zset (
   element text
 )
   server redis_server
@@ -250,7 +275,7 @@ Ref: [Redis docs](https://redis.io/docs/data-types/streams/)
 #### Usage
 
 ```sql
-create foreign table redis_stream (
+create foreign table redis.stream (
   id text,
   items jsonb
 )
@@ -283,7 +308,7 @@ Redis wrapper supports querying multiple objects of the same type using pattern 
 #### Usage
 
 ```sql
-create foreign table redis_multi_lists (
+create foreign table redis.multi_lists (
   key text,
   items jsonb
 )
@@ -292,8 +317,6 @@ create foreign table redis_multi_lists (
     src_type 'multi_list',
     src_key 'list:*'
   );
-
-select * from redis_multi_lists;
 ```
 
 #### Notes
@@ -340,7 +363,7 @@ This example will create foreign tables inside your Postgres database and query 
 - List
 
   ```sql
-  create foreign table redis_list (
+  create foreign table redis.list (
     element text
   )
   server redis_server
@@ -349,7 +372,7 @@ This example will create foreign tables inside your Postgres database and query 
     src_key 'list'
   );
 
-  select * from redis_list;
+  select * from redis.list;
   ```
 
   Query result:
@@ -366,7 +389,7 @@ This example will create foreign tables inside your Postgres database and query 
 - Set
 
   ```sql
-  create foreign table redis_set (
+  create foreign table redis.set (
     element text
   )
   server redis_server
@@ -375,7 +398,7 @@ This example will create foreign tables inside your Postgres database and query 
     src_key 'set'
   );
 
-  select * from redis_set;
+  select * from redis.set;
   ```
 
   Query result:
@@ -392,7 +415,7 @@ This example will create foreign tables inside your Postgres database and query 
 - Hash
 
   ```sql
-  create foreign table redis_hash (
+  create foreign table redis.hash (
     key text,
     value text
   )
@@ -402,7 +425,7 @@ This example will create foreign tables inside your Postgres database and query 
     src_key 'hash'
   );
 
-  select * from redis_hash;
+  select * from redis.hash;
   ```
 
   Query result:
@@ -418,7 +441,7 @@ This example will create foreign tables inside your Postgres database and query 
 - Sorted set
 
   ```sql
-  create foreign table redis_zset (
+  create foreign table redis.zset (
     element text
   )
   server redis_server
@@ -427,7 +450,7 @@ This example will create foreign tables inside your Postgres database and query 
     src_key 'zset'
   );
 
-  select * from redis_zset;
+  select * from redis.zset;
   ```
 
   Query result:
@@ -444,7 +467,7 @@ This example will create foreign tables inside your Postgres database and query 
 - Stream
 
   ```sql
-  create foreign table redis_stream (
+  create foreign table redis.stream (
     id text,
     items jsonb
   )
@@ -454,7 +477,7 @@ This example will create foreign tables inside your Postgres database and query 
     src_key 'stream'
   );
 
-  select * from redis_stream;
+  select * from redis.stream;
   ```
 
   Query result:
@@ -474,7 +497,7 @@ This example will create several foreign tables using pattern in key and query m
 - List
 
   ```sql
-  create foreign table redis_multi_lists (
+  create foreign table redis.multi_lists (
     key text,
     items jsonb
   )
@@ -484,7 +507,7 @@ This example will create several foreign tables using pattern in key and query m
       src_key 'list:*'
     );
 
-  select * from redis_multi_lists;
+  select * from redis.multi_lists;
   ```
 
   Query result:
@@ -500,7 +523,7 @@ This example will create several foreign tables using pattern in key and query m
 - Set
 
   ```sql
-  create foreign table redis_multi_sets (
+  create foreign table redis.multi_sets (
     key text,
     items jsonb
   )
@@ -510,7 +533,7 @@ This example will create several foreign tables using pattern in key and query m
       src_key 'set:*'
     );
 
-  select * from redis_multi_sets;
+  select * from redis.multi_sets;
   ```
 
   Query result:
@@ -526,7 +549,7 @@ This example will create several foreign tables using pattern in key and query m
 - Hash
 
   ```sql
-  create foreign table redis_multi_hashes (
+  create foreign table redis.multi_hashes (
     key text,
     items jsonb
   )
@@ -536,7 +559,7 @@ This example will create several foreign tables using pattern in key and query m
       src_key 'hash:*'
     );
 
-  select * from redis_multi_hashes;
+  select * from redis.multi_hashes;
   ```
 
   Query result:
@@ -552,7 +575,7 @@ This example will create several foreign tables using pattern in key and query m
 - Sorted set
 
   ```sql
-  create foreign table redis_multi_zsets (
+  create foreign table redis.multi_zsets (
     key text,
     items jsonb
   )
@@ -562,7 +585,7 @@ This example will create several foreign tables using pattern in key and query m
       src_key 'zset:*'
     );
 
-  select * from redis_multi_zsets;
+  select * from redis.multi_zsets;
   ```
 
   Query result:

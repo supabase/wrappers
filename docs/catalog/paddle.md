@@ -73,10 +73,46 @@ By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server
 insert into vault.secrets (name, secret)
 values (
   'paddle',
-  'bb4e69088ea07a98a90565ac610c63654423f8f1e2d48b39b5'
+  '<Paddle API key>' -- Paddle API key
 )
 returning key_id;
 ```
+
+### Connecting to Paddle
+
+We need to provide Postgres with the credentials to access Paddle, and any additional options. We can do this using the `create server` command:
+
+=== "With Vault"
+
+    ```sql
+    create server paddle_server
+      foreign data wrapper wasm_wrapper
+      options (
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.1.1/paddle_fdw.wasm',
+        fdw_package_name 'supabase:paddle-fdw',
+        fdw_package_version '0.1.1',
+        fdw_package_checksum 'c5ac70bb2eef33693787b7d4efce9a83cde8d4fa40889d2037403a51263ba657',
+        api_url 'https://sandbox-api.paddle.com', -- Use https://api.paddle.com for live account
+        api_key_id '<key_ID>' -- The Key ID from above.
+      );
+    ```
+
+=== "Without Vault"
+
+    ```sql
+    create server paddle_server
+      foreign data wrapper wasm_wrapper
+      options (
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.1.1/paddle_fdw.wasm',
+        fdw_package_name 'supabase:paddle-fdw',
+        fdw_package_version '0.1.1',
+        fdw_package_checksum 'c5ac70bb2eef33693787b7d4efce9a83cde8d4fa40889d2037403a51263ba657',
+        api_url 'https://sandbox-api.paddle.com', -- Use https://api.paddle.com for live account
+        api_key 'bb4e69088ea07a98a90565ac610c63654423f8f1e2d48b39b5'
+      );
+    ```
+
+Note the `fdw_package_*` options are required, which specify the Wasm package metadata. You can get the available package version list from [above](#available-versions).
 
 ### Create a schema
 
@@ -88,11 +124,13 @@ create schema if not exists paddle;
 
 ## Options
 
+The full list of foreign table options are below:
+
 - `object` - Object name in Paddle, required.
 
 Supported objects are listed below:
 
-| Object name           |
+| Object                |
 | --------------------- |
 | products              |
 | prices                |
@@ -230,13 +268,7 @@ select * from paddle.customers where id = 'ctm_01hymwgpkx639a6mkvg99563sp';
 
 ### Basic Example
 
-This example will create a "foreign table" inside your Postgres database and query its data. First, we can create a schema to hold all the Paddle foreign tables.
-
-```sql
-create schema if not exists paddle;
-```
-
-Then create the foreign table and query it, for example:
+This example will create a "foreign table" inside your Postgres database and query its data.
 
 ```sql
 create foreign table paddle.customers (
@@ -307,7 +339,7 @@ This example will modify data in a "foreign table" inside your Postgres database
 
 ```sql
 -- insert new data
-insert into paddle.products (name, tax_category)
+insert into paddle.products(name, tax_category)
 values ('my prod', 'standard');
 
 -- update existing data

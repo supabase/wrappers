@@ -70,7 +70,7 @@ By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server
 insert into vault.secrets (name, secret)
 values (
   'cal',
-  '<Cal.com API Key>' -- Cal.com API key
+  '<Cal.com API key>' -- Cal.com API key
 )
 returning key_id;
 ```
@@ -138,6 +138,8 @@ Supported objects are listed below:
 
 ## Entities
 
+The Cal.com Wrapper supports data reads and booking writes from the Cal.com API.
+
 ### Profile
 
 This is an object representing your Cal.com user profile.
@@ -168,7 +170,6 @@ create foreign table cal.my_profile (
 #### Notes
 
 - The `attrs` column contains all profile attributes in JSON format
-- Query using standard SQL: `select * from cal.my_profile`
 
 ### Event Types
 
@@ -197,8 +198,7 @@ create foreign table cal.event_types (
 #### Notes
 
 - The `attrs` column contains all event type attributes in JSON format
-- Extract specific fields using JSON operators
-- Example:
+- Extract specific fields using JSON operators, for example:
   ```sql
   select
     etg->'profile'->>'name' as profile,
@@ -353,13 +353,7 @@ Below are some examples on how to use Cal.com foreign tables.
 
 ### Basic example
 
-This example will create a "foreign table" inside your Postgres database and query its data. First, we can create a schema to hold all the Cal.com foreign tables.
-
-```sql
-create schema if not exists cal;
-```
-
-Then create the foreign table and query it, for example:
+This example will create a "foreign table" inside your Postgres database and query its data. 
 
 ```sql
 create foreign table cal.my_profile (
@@ -424,15 +418,15 @@ Once we know an event type ID (we can get it from above example, here we suppose
 ```
 insert into cal.bookings(attrs)
 values (
-	'{
-		"start": "2024-12-12T10:30:00.000Z",
-		"eventTypeId": 123456,
-		"attendee": {
-			"name": "Test Name",
-			"email": "test.name@example.com",
-			"timeZone": "America/New_York"
-		}
-	}'::jsonb
+  '{
+     "start": "2024-12-12T10:30:00.000Z",
+     "eventTypeId": 123456,
+     "attendee": {
+       "name": "Test Name",
+       "email": "test.name@example.com",
+       "timeZone": "America/New_York"
+     }
+  }'::jsonb
 );
 ```
 

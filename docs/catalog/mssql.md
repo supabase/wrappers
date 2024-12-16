@@ -87,12 +87,36 @@ All parameter keys are handled case-insensitive.
 | Encrypt                | true, false, DANGER_PLAINTEXT | Specifies whether the driver uses TLS to encrypt communication.                                    |
 | ApplicationName        | `<string>`                    | Sets the application name for the connection.                                                      |
 
+### Connecting to SQL Server
+
+We need to provide Postgres with the credentials to connect to SQL Server. We can do this using the `create server` command:
+
+=== "With Vault"
+
+    ```sql
+    create server mssql_server
+      foreign data wrapper mssql_wrapper
+      options (
+        conn_string_id '<key_ID>' -- The Key ID from above.
+      );
+    ```
+
+=== "Without Vault"
+
+    ```sql
+    create server mssql_server
+      foreign data wrapper mssql_wrapper
+      options (
+        conn_string 'Server=localhost,1433;User=sa;Password=my_password;Database=master;IntegratedSecurity=false;TrustServerCertificate=true;encrypt=DANGER_PLAINTEXT;ApplicationName=wrappers'
+      );
+    ```
+
 ### Create a schema
 
 We recommend creating a schema to hold all the foreign tables:
 
 ```sql
-create schema mssql;
+create schema if not exists mssql;
 ```
 
 ## Options
@@ -119,12 +143,12 @@ Ref: [Microsoft SQL Server docs](https://www.microsoft.com/en-au/sql-server/)
 
 | Object     | Select | Insert | Update | Delete | Truncate |
 | ---------- | :----: | :----: | :----: | :----: | :------: |
-| SQL Server |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
+| table/view |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
 
 #### Usage
 
 ```sql
-create foreign table mssql_users (
+create foreign table mssql.users (
   id bigint,
   name text,
   dt timestamp
@@ -140,9 +164,9 @@ create foreign table mssql_users (
 - Supports both tables and views as data sources
 - Can use subqueries in the `table` option
 - Query pushdown supported for:
-  - `where` clauses
-  - `order by` clauses
-  - `limit` clauses
+      - `where` clauses
+      - `order by` clauses
+      - `limit` clauses
 - See Data Types section for type mappings between PostgreSQL and SQL Server
 
 ## Query Pushdown Support
@@ -172,7 +196,7 @@ insert into users(id, name, dt) values (44, 'Baz', '2023-12-26');
 Then create and query the foreign table in PostgreSQL:
 
 ```sql
-create foreign table mssql_users (
+create foreign table mssql.users (
   id bigint,
   name text,
   dt timestamp
@@ -182,7 +206,7 @@ create foreign table mssql_users (
     table 'users'
   );
 
-select * from mssql_users;
+select * from mssql.users;
 ```
 
 ### Remote Subquery Example
@@ -190,7 +214,7 @@ select * from mssql_users;
 Create a foreign table using a subquery:
 
 ```sql
-create foreign table mssql_users_subquery (
+create foreign table mssql.users_subquery (
   id bigint,
   name text,
   dt timestamp
@@ -200,5 +224,5 @@ create foreign table mssql_users_subquery (
     table '(select * from users where id = 42 or id = 43)'
   );
 
-select * from mssql_users_subquery;
+select * from mssql.users_subquery;
 ```

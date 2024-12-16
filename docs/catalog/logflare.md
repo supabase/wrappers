@@ -53,7 +53,9 @@ values (
 returning key_id;
 ```
 
-Once you have stored your credentials, you can create a server to connect to Logflare:
+### Connecting to Logflare
+
+We need to provide Postgres with the credentials to connect to Logflare, and any additional options. We can do this using the `create server` command:
 
 === "With Vault"
 
@@ -80,10 +82,12 @@ Once you have stored your credentials, you can create a server to connect to Log
 We recommend creating a schema to hold all the foreign tables:
 
 ```sql
-create schema logflare;
+create schema if not exists logflare;
 ```
 
 ## Options
+
+The full list of foreign table options are below:
 
 - `endpoint` - Logflare endpoint UUID or name, required.
 
@@ -104,7 +108,7 @@ Ref: [Logflare docs](https://logflare.app)
 #### Usage
 
 ```sql
-create foreign table my_logflare_table (
+create foreign table logflare.my_logflare_table (
   id bigint,
   name text,
   _result text
@@ -117,12 +121,12 @@ create foreign table my_logflare_table (
 
 #### Notes
 
-- Meta Column `_result`:
+##### Meta Column `_result`:
   - Data type must be `text`
   - Stores the whole result record in JSON string format
   - Use JSON queries to extract fields: `_result::json->>'field_name'`
 
-- Query Parameters:
+##### Query Parameters:
   - Use parameter columns with prefix `_param_`
   - Example: `_param_org_id`, `_param_iso_timestamp_start`
   - Parameters are passed to the Logflare endpoint
@@ -148,7 +152,7 @@ Given a Logflare endpoint response:
 You can create and query a foreign table:
 
 ```sql
-create foreign table people (
+create foreign table logflare.people (
   id bigint,
   name text,
   _result text
@@ -158,12 +162,13 @@ create foreign table people (
     endpoint '9dd9a6f6-8e9b-4fa4-b682-4f2f5cd99da3'
   );
 
-select * from people;
+select * from logflare.people;
 ```
 
 ### Query Parameters Example
 
 For an endpoint accepting parameters:
+
 - org_id
 - iso_timestamp_start
 - iso_timestamp_end
@@ -183,7 +188,7 @@ With response format:
 Create and query the table with parameters:
 
 ```sql
-create foreign table runtime_hours (
+create foreign table logflare.runtime_hours (
   db_size text,
   org_id text,
   runtime_hours numeric,
@@ -204,7 +209,7 @@ select
   runtime_hours,
   runtime_minutes
 from
-  runtime_hours
+  logflare.runtime_hours
 where _param_org_id = 123
   and _param_iso_timestamp_start = '2023-07-01 02:03:04'
   and _param_iso_timestamp_end = '2023-07-02';

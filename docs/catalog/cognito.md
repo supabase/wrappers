@@ -52,12 +52,42 @@ values (
 returning key_id;
 ```
 
+### Connecting to Cognito
+
+We need to provide Postgres with the credentials to connect to Cognito, and any additional options. We can do this using the `create server` command:
+
+=== "With Vault"
+
+    ```sql
+    create server cognito_server
+      foreign data wrapper cognito_wrapper
+      options (
+        aws_access_key_id '<your_access_key>',
+        api_key_id '<your_secret_key_id_in_vault>',
+        region '<your_aws_region>',
+        user_pool_id '<your_user_pool_id>'
+      );
+    ```
+
+=== "Without Vault"
+
+    ```sql
+    create server cognito_server
+      foreign data wrapper cognito_wrapper
+      options (
+        aws_access_key_id '<your_access_key>',
+        aws_secret_access_key '<your_secret_key>',
+        region '<your_aws_region>',
+        user_pool_id '<your_user_pool_id>'
+      );
+    ```
+
 ### Create a schema
 
 We recommend creating a schema to hold all the foreign tables:
 
 ```sql
-create schema cognito;
+create schema if not exists cognito;
 ```
 
 ## Entities
@@ -77,7 +107,7 @@ Ref: [AWS Cognito User Records](https://docs.aws.amazon.com/cognito/latest/devel
 #### Usage
 
 ```sql
-create foreign table cognito (
+create foreign table cognito.users (
   username text,
   email text,
   status text,
@@ -108,7 +138,7 @@ This FDW doesn't support query pushdown.
 This will create a "foreign table" inside your Postgres database called `cognito_table`:
 
 ```sql
-create foreign table cognito_table (
+create foreign table cognito.users (
   username text,
   email text,
   status text,
@@ -126,5 +156,5 @@ options (
 You can now fetch your Cognito data from within your Postgres database:
 
 ```sql
-select * from cognito_table;
+select * from cognito.users;
 ```

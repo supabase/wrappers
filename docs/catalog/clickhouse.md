@@ -71,12 +71,43 @@ values (
 returning key_id;
 ```
 
+### Connecting to ClickHouse
+
+We need to provide Postgres with the credentials to connect to ClickHouse, and any additional options. We can do this using the `create server` command:
+
+=== "With Vault"
+
+    ```sql
+    create server clickhouse_server
+      foreign data wrapper clickhouse_wrapper
+      options (
+        conn_string_id '<key_ID>' -- The Key ID from above.
+      );
+    ```
+
+=== "Without Vault"
+
+    ```sql
+    create server clickhouse_server
+      foreign data wrapper clickhouse_wrapper
+      options (
+        conn_string 'tcp://default:@localhost:9000/default'
+      );
+    ```
+
+Some connection string examples:
+
+- `tcp://user:password@host:9000/clicks?compression=lz4&ping_timeout=42ms`
+- `tcp://default:PASSWORD@abc.eu-west-1.aws.clickhouse.cloud:9440/default?connection_timeout=30s&ping_before_query=false&secure=true`
+
+Check [more connection string parameters](https://github.com/suharev7/clickhouse-rs#dns).
+
 ### Create a schema
 
 We recommend creating a schema to hold all the foreign tables:
 
 ```sql
-create schema clickhouse;
+create schema if not exists clickhouse;
 ```
 
 ## Options
@@ -128,7 +159,7 @@ The ClickHouse Wrapper supports data reads and writes from ClickHouse tables.
 #### Usage
 
 ```sql
-create foreign table my_clickhouse_table (
+create foreign table clickhouse.my_table (
   id bigint,
   name text
 )
@@ -154,16 +185,23 @@ This FDW supports `where`, `order by` and `limit` clause pushdown, as well as pa
 
 This example demonstrates basic ClickHouse table operations.
 
-#### Operations
+```sql
+-- Run below SQLs on ClickHouse to create source table
+create table people (
+  id Int64,
+  name String
+)
+engine=MergeTree()
+order by id;
 
-| Object | Select | Insert | Update | Delete | Truncate |
-| ------ | :----: | :----: | :----: | :----: | :------: |
-| Tables |   ✅    |   ✅    |   ✅    |   ✅    |    ❌     |
+-- Add some test data
+insert into people values (1, 'Luke Skywalker'), (2, 'Leia Organa'), (3, 'Han Solo');
+```
 
-#### Usage
+Create foreign table on Postgres database:
 
 ```sql
-create foreign table people (
+create foreign table clickhouse.people (
   id bigint,
   name text
 )
@@ -171,15 +209,12 @@ create foreign table people (
   options (
     table 'people'
   );
+
+-- data scan
+select * from clickhouse.people;
+
+-- data modify
+insert into clickhouse.people values (4, 'Yoda');
+update clickhouse.people set name = 'Princess Leia' where id = 2;
+delete from clickhouse.people where id = 3;
 ```
-
-#### Notes
-
-- Query the table using standard SQL: `select * from people;`
-- Supports data modification operations with `rowid_column`
-- Example operations:
-  ```sql
-  insert into people values (4, 'Yoda');
-  update people set name = 'Princess Leia' where id = 2;
-  delete from people where id = 3;
-  ```

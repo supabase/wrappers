@@ -78,7 +78,9 @@ values (
 returning key_id;
 ```
 
-Once you have stored your credentials, you can create a server to connect to Snowflake:
+### Connecting to Snowflake
+
+We need to provide Postgres with the credentials to connect to Snowflake, and any additional options. We can do this using the `create server` command:
 
 === "With Vault"
 
@@ -114,26 +116,29 @@ Once you have stored your credentials, you can create a server to connect to Sno
       );
     ```
 
-Note: The `fdw_package_*` options are required, which specify the Wasm package metadata. You can get the available package version list from [above](#available-versions).
+Note the `fdw_package_*` options are required, which specify the Wasm package metadata. You can get the available package version list from [above](#available-versions).
 
 ### Create a schema
 
 We recommend creating a schema to hold all the foreign tables:
 
 ```sql
-create schema snowflake;
+create schema if not exists snowflake;
 ```
 
 ## Options
 
+The full list of foreign table options are below:
+
 - `table` - Source table or view name in Snowflake, required.
-  Can also be a subquery enclosed in parentheses.
+
+  This option can also be a subquery enclosed in parentheses.
 
 - `rowid_column` - Primary key column name, optional for data scan, required for data modify
 
 ## Entities
 
-### Snowflake Tables
+### Snowflake Tables/Views
 
 This is an object representing a Snowflake table or view.
 
@@ -141,9 +146,9 @@ Ref: [Snowflake docs](https://docs.snowflake.com/en/sql-reference/sql/create-tab
 
 #### Operations
 
-| Object | Select | Insert | Update | Delete | Truncate |
-| ------ | :----: | :----: | :----: | :----: | :------: |
-| Table  |   ✅    |   ✅    |   ✅    |   ✅    |    ❌     |
+| Object      | Select | Insert | Update | Delete | Truncate |
+| ----------- | :----: | :----: | :----: | :----: | :------: |
+| table/view  |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
 
 #### Usage
 
@@ -165,9 +170,9 @@ create foreign table snowflake.mytable (
 #### Notes
 
 - Supports both tables and views as data sources
-- Can use subqueries in table option
-- Requires rowid_column for data modification operations
-- Supports query pushdown for where, order by, and limit clauses
+- Can use subqueries in `table` option
+- Requires `rowid_column` for data modification operations
+- Supports query pushdown for `where`, `order by`, and `limit` clauses
 - Column names must match between Snowflake and foreign table
 - Data types must be compatible according to type mapping table
 
@@ -201,13 +206,7 @@ insert into mydatabase.public.mytable(id, name, num, dt, ts)
 values (43, 'bar', 56.78, '2024-05-19', '2024-05-19 12:34:56');
 ```
 
-This example will create a "foreign table" inside your Postgres database and query its data. First, we can create a schema to hold all the Snowflake foreign tables.
-
-```sql
-create schema if not exists snowflake;
-```
-
-Then create the foreign table and query it, for example:
+This example will create a "foreign table" inside your Postgres database and query its data.
 
 ```sql
 create foreign table snowflake.mytable (
@@ -228,7 +227,7 @@ select * from snowflake.mytable;
 
 ### Data Modify Example
 
-This example will modify data in a "foreign table" inside your Postgres database, note that `rowid_column` option is mandatory for data modify:
+This example will modify data in a "foreign table" inside your Postgres database, note that `rowid_column` option is required for data modify:
 
 ```sql
 -- insert new data

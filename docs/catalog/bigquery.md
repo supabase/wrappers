@@ -76,12 +76,46 @@ values (
 returning key_id;
 ```
 
+### Connecting to BigQuery
+
+We need to provide Postgres with the credentials to connect to BigQuery, and any additional options. We can do this using the `create server` command:
+
+=== "With Vault"
+
+    ```sql
+    create server bigquery_server
+      foreign data wrapper bigquery_wrapper
+      options (
+        sa_key_id '<key_ID>', -- The Key ID from above.
+        project_id 'your_gcp_project_id',
+        dataset_id 'your_gcp_dataset_id'
+      );
+    ```
+
+=== "Without Vault"
+
+    ```sql
+    create server bigquery_server
+      foreign data wrapper bigquery_wrapper
+      options (
+        sa_key '
+        {
+           "type": "service_account",
+           "project_id": "your_gcp_project_id",
+           ...
+        }
+       ',
+        project_id 'your_gcp_project_id',
+        dataset_id 'your_gcp_dataset_id'
+      );
+    ```
+
 ### Create a schema
 
 We recommend creating a schema to hold all the foreign tables:
 
 ```sql
-create schema bigquery;
+create schema if not exists bigquery;
 ```
 
 ## Options
@@ -116,7 +150,7 @@ The BigQuery Wrapper supports data reads and writes from BigQuery tables and vie
 #### Usage
 
 ```sql
-create foreign table my_bigquery_table (
+create foreign table bigquery.my_bigquery_table (
   id bigint,
   name text,
   ts timestamp
@@ -140,7 +174,7 @@ This FDW supports `where`, `order by` and `limit` clause pushdown.
 
 ## Inserting Rows & the Streaming Buffer
 
-This foreign data wrapper uses BigQuery’s `insertAll` API method to create a `streamingBuffer` with an associated partition time. **Within that partition time, the data cannot be updated, deleted, or fully exported**. Only after the time has elapsed (up to 90 minutes according to [BigQuery’s documentation](https://cloud.google.com/bigquery/docs/streaming-data-into-bigquery)); can you perform operations.
+This foreign data wrapper uses BigQuery’s `insertAll` API method to create a `streamingBuffer` with an associated partition time. **Within that partition time, the data cannot be updated, deleted, or fully exported**. Only after the time has elapsed (up to 90 minutes according to [BigQuery’s documentation](https://cloud.google.com/bigquery/docs/streaming-data-into-bigquery)), can you perform operations.
 
 If you attempt an `UPDATE` or `DELETE` statement on rows while in the streamingBuffer, you will get an error of `UPDATE` or `DELETE` statement over table datasetName - note that tableName would affect rows in the streaming buffer, which is not supported.
 
@@ -170,7 +204,7 @@ insert into your_project_id.your_dataset_id.people values
 This example will create a "foreign table" inside your Postgres database called `people` and query its data:
 
 ```sql
-create foreign table people (
+create foreign table bigquery.people (
   id bigint,
   name text,
   ts timestamp
@@ -181,7 +215,7 @@ create foreign table people (
     location 'EU'
   );
 
-select * from people;
+select * from bigquery.people;
 ```
 
 ### Data modify example
@@ -189,7 +223,7 @@ select * from people;
 This example will modify data in a "foreign table" inside your Postgres database called `people`, note that `rowid_column` option is mandatory:
 
 ```sql
-create foreign table people (
+create foreign table bigquery.people (
   id bigint,
   name text,
   ts timestamp
@@ -202,15 +236,15 @@ create foreign table people (
   );
 
 -- insert new data
-insert into people(id, name, ts)
+insert into bigquery.people(id, name, ts)
 values (4, 'Yoda', '2023-01-01 12:34:56');
 
 -- update existing data
-update people
+update bigquery.people
 set name = 'Anakin Skywalker'
 where id = 1;
 
 -- delete data
-delete from people
+delete from bigquery.people
 where id = 2;
 ```
