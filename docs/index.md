@@ -67,3 +67,16 @@ Although a foreign table behaves like any other table, the data is not stored in
 The following Postgres providers support Wrappers:
 
 - [supabase.com](https://supabase.com)
+
+## Guides
+
+Learn how to use and manage Foreign Data Wrappers:
+
+- [Installing Wrappers](guides/installation.md)
+- [Removing Wrappers](guides/removing-wrappers.md)
+- [Native vs WASM Wrappers](guides/native-wasm.md)
+- [Query Pushdown](guides/query-pushdown.md)
+- [Remote Subqueries](guides/remote-subqueries.md)
+- [Usage Statistics](guides/usage-statistics.md)
+- [Security](guides/security.md)
+- [Limitations](guides/limitations.md)
