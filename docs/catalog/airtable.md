@@ -123,7 +123,7 @@ options (
 
 This FDW doesn't support query pushdown.
 
-## Data Type Support
+## Supported Data Types
 
 The Airtable FDW supports the following PostgreSQL data types:
 
