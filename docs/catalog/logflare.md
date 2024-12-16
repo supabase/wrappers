@@ -135,32 +135,6 @@ create foreign table logflare.my_logflare_table (
 
 This FDW doesn't support query pushdown.
 
-## Limitations
-
-This section describes important limitations and considerations when using this FDW:
-
-- **Performance Limitations**:
-  - API requests are retried up to 3 times with exponential backoff on transient failures
-  - No query pushdown support means all filtering happens locally after data retrieval
-  - Response data must be fully loaded into memory before processing
-
-- **Feature Limitations**:
-  - Read-only access to Logflare endpoints (no Insert, Update, Delete, or Truncate operations)
-  - Query parameters only support the '=' operator (no >, <, LIKE, etc.)
-  - Array values are not supported in query parameters
-  - Limited data type support for column mappings
-
-- **Resource Usage**:
-  - Full result sets are loaded into memory, which can impact PostgreSQL performance with large datasets
-  - Each query requires a complete API request-response cycle
-  - Failed requests may consume additional resources due to retry attempts
-
-- **Known Issues**:
-  - 404 responses are treated as empty results rather than errors
-  - Materialized views using these foreign tables may fail during logical backups (use physical backups instead)
-  - Column type mismatches in the response data will result in null values
-  - Parameter names must be prefixed with '_param_' and match the expected endpoint parameters exactly
-
 ## Examples
 
 ### Basic Example
@@ -240,3 +214,29 @@ where _param_org_id = 123
   and _param_iso_timestamp_start = '2023-07-01 02:03:04'
   and _param_iso_timestamp_end = '2023-07-02';
 ```
+
+## Limitations
+
+This section describes important limitations and considerations when using this FDW:
+
+- **Performance Limitations**:
+  - API requests are retried up to 3 times with exponential backoff on transient failures
+  - No query pushdown support means all filtering happens locally after data retrieval
+  - Response data must be fully loaded into memory before processing
+
+- **Feature Limitations**:
+  - Read-only access to Logflare endpoints (no Insert, Update, Delete, or Truncate operations)
+  - Query parameters only support the '=' operator (no >, <, LIKE, etc.)
+  - Array values are not supported in query parameters
+  - Limited data type support for column mappings
+
+- **Resource Usage**:
+  - Full result sets are loaded into memory, which can impact PostgreSQL performance with large datasets
+  - Each query requires a complete API request-response cycle
+  - Failed requests may consume additional resources due to retry attempts
+
+- **Known Issues**:
+  - 404 responses are treated as empty results rather than errors
+  - Materialized views using these foreign tables may fail during logical backups (use physical backups instead)
+  - Column type mismatches in the response data will result in null values
+  - Parameter names must be prefixed with '_param_' and match the expected endpoint parameters exactly
