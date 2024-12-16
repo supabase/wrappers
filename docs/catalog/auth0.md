@@ -17,41 +17,6 @@ The Auth0 Wrapper allows you to read data from your Auth0 tenant for use within 
 
     Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
 
-## Limitations
-
-This section describes important limitations and considerations when using this FDW:
-
-- **Performance Limitations**:
-  - No query pushdown support, all filtering must be done locally
-  - API request latency affects query performance
-  - Large result sets may experience slower performance due to full data transfer requirement
-  - Performance depends on Auth0 API rate limits and response times
-  - No support for parallel query execution
-  - Pagination handling may impact performance for large user sets
-
-- **Feature Limitations**:
-  - Read-only access to Auth0 data (no insert, update, or delete operations)
-  - Only supports the users object from Auth0 Management API
-  - No support for other Auth0 API endpoints or objects
-  - Authentication limited to API key or Personal Access Token (PAT)
-  - No support for custom search queries beyond basic filtering
-  - Cannot modify Auth0 user properties via FDW
-
-- **Resource Usage**:
-  - Full result sets must be loaded into memory before processing
-  - Each query requires a complete API request-response cycle
-  - No connection pooling or caching support
-  - Memory usage scales with user count and attribute complexity
-  - API rate limiting may affect resource availability
-  - Large result sets may require significant local memory
-
-- **Known Issues**:
-  - Materialized views using these foreign tables may fail during logical backups
-  - Complex JSON attributes require manual parsing and handling
-  - Time zone differences may affect timestamp data interpretation
-  - API version changes may impact data structure compatibility
-  - Error messages from Auth0 API may not be fully preserved
-
 ## Preparation
 
 Before you can query Auth0, you need to enable the Wrappers extension and store your credentials in Postgres.
@@ -156,6 +121,41 @@ options (
 ## Query Pushdown Support
 
 This FDW doesn't support query pushdown.
+
+## Limitations
+
+This section describes important limitations and considerations when using this FDW:
+
+- **Performance Limitations**:
+  - No query pushdown support, all filtering must be done locally
+  - API request latency affects query performance
+  - Large result sets may experience slower performance due to full data transfer requirement
+  - Performance depends on Auth0 API rate limits and response times
+  - No support for parallel query execution
+  - Pagination handling may impact performance for large user sets
+
+- **Feature Limitations**:
+  - Read-only access to Auth0 data (no insert, update, or delete operations)
+  - Only supports the users object from Auth0 Management API
+  - No support for other Auth0 API endpoints or objects
+  - Authentication limited to API key or Personal Access Token (PAT)
+  - No support for custom search queries beyond basic filtering
+  - Cannot modify Auth0 user properties via FDW
+
+- **Resource Usage**:
+  - Full result sets must be loaded into memory before processing
+  - Each query requires a complete API request-response cycle
+  - No connection pooling or caching support
+  - Memory usage scales with user count and attribute complexity
+  - API rate limiting may affect resource availability
+  - Large result sets may require significant local memory
+
+- **Known Issues**:
+  - Materialized views using these foreign tables may fail during logical backups
+  - Complex JSON attributes require manual parsing and handling
+  - Time zone differences may affect timestamp data interpretation
+  - API version changes may impact data structure compatibility
+  - Error messages from Auth0 API may not be fully preserved
 
 ## Examples
 
