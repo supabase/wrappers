@@ -19,13 +19,19 @@ The Logflare Wrapper allows you to read data from Logflare endpoints within your
 
 ## Preparation
 
-Before you get started, make sure the `wrappers` extension is installed on your database:
+Before you can query Logflare, you need to enable the Wrappers extension and store your credentials in Postgres.
+
+### Enable Wrappers
+
+Make sure the `wrappers` extension is installed on your database:
 
 ```sql
 create extension if not exists wrappers with schema extensions;
 ```
 
-and then create the foreign data wrapper:
+### Enable the Logflare Wrapper
+
+Enable the `logflare_wrapper` FDW:
 
 ```sql
 create foreign data wrapper logflare_wrapper
@@ -33,9 +39,9 @@ create foreign data wrapper logflare_wrapper
   validator logflare_fdw_validator;
 ```
 
-### Secure your credentials (optional)
+### Store your credentials (optional)
 
-By default, Postgres stores FDW credentials inide `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
+By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
 
 ```sql
 -- Save your Logflare API key in Vault and retrieve the `key_id`
@@ -71,18 +77,38 @@ We need to provide Postgres with the credentials to connect to Logflare, and any
       );
     ```
 
-## Creating Foreign Tables
+### Create a schema
 
-The Logflare Wrapper supports data reads from Logflare's endpoints.
-
-| Integration | Select | Insert | Update | Delete | Truncate |
-| ----------- | :----: | :----: | :----: | :----: | :------: |
-| Logflare    |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
-
-For example:
+We recommend creating a schema to hold all the foreign tables:
 
 ```sql
-create foreign table my_logflare_table (
+create schema if not exists logflare;
+```
+
+## Options
+
+The full list of foreign table options are below:
+
+- `endpoint` - Logflare endpoint UUID or name, required.
+
+## Entities
+
+### Logflare
+
+This is an object representing Logflare endpoint data.
+
+Ref: [Logflare docs](https://logflare.app)
+
+#### Operations
+
+| Object   | Select | Insert | Update | Delete | Truncate |
+| -------- | :----: | :----: | :----: | :----: | :------: |
+| Logflare |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
+
+#### Usage
+
+```sql
+create foreign table logflare.my_logflare_table (
   id bigint,
   name text,
   _result text
@@ -93,19 +119,17 @@ create foreign table my_logflare_table (
   );
 ```
 
-### Meta column
+#### Notes
 
-You can define a specific meta column `_result` (data type: `text`) in the foreign table. It will store the whole result record in JSON string format, so you can extract any fields from it using Postgres JSON queries like `_result::json->>'foo'`. See more examples below.
+##### Meta Column `_result`:
+  - Data type must be `text`
+  - Stores the whole result record in JSON string format
+  - Use JSON queries to extract fields: `_result::json->>'field_name'`
 
-### Query parameters
-
-Logflare endpoint query parameters can be passed using specific parameter columns like `_param_foo` and `_param_bar`. See more examples below.
-
-### Foreign table options
-
-The full list of foreign table options are below:
-
-- `endpoint` - Logflare endpoint UUID or name, required.
+##### Query Parameters:
+  - Use parameter columns with prefix `_param_`
+  - Example: `_param_org_id`, `_param_iso_timestamp_start`
+  - Parameters are passed to the Logflare endpoint
 
 ## Query Pushdown Support
 
@@ -113,12 +137,9 @@ This FDW doesn't support query pushdown.
 
 ## Examples
 
-Some examples on how to use Logflare foreign tables.
+### Basic Example
 
-### Basic example
-
-Assume the Logflare endpoint response is like below:
-
+Given a Logflare endpoint response:
 ```json
 [
   {
@@ -128,10 +149,10 @@ Assume the Logflare endpoint response is like below:
 ]
 ```
 
-Then we can define a foreign table like this:
+You can create and query a foreign table:
 
 ```sql
-create foreign table people (
+create foreign table logflare.people (
   id bigint,
   name text,
   _result text
@@ -141,19 +162,18 @@ create foreign table people (
     endpoint '9dd9a6f6-8e9b-4fa4-b682-4f2f5cd99da3'
   );
 
-select * from people;
+select * from logflare.people;
 ```
 
-### Query parameters example
+### Query Parameters Example
 
-Suppose the Logflare endpoint accepts 3 parameters:
+For an endpoint accepting parameters:
 
-1. org_id
-2. iso_timestamp_start
-3. iso_timestamp_end
+- org_id
+- iso_timestamp_start
+- iso_timestamp_end
 
-And its response is like below:
-
+With response format:
 ```json
 [
   {
@@ -165,10 +185,10 @@ And its response is like below:
 ]
 ```
 
-We can define a foreign table and parameter columns like this:
+Create and query the table with parameters:
 
 ```sql
-create foreign table runtime_hours (
+create foreign table logflare.runtime_hours (
   db_size text,
   org_id text,
   runtime_hours numeric,
@@ -182,18 +202,14 @@ create foreign table runtime_hours (
   options (
     endpoint 'my.custom.endpoint'
   );
-```
 
-and query it with parameters like this:
-
-```sql
 select
   db_size,
   org_id,
   runtime_hours,
   runtime_minutes
 from
-  runtime_hours
+  logflare.runtime_hours
 where _param_org_id = 123
   and _param_iso_timestamp_start = '2023-07-01 02:03:04'
   and _param_iso_timestamp_end = '2023-07-02';

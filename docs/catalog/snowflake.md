@@ -42,13 +42,19 @@ The Snowflake Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows y
 
 ## Preparation
 
-Before you get started, make sure the `wrappers` extension is installed on your database:
+Before you can query Snowflake, you need to enable the Wrappers extension and store your credentials in Postgres.
+
+### Enable Wrappers
+
+Make sure the `wrappers` extension is installed on your database:
 
 ```sql
 create extension if not exists wrappers with schema extensions;
 ```
 
-and then create the Wasm foreign data wrapper:
+### Enable the Snowflake Wrapper
+
+Enable the Wasm foreign data wrapper:
 
 ```sql
 create foreign data wrapper wasm_wrapper
@@ -56,7 +62,7 @@ create foreign data wrapper wasm_wrapper
   validator wasm_fdw_validator;
 ```
 
-### Secure your credentials (optional)
+### Store your credentials (optional)
 
 By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
 
@@ -120,15 +126,31 @@ We recommend creating a schema to hold all the foreign tables:
 create schema if not exists snowflake;
 ```
 
-## Creating Foreign Tables
+## Options
 
-The Snowflake Wrapper supports data reads and writes from Snowflake.
+The full list of foreign table options are below:
 
-| Integration | Select | Insert | Update | Delete | Truncate |
+- `table` - Source table or view name in Snowflake, required.
+
+  This option can also be a subquery enclosed in parentheses.
+
+- `rowid_column` - Primary key column name, optional for data scan, required for data modify
+
+## Entities
+
+### Snowflake Tables/Views
+
+This is an object representing a Snowflake table or view.
+
+Ref: [Snowflake docs](https://docs.snowflake.com/en/sql-reference/sql/create-table)
+
+#### Operations
+
+| Object      | Select | Insert | Update | Delete | Truncate |
 | ----------- | :----: | :----: | :----: | :----: | :------: |
-| Snowflake   |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
+| table/view  |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
 
-For example:
+#### Usage
 
 ```sql
 create foreign table snowflake.mytable (
@@ -145,19 +167,14 @@ create foreign table snowflake.mytable (
   );
 ```
 
-### Foreign table options
+#### Notes
 
-The full list of foreign table options are below:
-
-- `table` - Source table or view name in Snowflake, required.
-
-  This can also be a subquery enclosed in parentheses, for example,
-
-  ```sql
-  table '(select * from mydatabase.public.mytable where id = 42)'
-  ```
-
-- `rowid_column` - Primary key column name, optional for data scan, required for data modify
+- Supports both tables and views as data sources
+- Can use subqueries in `table` option
+- Requires `rowid_column` for data modification operations
+- Supports query pushdown for `where`, `order by`, and `limit` clauses
+- Column names must match between Snowflake and foreign table
+- Data types must be compatible according to type mapping table
 
 ## Query Pushdown Support
 
@@ -165,7 +182,7 @@ This FDW supports `where`, `order by` and `limit` clause pushdown.
 
 ## Examples
 
-Some examples on how to use Snowflake foreign tables.
+### Basic Example
 
 Let's prepare the source table in Snowflake first:
 
@@ -189,15 +206,7 @@ insert into mydatabase.public.mytable(id, name, num, dt, ts)
 values (43, 'bar', 56.78, '2024-05-19', '2024-05-19 12:34:56');
 ```
 
-### Basic example
-
-This example will create a "foreign table" inside your Postgres database and query its data. First, we can create a schema to hold all the Snowflake foreign tables.
-
-```sql
-create schema if not exists snowflake;
-```
-
-Then create the foreign table and query it, for example:
+This example will create a "foreign table" inside your Postgres database and query its data.
 
 ```sql
 create foreign table snowflake.mytable (
@@ -216,9 +225,9 @@ create foreign table snowflake.mytable (
 select * from snowflake.mytable;
 ```
 
-### Data modify example
+### Data Modify Example
 
-This example will modify data in a "foreign table" inside your Postgres database, note that `rowid_column` option is mandatory for data modify:
+This example will modify data in a "foreign table" inside your Postgres database, note that `rowid_column` option is required for data modify:
 
 ```sql
 -- insert new data

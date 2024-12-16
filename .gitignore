@@ -16,3 +16,4 @@ cmake*/
 results/
 wrappers/results/
 wrappers/regression.*
+.venv/

@@ -44,13 +44,19 @@ The Paddle API uses JSON formatted data, please refer to [Paddle docs](https://d
 
 ## Preparation
 
-Before you get started, make sure the `wrappers` extension is installed on your database:
+Before you can query Paddle, you need to enable the Wrappers extension and store your credentials in Postgres.
+
+### Enable Wrappers
+
+Make sure the `wrappers` extension is installed on your database:
 
 ```sql
 create extension if not exists wrappers with schema extensions;
 ```
 
-and then create the Wasm foreign data wrapper:
+### Enable the Paddle Wrapper
+
+Enable the Wasm foreign data wrapper:
 
 ```sql
 create foreign data wrapper wasm_wrapper
@@ -58,7 +64,7 @@ create foreign data wrapper wasm_wrapper
   validator wasm_fdw_validator;
 ```
 
-### Secure your credentials (optional)
+### Store your credentials (optional)
 
 By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
 
@@ -67,7 +73,7 @@ By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server
 insert into vault.secrets (name, secret)
 values (
   'paddle',
-  'bb4e69088ea07a98a90565ac610c63654423f8f1e2d48b39b5'
+  '<Paddle API key>' -- Paddle API key
 )
 returning key_id;
 ```
@@ -116,15 +122,80 @@ We recommend creating a schema to hold all the foreign tables:
 create schema if not exists paddle;
 ```
 
-## Creating Foreign Tables
+## Options
 
-The Paddle Wrapper supports data reads and writes from Paddle.
+The full list of foreign table options are below:
 
-| Integration | Select | Insert | Update | Delete | Truncate |
-| ----------- | :----: | :----: | :----: | :----: | :------: |
-| Paddle      |   ✅   |   ✅   |   ✅   |   ❌   |    ❌    |
+- `object` - Object name in Paddle, required.
 
-For example:
+Supported objects are listed below:
+
+| Object                |
+| --------------------- |
+| products              |
+| prices                |
+| discounts             |
+| customers             |
+| transactions          |
+| reports               |
+| notification-settings |
+| notifications         |
+
+- `rowid_column` - Primary key column name, optional for data scan, required for data modify
+
+## Entities
+
+### Products
+
+This is an object representing Paddle Products.
+
+Ref: [Paddle API docs](https://developer.paddle.com/api-reference/about/data-types)
+
+#### Operations
+
+| Object   | Select | Insert | Update | Delete | Truncate |
+| -------- | :----: | :----: | :----: | :----: | :------: |
+| Products |   ✅    |   ✅    |   ✅    |   ❌    |    ❌     |
+
+#### Usage
+
+```sql
+create foreign table paddle.products (
+  id text,
+  name text,
+  tax_category text,
+  status text,
+  description text,
+  created_at timestamp,
+  updated_at timestamp,
+  attrs jsonb
+)
+  server paddle_server
+  options (
+    object 'products',
+    rowid_column 'id'
+  );
+```
+
+#### Notes
+
+- Requires `rowid_column` option for data modification operations
+- Query pushdown supported for `id` column
+- Product type can be extracted using: `attrs->>'type'`
+
+### Customers
+
+This is an object representing Paddle Customers.
+
+Ref: [Paddle API docs](https://developer.paddle.com/api-reference/about/data-types)
+
+#### Operations
+
+| Object    | Select | Insert | Update | Delete | Truncate |
+| --------- | :----: | :----: | :----: | :----: | :------: |
+| Customers |   ✅    |   ✅    |   ✅    |   ❌    |    ❌     |
+
+#### Usage
 
 ```sql
 create foreign table paddle.customers (
@@ -144,26 +215,46 @@ create foreign table paddle.customers (
   );
 ```
 
-### Foreign table options
+#### Notes
 
-The full list of foreign table options are below:
+- Requires `rowid_column` option for data modification operations
+- Query pushdown supported for `id` column
+- Custom data stored in dedicated `custom_data` column
 
-- `object` - Object name in Paddle, required.
+### Subscriptions
 
-  Supported objects are listed below:
+This is an object representing Paddle Subscriptions.
 
-  | Object name           |
-  | --------------------- |
-  | products              |
-  | prices                |
-  | discounts             |
-  | customers             |
-  | transactions          |
-  | reports               |
-  | notification-settings |
-  | notifications         |
+Ref: [Paddle API docs](https://developer.paddle.com/api-reference/about/data-types)
 
-- `rowid_column` - Primary key column name, optional for data scan, required for data modify
+#### Operations
+
+| Object        | Select | Insert | Update | Delete | Truncate |
+| ------------- | :----: | :----: | :----: | :----: | :------: |
+| Subscriptions |   ✅    |   ✅    |   ✅    |   ❌    |    ❌     |
+
+#### Usage
+
+```sql
+create foreign table paddle.subscriptions (
+  id text,
+  status text,
+  created_at timestamp,
+  updated_at timestamp,
+  attrs jsonb
+)
+  server paddle_server
+  options (
+    object 'subscriptions',
+    rowid_column 'id'
+  );
+```
+
+#### Notes
+
+- Requires `rowid_column` option for data modification operations
+- Query pushdown supported for `id` column
+- Subscription items status can be extracted using: `attrs#>'{items,status}'`
 
 ## Query Pushdown Support
 
@@ -175,17 +266,9 @@ select * from paddle.customers where id = 'ctm_01hymwgpkx639a6mkvg99563sp';
 
 ## Examples
 
-Below are some examples on how to use Paddle foreign tables.
+### Basic Example
 
-### Basic example
-
-This example will create a "foreign table" inside your Postgres database and query its data. First, we can create a schema to hold all the Paddle foreign tables.
-
-```sql
-create schema if not exists paddle;
-```
-
-Then create the foreign table and query it, for example:
+This example will create a "foreign table" inside your Postgres database and query its data.
 
 ```sql
 create foreign table paddle.customers (
@@ -209,7 +292,7 @@ select * from paddle.customers;
 
 `attrs` is a special column which stores all the object attributes in JSON format, you can extract any attributes needed or its associated sub objects from it. See more examples below.
 
-### Query JSON attributes
+### Query JSON Attributes
 
 ```sql
 create foreign table paddle.products (
@@ -250,13 +333,13 @@ select id, attrs#>'{items,status}' as item_status
 from paddle.subscriptions where id = 'sub_01hv959anj4zrw503h2acawb3p';
 ```
 
-### Data modify example
+### Data Modify Example
 
 This example will modify data in a "foreign table" inside your Postgres database, note that `rowid_column` option is mandatory for data modify:
 
 ```sql
 -- insert new data
-insert into paddle.products (name, tax_category)
+insert into paddle.products(name, tax_category)
 values ('my prod', 'standard');
 
 -- update existing data
