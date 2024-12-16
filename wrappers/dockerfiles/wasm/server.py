@@ -287,7 +287,39 @@ class MockServer(BaseHTTPRequestHandler):
     "createdOn": 1718259164549
 }
             '''
-
+        elif fdw == "cfd1":
+            body = '''
+{
+  "result": [
+    {
+      "results": [
+        {
+          "id": 42,
+          "name": "test name 2"
+        },
+        {
+          "id": 123,
+          "name": "test name"
+        }
+      ],
+      "success": true,
+      "meta": {
+        "served_by": "v3-prod",
+        "duration": 0.1983,
+        "changes": 0,
+        "last_row_id": 0,
+        "changed_db": false,
+        "size_after": 16384,
+        "rows_read": 2,
+        "rows_written": 0
+      }
+    }
+  ],
+  "errors": [],
+  "messages": [],
+  "success": true
+}
+            '''
         else:
             self.send_response(404)
             return
