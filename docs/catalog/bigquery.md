@@ -17,57 +17,6 @@ The BigQuery Wrapper allows you to read and write data from BigQuery within your
 
     Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
 
-## Limitations
-
-This section describes important limitations and considerations when using this FDW:
-
-- **Performance Limitations**:
-  - Query performance depends on BigQuery's execution time and data transfer speed
-  - Large result sets may experience network latency during data transfer
-  - Query execution time affected by BigQuery's job queue and resource availability
-  - Performance varies based on geographical location of BigQuery dataset
-  - Complex queries may face additional overhead during translation to BigQuery syntax
-  - Concurrent query limits based on BigQuery project quotas
-
-- **Feature Limitations**:
-  - Only supports specific data type mappings between Postgres and BigQuery
-  - Truncate operation not supported
-  - Data in streaming buffer cannot be modified for up to 90 minutes
-  - Update and delete operations blocked while data is in streaming buffer
-  - Limited support for BigQuery-specific features (e.g., nested arrays, structs)
-  - Location must be specified and cannot be changed after table creation
-
-- **Resource Usage**:
-  - Each query execution incurs BigQuery usage costs
-  - Large result sets require significant memory for data transfer
-  - Service account credentials must be stored and managed
-  - Memory usage scales with result set size and query complexity
-  - Network bandwidth consumption based on data transfer volume
-  - Concurrent connections limited by BigQuery quotas and pricing tier
-
-- **Known Issues**:
-  - Materialized views using foreign tables may fail during logical backups
-  - Streaming buffer delays affect data modification operations
-  - Time zone handling may require explicit conversion
-  - Error messages from BigQuery may not preserve full context
-  - Service account authentication requires careful credential management
-  - Project and dataset quotas may limit operation scale
-
-## Supported Data Types
-
-| Postgres Type    | BigQuery Type |
-| ---------------- | ------------- |
-| boolean          | BOOL          |
-| bigint           | INT64         |
-| double precision | FLOAT64       |
-| numeric          | NUMERIC       |
-| text             | STRING        |
-| varchar          | STRING        |
-| date             | DATE          |
-| timestamp        | DATETIME      |
-| timestamp        | TIMESTAMP     |
-| timestamptz      | TIMESTAMP     |
-
 ## Preparation
 
 Before you can query BigQuery, you need to enable the Wrappers extension and store your credentials in Postgres.
@@ -213,6 +162,57 @@ This FDW supports `where`, `order by` and `limit` clause pushdown.
 This foreign data wrapper uses BigQuery’s `insertAll` API method to create a `streamingBuffer` with an associated partition time. **Within that partition time, the data cannot be updated, deleted, or fully exported**. Only after the time has elapsed (up to 90 minutes according to [BigQuery’s documentation](https://cloud.google.com/bigquery/docs/streaming-data-into-bigquery)), can you perform operations.
 
 If you attempt an `UPDATE` or `DELETE` statement on rows while in the streamingBuffer, you will get an error of `UPDATE` or `DELETE` statement over table datasetName - note that tableName would affect rows in the streaming buffer, which is not supported.
+
+## Limitations
+
+This section describes important limitations and considerations when using this FDW:
+
+- **Performance Limitations**:
+  - Query performance depends on BigQuery's execution time and data transfer speed
+  - Large result sets may experience network latency during data transfer
+  - Query execution time affected by BigQuery's job queue and resource availability
+  - Performance varies based on geographical location of BigQuery dataset
+  - Complex queries may face additional overhead during translation to BigQuery syntax
+  - Concurrent query limits based on BigQuery project quotas
+
+- **Feature Limitations**:
+  - Only supports specific data type mappings between Postgres and BigQuery
+  - Truncate operation not supported
+  - Data in streaming buffer cannot be modified for up to 90 minutes
+  - Update and delete operations blocked while data is in streaming buffer
+  - Limited support for BigQuery-specific features (e.g., nested arrays, structs)
+  - Location must be specified and cannot be changed after table creation
+
+- **Resource Usage**:
+  - Each query execution incurs BigQuery usage costs
+  - Large result sets require significant memory for data transfer
+  - Service account credentials must be stored and managed
+  - Memory usage scales with result set size and query complexity
+  - Network bandwidth consumption based on data transfer volume
+  - Concurrent connections limited by BigQuery quotas and pricing tier
+
+- **Known Issues**:
+  - Materialized views using foreign tables may fail during logical backups
+  - Streaming buffer delays affect data modification operations
+  - Time zone handling may require explicit conversion
+  - Error messages from BigQuery may not preserve full context
+  - Service account authentication requires careful credential management
+  - Project and dataset quotas may limit operation scale
+
+## Supported Data Types
+
+| Postgres Type    | BigQuery Type |
+| ---------------- | ------------- |
+| boolean          | BOOL          |
+| bigint           | INT64         |
+| double precision | FLOAT64       |
+| numeric          | NUMERIC       |
+| text             | STRING        |
+| varchar          | STRING        |
+| date             | DATE          |
+| timestamp        | DATETIME      |
+| timestamp        | TIMESTAMP     |
+| timestamptz      | TIMESTAMP     |
 
 ## Examples
 
