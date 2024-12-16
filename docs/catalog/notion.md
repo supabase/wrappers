@@ -17,54 +17,6 @@ The Notion Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you 
 
     Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
 
-## Limitations
-
-This section describes important limitations and considerations when using this FDW:
-
-- **Performance Limitations**:
-  - Query pushdown support limited to 'id' and 'page_id' columns only
-  - Recursive block fetching can be extremely slow for large page hierarchies
-  - Notion API rate limits may affect query performance
-  - Network latency impacts query response times
-  - Full table scans without filters require multiple API calls
-  - WebAssembly execution overhead for data processing
-
-- **Feature Limitations**:
-  - Read-only operations supported (no INSERT, UPDATE, DELETE, or TRUNCATE)
-  - Limited data type mappings between Postgres and Notion types
-  - Complex Notion block types must be handled through JSONB
-  - No support for Notion's native search functionality
-  - Authentication requires Notion API integration setup
-  - WebAssembly runtime environment required
-
-- **Resource Usage**:
-  - API quota consumption scales with query complexity
-  - Memory usage increases with recursive block depth
-  - Full page hierarchies loaded into memory during block queries
-  - Network bandwidth consumption based on response size
-  - No connection pooling or result caching
-  - WebAssembly memory limitations may affect large datasets
-
-- **Known Issues**:
-  - Materialized views using foreign tables may fail during logical backups
-  - JSON attribute extraction requires explicit path navigation
-  - API version changes may affect data structure compatibility
-  - Some Notion block types may have incomplete attribute coverage
-  - Time zone handling may require explicit conversion
-  - Error messages may not preserve full Notion API context
-
-## Supported Data Types
-
-| Postgres Data Type | Notion Data Type |
-| ------------------ | ---------------- |
-| boolean            | Boolean          |
-| text               | String           |
-| timestamp          | Time             |
-| timestamptz        | Time             |
-| jsonb              | Json             |
-
-The Notion API uses JSON formatted data, please refer to [Notion API docs](https://developers.notion.com/reference/intro) for more details.
-
 ## Available Versions
 
 | Version | Wasm Package URL                                                                                | Checksum                                                           |
@@ -301,6 +253,54 @@ will recursively fetch all children blocks of the Page with id '5a67c86f-d0da-4d
     ```sql
     select * from notion.blocks;
     ```
+
+## Limitations
+
+This section describes important limitations and considerations when using this FDW:
+
+- **Performance Limitations**:
+  - Query pushdown support limited to 'id' and 'page_id' columns only
+  - Recursive block fetching can be extremely slow for large page hierarchies
+  - Notion API rate limits may affect query performance
+  - Network latency impacts query response times
+  - Full table scans without filters require multiple API calls
+  - WebAssembly execution overhead for data processing
+
+- **Feature Limitations**:
+  - Read-only operations supported (no INSERT, UPDATE, DELETE, or TRUNCATE)
+  - Limited data type mappings between Postgres and Notion types
+  - Complex Notion block types must be handled through JSONB
+  - No support for Notion's native search functionality
+  - Authentication requires Notion API integration setup
+  - WebAssembly runtime environment required
+
+- **Resource Usage**:
+  - API quota consumption scales with query complexity
+  - Memory usage increases with recursive block depth
+  - Full page hierarchies loaded into memory during block queries
+  - Network bandwidth consumption based on response size
+  - No connection pooling or result caching
+  - WebAssembly memory limitations may affect large datasets
+
+- **Known Issues**:
+  - Materialized views using foreign tables may fail during logical backups
+  - JSON attribute extraction requires explicit path navigation
+  - API version changes may affect data structure compatibility
+  - Some Notion block types may have incomplete attribute coverage
+  - Time zone handling may require explicit conversion
+  - Error messages may not preserve full Notion API context
+
+## Supported Data Types
+
+| Postgres Data Type | Notion Data Type |
+| ------------------ | ---------------- |
+| boolean            | Boolean          |
+| text               | String           |
+| timestamp          | Time             |
+| timestamptz        | Time             |
+| jsonb              | Json             |
+
+The Notion API uses JSON formatted data, please refer to [Notion API docs](https://developers.notion.com/reference/intro) for more details.
 
 ## Examples
 
