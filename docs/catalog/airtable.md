@@ -123,6 +123,83 @@ options (
 
 This FDW doesn't support query pushdown.
 
+## Data Type Support
+
+The Airtable FDW supports the following PostgreSQL data types:
+
+| PostgreSQL Type | Notes |
+| -------------- | ----- |
+| `boolean` | Maps to Airtable checkbox fields |
+| `smallint`, `integer`, `bigint` | Maps to Airtable number fields |
+| `real`, `double precision`, `numeric` | Maps to Airtable number fields |
+| `text` | Maps to Airtable single line text, long text, URL, email, and phone fields |
+| `date` | Maps to Airtable date fields |
+| `timestamp` | Maps to Airtable date fields |
+| `timestamp with time zone` | Maps to Airtable date fields |
+| `jsonb` | Maps to Airtable array fields, linked records, and other complex types |
+
+### Array and Complex Types
+
+Arrays and linked records are supported through the `jsonb` type:
+
+```sql
+create foreign table airtable.complex_types (
+  linked_records jsonb,  -- For Airtable linked records
+  attachments jsonb,    -- For Airtable attachments
+  multiselect jsonb     -- For Airtable multiple select fields
+)
+server airtable_server
+options (
+  base_id 'appXXXX',
+  table_id 'tblXXXX'
+);
+```
+
+### Column Naming Rules
+
+1. Column names are case-insensitive
+2. Column names containing spaces must be quoted:
+```sql
+create foreign table airtable.my_table (
+  "Business Name" text,  -- Column with spaces must be quoted
+  city text,            -- Simple column names don't need quotes
+  "ZIP Code" text       -- Another column with spaces
+)
+server airtable_server
+options (
+  base_id 'appXXXX',
+  table_id 'tblXXXX'
+);
+```
+
+### Handling Complex Data Types
+
+Here's an example of querying a table with linked records and arrays:
+
+```sql
+create foreign table airtable.contacts (
+  name text,
+  "Phone Numbers" jsonb,  -- Array of phone numbers
+  "Related Companies" jsonb,  -- Linked records
+  tags jsonb  -- Multiple select field
+)
+server airtable_server
+options (
+  base_id 'appXXXX',
+  table_id 'tblXXXX'
+);
+
+-- Query the complex types
+select
+  name,
+  "Phone Numbers"->0 as primary_phone,  -- Access first phone number
+  jsonb_array_length("Related Companies") as company_count,
+  tags
+from airtable.contacts;
+```
+
+Note: Null values in Airtable fields are returned as SQL NULL values.
+
 ## Examples
 
 ### Query an Airtable table
