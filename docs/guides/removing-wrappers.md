@@ -48,8 +48,17 @@ Remove each server:
 drop server if exists server_name cascade;
 ```
 
+!!! note
+
+    With `cascade` option, this will also drop all foreign tables using that foreign server.
+
 ### 3. Remove the Extension
 
 ```sql
-drop extension if exists wrappers;
+drop extension if exists wrappers cascade;
 ```
+
+!!! note
+
+    With `cascade` option, this will also drop all foreign servers and foreign tables using Wrappers extension.
+
