@@ -13,10 +13,6 @@ tags:
 
 The Snowflake Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you to read and write data from Snowflake within your Postgres database.
 
-!!! warning
-
-    Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
-
 ## Available Versions
 
 | Version | Wasm Package URL                                                                                      | Checksum                                                           |
@@ -184,36 +180,10 @@ This FDW supports `where`, `order by` and `limit` clause pushdown.
 
 This section describes important limitations and considerations when using this FDW:
 
-- **Performance Limitations**:
-  - Query pushdown support is limited to `where`, `order by`, and `limit` clauses
-  - WebAssembly execution overhead may impact query performance
-  - API request latency affects query performance as each operation requires Snowflake API calls
-  - Large result sets may experience slower performance due to full data transfer requirement
-  - No support for parallel query execution
-  - Performance depends on Snowflake's execution time and data transfer speed
-
-- **Feature Limitations**:
-  - Truncate operations are not supported for any object type
-  - Column names must exactly match between Snowflake and foreign table
-  - WebAssembly package version must match exactly with specified checksum
-  - Key-pair authentication required, no support for other authentication methods
-  - Subqueries in table options may have limited functionality
-  - Database and schema management operations not supported via FDW
-
-- **Resource Usage**:
-  - WebAssembly module initialization requires additional memory overhead
-  - Full result sets must be loaded into memory before processing
-  - Each query requires complete API request-response cycle
-  - No connection pooling or caching support
-  - Memory usage scales with result set size and complexity
-  - Each operation incurs Snowflake compute costs
-
-- **Known Issues**:
-  - Materialized views using these foreign tables may fail during logical backups
-  - WebAssembly binary must be downloaded and verified on each server restart
-  - Complex data type conversions may result in precision loss
-  - Error handling between WebAssembly and PostgreSQL may not preserve all error details
-  - Time zone handling differences between Snowflake and PostgreSQL may affect timestamp data
+- Large result sets may experience slower performance due to full data transfer requirement
+- Column names must exactly match between Snowflake and foreign table
+- Foreign tables with subquery option cannot support data modify
+- Materialized views using these foreign tables may fail during logical backups
 
 ## Examples
 

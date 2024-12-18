@@ -13,10 +13,6 @@ tags:
 
 The Cognito wrapper allows you to read data from your Cognito Userpool within your Postgres database.
 
-!!! warning
-
-    Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
-
 ## Preparation
 
 Before you can query AWS Cognito, you need to enable the Wrappers extension and store your credentials in Postgres.
@@ -135,37 +131,11 @@ This FDW doesn't support query pushdown.
 
 This section describes important limitations and considerations when using this FDW:
 
-- **Performance Limitations**:
-  - No query pushdown support, all filtering must be done locally
-  - API request latency affects query performance
-  - Large result sets may experience slower performance due to full data transfer requirement
-  - Performance depends on AWS Cognito API rate limits and response times
-  - No support for parallel query execution
-  - Pagination handling may impact performance for large user pools
-
-- **Feature Limitations**:
-  - Read-only access to Cognito data (no insert, update, or delete operations)
-  - Only supports User Pool objects from Cognito API
-  - Limited to specific predefined columns (username, email, status, etc.)
-  - Authentication requires AWS access key and secret key pair
-  - No support for Identity Pool operations
-  - Cannot modify Cognito user attributes via FDW
-
-- **Resource Usage**:
-  - Full result sets must be loaded into memory before processing
-  - Each query requires a complete API request-response cycle
-  - No connection pooling or caching support
-  - Memory usage scales with user count and attribute complexity
-  - AWS API rate limiting may affect resource availability
-  - Large result sets may require significant local memory
-
-- **Known Issues**:
-  - Materialized views using these foreign tables may fail during logical backups
-  - Complex JSON attributes require manual parsing in the attributes column
-  - Time zone differences may affect timestamp data interpretation
-  - AWS API version changes may impact data structure compatibility
-  - Error messages from AWS API may not be fully preserved
-  - AWS credentials must be kept in sync with IAM policies
+- No query pushdown support, all filtering must be done locally
+- Large result sets may experience slower performance due to full data transfer requirement
+- Only supports User Pool objects from Cognito API
+- No support for Identity Pool operations
+- Materialized views using these foreign tables may fail during logical backups
 
 ## Examples
 

@@ -13,10 +13,6 @@ tags:
 
 The Redis Wrapper allows you to read data from Redis within your Postgres database.
 
-!!! warning
-
-    Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
-
 ## Preparation
 
 Before you can query Redis, you need to enable the Wrappers extension and store your credentials in Postgres.
@@ -327,38 +323,16 @@ All Redis values will be stored as `text` or `jsonb` columns in Postgres, below 
 | Multiple Hash       | multi_hash                    |
 | Multiple Sorted Set | multi_zset                    |
 
-**See below for more descriptions for the `Multiple *` types and `src_type` foreign table option.**
-
 ## Limitations
 
 This section describes important limitations and considerations when using this FDW:
 
-- **Performance Limitations**:
-  - Buffer size limited to 256 items per request for list and sorted set operations
-  - No query pushdown support means all filtering happens locally after data retrieval
-  - API requests use exponential backoff with maximum 3 retries on failures
-  - Stream entries are processed in batches, which may impact real-time data access
+- Full result sets are loaded into memory before processing
+- Read-only access to Redis data structures (no Insert, Update, Delete, or Truncate operations)
+- Pattern matching in `multi_*` types only supports basic Redis glob patterns
+- Materialized views using these foreign tables may fail during logical backups
 
-- **Feature Limitations**:
-  - Read-only access to Redis data structures (no Insert, Update, Delete, or Truncate operations)
-  - Limited column type support (only text for basic types, jsonb for complex types)
-  - Pattern matching in `multi_*` types only supports basic Redis glob patterns
-  - Sorted set scores are not exposed in the foreign table structure
-  - Stream entries must be processed sequentially from the last known ID
-
-- **Resource Usage**:
-  - Full result sets are loaded into memory before processing
-  - Each query requires a complete Redis request-response cycle
-  - Multiple object queries (multi_*) load all matching keys into memory at once
-  - Failed requests consume additional resources due to retry attempts
-  - Large hash or stream results may require significant PostgreSQL memory
-
-- **Known Issues**:
-  - Materialized views using these foreign tables may fail during logical backups (use physical backups instead)
-  - 404 responses are treated as empty results rather than errors
-  - Column type mismatches in response data will result in null values
-  - Connection failures during scans may require re-establishing the connection
-  - Memory pressure can occur when dealing with large datasets due to full result set loading
+## Examples
 
 Some examples on how to use Redis foreign tables.
 

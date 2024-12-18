@@ -13,10 +13,6 @@ tags:
 
 The Calendly Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you to read data from your Calendly for use within your Postgres database.
 
-!!! warning
-
-    Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
-
 ## Available Versions
 
 | Version | Wasm Package URL                                                                                    | Checksum                                                           |
@@ -58,6 +54,46 @@ values (
 )
 returning key_id;
 ```
+
+### Connecting to Calendly
+
+We need to provide Postgres with the credentials to access Calendly and any additional options. We can do this using the `create server` command:
+
+=== "With Vault"
+
+    ```sql
+    create server calendly_server
+      foreign data wrapper wasm_wrapper
+      options (
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_calendly_fdw_v0.1.0/calendly_fdw.wasm',
+        fdw_package_name 'supabase:calendly-fdw',
+        fdw_package_version '0.1.0',
+        fdw_package_checksum '51a19fa4b8c40afb5dcf6dc2e009189aceeba65f30eec75d56a951d78fc8893f',
+        -- find your organization uri using foreign table 'calendly.current_user', see below example for details
+        organization 'https://api.calendly.com/organizations/81da9c7f-3e19-434a-c3d2-0325e375cdef',
+        api_url 'https://api.calendly.com',  -- optional
+        api_key_id '<key_ID>' -- The Key ID from above.
+      );
+    ```
+
+=== "Without Vault"
+
+    ```sql
+    create server calendly_server
+      foreign data wrapper wasm_wrapper
+      options (
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_calendly_fdw_v0.1.0/calendly_fdw.wasm',
+        fdw_package_name 'supabase:calendly-fdw',
+        fdw_package_version '0.1.0',
+        fdw_package_checksum '51a19fa4b8c40afb5dcf6dc2e009189aceeba65f30eec75d56a951d78fc8893f',
+        -- find your organization uri using foreign table 'calendly.current_user', see below example for details
+        organization 'https://api.calendly.com/organizations/81da9c7f-3e19-434a-c3d2-0325e375cdef',
+        api_url 'https://api.calendly.com',  -- optional
+        api_key 'eyJraWQiOiIxY2UxZ...'  -- Calendly personal access token
+      );
+    ```
+
+Note the `fdw_package_*` options are required, which specify the Wasm package metadata. You can get the available package version list from [above](#available-versions).
 
 ### Create a schema
 
@@ -256,42 +292,6 @@ create foreign table calendly.scheduled_events (
 
 This FDW doesn't support query pushdown.
 
-## Limitations
-
-This section describes important limitations and considerations when using this FDW:
-
-- **Performance Limitations**:
-  - No query pushdown support, all filtering happens locally
-  - Full result sets must be transferred from Calendly API
-  - Network latency impacts query response times
-  - API rate limits may affect query performance
-  - WebAssembly execution overhead for data processing
-  - Sequential scanning of all records for filtering
-
-- **Feature Limitations**:
-  - Read-only operations supported (no INSERT, UPDATE, DELETE, or TRUNCATE)
-  - Limited data type mappings (see Supported Data Types section)
-  - Complex Calendly event data must be handled through JSONB
-  - No support for Calendly's webhook functionality
-  - Authentication requires Calendly API token
-  - WebAssembly runtime environment required
-
-- **Resource Usage**:
-  - API quota consumption scales with query frequency
-  - Memory usage increases with result set size
-  - Network bandwidth consumption based on response size
-  - No connection pooling or result caching
-  - WebAssembly memory limitations may affect large datasets
-  - Each query requires fresh API authentication
-
-- **Known Issues**:
-  - Materialized views using foreign tables may fail during logical backups
-  - JSON attribute extraction requires explicit path navigation
-  - API version changes may affect data structure compatibility
-  - Time zone handling may require explicit conversion
-  - Error messages may not preserve full Calendly API context
-  - Organization URI must be manually configured after initial setup
-
 ## Supported Data Types
 
 | Postgres Data Type | Calendly Data Type |
@@ -305,6 +305,14 @@ This section describes important limitations and considerations when using this 
 | jsonb              | Json               |
 
 The Calendly API uses JSON formatted data, please refer to [Calendly API docs](https://developer.calendly.com/api-docs) for more details.
+
+## Limitations
+
+This section describes important limitations and considerations when using this FDW:
+
+- Large result sets may experience slower performance due to full data transfer requirement
+- Organization URI must be manually configured after initial setup
+- Materialized views using these foreign tables may fail during logical backups
 
 ## Examples
 

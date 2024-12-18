@@ -13,10 +13,6 @@ tags:
 
 The ClickHouse Wrapper allows you to read and write data from ClickHouse within your Postgres database.
 
-!!! warning
-
-    Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
-
 ## Preparation
 
 Before you can query ClickHouse, you need to enable the Wrappers extension and store your credentials in Postgres.
@@ -161,42 +157,6 @@ create foreign table clickhouse.my_table (
 
 This FDW supports `where`, `order by` and `limit` clause pushdown, as well as parametrized view (see above).
 
-## Limitations
-
-This section describes important limitations and considerations when using this FDW:
-
-- **Performance Limitations**:
-  - Full result sets must be transferred from ClickHouse to PostgreSQL
-  - Query performance depends on ClickHouse's execution time and network latency
-  - Only basic query clauses (WHERE, ORDER BY, LIMIT) support pushdown
-  - Complex ClickHouse-specific optimizations may not be utilized
-  - Joins between foreign tables may be inefficient
-  - Parametrized views may have overhead due to parameter substitution
-
-- **Feature Limitations**:
-  - No support for ClickHouse-specific table engines and their features
-  - Limited data type mappings (see Supported Data Types section)
-  - No support for ClickHouse's array and nested types
-  - TRUNCATE operation not supported
-  - Materialized columns not supported
-  - Some ClickHouse-specific SQL functions may not work
-
-- **Resource Usage**:
-  - Large result sets consume significant PostgreSQL memory
-  - Each query requires a new connection to ClickHouse
-  - No connection pooling available
-  - Memory usage scales with result set size
-  - Network bandwidth consumption based on data volume
-  - Concurrent queries may strain connection limits
-
-- **Known Issues**:
-  - Materialized views using foreign tables may fail during logical backups
-  - Updates and deletes require rowid_column specification
-  - Time zone handling may need explicit configuration
-  - Error messages may not preserve full ClickHouse context
-  - Data type conversion edge cases may occur
-  - Transaction isolation limited by ClickHouse capabilities
-
 ## Supported Data Types
 
 | Postgres Type    | ClickHouse Type   |
@@ -214,6 +174,16 @@ This section describes important limitations and considerations when using this 
 | date             | Date              |
 | timestamp        | DateTime          |
 | *                | Nullable&lt;T&gt; |
+
+## Limitations
+
+This section describes important limitations and considerations when using this FDW:
+
+- Full result sets must be transferred from ClickHouse to PostgreSQL
+- Large result sets consume significant PostgreSQL memory
+- Only basic query clauses (WHERE, ORDER BY, LIMIT) support pushdown
+- Limited data type mappings (see [Supported Data Types](#supported-data-types) section)
+- Materialized views using foreign tables may fail during logical backups
 
 ## Examples
 

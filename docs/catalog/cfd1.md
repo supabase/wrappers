@@ -13,10 +13,6 @@ tags:
 
 The Cloudflare D1 Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you to read data from Cloudflare D1 database for use within your Postgres database.
 
-!!! warning
-
-    Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
-
 ## Available Versions
 
 | Version | Wasm Package URL                                                                                | Checksum                                                           |
@@ -198,6 +194,8 @@ create foreign table cfd1.mytable (
 
 ## Query Pushdown Support
 
+This FDW supports `where`, `order by` and `limit` clause pushdown.
+
 ## Supported Data Types
 
 | Postgres Data Type | D1 Data Type |
@@ -213,36 +211,9 @@ The D1 API uses JSON formatted data, please refer to [D1 API docs](https://devel
 
 This section describes important limitations and considerations when using this FDW:
 
-- **Performance Limitations**:
-  - Query pushdown support is limited to `where`, `order by`, and `limit` clauses
-  - WebAssembly execution overhead may impact query performance
-  - API request latency affects query performance as each operation requires D1 API calls
-  - Large result sets may experience slower performance due to full data transfer requirement
-  - No support for parallel query execution
-
-- **Feature Limitations**:
-  - Limited data type support (only bigint, double precision, text supported)
-  - Truncate operations are not supported for any object type
-  - Foreign tables with subquery options cannot support data modification
-  - Column names must exactly match between D1 and foreign table
-  - WebAssembly package version must match exactly with specified checksum
-  - Database operations (create, update, delete) are not supported via the FDW
-
-- **Resource Usage**:
-  - WebAssembly module initialization requires additional memory overhead
-  - Full result sets must be loaded into memory before processing
-  - Each query requires a complete API request-response cycle
-  - No connection pooling or caching support
-  - Memory usage scales with result set size and JSON data volume
-
-- **Known Issues**:
-  - Materialized views using these foreign tables may fail during logical backups
-  - WebAssembly binary must be downloaded and verified on each server restart
-  - Checksum verification is currently marked as "tbd" in available versions
-  - Complex nested JSON structures require manual parsing
-  - Error handling between WebAssembly and PostgreSQL may not preserve all error details
-
-This FDW supports `where`, `order by` and `limit` clause pushdown.
+- Large result sets may experience slower performance due to full data transfer requirement
+- Foreign tables with subquery option cannot support data modify
+- Materialized views using these foreign tables may fail during logical backups
 
 ## Examples
 

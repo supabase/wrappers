@@ -13,10 +13,6 @@ tags:
 
 The Airtable Wrapper allows you to read data from your Airtable bases/tables within your Postgres database.
 
-!!! warning
-
-    Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
-
 ## Preparation
 
 Before you can query Airtable, you need to enable the Wrappers extension and store your credentials in Postgres.
@@ -127,37 +123,12 @@ This FDW doesn't support query pushdown.
 
 This section describes important limitations and considerations when using this FDW:
 
-- **Performance Limitations**:
-  - No query pushdown support, all filtering must be done locally
-  - API rate limits may affect query performance
-  - Large result sets experience slower performance due to full data transfer requirement
-  - Network latency affects query response times
-  - Sequential scans required for all operations
-  - Performance depends on Airtable API response times
-
-- **Feature Limitations**:
-  - Read-only operations supported (no INSERT, UPDATE, DELETE, or TRUNCATE)
-  - Limited to Airtable API v0 capabilities
-  - Complex field types (attachments, rollups) require manual handling
-  - No support for Airtable formulas or computed fields
-  - Views must be pre-configured in Airtable
-  - No support for Airtable's block features
-
-- **Resource Usage**:
-  - Full result sets must be loaded into memory
-  - Each query requires a complete API request-response cycle
-  - Memory usage scales with result set size
-  - Network bandwidth consumption based on data transfer volume
-  - API quota consumption for each query
-  - No connection pooling or result caching
-
-- **Known Issues**:
-  - Materialized views using foreign tables may fail during logical backups
-  - API authentication requires careful credential management
-  - Time zone handling may require explicit conversion
-  - Error messages from Airtable API may not preserve full context
-  - Large attachments may cause memory pressure
-  - API version changes may impact functionality
+- No query pushdown support, all filtering must be done locally
+- Large result sets may experience slower performance due to full data transfer requirement
+- No support for Airtable formulas or computed fields
+- Views must be pre-configured in Airtable
+- No support for Airtable's block features
+- Materialized views using these foreign tables may fail during logical backups
 
 ## Examples
 
