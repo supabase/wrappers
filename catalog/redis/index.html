@@ -672,15 +672,6 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#supported-redis-data-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      Supported Redis Data Types
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#preparation" class="md-nav__link">
     <span class="md-ellipsis">
       Preparation
@@ -1020,6 +1011,24 @@
   <a href="#query-pushdown-support" class="md-nav__link">
     <span class="md-ellipsis">
       Query Pushdown Support
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#supported-redis-data-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Supported Redis Data Types
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Limitations
     </span>
   </a>
   
@@ -1834,15 +1843,6 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#supported-redis-data-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      Supported Redis Data Types
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#preparation" class="md-nav__link">
     <span class="md-ellipsis">
       Preparation
@@ -2188,6 +2188,24 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#supported-redis-data-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Supported Redis Data Types
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Limitations
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#examples" class="md-nav__link">
     <span class="md-ellipsis">
       Examples
@@ -2258,59 +2276,6 @@
 <h1 id="redis">Redis</h1>
 <p><a href="https://redis.io/">Redis</a> is an open-source in-memory storage, used as a distributed, in-memory key–value database, cache and message broker, with optional durability.</p>
 <p>The Redis Wrapper allows you to read data from Redis within your Postgres database.</p>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.</p>
-</div>
-<h2 id="supported-redis-data-types">Supported Redis Data Types</h2>
-<p>All Redis values will be stored as <code>text</code> or <code>jsonb</code> columns in Postgres, below are the supported Redis data types:</p>
-<table>
-<thead>
-<tr>
-<th>Redis Type</th>
-<th>Foreign Table Type (src_type)</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>List</td>
-<td>list</td>
-</tr>
-<tr>
-<td>Set</td>
-<td>set</td>
-</tr>
-<tr>
-<td>Hash</td>
-<td>hash</td>
-</tr>
-<tr>
-<td>Sorted Set</td>
-<td>zset</td>
-</tr>
-<tr>
-<td>Stream</td>
-<td>stream</td>
-</tr>
-<tr>
-<td>Multiple List</td>
-<td>multi_list</td>
-</tr>
-<tr>
-<td>Multiple Set</td>
-<td>multi_set</td>
-</tr>
-<tr>
-<td>Multiple Hash</td>
-<td>multi_hash</td>
-</tr>
-<tr>
-<td>Multiple Sorted Set</td>
-<td>multi_zset</td>
-</tr>
-</tbody>
-</table>
-<p><strong>See below for more descriptions for the <code>Multiple *</code> types and <code>src_type</code> foreign table option.</strong></p>
 <h2 id="preparation">Preparation</h2>
 <p>Before you can query Redis, you need to enable the Wrappers extension and store your credentials in Postgres.</p>
 <h3 id="enable-wrappers">Enable Wrappers</h3>
@@ -2775,6 +2740,62 @@
 </ul>
 <h2 id="query-pushdown-support">Query Pushdown Support</h2>
 <p>This FDW doesn't support pushdown.</p>
+<h2 id="supported-redis-data-types">Supported Redis Data Types</h2>
+<p>All Redis values will be stored as <code>text</code> or <code>jsonb</code> columns in Postgres, below are the supported Redis data types:</p>
+<table>
+<thead>
+<tr>
+<th>Redis Type</th>
+<th>Foreign Table Type (src_type)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>List</td>
+<td>list</td>
+</tr>
+<tr>
+<td>Set</td>
+<td>set</td>
+</tr>
+<tr>
+<td>Hash</td>
+<td>hash</td>
+</tr>
+<tr>
+<td>Sorted Set</td>
+<td>zset</td>
+</tr>
+<tr>
+<td>Stream</td>
+<td>stream</td>
+</tr>
+<tr>
+<td>Multiple List</td>
+<td>multi_list</td>
+</tr>
+<tr>
+<td>Multiple Set</td>
+<td>multi_set</td>
+</tr>
+<tr>
+<td>Multiple Hash</td>
+<td>multi_hash</td>
+</tr>
+<tr>
+<td>Multiple Sorted Set</td>
+<td>multi_zset</td>
+</tr>
+</tbody>
+</table>
+<h2 id="limitations">Limitations</h2>
+<p>This section describes important limitations and considerations when using this FDW:</p>
+<ul>
+<li>Full result sets are loaded into memory before processing</li>
+<li>Read-only access to Redis data structures (no Insert, Update, Delete, or Truncate operations)</li>
+<li>Pattern matching in <code>multi_*</code> types only supports basic Redis glob patterns</li>
+<li>Materialized views using these foreign tables may fail during logical backups</li>
+</ul>
 <h2 id="examples">Examples</h2>
 <p>Some examples on how to use Redis foreign tables.</p>
 <p>Let's prepare some source data in Redis CLI first:</p>

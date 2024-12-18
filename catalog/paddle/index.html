@@ -921,15 +921,6 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#supported-data-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      Supported Data Types
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#available-versions" class="md-nav__link">
     <span class="md-ellipsis">
       Available Versions
@@ -1152,6 +1143,24 @@
   <a href="#query-pushdown-support" class="md-nav__link">
     <span class="md-ellipsis">
       Query Pushdown Support
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#supported-data-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Supported Data Types
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Limitations
     </span>
   </a>
   
@@ -1726,15 +1735,6 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#supported-data-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      Supported Data Types
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#available-versions" class="md-nav__link">
     <span class="md-ellipsis">
       Available Versions
@@ -1963,6 +1963,24 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#supported-data-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Supported Data Types
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Limitations
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#examples" class="md-nav__link">
     <span class="md-ellipsis">
       Examples
@@ -2042,66 +2060,6 @@
 <h1 id="paddle">Paddle</h1>
 <p><a href="https://www.paddle.com">Paddle</a> is a merchant of record that acts to provide a payment infrastructure to thousands of software companies around the world.</p>
 <p>The Paddle Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you to read and write data from Paddle within your Postgres database.</p>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.</p>
-</div>
-<h2 id="supported-data-types">Supported Data Types</h2>
-<table>
-<thead>
-<tr>
-<th>Postgres Data Type</th>
-<th>Paddle Data Type</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>boolean</td>
-<td>Boolean</td>
-</tr>
-<tr>
-<td>smallint</td>
-<td>Money</td>
-</tr>
-<tr>
-<td>integer</td>
-<td>Money</td>
-</tr>
-<tr>
-<td>bigint</td>
-<td>Money</td>
-</tr>
-<tr>
-<td>real</td>
-<td>Money</td>
-</tr>
-<tr>
-<td>double precision</td>
-<td>Money</td>
-</tr>
-<tr>
-<td>numeric</td>
-<td>Money</td>
-</tr>
-<tr>
-<td>text</td>
-<td>Text</td>
-</tr>
-<tr>
-<td>date</td>
-<td>Dates and time</td>
-</tr>
-<tr>
-<td>timestamp</td>
-<td>Dates and time</td>
-</tr>
-<tr>
-<td>timestamptz</td>
-<td>Dates and time</td>
-</tr>
-</tbody>
-</table>
-<p>The Paddle API uses JSON formatted data, please refer to <a href="https://developer.paddle.com/api-reference/about/data-types">Paddle docs</a> for more details.</p>
 <h2 id="available-versions">Available Versions</h2>
 <table>
 <thead>
@@ -2439,6 +2397,69 @@
 <p>This FDW supports <code>where</code> clause pushdown with <code>id</code> as the filter. For example,</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">paddle</span><span class="p">.</span><span class="n">customers</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;ctm_01hymwgpkx639a6mkvg99563sp&#39;</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
+<h2 id="supported-data-types">Supported Data Types</h2>
+<table>
+<thead>
+<tr>
+<th>Postgres Data Type</th>
+<th>Paddle Data Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>boolean</td>
+<td>Boolean</td>
+</tr>
+<tr>
+<td>smallint</td>
+<td>Money</td>
+</tr>
+<tr>
+<td>integer</td>
+<td>Money</td>
+</tr>
+<tr>
+<td>bigint</td>
+<td>Money</td>
+</tr>
+<tr>
+<td>real</td>
+<td>Money</td>
+</tr>
+<tr>
+<td>double precision</td>
+<td>Money</td>
+</tr>
+<tr>
+<td>numeric</td>
+<td>Money</td>
+</tr>
+<tr>
+<td>text</td>
+<td>Text</td>
+</tr>
+<tr>
+<td>date</td>
+<td>Dates and time</td>
+</tr>
+<tr>
+<td>timestamp</td>
+<td>Dates and time</td>
+</tr>
+<tr>
+<td>timestamptz</td>
+<td>Dates and time</td>
+</tr>
+</tbody>
+</table>
+<p>The Paddle API uses JSON formatted data, please refer to <a href="https://developer.paddle.com/api-reference/about/data-types">Paddle docs</a> for more details.</p>
+<h2 id="limitations">Limitations</h2>
+<p>This section describes important limitations and considerations when using this FDW:</p>
+<ul>
+<li>Query pushdown is only supported for the <code>id</code> column, resulting in full table scans for other filters</li>
+<li>Large result sets may experience slower performance due to full data transfer requirement</li>
+<li>Materialized views using these foreign tables may fail during logical backups</li>
+</ul>
 <h2 id="examples">Examples</h2>
 <h3 id="basic-example">Basic Example</h3>
 <p>This example will create a "foreign table" inside your Postgres database and query its data.</p>

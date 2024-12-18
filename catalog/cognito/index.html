@@ -693,6 +693,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Limitations
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#examples" class="md-nav__link">
     <span class="md-ellipsis">
       Examples
@@ -1723,6 +1732,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Limitations
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#examples" class="md-nav__link">
     <span class="md-ellipsis">
       Examples
@@ -1784,10 +1802,6 @@
 <h1 id="aws-cognito">AWS Cognito</h1>
 <p><a href="https://docs.aws.amazon.com/cognito/latest/developerguide/what-is-amazon-cognito.html">AWS Cognito</a> is an identity platform for web and mobile apps.</p>
 <p>The Cognito wrapper allows you to read data from your Cognito Userpool within your Postgres database.</p>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.</p>
-</div>
 <h2 id="preparation">Preparation</h2>
 <p>Before you can query AWS Cognito, you need to enable the Wrappers extension and store your credentials in Postgres.</p>
 <h3 id="enable-wrappers">Enable Wrappers</h3>
@@ -1923,6 +1937,15 @@
 </ul>
 <h2 id="query-pushdown-support">Query Pushdown Support</h2>
 <p>This FDW doesn't support query pushdown.</p>
+<h2 id="limitations">Limitations</h2>
+<p>This section describes important limitations and considerations when using this FDW:</p>
+<ul>
+<li>No query pushdown support, all filtering must be done locally</li>
+<li>Large result sets may experience slower performance due to full data transfer requirement</li>
+<li>Only supports User Pool objects from Cognito API</li>
+<li>No support for Identity Pool operations</li>
+<li>Materialized views using these foreign tables may fail during logical backups</li>
+</ul>
 <h2 id="examples">Examples</h2>
 <h3 id="basic-example">Basic example</h3>
 <p>This will create a "foreign table" inside your Postgres database called <code>cognito_table</code>:</p>

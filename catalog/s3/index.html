@@ -693,15 +693,6 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#supported-data-types-for-parquet-file" class="md-nav__link">
-    <span class="md-ellipsis">
-      Supported Data Types For Parquet File
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#preparation" class="md-nav__link">
     <span class="md-ellipsis">
       Preparation
@@ -948,6 +939,24 @@
   <a href="#query-pushdown-support" class="md-nav__link">
     <span class="md-ellipsis">
       Query Pushdown Support
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#supported-data-types-for-parquet-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      Supported Data Types For Parquet File
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Limitations
     </span>
   </a>
   
@@ -1741,15 +1750,6 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#supported-data-types-for-parquet-file" class="md-nav__link">
-    <span class="md-ellipsis">
-      Supported Data Types For Parquet File
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#preparation" class="md-nav__link">
     <span class="md-ellipsis">
       Preparation
@@ -2002,6 +2002,24 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#supported-data-types-for-parquet-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      Supported Data Types For Parquet File
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Limitations
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#examples" class="md-nav__link">
     <span class="md-ellipsis">
       Examples
@@ -2086,70 +2104,6 @@
 </ol>
 <p><strong>Note for CSV and JSONL files: currently all columns in S3 files must be defined in the foreign table and their types must be <code>text</code> type</strong>.</p>
 <p><strong>Note for Parquet files: the whole Parquet file will be loaded into local memory if it is compressed, so keep the file size as small as possible</strong>.</p>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.</p>
-</div>
-<h2 id="supported-data-types-for-parquet-file">Supported Data Types For Parquet File</h2>
-<p>The S3 Wrapper uses Parquet file data types from <a href="https://docs.rs/arrow-array/41.0.0/arrow_array/types/index.html">arrow_array::types</a>, below are their mappings to Postgres data types.</p>
-<table>
-<thead>
-<tr>
-<th>Postgres Type</th>
-<th>Parquet Type</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>boolean</td>
-<td>BooleanType</td>
-</tr>
-<tr>
-<td>char</td>
-<td>Int8Type</td>
-</tr>
-<tr>
-<td>smallint</td>
-<td>Int16Type</td>
-</tr>
-<tr>
-<td>real</td>
-<td>Float32Type</td>
-</tr>
-<tr>
-<td>integer</td>
-<td>Int32Type</td>
-</tr>
-<tr>
-<td>double precision</td>
-<td>Float64Type</td>
-</tr>
-<tr>
-<td>bigint</td>
-<td>Int64Type</td>
-</tr>
-<tr>
-<td>numeric</td>
-<td>Float64Type</td>
-</tr>
-<tr>
-<td>text</td>
-<td>ByteArrayType</td>
-</tr>
-<tr>
-<td>date</td>
-<td>Date64Type</td>
-</tr>
-<tr>
-<td>timestamp</td>
-<td>TimestampNanosecondType</td>
-</tr>
-<tr>
-<td>timestamptz</td>
-<td>TimestampNanosecondType</td>
-</tr>
-</tbody>
-</table>
 <h2 id="preparation">Preparation</h2>
 <p>Before you can query S3, you need to enable the Wrappers extension and store your credentials in Postgres.</p>
 <h3 id="enable-wrappers">Enable Wrappers</h3>
@@ -2481,6 +2435,77 @@
 </ul>
 <h2 id="query-pushdown-support">Query Pushdown Support</h2>
 <p>This FDW doesn't support query pushdown.</p>
+<h2 id="supported-data-types-for-parquet-file">Supported Data Types For Parquet File</h2>
+<p>The S3 Wrapper uses Parquet file data types from <a href="https://docs.rs/arrow-array/41.0.0/arrow_array/types/index.html">arrow_array::types</a>, below are their mappings to Postgres data types.</p>
+<table>
+<thead>
+<tr>
+<th>Postgres Type</th>
+<th>Parquet Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>boolean</td>
+<td>BooleanType</td>
+</tr>
+<tr>
+<td>char</td>
+<td>Int8Type</td>
+</tr>
+<tr>
+<td>smallint</td>
+<td>Int16Type</td>
+</tr>
+<tr>
+<td>real</td>
+<td>Float32Type</td>
+</tr>
+<tr>
+<td>integer</td>
+<td>Int32Type</td>
+</tr>
+<tr>
+<td>double precision</td>
+<td>Float64Type</td>
+</tr>
+<tr>
+<td>bigint</td>
+<td>Int64Type</td>
+</tr>
+<tr>
+<td>numeric</td>
+<td>Float64Type</td>
+</tr>
+<tr>
+<td>text</td>
+<td>ByteArrayType</td>
+</tr>
+<tr>
+<td>date</td>
+<td>Date64Type</td>
+</tr>
+<tr>
+<td>timestamp</td>
+<td>TimestampNanosecondType</td>
+</tr>
+<tr>
+<td>timestamptz</td>
+<td>TimestampNanosecondType</td>
+</tr>
+</tbody>
+</table>
+<h2 id="limitations">Limitations</h2>
+<p>This section describes important limitations and considerations when using this FDW:</p>
+<ul>
+<li>Large result sets experience slower performance due to full data transfer requirement</li>
+<li>Compressed files are loaded entirely into memory and have additional processing overhead</li>
+<li>CSV and JSONL columns must be defined as <code>text</code> type only</li>
+<li>All columns must be defined in foreign tables for CSV and JSONL</li>
+<li>Column names must match exactly for Parquet files</li>
+<li>No support for S3 Select or other S3-side filtering</li>
+<li>Materialized views using these foreign tables may fail during logical backups</li>
+</ul>
 <h2 id="examples">Examples</h2>
 <h3 id="basic-example">Basic Example</h3>
 <p>This will create some "foreign table" inside your Postgres database can read data from S3:</p>

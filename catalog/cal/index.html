@@ -837,15 +837,6 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#supported-data-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      Supported Data Types
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#available-versions" class="md-nav__link">
     <span class="md-ellipsis">
       Available Versions
@@ -1194,6 +1185,24 @@
   <a href="#query-pushdown-support" class="md-nav__link">
     <span class="md-ellipsis">
       Query Pushdown Support
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#supported-data-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Supported Data Types
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Limitations
     </span>
   </a>
   
@@ -1852,15 +1861,6 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#supported-data-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      Supported Data Types
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#available-versions" class="md-nav__link">
     <span class="md-ellipsis">
       Available Versions
@@ -2215,6 +2215,24 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#supported-data-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Supported Data Types
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Limitations
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#examples" class="md-nav__link">
     <span class="md-ellipsis">
       Examples
@@ -2294,46 +2312,6 @@
 <h1 id="calcom">Cal.com</h1>
 <p><a href="https://cal.com/">Cal.com</a> is an open source scheduling platform.</p>
 <p>The Cal Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you to read data from your Cal.com account for use within your Postgres database.</p>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.</p>
-</div>
-<h2 id="supported-data-types">Supported Data Types</h2>
-<table>
-<thead>
-<tr>
-<th>Postgres Data Type</th>
-<th>Cal.com Data Type</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>boolean</td>
-<td>Boolean</td>
-</tr>
-<tr>
-<td>bigint</td>
-<td>Number</td>
-</tr>
-<tr>
-<td>double precision</td>
-<td>Number</td>
-</tr>
-<tr>
-<td>text</td>
-<td>String</td>
-</tr>
-<tr>
-<td>jsonb</td>
-<td>Json</td>
-</tr>
-</tbody>
-</table>
-<p>The Cal.com API uses JSON formatted data, please refer to <a href="https://cal.com/docs/api-reference/v2/introduction">Cal.com API docs</a> for more details.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>This foreign data wrapper only supports Cal.com API v2.</p>
-</div>
 <h2 id="available-versions">Available Versions</h2>
 <table>
 <thead>
@@ -2800,6 +2778,46 @@
 </ul>
 <h2 id="query-pushdown-support">Query Pushdown Support</h2>
 <p>This FDW doesn't support query pushdown.</p>
+<h2 id="supported-data-types">Supported Data Types</h2>
+<table>
+<thead>
+<tr>
+<th>Postgres Data Type</th>
+<th>Cal.com Data Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>boolean</td>
+<td>Boolean</td>
+</tr>
+<tr>
+<td>bigint</td>
+<td>Number</td>
+</tr>
+<tr>
+<td>double precision</td>
+<td>Number</td>
+</tr>
+<tr>
+<td>text</td>
+<td>String</td>
+</tr>
+<tr>
+<td>jsonb</td>
+<td>Json</td>
+</tr>
+</tbody>
+</table>
+<p>The Cal.com API uses JSON formatted data, please refer to <a href="https://cal.com/docs/api-reference/v2/introduction">Cal.com API docs</a> for more details.</p>
+<h2 id="limitations">Limitations</h2>
+<p>This section describes important limitations and considerations when using this FDW:</p>
+<ul>
+<li>Only supports Cal.com API v2</li>
+<li>Large result sets may experience slower performance due to full data transfer requirement</li>
+<li>Write operations limited to booking creation only</li>
+<li>Materialized views using these foreign tables may fail during logical backups</li>
+</ul>
 <h2 id="examples">Examples</h2>
 <p>Below are some examples on how to use Cal.com foreign tables.</p>
 <h3 id="basic-example">Basic example</h3>

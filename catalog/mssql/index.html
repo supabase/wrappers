@@ -735,15 +735,6 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#supported-data-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      Supported Data Types
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#preparation" class="md-nav__link">
     <span class="md-ellipsis">
       Preparation
@@ -873,6 +864,24 @@
   <a href="#query-pushdown-support" class="md-nav__link">
     <span class="md-ellipsis">
       Query Pushdown Support
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#supported-data-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Supported Data Types
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Limitations
     </span>
   </a>
   
@@ -1624,15 +1633,6 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#supported-data-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      Supported Data Types
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#preparation" class="md-nav__link">
     <span class="md-ellipsis">
       Preparation
@@ -1768,6 +1768,24 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#supported-data-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Supported Data Types
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Limitations
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#examples" class="md-nav__link">
     <span class="md-ellipsis">
       Examples
@@ -1838,69 +1856,6 @@
 <h1 id="sql-server">SQL Server</h1>
 <p><a href="https://www.microsoft.com/en-au/sql-server/">Microsoft SQL Server</a> is a proprietary relational database management system developed by Microsoft.</p>
 <p>The SQL Server Wrapper allows you to read data from Microsoft SQL Server within your Postgres database.</p>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.</p>
-</div>
-<h2 id="supported-data-types">Supported Data Types</h2>
-<table>
-<thead>
-<tr>
-<th>Postgres Type</th>
-<th>SQL Server Type</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>boolean</td>
-<td>bit</td>
-</tr>
-<tr>
-<td>char</td>
-<td>tinyint</td>
-</tr>
-<tr>
-<td>smallint</td>
-<td>smallint</td>
-</tr>
-<tr>
-<td>real</td>
-<td>float(24)</td>
-</tr>
-<tr>
-<td>integer</td>
-<td>int</td>
-</tr>
-<tr>
-<td>double precision</td>
-<td>float(53)</td>
-</tr>
-<tr>
-<td>bigint</td>
-<td>bigint</td>
-</tr>
-<tr>
-<td>numeric</td>
-<td>numeric/decimal</td>
-</tr>
-<tr>
-<td>text</td>
-<td>varchar/char/text</td>
-</tr>
-<tr>
-<td>date</td>
-<td>date</td>
-</tr>
-<tr>
-<td>timestamp</td>
-<td>datetime/datetime2/smalldatetime</td>
-</tr>
-<tr>
-<td>timestamptz</td>
-<td>datetime/datetime2/smalldatetime</td>
-</tr>
-</tbody>
-</table>
 <h2 id="preparation">Preparation</h2>
 <p>Before you can query SQL Server, you need to enable the Wrappers extension and store your credentials in Postgres.</p>
 <h3 id="enable-wrappers">Enable Wrappers</h3>
@@ -2087,6 +2042,74 @@
 </ul>
 <h2 id="query-pushdown-support">Query Pushdown Support</h2>
 <p>This FDW supports <code>where</code>, <code>order by</code> and <code>limit</code> clause pushdown.</p>
+<h2 id="supported-data-types">Supported Data Types</h2>
+<table>
+<thead>
+<tr>
+<th>Postgres Type</th>
+<th>SQL Server Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>boolean</td>
+<td>bit</td>
+</tr>
+<tr>
+<td>char</td>
+<td>tinyint</td>
+</tr>
+<tr>
+<td>smallint</td>
+<td>smallint</td>
+</tr>
+<tr>
+<td>real</td>
+<td>float(24)</td>
+</tr>
+<tr>
+<td>integer</td>
+<td>int</td>
+</tr>
+<tr>
+<td>double precision</td>
+<td>float(53)</td>
+</tr>
+<tr>
+<td>bigint</td>
+<td>bigint</td>
+</tr>
+<tr>
+<td>numeric</td>
+<td>numeric/decimal</td>
+</tr>
+<tr>
+<td>text</td>
+<td>varchar/char/text</td>
+</tr>
+<tr>
+<td>date</td>
+<td>date</td>
+</tr>
+<tr>
+<td>timestamp</td>
+<td>datetime/datetime2/smalldatetime</td>
+</tr>
+<tr>
+<td>timestamptz</td>
+<td>datetime/datetime2/smalldatetime</td>
+</tr>
+</tbody>
+</table>
+<h2 id="limitations">Limitations</h2>
+<p>This section describes important limitations and considerations when using this FDW:</p>
+<ul>
+<li>Large result sets may experience slower performance due to full data transfer requirement</li>
+<li>Only supports specific data type mappings between Postgres and SQL Server</li>
+<li>Only support read operations (no INSERT, UPDATE, DELETE, or TRUNCATE)</li>
+<li>Windows authentication (Integrated Security) not supported</li>
+<li>Materialized views using these foreign tables may fail during logical backups</li>
+</ul>
 <h2 id="examples">Examples</h2>
 <h3 id="basic-example">Basic Example</h3>
 <p>First, create a source table in SQL Server:</p>

@@ -879,15 +879,6 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#supported-data-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      Supported Data Types
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#available-versions" class="md-nav__link">
     <span class="md-ellipsis">
       Available Versions
@@ -1068,6 +1059,24 @@
   <a href="#query-pushdown-support" class="md-nav__link">
     <span class="md-ellipsis">
       Query Pushdown Support
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#supported-data-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Supported Data Types
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Limitations
     </span>
   </a>
   
@@ -1693,15 +1702,6 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#supported-data-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      Supported Data Types
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#available-versions" class="md-nav__link">
     <span class="md-ellipsis">
       Available Versions
@@ -1888,6 +1888,24 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#supported-data-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Supported Data Types
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Limitations
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#examples" class="md-nav__link">
     <span class="md-ellipsis">
       Examples
@@ -1976,38 +1994,6 @@
 <h1 id="cloudflare-d1">Cloudflare D1</h1>
 <p><a href="https://developers.cloudflare.com/d1/">Cloudflare D1</a> is Cloudflare's managed, serverless database with SQLite's SQL semantics, built-in disaster recovery, and Worker and HTTP API access.</p>
 <p>The Cloudflare D1 Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you to read data from Cloudflare D1 database for use within your Postgres database.</p>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.</p>
-</div>
-<h2 id="supported-data-types">Supported Data Types</h2>
-<table>
-<thead>
-<tr>
-<th>Postgres Data Type</th>
-<th>D1 Data Type</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>bigint</td>
-<td>integer</td>
-</tr>
-<tr>
-<td>double precision</td>
-<td>real</td>
-</tr>
-<tr>
-<td>text</td>
-<td>text</td>
-</tr>
-<tr>
-<td>text</td>
-<td>blob</td>
-</tr>
-</tbody>
-</table>
-<p>The D1 API uses JSON formatted data, please refer to <a href="https://developers.cloudflare.com/api/operations/cloudflare-d1-list-databases">D1 API docs</a> for more details.</p>
 <h2 id="available-versions">Available Versions</h2>
 <table>
 <thead>
@@ -2255,6 +2241,41 @@
 </ul>
 <h2 id="query-pushdown-support">Query Pushdown Support</h2>
 <p>This FDW supports <code>where</code>, <code>order by</code> and <code>limit</code> clause pushdown.</p>
+<h2 id="supported-data-types">Supported Data Types</h2>
+<table>
+<thead>
+<tr>
+<th>Postgres Data Type</th>
+<th>D1 Data Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>bigint</td>
+<td>integer</td>
+</tr>
+<tr>
+<td>double precision</td>
+<td>real</td>
+</tr>
+<tr>
+<td>text</td>
+<td>text</td>
+</tr>
+<tr>
+<td>text</td>
+<td>blob</td>
+</tr>
+</tbody>
+</table>
+<p>The D1 API uses JSON formatted data, please refer to <a href="https://developers.cloudflare.com/api/operations/cloudflare-d1-list-databases">D1 API docs</a> for more details.</p>
+<h2 id="limitations">Limitations</h2>
+<p>This section describes important limitations and considerations when using this FDW:</p>
+<ul>
+<li>Large result sets may experience slower performance due to full data transfer requirement</li>
+<li>Foreign tables with subquery option cannot support data modify</li>
+<li>Materialized views using these foreign tables may fail during logical backups</li>
+</ul>
 <h2 id="examples">Examples</h2>
 <p>Below are some examples on how to use D1 foreign tables.</p>
 <h3 id="basic-example">Basic Example</h3>

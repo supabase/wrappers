@@ -588,15 +588,6 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#supported-data-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      Supported Data Types
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#preparation" class="md-nav__link">
     <span class="md-ellipsis">
       Preparation
@@ -735,6 +726,24 @@
   <a href="#inserting-rows-the-streaming-buffer" class="md-nav__link">
     <span class="md-ellipsis">
       Inserting Rows &amp; the Streaming Buffer
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#supported-data-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Supported Data Types
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Limitations
     </span>
   </a>
   
@@ -1633,15 +1642,6 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#supported-data-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      Supported Data Types
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#preparation" class="md-nav__link">
     <span class="md-ellipsis">
       Preparation
@@ -1786,6 +1786,24 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#supported-data-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Supported Data Types
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Limitations
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#examples" class="md-nav__link">
     <span class="md-ellipsis">
       Examples
@@ -1856,61 +1874,6 @@
 <h1 id="bigquery">BigQuery</h1>
 <p><a href="https://cloud.google.com/bigquery">BigQuery</a> is a completely serverless and cost-effective enterprise data warehouse that works across clouds and scales with your data, with BI, machine learning and AI built in.</p>
 <p>The BigQuery Wrapper allows you to read and write data from BigQuery within your Postgres database.</p>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.</p>
-</div>
-<h2 id="supported-data-types">Supported Data Types</h2>
-<table>
-<thead>
-<tr>
-<th>Postgres Type</th>
-<th>BigQuery Type</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>boolean</td>
-<td>BOOL</td>
-</tr>
-<tr>
-<td>bigint</td>
-<td>INT64</td>
-</tr>
-<tr>
-<td>double precision</td>
-<td>FLOAT64</td>
-</tr>
-<tr>
-<td>numeric</td>
-<td>NUMERIC</td>
-</tr>
-<tr>
-<td>text</td>
-<td>STRING</td>
-</tr>
-<tr>
-<td>varchar</td>
-<td>STRING</td>
-</tr>
-<tr>
-<td>date</td>
-<td>DATE</td>
-</tr>
-<tr>
-<td>timestamp</td>
-<td>DATETIME</td>
-</tr>
-<tr>
-<td>timestamp</td>
-<td>TIMESTAMP</td>
-</tr>
-<tr>
-<td>timestamptz</td>
-<td>TIMESTAMP</td>
-</tr>
-</tbody>
-</table>
 <h2 id="preparation">Preparation</h2>
 <p>Before you can query BigQuery, you need to enable the Wrappers extension and store your credentials in Postgres.</p>
 <h3 id="enable-wrappers">Enable Wrappers</h3>
@@ -2081,6 +2044,65 @@
 <h2 id="inserting-rows-the-streaming-buffer">Inserting Rows &amp; the Streaming Buffer</h2>
 <p>This foreign data wrapper uses BigQuery’s <code>insertAll</code> API method to create a <code>streamingBuffer</code> with an associated partition time. <strong>Within that partition time, the data cannot be updated, deleted, or fully exported</strong>. Only after the time has elapsed (up to 90 minutes according to <a href="https://cloud.google.com/bigquery/docs/streaming-data-into-bigquery">BigQuery’s documentation</a>), can you perform operations.</p>
 <p>If you attempt an <code>UPDATE</code> or <code>DELETE</code> statement on rows while in the streamingBuffer, you will get an error of <code>UPDATE</code> or <code>DELETE</code> statement over table datasetName - note that tableName would affect rows in the streaming buffer, which is not supported.</p>
+<h2 id="supported-data-types">Supported Data Types</h2>
+<table>
+<thead>
+<tr>
+<th>Postgres Type</th>
+<th>BigQuery Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>boolean</td>
+<td>BOOL</td>
+</tr>
+<tr>
+<td>bigint</td>
+<td>INT64</td>
+</tr>
+<tr>
+<td>double precision</td>
+<td>FLOAT64</td>
+</tr>
+<tr>
+<td>numeric</td>
+<td>NUMERIC</td>
+</tr>
+<tr>
+<td>text</td>
+<td>STRING</td>
+</tr>
+<tr>
+<td>varchar</td>
+<td>STRING</td>
+</tr>
+<tr>
+<td>date</td>
+<td>DATE</td>
+</tr>
+<tr>
+<td>timestamp</td>
+<td>DATETIME</td>
+</tr>
+<tr>
+<td>timestamp</td>
+<td>TIMESTAMP</td>
+</tr>
+<tr>
+<td>timestamptz</td>
+<td>TIMESTAMP</td>
+</tr>
+</tbody>
+</table>
+<h2 id="limitations">Limitations</h2>
+<p>This section describes important limitations and considerations when using this FDW:</p>
+<ul>
+<li>Large result sets may experience network latency during data transfer</li>
+<li>Data in streaming buffer cannot be modified for up to 90 minutes</li>
+<li>Only supports specific data type mappings between Postgres and BigQuery</li>
+<li>Materialized views using foreign tables may fail during logical backups</li>
+</ul>
 <h2 id="examples">Examples</h2>
 <p>Some examples on how to use BigQuery foreign tables.</p>
 <p>Let's prepare the source table in BigQuery first:</p>

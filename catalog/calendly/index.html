@@ -858,15 +858,6 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#supported-data-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      Supported Data Types
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#available-versions" class="md-nav__link">
     <span class="md-ellipsis">
       Available Versions
@@ -907,6 +898,15 @@
   <a href="#store-your-credentials-optional" class="md-nav__link">
     <span class="md-ellipsis">
       Store your credentials (optional)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#connecting-to-calendly" class="md-nav__link">
+    <span class="md-ellipsis">
+      Connecting to Calendly
     </span>
   </a>
   
@@ -1164,6 +1164,24 @@
   <a href="#query-pushdown-support" class="md-nav__link">
     <span class="md-ellipsis">
       Query Pushdown Support
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#supported-data-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Supported Data Types
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Limitations
     </span>
   </a>
   
@@ -1792,15 +1810,6 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#supported-data-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      Supported Data Types
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#available-versions" class="md-nav__link">
     <span class="md-ellipsis">
       Available Versions
@@ -1841,6 +1850,15 @@
   <a href="#store-your-credentials-optional" class="md-nav__link">
     <span class="md-ellipsis">
       Store your credentials (optional)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#connecting-to-calendly" class="md-nav__link">
+    <span class="md-ellipsis">
+      Connecting to Calendly
     </span>
   </a>
   
@@ -2104,6 +2122,24 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#supported-data-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Supported Data Types
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Limitations
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#examples" class="md-nav__link">
     <span class="md-ellipsis">
       Examples
@@ -2174,50 +2210,6 @@
 <h1 id="calendly">Calendly</h1>
 <p><a href="https://calendly.com/">Calendly</a> is a scheduling platform used for teams to schedule, prepare and follow up on external meetings.</p>
 <p>The Calendly Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you to read data from your Calendly for use within your Postgres database.</p>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.</p>
-</div>
-<h2 id="supported-data-types">Supported Data Types</h2>
-<table>
-<thead>
-<tr>
-<th>Postgres Data Type</th>
-<th>Calendly Data Type</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>boolean</td>
-<td>Boolean</td>
-</tr>
-<tr>
-<td>bigint</td>
-<td>Number</td>
-</tr>
-<tr>
-<td>double precision</td>
-<td>Number</td>
-</tr>
-<tr>
-<td>text</td>
-<td>String</td>
-</tr>
-<tr>
-<td>timestamp</td>
-<td>Time</td>
-</tr>
-<tr>
-<td>timestamptz</td>
-<td>Time</td>
-</tr>
-<tr>
-<td>jsonb</td>
-<td>Json</td>
-</tr>
-</tbody>
-</table>
-<p>The Calendly API uses JSON formatted data, please refer to <a href="https://developer.calendly.com/api-docs">Calendly API docs</a> for more details.</p>
 <h2 id="available-versions">Available Versions</h2>
 <table>
 <thead>
@@ -2265,6 +2257,65 @@
 <span class="p">)</span>
 <span class="n">returning</span><span class="w"> </span><span class="n">key_id</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
+<h3 id="connecting-to-calendly">Connecting to Calendly</h3>
+<p>We need to provide Postgres with the credentials to access Calendly and any additional options. We can do this using the <code>create server</code> command:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">With Vault</label><label for="__tabbed_1_2">Without Vault</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">calendly_server</span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_calendly_fdw_v0.1.0/calendly_fdw.wasm&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;supabase:calendly-fdw&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.1.0&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;51a19fa4b8c40afb5dcf6dc2e009189aceeba65f30eec75d56a951d78fc8893f&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="c1">-- find your organization uri using foreign table &#39;calendly.current_user&#39;, see below example for details</span>
+<span class="w">    </span><span class="n">organization</span><span class="w"> </span><span class="s1">&#39;https://api.calendly.com/organizations/81da9c7f-3e19-434a-c3d2-0325e375cdef&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">api_url</span><span class="w"> </span><span class="s1">&#39;https://api.calendly.com&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- optional</span>
+<span class="w">    </span><span class="n">api_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;key_ID&gt;&#39;</span><span class="w"> </span><span class="c1">-- The Key ID from above.</span>
+<span class="w">  </span><span class="p">);</span>
+</code></pre></div></td></tr></table></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">calendly_server</span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_calendly_fdw_v0.1.0/calendly_fdw.wasm&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;supabase:calendly-fdw&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.1.0&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;51a19fa4b8c40afb5dcf6dc2e009189aceeba65f30eec75d56a951d78fc8893f&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="c1">-- find your organization uri using foreign table &#39;calendly.current_user&#39;, see below example for details</span>
+<span class="w">    </span><span class="n">organization</span><span class="w"> </span><span class="s1">&#39;https://api.calendly.com/organizations/81da9c7f-3e19-434a-c3d2-0325e375cdef&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">api_url</span><span class="w"> </span><span class="s1">&#39;https://api.calendly.com&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- optional</span>
+<span class="w">    </span><span class="n">api_key</span><span class="w"> </span><span class="s1">&#39;eyJraWQiOiIxY2UxZ...&#39;</span><span class="w">  </span><span class="c1">-- Calendly personal access token</span>
+<span class="w">  </span><span class="p">);</span>
+</code></pre></div></td></tr></table></div>
+</div>
+</div>
+</div>
+<p>Note the <code>fdw_package_*</code> options are required, which specify the Wasm package metadata. You can get the available package version list from <a href="#available-versions">above</a>.</p>
 <h3 id="create-a-schema">Create a schema</h3>
 <p>We recommend creating a schema to hold all the foreign tables:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">calendly</span><span class="p">;</span>
@@ -2571,6 +2622,53 @@
 </ul>
 <h2 id="query-pushdown-support">Query Pushdown Support</h2>
 <p>This FDW doesn't support query pushdown.</p>
+<h2 id="supported-data-types">Supported Data Types</h2>
+<table>
+<thead>
+<tr>
+<th>Postgres Data Type</th>
+<th>Calendly Data Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>boolean</td>
+<td>Boolean</td>
+</tr>
+<tr>
+<td>bigint</td>
+<td>Number</td>
+</tr>
+<tr>
+<td>double precision</td>
+<td>Number</td>
+</tr>
+<tr>
+<td>text</td>
+<td>String</td>
+</tr>
+<tr>
+<td>timestamp</td>
+<td>Time</td>
+</tr>
+<tr>
+<td>timestamptz</td>
+<td>Time</td>
+</tr>
+<tr>
+<td>jsonb</td>
+<td>Json</td>
+</tr>
+</tbody>
+</table>
+<p>The Calendly API uses JSON formatted data, please refer to <a href="https://developer.calendly.com/api-docs">Calendly API docs</a> for more details.</p>
+<h2 id="limitations">Limitations</h2>
+<p>This section describes important limitations and considerations when using this FDW:</p>
+<ul>
+<li>Large result sets may experience slower performance due to full data transfer requirement</li>
+<li>Organization URI must be manually configured after initial setup</li>
+<li>Materialized views using these foreign tables may fail during logical backups</li>
+</ul>
 <h2 id="examples">Examples</h2>
 <p>Below are some examples on how to use Calendly foreign tables.</p>
 <h3 id="basic-example">Basic example</h3>
