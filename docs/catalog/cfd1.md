@@ -13,21 +13,6 @@ tags:
 
 The Cloudflare D1 Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you to read data from Cloudflare D1 database for use within your Postgres database.
 
-!!! warning
-
-    Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
-
-## Supported Data Types
-
-| Postgres Data Type | D1 Data Type |
-| ------------------ | ------------ |
-| bigint             | integer      |
-| double precision   | real         |
-| text               | text         |
-| text               | blob         |
-
-The D1 API uses JSON formatted data, please refer to [D1 API docs](https://developers.cloudflare.com/api/operations/cloudflare-d1-list-databases) for more details.
-
 ## Available Versions
 
 | Version | Wasm Package URL                                                                                | Checksum                                                           |
@@ -210,6 +195,25 @@ create foreign table cfd1.mytable (
 ## Query Pushdown Support
 
 This FDW supports `where`, `order by` and `limit` clause pushdown.
+
+## Supported Data Types
+
+| Postgres Data Type | D1 Data Type |
+| ------------------ | ------------ |
+| bigint             | integer      |
+| double precision   | real         |
+| text               | text         |
+| text               | blob         |
+
+The D1 API uses JSON formatted data, please refer to [D1 API docs](https://developers.cloudflare.com/api/operations/cloudflare-d1-list-databases) for more details.
+
+## Limitations
+
+This section describes important limitations and considerations when using this FDW:
+
+- Large result sets may experience slower performance due to full data transfer requirement
+- Foreign tables with subquery option cannot support data modify
+- Materialized views using these foreign tables may fail during logical backups
 
 ## Examples
 

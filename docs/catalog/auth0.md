@@ -13,10 +13,6 @@ tags:
 
 The Auth0 Wrapper allows you to read data from your Auth0 tenant for use within your Postgres database.
 
-!!! warning
-
-    Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
-
 ## Preparation
 
 Before you can query Auth0, you need to enable the Wrappers extension and store your credentials in Postgres.
@@ -121,6 +117,16 @@ options (
 ## Query Pushdown Support
 
 This FDW doesn't support query pushdown.
+
+## Limitations
+
+This section describes important limitations and considerations when using this FDW:
+
+- No query pushdown support, all filtering must be done locally
+- Large result sets may experience slower performance due to full data transfer requirement
+- Only supports the `users` object from Auth0 Management API
+- Cannot modify Auth0 user properties via FDW
+- Materialized views using these foreign tables may fail during logical backups
 
 ## Examples
 

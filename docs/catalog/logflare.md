@@ -13,10 +13,6 @@ tags:
 
 The Logflare Wrapper allows you to read data from Logflare endpoints within your Postgres database.
 
-!!! warning
-
-    Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
-
 ## Preparation
 
 Before you can query Logflare, you need to enable the Wrappers extension and store your credentials in Postgres.
@@ -134,6 +130,14 @@ create foreign table logflare.my_logflare_table (
 ## Query Pushdown Support
 
 This FDW doesn't support query pushdown.
+
+## Limitations
+
+This section describes important limitations and considerations when using this FDW:
+
+- Full result sets are loaded into memory, which can impact PostgreSQL performance with large datasets
+- Parameter names must be prefixed with '_param_' and match the expected endpoint parameters exactly
+- Materialized views using these foreign tables may fail during logical backups
 
 ## Examples
 

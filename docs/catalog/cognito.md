@@ -13,10 +13,6 @@ tags:
 
 The Cognito wrapper allows you to read data from your Cognito Userpool within your Postgres database.
 
-!!! warning
-
-    Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
-
 ## Preparation
 
 Before you can query AWS Cognito, you need to enable the Wrappers extension and store your credentials in Postgres.
@@ -130,6 +126,16 @@ options (
 ## Query Pushdown Support
 
 This FDW doesn't support query pushdown.
+
+## Limitations
+
+This section describes important limitations and considerations when using this FDW:
+
+- No query pushdown support, all filtering must be done locally
+- Large result sets may experience slower performance due to full data transfer requirement
+- Only supports User Pool objects from Cognito API
+- No support for Identity Pool operations
+- Materialized views using these foreign tables may fail during logical backups
 
 ## Examples
 

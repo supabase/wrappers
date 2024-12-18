@@ -13,10 +13,6 @@ tags:
 
 The Airtable Wrapper allows you to read data from your Airtable bases/tables within your Postgres database.
 
-!!! warning
-
-    Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
-
 ## Preparation
 
 Before you can query Airtable, you need to enable the Wrappers extension and store your credentials in Postgres.
@@ -122,6 +118,17 @@ options (
 ## Query Pushdown Support
 
 This FDW doesn't support query pushdown.
+
+## Limitations
+
+This section describes important limitations and considerations when using this FDW:
+
+- No query pushdown support, all filtering must be done locally
+- Large result sets may experience slower performance due to full data transfer requirement
+- No support for Airtable formulas or computed fields
+- Views must be pre-configured in Airtable
+- No support for Airtable's block features
+- Materialized views using these foreign tables may fail during logical backups
 
 ## Examples
 

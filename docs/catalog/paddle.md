@@ -13,28 +13,6 @@ tags:
 
 The Paddle Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you to read and write data from Paddle within your Postgres database.
 
-!!! warning
-
-    Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
-
-## Supported Data Types
-
-| Postgres Data Type | Paddle Data Type |
-| ------------------ | ---------------- |
-| boolean            | Boolean          |
-| smallint           | Money            |
-| integer            | Money            |
-| bigint             | Money            |
-| real               | Money            |
-| double precision   | Money            |
-| numeric            | Money            |
-| text               | Text             |
-| date               | Dates and time   |
-| timestamp          | Dates and time   |
-| timestamptz        | Dates and time   |
-
-The Paddle API uses JSON formatted data, please refer to [Paddle docs](https://developer.paddle.com/api-reference/about/data-types) for more details.
-
 ## Available Versions
 
 | Version | Wasm Package URL                                                                                | Checksum                                                           |
@@ -263,6 +241,32 @@ This FDW supports `where` clause pushdown with `id` as the filter. For example,
 ```sql
 select * from paddle.customers where id = 'ctm_01hymwgpkx639a6mkvg99563sp';
 ```
+
+## Supported Data Types
+
+| Postgres Data Type | Paddle Data Type |
+| ------------------ | ---------------- |
+| boolean            | Boolean          |
+| smallint           | Money            |
+| integer            | Money            |
+| bigint             | Money            |
+| real               | Money            |
+| double precision   | Money            |
+| numeric            | Money            |
+| text               | Text             |
+| date               | Dates and time   |
+| timestamp          | Dates and time   |
+| timestamptz        | Dates and time   |
+
+The Paddle API uses JSON formatted data, please refer to [Paddle docs](https://developer.paddle.com/api-reference/about/data-types) for more details.
+
+## Limitations
+
+This section describes important limitations and considerations when using this FDW:
+
+- Query pushdown is only supported for the `id` column, resulting in full table scans for other filters
+- Large result sets may experience slower performance due to full data transfer requirement
+- Materialized views using these foreign tables may fail during logical backups
 
 ## Examples
 

@@ -13,26 +13,6 @@ tags:
 
 The Snowflake Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you to read and write data from Snowflake within your Postgres database.
 
-!!! warning
-
-    Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
-
-## Supported Data Types
-
-| Postgres Data Type | Snowflake Data Type |
-| ------------------ | ------------------- |
-| boolean            | BOOLEAN             |
-| smallint           | SMALLINT            |
-| integer            | INT                 |
-| bigint             | BIGINT              |
-| real               | FLOAT4              |
-| double precision   | FLOAT8              |
-| numeric            | NUMBER              |
-| text               | VARCHAR             |
-| date               | DATE                |
-| timestamp          | TIMESTAMP_NTZ       |
-| timestamptz        | TIMESTAMP_TZ        |
-
 ## Available Versions
 
 | Version | Wasm Package URL                                                                                      | Checksum                                                           |
@@ -179,6 +159,31 @@ create foreign table snowflake.mytable (
 ## Query Pushdown Support
 
 This FDW supports `where`, `order by` and `limit` clause pushdown.
+
+## Supported Data Types
+
+| Postgres Data Type | Snowflake Data Type |
+| ------------------ | ------------------- |
+| boolean            | BOOLEAN             |
+| smallint           | SMALLINT            |
+| integer            | INT                 |
+| bigint             | BIGINT              |
+| real               | FLOAT4              |
+| double precision   | FLOAT8              |
+| numeric            | NUMBER              |
+| text               | VARCHAR             |
+| date               | DATE                |
+| timestamp          | TIMESTAMP_NTZ       |
+| timestamptz        | TIMESTAMP_TZ        |
+
+## Limitations
+
+This section describes important limitations and considerations when using this FDW:
+
+- Large result sets may experience slower performance due to full data transfer requirement
+- Column names must exactly match between Snowflake and foreign table
+- Foreign tables with subquery option cannot support data modify
+- Materialized views using these foreign tables may fail during logical backups
 
 ## Examples
 

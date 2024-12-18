@@ -13,28 +13,6 @@ tags:
 
 The ClickHouse Wrapper allows you to read and write data from ClickHouse within your Postgres database.
 
-!!! warning
-
-    Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
-
-## Supported Data Types
-
-| Postgres Type    | ClickHouse Type   |
-| ---------------- | ----------------- |
-| boolean          | UInt8             |
-| smallint         | Int16             |
-| integer          | UInt16            |
-| integer          | Int32             |
-| bigint           | UInt32            |
-| bigint           | Int64             |
-| bigint           | UInt64            |
-| real             | Float32           |
-| double precision | Float64           |
-| text             | String            |
-| date             | Date              |
-| timestamp        | DateTime          |
-| *                | Nullable&lt;T&gt; |
-
 ## Preparation
 
 Before you can query ClickHouse, you need to enable the Wrappers extension and store your credentials in Postgres.
@@ -178,6 +156,34 @@ create foreign table clickhouse.my_table (
 ## Query Pushdown Support
 
 This FDW supports `where`, `order by` and `limit` clause pushdown, as well as parametrized view (see above).
+
+## Supported Data Types
+
+| Postgres Type    | ClickHouse Type   |
+| ---------------- | ----------------- |
+| boolean          | UInt8             |
+| smallint         | Int16             |
+| integer          | UInt16            |
+| integer          | Int32             |
+| bigint           | UInt32            |
+| bigint           | Int64             |
+| bigint           | UInt64            |
+| real             | Float32           |
+| double precision | Float64           |
+| text             | String            |
+| date             | Date              |
+| timestamp        | DateTime          |
+| *                | Nullable&lt;T&gt; |
+
+## Limitations
+
+This section describes important limitations and considerations when using this FDW:
+
+- Full result sets must be transferred from ClickHouse to PostgreSQL
+- Large result sets consume significant PostgreSQL memory
+- Only basic query clauses (WHERE, ORDER BY, LIMIT) support pushdown
+- Limited data type mappings (see [Supported Data Types](#supported-data-types) section)
+- Materialized views using foreign tables may fail during logical backups
 
 ## Examples
 
