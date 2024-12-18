@@ -39,6 +39,9 @@ create foreign data wrapper airtable_wrapper
 
 By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
 
+
+Get your token from [Airtable's developer portal](https://airtable.com/create/tokens).
+
 ```sql
 -- Save your Airtable API key in Vault and retrieve the `key_id`
 insert into vault.secrets (name, secret)
@@ -98,9 +101,17 @@ The Airtable Wrapper supports data reads from Airtable's [Records](https://airta
 
 #### Usage
 
+Get your base ID and table ID from your table's URL.
+
+![airtable_credentials](../assets/airtable_credentials.png)
+
+!!! note
+
+    Foreign tables must be lowercase, regardless of capitalization in Airtable.
+
 ```sql
 create foreign table airtable.my_foreign_table (
-  name text
+  message text
   -- other fields
 )
 server airtable_server
