@@ -12,13 +12,13 @@
         <meta name="author" content="supabase">
       
       
-        <link rel="canonical" href="https://supabase.github.io/wrappers/catalog/firebase/">
+        <link rel="canonical" href="https://supabase.github.io/wrappers/catalog/cfd1/">
       
       
-        <link rel="prev" href="../clickhouse/">
+        <link rel="prev" href="../calendly/">
       
       
-        <link rel="next" href="../logflare/">
+        <link rel="next" href="../notion/">
       
       
       <link rel="icon" href="../../assets/favicon.ico">
@@ -26,7 +26,7 @@
     
     
       
-        <title>Firebase - Wrappers</title>
+        <title>Cloudflare D1 - Wrappers</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#firebase" class="md-skip">
+        <a href="#cloudflare-d1" class="md-skip">
           Skip to content
         </a>
       
@@ -113,7 +113,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Firebase
+              Cloudflare D1
             
           </span>
         </div>
@@ -407,8 +407,6 @@
                 
   
   
-    
-  
   
   
     
@@ -447,11 +445,13 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_2" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2_2" >
         
           
           <label class="md-nav__link" for="__nav_2_2" id="__nav_2_2_label" tabindex="">
@@ -465,7 +465,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_2_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_2_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_2_2">
             <span class="md-nav__icon md-icon"></span>
             Native
@@ -581,30 +581,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    Firebase
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../firebase/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -613,236 +593,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#preparation" class="md-nav__link">
-    <span class="md-ellipsis">
-      Preparation
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Preparation">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#enable-wrappers" class="md-nav__link">
-    <span class="md-ellipsis">
-      Enable Wrappers
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#enable-the-firebase-wrapper" class="md-nav__link">
-    <span class="md-ellipsis">
-      Enable the Firebase Wrapper
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#store-your-credentials-optional" class="md-nav__link">
-    <span class="md-ellipsis">
-      Store your credentials (optional)
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#connecting-to-firebase" class="md-nav__link">
-    <span class="md-ellipsis">
-      Connecting to Firebase
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#create-a-schema" class="md-nav__link">
-    <span class="md-ellipsis">
-      Create a schema
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#options" class="md-nav__link">
-    <span class="md-ellipsis">
-      Options
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#entities" class="md-nav__link">
-    <span class="md-ellipsis">
-      Entities
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Entities">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#authentication-users" class="md-nav__link">
-    <span class="md-ellipsis">
-      Authentication Users
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Authentication Users">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations" class="md-nav__link">
-    <span class="md-ellipsis">
-      Operations
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#firestore-database-documents" class="md-nav__link">
-    <span class="md-ellipsis">
-      Firestore Database Documents
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Firestore Database Documents">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      Operations
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#query-pushdown-support" class="md-nav__link">
-    <span class="md-ellipsis">
-      Query Pushdown Support
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      Examples
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Examples">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#firestore" class="md-nav__link">
-    <span class="md-ellipsis">
-      firestore
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#authusers" class="md-nav__link">
-    <span class="md-ellipsis">
-      auth/users
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -965,8 +715,10 @@
                 
   
   
+    
   
   
+  
     
     
       
@@ -997,13 +749,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_3" checked>
         
           
           
@@ -1025,7 +775,7 @@
             
           </div>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_2_3">
             <span class="md-nav__icon md-icon"></span>
             Wasm
@@ -1080,10 +830,30 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../cfd1/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Cloudflare D1
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   <span class="md-ellipsis">
@@ -1092,6 +862,272 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#supported-data-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Supported Data Types
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#available-versions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Available Versions
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#preparation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Preparation
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Preparation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#enable-wrappers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Enable Wrappers
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#enable-the-d1-wrapper" class="md-nav__link">
+    <span class="md-ellipsis">
+      Enable the D1 Wrapper
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#store-your-credentials-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      Store your credentials (optional)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#connecting-to-d1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Connecting to D1
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create-a-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      Create a schema
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#options" class="md-nav__link">
+    <span class="md-ellipsis">
+      Options
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#entities" class="md-nav__link">
+    <span class="md-ellipsis">
+      Entities
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Entities">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#d1-databases" class="md-nav__link">
+    <span class="md-ellipsis">
+      D1 Databases
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="D1 Databases">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#d1-tables" class="md-nav__link">
+    <span class="md-ellipsis">
+      D1 Tables
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="D1 Tables">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#operations_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notes_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#query-pushdown-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      Query Pushdown Support
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Examples
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      Basic Example
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#query-a-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      Query A Table
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#table-with-subquery" class="md-nav__link">
+    <span class="md-ellipsis">
+      Table With Subquery
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#modify-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      Modify Data
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1657,6 +1693,24 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#supported-data-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Supported Data Types
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#available-versions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Available Versions
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#preparation" class="md-nav__link">
     <span class="md-ellipsis">
       Preparation
@@ -1676,9 +1730,9 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#enable-the-firebase-wrapper" class="md-nav__link">
+  <a href="#enable-the-d1-wrapper" class="md-nav__link">
     <span class="md-ellipsis">
-      Enable the Firebase Wrapper
+      Enable the D1 Wrapper
     </span>
   </a>
   
@@ -1694,9 +1748,9 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#connecting-to-firebase" class="md-nav__link">
+  <a href="#connecting-to-d1" class="md-nav__link">
     <span class="md-ellipsis">
-      Connecting to Firebase
+      Connecting to D1
     </span>
   </a>
   
@@ -1736,13 +1790,13 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#authentication-users" class="md-nav__link">
+  <a href="#d1-databases" class="md-nav__link">
     <span class="md-ellipsis">
-      Authentication Users
+      D1 Databases
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Authentication Users">
+    <nav class="md-nav" aria-label="D1 Databases">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1778,13 +1832,13 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#firestore-database-documents" class="md-nav__link">
+  <a href="#d1-tables" class="md-nav__link">
     <span class="md-ellipsis">
-      Firestore Database Documents
+      D1 Tables
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Firestore Database Documents">
+    <nav class="md-nav" aria-label="D1 Tables">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1844,18 +1898,36 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#firestore" class="md-nav__link">
+  <a href="#basic-example" class="md-nav__link">
     <span class="md-ellipsis">
-      firestore
+      Basic Example
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#authusers" class="md-nav__link">
+  <a href="#query-a-table" class="md-nav__link">
     <span class="md-ellipsis">
-      auth/users
+      Query A Table
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#table-with-subquery" class="md-nav__link">
+    <span class="md-ellipsis">
+      Table With Subquery
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#modify-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      Modify Data
     </span>
   </a>
   
@@ -1885,7 +1957,7 @@
     
     
     
-      <a href="../../tags/#native" class="md-tag">native</a>
+      <a href="../../tags/#wasm" class="md-tag">wasm</a>
     
   
     
@@ -1901,32 +1973,93 @@
   
 
 
-<h1 id="firebase">Firebase</h1>
-<p><a href="https://firebase.google.com/">Firebase</a> is an app development platform built around non-relational technologies. The Firebase Wrapper supports connecting to below objects.</p>
-<ol>
-<li><a href="https://firebase.google.com/docs/auth/users">Authentication Users</a> (<em>read only</em>)</li>
-<li><a href="https://firebase.google.com/docs/firestore">Firestore Database Documents</a> (<em>read only</em>)</li>
-</ol>
+<h1 id="cloudflare-d1">Cloudflare D1</h1>
+<p><a href="https://developers.cloudflare.com/d1/">Cloudflare D1</a> is Cloudflare's managed, serverless database with SQLite's SQL semantics, built-in disaster recovery, and Worker and HTTP API access.</p>
+<p>The Cloudflare D1 Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you to read data from Cloudflare D1 database for use within your Postgres database.</p>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
 <p>Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.</p>
 </div>
+<h2 id="supported-data-types">Supported Data Types</h2>
+<table>
+<thead>
+<tr>
+<th>Postgres Data Type</th>
+<th>D1 Data Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>bigint</td>
+<td>integer</td>
+</tr>
+<tr>
+<td>double precision</td>
+<td>real</td>
+</tr>
+<tr>
+<td>text</td>
+<td>text</td>
+</tr>
+<tr>
+<td>text</td>
+<td>blob</td>
+</tr>
+</tbody>
+</table>
+<p>The D1 API uses JSON formatted data, please refer to <a href="https://developers.cloudflare.com/api/operations/cloudflare-d1-list-databases">D1 API docs</a> for more details.</p>
+<h2 id="available-versions">Available Versions</h2>
+<table>
+<thead>
+<tr>
+<th>Version</th>
+<th>Wasm Package URL</th>
+<th>Checksum</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.1.0</td>
+<td><code>https://github.com/supabase/wrappers/releases/download/wasm_cfd1_fdw_v0.1.0/cfd1_fdw.wasm</code></td>
+<td><code>783232834bb29dbd3ee6b09618c16f8a847286e63d05c54397d56c3e703fad31</code></td>
+</tr>
+</tbody>
+</table>
 <h2 id="preparation">Preparation</h2>
-<p>Before you can query Firebase, you need to enable the Wrappers extension and store your credentials in Postgres.</p>
+<p>Before you can query D1, you need to enable the Wrappers extension and store your credentials in Postgres.</p>
 <h3 id="enable-wrappers">Enable Wrappers</h3>
 <p>Make sure the <code>wrappers</code> extension is installed on your database:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">extension</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">wrappers</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">extensions</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
-<h3 id="enable-the-firebase-wrapper">Enable the Firebase Wrapper</h3>
-<p>Enable the <code>firebase_wrapper</code> FDW:</p>
+<h3 id="enable-the-d1-wrapper">Enable the D1 Wrapper</h3>
+<p>Enable the Wasm foreign data wrapper:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
-<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">firebase_wrapper</span>
-<span class="w">  </span><span class="k">handler</span><span class="w"> </span><span class="n">firebase_fdw_handler</span>
-<span class="w">  </span><span class="k">validator</span><span class="w"> </span><span class="n">firebase_fdw_validator</span><span class="p">;</span>
+<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
+<span class="w">  </span><span class="k">handler</span><span class="w"> </span><span class="n">wasm_fdw_handler</span>
+<span class="w">  </span><span class="k">validator</span><span class="w"> </span><span class="n">wasm_fdw_validator</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 <h3 id="store-your-credentials-optional">Store your credentials (optional)</h3>
 <p>By default, Postgres stores FDW credentials inside <code>pg_catalog.pg_foreign_server</code> in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with <a href="https://supabase.com/docs/guides/database/vault">Vault</a>, which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span>
+<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Save your D1 API token in Vault and retrieve the `key_id`</span>
+<span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">secrets</span><span class="w"> </span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">secret</span><span class="p">)</span>
+<span class="k">values</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="s1">&#39;cfd1&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="s1">&#39;&lt;D1 API token&gt;&#39;</span><span class="w"> </span><span class="c1">-- Cloudflare D1 API token</span>
+<span class="p">)</span>
+<span class="n">returning</span><span class="w"> </span><span class="n">key_id</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<h3 id="connecting-to-d1">Connecting to D1</h3>
+<p>We need to provide Postgres with the credentials to access D1 and any additional options. We can do this using the <code>create server</code> command:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">With Vault</label><label for="__tabbed_1_2">Without Vault</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -1937,34 +2070,19 @@
 <span class="normal"> 8</span>
 <span class="normal"> 9</span>
 <span class="normal">10</span>
-<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Save your Firebase credentials in Vault and retrieve the `key_id`</span>
-<span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">secrets</span><span class="w"> </span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">secret</span><span class="p">)</span>
-<span class="k">values</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="s1">&#39;firebase&#39;</span><span class="p">,</span>
-<span class="w">  </span><span class="s1">&#39;{</span>
-<span class="s1">      &quot;type&quot;: &quot;service_account&quot;,</span>
-<span class="s1">      &quot;project_id&quot;: &quot;your_gcp_project_id&quot;,</span>
-<span class="s1">      ...</span>
-<span class="s1">  }&#39;</span>
-<span class="p">)</span>
-<span class="n">returning</span><span class="w"> </span><span class="n">key_id</span><span class="p">;</span>
-</code></pre></div></td></tr></table></div>
-<h3 id="connecting-to-firebase">Connecting to Firebase</h3>
-<p>We need to provide Postgres with the credentials to connect to Firebase, and any additional options. We can do this using the <code>create server</code> command:</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">With Vault</label><label for="__tabbed_1_2">Without Vault</label></div>
-<div class="tabbed-content">
-<div class="tabbed-block">
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">firebase_server</span>
-<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">firebase_wrapper</span>
+<span class="normal">11</span>
+<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">cfd1_server</span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">sa_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;key_ID&gt;&#39;</span><span class="p">,</span><span class="w"> </span><span class="c1">-- The Key ID from above.</span>
-<span class="w">    </span><span class="n">project_id</span><span class="w"> </span><span class="s1">&#39;&lt;firebase_project_id&gt;&#39;</span>
-<span class="p">);</span>
+<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_cfd1_fdw_v0.1.0/cfd1_fdw.wasm&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;supabase:cfd1-fdw&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.1.0&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;783232834bb29dbd3ee6b09618c16f8a847286e63d05c54397d56c3e703fad31&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">api_url</span><span class="w"> </span><span class="s1">&#39;https://api.cloudflare.com/client/v4/accounts/&lt;account_id&gt;/d1/database&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- optional</span>
+<span class="w">    </span><span class="n">account_id</span><span class="w"> </span><span class="s1">&#39;&lt;Account ID&gt;&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">database_id</span><span class="w"> </span><span class="s1">&#39;&lt;Database ID&gt;&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">api_token_id</span><span class="w"> </span><span class="s1">&#39;&lt;key_ID&gt;&#39;</span><span class="w"> </span><span class="c1">-- The Key ID from above.</span>
+<span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 </div>
 <div class="tabbed-block">
@@ -1979,40 +2097,46 @@
 <span class="normal"> 9</span>
 <span class="normal">10</span>
 <span class="normal">11</span>
-<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">firebase_server</span>
-<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">firebase_wrapper</span>
-<span class="w">   </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">     </span><span class="n">sa_key</span><span class="w"> </span><span class="s1">&#39;</span>
-<span class="s1">     {</span>
-<span class="s1">        &quot;type&quot;: &quot;service_account&quot;,</span>
-<span class="s1">        &quot;project_id&quot;: &quot;your_gcp_project_id&quot;,</span>
-<span class="s1">        ...</span>
-<span class="s1">     }</span>
-<span class="s1">    &#39;</span><span class="p">,</span>
-<span class="w">     </span><span class="n">project_id</span><span class="w"> </span><span class="s1">&#39;firebase_project_id&#39;</span>
-<span class="w">   </span><span class="p">);</span>
+<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">cfd1_server</span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_cfd1_fdw_v0.1.0/cfd1_fdw.wasm&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;supabase:cfd1-fdw&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.1.0&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;783232834bb29dbd3ee6b09618c16f8a847286e63d05c54397d56c3e703fad31&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">api_url</span><span class="w"> </span><span class="s1">&#39;https://api.cloudflare.com/client/v4/accounts/&lt;account_id&gt;/d1/database&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- optional</span>
+<span class="w">    </span><span class="n">account_id</span><span class="w"> </span><span class="s1">&#39;&lt;Account ID&gt;&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">database_id</span><span class="w"> </span><span class="s1">&#39;&lt;Database ID&gt;&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">api_token</span><span class="w"> </span><span class="s1">&#39;&lt;D1 API token&gt;&#39;</span>
+<span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 </div>
 </div>
 </div>
+<p>Note the <code>fdw_package_*</code> options are required, which specify the Wasm package metadata. You can get the available package version list from <a href="#available-versions">above</a>.</p>
 <h3 id="create-a-schema">Create a schema</h3>
 <p>We recommend creating a schema to hold all the foreign tables:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">firebase</span><span class="p">;</span>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">cfd1</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 <h2 id="options">Options</h2>
 <p>The full list of foreign table options are below:</p>
 <ul>
-<li><code>object</code> - Object name in Firebase, required.</li>
-</ul>
-<p>For Authenciation users, the object name is fixed to <code>auth/users</code>. For Firestore documents, its format is <code>firestore/&lt;collection_id&gt;</code>, note that collection id must be a full path id. For example,</p>
+<li>
+<p><code>table</code> - Source table name in D1, required.</p>
 <ul>
-<li><code>firestore/my-collection</code></li>
-<li><code>firestore/my-collection/my-document/another-collection</code></li>
+<li>This option can also be a subquery enclosed in parentheses, see below for examples.</li>
+<li>A pseudo-table name <code>_meta_databases</code> can be used to query databases.</li>
+</ul>
+</li>
+<li>
+<p><code>rowid_column</code> - Primary key column name, optional for data scan, required for data modify.</p>
+</li>
 </ul>
 <h2 id="entities">Entities</h2>
-<h3 id="authentication-users">Authentication Users</h3>
-<p>This is an object representing Firebase Authentication Users.</p>
-<p>Ref: <a href="https://firebase.google.com/docs/auth/users">Firebase Authentication Users</a></p>
+<p>The D1 Wrapper supports data reads and writes from the Cloudflare D1 API.</p>
+<h3 id="d1-databases">D1 Databases</h3>
+<p>This is an object representing a D1 database.</p>
+<p>Ref: <a href="https://developers.cloudflare.com/api/operations/cloudflare-d1-list-databases">D1 databases docs</a></p>
 <h4 id="operations">Operations</h4>
 <table>
 <thead>
@@ -2027,7 +2151,7 @@
 </thead>
 <tbody>
 <tr>
-<td>Authentication Users</td>
+<td>database</td>
 <td style="text-align: center;">✅</td>
 <td style="text-align: center;">❌</td>
 <td style="text-align: center;">❌</td>
@@ -2046,25 +2170,32 @@
 <span class="normal"> 7</span>
 <span class="normal"> 8</span>
 <span class="normal"> 9</span>
-<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">firebase</span><span class="p">.</span><span class="n">users</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">uid</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">email</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">cfd1</span><span class="p">.</span><span class="n">databases</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">uuid</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="k">version</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">num_tables</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
+<span class="w">  </span><span class="n">file_size</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
+<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">_attrs</span><span class="w"> </span><span class="n">jsonb</span>
 <span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">firebase_server</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">cfd1_server</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;auth/users&#39;</span>
+<span class="w">    </span><span class="k">table</span><span class="w"> </span><span class="s1">&#39;_meta_databases&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 <h4 id="notes">Notes</h4>
 <ul>
-<li>The <code>attrs</code> column contains all user attributes in JSON format</li>
-<li>This is a special collection with unique metadata fields</li>
+<li>The <code>_attrs</code> meta column contains all database attributes in JSON format</li>
+<li>The table option must be <code>_meta_databases</code></li>
+<li>Only column names listed above are allowed</li>
 </ul>
-<h3 id="firestore-database-documents">Firestore Database Documents</h3>
-<p>This is an object representing Firestore Database Documents.</p>
-<p>Ref: <a href="https://firebase.google.com/docs/firestore">Firestore Database</a></p>
+<h3 id="d1-tables">D1 Tables</h3>
+<p>This is an object representing a D1 table.</p>
+<p>Ref: <a href="https://developers.cloudflare.com/api/operations/cloudflare-d1-query-database">D1 query docs</a></p>
 <h4 id="operations_1">Operations</h4>
 <table>
 <thead>
@@ -2079,11 +2210,11 @@
 </thead>
 <tbody>
 <tr>
-<td>Firestore Database Documents</td>
+<td>table</td>
 <td style="text-align: center;">✅</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
 <td style="text-align: center;">❌</td>
 </tr>
 </tbody>
@@ -2098,32 +2229,36 @@
 <span class="normal"> 7</span>
 <span class="normal"> 8</span>
 <span class="normal"> 9</span>
-<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">firebase</span><span class="p">.</span><span class="n">docs</span><span class="w"> </span><span class="p">(</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">cfd1</span><span class="p">.</span><span class="n">mytable</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
 <span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="w">  </span><span class="n">amount</span><span class="w"> </span><span class="n">double</span><span class="w"> </span><span class="k">precision</span><span class="p">,</span>
+<span class="w">  </span><span class="n">metadata</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">_attrs</span><span class="w"> </span><span class="n">jsonb</span>
 <span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">firebase_server</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">cfd1_server</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;firestore/user-profiles&#39;</span>
+<span class="w">    </span><span class="k">table</span><span class="w"> </span><span class="s1">&#39;mytable&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">rowid_column</span><span class="w"> </span><span class="s1">&#39;id&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 <h4 id="notes_1">Notes</h4>
 <ul>
-<li>The <code>name</code>, <code>created_at</code>, and <code>updated_at</code> are automatic metadata fields on all Firestore collections</li>
-<li>Collection ID must be a full path ID in the format <code>firestore/&lt;collection_id&gt;</code></li>
-<li>Examples of valid collection paths:</li>
-<li><code>firestore/my-collection</code></li>
-<li><code>firestore/my-collection/my-document/another-collection</code></li>
-<li>The <code>attrs</code> column contains all document attributes in JSON format</li>
+<li>The <code>_attrs</code> meta column contains all attributes in JSON format</li>
+<li>Can use subquery in <code>table</code> option</li>
+<li>Requires <code>rowid_column</code> for data modification operations</li>
+<li>Supports query pushdown for <code>where</code>, <code>order by</code>, and <code>limit</code> clauses</li>
+<li>Column names, except <code>_attrs</code>, must match between D1 and foreign table</li>
+<li>Data types must be compatible according to type mapping table</li>
 </ul>
 <h2 id="query-pushdown-support">Query Pushdown Support</h2>
-<p>This FDW doesn't support query pushdown.</p>
+<p>This FDW supports <code>where</code>, <code>order by</code> and <code>limit</code> clause pushdown.</p>
 <h2 id="examples">Examples</h2>
-<p>Some examples on how to use Firebase foreign tables.</p>
-<h3 id="firestore">firestore</h3>
-<p>To map a Firestore collection provide its location using the format <code>firestore/&lt;collection_id&gt;</code> as the <code>object</code> option as shown below.</p>
+<p>Below are some examples on how to use D1 foreign tables.</p>
+<h3 id="basic-example">Basic Example</h3>
+<p>This example will create a "foreign table" inside your Postgres database and query its data. </p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -2133,20 +2268,58 @@
 <span class="normal"> 7</span>
 <span class="normal"> 8</span>
 <span class="normal"> 9</span>
-<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">firebase</span><span class="p">.</span><span class="n">docs</span><span class="w"> </span><span class="p">(</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">cfd1</span><span class="p">.</span><span class="n">databases</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">uuid</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
 <span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="w">  </span><span class="k">version</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">num_tables</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
+<span class="w">  </span><span class="n">file_size</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
+<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">_attrs</span><span class="w"> </span><span class="n">jsonb</span>
 <span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">firebase_server</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">cfd1_server</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;firestore/user-profiles&#39;</span>
+<span class="w">    </span><span class="k">table</span><span class="w"> </span><span class="s1">&#39;_meta_databases&#39;</span>
 <span class="w">  </span><span class="p">);</span>
+
+<span class="c1">-- query D1 databases</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">cfd1</span><span class="p">.</span><span class="n">databases</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
-<p>Note that <code>name</code>, <code>created_at</code>, and <code>updated_at</code>, are automatic metadata fields on all Firestore collections.</p>
-<h3 id="authusers">auth/users</h3>
-<p>The <code>auth/users</code> collection is a special case with unique metadata. The following shows how to map Firebase users to PostgreSQL table.</p>
+<h3 id="query-a-table">Query A Table</h3>
+<p>Let's create a source table <code>test_table</code> in D1 web console and add some testing data.</p>
+<table>
+<thead>
+<tr>
+<th>Column Name</th>
+<th>Data Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>id</td>
+<td>integer</td>
+</tr>
+<tr>
+<td>name</td>
+<td>text</td>
+</tr>
+<tr>
+<td>amount</td>
+<td>real</td>
+</tr>
+<tr>
+<td>metadata</td>
+<td>blob</td>
+</tr>
+</tbody>
+</table>
+<p>This example will create a "foreign table" inside your Postgres database and query its data.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -2156,16 +2329,80 @@
 <span class="normal"> 7</span>
 <span class="normal"> 8</span>
 <span class="normal"> 9</span>
-<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">firebase</span><span class="p">.</span><span class="n">users</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">uid</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">email</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">cfd1</span><span class="p">.</span><span class="n">test_table</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
+<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">amount</span><span class="w"> </span><span class="n">double</span><span class="w"> </span><span class="k">precision</span><span class="p">,</span>
+<span class="w">  </span><span class="n">metadata</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">_attrs</span><span class="w"> </span><span class="n">jsonb</span>
 <span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">firebase_server</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">cfd1_server</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;auth/users&#39;</span>
+<span class="w">    </span><span class="k">table</span><span class="w"> </span><span class="s1">&#39;test_table&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">rowid_column</span><span class="w"> </span><span class="s1">&#39;id&#39;</span>
 <span class="w">  </span><span class="p">);</span>
+
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">cfd1</span><span class="p">.</span><span class="n">test_table</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<h3 id="table-with-subquery">Table With Subquery</h3>
+<p>The <code>table</code> option can also be a subquery enclosed in parentheses.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">cfd1</span><span class="p">.</span><span class="n">test_table_subquery</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
+<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">amount</span><span class="w"> </span><span class="n">double</span><span class="w"> </span><span class="k">precision</span><span class="p">,</span>
+<span class="w">  </span><span class="n">metadata</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">_attrs</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="p">)</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">cfd1_server</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">table</span><span class="w"> </span><span class="s1">&#39;(select * from test_table)&#39;</span>
+<span class="w">  </span><span class="p">);</span>
+
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">cfd1</span><span class="p">.</span><span class="n">test_table_subquery</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The foreign table with subquery option cannot support data modification.</p>
+</div>
+<h3 id="modify-data">Modify Data</h3>
+<p>This example will modify data in a "foreign table" inside your Postgres database, note that <code>rowid_column</code> table option is required for data modify.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- insert new data</span>
+<span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">cfd1</span><span class="p">.</span><span class="n">test_table</span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">amount</span><span class="p">)</span>
+<span class="k">values</span><span class="w"> </span><span class="p">(</span><span class="mi">123</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;test name 123&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">321</span><span class="p">.</span><span class="mi">654</span><span class="p">);</span>
+
+<span class="c1">-- update existing data</span>
+<span class="k">update</span><span class="w"> </span><span class="n">cfd1</span><span class="p">.</span><span class="n">test_table</span>
+<span class="k">set</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;new name&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">amount</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">null</span>
+<span class="k">where</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">123</span><span class="p">;</span>
+
+<span class="c1">-- delete data</span>
+<span class="k">delete</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">cfd1</span><span class="p">.</span><span class="n">test_table</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">123</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 
 
@@ -2199,7 +2436,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../clickhouse/" class="md-footer__link md-footer__link--prev" aria-label="Previous: ClickHouse">
+          <a href="../calendly/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Calendly">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
@@ -2209,20 +2446,20 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                ClickHouse
+                Calendly
               </div>
             </div>
           </a>
         
         
           
-          <a href="../logflare/" class="md-footer__link md-footer__link--next" aria-label="Next: Logflare">
+          <a href="../notion/" class="md-footer__link md-footer__link--next" aria-label="Next: Notion">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Logflare
+                Notion
               </div>
             </div>
             <div class="md-footer__button md-icon">
