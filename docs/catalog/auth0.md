@@ -55,7 +55,7 @@ returning key_id;
 
 ### Connecting to Auth0
 
-We need to provide Postgres with the credentials to connect to Airtable, and any additional options. We can do this using the `create server` command:
+We need to provide Postgres with the credentials to connect to Auth0, and any additional options. We can do this using the `create server` command:
 
 === "With Vault"
 
