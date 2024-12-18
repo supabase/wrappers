@@ -41,6 +41,7 @@ nav:
         - Security: 'guides/security.md'
         - FDW Statistics: 'guides/usage-statistics.md'
         - Installing Wrappers in Postgres: 'guides/installation.md'
+        - Removing Foreign Data Wrappers: 'guides/removing-wrappers.md'
         - Limitations: 'guides/limitations.md'
         - Developing a Wasm Wrapper: 
             - Quick Start: 'guides/create-wasm-wrapper.md'

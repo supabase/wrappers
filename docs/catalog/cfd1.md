@@ -17,7 +17,7 @@ The Cloudflare D1 Wrapper is a WebAssembly(Wasm) foreign data wrapper which allo
 
 | Version | Wasm Package URL                                                                                | Checksum                                                           |
 | ------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_cfd1_fdw_v0.1.0/cfd1_fdw.wasm` | `tbd` |
+| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_cfd1_fdw_v0.1.0/cfd1_fdw.wasm` | `783232834bb29dbd3ee6b09618c16f8a847286e63d05c54397d56c3e703fad31` |
 
 ## Preparation
 
@@ -68,7 +68,7 @@ We need to provide Postgres with the credentials to access D1 and any additional
         fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_cfd1_fdw_v0.1.0/cfd1_fdw.wasm',
         fdw_package_name 'supabase:cfd1-fdw',
         fdw_package_version '0.1.0',
-        fdw_package_checksum 'tbd',
+        fdw_package_checksum '783232834bb29dbd3ee6b09618c16f8a847286e63d05c54397d56c3e703fad31',
         api_url 'https://api.cloudflare.com/client/v4/accounts/<account_id>/d1/database',  -- optional
         account_id '<Account ID>',
         database_id '<Database ID>',
@@ -85,7 +85,7 @@ We need to provide Postgres with the credentials to access D1 and any additional
         fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_cfd1_fdw_v0.1.0/cfd1_fdw.wasm',
         fdw_package_name 'supabase:cfd1-fdw',
         fdw_package_version '0.1.0',
-        fdw_package_checksum 'tbd',
+        fdw_package_checksum '783232834bb29dbd3ee6b09618c16f8a847286e63d05c54397d56c3e703fad31',
         api_url 'https://api.cloudflare.com/client/v4/accounts/<account_id>/d1/database',  -- optional
         account_id '<Account ID>',
         database_id '<Database ID>',
