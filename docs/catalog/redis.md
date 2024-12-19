@@ -13,28 +13,6 @@ tags:
 
 The Redis Wrapper allows you to read data from Redis within your Postgres database.
 
-!!! warning
-
-    Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
-
-## Supported Redis Data Types
-
-All Redis values will be stored as `text` or `jsonb` columns in Postgres, below are the supported Redis data types:
-
-| Redis Type          | Foreign Table Type (src_type) |
-| ------------------- | ----------------------------- |
-| List                | list                          |
-| Set                 | set                           |
-| Hash                | hash                          |
-| Sorted Set          | zset                          |
-| Stream              | stream                        |
-| Multiple List       | multi_list                    |
-| Multiple Set        | multi_set                     |
-| Multiple Hash       | multi_hash                    |
-| Multiple Sorted Set | multi_zset                    |
-
-**See below for more descriptions for the `Multiple *` types and `src_type` foreign table option.**
-
 ## Preparation
 
 Before you can query Redis, you need to enable the Wrappers extension and store your credentials in Postgres.
@@ -328,6 +306,31 @@ create foreign table redis.multi_lists (
 ## Query Pushdown Support
 
 This FDW doesn't support pushdown.
+
+## Supported Redis Data Types
+
+All Redis values will be stored as `text` or `jsonb` columns in Postgres, below are the supported Redis data types:
+
+| Redis Type          | Foreign Table Type (src_type) |
+| ------------------- | ----------------------------- |
+| List                | list                          |
+| Set                 | set                           |
+| Hash                | hash                          |
+| Sorted Set          | zset                          |
+| Stream              | stream                        |
+| Multiple List       | multi_list                    |
+| Multiple Set        | multi_set                     |
+| Multiple Hash       | multi_hash                    |
+| Multiple Sorted Set | multi_zset                    |
+
+## Limitations
+
+This section describes important limitations and considerations when using this FDW:
+
+- Full result sets are loaded into memory before processing
+- Read-only access to Redis data structures (no Insert, Update, Delete, or Truncate operations)
+- Pattern matching in `multi_*` types only supports basic Redis glob patterns
+- Materialized views using these foreign tables may fail during logical backups
 
 ## Examples
 

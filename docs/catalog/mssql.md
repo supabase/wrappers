@@ -13,27 +13,6 @@ tags:
 
 The SQL Server Wrapper allows you to read data from Microsoft SQL Server within your Postgres database.
 
-!!! warning
-
-    Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
-
-## Supported Data Types
-
-| Postgres Type    | SQL Server Type                  |
-| ---------------- | -------------------------------- |
-| boolean          | bit                              |
-| char             | tinyint                          |
-| smallint         | smallint                         |
-| real             | float(24)                        |
-| integer          | int                              |
-| double precision | float(53)                        |
-| bigint           | bigint                           |
-| numeric          | numeric/decimal                  |
-| text             | varchar/char/text                |
-| date             | date                             |
-| timestamp        | datetime/datetime2/smalldatetime |
-| timestamptz      | datetime/datetime2/smalldatetime |
-
 ## Preparation
 
 Before you can query SQL Server, you need to enable the Wrappers extension and store your credentials in Postgres.
@@ -172,6 +151,33 @@ create foreign table mssql.users (
 ## Query Pushdown Support
 
 This FDW supports `where`, `order by` and `limit` clause pushdown.
+
+## Supported Data Types
+
+| Postgres Type    | SQL Server Type                  |
+| ---------------- | -------------------------------- |
+| boolean          | bit                              |
+| char             | tinyint                          |
+| smallint         | smallint                         |
+| real             | float(24)                        |
+| integer          | int                              |
+| double precision | float(53)                        |
+| bigint           | bigint                           |
+| numeric          | numeric/decimal                  |
+| text             | varchar/char/text                |
+| date             | date                             |
+| timestamp        | datetime/datetime2/smalldatetime |
+| timestamptz      | datetime/datetime2/smalldatetime |
+
+## Limitations
+
+This section describes important limitations and considerations when using this FDW:
+
+- Large result sets may experience slower performance due to full data transfer requirement
+- Only supports specific data type mappings between Postgres and SQL Server
+- Only support read operations (no INSERT, UPDATE, DELETE, or TRUNCATE)
+- Windows authentication (Integrated Security) not supported
+- Materialized views using these foreign tables may fail during logical backups
 
 ## Examples
 

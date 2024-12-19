@@ -13,26 +13,6 @@ tags:
 
 The Cal Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you to read data from your Cal.com account for use within your Postgres database.
 
-!!! warning
-
-    Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
-
-## Supported Data Types
-
-| Postgres Data Type | Cal.com Data Type |
-| ------------------ | ----------------- |
-| boolean            | Boolean           |
-| bigint             | Number            |
-| double precision   | Number            |
-| text               | String            |
-| jsonb              | Json              |
-
-The Cal.com API uses JSON formatted data, please refer to [Cal.com API docs](https://cal.com/docs/api-reference/v2/introduction) for more details.
-
-!!! note
-
-    This foreign data wrapper only supports Cal.com API v2.
-
 ## Available Versions
 
 | Version | Wasm Package URL                                                                                | Checksum                                                           |
@@ -346,6 +326,27 @@ create foreign table cal.conferencing (
 ## Query Pushdown Support
 
 This FDW doesn't support query pushdown.
+
+## Supported Data Types
+
+| Postgres Data Type | Cal.com Data Type |
+| ------------------ | ----------------- |
+| boolean            | Boolean           |
+| bigint             | Number            |
+| double precision   | Number            |
+| text               | String            |
+| jsonb              | Json              |
+
+The Cal.com API uses JSON formatted data, please refer to [Cal.com API docs](https://cal.com/docs/api-reference/v2/introduction) for more details.
+
+## Limitations
+
+This section describes important limitations and considerations when using this FDW:
+
+- Only supports Cal.com API v2
+- Large result sets may experience slower performance due to full data transfer requirement
+- Write operations limited to booking creation only
+- Materialized views using these foreign tables may fail during logical backups
 
 ## Examples
 

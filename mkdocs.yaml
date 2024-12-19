@@ -30,6 +30,7 @@ nav:
           - catalog/wasm/index.md
           - Cal.com: 'catalog/cal.md'
           - Calendly: 'catalog/calendly.md'
+          - Cloudflare D1: 'catalog/cfd1.md'
           - Notion: 'catalog/notion.md'
           - Paddle: 'catalog/paddle.md'
           - Snowflake: 'catalog/snowflake.md'
@@ -40,6 +41,7 @@ nav:
         - Security: 'guides/security.md'
         - FDW Statistics: 'guides/usage-statistics.md'
         - Installing Wrappers in Postgres: 'guides/installation.md'
+        - Removing Foreign Data Wrappers: 'guides/removing-wrappers.md'
         - Limitations: 'guides/limitations.md'
         - Developing a Wasm Wrapper: 
             - Quick Start: 'guides/create-wasm-wrapper.md'

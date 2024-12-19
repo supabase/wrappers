@@ -14,10 +14,6 @@ tags:
 1. [Authentication Users](https://firebase.google.com/docs/auth/users) (_read only_)
 2. [Firestore Database Documents](https://firebase.google.com/docs/firestore) (_read only_)
 
-!!! warning
-
-    Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
-
 ## Preparation
 
 Before you can query Firebase, you need to enable the Wrappers extension and store your credentials in Postgres.
@@ -183,6 +179,15 @@ create foreign table firebase.docs (
 ## Query Pushdown Support
 
 This FDW doesn't support query pushdown.
+
+## Limitations
+
+This section describes important limitations and considerations when using this FDW:
+
+- Only support read-only access to Authentication Users and Firestore Database Documents
+- Default maximum row count limit is 10,000 records
+- Full result sets are loaded into memory, which can impact PostgreSQL performance with large datasets
+- Materialized views using these foreign tables may fail during logical backups
 
 ## Examples
 

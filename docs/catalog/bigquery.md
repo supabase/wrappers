@@ -13,25 +13,6 @@ tags:
 
 The BigQuery Wrapper allows you to read and write data from BigQuery within your Postgres database.
 
-!!! warning
-
-    Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
-
-## Supported Data Types
-
-| Postgres Type    | BigQuery Type |
-| ---------------- | ------------- |
-| boolean          | BOOL          |
-| bigint           | INT64         |
-| double precision | FLOAT64       |
-| numeric          | NUMERIC       |
-| text             | STRING        |
-| varchar          | STRING        |
-| date             | DATE          |
-| timestamp        | DATETIME      |
-| timestamp        | TIMESTAMP     |
-| timestamptz      | TIMESTAMP     |
-
 ## Preparation
 
 Before you can query BigQuery, you need to enable the Wrappers extension and store your credentials in Postgres.
@@ -145,7 +126,7 @@ The BigQuery Wrapper supports data reads and writes from BigQuery tables and vie
 
 | Object | Select | Insert | Update | Delete | Truncate |
 | ------ | :----: | :----: | :----: | :----: | :------: |
-| Tables |   ✅    |   ✅    |   ✅    |   ✅    |    ❌     |
+| Tables |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
 
 #### Usage
 
@@ -177,6 +158,30 @@ This FDW supports `where`, `order by` and `limit` clause pushdown.
 This foreign data wrapper uses BigQuery’s `insertAll` API method to create a `streamingBuffer` with an associated partition time. **Within that partition time, the data cannot be updated, deleted, or fully exported**. Only after the time has elapsed (up to 90 minutes according to [BigQuery’s documentation](https://cloud.google.com/bigquery/docs/streaming-data-into-bigquery)), can you perform operations.
 
 If you attempt an `UPDATE` or `DELETE` statement on rows while in the streamingBuffer, you will get an error of `UPDATE` or `DELETE` statement over table datasetName - note that tableName would affect rows in the streaming buffer, which is not supported.
+
+## Supported Data Types
+
+| Postgres Type    | BigQuery Type |
+| ---------------- | ------------- |
+| boolean          | BOOL          |
+| bigint           | INT64         |
+| double precision | FLOAT64       |
+| numeric          | NUMERIC       |
+| text             | STRING        |
+| varchar          | STRING        |
+| date             | DATE          |
+| timestamp        | DATETIME      |
+| timestamp        | TIMESTAMP     |
+| timestamptz      | TIMESTAMP     |
+
+## Limitations
+
+This section describes important limitations and considerations when using this FDW:
+
+- Large result sets may experience network latency during data transfer
+- Data in streaming buffer cannot be modified for up to 90 minutes
+- Only supports specific data type mappings between Postgres and BigQuery
+- Materialized views using foreign tables may fail during logical backups
 
 ## Examples
 

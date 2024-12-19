@@ -13,10 +13,6 @@ tags:
 
 The Airtable Wrapper allows you to read data from your Airtable bases/tables within your Postgres database.
 
-!!! warning
-
-    Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
-
 ## Preparation
 
 Before you can query Airtable, you need to enable the Wrappers extension and store your credentials in Postgres.
@@ -42,6 +38,9 @@ create foreign data wrapper airtable_wrapper
 ### Store your credentials (optional)
 
 By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
+
+
+Get your token from [Airtable's developer portal](https://airtable.com/create/tokens).
 
 ```sql
 -- Save your Airtable API key in Vault and retrieve the `key_id`
@@ -102,9 +101,17 @@ The Airtable Wrapper supports data reads from Airtable's [Records](https://airta
 
 #### Usage
 
+Get your base ID and table ID from your table's URL.
+
+![airtable_credentials](../assets/airtable_credentials.png)
+
+!!! note
+
+    Foreign tables must be lowercase, regardless of capitalization in Airtable.
+
 ```sql
 create foreign table airtable.my_foreign_table (
-  name text
+  message text
   -- other fields
 )
 server airtable_server
@@ -199,6 +206,18 @@ from airtable.contacts;
 ```
 
 Note: Null values in Airtable fields are returned as SQL NULL values.
+
+## Limitations
+
+This section describes important limitations and considerations when using this FDW:
+
+- No query pushdown support, all filtering must be done locally
+- Large result sets may experience slower performance due to full data transfer requirement
+- No support for Airtable formulas or computed fields
+- Views must be pre-configured in Airtable
+- No support for Airtable's block features
+- Materialized views using these foreign tables may fail during logical backups
+
 
 ## Examples
 

@@ -13,10 +13,6 @@ tags:
 
 The Stripe Wrapper allows you to read data from Stripe within your Postgres database.
 
-!!! warning
-
-    Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
-
 ## Preparation
 
 Before you can query Stripe, you need to enable the Wrappers extension and store your credentials in Postgres.
@@ -1130,6 +1126,15 @@ select * from stripe.customers where id = 'cus_xxx';
 will be translated to a Stripe API call: `https://api.stripe.com/v1/customers/cus_xxx`.
 
 For supported filter columns for each object, please check out foreign table documents above.
+
+## Limitations
+
+This section describes important limitations and considerations when using this FDW:
+
+- Large result sets may experience slower performance due to full data transfer requirement
+- Webhook events and real-time updates are not supported
+- API version mismatches can cause unexpected data format issues
+- Materialized views using these foreign tables may fail during logical backups
 
 ## Examples
 

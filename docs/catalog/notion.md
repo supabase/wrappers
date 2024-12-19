@@ -13,22 +13,6 @@ tags:
 
 The Notion Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you to read data from your Notion workspace for use within your Postgres database.
 
-!!! warning
-
-    Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
-
-## Supported Data Types
-
-| Postgres Data Type | Notion Data Type |
-| ------------------ | ---------------- |
-| boolean            | Boolean          |
-| text               | String           |
-| timestamp          | Time             |
-| timestamptz        | Time             |
-| jsonb              | Json             |
-
-The Notion API uses JSON formatted data, please refer to [Notion API docs](https://developers.notion.com/reference/intro) for more details.
-
 ## Available Versions
 
 | Version | Wasm Package URL                                                                                | Checksum                                                           |
@@ -265,6 +249,27 @@ will recursively fetch all children blocks of the Page with id '5a67c86f-d0da-4d
     ```sql
     select * from notion.blocks;
     ```
+
+## Supported Data Types
+
+| Postgres Data Type | Notion Data Type |
+| ------------------ | ---------------- |
+| boolean            | Boolean          |
+| text               | String           |
+| timestamp          | Time             |
+| timestamptz        | Time             |
+| jsonb              | Json             |
+
+The Notion API uses JSON formatted data, please refer to [Notion API docs](https://developers.notion.com/reference/intro) for more details.
+
+## Limitations
+
+This section describes important limitations and considerations when using this FDW:
+
+- Large result sets may experience slower performance due to full data transfer requirement
+- Query pushdown support limited to 'id' and 'page_id' columns only
+- Recursive block fetching can be extremely slow for large page hierarchies
+- Materialized views using these foreign tables may fail during logical backups
 
 ## Examples
 
