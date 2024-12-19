@@ -217,6 +217,7 @@ This section describes important limitations and considerations when using this 
 - Views must be pre-configured in Airtable
 - No support for Airtable's block features
 - Materialized views using these foreign tables may fail during logical backups
+
 ## Examples
 
 ### Query an Airtable table
