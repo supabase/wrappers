@@ -320,6 +320,42 @@ class MockServer(BaseHTTPRequestHandler):
   "success": true
 }
             '''
+        elif fdw == "infura":
+            content_length = int(self.headers['Content-Length'])
+            request_body = self.rfile.read(content_length).decode('utf-8')
+            request = json.loads(request_body)
+            method = request.get('method')
+
+            responses = {
+                'eth_blockNumber': {
+                    'jsonrpc': '2.0',
+                    'id': request.get('id', 1),
+                    'result': '0x1234567'
+                },
+                'eth_getBlockByNumber': {
+                    'jsonrpc': '2.0',
+                    'id': request.get('id', 1),
+                    'result': {
+                        'number': '0x1234567',
+                        'hash': '0xabcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
+                        'parentHash': '0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+                        'nonce': '0x123456',
+                        'miner': '0xdef0123456789abcdef0123456789abcdef012345',
+                        'difficulty': '0x5678',
+                        'totalDifficulty': '0x12345678',
+                        'size': '0x1234',
+                        'gasLimit': '0x5678',
+                        'gasUsed': '0x1234',
+                        'timestamp': '0x5678'
+                    }
+                }
+            }
+
+            body = json.dumps(responses.get(method, {
+                'jsonrpc': '2.0',
+                'id': request.get('id', 1),
+                'error': {'code': -32601, 'message': 'Method not found'}
+            }))
         else:
             self.send_response(404)
             return
