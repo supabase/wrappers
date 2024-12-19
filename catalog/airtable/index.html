@@ -1836,6 +1836,7 @@
 </code></pre></div></td></tr></table></div>
 <h3 id="store-your-credentials-optional">Store your credentials (optional)</h3>
 <p>By default, Postgres stores FDW credentials inside <code>pg_catalog.pg_foreign_server</code> in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with <a href="https://supabase.com/docs/guides/database/vault">Vault</a>, which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.</p>
+<p>Get your token from <a href="https://airtable.com/create/tokens">Airtable's developer portal</a>.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
@@ -1912,6 +1913,12 @@
 </tbody>
 </table>
 <h4 id="usage">Usage</h4>
+<p>Get your base ID and table ID from your table's URL.</p>
+<p><img alt="airtable_credentials" src="../../assets/airtable_credentials.png" /></p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Foreign tables must be lowercase, regardless of capitalization in Airtable.</p>
+</div>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
@@ -1921,7 +1928,7 @@
 <span class="normal">7</span>
 <span class="normal">8</span>
 <span class="normal">9</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">airtable</span><span class="p">.</span><span class="n">my_foreign_table</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span>
+<span class="w">  </span><span class="n">message</span><span class="w"> </span><span class="nb">text</span>
 <span class="w">  </span><span class="c1">-- other fields</span>
 <span class="p">)</span>
 <span class="n">server</span><span class="w"> </span><span class="n">airtable_server</span>
