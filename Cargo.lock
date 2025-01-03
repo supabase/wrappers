@@ -7838,7 +7838,7 @@ dependencies = [
 
 [[package]]
 name = "wrappers"
-version = "0.4.3"
+version = "0.4.4"
 dependencies = [
  "anyhow",
  "arrow-array",
