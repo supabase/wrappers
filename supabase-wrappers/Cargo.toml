@@ -17,18 +17,18 @@ pg13 = ["pgrx/pg13", "pgrx-tests/pg13"]
 pg14 = ["pgrx/pg14", "pgrx-tests/pg14"]
 pg15 = ["pgrx/pg15", "pgrx-tests/pg15"]
 pg16 = ["pgrx/pg16", "pgrx-tests/pg16"]
-pg17 = ["pgrx/pg17", "pgrx-tests/pg17" ]
+pg17 = ["pgrx/pg17", "pgrx-tests/pg17"]
 pg_test = []
 
 [dependencies]
-pgrx = { version = "=0.12.6", default-features = false }
-thiserror = "1.0.48"
-tokio = { version = "1.35", features = ["rt", "net"] }
-uuid = { version = "1.2.2" }
+pgrx = { version = "=0.12.7", default-features = false }
+thiserror = "1.0.63"
+tokio = { version = "1.40", features = ["rt", "net"] }
+uuid = { version = "1.10.0" }
 supabase-wrappers-macros = { version = "0.1", path = "../supabase-wrappers-macros" }
 
 [dev-dependencies]
-pgrx-tests = "=0.12.6"
+pgrx-tests = "=0.12.7"
 
 [package.metadata.docs.rs]
 features = ["pg15", "cshim"]
