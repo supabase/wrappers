@@ -23,6 +23,7 @@
 | [Paddle](./wasm-wrappers/fdw/paddle_fdw)        | A Wasm FDW for [Paddle](https://www.paddle.com/)                              | ✅   | ✅     |
 | [Calendly](./wasm-wrappers/fdw/calendly_fdw)    | A Wasm FDW for [Calendly](https://www.calendly.com/)                          | ✅   | ❌     |
 | [Cal.com](./wasm-wrappers/fdw/cal_fdw)          | A Wasm FDW for [Cal.com](https://www.cal.com/)                                | ✅   | ❌     |
+| [Clerk](./wasm-wrappers/fdw/clerk_fdw)          | A Wasm FDW for [Clerk](https://www.clerk.com/)                                | ✅   | ❌     |
 | [Cloudflare D1](./wasm-wrappers/fdw/cfd1_fdw)   | A Wasm FDW for [Cloudflare D1](https://developers.cloudflare.com/d1/)         | ✅   | ✅     |
 
 ### Warning

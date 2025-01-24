@@ -281,6 +281,50 @@ mod tests {
                 .filter_map(|r| r.get_by_name::<i64, _>("id").unwrap())
                 .collect::<Vec<_>>();
             assert_eq!(results, vec![42, 123]);
+
+            // Clerk FDW test
+            c.update(
+                r#"CREATE SERVER clerk_server
+                     FOREIGN DATA WRAPPER wasm_wrapper
+                     OPTIONS (
+                       fdw_package_url 'file://../../../wasm-wrappers/fdw/clerk_fdw/target/wasm32-unknown-unknown/release/clerk_fdw.wasm',
+                       fdw_package_name 'supabase:clerk-fdw',
+                       fdw_package_version '>=0.1.0',
+                       api_url 'http://localhost:8096/clerk',
+                       api_key 'ccc'
+                     )"#,
+                None,
+                None,
+            )
+            .unwrap();
+            c.update(
+                r#"
+                  CREATE FOREIGN TABLE clerk_table (
+                    id text,
+                    external_id text,
+                    username text,
+                    first_name text,
+                    last_name text,
+                    created_at timestamp,
+                    updated_at timestamp,
+                    attrs jsonb
+                  )
+                  SERVER clerk_server
+                  OPTIONS (
+                    object 'users'
+                  )
+             "#,
+                None,
+                None,
+            )
+            .unwrap();
+
+            let results = c
+                .select("SELECT * FROM clerk_table", None, None)
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("id").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(results, vec!["user_2rvWkk90azWI2o3PH4LDuCMDPPh"]);
         });
     }
 }

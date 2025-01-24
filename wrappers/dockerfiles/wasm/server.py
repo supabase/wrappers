@@ -190,6 +190,69 @@ class MockServer(BaseHTTPRequestHandler):
     }
 }
             '''
+        elif fdw == "clerk":
+            body = '''
+[
+  {
+    "id": "user_2rvWkk90azWI2o3PH4LDuCMDPPh",
+    "object": "user",
+    "username": null,
+    "first_name": null,
+    "last_name": null,
+    "image_url": "https://img.clerk.com/eyJ0eXBlIjoiZGVmYXVsdCIsImlpZCI6Imluc18ycnVoOVpldUJWa3pNc1FoRHg5VWdNS2ZySGMiLCJyaWQiOiJ1c2VyXzJydldrazkwYXpXSTJvM1BINExEdUNNRFBQaCJ9",
+    "has_image": false,
+    "primary_email_address_id": "idn_2rvWkfsWd4iVsYWUYn5zKAnXqtM",
+    "primary_phone_number_id": null,
+    "primary_web3_wallet_id": null,
+    "password_enabled": true,
+    "two_factor_enabled": false,
+    "totp_enabled": false,
+    "backup_code_enabled": false,
+    "email_addresses": [
+      {
+        "id": "idn_2rvWkfsWd4iVsYWUYn5zKAnXqtM",
+        "object": "email_address",
+        "email_address": "test@test.com",
+        "reserved": false,
+        "verification": {
+          "status": "verified",
+          "strategy": "admin",
+          "attempts": null,
+          "expire_at": null
+        },
+        "linked_to": [],
+        "matches_sso_connection": false,
+        "created_at": 1737440173271,
+        "updated_at": 1737440173271
+      }
+    ],
+    "phone_numbers": [],
+    "web3_wallets": [],
+    "passkeys": [],
+    "external_accounts": [],
+    "saml_accounts": [],
+    "enterprise_accounts": [],
+    "public_metadata": {},
+    "private_metadata": {},
+    "unsafe_metadata": {},
+    "external_id": null,
+    "last_sign_in_at": null,
+    "banned": false,
+    "locked": false,
+    "lockout_expires_in_seconds": null,
+    "verification_attempts_remaining": 100,
+    "created_at": 1737440173260,
+    "updated_at": 1737440173281,
+    "delete_self_enabled": true,
+    "create_organization_enabled": true,
+    "last_active_at": null,
+    "mfa_enabled_at": null,
+    "mfa_disabled_at": null,
+    "legal_accepted_at": null,
+    "profile_image_url": "https://www.gravatar.com/avatar?d=mp"
+  }
+]
+            '''
         else:
             self.send_response(404)
             return
