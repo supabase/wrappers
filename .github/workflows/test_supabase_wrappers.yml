@@ -49,6 +49,6 @@ jobs:
 
     - name: Run clippy
       run: |
-        cd supabase-wrappers && RUSTFLAGS="-D warnings" cargo clippy --all --tests --no-deps --features "pgrx_embed"
+        cd supabase-wrappers && RUSTFLAGS="-D warnings" cargo clippy --all --tests --no-deps
 
     - run: cd supabase-wrappers && cargo test
