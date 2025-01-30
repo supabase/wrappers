@@ -1,6 +1,8 @@
 use pg_sys::{AsPgCStr, Oid};
+use pgrx::list::List;
 use pgrx::pg_sys::panic::ErrorReport;
-use pgrx::{debug2, prelude::*, PgList};
+use pgrx::{debug2, prelude::*};
+use std::ffi::c_void;
 use std::marker::PhantomData;
 
 use crate::instance;
@@ -81,16 +83,26 @@ pub(super) extern "C" fn import_foreign_schema<E: Into<ErrorReport>, W: ForeignD
             },
 
             table_list: {
-                let tables: PgList<pg_sys::RangeVar> = PgList::from_pg((*stmt).table_list);
-                tables
-                    .iter_ptr()
-                    .map(|item| {
-                        std::ffi::CStr::from_ptr(item.as_mut().unwrap().relname)
-                            .to_str()
-                            .unwrap()
-                            .to_string()
-                    })
-                    .collect()
+                pgrx::memcx::current_context(|mcx| {
+                    let mut ret = Vec::new();
+
+                    if let Some(tables) =
+                        List::<*mut c_void>::downcast_ptr_in_memcx((*stmt).table_list, mcx)
+                    {
+                        ret = tables
+                            .iter()
+                            .map(|item| {
+                                let rv = *item as *mut pg_sys::RangeVar;
+                                std::ffi::CStr::from_ptr((*rv).relname)
+                                    .to_str()
+                                    .unwrap()
+                                    .to_string()
+                            })
+                            .collect();
+                    }
+
+                    ret
+                })
             },
 
             options: options_to_hashmap((*stmt).options).unwrap(),
@@ -102,10 +114,11 @@ pub(super) extern "C" fn import_foreign_schema<E: Into<ErrorReport>, W: ForeignD
             .import_foreign_schema(import_foreign_schema_stmt);
     }
 
-    let mut ret: PgList<std::ffi::c_char> = PgList::new();
-    for command in create_stmts {
-        ret.push(command.as_pg_cstr());
-    }
-
-    ret.into_pg()
+    pgrx::memcx::current_context(|mcx| {
+        let mut ret = List::<*mut c_void>::Nil;
+        for command in create_stmts {
+            ret.unstable_push_in_context(command.as_pg_cstr() as _, mcx);
+        }
+        ret.into_ptr()
+    })
 }
