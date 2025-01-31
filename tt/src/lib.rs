@@ -16,7 +16,6 @@ mod tests {
     fn test_hello_tt() {
         assert_eq!("Hello, tt", crate::hello_tt());
     }
-
 }
 
 /// This module is required by `cargo pgrx test` invocations.
