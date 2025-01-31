@@ -45,10 +45,10 @@ jobs:
 
     - name: Format code
       run: |
-        cd supabase-wrappers && cargo fmt --check
+        cd tt && cargo fmt --check
 
     - name: Run clippy
       run: |
-        cd supabase-wrappers && RUSTFLAGS="-D warnings" cargo clippy --all --tests --no-deps
+        cd tt && RUSTFLAGS="-D warnings" cargo clippy --all --tests --no-deps
 
-    - run: cd supabase-wrappers && cargo test
+    - run: cd tt && cargo test

@@ -1,0 +1,6 @@
+comment = 'tt:  Created by pgrx'
+default_version = '@CARGO_VERSION@'
+module_pathname = '$libdir/tt'
+relocatable = false
+superuser = true
+trusted = false
