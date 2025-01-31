@@ -3,7 +3,6 @@ members = [
     "supabase-wrappers",
     "supabase-wrappers-macros",
     "wrappers",
-    "tt",
 ]
 exclude = [
     "wasm-wrappers/fdw/cal_fdw",

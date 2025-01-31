@@ -20,6 +20,9 @@ pg16 = ["pgrx/pg16", "pgrx-tests/pg16"]
 pg17 = ["pgrx/pg17", "pgrx-tests/pg17"]
 pg_test = []
 
+[lints.rust]
+unexpected_cfgs = { level = "allow", check-cfg = ['cfg(pgrx_embed)'] }
+
 [dependencies]
 pgrx = { version = "=0.12.9", default-features = false }
 thiserror = "1.0.63"
