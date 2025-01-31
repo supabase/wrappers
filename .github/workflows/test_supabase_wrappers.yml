@@ -49,6 +49,6 @@ jobs:
 
     - name: Run clippy
       run: |
-        cd tt && RUSTFLAGS="-D warnings" cargo clippy --all --tests --no-deps
+        cd tt && RUSTFLAGS="-D warnings" cargo clippy --features "pg15" --no-default-features --tests --no-deps
 
     - run: cd tt && cargo test
