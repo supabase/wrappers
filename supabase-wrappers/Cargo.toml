@@ -10,6 +10,9 @@ repository = "https://github.com/supabase/wrappers/tree/main/supabase-wrappers"
 categories = ["database"]
 keywords = ["database", "postgres", "postgresql", "extension"]
 
+[lints.rust]
+unexpected_cfgs = { level = "allow", check-cfg = ['cfg(pgrx_embed)'] }
+
 [features]
 default = ["pg15"]
 pg12 = ["pgrx/pg12", "pgrx-tests/pg12"]
@@ -19,9 +22,6 @@ pg15 = ["pgrx/pg15", "pgrx-tests/pg15"]
 pg16 = ["pgrx/pg16", "pgrx-tests/pg16"]
 pg17 = ["pgrx/pg17", "pgrx-tests/pg17"]
 pg_test = []
-
-[lints.rust]
-unexpected_cfgs = { level = "allow", check-cfg = ['cfg(pgrx_embed)'] }
 
 [dependencies]
 pgrx = { version = "=0.12.9", default-features = false }

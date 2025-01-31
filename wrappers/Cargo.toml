@@ -11,6 +11,9 @@ crate-type = ["cdylib", "lib"]
 name = "pgrx_embed_wrappers"
 path = "./src/bin/pgrx_embed.rs"
 
+[lints.rust]
+unexpected_cfgs = { level = "allow", check-cfg = ['cfg(pgrx_embed)'] }
+
 [features]
 default = ["pg15"]
 pg12 = ["pgrx/pg12", "pgrx-tests/pg12", "supabase-wrappers/pg12"]
