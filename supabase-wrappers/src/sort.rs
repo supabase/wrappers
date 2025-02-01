@@ -1,5 +1,7 @@
 use crate::interface::Sort;
-use pgrx::{is_a, list::PgList, pg_sys};
+use pgrx::list::List;
+use pgrx::{is_a, pg_sys};
+use std::ffi::c_void;
 use std::ffi::CStr;
 
 pub(crate) unsafe fn create_sort(
@@ -28,50 +30,63 @@ pub(crate) unsafe fn extract_sorts(
     baserel: *mut pg_sys::RelOptInfo,
     baserel_id: pg_sys::Oid,
 ) -> Vec<Sort> {
-    let mut ret = Vec::new();
-    let pathkeys: PgList<pg_sys::PathKey> = PgList::from_pg((*root).query_pathkeys);
+    pgrx::memcx::current_context(|mcx| {
+        let mut ret = Vec::new();
 
-    for pathkey in pathkeys.iter_ptr() {
-        let ec = (*pathkey).pk_eclass;
+        if let Some(pathkeys) =
+            List::<*mut c_void>::downcast_ptr_in_memcx((*root).query_pathkeys, mcx)
+        {
+            for pathkey in pathkeys.iter() {
+                let ec = (*(*pathkey as *mut pg_sys::PathKey)).pk_eclass;
 
-        if (*ec).ec_has_volatile {
-            continue;
-        }
-
-        let ems: PgList<pg_sys::EquivalenceMember> = PgList::from_pg((*ec).ec_members);
-        ems.iter_ptr()
-            .find(|em| pg_sys::bms_equal((*(*em)).em_relids, (*baserel).relids))
-            .and_then(|em| {
-                let expr = (*em).em_expr as *mut pg_sys::Node;
-
-                if is_a(expr, pg_sys::NodeTag::T_Var) {
-                    let var = expr as *mut pg_sys::Var;
-                    let sort = create_sort(pathkey, var, baserel_id);
-                    if let Some(sort) = sort {
-                        ret.push(sort);
-                    }
-                } else if is_a(expr, pg_sys::NodeTag::T_RelabelType) {
-                    // ORDER BY clauses having a COLLATE option will be RelabelType
-                    let expr = expr as *mut pg_sys::RelabelType;
-                    let var = (*expr).arg as *mut pg_sys::Var;
-                    if is_a(var as *mut pg_sys::Node, pg_sys::NodeTag::T_Var) {
-                        let sort = create_sort(pathkey, var, baserel_id);
-                        if let Some(mut sort) = sort {
-                            let coll_id = (*expr).resultcollid;
-                            sort.collate = Some(
-                                CStr::from_ptr(pg_sys::get_collation_name(coll_id))
-                                    .to_str()
-                                    .unwrap()
-                                    .to_owned(),
-                            );
-                            ret.push(sort);
-                        }
-                    }
+                if (*ec).ec_has_volatile {
+                    continue;
                 }
 
-                None::<()>
-            });
-    }
+                if let Some(ems) = List::<*mut c_void>::downcast_ptr_in_memcx((*ec).ec_members, mcx)
+                {
+                    ems.iter()
+                        .find(|em| {
+                            pg_sys::bms_equal(
+                                (*(**em as *mut pg_sys::EquivalenceMember)).em_relids,
+                                (*baserel).relids,
+                            )
+                        })
+                        .and_then(|em| {
+                            let expr = (*(*em as *mut pg_sys::EquivalenceMember)).em_expr
+                                as *mut pg_sys::Node;
 
-    ret
+                            if is_a(expr, pg_sys::NodeTag::T_Var) {
+                                let var = expr as *mut pg_sys::Var;
+                                let sort = create_sort(*pathkey as _, var, baserel_id);
+                                if let Some(sort) = sort {
+                                    ret.push(sort);
+                                }
+                            } else if is_a(expr, pg_sys::NodeTag::T_RelabelType) {
+                                // ORDER BY clauses having a COLLATE option will be RelabelType
+                                let expr = expr as *mut pg_sys::RelabelType;
+                                let var = (*expr).arg as *mut pg_sys::Var;
+                                if is_a(var as *mut pg_sys::Node, pg_sys::NodeTag::T_Var) {
+                                    let sort = create_sort(*pathkey as _, var, baserel_id);
+                                    if let Some(mut sort) = sort {
+                                        let coll_id = (*expr).resultcollid;
+                                        sort.collate = Some(
+                                            CStr::from_ptr(pg_sys::get_collation_name(coll_id))
+                                                .to_str()
+                                                .unwrap()
+                                                .to_owned(),
+                                        );
+                                        ret.push(sort);
+                                    }
+                                }
+                            }
+
+                            None::<()>
+                        });
+                }
+            }
+        }
+
+        ret
+    })
 }
