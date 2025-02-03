@@ -51,10 +51,17 @@ jobs:
       - run: cargo install cargo-pgrx --version 0.12.9
       - run: cargo pgrx init --pg15 /usr/lib/postgresql/15/bin/pg_config
 
+      - name: Build docker images
+        run: |
+          docker compose -f wrappers/.ci/docker-compose-native.yaml up -d
+
       - name: Generate code coverage
         id: coverage
         run: |
-          cargo llvm-cov test --workspace --exclude supabase-wrappers-macros --no-fail-fast --lcov --output-path lcov.info
+          source <(cargo llvm-cov show-env --export-prefix --no-cfg-coverage)
+          cargo llvm-cov clean --workspace
+          cargo pgrx test --features "native_fdws" --manifest-path wrappers/Cargo.toml pg15
+          cargo llvm-cov report --lcov --output-path lcov.info
 
       - name: Coveralls upload
         uses: coverallsapp/github-action@v2
