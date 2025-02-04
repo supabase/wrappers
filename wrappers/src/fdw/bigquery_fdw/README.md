@@ -11,6 +11,7 @@ This is a foreign data wrapper for [BigQuery](https://cloud.google.com/bigquery)
 
 | Version | Date       | Notes                                                |
 | ------- | ---------- | ---------------------------------------------------- |
+| 0.1.6   | 2025-02-04 | Upgrade bq client lib to v0.25.1, support JSON type  |
 | 0.1.5   | 2024-09-30 | Support for pgrx 0.12.6                              |
 | 0.1.4   | 2023-07-13 | Added fdw stats collection                           |
 | 0.1.3   | 2023-04-03 | Added support for `NUMERIC` type                     |

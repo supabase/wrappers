@@ -173,6 +173,7 @@ If you attempt an `UPDATE` or `DELETE` statement on rows while in the streamingB
 | timestamp        | DATETIME      |
 | timestamp        | TIMESTAMP     |
 | timestamptz      | TIMESTAMP     |
+| jsonb            | JSON          |
 
 ## Limitations
 
@@ -194,14 +195,15 @@ Let's prepare the source table in BigQuery first:
 create table your_project_id.your_dataset_id.people (
   id int64,
   name string,
-  ts timestamp
+  ts timestamp,
+  props jsonb
 );
 
 -- Add some test data
 insert into your_project_id.your_dataset_id.people values
-  (1, 'Luke Skywalker', current_timestamp()),
-  (2, 'Leia Organa', current_timestamp()),
-  (3, 'Han Solo', current_timestamp());
+  (1, 'Luke Skywalker', current_timestamp(), parse_json('{"coordinates":[10,20],"id":1}')),
+  (2, 'Leia Organa', current_timestamp(), null),
+  (3, 'Han Solo', current_timestamp(), null);
 ```
 
 ### Basic example
@@ -212,7 +214,8 @@ This example will create a "foreign table" inside your Postgres database called 
 create foreign table bigquery.people (
   id bigint,
   name text,
-  ts timestamp
+  ts timestamp,
+  props jsonb
 )
   server bigquery_server
   options (
@@ -231,7 +234,8 @@ This example will modify data in a "foreign table" inside your Postgres database
 create foreign table bigquery.people (
   id bigint,
   name text,
-  ts timestamp
+  ts timestamp,
+  props jsonb
 )
   server bigquery_server
   options (
@@ -241,12 +245,12 @@ create foreign table bigquery.people (
   );
 
 -- insert new data
-insert into bigquery.people(id, name, ts)
-values (4, 'Yoda', '2023-01-01 12:34:56');
+insert into bigquery.people(id, name, ts, props)
+values (4, 'Yoda', '2023-01-01 12:34:56', '{"coordinates":[10,20],"id":1}'::jsonb);
 
 -- update existing data
 update bigquery.people
-set name = 'Anakin Skywalker'
+set name = 'Anakin Skywalker', props = '{"coordinates":[30,40],"id":42}'::jsonb
 where id = 1;
 
 -- delete data
