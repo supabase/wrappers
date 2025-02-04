@@ -177,7 +177,7 @@ either = { version = "1.12.0", optional = true }
 
 
 # for bigquery_fdw, firebase_fdw, airtable_fdw and etc.
-gcp-bigquery-client = { version = "0.17.0", optional = true }
+gcp-bigquery-client = { version = "0.25.1", optional = true }
 serde = { version = "1", optional = true }
 serde_json = { version = "1.0.86", optional = true }
 wiremock = { version = "0.5", optional = true }
@@ -189,7 +189,7 @@ reqwest-middleware = { version = "0.2.3", optional = true }
 reqwest-retry = { version = "0.2.2", optional = true }
 
 # for firebase_fdw
-yup-oauth2 = { version = "8.0.0", optional = true }
+yup-oauth2 = { version = "11.0.0", optional = true }
 regex = { version = "1", optional = true }
 
 # for airtable_fdw, stripe_fdw
