@@ -3,54 +3,22 @@ use futures::executor;
 use gcp_bigquery_client::{
     client_builder::ClientBuilder,
     model::{
-        field_type::FieldType, get_query_results_parameters::GetQueryResultsParameters,
-        query_request::QueryRequest, query_response::QueryResponse, query_response::ResultSet,
+        get_query_results_parameters::GetQueryResultsParameters, job_reference::JobReference,
+        query_request::QueryRequest, query_response::ResultSet,
         table_data_insert_all_request::TableDataInsertAllRequest,
-        table_field_schema::TableFieldSchema,
     },
     Client,
 };
-use pgrx::prelude::PgSqlErrorCode;
-use pgrx::prelude::{AnyNumeric, Date, Timestamp};
+use pgrx::prelude::{AnyNumeric, Date, PgSqlErrorCode, Timestamp};
+use pgrx::{pg_sys, JsonB};
 use serde_json::json;
 use std::collections::HashMap;
 use std::str::FromStr;
 
 use supabase_wrappers::prelude::*;
 
-// convert BigQuery field to Cell
-fn field_to_cell(rs: &ResultSet, field: &TableFieldSchema) -> BigQueryFdwResult<Option<Cell>> {
-    Ok(match field.r#type {
-        FieldType::Boolean => rs.get_bool_by_name(&field.name)?.map(Cell::Bool),
-        FieldType::Int64 | FieldType::Integer => rs.get_i64_by_name(&field.name)?.map(Cell::I64),
-        FieldType::Float64 | FieldType::Float => rs.get_f64_by_name(&field.name)?.map(Cell::F64),
-        FieldType::Numeric => match rs.get_f64_by_name(&field.name)? {
-            Some(v) => Some(Cell::Numeric(AnyNumeric::try_from(v)?)),
-            None => None,
-        },
-        FieldType::String => rs.get_string_by_name(&field.name)?.map(Cell::String),
-        FieldType::Date => match rs.get_string_by_name(&field.name)? {
-            Some(v) => Some(Cell::Date(Date::from_str(&v)?)),
-            None => None,
-        },
-        FieldType::Datetime => match rs.get_string_by_name(&field.name)? {
-            Some(v) => Some(Cell::Timestamp(Timestamp::from_str(&v)?)),
-            None => None,
-        },
-        FieldType::Timestamp => rs.get_f64_by_name(&field.name)?.map(|v| {
-            let ts = pgrx::prelude::to_timestamp(v);
-            Cell::Timestamp(ts.to_utc())
-        }),
-        _ => {
-            return Err(BigQueryFdwError::UnsupportedFieldType(
-                field.name.to_owned(),
-            ));
-        }
-    })
-}
-
 #[wrappers_fdw(
-    version = "0.1.5",
+    version = "0.1.6",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/bigquery_fdw",
     error_type = "BigQueryFdwError"
@@ -63,6 +31,8 @@ pub(crate) struct BigQueryFdw {
     table: String,
     rowid_col: String,
     tgt_cols: Vec<Column>,
+    job_ref: Option<JobReference>,
+    page_token: Option<String>,
     scan_result: Option<ResultSet>,
     auth_mock: Option<GoogleAuthMock>,
 }
@@ -125,25 +95,66 @@ impl BigQueryFdw {
         sql
     }
 
+    // read one source row from result set and convert it to Postgres row
     fn extract_row(
         tgt_cols: &[Column],
         row: &mut Row,
         rs: &mut ResultSet,
     ) -> BigQueryFdwResult<bool> {
-        if rs.next_row() {
-            if let Some(schema) = &rs.query_response().schema {
-                if let Some(fields) = &schema.fields {
-                    for tgt_col in tgt_cols {
-                        if let Some(field) = fields.iter().find(|&f| f.name == tgt_col.name) {
-                            let cell = field_to_cell(rs, field)?;
-                            row.push(&field.name, cell);
-                        }
-                    }
-                    return Ok(true);
-                }
-            }
+        if !rs.next_row() {
+            return Ok(false);
         }
-        Ok(false)
+
+        // convert BigQuery field to Cell
+        for tgt_col in tgt_cols {
+            let cell = match tgt_col.type_oid {
+                pg_sys::BOOLOID => rs.get_bool_by_name(&tgt_col.name)?.map(Cell::Bool),
+                pg_sys::CHAROID => rs.get_i64_by_name(&tgt_col.name)?.map(|v| Cell::I8(v as _)),
+                pg_sys::INT2OID => rs
+                    .get_i64_by_name(&tgt_col.name)?
+                    .map(|v| Cell::I16(v as _)),
+                pg_sys::INT4OID => rs
+                    .get_i64_by_name(&tgt_col.name)?
+                    .map(|v| Cell::I32(v as _)),
+                pg_sys::INT8OID => rs.get_i64_by_name(&tgt_col.name)?.map(Cell::I64),
+                pg_sys::FLOAT4OID => rs
+                    .get_f64_by_name(&tgt_col.name)?
+                    .map(|v| Cell::F32(v as _)),
+                pg_sys::FLOAT8OID => rs.get_f64_by_name(&tgt_col.name)?.map(Cell::F64),
+                pg_sys::NUMERICOID => match rs.get_f64_by_name(&tgt_col.name)? {
+                    Some(v) => Some(Cell::Numeric(AnyNumeric::try_from(v)?)),
+                    None => None,
+                },
+                pg_sys::TEXTOID => rs.get_string_by_name(&tgt_col.name)?.map(Cell::String),
+                pg_sys::DATEOID => match rs.get_string_by_name(&tgt_col.name)? {
+                    Some(v) => Some(Cell::Date(Date::from_str(&v)?)),
+                    None => None,
+                },
+                pg_sys::TIMESTAMPOID | pg_sys::TIMESTAMPTZOID => {
+                    // try convert BigQuery source field FieldType::Timestamp first,
+                    // then try convert from FieldType::Datetime
+                    match rs.get_f64_by_name(&tgt_col.name) {
+                        Ok(val) => val.map(|v| {
+                            let ts = pgrx::prelude::to_timestamp(v);
+                            Cell::Timestamp(ts.to_utc())
+                        }),
+                        Err(_) => match rs.get_string_by_name(&tgt_col.name)? {
+                            Some(v) => Some(Cell::Timestamp(Timestamp::from_str(&v)?)),
+                            None => None,
+                        },
+                    }
+                }
+                pg_sys::JSONBOID => rs
+                    .get_json_value_by_name(&tgt_col.name)?
+                    .map(|v| Cell::Json(JsonB(v))),
+                _ => {
+                    return Err(BigQueryFdwError::UnsupportedFieldType(tgt_col.name.clone()));
+                }
+            };
+            row.push(&tgt_col.name, cell);
+        }
+
+        Ok(true)
     }
 }
 
@@ -157,6 +168,8 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
             table: "".to_string(),
             rowid_col: "".to_string(),
             tgt_cols: Vec::new(),
+            job_ref: None,
+            page_token: None,
             scan_result: None,
             auth_mock: None,
         };
@@ -275,8 +288,7 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
 
             // execute query on BigQuery
             match self.rt.block_on(client.job().query(&self.project_id, req)) {
-                Ok(rs) => {
-                    let resp = rs.query_response();
+                Ok(resp) => {
                     if resp.job_complete == Some(false) {
                         report_error(
                             PgSqlErrorCode::ERRCODE_FDW_ERROR,
@@ -307,6 +319,9 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
                                 .and_then(|v| v.parse::<i64>().ok())
                                 .unwrap_or(0i64),
                         );
+                        self.job_ref = resp.job_reference.clone();
+                        self.page_token = resp.page_token.clone();
+                        let rs = ResultSet::new_from_query_response(resp);
                         self.scan_result = Some(rs);
                     }
                 }
@@ -330,33 +345,38 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
                     return Ok(Some(()));
                 }
 
-                // deal with pagination
-                if rs.query_response().page_token.is_some() {
-                    if let Some(job_ref) = &rs.query_response().job_reference {
-                        if let Some(job_id) = &job_ref.job_id {
-                            match self.rt.block_on(client.job().get_query_results(
-                                &self.project_id,
-                                job_id,
-                                GetQueryResultsParameters {
-                                    location: job_ref.location.clone(),
-                                    page_token: rs.query_response().page_token.clone(),
-                                    ..Default::default()
-                                },
-                            )) {
-                                Ok(resp) => {
-                                    // replace result set with data from the new page
-                                    *rs = ResultSet::new(QueryResponse::from(resp));
-                                    if Self::extract_row(&self.tgt_cols, row, rs)? {
-                                        return Ok(Some(()));
-                                    }
+                // no more source data to read
+                if self.page_token.is_none() {
+                    return Ok(None);
+                }
+
+                // otherwise, dealing with pagination
+                if let Some(job_ref) = &self.job_ref {
+                    if let Some(job_id) = &job_ref.job_id {
+                        match self.rt.block_on(client.job().get_query_results(
+                            &self.project_id,
+                            job_id,
+                            GetQueryResultsParameters {
+                                location: job_ref.location.clone(),
+                                page_token: self.page_token.clone(),
+                                ..Default::default()
+                            },
+                        )) {
+                            Ok(resp) => {
+                                // replace result set with data from the new page
+                                self.job_ref = resp.job_reference.clone();
+                                self.page_token = resp.page_token.clone();
+                                *rs = ResultSet::new_from_get_query_results_response(resp);
+                                if Self::extract_row(&self.tgt_cols, row, rs)? {
+                                    return Ok(Some(()));
                                 }
-                                Err(err) => {
-                                    self.scan_result = None;
-                                    report_error(
-                                        PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                                        &format!("fetch query result failed: {}", err),
-                                    );
-                                }
+                            }
+                            Err(err) => {
+                                self.scan_result = None;
+                                report_error(
+                                    PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                                    &format!("fetch query result failed: {}", err),
+                                );
                             }
                         }
                     }
@@ -398,7 +418,7 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
                         Cell::Date(v) => row_json[col_name] = json!(v),
                         Cell::Timestamp(v) => row_json[col_name] = json!(v),
                         Cell::Timestamptz(v) => row_json[col_name] = json!(v),
-                        Cell::Json(v) => row_json[col_name] = json!(v),
+                        Cell::Json(v) => row_json[col_name] = json!(v.0.to_string()),
                         _ => {
                             return Err(BigQueryFdwError::UnsupportedFieldType(
                                 col_name.to_owned(),
@@ -411,15 +431,16 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
             insert_request.add_row(None, row_json)?;
 
             // execute insert job on BigQuery
-            if let Err(err) = self.rt.block_on(client.tabledata().insert_all(
+            let resp = self.rt.block_on(client.tabledata().insert_all(
                 &self.project_id,
                 &self.dataset_id,
                 &self.table,
                 insert_request,
-            )) {
+            ))?;
+            if let Some(errors) = resp.insert_errors {
                 report_error(
                     PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                    &format!("insert failed: {}", err),
+                    &format!("insert failed: {:?}", errors),
                 );
             }
         }
@@ -435,7 +456,10 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
                     continue;
                 }
                 if let Some(cell) = cell {
-                    sets.push(format!("{} = {}", col, cell));
+                    match cell {
+                        Cell::Json(v) => sets.push(format!("{} = parse_json('{}')", col, v.0)),
+                        _ => sets.push(format!("{} = {}", col, cell)),
+                    }
                 } else {
                     sets.push(format!("{} = null", col));
                 }
