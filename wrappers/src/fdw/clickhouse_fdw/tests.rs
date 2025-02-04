@@ -9,7 +9,7 @@ mod tests {
     #[pg_test]
     fn clickhouse_smoketest() {
         Spi::connect(|mut c| {
-            let clickhouse_pool = ch::Pool::new("tcp://default:@localhost:9000/default");
+            let clickhouse_pool = ch::Pool::new("tcp://default:default@localhost:9000/default");
 
             let rt = create_async_runtime().expect("failed to create runtime");
             let mut handle = rt
@@ -37,7 +37,7 @@ mod tests {
                 r#"CREATE SERVER my_clickhouse_server
                          FOREIGN DATA WRAPPER clickhouse_wrapper
                          OPTIONS (
-                           conn_string 'tcp://default:@localhost:9000/default'
+                           conn_string 'tcp://default:default@localhost:9000/default'
                          )"#,
                 None,
                 None,
