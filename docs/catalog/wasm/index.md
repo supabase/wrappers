@@ -37,6 +37,18 @@ Foreign data wrappers built with Wasm which can be used on Supabase platform.
     :octicons-code-24: [source](https://github.com/supabase/wrappers/tree/wasm_calendly_fdw_v0.1.0/wasm-wrappers/fdw/calendly_fdw) &nbsp;
     :material-file-document: [docs](../calendly.md)
 
+- :simple-webassembly: &nbsp; **[Clerk](../clerk.md)**
+
+    ----
+
+    Foreign data wrapper for [Clerk](https://clerk.com/).
+
+    Supported by [Supabase](https://www.supabase.com)
+
+    :octicons-tag-24: [v0.1.0](https://github.com/supabase/wrappers/releases/tag/clerk_fdw_v0.1.0) &nbsp;
+    :octicons-code-24: [source](https://github.com/supabase/wrappers/tree/wasm_clerk_fdw_v0.1.0/wasm-wrappers/fdw/clerk_fdw) &nbsp;
+    :material-file-document: [docs](../clerk.md)
+
 - :simple-webassembly: &nbsp; **[Cloudflare D1](../cfd1.md)**
 
     ----

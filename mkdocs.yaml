@@ -30,6 +30,7 @@ nav:
           - catalog/wasm/index.md
           - Cal.com: 'catalog/cal.md'
           - Calendly: 'catalog/calendly.md'
+          - Clerk: 'catalog/clerk.md'
           - Cloudflare D1: 'catalog/cfd1.md'
           - Notion: 'catalog/notion.md'
           - Paddle: 'catalog/paddle.md'
