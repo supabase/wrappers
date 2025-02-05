@@ -17,6 +17,7 @@ The Notion Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you 
 
 | Version | Wasm Package URL                                                                                | Checksum                                                           |
 | ------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| 0.1.1   | `https://github.com/supabase/wrappers/releases/download/wasm_notion_fdw_v0.1.1/notion_fdw.wasm` | `tbd` |
 | 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_notion_fdw_v0.1.0/notion_fdw.wasm` | `e017263d1fc3427cc1df8071d1182cdc9e2f00363344dddb8c195c5d398a2099` |
 
 ## Preparation
@@ -55,6 +56,42 @@ values (
 returning key_id;
 ```
 
+### Connecting to Notion
+
+We need to provide Postgres with the credentials to access Notion and any additional options. We can do this using the `create server` command:
+
+=== "With Vault"
+
+    ```sql
+    create server notion_server
+      foreign data wrapper wasm_wrapper
+      options (
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_notion_fdw_v0.1.1/notion_fdw.wasm',
+        fdw_package_name 'supabase:notion-fdw',
+        fdw_package_version '0.1.1',
+        fdw_package_checksum 'tbd',
+        api_url 'https://api.notion.com/v1',  -- optional
+        api_key_id '<key_ID>' -- The Key ID from above.
+      );
+    ```
+
+=== "Without Vault"
+
+    ```sql
+    create server cal_server
+      foreign data wrapper wasm_wrapper
+      options (
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_notion_fdw_v0.1.1/notion_fdw.wasm',
+        fdw_package_name 'supabase:notion-fdw',
+        fdw_package_version '0.1.1',
+        fdw_package_checksum 'tbd',
+        api_url 'https://api.notion.com/v1',  -- optional
+        api_key 'secret_xxxx...'  -- Notion API key
+      );
+    ```
+
+Note the `fdw_package_*` options are required, which specify the Wasm package metadata. You can get the available package version list from [above](#available-versions).
+
 ### Create a schema
 
 We recommend creating a schema to hold all the foreign tables:
@@ -91,7 +128,7 @@ Ref: [Notion API docs](https://developers.notion.com/reference/intro)
 
 | Object | Select | Insert | Update | Delete | Truncate |
 | ------ | :----: | :----: | :----: | :----: | :------: |
-| Block  |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
+| Block  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
 
 #### Usage
 
@@ -130,7 +167,7 @@ Ref: [Notion API docs](https://developers.notion.com/reference/intro)
 
 | Object | Select | Insert | Update | Delete | Truncate |
 | ------ | :----: | :----: | :----: | :----: | :------: |
-| Page   |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
+| Page   |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
 
 #### Usage
 
@@ -164,7 +201,7 @@ Ref: [Notion API docs](https://developers.notion.com/reference/intro)
 
 | Object   | Select | Insert | Update | Delete | Truncate |
 | -------- | :----: | :----: | :----: | :----: | :------: |
-| Database |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
+| Database |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
 
 #### Usage
 
@@ -198,7 +235,7 @@ Ref: [Notion API docs](https://developers.notion.com/reference/intro)
 
 | Object | Select | Insert | Update | Delete | Truncate |
 | ------ | :----: | :----: | :----: | :----: | :------: |
-| User   |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
+| User   |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
 
 #### Usage
 

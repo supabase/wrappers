@@ -296,6 +296,8 @@ impl NotionFdw {
         let children = self.make_request("block", Some(block_id), ctx)?;
 
         for child in children.iter() {
+            ret.push(child.clone());
+
             let has_children = child
                 .pointer("/has_children")
                 .and_then(|v| v.as_bool())
@@ -307,8 +309,6 @@ impl NotionFdw {
                 }
             }
         }
-
-        ret.extend(children);
 
         Ok(ret)
     }
