@@ -12,7 +12,7 @@ name = "pgrx_embed_wrappers"
 path = "./src/bin/pgrx_embed.rs"
 
 [lints.rust]
-unexpected_cfgs = { level = "allow", check-cfg = ['cfg(pgrx_embed)'] }
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(pgrx_embed)'] }
 
 [features]
 default = ["pg15"]
