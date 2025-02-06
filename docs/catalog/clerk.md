@@ -17,7 +17,7 @@ The Clerk Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you t
 
 | Version | Wasm Package URL                                                                                    | Checksum                                                           |
 | ------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_clerk_fdw_v0.1.0/clerk_fdw.wasm` | `tbd` |
+| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_clerk_fdw_v0.1.0/clerk_fdw.wasm` | `613be26b59fa4c074e0b93f0db617fcd7b468d4d02edece0b1f85fdb683ebdc4` |
 
 ## Preparation
 
@@ -68,7 +68,7 @@ We need to provide Postgres with the credentials to access Clerk and any additio
         fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_clerk_fdw_v0.1.0/clerk_fdw.wasm',
         fdw_package_name 'supabase:clerk-fdw',
         fdw_package_version '0.1.0',
-        fdw_package_checksum 'tbd',
+        fdw_package_checksum '613be26b59fa4c074e0b93f0db617fcd7b468d4d02edece0b1f85fdb683ebdc4',
         api_url 'https://api.clerk.com/v1',  -- optional
         api_key_id '<key_ID>' -- The Key ID from above.
       );
@@ -83,7 +83,7 @@ We need to provide Postgres with the credentials to access Clerk and any additio
         fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_clerk_fdw_v0.1.0/clerk_fdw.wasm',
         fdw_package_name 'supabase:clerk-fdw',
         fdw_package_version '0.1.0',
-        fdw_package_checksum 'tbd',
+        fdw_package_checksum '613be26b59fa4c074e0b93f0db617fcd7b468d4d02edece0b1f85fdb683ebdc4',
         api_url 'https://api.clerk.com/v1',  -- optional
         api_key 'sk_test_...'  -- Clerk API key
       );
