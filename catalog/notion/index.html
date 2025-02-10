@@ -738,6 +738,8 @@
       
         
       
+        
+      
     
     
       
@@ -817,6 +819,27 @@
   
   <span class="md-ellipsis">
     Calendly
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../clerk/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Clerk
   </span>
   
 
@@ -940,6 +963,15 @@
   <a href="#store-your-credentials-optional" class="md-nav__link">
     <span class="md-ellipsis">
       Store your credentials (optional)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#connecting-to-notion" class="md-nav__link">
+    <span class="md-ellipsis">
+      Connecting to Notion
     </span>
   </a>
   
@@ -1814,6 +1846,15 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#connecting-to-notion" class="md-nav__link">
+    <span class="md-ellipsis">
+      Connecting to Notion
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#create-a-schema" class="md-nav__link">
     <span class="md-ellipsis">
       Create a schema
@@ -2137,6 +2178,11 @@
 </thead>
 <tbody>
 <tr>
+<td>0.1.1</td>
+<td><code>https://github.com/supabase/wrappers/releases/download/wasm_notion_fdw_v0.1.1/notion_fdw.wasm</code></td>
+<td><code>tbd</code></td>
+</tr>
+<tr>
 <td>0.1.0</td>
 <td><code>https://github.com/supabase/wrappers/releases/download/wasm_notion_fdw_v0.1.0/notion_fdw.wasm</code></td>
 <td><code>e017263d1fc3427cc1df8071d1182cdc9e2f00363344dddb8c195c5d398a2099</code></td>
@@ -2173,6 +2219,57 @@
 <span class="p">)</span>
 <span class="n">returning</span><span class="w"> </span><span class="n">key_id</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
+<h3 id="connecting-to-notion">Connecting to Notion</h3>
+<p>We need to provide Postgres with the credentials to access Notion and any additional options. We can do this using the <code>create server</code> command:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">With Vault</label><label for="__tabbed_1_2">Without Vault</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">notion_server</span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_notion_fdw_v0.1.1/notion_fdw.wasm&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;supabase:notion-fdw&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.1.1&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;tbd&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">api_url</span><span class="w"> </span><span class="s1">&#39;https://api.notion.com/v1&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- optional</span>
+<span class="w">    </span><span class="n">api_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;key_ID&gt;&#39;</span><span class="w"> </span><span class="c1">-- The Key ID from above.</span>
+<span class="w">  </span><span class="p">);</span>
+</code></pre></div></td></tr></table></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">cal_server</span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_notion_fdw_v0.1.1/notion_fdw.wasm&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;supabase:notion-fdw&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.1.1&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;tbd&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">api_url</span><span class="w"> </span><span class="s1">&#39;https://api.notion.com/v1&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- optional</span>
+<span class="w">    </span><span class="n">api_key</span><span class="w"> </span><span class="s1">&#39;secret_xxxx...&#39;</span><span class="w">  </span><span class="c1">-- Notion API key</span>
+<span class="w">  </span><span class="p">);</span>
+</code></pre></div></td></tr></table></div>
+</div>
+</div>
+</div>
+<p>Note the <code>fdw_package_*</code> options are required, which specify the Wasm package metadata. You can get the available package version list from <a href="#available-versions">above</a>.</p>
 <h3 id="create-a-schema">Create a schema</h3>
 <p>We recommend creating a schema to hold all the foreign tables:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">notion</span><span class="p">;</span>
