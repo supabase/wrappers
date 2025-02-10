@@ -17,7 +17,7 @@ The Notion Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you 
 
 | Version | Wasm Package URL                                                                                | Checksum                                                           |
 | ------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| 0.1.1   | `https://github.com/supabase/wrappers/releases/download/wasm_notion_fdw_v0.1.1/notion_fdw.wasm` | `tbd` |
+| 0.1.1   | `https://github.com/supabase/wrappers/releases/download/wasm_notion_fdw_v0.1.1/notion_fdw.wasm` | `6dea3014f462aafd0c051c37d163fe326e7650c26a7eb5d8017a30634b5a46de` |
 | 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_notion_fdw_v0.1.0/notion_fdw.wasm` | `e017263d1fc3427cc1df8071d1182cdc9e2f00363344dddb8c195c5d398a2099` |
 
 ## Preparation
@@ -69,7 +69,7 @@ We need to provide Postgres with the credentials to access Notion and any additi
         fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_notion_fdw_v0.1.1/notion_fdw.wasm',
         fdw_package_name 'supabase:notion-fdw',
         fdw_package_version '0.1.1',
-        fdw_package_checksum 'tbd',
+        fdw_package_checksum '6dea3014f462aafd0c051c37d163fe326e7650c26a7eb5d8017a30634b5a46de',
         api_url 'https://api.notion.com/v1',  -- optional
         api_key_id '<key_ID>' -- The Key ID from above.
       );
@@ -84,7 +84,7 @@ We need to provide Postgres with the credentials to access Notion and any additi
         fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_notion_fdw_v0.1.1/notion_fdw.wasm',
         fdw_package_name 'supabase:notion-fdw',
         fdw_package_version '0.1.1',
-        fdw_package_checksum 'tbd',
+        fdw_package_checksum '6dea3014f462aafd0c051c37d163fe326e7650c26a7eb5d8017a30634b5a46de',
         api_url 'https://api.notion.com/v1',  -- optional
         api_key 'secret_xxxx...'  -- Notion API key
       );
