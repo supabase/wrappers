@@ -69,8 +69,8 @@ Foreign data wrappers built with Wasm which can be used on Supabase platform.
 
     Supported by [Supabase](https://www.supabase.com)
 
-    :octicons-tag-24: [v0.1.0](https://github.com/supabase/wrappers/releases/tag/wasm_notion_fdw_v0.1.0) &nbsp;
-    :octicons-code-24: [source](https://github.com/supabase/wrappers/tree/wasm_notion_fdw_v0.1.0/wasm-wrappers/fdw/notion_fdw) &nbsp;
+    :octicons-tag-24: [v0.1.1](https://github.com/supabase/wrappers/releases/tag/wasm_notion_fdw_v0.1.1) &nbsp;
+    :octicons-code-24: [source](https://github.com/supabase/wrappers/tree/wasm_notion_fdw_v0.1.1/wasm-wrappers/fdw/notion_fdw) &nbsp;
     :material-file-document: [docs](../notion.md)
 
 - :simple-webassembly: &nbsp; **[Paddle](../paddle.md)**

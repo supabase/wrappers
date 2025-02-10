@@ -1,4 +1,4 @@
-package supabase:notion-fdw@0.1.0;
+package supabase:notion-fdw@0.1.1;
 
 world notion {
     import supabase:wrappers/http@0.1.0;
