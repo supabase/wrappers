@@ -34,6 +34,7 @@ mod tests {
                     r#"CREATE TABLE users (
                         id bigint,
                         name varchar(30),
+                        amount numeric(18,2),
                         is_admin bit,
                         dt datetime2
                     )"#,
@@ -47,9 +48,9 @@ mod tests {
             client
                 .execute(
                     r#"
-                    INSERT INTO users(id, name, is_admin, dt) VALUES (42, 'foo', 0, '2023-12-28');
-                    INSERT INTO users(id, name, is_admin, dt) VALUES (43, 'bar', 1, '2023-12-27');
-                    INSERT INTO users(id, name, is_admin, dt) VALUES (44, 'baz', 0, '2023-12-26');
+                    INSERT INTO users(id, name, amount, is_admin, dt) VALUES (42, 'foo', 12.34, 0, '2023-12-28');
+                    INSERT INTO users(id, name, amount, is_admin, dt) VALUES (43, 'bar', 0.0, 1, '2023-12-27');
+                    INSERT INTO users(id, name, amount, is_admin, dt) VALUES (44, 'baz', 42.0, 0, '2023-12-26');
                     "#,
                     &[],
                 )
@@ -80,6 +81,7 @@ mod tests {
                   CREATE FOREIGN TABLE mssql_users (
                     id bigint,
                     name text,
+                    amount numeric(18,2),
                     is_admin boolean,
                     dt timestamp
                   )
@@ -109,11 +111,22 @@ mod tests {
             .unwrap();
 
             let results = c
-                .select("SELECT name FROM mssql_users WHERE id = 42", None, None)
+                .select(
+                    "SELECT name, amount FROM mssql_users WHERE id = 42",
+                    None,
+                    None,
+                )
                 .unwrap()
-                .filter_map(|r| r.get_by_name::<&str, _>("name").unwrap())
+                .filter_map(|r| {
+                    r.get_by_name::<&str, _>("name")
+                        .unwrap()
+                        .zip(r.get_by_name::<pgrx::Numeric<18, 2>, _>("amount").unwrap())
+                })
                 .collect::<Vec<_>>();
-            assert_eq!(results, vec!["foo"]);
+            assert_eq!(
+                results,
+                vec![("foo", pgrx::Numeric::try_from(12.34).unwrap())]
+            );
 
             let results = c
                 .select("SELECT name FROM mssql_users ORDER BY id DESC", None, None)
