@@ -253,6 +253,50 @@ class MockServer(BaseHTTPRequestHandler):
   }
 ]
             '''
+        elif fdw == "orb":
+            body = '''
+{
+  "data": [
+    {
+      "accounting_sync_configuration": {
+        "accounting_providers": [],
+        "excluded": false
+      },
+      "additional_emails": [],
+      "auto_collection": true,
+      "balance": "0.00",
+      "billing_address": null,
+      "created_at": "2025-02-15T13:04:43+00:00",
+      "currency": "USD",
+      "email": "test@test.com",
+      "email_delivery": true,
+      "exempt_from_automated_tax": false,
+      "external_customer_id": "aaabbbcccddd",
+      "hierarchy": {
+        "children": [],
+        "parent": null
+      },
+      "id": "XimGiw3pnsgusvc3",
+      "metadata": {
+        "is_local_entity": "true",
+        "mydata.0": "aaabbbcccddd"
+      },
+      "name": "test@test.com customer",
+      "payment_provider": "stripe_charge",
+      "payment_provider_id": "cus_xxxx",
+      "portal_url": "https://portal.withorb.com/view?token=aaaa.bbb.ccc",
+      "reporting_configuration": null,
+      "shipping_address": null,
+      "tax_id": null,
+      "timezone": "Etc/UTC"
+    }
+  ],
+  "pagination_metadata": {
+    "has_more": false,
+    "next_cursor": null
+  }
+}
+            '''
         else:
             self.send_response(404)
             return
