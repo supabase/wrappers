@@ -48,6 +48,7 @@ jobs:
             pkg-config \
             postgresql-15 \
             postgresql-server-dev-15
+          sudo apt-get -y autoremove && sudo apt-get -y clean
           sudo chmod a+rwx `/usr/lib/postgresql/15/bin/pg_config --pkglibdir` `/usr/lib/postgresql/15/bin/pg_config --sharedir`/extension /var/run/postgresql/
 
       - run: cargo install cargo-pgrx --version 0.12.9
@@ -69,9 +70,7 @@ jobs:
         run: |
           source <(cargo llvm-cov show-env --export-prefix --no-cfg-coverage)
           cargo llvm-cov clean --workspace
-          cargo pgrx test --features "native_fdws" --manifest-path wrappers/Cargo.toml pg15
-          rm -rf ./target/debug
-          cargo pgrx test --features "wasm_fdw" --manifest-path wrappers/Cargo.toml pg15
+          cargo pgrx test --features "all_fdws" --manifest-path wrappers/Cargo.toml pg15
           cargo llvm-cov report --lcov --output-path lcov.info
 
       - name: Coveralls upload
