@@ -68,7 +68,9 @@ jobs:
         run: |
           source <(cargo llvm-cov show-env --export-prefix --no-cfg-coverage)
           cargo llvm-cov clean --workspace
-          cargo pgrx test --features "all_fdws" --manifest-path wrappers/Cargo.toml pg15
+          cargo pgrx test --features "native_fdws" --manifest-path wrappers/Cargo.toml pg15
+          rm -rf ./target/debug
+          cargo pgrx test --features "wasm_fdws" --manifest-path wrappers/Cargo.toml pg15
           cargo llvm-cov report --lcov --output-path lcov.info
 
       - name: Coveralls upload
