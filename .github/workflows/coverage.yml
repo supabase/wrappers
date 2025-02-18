@@ -70,7 +70,7 @@ jobs:
           rm -rf ./target/debug
           cargo install cargo-component --version 0.13.2
           rustup target add wasm32-unknown-unknown
-          cargo pgrx test --features "wasm_fdws" --manifest-path wrappers/Cargo.toml pg15
+          cargo pgrx test --features "wasm_fdw" --manifest-path wrappers/Cargo.toml pg15
           cargo llvm-cov report --lcov --output-path lcov.info
 
       - name: Coveralls upload
