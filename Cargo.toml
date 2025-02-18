@@ -10,9 +10,10 @@ exclude = [
     "wasm-wrappers/fdw/cfd1_fdw",
     "wasm-wrappers/fdw/clerk_fdw",
     "wasm-wrappers/fdw/helloworld_fdw",
-    "wasm-wrappers/fdw/snowflake_fdw",
-    "wasm-wrappers/fdw/paddle_fdw",
     "wasm-wrappers/fdw/notion_fdw",
+    "wasm-wrappers/fdw/orb_fdw",
+    "wasm-wrappers/fdw/paddle_fdw",
+    "wasm-wrappers/fdw/snowflake_fdw",
 ]
 resolver = "2"
 

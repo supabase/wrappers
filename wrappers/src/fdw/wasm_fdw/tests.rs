@@ -325,6 +325,48 @@ mod tests {
                 .filter_map(|r| r.get_by_name::<&str, _>("id").unwrap())
                 .collect::<Vec<_>>();
             assert_eq!(results, vec!["user_2rvWkk90azWI2o3PH4LDuCMDPPh"]);
+
+            // Orb FDW test
+            c.update(
+                r#"CREATE SERVER orb_server
+                     FOREIGN DATA WRAPPER wasm_wrapper
+                     OPTIONS (
+                       fdw_package_url 'file://../../../wasm-wrappers/fdw/orb_fdw/target/wasm32-unknown-unknown/release/orb_fdw.wasm',
+                       fdw_package_name 'supabase:orb-fdw',
+                       fdw_package_version '>=0.1.0',
+                       api_url 'http://localhost:8096/orb',
+                       api_key 'ccc'
+                     )"#,
+                None,
+                None,
+            )
+            .unwrap();
+            c.update(
+                r#"
+                  CREATE FOREIGN TABLE orb_table (
+                    id text,
+                    name text,
+                    email text,
+                    created_at timestamp,
+                    auto_collection boolean,
+                    attrs jsonb
+                  )
+                  SERVER orb_server
+                  OPTIONS (
+                    object 'customers'
+                  )
+             "#,
+                None,
+                None,
+            )
+            .unwrap();
+
+            let results = c
+                .select("SELECT * FROM orb_table", None, None)
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("id").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(results, vec!["XimGiw3pnsgusvc3"]);
         });
     }
 }
