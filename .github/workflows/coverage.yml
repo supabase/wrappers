@@ -57,6 +57,13 @@ jobs:
         run: |
           docker compose -f wrappers/.ci/docker-compose.yaml up -d
 
+      - name: Build Wasm FDWs
+        run: |
+          cargo install cargo-component --version 0.13.2
+          rustup target add wasm32-unknown-unknown
+          find ./wasm-wrappers/fdw/ -name "Cargo.toml" -exec cargo component build --release --target wasm32-unknown-unknown --manifest-path {} \;
+          find ./wasm-wrappers/fdw/ -type f ! -name "*.wasm" -delete
+
       - name: Generate code coverage
         id: coverage
         run: |
@@ -64,9 +71,6 @@ jobs:
           cargo llvm-cov clean --workspace
           cargo pgrx test --features "native_fdws" --manifest-path wrappers/Cargo.toml pg15
           rm -rf ./target/debug
-          cargo install cargo-component --version 0.13.2
-          rustup target add wasm32-unknown-unknown
-          find ./wasm-wrappers/fdw/ -name "Cargo.toml" -exec cargo component build --release --target wasm32-unknown-unknown --manifest-path {} \;
           cargo pgrx test --features "wasm_fdw" --manifest-path wrappers/Cargo.toml pg15
           cargo llvm-cov report --lcov --output-path lcov.info
 
