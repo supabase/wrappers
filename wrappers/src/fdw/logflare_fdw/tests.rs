@@ -43,17 +43,18 @@ mod tests {
             .unwrap();
 
             let results = c
-                .select(
-                    "SELECT * FROM logflare_table",
-                    None,
-                    None,
-                )
+                .select("SELECT * FROM logflare_table", None, None)
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("id").unwrap())
                 .collect::<Vec<_>>();
 
-            assert_eq!(results, vec!["84e1ed2a-3627-4d70-b311-c0e7c0bed313", "f45121ea-1738-46c9-a506-9ee52ff8220f"]);
+            assert_eq!(
+                results,
+                vec![
+                    "84e1ed2a-3627-4d70-b311-c0e7c0bed313",
+                    "f45121ea-1738-46c9-a506-9ee52ff8220f"
+                ]
+            );
         });
     }
 }
-
