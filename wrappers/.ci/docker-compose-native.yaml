@@ -147,3 +147,15 @@ services:
       interval: 11s
       timeout: 6s
       retries: 3
+
+  logflare:
+    container_name: logflare-local
+    build:
+      context: ../dockerfiles/logflare
+    ports:
+      - "4343:4343"
+    healthcheck:
+      test: curl --fail http://0.0.0.0:4343/v1/endpoint || exit 1
+      interval: 11s
+      timeout: 6s
+      retries: 3
