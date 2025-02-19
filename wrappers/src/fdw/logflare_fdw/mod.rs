@@ -1,5 +1,6 @@
 #![allow(clippy::module_inception)]
 mod logflare_fdw;
+mod tests;
 
 use http::header::InvalidHeaderValue;
 use pgrx::pg_sys::panic::ErrorReport;

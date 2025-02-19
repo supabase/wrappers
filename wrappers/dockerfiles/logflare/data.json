@@ -1,0 +1,116 @@
+{
+    "result": [
+        {
+            "event_message": "Sent 200 in 4ms",
+            "id": "84e1ed2a-3627-4d70-b311-c0e7c0bed313",
+            "metadata": [
+                {
+                    "application_name": null,
+                    "callers": [],
+                    "context": [
+                        {
+                            "application": "phoenix",
+                            "domain": [
+                                "elixir"
+                            ],
+                            "file": "lib/phoenix/logger.ex",
+                            "function": "phoenix_endpoint_stop/4",
+                            "gl": "<0.2934.0>",
+                            "line": 231,
+                            "mfa": [
+                                "Elixir.Phoenix.Logger",
+                                "phoenix_endpoint_stop",
+                                "4"
+                            ],
+                            "module": "Elixir.Phoenix.Logger",
+                            "pid": "<0.2224935.0>",
+                            "registered_name": null,
+                            "time": 1739866449830697,
+                            "vm": [
+                                {
+                                    "node": "realtime@2a05:d01c:582:c001:78f1:89cb:ccc2:e853"
+                                }
+                            ]
+                        }
+                    ],
+                    "depth": null,
+                    "error_code": null,
+                    "error_logger": [],
+                    "error_string": null,
+                    "external_id": null,
+                    "formatter_error_params": [],
+                    "func": null,
+                    "internal_log_event": null,
+                    "level": "info",
+                    "logger_pubsub_backend": [],
+                    "measurements": [],
+                    "mod": null,
+                    "project": null,
+                    "region": "eu-west-2",
+                    "request_id": "GCU_UWKIIGEd25gAQTbB",
+                    "stacktrace": [],
+                    "target": null,
+                    "tenant": null,
+                    "tenant_params": []
+                }
+            ],
+            "timestamp": 1739866449830000
+        },
+        {
+            "event_message": "GET /",
+            "id": "f45121ea-1738-46c9-a506-9ee52ff8220f",
+            "metadata": [
+                {
+                    "application_name": null,
+                    "callers": [],
+                    "context": [
+                        {
+                            "application": "phoenix",
+                            "domain": [
+                                "elixir"
+                            ],
+                            "file": "lib/phoenix/logger.ex",
+                            "function": "phoenix_endpoint_start/4",
+                            "gl": "<0.2934.0>",
+                            "line": 217,
+                            "mfa": [
+                                "Elixir.Phoenix.Logger",
+                                "phoenix_endpoint_start",
+                                "4"
+                            ],
+                            "module": "Elixir.Phoenix.Logger",
+                            "pid": "<0.2224935.0>",
+                            "registered_name": null,
+                            "time": 1739866449826598,
+                            "vm": [
+                                {
+                                    "node": "realtime@2a05:d01c:582:c001:78f1:89cb:ccc2:e853"
+                                }
+                            ]
+                        }
+                    ],
+                    "depth": null,
+                    "error_code": null,
+                    "error_logger": [],
+                    "error_string": null,
+                    "external_id": null,
+                    "formatter_error_params": [],
+                    "func": null,
+                    "internal_log_event": null,
+                    "level": "info",
+                    "logger_pubsub_backend": [],
+                    "measurements": [],
+                    "mod": null,
+                    "project": null,
+                    "region": "eu-west-2",
+                    "request_id": "GCU_UWKIIGEd25gAQTbB",
+                    "stacktrace": [],
+                    "target": null,
+                    "tenant": null,
+                    "tenant_params": []
+                }
+            ],
+            "timestamp": 1739866449826000
+        }
+    ]
+}
