@@ -130,6 +130,34 @@ options (
 
 This FDW doesn't support query pushdown.
 
+## Supported Data Types
+
+| Postgres Data Type | Airtable Data Type |
+| ------------------ | ------------------ |
+| boolean            | Checkbox           |
+| smallint           | Number             |
+| integer            | Number             |
+| bigint             | Autonumber         |
+| bigint             | Number             |
+| real               | Number             |
+| double precision   | Number             |
+| numeric            | Number             |
+| numeric            | Currency           |
+| numeric            | Percent            |
+| text               | Single line text   |
+| text               | Long text          |
+| text               | Single select      |
+| text               | Phone number       |
+| text               | Email              |
+| text               | URL                |
+| date               | Date               |
+| timestamp          | Created time       |
+| timestamp          | Last modified time |
+| jsonb              | Multiple select    |
+| jsonb              | Created by         |
+| jsonb              | Last modified by   |
+| jsonb              | User               |
+
 ## Limitations
 
 This section describes important limitations and considerations when using this FDW:
