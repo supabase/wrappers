@@ -15,9 +15,9 @@ The Orb Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you to 
 
 ## Available Versions
 
-| Version | Wasm Package URL                                                                                    | Checksum                                                           |
-| ------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_orb_fdw_v0.1.0/orb_fdw.wasm` | `tbd` |
+| Version | Wasm Package URL                                                                          | Checksum                                                           |
+| ------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_orb_fdw_v0.1.0/orb_fdw.wasm` | `89153a0a570257c231b78561cc909766731c828324585a5b6e2aa553902cb73a` |
 
 ## Preparation
 
@@ -68,7 +68,7 @@ We need to provide Postgres with the credentials to access Orb and any additiona
         fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_orb_fdw_v0.1.0/orb_fdw.wasm',
         fdw_package_name 'supabase:orb-fdw',
         fdw_package_version '0.1.0',
-        fdw_package_checksum 'tbd',
+        fdw_package_checksum '89153a0a570257c231b78561cc909766731c828324585a5b6e2aa553902cb73a',
         api_url 'https://api.withorb.com/v1',  -- optional
         api_key_id '<key_ID>' -- The Key ID from above.
       );
@@ -83,7 +83,7 @@ We need to provide Postgres with the credentials to access Orb and any additiona
         fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_orb_fdw_v0.1.0/orb_fdw.wasm',
         fdw_package_name 'supabase:orb-fdw',
         fdw_package_version '0.1.0',
-        fdw_package_checksum 'tbd',
+        fdw_package_checksum '89153a0a570257c231b78561cc909766731c828324585a5b6e2aa553902cb73a',
         api_url 'https://api.withorb.com/v1',  -- optional
         api_key '3e2e912...'  -- Orb API key
       );
