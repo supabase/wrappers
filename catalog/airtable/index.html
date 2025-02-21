@@ -651,6 +651,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#supported-data-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Supported Data Types
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#limitations" class="md-nav__link">
     <span class="md-ellipsis">
       Limitations
@@ -946,6 +955,8 @@
       
         
       
+        
+      
     
     
       
@@ -1090,6 +1101,27 @@
   
   <span class="md-ellipsis">
     Notion
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../orb/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Orb
   </span>
   
 
@@ -1764,6 +1796,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#supported-data-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Supported Data Types
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#limitations" class="md-nav__link">
     <span class="md-ellipsis">
       Limitations
@@ -1967,6 +2008,109 @@
 </ul>
 <h2 id="query-pushdown-support">Query Pushdown Support</h2>
 <p>This FDW doesn't support query pushdown.</p>
+<h2 id="supported-data-types">Supported Data Types</h2>
+<table>
+<thead>
+<tr>
+<th>Postgres Data Type</th>
+<th>Airtable Data Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>boolean</td>
+<td>Checkbox</td>
+</tr>
+<tr>
+<td>smallint</td>
+<td>Number</td>
+</tr>
+<tr>
+<td>integer</td>
+<td>Number</td>
+</tr>
+<tr>
+<td>bigint</td>
+<td>Autonumber</td>
+</tr>
+<tr>
+<td>bigint</td>
+<td>Number</td>
+</tr>
+<tr>
+<td>real</td>
+<td>Number</td>
+</tr>
+<tr>
+<td>double precision</td>
+<td>Number</td>
+</tr>
+<tr>
+<td>numeric</td>
+<td>Number</td>
+</tr>
+<tr>
+<td>numeric</td>
+<td>Currency</td>
+</tr>
+<tr>
+<td>numeric</td>
+<td>Percent</td>
+</tr>
+<tr>
+<td>text</td>
+<td>Single line text</td>
+</tr>
+<tr>
+<td>text</td>
+<td>Long text</td>
+</tr>
+<tr>
+<td>text</td>
+<td>Single select</td>
+</tr>
+<tr>
+<td>text</td>
+<td>Phone number</td>
+</tr>
+<tr>
+<td>text</td>
+<td>Email</td>
+</tr>
+<tr>
+<td>text</td>
+<td>URL</td>
+</tr>
+<tr>
+<td>date</td>
+<td>Date</td>
+</tr>
+<tr>
+<td>timestamp</td>
+<td>Created time</td>
+</tr>
+<tr>
+<td>timestamp</td>
+<td>Last modified time</td>
+</tr>
+<tr>
+<td>jsonb</td>
+<td>Multiple select</td>
+</tr>
+<tr>
+<td>jsonb</td>
+<td>Created by</td>
+</tr>
+<tr>
+<td>jsonb</td>
+<td>Last modified by</td>
+</tr>
+<tr>
+<td>jsonb</td>
+<td>User</td>
+</tr>
+</tbody>
+</table>
 <h2 id="limitations">Limitations</h2>
 <p>This section describes important limitations and considerations when using this FDW:</p>
 <ul>

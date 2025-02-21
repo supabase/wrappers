@@ -2,177 +2,182 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://supabase.github.io/wrappers/</loc>
-         <lastmod>2025-02-10</lastmod>
+         <lastmod>2025-02-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/catalog/</loc>
-         <lastmod>2025-02-10</lastmod>
+         <lastmod>2025-02-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/catalog/airtable/</loc>
-         <lastmod>2025-02-10</lastmod>
+         <lastmod>2025-02-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/catalog/auth0/</loc>
-         <lastmod>2025-02-10</lastmod>
+         <lastmod>2025-02-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/catalog/bigquery/</loc>
-         <lastmod>2025-02-10</lastmod>
+         <lastmod>2025-02-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/catalog/cal/</loc>
-         <lastmod>2025-02-10</lastmod>
+         <lastmod>2025-02-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/catalog/calendly/</loc>
-         <lastmod>2025-02-10</lastmod>
+         <lastmod>2025-02-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/catalog/cfd1/</loc>
-         <lastmod>2025-02-10</lastmod>
+         <lastmod>2025-02-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/catalog/clerk/</loc>
-         <lastmod>2025-02-10</lastmod>
+         <lastmod>2025-02-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/catalog/clickhouse/</loc>
-         <lastmod>2025-02-10</lastmod>
+         <lastmod>2025-02-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/catalog/cognito/</loc>
-         <lastmod>2025-02-10</lastmod>
+         <lastmod>2025-02-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/catalog/firebase/</loc>
-         <lastmod>2025-02-10</lastmod>
+         <lastmod>2025-02-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/catalog/logflare/</loc>
-         <lastmod>2025-02-10</lastmod>
+         <lastmod>2025-02-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/catalog/mssql/</loc>
-         <lastmod>2025-02-10</lastmod>
+         <lastmod>2025-02-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/catalog/notion/</loc>
-         <lastmod>2025-02-10</lastmod>
+         <lastmod>2025-02-21</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://supabase.github.io/wrappers/catalog/orb/</loc>
+         <lastmod>2025-02-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/catalog/paddle/</loc>
-         <lastmod>2025-02-10</lastmod>
+         <lastmod>2025-02-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/catalog/redis/</loc>
-         <lastmod>2025-02-10</lastmod>
+         <lastmod>2025-02-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/catalog/s3/</loc>
-         <lastmod>2025-02-10</lastmod>
+         <lastmod>2025-02-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/catalog/snowflake/</loc>
-         <lastmod>2025-02-10</lastmod>
+         <lastmod>2025-02-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/catalog/stripe/</loc>
-         <lastmod>2025-02-10</lastmod>
+         <lastmod>2025-02-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/catalog/wasm/</loc>
-         <lastmod>2025-02-10</lastmod>
+         <lastmod>2025-02-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/contributing/core/</loc>
-         <lastmod>2025-02-10</lastmod>
+         <lastmod>2025-02-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/contributing/documentation/</loc>
-         <lastmod>2025-02-10</lastmod>
+         <lastmod>2025-02-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/contributing/native/</loc>
-         <lastmod>2025-02-10</lastmod>
+         <lastmod>2025-02-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/guides/create-wasm-wrapper/</loc>
-         <lastmod>2025-02-10</lastmod>
+         <lastmod>2025-02-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/guides/installation/</loc>
-         <lastmod>2025-02-10</lastmod>
+         <lastmod>2025-02-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/guides/limitations/</loc>
-         <lastmod>2025-02-10</lastmod>
+         <lastmod>2025-02-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/guides/native-wasm/</loc>
-         <lastmod>2025-02-10</lastmod>
+         <lastmod>2025-02-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/guides/query-pushdown/</loc>
-         <lastmod>2025-02-10</lastmod>
+         <lastmod>2025-02-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/guides/remote-subqueries/</loc>
-         <lastmod>2025-02-10</lastmod>
+         <lastmod>2025-02-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/guides/removing-wrappers/</loc>
-         <lastmod>2025-02-10</lastmod>
+         <lastmod>2025-02-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/guides/security/</loc>
-         <lastmod>2025-02-10</lastmod>
+         <lastmod>2025-02-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/guides/usage-statistics/</loc>
-         <lastmod>2025-02-10</lastmod>
+         <lastmod>2025-02-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/guides/wasm-advanced/</loc>
-         <lastmod>2025-02-10</lastmod>
+         <lastmod>2025-02-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://supabase.github.io/wrappers/tags/</loc>
-         <lastmod>2025-02-10</lastmod>
+         <lastmod>2025-02-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
 </urlset>

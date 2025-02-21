@@ -12,13 +12,13 @@
         <meta name="author" content="supabase">
       
       
-        <link rel="canonical" href="https://supabase.github.io/wrappers/catalog/clerk/">
+        <link rel="canonical" href="https://supabase.github.io/wrappers/catalog/orb/">
       
       
-        <link rel="prev" href="../calendly/">
+        <link rel="prev" href="../notion/">
       
       
-        <link rel="next" href="../cfd1/">
+        <link rel="next" href="../paddle/">
       
       
       <link rel="icon" href="../../assets/favicon.ico">
@@ -26,7 +26,7 @@
     
     
       
-        <title>Clerk - Wrappers</title>
+        <title>Orb - Wrappers</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#clerk" class="md-skip">
+        <a href="#orb" class="md-skip">
           Skip to content
         </a>
       
@@ -113,7 +113,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Clerk
+              Orb
             
           </span>
         </div>
@@ -834,30 +834,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    Clerk
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../clerk/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -866,683 +846,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#available-versions" class="md-nav__link">
-    <span class="md-ellipsis">
-      Available Versions
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#preparation" class="md-nav__link">
-    <span class="md-ellipsis">
-      Preparation
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Preparation">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#enable-wrappers" class="md-nav__link">
-    <span class="md-ellipsis">
-      Enable Wrappers
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#enable-the-clerk-wrapper" class="md-nav__link">
-    <span class="md-ellipsis">
-      Enable the Clerk Wrapper
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#store-your-credentials-optional" class="md-nav__link">
-    <span class="md-ellipsis">
-      Store your credentials (optional)
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#connecting-to-clerk" class="md-nav__link">
-    <span class="md-ellipsis">
-      Connecting to Clerk
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#create-a-schema" class="md-nav__link">
-    <span class="md-ellipsis">
-      Create a schema
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#options" class="md-nav__link">
-    <span class="md-ellipsis">
-      Options
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#entities" class="md-nav__link">
-    <span class="md-ellipsis">
-      Entities
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Entities">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#allow-list" class="md-nav__link">
-    <span class="md-ellipsis">
-      Allow-list
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Allow-list">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations" class="md-nav__link">
-    <span class="md-ellipsis">
-      Operations
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#block-list" class="md-nav__link">
-    <span class="md-ellipsis">
-      Block-list
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Block-list">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      Operations
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#domains" class="md-nav__link">
-    <span class="md-ellipsis">
-      Domains
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Domains">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      Operations
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#invitations" class="md-nav__link">
-    <span class="md-ellipsis">
-      Invitations
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Invitations">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations_3" class="md-nav__link">
-    <span class="md-ellipsis">
-      Operations
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_3" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_3" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#jwt-templates" class="md-nav__link">
-    <span class="md-ellipsis">
-      JWT Templates
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="JWT Templates">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations_4" class="md-nav__link">
-    <span class="md-ellipsis">
-      Operations
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_4" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_4" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#oauth-applications" class="md-nav__link">
-    <span class="md-ellipsis">
-      OAuth Applications
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="OAuth Applications">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations_5" class="md-nav__link">
-    <span class="md-ellipsis">
-      Operations
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_5" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_5" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#organizations" class="md-nav__link">
-    <span class="md-ellipsis">
-      Organizations
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Organizations">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations_6" class="md-nav__link">
-    <span class="md-ellipsis">
-      Operations
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_6" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_6" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#organization-invitations" class="md-nav__link">
-    <span class="md-ellipsis">
-      Organization Invitations
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Organization Invitations">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations_7" class="md-nav__link">
-    <span class="md-ellipsis">
-      Operations
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_7" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_7" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#organization-memberships" class="md-nav__link">
-    <span class="md-ellipsis">
-      Organization Memberships
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Organization Memberships">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations_8" class="md-nav__link">
-    <span class="md-ellipsis">
-      Operations
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_8" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_8" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#redirect-urls" class="md-nav__link">
-    <span class="md-ellipsis">
-      Redirect URLs
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Redirect URLs">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations_9" class="md-nav__link">
-    <span class="md-ellipsis">
-      Operations
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_9" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_9" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#saml-connections" class="md-nav__link">
-    <span class="md-ellipsis">
-      SAML Connections
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="SAML Connections">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations_10" class="md-nav__link">
-    <span class="md-ellipsis">
-      Operations
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_10" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_10" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#users" class="md-nav__link">
-    <span class="md-ellipsis">
-      Users
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Users">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations_11" class="md-nav__link">
-    <span class="md-ellipsis">
-      Operations
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_11" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_11" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#query-pushdown-support" class="md-nav__link">
-    <span class="md-ellipsis">
-      Query Pushdown Support
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#supported-data-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      Supported Data Types
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#limitations" class="md-nav__link">
-    <span class="md-ellipsis">
-      Limitations
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      Examples
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Examples">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#basic-example" class="md-nav__link">
-    <span class="md-ellipsis">
-      Basic example
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#query-json-attributes" class="md-nav__link">
-    <span class="md-ellipsis">
-      Query JSON attributes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1594,10 +897,30 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../orb/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Orb
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   <span class="md-ellipsis">
@@ -1606,6 +929,893 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#available-versions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Available Versions
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#preparation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Preparation
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Preparation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#enable-wrappers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Enable Wrappers
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#enable-the-orb-wrapper" class="md-nav__link">
+    <span class="md-ellipsis">
+      Enable the Orb Wrapper
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#store-your-credentials-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      Store your credentials (optional)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#connecting-to-orb" class="md-nav__link">
+    <span class="md-ellipsis">
+      Connecting to Orb
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create-a-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      Create a schema
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#options" class="md-nav__link">
+    <span class="md-ellipsis">
+      Options
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#entities" class="md-nav__link">
+    <span class="md-ellipsis">
+      Entities
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Entities">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#alert" class="md-nav__link">
+    <span class="md-ellipsis">
+      Alert
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Alert">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#coupon" class="md-nav__link">
+    <span class="md-ellipsis">
+      Coupon
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Coupon">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#operations_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notes_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#credit-note" class="md-nav__link">
+    <span class="md-ellipsis">
+      Credit Note
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Credit Note">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#operations_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notes_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#customer" class="md-nav__link">
+    <span class="md-ellipsis">
+      Customer
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Customer">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#operations_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notes_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#credit" class="md-nav__link">
+    <span class="md-ellipsis">
+      Credit
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Credit">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#operations_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notes_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#credits-ledger" class="md-nav__link">
+    <span class="md-ellipsis">
+      Credits ledger
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Credits ledger">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#operations_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notes_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dimensional-price-group" class="md-nav__link">
+    <span class="md-ellipsis">
+      Dimensional Price Group
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Dimensional Price Group">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#operations_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notes_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#event-backfill" class="md-nav__link">
+    <span class="md-ellipsis">
+      Event Backfill
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Event Backfill">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#operations_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notes_7" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#event-volume" class="md-nav__link">
+    <span class="md-ellipsis">
+      Event Volume
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Event Volume">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#operations_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notes_8" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#invoice" class="md-nav__link">
+    <span class="md-ellipsis">
+      Invoice
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Invoice">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#operations_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notes_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#item" class="md-nav__link">
+    <span class="md-ellipsis">
+      Item
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Item">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#operations_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notes_10" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#metric" class="md-nav__link">
+    <span class="md-ellipsis">
+      Metric
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Metric">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#operations_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notes_11" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      Plan
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Plan">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#operations_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notes_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#price" class="md-nav__link">
+    <span class="md-ellipsis">
+      Price
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Price">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#operations_13" class="md-nav__link">
+    <span class="md-ellipsis">
+      Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage_13" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notes_13" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#subscription" class="md-nav__link">
+    <span class="md-ellipsis">
+      Subscription
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Subscription">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#operations_14" class="md-nav__link">
+    <span class="md-ellipsis">
+      Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage_14" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notes_14" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#query-pushdown-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      Query Pushdown Support
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Query Pushdown Support">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#where-clause-pushdown" class="md-nav__link">
+    <span class="md-ellipsis">
+      where clause pushdown
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="where clause pushdown">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#alert_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Alert
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#customer_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Customer
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#event-volume_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Event Volume
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#invoice_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Invoice
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#subscription_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Subscription
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#limit-clause-pushdown" class="md-nav__link">
+    <span class="md-ellipsis">
+      limit clause pushdown
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#supported-data-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Supported Data Types
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Limitations
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Examples
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      Basic example
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#query-json-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Query JSON attributes
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#data-modify-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      Data Modify Example
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -2178,9 +2388,9 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#enable-the-clerk-wrapper" class="md-nav__link">
+  <a href="#enable-the-orb-wrapper" class="md-nav__link">
     <span class="md-ellipsis">
-      Enable the Clerk Wrapper
+      Enable the Orb Wrapper
     </span>
   </a>
   
@@ -2196,9 +2406,9 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#connecting-to-clerk" class="md-nav__link">
+  <a href="#connecting-to-orb" class="md-nav__link">
     <span class="md-ellipsis">
-      Connecting to Clerk
+      Connecting to Orb
     </span>
   </a>
   
@@ -2238,13 +2448,13 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#allow-list" class="md-nav__link">
+  <a href="#alert" class="md-nav__link">
     <span class="md-ellipsis">
-      Allow-list
+      Alert
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Allow-list">
+    <nav class="md-nav" aria-label="Alert">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2280,13 +2490,13 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#block-list" class="md-nav__link">
+  <a href="#coupon" class="md-nav__link">
     <span class="md-ellipsis">
-      Block-list
+      Coupon
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Block-list">
+    <nav class="md-nav" aria-label="Coupon">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2322,13 +2532,13 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#domains" class="md-nav__link">
+  <a href="#credit-note" class="md-nav__link">
     <span class="md-ellipsis">
-      Domains
+      Credit Note
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Domains">
+    <nav class="md-nav" aria-label="Credit Note">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2364,13 +2574,13 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#invitations" class="md-nav__link">
+  <a href="#customer" class="md-nav__link">
     <span class="md-ellipsis">
-      Invitations
+      Customer
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Invitations">
+    <nav class="md-nav" aria-label="Customer">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2406,13 +2616,13 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#jwt-templates" class="md-nav__link">
+  <a href="#credit" class="md-nav__link">
     <span class="md-ellipsis">
-      JWT Templates
+      Credit
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="JWT Templates">
+    <nav class="md-nav" aria-label="Credit">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2448,13 +2658,13 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#oauth-applications" class="md-nav__link">
+  <a href="#credits-ledger" class="md-nav__link">
     <span class="md-ellipsis">
-      OAuth Applications
+      Credits ledger
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="OAuth Applications">
+    <nav class="md-nav" aria-label="Credits ledger">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2490,13 +2700,13 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#organizations" class="md-nav__link">
+  <a href="#dimensional-price-group" class="md-nav__link">
     <span class="md-ellipsis">
-      Organizations
+      Dimensional Price Group
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Organizations">
+    <nav class="md-nav" aria-label="Dimensional Price Group">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2532,13 +2742,13 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#organization-invitations" class="md-nav__link">
+  <a href="#event-backfill" class="md-nav__link">
     <span class="md-ellipsis">
-      Organization Invitations
+      Event Backfill
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Organization Invitations">
+    <nav class="md-nav" aria-label="Event Backfill">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2574,13 +2784,13 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#organization-memberships" class="md-nav__link">
+  <a href="#event-volume" class="md-nav__link">
     <span class="md-ellipsis">
-      Organization Memberships
+      Event Volume
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Organization Memberships">
+    <nav class="md-nav" aria-label="Event Volume">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2616,13 +2826,13 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#redirect-urls" class="md-nav__link">
+  <a href="#invoice" class="md-nav__link">
     <span class="md-ellipsis">
-      Redirect URLs
+      Invoice
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Redirect URLs">
+    <nav class="md-nav" aria-label="Invoice">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2658,13 +2868,13 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#saml-connections" class="md-nav__link">
+  <a href="#item" class="md-nav__link">
     <span class="md-ellipsis">
-      SAML Connections
+      Item
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="SAML Connections">
+    <nav class="md-nav" aria-label="Item">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2700,13 +2910,13 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#users" class="md-nav__link">
+  <a href="#metric" class="md-nav__link">
     <span class="md-ellipsis">
-      Users
+      Metric
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Users">
+    <nav class="md-nav" aria-label="Metric">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2741,6 +2951,132 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      Plan
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Plan">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#operations_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notes_12" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#price" class="md-nav__link">
+    <span class="md-ellipsis">
+      Price
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Price">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#operations_13" class="md-nav__link">
+    <span class="md-ellipsis">
+      Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage_13" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notes_13" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#subscription" class="md-nav__link">
+    <span class="md-ellipsis">
+      Subscription
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Subscription">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#operations_14" class="md-nav__link">
+    <span class="md-ellipsis">
+      Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage_14" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notes_14" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2752,6 +3088,81 @@
       Query Pushdown Support
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Query Pushdown Support">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#where-clause-pushdown" class="md-nav__link">
+    <span class="md-ellipsis">
+      where clause pushdown
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="where clause pushdown">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#alert_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Alert
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#customer_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Customer
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#event-volume_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Event Volume
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#invoice_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Invoice
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#subscription_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Subscription
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#limit-clause-pushdown" class="md-nav__link">
+    <span class="md-ellipsis">
+      limit clause pushdown
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2801,6 +3212,15 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#data-modify-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      Data Modify Example
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2841,9 +3261,9 @@
   
 
 
-<h1 id="clerk">Clerk</h1>
-<p><a href="https://clerk.com/">Clerk</a> is a complete suite of embeddable UIs, flexible APIs, and admin dashboards to authenticate and manage users.</p>
-<p>The Clerk Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you to read data from Clerk for use within your Postgres database.</p>
+<h1 id="orb">Orb</h1>
+<p><a href="https://withorb.com/">Orb</a> is a metering and pricing platform built to support usage-based billing models.</p>
+<p>The Orb Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you to read data from Orb for use within your Postgres database.</p>
 <h2 id="available-versions">Available Versions</h2>
 <table>
 <thead>
@@ -2856,18 +3276,18 @@
 <tbody>
 <tr>
 <td>0.1.0</td>
-<td><code>https://github.com/supabase/wrappers/releases/download/wasm_clerk_fdw_v0.1.0/clerk_fdw.wasm</code></td>
-<td><code>613be26b59fa4c074e0b93f0db617fcd7b468d4d02edece0b1f85fdb683ebdc4</code></td>
+<td><code>https://github.com/supabase/wrappers/releases/download/wasm_orb_fdw_v0.1.0/orb_fdw.wasm</code></td>
+<td><code>89153a0a570257c231b78561cc909766731c828324585a5b6e2aa553902cb73a</code></td>
 </tr>
 </tbody>
 </table>
 <h2 id="preparation">Preparation</h2>
-<p>Before you can query Clerk, you need to enable the Wrappers extension and store your credentials in Postgres.</p>
+<p>Before you can query Orb, you need to enable the Wrappers extension and store your credentials in Postgres.</p>
 <h3 id="enable-wrappers">Enable Wrappers</h3>
 <p>Make sure the <code>wrappers</code> extension is installed on your database:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">extension</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">wrappers</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">extensions</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
-<h3 id="enable-the-clerk-wrapper">Enable the Clerk Wrapper</h3>
+<h3 id="enable-the-orb-wrapper">Enable the Orb Wrapper</h3>
 <p>Enable the Wasm foreign data wrapper:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
@@ -2883,16 +3303,16 @@
 <span class="normal">4</span>
 <span class="normal">5</span>
 <span class="normal">6</span>
-<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Save your Clerk API key in Vault and retrieve the `key_id`</span>
+<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Save your Orb API key in Vault and retrieve the `key_id`</span>
 <span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">secrets</span><span class="w"> </span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">secret</span><span class="p">)</span>
 <span class="k">values</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="s1">&#39;clerk&#39;</span><span class="p">,</span>
-<span class="w">  </span><span class="s1">&#39;&lt;Clerk API key&gt;&#39;</span><span class="w"> </span><span class="c1">-- Clerk API key </span>
+<span class="w">  </span><span class="s1">&#39;orb&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="s1">&#39;&lt;Orb API key&gt;&#39;</span><span class="w"> </span><span class="c1">-- Orb API key </span>
 <span class="p">)</span>
 <span class="n">returning</span><span class="w"> </span><span class="n">key_id</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
-<h3 id="connecting-to-clerk">Connecting to Clerk</h3>
-<p>We need to provide Postgres with the credentials to access Clerk and any additional options. We can do this using the <code>create server</code> command:</p>
+<h3 id="connecting-to-orb">Connecting to Orb</h3>
+<p>We need to provide Postgres with the credentials to access Orb and any additional options. We can do this using the <code>create server</code> command:</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">With Vault</label><label for="__tabbed_1_2">Without Vault</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
@@ -2905,14 +3325,14 @@
 <span class="normal"> 7</span>
 <span class="normal"> 8</span>
 <span class="normal"> 9</span>
-<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">clerk_server</span>
+<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">orb_server</span>
 <span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_clerk_fdw_v0.1.0/clerk_fdw.wasm&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;supabase:clerk-fdw&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_orb_fdw_v0.1.0/orb_fdw.wasm&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;supabase:orb-fdw&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.1.0&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;613be26b59fa4c074e0b93f0db617fcd7b468d4d02edece0b1f85fdb683ebdc4&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">api_url</span><span class="w"> </span><span class="s1">&#39;https://api.clerk.com/v1&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- optional</span>
+<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;89153a0a570257c231b78561cc909766731c828324585a5b6e2aa553902cb73a&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">api_url</span><span class="w"> </span><span class="s1">&#39;https://api.withorb.com/v1&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- optional</span>
 <span class="w">    </span><span class="n">api_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;key_ID&gt;&#39;</span><span class="w"> </span><span class="c1">-- The Key ID from above.</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
@@ -2927,15 +3347,15 @@
 <span class="normal"> 7</span>
 <span class="normal"> 8</span>
 <span class="normal"> 9</span>
-<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">clerk_server</span>
+<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">orb_server</span>
 <span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_clerk_fdw_v0.1.0/clerk_fdw.wasm&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;supabase:clerk-fdw&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_orb_fdw_v0.1.0/orb_fdw.wasm&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;supabase:orb-fdw&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.1.0&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;613be26b59fa4c074e0b93f0db617fcd7b468d4d02edece0b1f85fdb683ebdc4&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">api_url</span><span class="w"> </span><span class="s1">&#39;https://api.clerk.com/v1&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- optional</span>
-<span class="w">    </span><span class="n">api_key</span><span class="w"> </span><span class="s1">&#39;sk_test_...&#39;</span><span class="w">  </span><span class="c1">-- Clerk API key</span>
+<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;89153a0a570257c231b78561cc909766731c828324585a5b6e2aa553902cb73a&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">api_url</span><span class="w"> </span><span class="s1">&#39;https://api.withorb.com/v1&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- optional</span>
+<span class="w">    </span><span class="n">api_key</span><span class="w"> </span><span class="s1">&#39;3e2e912...&#39;</span><span class="w">  </span><span class="c1">-- Orb API key</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 </div>
@@ -2944,12 +3364,12 @@
 <p>Note the <code>fdw_package_*</code> options are required, which specify the Wasm package metadata. You can get the available package version list from <a href="#available-versions">above</a>.</p>
 <h3 id="create-a-schema">Create a schema</h3>
 <p>We recommend creating a schema to hold all the foreign tables:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">clerk</span><span class="p">;</span>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">orb</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 <h2 id="options">Options</h2>
 <p>The full list of foreign table options are below:</p>
 <ul>
-<li><code>object</code> - Object name in Clerk, required.</li>
+<li><code>object</code> - Object name in Orb, required.</li>
 </ul>
 <p>Supported objects are listed below:</p>
 <table>
@@ -2960,47 +3380,59 @@
 </thead>
 <tbody>
 <tr>
-<td>allowlist_identifiers</td>
+<td>alerts</td>
 </tr>
 <tr>
-<td>blocklist_identifiers</td>
+<td>coupons</td>
 </tr>
 <tr>
-<td>domains</td>
+<td>credit_notes</td>
 </tr>
 <tr>
-<td>invitations</td>
+<td>customers</td>
 </tr>
 <tr>
-<td>jwt_templates</td>
+<td>credits</td>
 </tr>
 <tr>
-<td>oauth_applications</td>
+<td>credits_ledger</td>
 </tr>
 <tr>
-<td>organizations</td>
+<td>dimensional_price_groups</td>
 </tr>
 <tr>
-<td>organization_invitations</td>
+<td>events_backfills</td>
 </tr>
 <tr>
-<td>organization_memberships</td>
+<td>events_volume</td>
 </tr>
 <tr>
-<td>redirect_urls</td>
+<td>invoices</td>
 </tr>
 <tr>
-<td>saml_connections</td>
+<td>items</td>
 </tr>
 <tr>
-<td>users</td>
+<td>metrics</td>
+</tr>
+<tr>
+<td>plans</td>
+</tr>
+<tr>
+<td>prices</td>
+</tr>
+<tr>
+<td>subscriptions</td>
 </tr>
 </tbody>
 </table>
+<ul>
+<li><code>rowid_column</code> - Primary key column name, optional for data scan, required for data modify</li>
+</ul>
 <h2 id="entities">Entities</h2>
-<h3 id="allow-list">Allow-list</h3>
-<p>This is a list of all identifiers allowed to sign up to an instance.</p>
-<p>Ref: <a href="https://clerk.com/docs/reference/backend-api/tag/Allow-list-Block-list#operation/ListAllowlistIdentifiers">Clerk API docs</a></p>
+<h3 id="alert">Alert</h3>
+<p>This is a list of all alerts within Orb.</p>
+<p>Ref: <a href="https://docs.withorb.com/api-reference/alert/list-alerts">Orb API docs</a></p>
 <h4 id="operations">Operations</h4>
 <table>
 <thead>
@@ -3015,7 +3447,7 @@
 </thead>
 <tbody>
 <tr>
-<td>allowlist_identifiers</td>
+<td>alerts</td>
 <td style="text-align: center;">✅</td>
 <td style="text-align: center;">❌</td>
 <td style="text-align: center;">❌</td>
@@ -3038,28 +3470,29 @@
 <span class="normal">11</span>
 <span class="normal">12</span>
 <span class="normal">13</span>
-<span class="normal">14</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">clerk</span><span class="p">.</span><span class="n">allowlist_identifiers</span><span class="w"> </span><span class="p">(</span>
+<span class="normal">14</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">orb</span><span class="p">.</span><span class="n">alerts</span><span class="w"> </span><span class="p">(</span>
 <span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">invitation_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">identifier</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">identifier_type</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">instance_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="k">type</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">enabled</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span>
+<span class="w">  </span><span class="n">customer_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">external_customer_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">subscription_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
 <span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
 <span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
 <span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">clerk_server</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">orb_server</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;allowlist_identifiers&#39;</span>
+<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;alerts&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 <h4 id="notes">Notes</h4>
 <ul>
 <li>The <code>attrs</code> column contains additional attributes in JSON format</li>
+<li>The query must specify one of <code>customer_id</code>, <code>external_customer_id</code>, or <code>subscription_id</code></li>
 </ul>
-<h3 id="block-list">Block-list</h3>
-<p>This is a list of all identifiers which are not allowed to access an instance.</p>
-<p>Ref: <a href="https://clerk.com/docs/reference/backend-api/tag/Allow-list-Block-list#operation/ListBlocklistIdentifiers">Clerk API docs</a></p>
+<h3 id="coupon">Coupon</h3>
+<p>This is a list of all coupons for an account.</p>
+<p>Ref: <a href="https://docs.withorb.com/api-reference/coupon/list-coupons">Orb API docs</a></p>
 <h4 id="operations_1">Operations</h4>
 <table>
 <thead>
@@ -3074,7 +3507,7 @@
 </thead>
 <tbody>
 <tr>
-<td>blocklist_identifiers</td>
+<td>coupons</td>
 <td style="text-align: center;">✅</td>
 <td style="text-align: center;">❌</td>
 <td style="text-align: center;">❌</td>
@@ -3095,28 +3528,26 @@
 <span class="normal"> 9</span>
 <span class="normal">10</span>
 <span class="normal">11</span>
-<span class="normal">12</span>
-<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">clerk</span><span class="p">.</span><span class="n">blocklist_identifiers</span><span class="w"> </span><span class="p">(</span>
+<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">orb</span><span class="p">.</span><span class="n">coupons</span><span class="w"> </span><span class="p">(</span>
 <span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">identifier</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">identifier_type</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">instance_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
+<span class="w">  </span><span class="n">redemption_code</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">times_redeemed</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
+<span class="w">  </span><span class="n">duration_in_months</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
+<span class="w">  </span><span class="n">archived_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
 <span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
 <span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">clerk_server</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">orb_server</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;blocklist_identifiers&#39;</span>
+<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;coupons&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 <h4 id="notes_1">Notes</h4>
 <ul>
 <li>The <code>attrs</code> column contains additional attributes in JSON format</li>
 </ul>
-<h3 id="domains">Domains</h3>
-<p>This is a list of all domains for an instance.</p>
-<p>Ref: <a href="https://clerk.com/docs/reference/backend-api/tag/Domains#operation/ListDomains">Clerk API docs</a></p>
+<h3 id="credit-note">Credit Note</h3>
+<p>This is a list of all CreditNotes.</p>
+<p>Ref: <a href="https://docs.withorb.com/api-reference/credit-note/list-credit-notes">Orb API docs</a></p>
 <h4 id="operations_2">Operations</h4>
 <table>
 <thead>
@@ -3131,9 +3562,9 @@
 </thead>
 <tbody>
 <tr>
-<td>domains</td>
+<td>credit_notes</td>
 <td style="text-align: center;">✅</td>
-<td style="text-align: center;">❌</td>
+<td style="text-align: center;">✅</td>
 <td style="text-align: center;">❌</td>
 <td style="text-align: center;">❌</td>
 <td style="text-align: center;">❌</td>
@@ -3152,26 +3583,26 @@
 <span class="normal"> 9</span>
 <span class="normal">10</span>
 <span class="normal">11</span>
-<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">clerk</span><span class="p">.</span><span class="n">domains</span><span class="w"> </span><span class="p">(</span>
+<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">orb</span><span class="p">.</span><span class="n">credit_notes</span><span class="w"> </span><span class="p">(</span>
 <span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">is_satellite</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span>
-<span class="w">  </span><span class="n">frontend_api_url</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">accounts_portal_url</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="k">type</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">total</span><span class="w"> </span><span class="nb">numeric</span><span class="p">(</span><span class="mi">18</span><span class="p">,</span><span class="mi">2</span><span class="p">),</span>
+<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
 <span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
 <span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">clerk_server</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">orb_server</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;domains&#39;</span>
+<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;credit_notes&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">rowid_column</span><span class="w"> </span><span class="s1">&#39;id&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 <h4 id="notes_2">Notes</h4>
 <ul>
 <li>The <code>attrs</code> column contains additional attributes in JSON format</li>
 </ul>
-<h3 id="invitations">Invitations</h3>
-<p>This is a list of all non-revoked invitations for your application.</p>
-<p>Ref: <a href="https://clerk.com/docs/reference/backend-api/tag/Invitations#operation/ListInvitations">Clerk API docs</a></p>
+<h3 id="customer">Customer</h3>
+<p>This is a list of all customers for an account.</p>
+<p>Ref: <a href="https://docs.withorb.com/api-reference/customer/list-customers">Orb API docs</a></p>
 <h4 id="operations_3">Operations</h4>
 <table>
 <thead>
@@ -3186,11 +3617,11 @@
 </thead>
 <tbody>
 <tr>
-<td>invitations</td>
+<td>customers</td>
 <td style="text-align: center;">✅</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
 <td style="text-align: center;">❌</td>
 </tr>
 </tbody>
@@ -3208,31 +3639,27 @@
 <span class="normal">10</span>
 <span class="normal">11</span>
 <span class="normal">12</span>
-<span class="normal">13</span>
-<span class="normal">14</span>
-<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">clerk</span><span class="p">.</span><span class="n">invitations</span><span class="w"> </span><span class="p">(</span>
+<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">orb</span><span class="p">.</span><span class="n">customers</span><span class="w"> </span><span class="p">(</span>
 <span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">email_address</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">url</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">revoked</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span>
-<span class="w">  </span><span class="n">status</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">expires_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
+<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">email</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
 <span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
+<span class="w">  </span><span class="n">auto_collection</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span>
 <span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
 <span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">clerk_server</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">orb_server</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;invitations&#39;</span>
+<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;customers&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">rowid_column</span><span class="w"> </span><span class="s1">&#39;id&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 <h4 id="notes_3">Notes</h4>
 <ul>
 <li>The <code>attrs</code> column contains additional attributes in JSON format</li>
 </ul>
-<h3 id="jwt-templates">JWT Templates</h3>
-<p>This is a list of all JWT templates.</p>
-<p>Ref: <a href="https://clerk.com/docs/reference/backend-api/tag/JWT-Templates#operation/ListJWTTemplates">Clerk API docs</a></p>
+<h3 id="credit">Credit</h3>
+<p>This is a list of unexpired, non-zero credit blocks for a customer.</p>
+<p>Ref: <a href="https://docs.withorb.com/api-reference/credit/fetch-customer-credit-balance-by-external-customer-id">Orb API docs</a></p>
 <h4 id="operations_4">Operations</h4>
 <table>
 <thead>
@@ -3247,7 +3674,7 @@
 </thead>
 <tbody>
 <tr>
-<td>jwt_templates</td>
+<td>credits</td>
 <td style="text-align: center;">✅</td>
 <td style="text-align: center;">❌</td>
 <td style="text-align: center;">❌</td>
@@ -3270,30 +3697,29 @@
 <span class="normal">11</span>
 <span class="normal">12</span>
 <span class="normal">13</span>
-<span class="normal">14</span>
-<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">clerk</span><span class="p">.</span><span class="n">jwt_templates</span><span class="w"> </span><span class="p">(</span>
+<span class="normal">14</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">orb</span><span class="p">.</span><span class="n">credits</span><span class="w"> </span><span class="p">(</span>
 <span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">lifetime</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
-<span class="w">  </span><span class="n">allowed_clock_skew</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
-<span class="w">  </span><span class="n">custom_signing_key</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span>
-<span class="w">  </span><span class="n">signing_algorithm</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
+<span class="w">  </span><span class="n">customer_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">external_customer_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">balance</span><span class="w"> </span><span class="nb">numeric</span><span class="p">(</span><span class="mi">18</span><span class="p">,</span><span class="mi">2</span><span class="p">),</span>
+<span class="w">  </span><span class="n">status</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">effective_date</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
+<span class="w">  </span><span class="n">expiry_date</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
 <span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
 <span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">clerk_server</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">orb_server</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;jwt_templates&#39;</span>
+<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;credits&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 <h4 id="notes_4">Notes</h4>
 <ul>
 <li>The <code>attrs</code> column contains additional attributes in JSON format</li>
+<li>The query must specify one of <code>customer_id</code> or <code>external_customer_id</code></li>
 </ul>
-<h3 id="oauth-applications">OAuth Applications</h3>
-<p>This is a list of OAuth applications for an instance.</p>
-<p>Ref: <a href="https://clerk.com/docs/reference/backend-api/tag/OAuth-Applications#operation/ListOAuthApplications">Clerk API docs</a></p>
+<h3 id="credits-ledger">Credits ledger</h3>
+<p>This is a list of actions that have taken place to modify a customer’s credit balance.</p>
+<p>Ref: <a href="https://docs.withorb.com/api-reference/credit/fetch-customer-credits-ledger-by-external-id">Orb API docs</a></p>
 <h4 id="operations_5">Operations</h4>
 <table>
 <thead>
@@ -3308,7 +3734,7 @@
 </thead>
 <tbody>
 <tr>
-<td>oauth_applications</td>
+<td>credits/ledger</td>
 <td style="text-align: center;">✅</td>
 <td style="text-align: center;">❌</td>
 <td style="text-align: center;">❌</td>
@@ -3329,32 +3755,27 @@
 <span class="normal"> 9</span>
 <span class="normal">10</span>
 <span class="normal">11</span>
-<span class="normal">12</span>
-<span class="normal">13</span>
-<span class="normal">14</span>
-<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">clerk</span><span class="p">.</span><span class="n">oauth_applications</span><span class="w"> </span><span class="p">(</span>
+<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">orb</span><span class="p">.</span><span class="n">credits_ledger</span><span class="w"> </span><span class="p">(</span>
 <span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">instance_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">client_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="k">public</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span>
-<span class="w">  </span><span class="n">scopes</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">customer_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">external_customer_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">amount</span><span class="w"> </span><span class="nb">numeric</span><span class="p">(</span><span class="mi">18</span><span class="p">,</span><span class="mi">2</span><span class="p">),</span>
 <span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
 <span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
 <span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">clerk_server</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">orb_server</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;oauth_applications&#39;</span>
+<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;credits/ledger&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 <h4 id="notes_5">Notes</h4>
 <ul>
 <li>The <code>attrs</code> column contains additional attributes in JSON format</li>
+<li>The query must specify one of <code>customer_id</code> or <code>external_customer_id</code></li>
 </ul>
-<h3 id="organizations">Organizations</h3>
-<p>This is a list of organizations for an instance.</p>
-<p>Ref: <a href="https://clerk.com/docs/reference/backend-api/tag/Organizations#operation/ListOrganizations">Clerk API docs</a></p>
+<h3 id="dimensional-price-group">Dimensional Price Group</h3>
+<p>This is a list of dimensional price groups.</p>
+<p>Ref: <a href="https://docs.withorb.com/api-reference/dimensional-price-group/list-dimensional-price-groups">Orb API docs</a></p>
 <h4 id="operations_6">Operations</h4>
 <table>
 <thead>
@@ -3369,9 +3790,9 @@
 </thead>
 <tbody>
 <tr>
-<td>organizations</td>
+<td>dimensional_price_groups</td>
 <td style="text-align: center;">✅</td>
-<td style="text-align: center;">❌</td>
+<td style="text-align: center;">✅</td>
 <td style="text-align: center;">❌</td>
 <td style="text-align: center;">❌</td>
 <td style="text-align: center;">❌</td>
@@ -3388,28 +3809,24 @@
 <span class="normal"> 7</span>
 <span class="normal"> 8</span>
 <span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">clerk</span><span class="p">.</span><span class="n">organizations</span><span class="w"> </span><span class="p">(</span>
+<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">orb</span><span class="p">.</span><span class="n">dimensional_price_groups</span><span class="w"> </span><span class="p">(</span>
 <span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
 <span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">slug</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
 <span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
 <span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">clerk_server</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">orb_server</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;organizations&#39;</span>
+<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;dimensional_price_groups&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">rowid_column</span><span class="w"> </span><span class="s1">&#39;id&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 <h4 id="notes_6">Notes</h4>
 <ul>
 <li>The <code>attrs</code> column contains additional attributes in JSON format</li>
 </ul>
-<h3 id="organization-invitations">Organization Invitations</h3>
-<p>This is a list of organization invitations for an instance.</p>
-<p>Ref: <a href="https://clerk.com/docs/reference/backend-api/tag/Organization-Invitations#operation/ListInstanceOrganizationInvitations">Clerk API docs</a></p>
+<h3 id="event-backfill">Event Backfill</h3>
+<p>This is a list of all event backfills.</p>
+<p>Ref: <a href="https://docs.withorb.com/api-reference/event/list-backfills">Orb API docs</a></p>
 <h4 id="operations_7">Operations</h4>
 <table>
 <thead>
@@ -3424,9 +3841,9 @@
 </thead>
 <tbody>
 <tr>
-<td>organization_invitations</td>
+<td>events/backfills</td>
 <td style="text-align: center;">✅</td>
-<td style="text-align: center;">❌</td>
+<td style="text-align: center;">✅</td>
 <td style="text-align: center;">❌</td>
 <td style="text-align: center;">❌</td>
 <td style="text-align: center;">❌</td>
@@ -3445,32 +3862,26 @@
 <span class="normal"> 9</span>
 <span class="normal">10</span>
 <span class="normal">11</span>
-<span class="normal">12</span>
-<span class="normal">13</span>
-<span class="normal">14</span>
-<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">clerk</span><span class="p">.</span><span class="n">organization_invitations</span><span class="w"> </span><span class="p">(</span>
+<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">orb</span><span class="p">.</span><span class="n">events_backfills</span><span class="w"> </span><span class="p">(</span>
 <span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">email_address</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="k">role</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">role_name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">organization_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
 <span class="w">  </span><span class="n">status</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">events_ingested</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
 <span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
 <span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
 <span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">clerk_server</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">orb_server</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;organization_invitations&#39;</span>
+<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;events/backfills&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">rowid_column</span><span class="w"> </span><span class="s1">&#39;id&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 <h4 id="notes_7">Notes</h4>
 <ul>
 <li>The <code>attrs</code> column contains additional attributes in JSON format</li>
 </ul>
-<h3 id="organization-memberships">Organization Memberships</h3>
-<p>This is a list of organization user memberships for an instance.</p>
-<p>Ref: <a href="https://clerk.com/docs/reference/backend-api/tag/Organization-Memberships#operation/InstanceGetOrganizationMemberships">Clerk API docs</a></p>
+<h3 id="event-volume">Event Volume</h3>
+<p>This returns the event volume for an account.</p>
+<p>Ref: <a href="https://docs.withorb.com/api-reference/event/get-event-volume">Orb API docs</a></p>
 <h4 id="operations_8">Operations</h4>
 <table>
 <thead>
@@ -3485,7 +3896,7 @@
 </thead>
 <tbody>
 <tr>
-<td>organization_memberships</td>
+<td>events/volume</td>
 <td style="text-align: center;">✅</td>
 <td style="text-align: center;">❌</td>
 <td style="text-align: center;">❌</td>
@@ -3504,28 +3915,24 @@
 <span class="normal"> 7</span>
 <span class="normal"> 8</span>
 <span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">clerk</span><span class="p">.</span><span class="n">organization_memberships</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="k">role</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">role_name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
+<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">orb</span><span class="p">.</span><span class="n">events_volume</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="k">count</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
+<span class="w">  </span><span class="n">timeframe_start</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
+<span class="w">  </span><span class="n">timeframe_end</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
 <span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
 <span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">clerk_server</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">orb_server</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;organization_memberships&#39;</span>
+<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;events/volume&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 <h4 id="notes_8">Notes</h4>
 <ul>
 <li>The <code>attrs</code> column contains additional attributes in JSON format</li>
 </ul>
-<h3 id="redirect-urls">Redirect URLs</h3>
-<p>This is a list of all whitelisted redirect urls for the instance.</p>
-<p>Ref: <a href="https://clerk.com/docs/reference/backend-api/tag/Redirect-URLs#operation/ListRedirectURLs">Clerk API docs</a></p>
+<h3 id="invoice">Invoice</h3>
+<p>This is a list of invoices for an account.</p>
+<p>Ref: <a href="https://docs.withorb.com/api-reference/invoice/list-invoices">Orb API docs</a></p>
 <h4 id="operations_9">Operations</h4>
 <table>
 <thead>
@@ -3540,9 +3947,9 @@
 </thead>
 <tbody>
 <tr>
-<td>redirect_urls</td>
+<td>invoices</td>
 <td style="text-align: center;">✅</td>
-<td style="text-align: center;">❌</td>
+<td style="text-align: center;">✅</td>
 <td style="text-align: center;">❌</td>
 <td style="text-align: center;">❌</td>
 <td style="text-align: center;">❌</td>
@@ -3560,25 +3967,41 @@
 <span class="normal"> 8</span>
 <span class="normal"> 9</span>
 <span class="normal">10</span>
-<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">clerk</span><span class="p">.</span><span class="n">redirect_urls</span><span class="w"> </span><span class="p">(</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">orb</span><span class="p">.</span><span class="n">invoices</span><span class="w"> </span><span class="p">(</span>
 <span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">url</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">invoice_number</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">customer_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">external_customer_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">subscription_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">status</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">amount_due</span><span class="w"> </span><span class="nb">numeric</span><span class="p">(</span><span class="mi">18</span><span class="p">,</span><span class="mi">2</span><span class="p">),</span>
+<span class="w">  </span><span class="n">currency</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">due_date</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
+<span class="w">  </span><span class="n">issued_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
 <span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
 <span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
 <span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">clerk_server</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">orb_server</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;redirect_urls&#39;</span>
+<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;invoices&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">rowid_column</span><span class="w"> </span><span class="s1">&#39;id&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 <h4 id="notes_9">Notes</h4>
 <ul>
 <li>The <code>attrs</code> column contains additional attributes in JSON format</li>
 </ul>
-<h3 id="saml-connections">SAML Connections</h3>
-<p>This is a list of SAML Connections for an instance.</p>
-<p>Ref: <a href="https://clerk.com/docs/reference/backend-api/tag/SAML-Connections#operation/ListSAMLConnections">Clerk API docs</a></p>
+<h3 id="item">Item</h3>
+<p>This is a list of all items.</p>
+<p>Ref: <a href="https://docs.withorb.com/api-reference/item/list-items">Orb API docs</a></p>
 <h4 id="operations_10">Operations</h4>
 <table>
 <thead>
@@ -3593,10 +4016,10 @@
 </thead>
 <tbody>
 <tr>
-<td>saml_connections</td>
+<td>items</td>
 <td style="text-align: center;">✅</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
 <td style="text-align: center;">❌</td>
 <td style="text-align: center;">❌</td>
 </tr>
@@ -3613,33 +4036,25 @@
 <span class="normal"> 8</span>
 <span class="normal"> 9</span>
 <span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span>
-<span class="normal">13</span>
-<span class="normal">14</span>
-<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">clerk</span><span class="p">.</span><span class="n">saml_connections</span><span class="w"> </span><span class="p">(</span>
+<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">orb</span><span class="p">.</span><span class="n">items</span><span class="w"> </span><span class="p">(</span>
 <span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
 <span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="k">domain</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">active</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span>
-<span class="w">  </span><span class="n">provider</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">user_count</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
 <span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
 <span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
 <span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">clerk_server</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">orb_server</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;saml_connections&#39;</span>
+<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;items&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">rowid_column</span><span class="w"> </span><span class="s1">&#39;id&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 <h4 id="notes_10">Notes</h4>
 <ul>
 <li>The <code>attrs</code> column contains additional attributes in JSON format</li>
 </ul>
-<h3 id="users">Users</h3>
-<p>This is a list of all users.</p>
-<p>Ref: <a href="https://clerk.com/docs/reference/backend-api/tag/Users#operation/GetUserList">Clerk API docs</a></p>
+<h3 id="metric">Metric</h3>
+<p>This is a list of metric details.</p>
+<p>Ref: <a href="https://docs.withorb.com/api-reference/metric/list-metrics">Orb API docs</a></p>
 <h4 id="operations_11">Operations</h4>
 <table>
 <thead>
@@ -3654,10 +4069,10 @@
 </thead>
 <tbody>
 <tr>
-<td>users</td>
+<td>metrics</td>
 <td style="text-align: center;">✅</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
 <td style="text-align: center;">❌</td>
 <td style="text-align: center;">❌</td>
 </tr>
@@ -3676,34 +4091,271 @@
 <span class="normal">10</span>
 <span class="normal">11</span>
 <span class="normal">12</span>
-<span class="normal">13</span>
-<span class="normal">14</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">clerk</span><span class="p">.</span><span class="n">users</span><span class="w"> </span><span class="p">(</span>
+<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">orb</span><span class="p">.</span><span class="n">metrics</span><span class="w"> </span><span class="p">(</span>
 <span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">external_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">username</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">first_name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">last_name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">description</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">status</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
 <span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
 <span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
 <span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">clerk_server</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">orb_server</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;users&#39;</span>
+<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;metrics&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">rowid_column</span><span class="w"> </span><span class="s1">&#39;id&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 <h4 id="notes_11">Notes</h4>
 <ul>
 <li>The <code>attrs</code> column contains additional attributes in JSON format</li>
 </ul>
+<h3 id="plan">Plan</h3>
+<p>This is a list of all plans for an account.</p>
+<p>Ref: <a href="https://docs.withorb.com/api-reference/plan/list-plans">Orb API docs</a></p>
+<h4 id="operations_12">Operations</h4>
+<table>
+<thead>
+<tr>
+<th>Object</th>
+<th style="text-align: center;">Select</th>
+<th style="text-align: center;">Insert</th>
+<th style="text-align: center;">Update</th>
+<th style="text-align: center;">Delete</th>
+<th style="text-align: center;">Truncate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>plans</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+</tr>
+</tbody>
+</table>
+<h4 id="usage_12">Usage</h4>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">orb</span><span class="p">.</span><span class="n">plans</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">description</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">status</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">maximum_amount</span><span class="w"> </span><span class="nb">numeric</span><span class="p">(</span><span class="mi">18</span><span class="p">,</span><span class="mi">2</span><span class="p">),</span>
+<span class="w">  </span><span class="n">minimum_amount</span><span class="w"> </span><span class="nb">numeric</span><span class="p">(</span><span class="mi">18</span><span class="p">,</span><span class="mi">2</span><span class="p">),</span>
+<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
+<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="p">)</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">orb_server</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;plans&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">rowid_column</span><span class="w"> </span><span class="s1">&#39;id&#39;</span>
+<span class="w">  </span><span class="p">);</span>
+</code></pre></div></td></tr></table></div>
+<h4 id="notes_12">Notes</h4>
+<ul>
+<li>The <code>attrs</code> column contains additional attributes in JSON format</li>
+</ul>
+<h3 id="price">Price</h3>
+<p>This is a list of all add-on prices.</p>
+<p>Ref: <a href="https://docs.withorb.com/api-reference/price/list-prices">Orb API docs</a></p>
+<h4 id="operations_13">Operations</h4>
+<table>
+<thead>
+<tr>
+<th>Object</th>
+<th style="text-align: center;">Select</th>
+<th style="text-align: center;">Insert</th>
+<th style="text-align: center;">Update</th>
+<th style="text-align: center;">Delete</th>
+<th style="text-align: center;">Truncate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>prices</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+</tr>
+</tbody>
+</table>
+<h4 id="usage_13">Usage</h4>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">orb</span><span class="p">.</span><span class="n">prices</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">external_price_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">price_type</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">maximum_amount</span><span class="w"> </span><span class="nb">numeric</span><span class="p">(</span><span class="mi">18</span><span class="p">,</span><span class="mi">2</span><span class="p">),</span>
+<span class="w">  </span><span class="n">minimum_amount</span><span class="w"> </span><span class="nb">numeric</span><span class="p">(</span><span class="mi">18</span><span class="p">,</span><span class="mi">2</span><span class="p">),</span>
+<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
+<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="p">)</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">orb_server</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;prices&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">rowid_column</span><span class="w"> </span><span class="s1">&#39;id&#39;</span>
+<span class="w">  </span><span class="p">);</span>
+</code></pre></div></td></tr></table></div>
+<h4 id="notes_13">Notes</h4>
+<ul>
+<li>The <code>attrs</code> column contains additional attributes in JSON format</li>
+</ul>
+<h3 id="subscription">Subscription</h3>
+<p>This is a list of all subscriptions for an account.</p>
+<p>Ref: <a href="https://docs.withorb.com/api-reference/subscription/list-subscriptions">Orb API docs</a></p>
+<h4 id="operations_14">Operations</h4>
+<table>
+<thead>
+<tr>
+<th>Object</th>
+<th style="text-align: center;">Select</th>
+<th style="text-align: center;">Insert</th>
+<th style="text-align: center;">Update</th>
+<th style="text-align: center;">Delete</th>
+<th style="text-align: center;">Truncate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>subscriptions</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+</tr>
+</tbody>
+</table>
+<h4 id="usage_14">Usage</h4>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">orb</span><span class="p">.</span><span class="n">subscriptions</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">customer_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">external_customer_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">billing_cycle_day</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
+<span class="w">  </span><span class="n">status</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">start_date</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
+<span class="w">  </span><span class="n">end_date</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
+<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
+<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="p">)</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">orb_server</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;subscriptions&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">rowid_column</span><span class="w"> </span><span class="s1">&#39;id&#39;</span>
+<span class="w">  </span><span class="p">);</span>
+</code></pre></div></td></tr></table></div>
+<h4 id="notes_14">Notes</h4>
+<ul>
+<li>The <code>attrs</code> column contains additional attributes in JSON format</li>
+</ul>
 <h2 id="query-pushdown-support">Query Pushdown Support</h2>
-<p>This FDW doesn't support query pushdown.</p>
+<h3 id="where-clause-pushdown"><code>where</code> clause pushdown</h3>
+<p>This FDW supports <code>where id = 'xxx'</code> clause pushdown for below objects:</p>
+<ul>
+<li>Coupon</li>
+<li>Credit Note</li>
+<li>Customer</li>
+<li>Dimensional Price Group</li>
+<li>Event Backfill</li>
+<li>Invoice</li>
+<li>Item</li>
+<li>Metric</li>
+<li>Plan</li>
+<li>Price</li>
+<li>Subscription</li>
+</ul>
+<p>Some other supported <code>where</code> clauses pushdown are listed below:</p>
+<h4 id="alert_1">Alert</h4>
+<p>For example, <code>where customer_id = 'WmUkxWmvLvvXHaNV'</code>.</p>
+<ul>
+<li>customer_id, (operations: <code>=</code>)</li>
+<li>external_customer_id, (operations: <code>=</code>)</li>
+<li>subscription_id, (operations: <code>=</code>)</li>
+</ul>
+<h4 id="customer_1">Customer</h4>
+<p>For example, <code>where created_at &gt;= '2025-02-15T10:25:36'</code>.</p>
+<ul>
+<li>created_at, (operations: <code>&lt;</code>, <code>&lt;=</code>, <code>&gt;</code>, <code>&gt;=</code>)</li>
+</ul>
+<h4 id="event-volume_1">Event Volume</h4>
+<p>For example, <code>where timeframe_start = '2025-02-15'</code>.</p>
+<ul>
+<li>timeframe_start, (operations: <code>=</code>)</li>
+</ul>
+<h4 id="invoice_1">Invoice</h4>
+<p>For example, <code>where status = 'paid'</code>.</p>
+<ul>
+<li>customer_id, (operations: <code>=</code>)</li>
+<li>external_customer_id, (operations: <code>=</code>)</li>
+<li>subscription_id, (operations: <code>=</code>)</li>
+<li>status, (operations: <code>=</code>)</li>
+<li>due_date, (operations: <code>=</code>, <code>&lt;</code>, <code>&gt;</code>)</li>
+<li>created_at, (operations: <code>&lt;</code>, <code>&lt;=</code>, <code>&gt;</code>, <code>&gt;=</code>)</li>
+</ul>
+<h4 id="subscription_1">Subscription</h4>
+<p>For example, <code>where status = 'active'</code>.</p>
+<ul>
+<li>customer_id, (operations: <code>=</code>)</li>
+<li>external_customer_id, (operations: <code>=</code>)</li>
+<li>status, (operations: <code>=</code>)</li>
+<li>created_at, (operations: <code>&lt;</code>, <code>&lt;=</code>, <code>&gt;</code>, <code>&gt;=</code>)</li>
+</ul>
+<h3 id="limit-clause-pushdown"><code>limit</code> clause pushdown</h3>
+<p>This FDW supports <code>limit</code> clause pushdown for all the objects. For example,</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">orb</span><span class="p">.</span><span class="n">customers</span><span class="w"> </span><span class="k">limit</span><span class="w"> </span><span class="mi">200</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
 <h2 id="supported-data-types">Supported Data Types</h2>
 <table>
 <thead>
 <tr>
 <th>Postgres Data Type</th>
-<th>Clerk Data Type</th>
+<th>Orb Data Type</th>
 </tr>
 </thead>
 <tbody>
@@ -3716,7 +4368,7 @@
 <td>Number</td>
 </tr>
 <tr>
-<td>double precision</td>
+<td>numeric</td>
 <td>Number</td>
 </tr>
 <tr>
@@ -3733,16 +4385,15 @@
 </tr>
 </tbody>
 </table>
-<p>The Clerk API uses JSON formatted data, please refer to <a href="https://clerk.com/docs/reference/backend-api">Clerk Backend API docs</a> for more details.</p>
+<p>The Orb API uses JSON formatted data, please refer to <a href="https://docs.withorb.com/api-reference">Orb API docs</a> for more details.</p>
 <h2 id="limitations">Limitations</h2>
 <p>This section describes important limitations and considerations when using this FDW:</p>
 <ul>
 <li>Large result sets may experience slower performance due to full data transfer requirement</li>
-<li>Query pushdown is not supported</li>
 <li>Materialized views using these foreign tables may fail during logical backups</li>
 </ul>
 <h2 id="examples">Examples</h2>
-<p>Below are some examples on how to use Clerk foreign tables.</p>
+<p>Below are some examples on how to use Orb foreign tables.</p>
 <h3 id="basic-example">Basic example</h3>
 <p>This example will create a "foreign table" inside your Postgres database and query its data.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
@@ -3761,37 +4412,137 @@
 <span class="normal">14</span>
 <span class="normal">15</span>
 <span class="normal">16</span>
-<span class="normal">17</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">clerk</span><span class="p">.</span><span class="n">users</span><span class="w"> </span><span class="p">(</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">orb</span><span class="p">.</span><span class="n">customers</span><span class="w"> </span><span class="p">(</span>
 <span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">external_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">username</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">first_name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">last_name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">email</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
 <span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
+<span class="w">  </span><span class="n">auto_collection</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span>
 <span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
 <span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">clerk_server</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">orb_server</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;users&#39;</span>
+<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;customers&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">rowid_column</span><span class="w"> </span><span class="s1">&#39;id&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 
-<span class="c1">-- query all users</span>
-<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">clerk</span><span class="p">.</span><span class="n">users</span><span class="p">;</span>
+<span class="c1">-- query all customers</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">orb</span><span class="p">.</span><span class="n">customers</span><span class="p">;</span>
+
+<span class="c1">-- you can use `limit` clause to reduce query time if customer number is large</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">orb</span><span class="p">.</span><span class="n">customers</span><span class="w"> </span><span class="k">limit</span><span class="w"> </span><span class="mi">200</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 <p><code>attrs</code> is a special column which stores all the object attributes in JSON format, you can extract any attributes needed from it. See more examples below.</p>
 <h3 id="query-json-attributes">Query JSON attributes</h3>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- extract all email addresses from user</span>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">orb</span><span class="p">.</span><span class="n">invoices</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">invoice_number</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">customer_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">external_customer_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">subscription_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">status</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">amount_due</span><span class="w"> </span><span class="nb">numeric</span><span class="p">(</span><span class="mi">18</span><span class="p">,</span><span class="mi">2</span><span class="p">),</span>
+<span class="w">  </span><span class="n">currency</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">due_date</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
+<span class="w">  </span><span class="n">issued_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
+<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
+<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="p">)</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">orb_server</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;invoices&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">rowid_column</span><span class="w"> </span><span class="s1">&#39;id&#39;</span>
+<span class="w">  </span><span class="p">);</span>
+
+<span class="c1">-- extract all line items from an invoice</span>
 <span class="k">select</span>
-<span class="w">  </span><span class="n">u</span><span class="p">.</span><span class="n">id</span><span class="p">,</span>
-<span class="w">  </span><span class="n">e</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;email_address&#39;</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">email</span>
-<span class="k">from</span><span class="w"> </span><span class="n">clerk</span><span class="p">.</span><span class="n">users</span><span class="w"> </span><span class="n">u</span>
-<span class="w">  </span><span class="k">cross</span><span class="w"> </span><span class="k">join</span><span class="w"> </span><span class="n">json_array_elements</span><span class="p">((</span><span class="n">attrs</span><span class="o">-&gt;</span><span class="s1">&#39;email_addresses&#39;</span><span class="p">)::</span><span class="n">json</span><span class="p">)</span><span class="w"> </span><span class="n">e</span><span class="p">;</span>
+<span class="w">  </span><span class="n">i</span><span class="p">.</span><span class="n">id</span><span class="p">,</span>
+<span class="w">  </span><span class="n">li</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;name&#39;</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">line_item_name</span><span class="p">,</span>
+<span class="w">  </span><span class="n">li</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;quantity&#39;</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">line_item_quantity</span><span class="p">,</span>
+<span class="w">  </span><span class="n">li</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;subtotal&#39;</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">line_item_subtotal</span>
+<span class="k">from</span><span class="w"> </span><span class="n">orb</span><span class="p">.</span><span class="n">invoices</span><span class="w"> </span><span class="n">i</span>
+<span class="w">  </span><span class="k">cross</span><span class="w"> </span><span class="k">join</span><span class="w"> </span><span class="n">json_array_elements</span><span class="p">((</span><span class="n">attrs</span><span class="o">-&gt;</span><span class="s1">&#39;line_items&#39;</span><span class="p">)::</span><span class="n">json</span><span class="p">)</span><span class="w"> </span><span class="n">li</span>
+<span class="k">where</span>
+<span class="w">  </span><span class="n">i</span><span class="p">.</span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;PsEhbLd88auyhZ8F&#39;</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<h3 id="data-modify-example">Data Modify Example</h3>
+<p>This example will modify data in a "foreign table" inside your Postgres database, note that <code>rowid_column</code> foreign table option is mandatory for data modify. Data modify is done through the <code>attrs</code> jsonb column, which will be posted as request body to Orb API endpoint. Please refer to <a href="https://docs.withorb.com/api-reference">Orb API reference docs</a> for the JSON request details.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- create a new customer</span>
+<span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">orb</span><span class="p">.</span><span class="n">customers</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span>
+<span class="k">values</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="s1">&#39;{</span>
+<span class="s1">    &quot;name&quot;: &quot;John Doe&quot;,</span>
+<span class="s1">    &quot;email&quot;: &quot;test@test.com&quot;</span>
+<span class="s1">  }&#39;</span><span class="p">::</span><span class="n">jsonb</span>
+<span class="p">);</span>
+
+<span class="c1">-- update the existing customer</span>
+<span class="k">update</span><span class="w"> </span><span class="n">orb</span><span class="p">.</span><span class="n">customers</span>
+<span class="k">set</span><span class="w"> </span><span class="n">attrs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;{</span>
+<span class="s1">  &quot;name&quot;: &quot;Jane Smith&quot;,</span>
+<span class="s1">  &quot;billing_address&quot;: {</span>
+<span class="s1">    &quot;city&quot;: &quot;New York&quot;,</span>
+<span class="s1">    &quot;country&quot;: &quot;US&quot;</span>
+<span class="s1">  }</span>
+<span class="s1">}&#39;</span><span class="p">::</span><span class="n">jsonb</span>
+<span class="k">where</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;n6DaYELQYubChJWf&#39;</span><span class="p">;</span>
+
+<span class="c1">-- delete a customer</span>
+<span class="k">delete</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">orb</span><span class="p">.</span><span class="n">customers</span>
+<span class="k">where</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;n6DaYELQYubChJWf&#39;</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 
 
@@ -3825,7 +4576,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../calendly/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Calendly">
+          <a href="../notion/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Notion">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
@@ -3835,20 +4586,20 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                Calendly
+                Notion
               </div>
             </div>
           </a>
         
         
           
-          <a href="../cfd1/" class="md-footer__link md-footer__link--next" aria-label="Next: Cloudflare D1">
+          <a href="../paddle/" class="md-footer__link md-footer__link--next" aria-label="Next: Paddle">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Cloudflare D1
+                Paddle
               </div>
             </div>
             <div class="md-footer__button md-icon">
