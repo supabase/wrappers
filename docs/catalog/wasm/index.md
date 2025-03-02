@@ -61,6 +61,18 @@ Foreign data wrappers built with Wasm which can be used on Supabase platform.
     :octicons-code-24: [source](https://github.com/supabase/wrappers/tree/wasm_cfd1_fdw_v0.1.0/wasm-wrappers/fdw/cfd1_fdw) &nbsp;
     :material-file-document: [docs](../cfd1.md)
 
+- :simple-webassembly: &nbsp; **[HubSpot](../hubspot.md)**
+
+    ----
+
+    Foreign data wrapper for [HubSpot](https://www.hubspot.com/).
+
+    Supported by [Supabase](https://www.supabase.com)
+
+    :octicons-tag-24: [v0.1.0](https://github.com/supabase/wrappers/releases/tag/wasm_hubspot_fdw_v0.1.0) &nbsp;
+    :octicons-code-24: [source](https://github.com/supabase/wrappers/tree/wasm_hubspot_fdw_v0.1.1/wasm-wrappers/fdw/hubspot_fdw) &nbsp;
+    :material-file-document: [docs](../hubspot.md)
+
 - :simple-webassembly: &nbsp; **[Notion](../notion.md)**
 
     ----
