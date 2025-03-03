@@ -297,6 +297,43 @@ class MockServer(BaseHTTPRequestHandler):
   }
 }
             '''
+        elif fdw == "hubspot":
+            body = '''
+{
+  "results": [
+    {
+      "id": "1501",
+      "properties": {
+        "createdate": "2021-04-28T10:26:44.741Z",
+        "hs_object_id": "1501",
+        "lastmodifieddate": "2025-02-28T05:09:57.297Z",
+        "user_id": "8527"
+      },
+      "createdAt": "2021-04-28T10:26:44.741Z",
+      "updatedAt": "2025-02-28T05:09:57.297Z",
+      "archived": false
+    },
+    {
+      "id": "1502",
+      "properties": {
+        "createdate": "2021-04-28T10:26:44.804Z",
+        "hs_object_id": "1502",
+        "lastmodifieddate": "2025-02-24T17:25:56.940Z",
+        "user_id": "8528"
+      },
+      "createdAt": "2021-04-28T10:26:44.804Z",
+      "updatedAt": "2025-02-24T17:25:56.940Z",
+      "archived": false
+    }
+  ],
+  "paging": {
+    "next": {
+      "after": "1503",
+      "link": "https://api.hubapi.com/crm/v3/objects/contacts?limit=2&properties=user_id&after=1503"
+    }
+  }
+}
+            '''
         else:
             self.send_response(404)
             return

@@ -367,6 +367,50 @@ mod tests {
                 .filter_map(|r| r.get_by_name::<&str, _>("id").unwrap())
                 .collect::<Vec<_>>();
             assert_eq!(results, vec!["XimGiw3pnsgusvc3"]);
+
+            // HubSpot FDW test
+            c.update(
+                r#"CREATE SERVER hubspot_server
+                     FOREIGN DATA WRAPPER wasm_wrapper
+                     OPTIONS (
+                       fdw_package_url 'file://../../../wasm-wrappers/fdw/hubspot_fdw/target/wasm32-unknown-unknown/release/hubspot_fdw.wasm',
+                       fdw_package_name 'supabase:hubspot-fdw',
+                       fdw_package_version '>=0.1.0',
+                       api_url 'http://localhost:8096/hubspot',
+                       api_key 'ccc'
+                     )"#,
+                None,
+                None,
+            )
+            .unwrap();
+            c.update(
+                r#"
+                  CREATE FOREIGN TABLE hubspot_table (
+                    id text,
+                    email text,
+                    firstname text,
+                    lastname text,
+                    user_id text,
+                    created_at timestamp,
+                    updated_at timestamp,
+                    attrs jsonb
+                  )
+                  SERVER hubspot_server
+                  OPTIONS (
+                    object 'objects/contacts'
+                  )
+             "#,
+                None,
+                None,
+            )
+            .unwrap();
+
+            let results = c
+                .select("SELECT id, user_id FROM hubspot_table", None, None)
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("user_id").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(results, vec!["8527", "8528"]);
         });
     }
 }
