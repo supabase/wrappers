@@ -17,7 +17,7 @@ The HubSpot Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you
 
 | Version | Wasm Package URL                                                                                  | Checksum                                                           |
 | ------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_hubspot_fdw_v0.1.0/hubspot_fdw.wasm` | `tbd` |
+| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_hubspot_fdw_v0.1.0/hubspot_fdw.wasm` | `2cbf39e9e28aa732a225db09b2186a2342c44697d4fa047652d358e292ba5521` |
 
 ## Preparation
 
@@ -68,7 +68,7 @@ We need to provide Postgres with the credentials to access HubSpot and any addit
         fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_hubspot_fdw_v0.1.0/hubspot_fdw.wasm',
         fdw_package_name 'supabase:hubspot-fdw',
         fdw_package_version '0.1.0',
-        fdw_package_checksum 'tbd',
+        fdw_package_checksum '2cbf39e9e28aa732a225db09b2186a2342c44697d4fa047652d358e292ba5521',
         api_url 'https://api.hubapi.com/crm/v3',  -- optional
         api_key_id '<key_ID>' -- The Key ID from above.
       );
@@ -83,7 +83,7 @@ We need to provide Postgres with the credentials to access HubSpot and any addit
         fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_hubspot_fdw_v0.1.0/hubspot_fdw.wasm',
         fdw_package_name 'supabase:hubspot-fdw',
         fdw_package_version '0.1.0',
-        fdw_package_checksum 'tbd',
+        fdw_package_checksum '2cbf39e9e28aa732a225db09b2186a2342c44697d4fa047652d358e292ba5521',
         api_url 'https://api.hubapi.com/crm/v3',  -- optional
         api_key 'pat-xxx-xxxxxxx-...'  -- HubSpot private apps access token
       );
