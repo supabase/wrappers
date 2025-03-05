@@ -51,10 +51,18 @@ By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server
 insert into vault.secrets (name, secret)
 values (
   'notion',
-  '<Notion API key>' -- Notion API key
+  '<Notion API key>' -- should look like ntn_589513........
 )
-returning key_id;
+returning key_id; -- copy this Vault key id for the next step
 ```
+
+> ⚠️ ** Getting a Notion API key**
+>
+> 1. Visit [Notion > Profile > Integrations](https://www.notion.so/profile/integrations)
+> 2. Click `New integration`
+> 3. Add an integration name, select your workspace, then select Internal as the Type
+> 4. This will give you an `Internal Integration Secret` that will look like `ntn_589513........`
+> 5. Use this as your Notion API key
 
 ### Connecting to Notion
 
@@ -71,14 +79,14 @@ We need to provide Postgres with the credentials to access Notion and any additi
         fdw_package_version '0.1.1',
         fdw_package_checksum '6dea3014f462aafd0c051c37d163fe326e7650c26a7eb5d8017a30634b5a46de',
         api_url 'https://api.notion.com/v1',  -- optional
-        api_key_id '<key_ID>' -- The Key ID from above.
+        api_key_id '<vault key_ID>' -- the Vault key id from the previous step, not the Notion API key itself
       );
     ```
 
 === "Without Vault"
 
     ```sql
-    create server cal_server
+    create server notion_server
       foreign data wrapper wasm_wrapper
       options (
         fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_notion_fdw_v0.1.1/notion_fdw.wasm',
@@ -86,7 +94,7 @@ We need to provide Postgres with the credentials to access Notion and any additi
         fdw_package_version '0.1.1',
         fdw_package_checksum '6dea3014f462aafd0c051c37d163fe326e7650c26a7eb5d8017a30634b5a46de',
         api_url 'https://api.notion.com/v1',  -- optional
-        api_key 'secret_xxxx...'  -- Notion API key
+        api_key 'ntn_589513........'  -- Notion API key
       );
     ```
 
@@ -114,7 +122,6 @@ Supported objects are listed below:
 | page        |
 | database    |
 | user        |
-
 
 ## Entities
 
