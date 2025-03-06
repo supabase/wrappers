@@ -118,6 +118,27 @@ The Stripe Wrapper supports data read and modify from Stripe API.
 | [Topups](#top-ups)                            |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
 | [Transfers](#transfers)                       |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
 
+We can use SQL [import foreign schema](https://www.postgresql.org/docs/current/sql-importforeignschema.html) to import foreign table definitions from Stripe.
+
+For example, using below SQL can automatically create foreign tables in the `stripe` schema.
+
+```sql
+-- create all the foreign tables
+import foreign schema stripe from server stripe_server into stripe;
+
+-- or, create "checkout_sessions", "customers" and "balance" tables only
+import foreign schema stripe
+   limit to ("checkout_sessions", "customers", "balance")
+   from server stripe_server into stripe;
+
+-- or, create all foreign tables except "checkout_sessions" and "billing_meters"
+import foreign schema stripe
+   except ("checkout_sessions", "billing_meters")
+   from server stripe_server into stripe;
+```
+
+The full list of the foreign tables is below:
+
 ### Accounts
 
 This is an object representing a Stripe account.
@@ -625,7 +646,7 @@ Ref: [Stripe docs](https://docs.stripe.com/api/billing/meter)
 #### Usage
 
 ```sql
-create foreign table stripe.meter (
+create foreign table stripe.billing_meter (
   id text,
   display_name text,
   event_name text,
