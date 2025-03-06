@@ -2261,10 +2261,20 @@
 <span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">secrets</span><span class="w"> </span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">secret</span><span class="p">)</span>
 <span class="k">values</span><span class="w"> </span><span class="p">(</span>
 <span class="w">  </span><span class="s1">&#39;notion&#39;</span><span class="p">,</span>
-<span class="w">  </span><span class="s1">&#39;&lt;Notion API key&gt;&#39;</span><span class="w"> </span><span class="c1">-- Notion API key</span>
+<span class="w">  </span><span class="s1">&#39;&lt;Notion API key&gt;&#39;</span><span class="w"> </span><span class="c1">-- should look like ntn_589513........</span>
 <span class="p">)</span>
-<span class="n">returning</span><span class="w"> </span><span class="n">key_id</span><span class="p">;</span>
+<span class="n">returning</span><span class="w"> </span><span class="n">key_id</span><span class="p">;</span><span class="w"> </span><span class="c1">-- copy this Vault key id for the next step</span>
 </code></pre></div></td></tr></table></div>
+<blockquote>
+<p>⚠️ ** Getting a Notion API key**</p>
+<ol>
+<li>Visit <a href="https://www.notion.so/profile/integrations">Notion &gt; Profile &gt; Integrations</a></li>
+<li>Click <code>New integration</code></li>
+<li>Add an integration name, select your workspace, then select Internal as the Type</li>
+<li>This will give you an <code>Internal Integration Secret</code> that will look like <code>ntn_589513........</code></li>
+<li>Use this as your Notion API key</li>
+</ol>
+</blockquote>
 <h3 id="connecting-to-notion">Connecting to Notion</h3>
 <p>We need to provide Postgres with the credentials to access Notion and any additional options. We can do this using the <code>create server</code> command:</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">With Vault</label><label for="__tabbed_1_2">Without Vault</label></div>
@@ -2287,7 +2297,7 @@
 <span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.1.1&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;6dea3014f462aafd0c051c37d163fe326e7650c26a7eb5d8017a30634b5a46de&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">api_url</span><span class="w"> </span><span class="s1">&#39;https://api.notion.com/v1&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- optional</span>
-<span class="w">    </span><span class="n">api_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;key_ID&gt;&#39;</span><span class="w"> </span><span class="c1">-- The Key ID from above.</span>
+<span class="w">    </span><span class="n">api_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;vault key_ID&gt;&#39;</span><span class="w"> </span><span class="c1">-- the Vault key id from the previous step, not the Notion API key itself</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 </div>
@@ -2301,7 +2311,7 @@
 <span class="normal"> 7</span>
 <span class="normal"> 8</span>
 <span class="normal"> 9</span>
-<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">cal_server</span>
+<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">notion_server</span>
 <span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_notion_fdw_v0.1.1/notion_fdw.wasm&#39;</span><span class="p">,</span>
@@ -2309,7 +2319,7 @@
 <span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.1.1&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;6dea3014f462aafd0c051c37d163fe326e7650c26a7eb5d8017a30634b5a46de&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">api_url</span><span class="w"> </span><span class="s1">&#39;https://api.notion.com/v1&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- optional</span>
-<span class="w">    </span><span class="n">api_key</span><span class="w"> </span><span class="s1">&#39;secret_xxxx...&#39;</span><span class="w">  </span><span class="c1">-- Notion API key</span>
+<span class="w">    </span><span class="n">api_key</span><span class="w"> </span><span class="s1">&#39;ntn_589513........&#39;</span><span class="w">  </span><span class="c1">-- Notion API key</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 </div>
