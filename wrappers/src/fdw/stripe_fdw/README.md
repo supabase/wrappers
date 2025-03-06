@@ -10,6 +10,7 @@ This is a foreign data wrapper for [Stripe](https://stripe.com/) developed using
 
 | Version | Date       | Notes                                                |
 | ------- | ---------- | ---------------------------------------------------- |
+| 0.1.12  | 2025-03-06 | Added import foreign schema support                  |
 | 0.1.11  | 2024-09-20 | Added Meter object                                   |
 | 0.1.10  | 2024-08-26 | Added 'api_key_name' server option                   |
 | 0.1.9   | 2024-07-01 | Added 'api_version' server option                    |

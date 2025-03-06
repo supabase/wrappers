@@ -4,11 +4,417 @@ use reqwest::{self, header, StatusCode, Url};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use serde_json::{json, Map as JsonMap, Number, Value as JsonValue};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use supabase_wrappers::prelude::*;
 
 use super::{StripeFdwError, StripeFdwResult};
+
+// config list for all the supported foreign tables
+// an example:
+// {
+//   "invoices": (
+//     // foreign table name
+//     "invoices",
+//
+//     // supported pushdown columns other than id
+//     ["customer", "status", "subscription"],
+//
+//     // foreign table column tuples: (column_name, type)
+//     [
+//       ("id", "text"),
+//       ("customer", "text"),
+//       ("subscription", "text"),
+//       ("status", "text"),
+//     ]
+//   ),
+// }
+type TableConfig = HashMap<
+    &'static str,
+    (
+        &'static str,
+        Vec<&'static str>,
+        Vec<(&'static str, &'static str)>,
+    ),
+>;
+
+fn create_table_config() -> TableConfig {
+    HashMap::from([
+        (
+            "accounts",
+            (
+                "accounts",
+                vec![],
+                vec![
+                    ("id", "text"),
+                    ("business_type", "text"),
+                    ("country", "text"),
+                    ("email", "text"),
+                    ("type", "text"),
+                    ("created", "timestamp"),
+                ],
+            ),
+        ),
+        (
+            "balance",
+            (
+                "balance",
+                vec![],
+                vec![
+                    ("balance_type", "text"),
+                    ("amount", "bigint"),
+                    ("currency", "text"),
+                ],
+            ),
+        ),
+        (
+            "balance_transactions",
+            (
+                "balance_transactions",
+                vec!["type"],
+                vec![
+                    ("id", "text"),
+                    ("amount", "bigint"),
+                    ("currency", "text"),
+                    ("description", "text"),
+                    ("fee", "bigint"),
+                    ("net", "bigint"),
+                    ("status", "text"),
+                    ("type", "text"),
+                    ("created", "timestamp"),
+                ],
+            ),
+        ),
+        (
+            "charges",
+            (
+                "charges",
+                vec!["customer"],
+                vec![
+                    ("id", "text"),
+                    ("amount", "bigint"),
+                    ("currency", "text"),
+                    ("customer", "text"),
+                    ("description", "text"),
+                    ("invoice", "text"),
+                    ("payment_intent", "text"),
+                    ("status", "text"),
+                    ("created", "timestamp"),
+                ],
+            ),
+        ),
+        (
+            "customers",
+            (
+                "customers",
+                vec!["email"],
+                vec![
+                    ("id", "text"),
+                    ("email", "text"),
+                    ("name", "text"),
+                    ("description", "text"),
+                    ("created", "timestamp"),
+                ],
+            ),
+        ),
+        (
+            "disputes",
+            (
+                "disputes",
+                vec!["charge", "payment_intent"],
+                vec![
+                    ("id", "text"),
+                    ("amount", "bigint"),
+                    ("currency", "text"),
+                    ("charge", "text"),
+                    ("payment_intent", "text"),
+                    ("reason", "text"),
+                    ("status", "text"),
+                    ("created", "timestamp"),
+                ],
+            ),
+        ),
+        (
+            "events",
+            (
+                "events",
+                vec!["type"],
+                vec![
+                    ("id", "text"),
+                    ("type", "text"),
+                    ("api_version", "text"),
+                    ("created", "timestamp"),
+                ],
+            ),
+        ),
+        (
+            "files",
+            (
+                "files",
+                vec!["purpose"],
+                vec![
+                    ("id", "text"),
+                    ("filename", "text"),
+                    ("purpose", "text"),
+                    ("title", "text"),
+                    ("size", "bigint"),
+                    ("type", "text"),
+                    ("url", "text"),
+                    ("created", "timestamp"),
+                    ("expires_at", "timestamp"),
+                ],
+            ),
+        ),
+        (
+            "file_links",
+            (
+                "file_links",
+                vec![],
+                vec![
+                    ("id", "text"),
+                    ("file", "text"),
+                    ("url", "text"),
+                    ("created", "timestamp"),
+                    ("expired", "bool"),
+                    ("expires_at", "timestamp"),
+                ],
+            ),
+        ),
+        (
+            "invoices",
+            (
+                "invoices",
+                vec!["customer", "status", "subscription"],
+                vec![
+                    ("id", "text"),
+                    ("customer", "text"),
+                    ("subscription", "text"),
+                    ("status", "text"),
+                    ("total", "bigint"),
+                    ("currency", "text"),
+                    ("period_start", "timestamp"),
+                    ("period_end", "timestamp"),
+                ],
+            ),
+        ),
+        (
+            "mandates",
+            (
+                "mandates",
+                vec![],
+                vec![
+                    ("id", "text"),
+                    ("payment_method", "text"),
+                    ("status", "text"),
+                    ("type", "text"),
+                ],
+            ),
+        ),
+        (
+            "payment_intents",
+            (
+                "payment_intents",
+                vec!["customer"],
+                vec![
+                    ("id", "text"),
+                    ("customer", "text"),
+                    ("amount", "bigint"),
+                    ("currency", "text"),
+                    ("payment_method", "text"),
+                    ("created", "timestamp"),
+                ],
+            ),
+        ),
+        (
+            "payouts",
+            (
+                "payouts",
+                vec!["status"],
+                vec![
+                    ("id", "text"),
+                    ("amount", "bigint"),
+                    ("currency", "text"),
+                    ("arrival_date", "timestamp"),
+                    ("description", "text"),
+                    ("statement_descriptor", "text"),
+                    ("status", "text"),
+                    ("created", "timestamp"),
+                ],
+            ),
+        ),
+        (
+            "prices",
+            (
+                "prices",
+                vec!["active", "currency", "product", "type"],
+                vec![
+                    ("id", "text"),
+                    ("active", "bool"),
+                    ("currency", "text"),
+                    ("product", "text"),
+                    ("unit_amount", "bigint"),
+                    ("type", "text"),
+                    ("created", "timestamp"),
+                ],
+            ),
+        ),
+        (
+            "products",
+            (
+                "products",
+                vec!["active"],
+                vec![
+                    ("id", "text"),
+                    ("name", "text"),
+                    ("active", "bool"),
+                    ("default_price", "text"),
+                    ("description", "text"),
+                    ("created", "timestamp"),
+                    ("updated", "timestamp"),
+                ],
+            ),
+        ),
+        (
+            "refunds",
+            (
+                "refunds",
+                vec!["charge", "payment_intent"],
+                vec![
+                    ("id", "text"),
+                    ("amount", "bigint"),
+                    ("currency", "text"),
+                    ("charge", "text"),
+                    ("payment_intent", "text"),
+                    ("reason", "text"),
+                    ("status", "text"),
+                    ("created", "timestamp"),
+                ],
+            ),
+        ),
+        (
+            "setup_attempts",
+            (
+                "setup_attempts",
+                vec!["setup_intent"],
+                vec![
+                    ("id", "text"),
+                    ("application", "text"),
+                    ("customer", "text"),
+                    ("on_behalf_of", "text"),
+                    ("payment_method", "text"),
+                    ("setup_intent", "text"),
+                    ("status", "text"),
+                    ("usage", "text"),
+                    ("created", "timestamp"),
+                ],
+            ),
+        ),
+        (
+            "setup_intents",
+            (
+                "setup_intents",
+                vec!["customer", "payment_method"],
+                vec![
+                    ("id", "text"),
+                    ("client_secret", "text"),
+                    ("customer", "text"),
+                    ("description", "text"),
+                    ("payment_method", "text"),
+                    ("status", "text"),
+                    ("usage", "text"),
+                    ("created", "timestamp"),
+                ],
+            ),
+        ),
+        (
+            "subscriptions",
+            (
+                "subscriptions",
+                vec!["customer", "price", "status"],
+                vec![
+                    ("id", "text"),
+                    ("customer", "text"),
+                    ("currency", "text"),
+                    ("current_period_start", "timestamp"),
+                    ("current_period_end", "timestamp"),
+                ],
+            ),
+        ),
+        (
+            "tokens",
+            (
+                "tokens",
+                vec![],
+                vec![
+                    ("id", "text"),
+                    ("type", "text"),
+                    ("client_ip", "text"),
+                    ("used", "bool"),
+                    ("livemode", "bool"),
+                    ("created", "timestamp"),
+                ],
+            ),
+        ),
+        (
+            "topups",
+            (
+                "topups",
+                vec!["status"],
+                vec![
+                    ("id", "text"),
+                    ("amount", "bigint"),
+                    ("currency", "text"),
+                    ("description", "text"),
+                    ("status", "text"),
+                    ("created", "timestamp"),
+                ],
+            ),
+        ),
+        (
+            "transfers",
+            (
+                "transfers",
+                vec!["destination"],
+                vec![
+                    ("id", "text"),
+                    ("amount", "bigint"),
+                    ("currency", "text"),
+                    ("description", "text"),
+                    ("destination", "text"),
+                    ("created", "timestamp"),
+                ],
+            ),
+        ),
+        (
+            "billing/meters",
+            (
+                "billing_meters",
+                vec![],
+                vec![
+                    ("id", "text"),
+                    ("display_name", "text"),
+                    ("event_name", "text"),
+                    ("event_time_window", "text"),
+                    ("status", "text"),
+                ],
+            ),
+        ),
+        (
+            "checkout/sessions",
+            (
+                "checkout_sessions",
+                vec!["customer", "payment_intent", "subscription"],
+                vec![
+                    ("id", "text"),
+                    ("customer", "text"),
+                    ("payment_intent", "text"),
+                    ("subscription", "text"),
+                    ("created", "timestamp"),
+                ],
+            ),
+        ),
+    ])
+}
 
 fn create_client(
     api_key: &str,
@@ -103,8 +509,8 @@ fn body_to_rows(
                     .and_then(|v| v.get(*col_name))
                     .and_then(|v| match *col_type {
                         "bool" => v.as_bool().map(Cell::Bool),
-                        "i64" => v.as_i64().map(Cell::I64),
-                        "string" => v.as_str().map(|a| Cell::String(a.to_owned())),
+                        "bigint" => v.as_i64().map(Cell::I64),
+                        "text" => v.as_str().map(|a| Cell::String(a.to_owned())),
                         "timestamp" => v.as_i64().map(|a| {
                             let ts = to_timestamp(a as f64);
                             Cell::Timestamp(ts.to_utc())
@@ -255,7 +661,7 @@ fn inc_stats_request_cnt(stats_metadata: &mut JsonB) -> StripeFdwResult<()> {
 }
 
 #[wrappers_fdw(
-    version = "0.1.11",
+    version = "0.1.12",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/stripe_fdw",
     error_type = "StripeFdwError"
@@ -268,6 +674,7 @@ pub(crate) struct StripeFdw {
     obj: String,
     rowid_col: String,
     iter_idx: usize,
+    table_config: TableConfig,
 }
 
 impl StripeFdw {
@@ -284,35 +691,11 @@ impl StripeFdw {
 
         // pushdown quals other than id
         // ref: https://stripe.com/docs/api/[object]/list
-        let fields = match obj {
-            "accounts" => vec![],
-            "balance" => vec![],
-            "balance_transactions" => vec!["type"],
-            "charges" => vec!["customer"],
-            "customers" => vec!["email"],
-            "disputes" => vec!["charge", "payment_intent"],
-            "events" => vec!["type"],
-            "files" => vec!["purpose"],
-            "file_links" => vec![],
-            "invoices" => vec!["customer", "status", "subscription"],
-            "mandates" => vec![],
-            "payment_intents" => vec!["customer"],
-            "payouts" => vec!["status"],
-            "prices" => vec!["active", "currency", "product", "type"],
-            "products" => vec!["active"],
-            "refunds" => vec!["charge", "payment_intent"],
-            "setup_attempts" => vec!["setup_intent"],
-            "setup_intents" => vec!["customer", "payment_method"],
-            "subscriptions" => vec!["customer", "price", "status"],
-            "tokens" => vec![],
-            "topups" => vec!["status"],
-            "transfers" => vec!["destination"],
-            "billing/meters" => vec![],
-            "checkout/sessions" => vec!["customer", "payment_intent", "subscription"],
-            _ => {
-                return Err(StripeFdwError::ObjectNotImplemented(obj.to_string()));
-            }
-        };
+        let fields = self
+            .table_config
+            .get(obj)
+            .map(|v| v.1.clone())
+            .ok_or_else(|| StripeFdwError::ObjectNotImplemented(obj.to_string()))?;
         pushdown_quals(&mut url, obj, quals, fields, page_size, cursor);
 
         Ok(Some(url))
@@ -325,309 +708,12 @@ impl StripeFdw {
         resp_body: &str,
         tgt_cols: &[Column],
     ) -> StripeFdwResult<(Vec<Row>, Option<String>, Option<bool>)> {
-        match obj {
-            "accounts" => body_to_rows(
-                resp_body,
-                vec![
-                    ("id", "string"),
-                    ("business_type", "string"),
-                    ("country", "string"),
-                    ("email", "string"),
-                    ("type", "string"),
-                    ("created", "timestamp"),
-                ],
-                tgt_cols,
-            ),
-            "balance" => body_to_rows(
-                resp_body,
-                vec![
-                    ("balance_type", "string"),
-                    ("amount", "i64"),
-                    ("currency", "string"),
-                ],
-                tgt_cols,
-            ),
-            "balance_transactions" => body_to_rows(
-                resp_body,
-                vec![
-                    ("id", "string"),
-                    ("amount", "i64"),
-                    ("currency", "string"),
-                    ("description", "string"),
-                    ("fee", "i64"),
-                    ("net", "i64"),
-                    ("status", "string"),
-                    ("type", "string"),
-                    ("created", "timestamp"),
-                ],
-                tgt_cols,
-            ),
-            "charges" => body_to_rows(
-                resp_body,
-                vec![
-                    ("id", "string"),
-                    ("amount", "i64"),
-                    ("currency", "string"),
-                    ("customer", "string"),
-                    ("description", "string"),
-                    ("invoice", "string"),
-                    ("payment_intent", "string"),
-                    ("status", "string"),
-                    ("created", "timestamp"),
-                ],
-                tgt_cols,
-            ),
-            "customers" => body_to_rows(
-                resp_body,
-                vec![
-                    ("id", "string"),
-                    ("email", "string"),
-                    ("name", "string"),
-                    ("description", "string"),
-                    ("created", "timestamp"),
-                ],
-                tgt_cols,
-            ),
-            "disputes" => body_to_rows(
-                resp_body,
-                vec![
-                    ("id", "string"),
-                    ("amount", "i64"),
-                    ("currency", "string"),
-                    ("charge", "string"),
-                    ("payment_intent", "string"),
-                    ("reason", "string"),
-                    ("status", "string"),
-                    ("created", "timestamp"),
-                ],
-                tgt_cols,
-            ),
-            "events" => body_to_rows(
-                resp_body,
-                vec![
-                    ("id", "string"),
-                    ("type", "string"),
-                    ("api_version", "string"),
-                    ("created", "timestamp"),
-                ],
-                tgt_cols,
-            ),
-            "files" => body_to_rows(
-                resp_body,
-                vec![
-                    ("id", "string"),
-                    ("filename", "string"),
-                    ("purpose", "string"),
-                    ("title", "string"),
-                    ("size", "i64"),
-                    ("type", "string"),
-                    ("url", "string"),
-                    ("created", "timestamp"),
-                    ("expires_at", "timestamp"),
-                ],
-                tgt_cols,
-            ),
-            "file_links" => body_to_rows(
-                resp_body,
-                vec![
-                    ("id", "string"),
-                    ("file", "string"),
-                    ("url", "string"),
-                    ("created", "timestamp"),
-                    ("expired", "bool"),
-                    ("expires_at", "timestamp"),
-                ],
-                tgt_cols,
-            ),
-            "invoices" => body_to_rows(
-                resp_body,
-                vec![
-                    ("id", "string"),
-                    ("customer", "string"),
-                    ("subscription", "string"),
-                    ("status", "string"),
-                    ("total", "i64"),
-                    ("currency", "string"),
-                    ("period_start", "timestamp"),
-                    ("period_end", "timestamp"),
-                ],
-                tgt_cols,
-            ),
-            "mandates" => body_to_rows(
-                resp_body,
-                vec![
-                    ("id", "string"),
-                    ("payment_method", "string"),
-                    ("status", "string"),
-                    ("type", "string"),
-                ],
-                tgt_cols,
-            ),
-            "payment_intents" => body_to_rows(
-                resp_body,
-                vec![
-                    ("id", "string"),
-                    ("customer", "string"),
-                    ("amount", "i64"),
-                    ("currency", "string"),
-                    ("payment_method", "string"),
-                    ("created", "timestamp"),
-                ],
-                tgt_cols,
-            ),
-            "payouts" => body_to_rows(
-                resp_body,
-                vec![
-                    ("id", "string"),
-                    ("amount", "i64"),
-                    ("currency", "string"),
-                    ("arrival_date", "timestamp"),
-                    ("description", "string"),
-                    ("statement_descriptor", "string"),
-                    ("status", "string"),
-                    ("created", "timestamp"),
-                ],
-                tgt_cols,
-            ),
-            "prices" => body_to_rows(
-                resp_body,
-                vec![
-                    ("id", "string"),
-                    ("active", "bool"),
-                    ("currency", "string"),
-                    ("product", "string"),
-                    ("unit_amount", "i64"),
-                    ("type", "string"),
-                    ("created", "timestamp"),
-                ],
-                tgt_cols,
-            ),
-            "products" => body_to_rows(
-                resp_body,
-                vec![
-                    ("id", "string"),
-                    ("name", "string"),
-                    ("active", "bool"),
-                    ("default_price", "string"),
-                    ("description", "string"),
-                    ("created", "timestamp"),
-                    ("updated", "timestamp"),
-                ],
-                tgt_cols,
-            ),
-            "refunds" => body_to_rows(
-                resp_body,
-                vec![
-                    ("id", "string"),
-                    ("amount", "i64"),
-                    ("currency", "string"),
-                    ("charge", "string"),
-                    ("payment_intent", "string"),
-                    ("reason", "string"),
-                    ("status", "string"),
-                    ("created", "timestamp"),
-                ],
-                tgt_cols,
-            ),
-            "setup_attempts" => body_to_rows(
-                resp_body,
-                vec![
-                    ("id", "string"),
-                    ("application", "string"),
-                    ("customer", "string"),
-                    ("on_behalf_of", "string"),
-                    ("payment_method", "string"),
-                    ("setup_intent", "string"),
-                    ("status", "string"),
-                    ("usage", "string"),
-                    ("created", "timestamp"),
-                ],
-                tgt_cols,
-            ),
-            "setup_intents" => body_to_rows(
-                resp_body,
-                vec![
-                    ("id", "string"),
-                    ("client_secret", "string"),
-                    ("customer", "string"),
-                    ("description", "string"),
-                    ("payment_method", "string"),
-                    ("status", "string"),
-                    ("usage", "string"),
-                    ("created", "timestamp"),
-                ],
-                tgt_cols,
-            ),
-            "subscriptions" => body_to_rows(
-                resp_body,
-                vec![
-                    ("id", "string"),
-                    ("customer", "string"),
-                    ("currency", "string"),
-                    ("current_period_start", "timestamp"),
-                    ("current_period_end", "timestamp"),
-                ],
-                tgt_cols,
-            ),
-            "tokens" => body_to_rows(
-                resp_body,
-                vec![
-                    ("id", "string"),
-                    ("type", "string"),
-                    ("client_ip", "string"),
-                    ("used", "bool"),
-                    ("created", "timestamp"),
-                ],
-                tgt_cols,
-            ),
-            "topups" => body_to_rows(
-                resp_body,
-                vec![
-                    ("id", "string"),
-                    ("amount", "i64"),
-                    ("currency", "string"),
-                    ("description", "string"),
-                    ("status", "string"),
-                    ("created", "timestamp"),
-                ],
-                tgt_cols,
-            ),
-            "transfers" => body_to_rows(
-                resp_body,
-                vec![
-                    ("id", "string"),
-                    ("amount", "i64"),
-                    ("currency", "string"),
-                    ("description", "string"),
-                    ("destination", "string"),
-                    ("created", "timestamp"),
-                ],
-                tgt_cols,
-            ),
-            "billing/meters" => body_to_rows(
-                resp_body,
-                vec![
-                    ("id", "string"),
-                    ("display_name", "string"),
-                    ("event_name", "string"),
-                    ("event_time_window", "string"),
-                    ("status", "string"),
-                ],
-                tgt_cols,
-            ),
-            "checkout/sessions" => body_to_rows(
-                resp_body,
-                vec![
-                    ("id", "string"),
-                    ("customer", "string"),
-                    ("payment_intent", "string"),
-                    ("subscription", "string"),
-                    ("created", "timestamp"),
-                ],
-                tgt_cols,
-            ),
-            _ => Err(StripeFdwError::ObjectNotImplemented(obj.to_string())),
-        }
+        let cols = self
+            .table_config
+            .get(obj)
+            .map(|v| v.2.clone())
+            .ok_or_else(|| StripeFdwError::ObjectNotImplemented(obj.to_string()))?;
+        body_to_rows(resp_body, cols, tgt_cols)
     }
 }
 
@@ -681,6 +767,7 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
             obj: String::default(),
             rowid_col: String::default(),
             iter_idx: 0,
+            table_config: create_table_config(),
         })
     }
 
@@ -921,6 +1008,47 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
             set_stats_metadata(stats_metadata);
         }
         Ok(())
+    }
+
+    fn import_foreign_schema(&mut self, stmt: ImportForeignSchemaStmt) -> Vec<String> {
+        let tbl_config: TableConfig = HashMap::from_iter(
+            self.table_config
+                .iter()
+                .map(|(k, v)| (v.0, (*k, v.1.clone(), v.2.clone()))),
+        );
+        let all_tables: HashSet<&str> = HashSet::from_iter(tbl_config.keys().copied());
+        let table_list = stmt.table_list.iter().map(|t| t.as_str()).collect();
+        let selected = match stmt.list_type {
+            ListType::FdwImportSchemaAll => all_tables,
+            ListType::FdwImportSchemaLimitTo => {
+                all_tables.intersection(&table_list).copied().collect()
+            }
+            ListType::FdwImportSchemaExcept => {
+                all_tables.difference(&table_list).copied().collect()
+            }
+        };
+        let ret = selected
+            .iter()
+            .map(|tbl| {
+                tbl_config
+                    .get(tbl)
+                    .map(|cfg| {
+                        let cols = cfg
+                            .2
+                            .iter()
+                            .map(|col| format!("{} {}", col.0, col.1))
+                            .collect::<Vec<String>>()
+                            .join(",");
+                        format!(
+                            r#"create foreign table if not exists {} ({},attrs jsonb)
+                            server {} options (object '{}', rowid_column 'id')"#,
+                            tbl, cols, stmt.server_name, cfg.0,
+                        )
+                    })
+                    .unwrap_or_default()
+            })
+            .collect();
+        ret
     }
 
     fn validator(
