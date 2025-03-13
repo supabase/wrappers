@@ -32,7 +32,16 @@ mod tests {
                   CREATE FOREIGN TABLE test_table (
                     id bigint,
                     name text,
-                    num numeric
+                    num numeric,
+                    is_active boolean,
+                    col_int8 varchar(1),
+                    col_int16 smallint,
+                    col_int32 integer,
+                    col_float32 real,
+                    col_float64 double precision,
+                    attrs jsonb,
+                    signup_dt date,
+                    created_at timestamp
                   )
                   SERVER my_bigquery_server
                   OPTIONS (
@@ -69,7 +78,7 @@ mod tests {
             */
 
             let results = c
-                .select("SELECT name FROM test_table", None, None)
+                .select("SELECT * FROM test_table", None, None)
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("name").unwrap())
                 .collect::<Vec<_>>();

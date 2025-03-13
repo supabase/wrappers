@@ -14,10 +14,46 @@ projects:
             - name: num
               type: NUMERIC
               mode: REQUIRED
+            - name: is_active
+              type: BOOL
+            - name: col_int8
+              type: INTEGER
+            - name: col_int16
+              type: INTEGER
+            - name: col_int32
+              type: INTEGER
+            - name: col_float32
+              type: FLOAT64
+            - name: col_float64
+              type: FLOAT64
+            - name: attrs
+              type: JSON
+            - name: signup_dt
+              type: DATE
+            - name: created_at
+              type: TIMESTAMP
           data:
             - id: 1
               name: foo
               num: 0.123
+              is_active: true
+              col_int8: 42
+              col_int16: 12345
+              col_int32: 65538
+              col_float32: 123.456
+              col_float64: 123.456
+              attrs: '{"aa": "bb"}'
+              signup_dt: "2022-10-21"
+              created_at: "2022-10-21T00:00:00"
             - id: 2
               name: bar
               num: 1234.56789
+              is_active: false
+              col_int8: 44
+              col_int16: 12348
+              col_int32: 65540
+              col_float32: 123.456
+              col_float64: 654.321
+              attrs: '{"aa": 123.45}'
+              signup_dt: "2023-10-21"
+              created_at: "2023-10-21T00:00:00"
