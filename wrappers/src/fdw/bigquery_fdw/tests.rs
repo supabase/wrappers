@@ -113,26 +113,56 @@ mod tests {
 
             assert_eq!(results, vec!["0.123", "1234.56789"]);
 
-            // DISABLED: error: [FIXME]
-            // insert failed: Request error (error: error decoding response body: missing field `status` at line 1 column 436)
-
-            /*
             c.update(
-                "INSERT INTO test_table (name) VALUES ($1)",
+                "INSERT INTO test_table (id, name) VALUES ($1, $2)",
                 None,
-                Some(vec![(
-                    PgOid::BuiltIn(PgBuiltInOids::TEXTOID),
-                    "baz".into_datum(),
-                )]),
-            );
+                Some(vec![
+                    (PgOid::BuiltIn(PgBuiltInOids::INT8OID), 42.into_datum()),
+                    (PgOid::BuiltIn(PgBuiltInOids::TEXTOID), "baz".into_datum()),
+                ]),
+            )
+            .unwrap();
 
             let results = c
                 .select("SELECT name FROM test_table", None, None)
+                .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("name").unwrap())
                 .collect::<Vec<_>>();
-
             assert_eq!(results, vec!["foo", "bar", "baz"]);
-             */
+
+            c.update(
+                "UPDATE test_table SET name = $1 WHERE id = $2",
+                None,
+                Some(vec![
+                    (PgOid::BuiltIn(PgBuiltInOids::TEXTOID), "qux".into_datum()),
+                    (PgOid::BuiltIn(PgBuiltInOids::INT8OID), 42.into_datum()),
+                ]),
+            )
+            .unwrap();
+
+            let results = c
+                .select("SELECT name FROM test_table ORDER BY id", None, None)
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("name").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(results, vec!["foo", "bar", "qux"]);
+
+            c.update(
+                "DELETE FROM test_table WHERE id = $1",
+                None,
+                Some(vec![(
+                    PgOid::BuiltIn(PgBuiltInOids::INT8OID),
+                    42.into_datum(),
+                )]),
+            )
+            .unwrap();
+
+            let results = c
+                .select("SELECT name FROM test_table ORDER BY id", None, None)
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("name").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(results, vec!["foo", "bar"]);
         });
     }
 }
