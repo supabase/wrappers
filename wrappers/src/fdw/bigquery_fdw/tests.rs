@@ -34,7 +34,7 @@ mod tests {
                     name text,
                     num numeric,
                     is_active boolean,
-                    col_int8 varchar(1),
+                    col_int8 "char",
                     col_int16 smallint,
                     col_int32 integer,
                     col_float32 real,
