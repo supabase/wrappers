@@ -13,7 +13,6 @@ projects:
               mode: REQUIRED
             - name: num
               type: NUMERIC
-              mode: REQUIRED
             - name: is_active
               type: BOOL
             - name: col_int8
