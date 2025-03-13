@@ -32,7 +32,12 @@ mod tests {
                 r#"
                   CREATE FOREIGN TABLE cognito_view (
                     email text,
-                    username text
+                    username text,
+                    enabled bool,
+                    status text,
+                    attributes jsonb,
+                    created_at timestamp,
+                    updated_at timestamp
                   )
                   SERVER cognito_server
                   options (
