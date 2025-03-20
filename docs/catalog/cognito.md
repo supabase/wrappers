@@ -88,6 +88,16 @@ create schema if not exists cognito;
 
 ## Entities
 
+We can use SQL [import foreign schema](https://www.postgresql.org/docs/current/sql-importforeignschema.html) to import foreign table definitions from Cognito.
+
+For example, using below SQL can automatically create foreign table in the `cognito` schema.
+
+```sql
+import foreign schema cognito from server cognito_server into cognito;
+```
+
+The foreign table will be created as below:
+
 ### Users
 
 This is an object representing Cognito User Records.

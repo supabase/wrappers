@@ -28,22 +28,10 @@ mod tests {
                 None,
             )
             .unwrap();
+            c.update(r#"CREATE SCHEMA IF NOT EXISTS cognito"#, None, None)
+                .unwrap();
             c.update(
-                r#"
-                  CREATE FOREIGN TABLE cognito_view (
-                    email text,
-                    username text,
-                    enabled bool,
-                    status text,
-                    attributes jsonb,
-                    created_at timestamp,
-                    updated_at timestamp
-                  )
-                  SERVER cognito_server
-                  options (
-                    object 'users'
-                  )
-             "#,
+                r#"IMPORT FOREIGN SCHEMA cognito FROM SERVER cognito_server INTO cognito"#,
                 None,
                 None,
             )
@@ -51,7 +39,7 @@ mod tests {
 
             let results = c
                 .select(
-                    "SELECT * FROM cognito_view WHERE email = 'test1'",
+                    "SELECT * FROM cognito.users WHERE email = 'test1'",
                     None,
                     None,
                 )
