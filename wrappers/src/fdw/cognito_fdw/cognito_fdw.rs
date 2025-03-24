@@ -12,7 +12,7 @@ use super::cognito_client::rows_iterator::RowsIterator;
 use super::{CognitoFdwError, CognitoFdwResult};
 
 #[wrappers_fdw(
-    version = "0.1.3",
+    version = "0.1.4",
     author = "Joel",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/cognito_fdw",
     error_type = "CognitoFdwError"
@@ -109,6 +109,22 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
 
     fn end_scan(&mut self) -> CognitoFdwResult<()> {
         Ok(())
+    }
+
+    fn import_foreign_schema(&mut self, stmt: ImportForeignSchemaStmt) -> Vec<String> {
+        vec![format!(
+            r#"create foreign table if not exists users (
+                username text,
+                email text,
+                status text,
+                enabled boolean,
+                created_at timestamp,
+                updated_at timestamp,
+                attributes jsonb
+            )
+            server {} options (object 'users')"#,
+            stmt.server_name
+        )]
     }
 
     fn validator(
