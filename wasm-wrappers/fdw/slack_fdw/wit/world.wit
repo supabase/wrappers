@@ -1,0 +1,89 @@
+package wrappers:slack;
+
+interface tables {
+  // Table resources supported by this FDW
+  enum resource {
+    messages,
+    channels,
+    users,
+    files,
+    reactions,
+    stars,
+    team-info,
+  }
+
+  // Column definition
+  record column {
+    name: string,
+    type: string,
+  }
+
+  // Table definition
+  record table {
+    name: string,
+    columns: list<column>,
+  }
+
+  // Get available tables
+  get-tables: func() -> list<table>;
+}
+
+interface options {
+  // Connection options
+  record connection-option {
+    name: string,
+    value: string,
+  }
+
+  // Foreign table options
+  record table-option {
+    name: string,
+    value: string,
+  }
+
+  // Initialize connection with given options
+  init: func(options: list<connection-option>) -> result<_, string>;
+  
+  // Get options for a specific table
+  get-table-options: func(resource: string, options: list<table-option>) -> result<_, string>;
+}
+
+interface queries {
+  // Supported conditions for pushing down WHERE clauses
+  enum condition-operator {
+    eq,
+    ne,
+    lt,
+    le,
+    gt,
+    ge,
+    like,
+    in,
+  }
+
+  // Condition for filtering
+  record condition {
+    column: string,
+    operator: condition-operator,
+    value: string,
+  }
+
+  // Query definition
+  record query {
+    resource: string,
+    conditions: list<condition>,
+    limit: option<u32>,
+  }
+
+  // Record representing a row
+  type row = list<option<string>>;
+
+  // Execute a query
+  execute: func(query: query) -> result<list<row>, string>;
+}
+
+world slack {
+  export tables;
+  export options;
+  export queries;
+}
