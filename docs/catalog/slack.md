@@ -15,9 +15,9 @@ The Slack Wrapper is a WebAssembly (Wasm) foreign data wrapper which allows you 
 
 ## Available Versions
 
-| Version | Wasm Package URL                                                                              | Checksum            |
-| ------- | --------------------------------------------------------------------------------------------- | ------------------- |
-| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.1.0/slack_fdw.wasm` | _Not yet available_ |
+| Version | Wasm Package URL                                                                              | Checksum                                                         |
+| ------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.1.0/slack_fdw.wasm` | 148a058b4963d486d600eed1ed72943804e8e014981c804f3b35e389f2f2844a |
 
 ## Preparation
 
@@ -81,10 +81,10 @@ We need to provide Postgres with the credentials to access Slack and any additio
     create server slack_server
       foreign data wrapper wasm_wrapper
       options (
-        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.1.0/slack_fdw.wasm',
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.1/slack_fdw.wasm',
         fdw_package_name 'supabase:slack-fdw',
         fdw_package_version '0.1.0',
-        fdw_package_checksum '_not_yet_available_',
+        fdw_package_checksum '148a058b4963d486d600eed1ed72943804e8e014981c804f3b35e389f2f2844a',
         api_token_id '<key_ID>', -- The Key ID from Vault
         workspace 'your-workspace' -- Optional workspace name
       );
@@ -96,10 +96,10 @@ We need to provide Postgres with the credentials to access Slack and any additio
     create server slack_server
       foreign data wrapper wasm_wrapper
       options (
-        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.1.0/slack_fdw.wasm',
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.1/slack_fdw.wasm',
         fdw_package_name 'supabase:slack-fdw',
         fdw_package_version '0.1.0',
-        fdw_package_checksum '_not_yet_available_',
+        fdw_package_checksum '148a058b4963d486d600eed1ed72943804e8e014981c804f3b35e389f2f2844a',
         api_token 'xoxb-your-slack-token',
         workspace 'your-workspace' -- Optional workspace name
       );
@@ -229,6 +229,9 @@ options (
 - The `id` field is the user ID and is used as the primary key
 - Requires the `users:read` scope
 - Email field requires the `users:read.email` scope
+- Supports query pushdown for filtering by `is_admin`, `is_bot`, and `name`
+- Supports sorting by `name`, `real_name`, and `email`
+- Supports LIMIT and OFFSET clauses for pagination
 
 ### Files
 
@@ -303,13 +306,13 @@ options (
 
 This FDW supports the following condition pushdowns:
 
-| Resource  | Supported Filters                   |
-| --------- | ----------------------------------- |
-| messages  | channel_id, oldest, latest          |
-| users     | *(no filter support)*               |
-| channels  | types (public/private)              |
-| files     | channel_id, user_id, ts_from, ts_to |
-| team-info | *(no filter support)*               |
+| Resource  | Supported Filters                   | Sorting                | Limit/Offset |
+| --------- | ----------------------------------- | ---------------------- | ------------ |
+| messages  | channel_id, oldest, latest          | No                     | No           |
+| users     | is_admin, is_bot, name              | name, real_name, email | Yes          |
+| channels  | types (public/private)              | No                     | No           |
+| files     | channel_id, user_id, ts_from, ts_to | No                     | No           |
+| team-info | *(no filter support)*               | No                     | No           |
 
 ## Supported Data Types
 
@@ -396,6 +399,12 @@ options (
 
 -- List all admin users
 select * from slack.users where is_admin = true;
+
+-- Get users ordered by name
+select * from slack.users order by name;
+
+-- Get top 5 non-bot users ordered by real_name 
+select * from slack.users where is_bot = false order by real_name limit 5;
 ```
 
 ### Join Tables Together

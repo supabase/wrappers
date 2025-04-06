@@ -10,7 +10,7 @@ use bindings::{
     exports::supabase::wrappers::routines::Guest,
     supabase::wrappers::{
         http, stats, time,
-        types::{Cell, Context, FdwError, FdwResult, OptionsType, Row, Value},
+        types::{Cell, Context, FdwError, FdwResult, Limit, OptionsType, Row, Sort, Value},
         utils,
     },
 };
@@ -34,6 +34,10 @@ struct SlackFdw {
     
     // Current position in result set
     result_index: usize,
+    
+    // Query pushdown support
+    sorts: Vec<Sort>,
+    limit: Option<Limit>,
 }
 
 static mut INSTANCE: *mut SlackFdw = std::ptr::null_mut::<SlackFdw>();
@@ -152,9 +156,21 @@ impl SlackFdw {
     
     // Fetch users
     fn fetch_users(&mut self, ctx: &Context) -> FdwResult {
+        // Determine batch size based on limit if provided
+        let batch_size = if let Some(limit) = &self.limit {
+            // If there's a limit and it's smaller than our default batch size, use it
+            if limit.count > 0 && limit.count < BATCH_SIZE as i64 {
+                limit.count as u32
+            } else {
+                BATCH_SIZE
+            }
+        } else {
+            BATCH_SIZE
+        };
+        
         // Create request parameters
         let mut params = vec![
-            ("limit".to_string(), BATCH_SIZE.to_string()),
+            ("limit".to_string(), batch_size.to_string()),
         ];
         
         // Add cursor if available
@@ -207,15 +223,83 @@ impl SlackFdw {
                 });
             }
             
-            // Save filtered users
+            // Apply sorting if requested
+            if !self.sorts.is_empty() {
+                users.sort_by(|a, b| {
+                    for sort in &self.sorts {
+                        match sort.field().as_str() {
+                            "name" => {
+                                let ordering = a.name.cmp(&b.name);
+                                if sort.reversed() {
+                                    return ordering.reverse();
+                                }
+                                if ordering != std::cmp::Ordering::Equal {
+                                    return ordering;
+                                }
+                            },
+                            "real_name" => {
+                                let a_real_name = a.real_name.as_ref().unwrap_or(&String::new());
+                                let b_real_name = b.real_name.as_ref().unwrap_or(&String::new());
+                                let ordering = a_real_name.cmp(b_real_name);
+                                if sort.reversed() {
+                                    return ordering.reverse();
+                                }
+                                if ordering != std::cmp::Ordering::Equal {
+                                    return ordering;
+                                }
+                            },
+                            "email" => {
+                                let a_email = a.profile.email.as_ref().unwrap_or(&String::new());
+                                let b_email = b.profile.email.as_ref().unwrap_or(&String::new());
+                                let ordering = a_email.cmp(b_email);
+                                if sort.reversed() {
+                                    return ordering.reverse();
+                                }
+                                if ordering != std::cmp::Ordering::Equal {
+                                    return ordering;
+                                }
+                            },
+                            _ => {}
+                        }
+                    }
+                    std::cmp::Ordering::Equal
+                });
+            }
+            
+            // Apply LIMIT and OFFSET if specified
+            if let Some(limit) = &self.limit {
+                let start = limit.offset as usize;
+                let end = (limit.offset + limit.count) as usize;
+                
+                // Handle offset - trim the beginning of the results
+                if start < users.len() {
+                    users = users[start..].to_vec();
+                } else {
+                    users.clear();
+                }
+                
+                // Handle count - trim the end of the results if needed
+                if users.len() > end - start {
+                    users.truncate(end - start);
+                }
+                
+                // If we've reached the requested limit, don't fetch more pages
+                if users.len() >= (limit.count as usize) {
+                    self.next_cursor = None;
+                }
+            }
+            
+            // Save filtered and sorted users
             self.users = users;
             
-            // Get pagination info
-            self.next_cursor = resp_json
-                .get("response_metadata")
-                .and_then(|m| m.get("next_cursor"))
-                .and_then(|c| c.as_str())
-                .map(|s| s.to_string());
+            // Get pagination info (if we haven't already cleared it due to limit)
+            if self.next_cursor.is_some() {
+                self.next_cursor = resp_json
+                    .get("response_metadata")
+                    .and_then(|m| m.get("next_cursor"))
+                    .and_then(|c| c.as_str())
+                    .map(|s| s.to_string());
+            }
             
             // Reset position
             self.result_index = 0;
@@ -284,6 +368,10 @@ impl Guest for SlackFdw {
         this.next_cursor = None;
         this.result_index = 0;
         
+        // Store the sort and limit information for query pushdown
+        this.sorts = ctx.get_sorts();
+        this.limit = ctx.get_limit();
+        
         // Verify that the resource is 'users'
         if resource.as_str() != "users" {
             return Err(format!("Unsupported resource type: {}. Currently only 'users' is supported.", resource));
@@ -302,8 +390,16 @@ impl Guest for SlackFdw {
             stats::inc_stats(FDW_NAME, stats::Metric::RowsIn, this.users.len() as i64);
             stats::inc_stats(FDW_NAME, stats::Metric::RowsOut, this.users.len() as i64);
             
-            // If there's a next cursor, fetch the next batch
+            // If there's a next cursor and we don't have a limit or haven't reached it yet, fetch the next batch
             if this.next_cursor.is_some() {
+                // If we have a limit, check if we've already reached it
+                if let Some(limit) = &this.limit {
+                    if this.users.len() >= limit.count as usize {
+                        // We've already met our limit, don't fetch more
+                        return Ok(None);
+                    }
+                }
+                
                 this.fetch_users(ctx)?;
                 
                 // If the new batch is empty, we're done
@@ -333,6 +429,10 @@ impl Guest for SlackFdw {
         this.has_more = false;
         this.next_cursor = None;
         this.result_index = 0;
+        
+        // Update sort and limit info in case they changed
+        this.sorts = ctx.get_sorts();
+        this.limit = ctx.get_limit();
         
         // Re-fetch users data
         this.fetch_users(ctx)
