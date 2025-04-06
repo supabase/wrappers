@@ -16,7 +16,7 @@ use bindings::{
     },
 };
 
-use models::{User, UserGroup, UserGroupMembership};
+use models::{User, UserGroup, UserGroupMembership, Message, Channel, File, TeamInfo};
 
 #[derive(Debug, Default)]
 struct SlackFdw {
@@ -34,6 +34,13 @@ struct SlackFdw {
     users: Vec<User>,
     user_groups: Vec<UserGroup>,
     user_group_memberships: Vec<UserGroupMembership>,
+    messages: Vec<Message>,
+    channels: Vec<Channel>,
+    files: Vec<File>,
+    team_info: Option<TeamInfo>,
+    
+    // For messages, we need to track the channel_id
+    current_channel_id: Option<String>,
     
     // Current position in result set
     result_index: usize,
@@ -139,6 +146,84 @@ impl SlackFdw {
         row.push(Some(&Cell::String(membership.usergroup_name.clone())));
         row.push(Some(&Cell::String(membership.usergroup_handle.clone())));
         row.push(Some(&Cell::String(membership.user_id.clone())));
+        Ok(())
+    }
+    
+    // Map Slack Message to PostgreSQL Row
+    fn message_to_row(&self, message: &Message, row: &Row) -> Result<(), FdwError> {
+        // Get channel_id
+        let channel_id = self.current_channel_id.clone().unwrap_or_default();
+        
+        // Basic information
+        row.push(Some(&Cell::String(message.ts.clone())));
+        
+        if let Some(user_id) = &message.user {
+            row.push(Some(&Cell::String(user_id.clone())));
+        } else {
+            row.push(None);
+        }
+        
+        row.push(Some(&Cell::String(channel_id)));
+        row.push(Some(&Cell::String(message.text.clone())));
+        
+        if let Some(thread_ts) = &message.thread_ts {
+            row.push(Some(&Cell::String(thread_ts.clone())));
+        } else {
+            row.push(None);
+        }
+        
+        if let Some(reply_count) = message.reply_count {
+            row.push(Some(&Cell::I32(reply_count)));
+        } else {
+            row.push(None);
+        }
+        
+        Ok(())
+    }
+    
+    // Map Slack Channel to PostgreSQL Row
+    fn channel_to_row(&self, channel: &Channel, row: &Row) -> Result<(), FdwError> {
+        row.push(Some(&Cell::String(channel.id.clone())));
+        row.push(Some(&Cell::String(channel.name.clone())));
+        row.push(Some(&Cell::Bool(channel.is_private)));
+        
+        // Convert unix timestamp to PostgreSQL timestamp
+        row.push(Some(&Cell::I64(channel.created)));
+        
+        row.push(Some(&Cell::String(channel.creator.clone())));
+        
+        Ok(())
+    }
+    
+    // Map Slack File to PostgreSQL Row
+    fn file_to_row(&self, file: &File, row: &Row) -> Result<(), FdwError> {
+        row.push(Some(&Cell::String(file.id.clone())));
+        row.push(Some(&Cell::String(file.name.clone())));
+        row.push(Some(&Cell::String(file.title.clone())));
+        row.push(Some(&Cell::String(file.mimetype.clone())));
+        row.push(Some(&Cell::I64(file.size)));
+        
+        if let Some(url) = &file.url_private {
+            row.push(Some(&Cell::String(url.clone())));
+        } else {
+            row.push(None);
+        }
+        
+        row.push(Some(&Cell::String(file.user.clone())));
+        
+        // Convert unix timestamp to PostgreSQL timestamp
+        row.push(Some(&Cell::I64(file.created)));
+        
+        Ok(())
+    }
+    
+    // Map Slack TeamInfo to PostgreSQL Row
+    fn team_info_to_row(&self, team_info: &TeamInfo, row: &Row) -> Result<(), FdwError> {
+        row.push(Some(&Cell::String(team_info.id.clone())));
+        row.push(Some(&Cell::String(team_info.name.clone())));
+        row.push(Some(&Cell::String(team_info.domain.clone())));
+        row.push(Some(&Cell::String(team_info.email_domain.clone())));
+        
         Ok(())
     }
     
@@ -583,6 +668,208 @@ impl SlackFdw {
         Ok(())
     }
     
+    // Fetch messages from a channel
+    fn fetch_messages(&mut self, ctx: &Context) -> FdwResult {
+        self.messages.clear();
+        
+        // Create request parameters
+        let mut params = Vec::new();
+        
+        // Push down WHERE filters if possible
+        let quals = ctx.get_quals();
+        if !quals.is_empty() {
+            for qual in quals.iter() {
+                if qual.operator().as_str() == "=" && !qual.use_or() {
+                    match qual.field().as_str() {
+                        "channel_id" => {
+                            if let Value::Cell(Cell::String(channel_id)) = qual.value() {
+                                params.push(("channel".to_string(), channel_id.clone()));
+                                self.current_channel_id = Some(channel_id.clone());
+                            }
+                        },
+                        "oldest" => {
+                            if let Value::Cell(Cell::String(oldest)) = qual.value() {
+                                params.push(("oldest".to_string(), oldest.clone()));
+                            }
+                        },
+                        "latest" => {
+                            if let Value::Cell(Cell::String(latest)) = qual.value() {
+                                params.push(("latest".to_string(), latest.clone()));
+                            }
+                        },
+                        _ => {}
+                    }
+                }
+            }
+        }
+        
+        // If no channel_id is specified, we can't fetch messages
+        if !params.iter().any(|(k, _)| k == "channel") {
+            return Err("channel_id is required for querying messages".to_string());
+        }
+        
+        // Create request and send it
+        let req = self.create_request("conversations.history", &params)?;
+        let resp_json = self.make_request(&req)?;
+        
+        if let Some(messages) = resp_json.get("messages").and_then(|m| m.as_array()) {
+            // Convert JSON messages to our model
+            self.messages = messages.iter()
+                .filter_map(|m| serde_json::from_value(m.clone()).ok())
+                .collect::<Vec<Message>>();
+            
+            // Get pagination info
+            self.has_more = resp_json.get("has_more").and_then(|h| h.as_bool()).unwrap_or(false);
+            self.next_cursor = resp_json
+                .get("response_metadata")
+                .and_then(|m| m.get("next_cursor"))
+                .and_then(|c| c.as_str())
+                .map(|s| s.to_string());
+            
+            // Reset position
+            self.result_index = 0;
+            
+            Ok(())
+        } else {
+            Err("Failed to parse messages from response".to_string())
+        }
+    }
+    
+    // Fetch channels
+    fn fetch_channels(&mut self, ctx: &Context) -> FdwResult {
+        self.channels.clear();
+        
+        // Create request parameters
+        let mut params = Vec::new();
+        
+        // Push down WHERE filters if possible
+        let quals = ctx.get_quals();
+        if !quals.is_empty() {
+            for qual in quals.iter() {
+                if qual.operator().as_str() == "=" && !qual.use_or() {
+                    match qual.field().as_str() {
+                        "types" => {
+                            if let Value::Cell(Cell::String(types)) = qual.value() {
+                                params.push(("types".to_string(), types.clone()));
+                            }
+                        },
+                        _ => {}
+                    }
+                }
+            }
+        }
+        
+        // Add types if not specified (default to public channels)
+        if !params.iter().any(|(k, _)| k == "types") {
+            params.push(("types".to_string(), "public_channel".to_string()));
+        }
+        
+        // Create request and send it
+        let req = self.create_request("conversations.list", &params)?;
+        let resp_json = self.make_request(&req)?;
+        
+        if let Some(channels) = resp_json.get("channels").and_then(|c| c.as_array()) {
+            // Convert JSON channels to our model
+            self.channels = channels.iter()
+                .filter_map(|c| serde_json::from_value(c.clone()).ok())
+                .collect::<Vec<Channel>>();
+            
+            // Get pagination info
+            self.next_cursor = resp_json
+                .get("response_metadata")
+                .and_then(|m| m.get("next_cursor"))
+                .and_then(|c| c.as_str())
+                .map(|s| s.to_string());
+            
+            // Reset position
+            self.result_index = 0;
+            
+            Ok(())
+        } else {
+            Err("Failed to parse channels from response".to_string())
+        }
+    }
+    
+    // Fetch files
+    fn fetch_files(&mut self, ctx: &Context) -> FdwResult {
+        self.files.clear();
+        
+        // Create request parameters
+        let mut params = Vec::new();
+        
+        // Push down WHERE filters if possible
+        let quals = ctx.get_quals();
+        if !quals.is_empty() {
+            for qual in quals.iter() {
+                if qual.operator().as_str() == "=" && !qual.use_or() {
+                    match qual.field().as_str() {
+                        "channel_id" => {
+                            if let Value::Cell(Cell::String(channel_id)) = qual.value() {
+                                params.push(("channel".to_string(), channel_id.clone()));
+                            }
+                        },
+                        "user_id" => {
+                            if let Value::Cell(Cell::String(user_id)) = qual.value() {
+                                params.push(("user".to_string(), user_id.clone()));
+                            }
+                        },
+                        "ts_from" => {
+                            if let Value::Cell(Cell::String(ts_from)) = qual.value() {
+                                params.push(("ts_from".to_string(), ts_from.clone()));
+                            }
+                        },
+                        "ts_to" => {
+                            if let Value::Cell(Cell::String(ts_to)) = qual.value() {
+                                params.push(("ts_to".to_string(), ts_to.clone()));
+                            }
+                        },
+                        _ => {}
+                    }
+                }
+            }
+        }
+        
+        // Add default count
+        params.push(("count".to_string(), BATCH_SIZE.to_string()));
+        
+        // Create request and send it
+        let req = self.create_request("files.list", &params)?;
+        let resp_json = self.make_request(&req)?;
+        
+        if let Some(files) = resp_json.get("files").and_then(|f| f.as_array()) {
+            // Convert JSON files to our model
+            self.files = files.iter()
+                .filter_map(|f| serde_json::from_value(f.clone()).ok())
+                .collect::<Vec<File>>();
+            
+            // Reset position
+            self.result_index = 0;
+            
+            Ok(())
+        } else {
+            Err("Failed to parse files from response".to_string())
+        }
+    }
+    
+    // Fetch team info
+    fn fetch_team_info(&mut self, _ctx: &Context) -> FdwResult {
+        // Create request and send it
+        let req = self.create_request("team.info", &[])?;
+        let resp_json = self.make_request(&req)?;
+        
+        if let Some(team) = resp_json.get("team") {
+            // Convert JSON team info to our model
+            self.team_info = serde_json::from_value(team.clone()).ok();
+            
+            // Reset position
+            self.result_index = 0;
+            
+            Ok(())
+        } else {
+            Err("Failed to parse team info from response".to_string())
+        }
+    }
+    
     // Fetch users
     fn fetch_users(&mut self, ctx: &Context) -> FdwResult {
         // Determine batch size based on limit if provided
@@ -796,6 +1083,7 @@ impl Guest for SlackFdw {
         this.has_more = false;
         this.next_cursor = None;
         this.result_index = 0;
+        this.current_channel_id = None;
         
         // Store the sort and limit information for query pushdown
         this.sorts = ctx.get_sorts();
@@ -806,7 +1094,11 @@ impl Guest for SlackFdw {
             "users" => this.fetch_users(ctx),
             "usergroups" => this.fetch_user_groups(ctx),
             "usergroup_members" => this.fetch_user_group_memberships(ctx),
-            _ => Err(format!("Unsupported resource type: {}. Supported resources are 'users', 'usergroups', and 'usergroup_members'.", resource))
+            "messages" => this.fetch_messages(ctx),
+            "channels" => this.fetch_channels(ctx),
+            "files" => this.fetch_files(ctx),
+            "team-info" => this.fetch_team_info(ctx),
+            _ => Err(format!("Unsupported resource type: {}. Supported resources are 'users', 'usergroups', 'usergroup_members', 'messages', 'channels', 'files', and 'team-info'.", resource))
         }
     }
 
@@ -888,6 +1180,99 @@ impl Guest for SlackFdw {
                 this.result_index += 1;
                 Ok(Some(0))
             },
+            "messages" => {
+                // If we've reached the end of our messages
+                if this.result_index >= this.messages.len() {
+                    // Record metrics
+                    stats::inc_stats(FDW_NAME, stats::Metric::RowsIn, this.messages.len() as i64);
+                    stats::inc_stats(FDW_NAME, stats::Metric::RowsOut, this.messages.len() as i64);
+                    
+                    // If there's more messages and we have a pagination cursor, fetch the next batch
+                    if this.has_more && this.next_cursor.is_some() {
+                        this.fetch_messages(ctx)?;
+                        
+                        // If the new batch is empty, we're done
+                        if this.messages.is_empty() {
+                            return Ok(None);
+                        }
+                    } else {
+                        // No more results
+                        return Ok(None);
+                    }
+                }
+                
+                // Get the message from the current batch
+                let message = &this.messages[this.result_index];
+                
+                // Convert message to row
+                this.message_to_row(message, row)?;
+                
+                this.result_index += 1;
+                Ok(Some(0))
+            },
+            "channels" => {
+                // If we've reached the end of our channels
+                if this.result_index >= this.channels.len() {
+                    // Record metrics
+                    stats::inc_stats(FDW_NAME, stats::Metric::RowsIn, this.channels.len() as i64);
+                    stats::inc_stats(FDW_NAME, stats::Metric::RowsOut, this.channels.len() as i64);
+                    
+                    // If there's a next cursor, fetch the next batch
+                    if this.next_cursor.is_some() {
+                        this.fetch_channels(ctx)?;
+                        
+                        // If the new batch is empty, we're done
+                        if this.channels.is_empty() {
+                            return Ok(None);
+                        }
+                    } else {
+                        // No more results
+                        return Ok(None);
+                    }
+                }
+                
+                // Get the channel from the current batch
+                let channel = &this.channels[this.result_index];
+                
+                // Convert channel to row
+                this.channel_to_row(channel, row)?;
+                
+                this.result_index += 1;
+                Ok(Some(0))
+            },
+            "files" => {
+                // If we've reached the end of our files
+                if this.result_index >= this.files.len() {
+                    // Record metrics
+                    stats::inc_stats(FDW_NAME, stats::Metric::RowsIn, this.files.len() as i64);
+                    stats::inc_stats(FDW_NAME, stats::Metric::RowsOut, this.files.len() as i64);
+                    return Ok(None);
+                }
+                
+                // Get the file from the current batch
+                let file = &this.files[this.result_index];
+                
+                // Convert file to row
+                this.file_to_row(file, row)?;
+                
+                this.result_index += 1;
+                Ok(Some(0))
+            },
+            "team-info" => {
+                // Team info has only one row
+                if this.result_index > 0 || this.team_info.is_none() {
+                    return Ok(None);
+                }
+                
+                // Get the team info
+                let team_info = this.team_info.as_ref().unwrap();
+                
+                // Convert team info to row
+                this.team_info_to_row(team_info, row)?;
+                
+                this.result_index += 1;
+                Ok(Some(0))
+            },
             _ => Err(format!("Unsupported resource type: {}", this.resource))
         }
     }
@@ -909,6 +1294,10 @@ impl Guest for SlackFdw {
             "users" => this.fetch_users(ctx),
             "usergroups" => this.fetch_user_groups(ctx),
             "usergroup_members" => this.fetch_user_group_memberships(ctx),
+            "messages" => this.fetch_messages(ctx),
+            "channels" => this.fetch_channels(ctx),
+            "files" => this.fetch_files(ctx),
+            "team-info" => this.fetch_team_info(ctx),
             _ => Err(format!("Unsupported resource type: {}", this.resource))
         }
     }
@@ -921,6 +1310,10 @@ impl Guest for SlackFdw {
             "users" => this.users.clear(),
             "usergroups" => this.user_groups.clear(),
             "usergroup_members" => this.user_group_memberships.clear(),
+            "messages" => this.messages.clear(),
+            "channels" => this.channels.clear(),
+            "files" => this.files.clear(),
+            "team-info" => this.team_info = None,
             _ => {} // No action for unknown resource
         }
         

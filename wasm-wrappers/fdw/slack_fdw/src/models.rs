@@ -18,6 +18,127 @@ pub struct ResponseMetadata {
     pub next_cursor: Option<String>,
 }
 
+/// Messages resource models
+#[derive(Debug, Deserialize)]
+pub struct ConversationHistoryResponse {
+    pub messages: Vec<Message>,
+    pub has_more: bool,
+    #[serde(default)]
+    pub response_metadata: Option<ResponseMetadata>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct Message {
+    pub ts: String,
+    pub user: Option<String>,
+    pub bot_id: Option<String>,
+    pub text: String,
+    pub thread_ts: Option<String>,
+    pub reply_count: Option<i32>,
+    #[serde(default)]
+    pub reactions: Option<Vec<Reaction>>,
+    #[serde(default)]
+    pub files: Option<Vec<File>>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct Reaction {
+    pub name: String,
+    pub users: Vec<String>,
+    pub count: i32,
+}
+
+/// Channels resource models
+#[derive(Debug, Deserialize)]
+pub struct ConversationListResponse {
+    pub channels: Vec<Channel>,
+    #[serde(default)]
+    pub response_metadata: Option<ResponseMetadata>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct Channel {
+    pub id: String,
+    pub name: String,
+    pub is_private: bool,
+    pub created: i64,
+    pub creator: String,
+    pub is_archived: bool,
+    pub num_members: Option<i32>,
+    pub topic: Option<ChannelTopic>,
+    pub purpose: Option<ChannelPurpose>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct ChannelTopic {
+    pub value: String,
+    pub creator: String,
+    pub last_set: i64,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct ChannelPurpose {
+    pub value: String,
+    pub creator: String,
+    pub last_set: i64,
+}
+
+/// Files resource models
+#[derive(Debug, Deserialize)]
+pub struct FilesListResponse {
+    pub files: Vec<File>,
+    pub paging: Option<Paging>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct File {
+    pub id: String,
+    pub name: String,
+    pub title: String,
+    pub mimetype: String,
+    pub filetype: String,
+    pub size: i64,
+    pub url_private: Option<String>,
+    pub url_private_download: Option<String>,
+    pub user: String,
+    pub created: i64,
+    pub timestamp: i64,
+    pub channels: Option<Vec<String>>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct Paging {
+    pub count: i32,
+    pub total: i32,
+    pub page: i32,
+    pub pages: i32,
+}
+
+/// Team info resource models
+#[derive(Debug, Deserialize)]
+pub struct TeamInfoResponse {
+    pub team: TeamInfo,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct TeamInfo {
+    pub id: String,
+    pub name: String,
+    pub domain: String,
+    pub email_domain: String,
+    pub icon: TeamIcon,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct TeamIcon {
+    pub image_34: String,
+    pub image_44: String,
+    pub image_68: String,
+    pub image_88: String,
+    pub image_102: String,
+    pub image_132: String,
+}
+
 /// User resource models
 #[derive(Debug, Deserialize)]
 pub struct UserResponse {
@@ -140,6 +261,57 @@ pub struct UserGroupMembership {
 }
 
 // Utility conversion functions for database rows
+impl Message {
+    pub fn to_row(&self, channel_id: &str) -> Vec<Option<String>> {
+        vec![
+            Some(self.ts.clone()),
+            self.user.clone(),
+            Some(channel_id.to_string()),
+            Some(self.text.clone()),
+            self.thread_ts.clone(),
+            self.reply_count.map(|r| r.to_string()),
+        ]
+    }
+}
+
+impl Channel {
+    pub fn to_row(&self) -> Vec<Option<String>> {
+        vec![
+            Some(self.id.clone()),
+            Some(self.name.clone()),
+            Some(self.is_private.to_string()),
+            Some(self.created.to_string()),
+            Some(self.creator.clone()),
+        ]
+    }
+}
+
+impl File {
+    pub fn to_row(&self) -> Vec<Option<String>> {
+        vec![
+            Some(self.id.clone()),
+            Some(self.name.clone()),
+            Some(self.title.clone()),
+            Some(self.mimetype.clone()),
+            Some(self.size.to_string()),
+            self.url_private.clone(),
+            Some(self.user.clone()),
+            Some(self.created.to_string()),
+        ]
+    }
+}
+
+impl TeamInfo {
+    pub fn to_row(&self) -> Vec<Option<String>> {
+        vec![
+            Some(self.id.clone()),
+            Some(self.name.clone()),
+            Some(self.domain.clone()),
+            Some(self.email_domain.clone()),
+        ]
+    }
+}
+
 impl User {
     pub fn to_row(&self) -> Vec<Option<String>> {
         vec![
