@@ -229,7 +229,7 @@ options (
 - The `id` field is the user ID and is used as the primary key
 - Requires the `users:read` scope
 - Email field requires the `users:read.email` scope
-- Supports query pushdown for filtering by `is_admin`, `is_bot`, and `name`
+- Supports query pushdown for filtering by `is_admin`, `is_bot`, `name`, and `email`
 - Supports sorting by `name`, `real_name`, and `email`
 - Supports LIMIT and OFFSET clauses for pagination
 
@@ -309,7 +309,7 @@ This FDW supports the following condition pushdowns:
 | Resource  | Supported Filters                   | Sorting                | Limit/Offset |
 | --------- | ----------------------------------- | ---------------------- | ------------ |
 | messages  | channel_id, oldest, latest          | No                     | No           |
-| users     | is_admin, is_bot, name              | name, real_name, email | Yes          |
+| users     | is_admin, is_bot, name, email       | name, real_name, email | Yes          |
 | channels  | types (public/private)              | No                     | No           |
 | files     | channel_id, user_id, ts_from, ts_to | No                     | No           |
 | team-info | *(no filter support)*               | No                     | No           |
@@ -405,6 +405,12 @@ select * from slack.users order by name;
 
 -- Get top 5 non-bot users ordered by real_name 
 select * from slack.users where is_bot = false order by real_name limit 5;
+
+-- Filter users by email domain
+select * from slack.users where email like '%@example.com' order by name;
+
+-- Find user by name (pushes filter down to API)
+select * from slack.users where name = 'johndoe';
 ```
 
 ### Join Tables Together

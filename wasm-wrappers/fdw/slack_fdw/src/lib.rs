@@ -178,6 +178,29 @@ impl SlackFdw {
             params.push(("cursor".to_string(), cursor.clone()));
         }
         
+        // Push down WHERE filters if possible
+        let quals = ctx.get_quals();
+        if !quals.is_empty() {
+            for qual in quals.iter() {
+                if qual.operator().as_str() == "=" && !qual.use_or() {
+                    match qual.field().as_str() {
+                        // These filters will be applied server-side via the API
+                        "name" => {
+                            if let Value::Cell(Cell::String(name)) = qual.value() {
+                                params.push(("query".to_string(), name.clone()));
+                            }
+                        },
+                        "email" => {
+                            if let Value::Cell(Cell::String(email)) = qual.value() {
+                                params.push(("email".to_string(), email.clone()));
+                            }
+                        },
+                        _ => {}
+                    }
+                }
+            }
+        }
+        
         // Create request and send it
         let req = self.create_request("users.list", &params)?;
         let resp_json = self.make_request(&req)?;
