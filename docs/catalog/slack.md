@@ -17,11 +17,8 @@ The Slack Wrapper is a WebAssembly (Wasm) foreign data wrapper which allows you 
 
 | Version | Wasm Package URL                                                                              | Checksum                                                           |
 | ------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| 0.0.1   | `https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.1.0/slack_fdw.wasm` | `148a058b4963d486d600eed1ed72943804e8e014981c804f3b35e389f2f2844a` |
-| 0.0.3   | `https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.3/slack_fdw.wasm` | `43a037dbccff6fa7a513a0c1ab74bd6157e110776dae67da62e92d3c1670d7b0` |
-| 0.0.4   | `https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.4/slack_fdw.wasm` | `(checksum will be generated on release)`                          |
-| 0.0.5   | `https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.5/slack_fdw.wasm` | `(checksum will be generated on release)`                          |
-| 0.0.6   | `https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.6/slack_fdw.wasm` | `(checksum will be generated on release)`                          |
+| 0.0.6   | `https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.6/slack_fdw.wasm` | `349cb556f87a0233e25eb608a77e840531bc87f1acf9916856268bdcdd9973e2` |
+| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.6/slack_fdw.wasm` | `(Coming soon)`                                                    |
 
 ## Preparation
 
@@ -472,16 +469,16 @@ This FDW supports the following condition pushdowns:
 
 Each entity type in the Slack FDW requires specific API scopes. If you get a `missing_scope` error, you may need to add additional scopes and reinstall your app to the workspace.
 
-| Entity Type       | Required Scopes                     | Error If Missing                                  |
-|-------------------|------------------------------------|-------------------------------------------------|
-| users             | `users:read`                       | "The token used is not granted the required scopes" |
-| users (emails)    | `users:read.email`                 | "missing_scope" on email fields                  |
-| usergroups        | `usergroups:read`                  | "missing_scope" when querying user groups        |
-| usergroup_members | `usergroups:read`                  | "missing_scope" when querying user group members |
-| channels          | `channels:read`                    | "missing_scope" when querying channels           |
-| messages          | `channels:history`, `channels:read` | "missing_scope" when querying messages           |
-| files             | `files:read`                       | "missing_scope" when querying files              |
-| team-info         | `team:read`                        | "missing_scope" when querying team info          |
+| Entity Type       | Required Scopes                     | Error If Missing                                    |
+| ----------------- | ----------------------------------- | --------------------------------------------------- |
+| users             | `users:read`                        | "The token used is not granted the required scopes" |
+| users (emails)    | `users:read.email`                  | "missing_scope" on email fields                     |
+| usergroups        | `usergroups:read`                   | "missing_scope" when querying user groups           |
+| usergroup_members | `usergroups:read`                   | "missing_scope" when querying user group members    |
+| channels          | `channels:read`                     | "missing_scope" when querying channels              |
+| messages          | `channels:history`, `channels:read` | "missing_scope" when querying messages              |
+| files             | `files:read`                        | "missing_scope" when querying files                 |
+| team-info         | `team:read`                         | "missing_scope" when querying team info             |
 
 ### Adding Scopes to an Existing App
 
