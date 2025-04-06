@@ -328,7 +328,7 @@ impl User {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_message_to_row() {
         let msg = Message {
@@ -341,7 +341,7 @@ mod tests {
             reactions: None,
             files: None,
         };
-        
+
         let row = msg.to_row("C12345");
         assert_eq!(row.len(), 6);
         assert_eq!(row[0], Some("1234567890.123456".to_string()));
@@ -351,7 +351,7 @@ mod tests {
         assert_eq!(row[4], Some("1234567890.123456".to_string()));
         assert_eq!(row[5], Some("5".to_string()));
     }
-    
+
     #[test]
     fn test_user_to_row() {
         let user = User {
@@ -372,7 +372,7 @@ mod tests {
             deleted: false,
             updated: None,
         };
-        
+
         let row = user.to_row();
         assert_eq!(row.len(), 6);
         assert_eq!(row[0], Some("U12345".to_string()));
@@ -382,7 +382,7 @@ mod tests {
         assert_eq!(row[4], Some("true".to_string()));
         assert_eq!(row[5], Some("false".to_string()));
     }
-    
+
     #[test]
     fn test_channel_to_row() {
         let channel = Channel {
@@ -396,7 +396,7 @@ mod tests {
             topic: None,
             purpose: None,
         };
-        
+
         let row = channel.to_row();
         assert_eq!(row.len(), 5);
         assert_eq!(row[0], Some("C12345".to_string()));
@@ -405,7 +405,7 @@ mod tests {
         assert_eq!(row[3], Some("1618247000".to_string()));
         assert_eq!(row[4], Some("U12345".to_string()));
     }
-    
+
     #[test]
     fn test_file_to_row() {
         let file = File {
@@ -422,7 +422,7 @@ mod tests {
             timestamp: 1618247000,
             channels: Some(vec!["C12345".to_string()]),
         };
-        
+
         let row = file.to_row();
         assert_eq!(row.len(), 8);
         assert_eq!(row[0], Some("F12345".to_string()));
@@ -430,11 +430,14 @@ mod tests {
         assert_eq!(row[2], Some("Important Document".to_string()));
         assert_eq!(row[3], Some("application/pdf".to_string()));
         assert_eq!(row[4], Some("1024000".to_string()));
-        assert_eq!(row[5], Some("https://files.slack.com/files-pri/T123456/document.pdf".to_string()));
+        assert_eq!(
+            row[5],
+            Some("https://files.slack.com/files-pri/T123456/document.pdf".to_string())
+        );
         assert_eq!(row[6], Some("U12345".to_string()));
         assert_eq!(row[7], Some("1618247000".to_string()));
     }
-    
+
     #[test]
     fn test_team_info_to_row() {
         let team_info = TeamInfo {
@@ -451,7 +454,7 @@ mod tests {
                 image_132: "https://a.slack-edge.com/image_132.png".to_string(),
             },
         };
-        
+
         let row = team_info.to_row();
         assert_eq!(row.len(), 4);
         assert_eq!(row[0], Some("T12345".to_string()));
