@@ -102,11 +102,17 @@ All entity models are defined in `models.rs`:
 
 The FDW implements query pushdown for:
 
-- **Users**: Filtering by name, email, team_id; sorting by name, real_name, email
-- **Usergroups**: Filtering by team_id, include_disabled; sorting by name, handle, date
-- **Messages**: Filtering by channel_id, oldest, latest timestamps
-- **Channels**: Filtering by types (public/private)
-- **Files**: Filtering by channel_id, user_id, ts_from, ts_to
+| Resource          | Supported Filters                   | Sorting                                | Limit/Offset |
+|-------------------|-------------------------------------|----------------------------------------|--------------|
+| messages          | channel_id, oldest, latest          | No                                     | Yes*         |
+| users             | name, email, team_id                | name, real_name, email                 | Yes          |
+| usergroups        | team_id, include_disabled           | name, handle, date_create, date_update | Yes          |
+| usergroup_members | *(no filter support)*               | No                                     | Yes          |
+| channels          | types (public/private)              | No                                     | Yes*         |
+| files             | channel_id, user_id, ts_from, ts_to | No                                     | No           |
+| team-info         | *(no filter support)*               | No                                     | No           |
+
+\* Pagination is supported through cursor-based pagination from the Slack API
 
 ## Usage
 

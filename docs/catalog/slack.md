@@ -448,13 +448,15 @@ This FDW supports the following condition pushdowns:
 
 | Resource          | Supported Filters                   | Sorting                                | Limit/Offset |
 | ----------------- | ----------------------------------- | -------------------------------------- | ------------ |
-| messages          | channel_id, oldest, latest          | No                                     | No           |
+| messages          | channel_id, oldest, latest          | No                                     | Yes*         |
 | users             | name, email, team_id                | name, real_name, email                 | Yes          |
 | usergroups        | team_id, include_disabled           | name, handle, date_create, date_update | Yes          |
 | usergroup_members | *(no filter support)*               | No                                     | Yes          |
-| channels          | types (public/private)              | No                                     | No           |
+| channels          | types (public/private)              | No                                     | Yes*         |
 | files             | channel_id, user_id, ts_from, ts_to | No                                     | No           |
 | team-info         | *(no filter support)*               | No                                     | No           |
+
+\* Pagination is supported through cursor-based pagination from the Slack API
 
 ## Supported Data Types
 
