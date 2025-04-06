@@ -21,6 +21,7 @@ The Slack Wrapper is a WebAssembly (Wasm) foreign data wrapper which allows you 
 | 0.0.3   | `https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.3/slack_fdw.wasm` | `43a037dbccff6fa7a513a0c1ab74bd6157e110776dae67da62e92d3c1670d7b0` |
 | 0.0.4   | `https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.4/slack_fdw.wasm` | `(checksum will be generated on release)`                          |
 | 0.0.5   | `https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.5/slack_fdw.wasm` | `(checksum will be generated on release)`                          |
+| 0.0.6   | `https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.6/slack_fdw.wasm` | `(checksum will be generated on release)`                          |
 
 ## Preparation
 
@@ -84,9 +85,9 @@ We need to provide Postgres with the credentials to access Slack and any additio
     create server slack_server
       foreign data wrapper wasm_wrapper
       options (
-        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.5/slack_fdw.wasm',
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.6/slack_fdw.wasm',
         fdw_package_name 'supabase:slack-fdw',
-        fdw_package_version '0.0.5',
+        fdw_package_version '0.0.6',
         fdw_package_checksum '(checksum will be generated on release)',
         api_token_id '<key_ID>', -- The Key ID from Vault
         workspace 'your-workspace' -- Optional workspace name
@@ -99,9 +100,9 @@ We need to provide Postgres with the credentials to access Slack and any additio
     create server slack_server
       foreign data wrapper wasm_wrapper
       options (
-        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.5/slack_fdw.wasm',
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.6/slack_fdw.wasm',
         fdw_package_name 'supabase:slack-fdw',
-        fdw_package_version '0.0.5',
+        fdw_package_version '0.0.6',
         fdw_package_checksum '(checksum will be generated on release)',
         api_token 'xoxb-your-slack-token',
         workspace 'your-workspace' -- Optional workspace name
