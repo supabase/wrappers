@@ -58,6 +58,8 @@ create foreign data wrapper wasm_wrapper
    - `users:read.email` - View email addresses
    - `files:read` - View files shared in channels
    - `reactions:read` - View emoji reactions
+   - `team:read` - View information about the workspace
+   - `usergroups:read` - View user groups and their members
 6. Install the app to your workspace
 7. Copy the "Bot User OAuth Token" that starts with `xoxb-`
 
@@ -464,6 +466,35 @@ This FDW supports the following condition pushdowns:
 | bigint             | number                  |
 | timestamp          | string (Unix timestamp) |
 
+## Required Slack API Scopes
+
+Each entity type in the Slack FDW requires specific API scopes. If you get a `missing_scope` error, you may need to add additional scopes and reinstall your app to the workspace.
+
+| Entity Type       | Required Scopes                     | Error If Missing                                  |
+|-------------------|------------------------------------|-------------------------------------------------|
+| users             | `users:read`                       | "The token used is not granted the required scopes" |
+| users (emails)    | `users:read.email`                 | "missing_scope" on email fields                  |
+| usergroups        | `usergroups:read`                  | "missing_scope" when querying user groups        |
+| usergroup_members | `usergroups:read`                  | "missing_scope" when querying user group members |
+| channels          | `channels:read`                    | "missing_scope" when querying channels           |
+| messages          | `channels:history`, `channels:read` | "missing_scope" when querying messages           |
+| files             | `files:read`                       | "missing_scope" when querying files              |
+| team-info         | `team:read`                        | "missing_scope" when querying team info          |
+
+### Adding Scopes to an Existing App
+
+If you need to add scopes to an existing Slack app:
+
+1. Go to [Your Slack Apps](https://api.slack.com/apps)
+2. Select your app
+3. Click "OAuth & Permissions" in the sidebar
+4. Under "Bot Token Scopes", click "Add an OAuth Scope"
+5. Add any missing scopes from the table above
+6. Scroll up and click "Reinstall to Workspace"
+7. Approve the new permissions
+8. Copy the new Bot User OAuth Token (it may have changed)
+9. Update your token in your database server configuration
+
 ## Limitations
 
 This section describes important limitations and considerations when using this FDW:
@@ -473,6 +504,50 @@ This section describes important limitations and considerations when using this 
 - Messages older than the workspace retention policy are not accessible
 - Private channels require the `groups:history` and `groups:read` scopes
 - Direct messages require the `im:history` and `im:read` scopes
+
+## Troubleshooting
+
+### Error: "Slack API error: missing_scope"
+
+This error occurs when your Slack token doesn't have all the required OAuth scopes for the resource you're trying to access.
+
+**Solution:**
+1. Check the [Required Slack API Scopes](#required-slack-api-scopes) section above to see which scopes are needed for the entity you're querying
+2. Follow the steps in the "Adding Scopes to an Existing App" section to add the missing scopes
+3. Reinstall your app to the workspace
+4. Update your token in the PostgreSQL server configuration
+
+### Error: "channel_id is required for querying messages"
+
+When querying the `messages` table, you must include a `WHERE channel_id = 'CXXXXXXXX'` clause.
+
+**Solution:**
+```sql
+-- Incorrect (will error):
+SELECT * FROM slack.messages LIMIT 10;
+
+-- Correct:
+SELECT * FROM slack.messages WHERE channel_id = 'C01234ABCDE' LIMIT 10;
+```
+
+### Error: "Rate limit exceeded"
+
+Slack's API enforces rate limits (Tier 2: ~20 requests/minute). 
+
+**Solution:**
+- Add more specific WHERE clauses to reduce the number of API calls
+- Use smaller LIMIT values
+- Consider materialized views for frequent queries:
+```sql
+CREATE MATERIALIZED VIEW slack_users AS 
+SELECT * FROM slack.users;
+
+-- Query the materialized view instead
+SELECT * FROM slack_users;
+
+-- Refresh when needed (less frequently)
+REFRESH MATERIALIZED VIEW slack_users;
+```
 
 ## Examples
 

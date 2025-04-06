@@ -116,9 +116,9 @@ The FDW implements query pushdown for:
 CREATE SERVER slack_server
 FOREIGN DATA WRAPPER wasm_wrapper
 OPTIONS (
-    fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.5/slack_fdw.wasm',
+    fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.6/slack_fdw.wasm',
     fdw_package_name 'supabase:slack-fdw',
-    fdw_package_version '0.0.5',
+    fdw_package_version '0.0.6',
     fdw_package_checksum '(checksum will be generated on release)',
     api_token 'xoxb-your-slack-token',
     workspace 'your-workspace-name'
@@ -286,12 +286,21 @@ This FDW implements rate limiting handling according to Slack's guidelines:
 
 ## Required Slack API Scopes
 
-- `users:read`: For querying users
-- `users:read.email`: For accessing email addresses
-- `usergroups:read`: For querying user groups
-- `channels:read`: For querying channels
-- `channels:history`: For querying messages
-- `files:read`: For querying files
+Each entity type requires specific OAuth scopes:
+
+| Entity Type       | Required Scopes                     | Error If Missing                                  |
+|-------------------|------------------------------------|-------------------------------------------------|
+| users             | `users:read`                       | "The token used is not granted the required scopes" |
+| users (emails)    | `users:read.email`                 | "missing_scope" on email fields                  |
+| usergroups        | `usergroups:read`                  | "missing_scope" when querying user groups        |
+| usergroup_members | `usergroups:read`                  | "missing_scope" when querying user group members |
+| channels          | `channels:read`                    | "missing_scope" when querying channels           |
+| messages          | `channels:history`, `channels:read` | "missing_scope" when querying messages           |
+| files             | `files:read`                       | "missing_scope" when querying files              |
+| team-info         | `team:read`                        | "missing_scope" when querying team info          |
+| reactions         | `reactions:read`                   | Missing reactions data in responses              |
+
+For production use, we recommend installing your app with all of these scopes from the beginning to avoid permission issues later.
 
 ## Development
 
