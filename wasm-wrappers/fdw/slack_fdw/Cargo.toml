@@ -1,22 +1,26 @@
 [package]
 name = "slack_fdw"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib"]
 
 [dependencies]
-anyhow = "1.0"
+wit-bindgen-rt = "0.26.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-url = "2.5"
-wit-bindgen = "0.16"
-reqwest = { version = "0.11", features = ["json", "blocking"] }
-base64 = "0.21"
-thiserror = "1.0"
-chrono = "0.4"
-log = "0.4"
+
+[package.metadata.component]
+package = "supabase:slack-fdw"
+
+[package.metadata.component.dependencies]
+
+[package.metadata.component.target]
+path = "wit"
+
+[package.metadata.component.target.dependencies]
+"supabase:wrappers" = { path = "../../wit" }
 
 [profile.release]
 lto = true
