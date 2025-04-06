@@ -64,35 +64,201 @@ impl SlackFdw {
     
     // Map Slack User to PostgreSQL Row
     fn user_to_row(&self, user: &User, row: &Row) -> Result<(), FdwError> {
-        // id
-        row.push(Some(&Cell::String(user.id.clone())));
+        // Basic information
+        row.push(Some(&Cell::String(user.id.clone()))); // id
+        row.push(Some(&Cell::String(user.name.clone()))); // name
         
-        // name
-        row.push(Some(&Cell::String(user.name.clone())));
-        
-        // real_name
+        // Name and profile fields
         if let Some(real_name) = &user.real_name {
             row.push(Some(&Cell::String(real_name.clone())));
         } else {
             row.push(None);
         }
         
-        // email
+        if let Some(display_name) = &user.profile.display_name {
+            row.push(Some(&Cell::String(display_name.clone())));
+        } else {
+            row.push(None);
+        }
+        
+        if let Some(display_name_normalized) = &user.profile.display_name_normalized {
+            row.push(Some(&Cell::String(display_name_normalized.clone())));
+        } else {
+            row.push(None);
+        }
+        
+        if let Some(real_name_normalized) = &user.profile.real_name_normalized {
+            row.push(Some(&Cell::String(real_name_normalized.clone())));
+        } else {
+            row.push(None);
+        }
+        
+        // Contact information
         if let Some(email) = &user.profile.email {
             row.push(Some(&Cell::String(email.clone())));
         } else {
             row.push(None);
         }
         
-        // is_admin
+        if let Some(phone) = &user.profile.phone {
+            row.push(Some(&Cell::String(phone.clone())));
+        } else {
+            row.push(None);
+        }
+        
+        if let Some(skype) = &user.profile.skype {
+            row.push(Some(&Cell::String(skype.clone())));
+        } else {
+            row.push(None);
+        }
+        
+        // Role information
         if let Some(is_admin) = user.is_admin {
             row.push(Some(&Cell::Bool(is_admin)));
         } else {
             row.push(None);
         }
         
-        // is_bot
-        row.push(Some(&Cell::Bool(user.is_bot)));
+        if let Some(is_owner) = user.is_owner {
+            row.push(Some(&Cell::Bool(is_owner)));
+        } else {
+            row.push(None);
+        }
+        
+        if let Some(is_primary_owner) = user.is_primary_owner {
+            row.push(Some(&Cell::Bool(is_primary_owner)));
+        } else {
+            row.push(None);
+        }
+        
+        row.push(Some(&Cell::Bool(user.is_bot))); // is_bot
+        
+        if let Some(is_app_user) = user.is_app_user {
+            row.push(Some(&Cell::Bool(is_app_user)));
+        } else {
+            row.push(None);
+        }
+        
+        if let Some(is_restricted) = user.is_restricted {
+            row.push(Some(&Cell::Bool(is_restricted)));
+        } else {
+            row.push(None);
+        }
+        
+        if let Some(is_ultra_restricted) = user.is_ultra_restricted {
+            row.push(Some(&Cell::Bool(is_ultra_restricted)));
+        } else {
+            row.push(None);
+        }
+        
+        row.push(Some(&Cell::Bool(user.deleted))); // deleted
+        
+        // Status information
+        if let Some(status_text) = &user.profile.status_text {
+            row.push(Some(&Cell::String(status_text.clone())));
+        } else {
+            row.push(None);
+        }
+        
+        if let Some(status_emoji) = &user.profile.status_emoji {
+            row.push(Some(&Cell::String(status_emoji.clone())));
+        } else {
+            row.push(None);
+        }
+        
+        if let Some(status_expiration) = user.profile.status_expiration {
+            row.push(Some(&Cell::I64(status_expiration)));
+        } else {
+            row.push(None);
+        }
+        
+        if let Some(title) = &user.profile.title {
+            row.push(Some(&Cell::String(title.clone())));
+        } else {
+            row.push(None);
+        }
+        
+        // Team information
+        if let Some(team_id) = &user.team_id {
+            row.push(Some(&Cell::String(team_id.clone())));
+        } else {
+            row.push(None);
+        }
+        
+        if let Some(team) = &user.profile.team {
+            row.push(Some(&Cell::String(team.clone())));
+        } else {
+            row.push(None);
+        }
+        
+        // Time zone information
+        if let Some(tz) = &user.tz {
+            row.push(Some(&Cell::String(tz.clone())));
+        } else {
+            row.push(None);
+        }
+        
+        if let Some(tz_label) = &user.tz_label {
+            row.push(Some(&Cell::String(tz_label.clone())));
+        } else {
+            row.push(None);
+        }
+        
+        if let Some(tz_offset) = user.tz_offset {
+            row.push(Some(&Cell::I32(tz_offset)));
+        } else {
+            row.push(None);
+        }
+        
+        if let Some(locale) = &user.locale {
+            row.push(Some(&Cell::String(locale.clone())));
+        } else {
+            row.push(None);
+        }
+        
+        // Avatar/image URLs
+        if let Some(image_24) = &user.profile.image_24 {
+            row.push(Some(&Cell::String(image_24.clone())));
+        } else {
+            row.push(None);
+        }
+        
+        if let Some(image_48) = &user.profile.image_48 {
+            row.push(Some(&Cell::String(image_48.clone())));
+        } else {
+            row.push(None);
+        }
+        
+        if let Some(image_72) = &user.profile.image_72 {
+            row.push(Some(&Cell::String(image_72.clone())));
+        } else {
+            row.push(None);
+        }
+        
+        if let Some(image_192) = &user.profile.image_192 {
+            row.push(Some(&Cell::String(image_192.clone())));
+        } else {
+            row.push(None);
+        }
+        
+        if let Some(image_512) = &user.profile.image_512 {
+            row.push(Some(&Cell::String(image_512.clone())));
+        } else {
+            row.push(None);
+        }
+        
+        // Miscellaneous
+        if let Some(color) = &user.color {
+            row.push(Some(&Cell::String(color.clone())));
+        } else {
+            row.push(None);
+        }
+        
+        if let Some(updated) = user.updated {
+            row.push(Some(&Cell::I64(updated)));
+        } else {
+            row.push(None);
+        }
         
         Ok(())
     }

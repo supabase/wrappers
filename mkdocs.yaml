@@ -45,15 +45,17 @@ nav:
       - Security: "guides/security.md"
       - FDW Statistics: "guides/usage-statistics.md"
       - Installing Wrappers in Postgres: "guides/installation.md"
+      - Updating Foreign Data Wrappers: "guides/updating-wrappers.md"
       - Removing Foreign Data Wrappers: "guides/removing-wrappers.md"
       - Limitations: "guides/limitations.md"
+  - Contributing:
+      - Building the Docs: "contributing/documentation.md"
+      - Core Development: "contributing/core.md"
+      - Developing a Native Wrapper:
+          - Quick Start: "contributing/native.md"
       - Developing a Wasm Wrapper:
           - Quick Start: "guides/create-wasm-wrapper.md"
           - Advanced guide: "guides/wasm-advanced.md"
-  - Contributing:
-      - Core Development: "contributing/core.md"
-      - Developing a Native Wrapper: "contributing/native.md"
-      - Documentation: "contributing/documentation.md"
 
 plugins:
   - tags:
