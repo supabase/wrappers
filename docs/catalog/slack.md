@@ -361,12 +361,6 @@ options (
 
 -- Get all user group memberships
 select * from slack.usergroup_members;
-
--- Find users in a specific user group
-select u.name, u.real_name, u.email
-from slack.usergroup_members m
-join slack.users u on m.user_id = u.id
-where m.usergroup_handle = 'engineering';
 ```
 
 #### Notes
@@ -374,7 +368,7 @@ where m.usergroup_handle = 'engineering';
 - The `usergroup_id` and `user_id` fields form a composite primary key
 - Requires the `usergroups:read` scope
 - Supports LIMIT and OFFSET clauses for pagination
-- Useful for joining users with their groups
+- To avoid excessive API calls and potential rate limiting, consider using materialized views instead of direct joins
 
 ### Files
 
@@ -504,100 +498,6 @@ options (
 select * from slack.channels;
 ```
 
-### Working with User Groups
-
-This example shows how to work with user groups and their members.
-
-```sql
--- Create tables
-create foreign table slack.usergroups (
-  id text,
-  team_id text,
-  name text,
-  handle text,
-  description text,
-  is_external boolean,
-  date_create bigint,
-  date_update bigint,
-  date_delete bigint,
-  auto_type text,
-  created_by text,
-  updated_by text,
-  deleted_by text,
-  user_count integer,
-  channel_count integer
-)
-server slack_server
-options (
-  resource 'usergroups'
-);
-
-create foreign table slack.usergroup_members (
-  usergroup_id text,
-  usergroup_name text,
-  usergroup_handle text,
-  user_id text
-)
-server slack_server
-options (
-  resource 'usergroup_members'
-);
-
-create foreign table slack.users (
-  id text,
-  name text,
-  real_name text,
-  email text,
-  is_admin boolean,
-  is_bot boolean
-)
-server slack_server
-options (
-  resource 'users'
-);
-
--- Get all user groups
-select name, handle, description, user_count 
-from slack.usergroups 
-order by name;
-
--- Find all users in a specific user group
-select u.name, u.real_name, u.email
-from slack.usergroup_members m
-join slack.users u on m.user_id = u.id
-where m.usergroup_handle = 'engineering'
-order by u.name;
-
--- Find all groups a specific user belongs to
-select g.name, g.handle, g.description
-from slack.usergroup_members m
-join slack.usergroups g on m.usergroup_id = g.id
-where m.user_id = (select id from slack.users where name = 'johndoe')
-order by g.name;
-```
-
-### Messages from a Specific Channel
-
-```sql
-create foreign table slack.messages (
-  ts text,
-  user_id text,
-  channel_id text,
-  text text,
-  thread_ts text,
-  reply_count integer
-)
-server slack_server
-options (
-  resource 'messages'
-);
-
--- Get messages from a specific channel
-select * from slack.messages 
-where channel_id = 'C01234ABCDE'
-limit 100;
-```
-
 ### User Information
 
 ```sql
@@ -644,13 +544,61 @@ select id, name, real_name, image_192 as profile_picture from slack.users
 where name = 'johndoe';
 ```
 
-### Join Tables Together
+### User Groups Example
 
 ```sql
--- Find all messages from a specific user
-select m.*, u.real_name 
-from slack.messages m
-join slack.users u on m.user_id = u.id
-where u.name = 'johndoe'
-limit 50;
+-- Create tables
+create foreign table slack.usergroups (
+  id text,
+  name text,
+  handle text,
+  description text,
+  user_count integer
+)
+server slack_server
+options (
+  resource 'usergroups'
+);
+
+create foreign table slack.usergroup_members (
+  usergroup_id text,
+  usergroup_name text,
+  usergroup_handle text,
+  user_id text
+)
+server slack_server
+options (
+  resource 'usergroup_members'
+);
+
+-- Get all user groups
+select name, handle, description, user_count 
+from slack.usergroups 
+order by name;
+
+-- Get all members of a user group (just IDs)
+select * from slack.usergroup_members 
+where usergroup_id = 'S01234ABCDE';
+```
+
+### Messages from a Specific Channel
+
+```sql
+create foreign table slack.messages (
+  ts text,
+  user_id text,
+  channel_id text,
+  text text,
+  thread_ts text,
+  reply_count integer
+)
+server slack_server
+options (
+  resource 'messages'
+);
+
+-- Get messages from a specific channel
+select * from slack.messages 
+where channel_id = 'C01234ABCDE'
+limit 100;
 ```
