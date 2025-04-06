@@ -4,6 +4,7 @@ use serde_json::Value as JsonValue;
 
 // Slack FDW implementation modules
 pub mod models;
+#[cfg(test)]
 mod api;
 
 use bindings::{
@@ -159,8 +160,8 @@ impl SlackFdw {
         // Determine batch size based on limit if provided
         let batch_size = if let Some(limit) = &self.limit {
             // If there's a limit and it's smaller than our default batch size, use it
-            if limit.count > 0 && limit.count < BATCH_SIZE as i64 {
-                limit.count as u32
+            if limit.count() > 0 && limit.count() < BATCH_SIZE as i64 {
+                limit.count() as u32
             } else {
                 BATCH_SIZE
             }
@@ -261,8 +262,9 @@ impl SlackFdw {
                                 }
                             },
                             "real_name" => {
-                                let a_real_name = a.real_name.as_ref().unwrap_or(&String::new());
-                                let b_real_name = b.real_name.as_ref().unwrap_or(&String::new());
+                                let empty_string = String::new();
+                                let a_real_name = a.real_name.as_ref().unwrap_or(&empty_string);
+                                let b_real_name = b.real_name.as_ref().unwrap_or(&empty_string);
                                 let ordering = a_real_name.cmp(b_real_name);
                                 if sort.reversed() {
                                     return ordering.reverse();
@@ -272,8 +274,9 @@ impl SlackFdw {
                                 }
                             },
                             "email" => {
-                                let a_email = a.profile.email.as_ref().unwrap_or(&String::new());
-                                let b_email = b.profile.email.as_ref().unwrap_or(&String::new());
+                                let empty_string = String::new();
+                                let a_email = a.profile.email.as_ref().unwrap_or(&empty_string);
+                                let b_email = b.profile.email.as_ref().unwrap_or(&empty_string);
                                 let ordering = a_email.cmp(b_email);
                                 if sort.reversed() {
                                     return ordering.reverse();
@@ -291,8 +294,8 @@ impl SlackFdw {
             
             // Apply LIMIT and OFFSET if specified
             if let Some(limit) = &self.limit {
-                let start = limit.offset as usize;
-                let end = (limit.offset + limit.count) as usize;
+                let start = limit.offset() as usize;
+                let end = (limit.offset() + limit.count()) as usize;
                 
                 // Handle offset - trim the beginning of the results
                 if start < users.len() {
@@ -307,7 +310,7 @@ impl SlackFdw {
                 }
                 
                 // If we've reached the requested limit, don't fetch more pages
-                if users.len() >= (limit.count as usize) {
+                if users.len() >= (limit.count() as usize) {
                     self.next_cursor = None;
                 }
             }
@@ -417,7 +420,7 @@ impl Guest for SlackFdw {
             if this.next_cursor.is_some() {
                 // If we have a limit, check if we've already reached it
                 if let Some(limit) = &this.limit {
-                    if this.users.len() >= limit.count as usize {
+                    if this.users.len() >= limit.count() as usize {
                         // We've already met our limit, don't fetch more
                         return Ok(None);
                     }

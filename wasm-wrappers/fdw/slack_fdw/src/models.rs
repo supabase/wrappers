@@ -26,7 +26,7 @@ pub struct UserResponse {
     pub response_metadata: Option<ResponseMetadata>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct User {
     pub id: String,
     pub name: String,
@@ -39,7 +39,7 @@ pub struct User {
     pub updated: Option<i64>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct UserProfile {
     pub email: Option<String>,
     pub display_name: Option<String>,
