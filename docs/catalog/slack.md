@@ -17,7 +17,8 @@ The Slack Wrapper is a WebAssembly (Wasm) foreign data wrapper which allows you 
 
 | Version | Wasm Package URL                                                                              | Checksum                                                         |
 | ------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.1.0/slack_fdw.wasm` | 148a058b4963d486d600eed1ed72943804e8e014981c804f3b35e389f2f2844a |
+| 0.0.1   | `https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.1.0/slack_fdw.wasm` | 148a058b4963d486d600eed1ed72943804e8e014981c804f3b35e389f2f2844a |
+| 0.0.2   | `https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.2/slack_fdw.wasm` | (checksum will be generated on release)                          |
 
 ## Preparation
 
@@ -81,10 +82,10 @@ We need to provide Postgres with the credentials to access Slack and any additio
     create server slack_server
       foreign data wrapper wasm_wrapper
       options (
-        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.1/slack_fdw.wasm',
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.2/slack_fdw.wasm',
         fdw_package_name 'supabase:slack-fdw',
-        fdw_package_version '0.1.0',
-        fdw_package_checksum '148a058b4963d486d600eed1ed72943804e8e014981c804f3b35e389f2f2844a',
+        fdw_package_version '0.0.2',
+        fdw_package_checksum '(checksum will be generated on release)',
         api_token_id '<key_ID>', -- The Key ID from Vault
         workspace 'your-workspace' -- Optional workspace name
       );
@@ -96,10 +97,10 @@ We need to provide Postgres with the credentials to access Slack and any additio
     create server slack_server
       foreign data wrapper wasm_wrapper
       options (
-        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.1/slack_fdw.wasm',
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.2/slack_fdw.wasm',
         fdw_package_name 'supabase:slack-fdw',
-        fdw_package_version '0.1.0',
-        fdw_package_checksum '148a058b4963d486d600eed1ed72943804e8e014981c804f3b35e389f2f2844a',
+        fdw_package_version '0.0.2',
+        fdw_package_checksum '(checksum will be generated on release)',
         api_token 'xoxb-your-slack-token',
         workspace 'your-workspace' -- Optional workspace name
       );
