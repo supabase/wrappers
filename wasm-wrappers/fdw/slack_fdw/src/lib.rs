@@ -16,7 +16,7 @@ use bindings::{
     },
 };
 
-use models::User;
+use models::{User, UserGroup, UserGroupMembership};
 
 #[derive(Debug, Default)]
 struct SlackFdw {
@@ -32,6 +32,8 @@ struct SlackFdw {
     
     // Cache for API responses
     users: Vec<User>,
+    user_groups: Vec<UserGroup>,
+    user_group_memberships: Vec<UserGroupMembership>,
     
     // Current position in result set
     result_index: usize,
@@ -61,6 +63,84 @@ impl SlackFdw {
     
     // This was left as a placeholder - in production we don't use the SlackClient
     // but directly make requests via the HTTP interface
+    
+    // Map Slack UserGroup to PostgreSQL Row
+    fn usergroup_to_row(&self, usergroup: &UserGroup, row: &Row) -> Result<(), FdwError> {
+        // Basic information
+        row.push(Some(&Cell::String(usergroup.id.clone())));
+        row.push(Some(&Cell::String(usergroup.team_id.clone())));
+        row.push(Some(&Cell::String(usergroup.name.clone())));
+        row.push(Some(&Cell::String(usergroup.handle.clone())));
+        
+        // Optional fields
+        if let Some(description) = &usergroup.description {
+            row.push(Some(&Cell::String(description.clone())));
+        } else {
+            row.push(None);
+        }
+        
+        if let Some(is_external) = usergroup.is_external {
+            row.push(Some(&Cell::Bool(is_external)));
+        } else {
+            row.push(None);
+        }
+        
+        // Timestamps
+        row.push(Some(&Cell::I64(usergroup.date_create)));
+        row.push(Some(&Cell::I64(usergroup.date_update)));
+        
+        if let Some(date_delete) = usergroup.date_delete {
+            row.push(Some(&Cell::I64(date_delete)));
+        } else {
+            row.push(None);
+        }
+        
+        // Auto type
+        if let Some(auto_type) = &usergroup.auto_type {
+            row.push(Some(&Cell::String(auto_type.clone())));
+        } else {
+            row.push(None);
+        }
+        
+        // User information
+        row.push(Some(&Cell::String(usergroup.created_by.clone())));
+        
+        if let Some(updated_by) = &usergroup.updated_by {
+            row.push(Some(&Cell::String(updated_by.clone())));
+        } else {
+            row.push(None);
+        }
+        
+        if let Some(deleted_by) = &usergroup.deleted_by {
+            row.push(Some(&Cell::String(deleted_by.clone())));
+        } else {
+            row.push(None);
+        }
+        
+        // Counts
+        if let Some(user_count) = usergroup.user_count {
+            row.push(Some(&Cell::I32(user_count)));
+        } else {
+            row.push(None);
+        }
+        
+        if let Some(channel_count) = usergroup.channel_count {
+            row.push(Some(&Cell::I32(channel_count)));
+        } else {
+            row.push(None);
+        }
+        
+        Ok(())
+    }
+    
+    // Map UserGroupMembership to PostgreSQL Row
+    fn usergroup_membership_to_row(&self, membership: &UserGroupMembership, row: &Row) -> Result<(), FdwError> {
+        row.push(Some(&Cell::String(membership.usergroup_id.clone())));
+        row.push(Some(&Cell::String(membership.usergroup_name.clone())));
+        row.push(Some(&Cell::String(membership.usergroup_handle.clone())));
+        row.push(Some(&Cell::String(membership.user_id.clone())));
+        Ok(())
+    }
     
     // Map Slack User to PostgreSQL Row
     fn user_to_row(&self, user: &User, row: &Row) -> Result<(), FdwError> {
@@ -321,6 +401,188 @@ impl SlackFdw {
         }
     }
     
+    // Fetch user groups
+    fn fetch_user_groups(&mut self, ctx: &Context) -> FdwResult {
+        // Create request parameters
+        let mut params = vec![
+            ("include_users".to_string(), "true".to_string()),
+        ];
+        
+        // Push down WHERE filters if possible
+        let quals = ctx.get_quals();
+        if !quals.is_empty() {
+            for qual in quals.iter() {
+                if qual.operator().as_str() == "=" && !qual.use_or() {
+                    match qual.field().as_str() {
+                        "team_id" => {
+                            if let Value::Cell(Cell::String(team_id)) = qual.value() {
+                                params.push(("team_id".to_string(), team_id.clone()));
+                            }
+                        },
+                        "include_disabled" => {
+                            if let Value::Cell(Cell::Bool(include_disabled)) = qual.value() {
+                                params.push(("include_disabled".to_string(), include_disabled.to_string()));
+                            }
+                        },
+                        _ => {}
+                    }
+                }
+            }
+        }
+        
+        // Create request and send it
+        let req = self.create_request("usergroups.list", &params)?;
+        let resp_json = self.make_request(&req)?;
+        
+        // Extract user groups
+        if let Some(usergroups) = resp_json.get("usergroups").and_then(|g| g.as_array()) {
+            // Convert JSON user groups to our model
+            self.user_groups = usergroups.iter()
+                .filter_map(|g| serde_json::from_value(g.clone()).ok())
+                .collect::<Vec<UserGroup>>();
+            
+            // Apply sorting if requested
+            if !self.sorts.is_empty() {
+                self.user_groups.sort_by(|a, b| {
+                    for sort in &self.sorts {
+                        match sort.field().as_str() {
+                            "name" => {
+                                let ordering = a.name.cmp(&b.name);
+                                if sort.reversed() {
+                                    return ordering.reverse();
+                                }
+                                if ordering != std::cmp::Ordering::Equal {
+                                    return ordering;
+                                }
+                            },
+                            "handle" => {
+                                let ordering = a.handle.cmp(&b.handle);
+                                if sort.reversed() {
+                                    return ordering.reverse();
+                                }
+                                if ordering != std::cmp::Ordering::Equal {
+                                    return ordering;
+                                }
+                            },
+                            "date_create" => {
+                                let ordering = a.date_create.cmp(&b.date_create);
+                                if sort.reversed() {
+                                    return ordering.reverse();
+                                }
+                                if ordering != std::cmp::Ordering::Equal {
+                                    return ordering;
+                                }
+                            },
+                            "date_update" => {
+                                let ordering = a.date_update.cmp(&b.date_update);
+                                if sort.reversed() {
+                                    return ordering.reverse();
+                                }
+                                if ordering != std::cmp::Ordering::Equal {
+                                    return ordering;
+                                }
+                            },
+                            _ => {}
+                        }
+                    }
+                    std::cmp::Ordering::Equal
+                });
+            }
+            
+            // Apply LIMIT and OFFSET if specified
+            if let Some(limit) = &self.limit {
+                let start = limit.offset() as usize;
+                let end = (limit.offset() + limit.count()) as usize;
+                
+                // Handle offset - trim the beginning of the results
+                if start < self.user_groups.len() {
+                    self.user_groups = self.user_groups[start..].to_vec();
+                } else {
+                    self.user_groups.clear();
+                }
+                
+                // Handle count - trim the end of the results if needed
+                if self.user_groups.len() > end - start {
+                    self.user_groups.truncate(end - start);
+                }
+            }
+            
+            // Reset position
+            self.result_index = 0;
+            
+            Ok(())
+        } else {
+            Err("Failed to parse user groups from response".to_string())
+        }
+    }
+    
+    // Fetch user group memberships
+    fn fetch_user_group_memberships(&mut self, ctx: &Context) -> FdwResult {
+        self.user_group_memberships.clear();
+        
+        // Get all user groups first
+        self.fetch_user_groups(ctx)?;
+        
+        // For each group that doesn't include users, fetch its members
+        for group in &self.user_groups {
+            if let Some(users) = &group.users {
+                // If users are already included in the group response, use those
+                for user_id in users {
+                    self.user_group_memberships.push(UserGroupMembership {
+                        usergroup_id: group.id.clone(),
+                        usergroup_name: group.name.clone(),
+                        usergroup_handle: group.handle.clone(),
+                        user_id: user_id.clone(),
+                    });
+                }
+            } else {
+                // Otherwise, fetch the members
+                let params = vec![
+                    ("usergroup".to_string(), group.id.clone()),
+                ];
+                
+                let req = self.create_request("usergroups.users.list", &params)?;
+                let resp_json = self.make_request(&req)?;
+                
+                if let Some(users) = resp_json.get("users").and_then(|u| u.as_array()) {
+                    for user_id in users {
+                        if let Some(user_id) = user_id.as_str() {
+                            self.user_group_memberships.push(UserGroupMembership {
+                                usergroup_id: group.id.clone(),
+                                usergroup_name: group.name.clone(),
+                                usergroup_handle: group.handle.clone(),
+                                user_id: user_id.to_string(),
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Apply LIMIT and OFFSET if specified
+        if let Some(limit) = &self.limit {
+            let start = limit.offset() as usize;
+            let end = (limit.offset() + limit.count()) as usize;
+            
+            // Handle offset - trim the beginning of the results
+            if start < self.user_group_memberships.len() {
+                self.user_group_memberships = self.user_group_memberships[start..].to_vec();
+            } else {
+                self.user_group_memberships.clear();
+            }
+            
+            // Handle count - trim the end of the results if needed
+            if self.user_group_memberships.len() > end - start {
+                self.user_group_memberships.truncate(end - start);
+            }
+        }
+        
+        // Reset position
+        self.result_index = 0;
+        
+        Ok(())
+    }
+    
     // Fetch users
     fn fetch_users(&mut self, ctx: &Context) -> FdwResult {
         // Determine batch size based on limit if provided
@@ -539,54 +801,95 @@ impl Guest for SlackFdw {
         this.sorts = ctx.get_sorts();
         this.limit = ctx.get_limit();
         
-        // Verify that the resource is 'users'
-        if resource.as_str() != "users" {
-            return Err(format!("Unsupported resource type: {}. Currently only 'users' is supported.", resource));
+        // Fetch the appropriate resource data
+        match resource.as_str() {
+            "users" => this.fetch_users(ctx),
+            "usergroups" => this.fetch_user_groups(ctx),
+            "usergroup_members" => this.fetch_user_group_memberships(ctx),
+            _ => Err(format!("Unsupported resource type: {}. Supported resources are 'users', 'usergroups', and 'usergroup_members'.", resource))
         }
-        
-        // Fetch users data
-        this.fetch_users(ctx)
     }
 
     fn iter_scan(ctx: &Context, row: &Row) -> Result<Option<u32>, FdwError> {
         let this = Self::this_mut();
         
-        // If we've reached the end of our current batch
-        if this.result_index >= this.users.len() {
-            // Record metrics
-            stats::inc_stats(FDW_NAME, stats::Metric::RowsIn, this.users.len() as i64);
-            stats::inc_stats(FDW_NAME, stats::Metric::RowsOut, this.users.len() as i64);
-            
-            // If there's a next cursor and we don't have a limit or haven't reached it yet, fetch the next batch
-            if this.next_cursor.is_some() {
-                // If we have a limit, check if we've already reached it
-                if let Some(limit) = &this.limit {
-                    if this.users.len() >= limit.count() as usize {
-                        // We've already met our limit, don't fetch more
+        match this.resource.as_str() {
+            "users" => {
+                // If we've reached the end of our current batch of users
+                if this.result_index >= this.users.len() {
+                    // Record metrics
+                    stats::inc_stats(FDW_NAME, stats::Metric::RowsIn, this.users.len() as i64);
+                    stats::inc_stats(FDW_NAME, stats::Metric::RowsOut, this.users.len() as i64);
+                    
+                    // If there's a next cursor and we don't have a limit or haven't reached it yet, fetch the next batch
+                    if this.next_cursor.is_some() {
+                        // If we have a limit, check if we've already reached it
+                        if let Some(limit) = &this.limit {
+                            if this.users.len() >= limit.count() as usize {
+                                // We've already met our limit, don't fetch more
+                                return Ok(None);
+                            }
+                        }
+                        
+                        this.fetch_users(ctx)?;
+                        
+                        // If the new batch is empty, we're done
+                        if this.users.is_empty() {
+                            return Ok(None);
+                        }
+                    } else {
+                        // No more results
                         return Ok(None);
                     }
                 }
                 
-                this.fetch_users(ctx)?;
+                // Get the user from the current batch
+                let user = &this.users[this.result_index];
                 
-                // If the new batch is empty, we're done
-                if this.users.is_empty() {
+                // Convert user to row
+                this.user_to_row(user, row)?;
+                
+                this.result_index += 1;
+                Ok(Some(0))
+            },
+            "usergroups" => {
+                // If we've reached the end of our user groups
+                if this.result_index >= this.user_groups.len() {
+                    // Record metrics
+                    stats::inc_stats(FDW_NAME, stats::Metric::RowsIn, this.user_groups.len() as i64);
+                    stats::inc_stats(FDW_NAME, stats::Metric::RowsOut, this.user_groups.len() as i64);
                     return Ok(None);
                 }
-            } else {
-                // No more results
-                return Ok(None);
-            }
+                
+                // Get the user group from the current position
+                let usergroup = &this.user_groups[this.result_index];
+                
+                // Convert user group to row
+                this.usergroup_to_row(usergroup, row)?;
+                
+                this.result_index += 1;
+                Ok(Some(0))
+            },
+            "usergroup_members" => {
+                // If we've reached the end of our user group memberships
+                if this.result_index >= this.user_group_memberships.len() {
+                    // Record metrics
+                    stats::inc_stats(FDW_NAME, stats::Metric::RowsIn, this.user_group_memberships.len() as i64);
+                    stats::inc_stats(FDW_NAME, stats::Metric::RowsOut, this.user_group_memberships.len() as i64);
+                    return Ok(None);
+                }
+                
+                // Get the membership from the current position
+                let membership = &this.user_group_memberships[this.result_index];
+                
+                // Convert membership to row
+                this.usergroup_membership_to_row(membership, row)?;
+                
+                this.result_index += 1;
+                Ok(Some(0))
+            },
+            _ => Err(format!("Unsupported resource type: {}", this.resource))
         }
-        
-        // Get the user from the current batch
-        let user = &this.users[this.result_index];
-        
-        // Convert user to row
-        this.user_to_row(user, row)?;
-        
-        this.result_index += 1;
-        Ok(Some(0))
     }
 
     fn re_scan(ctx: &Context) -> FdwResult {
@@ -601,15 +904,25 @@ impl Guest for SlackFdw {
         this.sorts = ctx.get_sorts();
         this.limit = ctx.get_limit();
         
-        // Re-fetch users data
-        this.fetch_users(ctx)
+        // Re-fetch the appropriate resource data
+        match this.resource.as_str() {
+            "users" => this.fetch_users(ctx),
+            "usergroups" => this.fetch_user_groups(ctx),
+            "usergroup_members" => this.fetch_user_group_memberships(ctx),
+            _ => Err(format!("Unsupported resource type: {}", this.resource))
+        }
     }
 
     fn end_scan(_ctx: &Context) -> FdwResult {
         let this = Self::this_mut();
         
-        // Clear cached users data
-        this.users.clear();
+        // Clear cached data based on resource type
+        match this.resource.as_str() {
+            "users" => this.users.clear(),
+            "usergroups" => this.user_groups.clear(),
+            "usergroup_members" => this.user_group_memberships.clear(),
+            _ => {} // No action for unknown resource
+        }
         
         Ok(())
     }

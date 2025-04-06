@@ -87,6 +87,58 @@ pub struct ErrorMetadata {
     pub messages: Option<Vec<String>>,
 }
 
+// User Group models
+#[derive(Debug, Deserialize)]
+pub struct UserGroupsResponse {
+    pub usergroups: Vec<UserGroup>,
+    #[serde(default)]
+    pub response_metadata: Option<ResponseMetadata>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct UserGroup {
+    pub id: String,
+    pub team_id: String,
+    pub name: String,
+    pub handle: String,
+    pub description: Option<String>,
+    pub is_external: Option<bool>,
+    pub date_create: i64,
+    pub date_update: i64,
+    pub date_delete: Option<i64>,
+    pub auto_type: Option<String>,
+    pub created_by: String,
+    pub updated_by: Option<String>,
+    pub deleted_by: Option<String>,
+    pub user_count: Option<i32>,
+    pub users: Option<Vec<String>>,
+    pub prefs: Option<UserGroupPrefs>,
+    pub channel_count: Option<i32>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct UserGroupPrefs {
+    pub channels: Option<Vec<String>>,
+    pub groups: Option<Vec<String>>,
+}
+
+// User Group Members response
+#[derive(Debug, Deserialize)]
+pub struct UserGroupMembersResponse {
+    pub users: Vec<String>,
+    #[serde(default)]
+    pub response_metadata: Option<ResponseMetadata>,
+}
+
+// Model for joining user groups with users
+#[derive(Debug, Clone)]
+pub struct UserGroupMembership {
+    pub usergroup_id: String,
+    pub usergroup_name: String,
+    pub usergroup_handle: String,
+    pub user_id: String,
+}
+
 // Utility conversion functions for database rows
 impl User {
     pub fn to_row(&self) -> Vec<Option<String>> {

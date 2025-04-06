@@ -20,6 +20,7 @@ The Slack Wrapper is a WebAssembly (Wasm) foreign data wrapper which allows you 
 | 0.0.1   | `https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.1.0/slack_fdw.wasm` | `148a058b4963d486d600eed1ed72943804e8e014981c804f3b35e389f2f2844a` |
 | 0.0.3   | `https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.3/slack_fdw.wasm` | `43a037dbccff6fa7a513a0c1ab74bd6157e110776dae67da62e92d3c1670d7b0` |
 | 0.0.4   | `https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.4/slack_fdw.wasm` | `(checksum will be generated on release)`                          |
+| 0.0.5   | `https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.5/slack_fdw.wasm` | `(checksum will be generated on release)`                          |
 
 ## Preparation
 
@@ -83,9 +84,9 @@ We need to provide Postgres with the credentials to access Slack and any additio
     create server slack_server
       foreign data wrapper wasm_wrapper
       options (
-        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.4/slack_fdw.wasm',
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.5/slack_fdw.wasm',
         fdw_package_name 'supabase:slack-fdw',
-        fdw_package_version '0.0.4',
+        fdw_package_version '0.0.5',
         fdw_package_checksum '(checksum will be generated on release)',
         api_token_id '<key_ID>', -- The Key ID from Vault
         workspace 'your-workspace' -- Optional workspace name
@@ -98,9 +99,9 @@ We need to provide Postgres with the credentials to access Slack and any additio
     create server slack_server
       foreign data wrapper wasm_wrapper
       options (
-        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.4/slack_fdw.wasm',
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.5/slack_fdw.wasm',
         fdw_package_name 'supabase:slack-fdw',
-        fdw_package_version '0.0.4',
+        fdw_package_version '0.0.5',
         fdw_package_checksum '(checksum will be generated on release)',
         api_token 'xoxb-your-slack-token',
         workspace 'your-workspace' -- Optional workspace name
@@ -280,6 +281,101 @@ options (
 - Supports sorting by `name`, `real_name`, and `email`
 - Supports LIMIT and OFFSET clauses for pagination
 
+### User Groups
+
+This represents user groups (a.k.a. user groups) in the workspace.
+
+Ref: [Slack usergroups.list API](https://api.slack.com/methods/usergroups.list)
+
+#### Operations
+
+| Object     | Select | Insert | Update | Delete | Truncate |
+| ---------- | :----: | :----: | :----: | :----: | :------: |
+| usergroups |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
+
+#### Usage
+
+```sql
+create foreign table slack.usergroups (
+  id text,
+  team_id text,
+  name text,
+  handle text,
+  description text,
+  is_external boolean,
+  date_create bigint,
+  date_update bigint,
+  date_delete bigint,
+  auto_type text,
+  created_by text,
+  updated_by text,
+  deleted_by text,
+  user_count integer,
+  channel_count integer
+)
+server slack_server
+options (
+  resource 'usergroups'
+);
+
+-- Get all user groups
+select * from slack.usergroups;
+
+-- Get user groups sorted by name
+select * from slack.usergroups order by name;
+```
+
+#### Notes
+
+- The `id` field is the user group ID and is used as the primary key
+- Requires the `usergroups:read` scope
+- Supports query pushdown for filtering by `team_id` and `include_disabled`
+- Supports sorting by `name`, `handle`, `date_create`, and `date_update`
+- Supports LIMIT and OFFSET clauses for pagination
+
+### User Group Members
+
+This represents the membership relationship between users and user groups.
+
+Ref: [Slack usergroups.users.list API](https://api.slack.com/methods/usergroups.users.list)
+
+#### Operations
+
+| Object            | Select | Insert | Update | Delete | Truncate |
+| ----------------- | :----: | :----: | :----: | :----: | :------: |
+| usergroup_members |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
+
+#### Usage
+
+```sql
+create foreign table slack.usergroup_members (
+  usergroup_id text,
+  usergroup_name text,
+  usergroup_handle text,
+  user_id text
+)
+server slack_server
+options (
+  resource 'usergroup_members'
+);
+
+-- Get all user group memberships
+select * from slack.usergroup_members;
+
+-- Find users in a specific user group
+select u.name, u.real_name, u.email
+from slack.usergroup_members m
+join slack.users u on m.user_id = u.id
+where m.usergroup_handle = 'engineering';
+```
+
+#### Notes
+
+- The `usergroup_id` and `user_id` fields form a composite primary key
+- Requires the `usergroups:read` scope
+- Supports LIMIT and OFFSET clauses for pagination
+- Useful for joining users with their groups
+
 ### Files
 
 This represents files shared in the workspace.
@@ -353,13 +449,15 @@ options (
 
 This FDW supports the following condition pushdowns:
 
-| Resource  | Supported Filters                   | Sorting                | Limit/Offset |
-| --------- | ----------------------------------- | ---------------------- | ------------ |
-| messages  | channel_id, oldest, latest          | No                     | No           |
-| users     | name, email, team_id                | name, real_name, email | Yes          |
-| channels  | types (public/private)              | No                     | No           |
-| files     | channel_id, user_id, ts_from, ts_to | No                     | No           |
-| team-info | *(no filter support)*               | No                     | No           |
+| Resource          | Supported Filters                   | Sorting                                | Limit/Offset |
+| ----------------- | ----------------------------------- | -------------------------------------- | ------------ |
+| messages          | channel_id, oldest, latest          | No                                     | No           |
+| users             | name, email, team_id                | name, real_name, email                 | Yes          |
+| usergroups        | team_id, include_disabled           | name, handle, date_create, date_update | Yes          |
+| usergroup_members | *(no filter support)*               | No                                     | Yes          |
+| channels          | types (public/private)              | No                                     | No           |
+| files             | channel_id, user_id, ts_from, ts_to | No                                     | No           |
+| team-info         | *(no filter support)*               | No                                     | No           |
 
 ## Supported Data Types
 
@@ -404,6 +502,78 @@ options (
 
 -- Query all channels
 select * from slack.channels;
+```
+
+### Working with User Groups
+
+This example shows how to work with user groups and their members.
+
+```sql
+-- Create tables
+create foreign table slack.usergroups (
+  id text,
+  team_id text,
+  name text,
+  handle text,
+  description text,
+  is_external boolean,
+  date_create bigint,
+  date_update bigint,
+  date_delete bigint,
+  auto_type text,
+  created_by text,
+  updated_by text,
+  deleted_by text,
+  user_count integer,
+  channel_count integer
+)
+server slack_server
+options (
+  resource 'usergroups'
+);
+
+create foreign table slack.usergroup_members (
+  usergroup_id text,
+  usergroup_name text,
+  usergroup_handle text,
+  user_id text
+)
+server slack_server
+options (
+  resource 'usergroup_members'
+);
+
+create foreign table slack.users (
+  id text,
+  name text,
+  real_name text,
+  email text,
+  is_admin boolean,
+  is_bot boolean
+)
+server slack_server
+options (
+  resource 'users'
+);
+
+-- Get all user groups
+select name, handle, description, user_count 
+from slack.usergroups 
+order by name;
+
+-- Find all users in a specific user group
+select u.name, u.real_name, u.email
+from slack.usergroup_members m
+join slack.users u on m.user_id = u.id
+where m.usergroup_handle = 'engineering'
+order by u.name;
+
+-- Find all groups a specific user belongs to
+select g.name, g.handle, g.description
+from slack.usergroup_members m
+join slack.usergroups g on m.usergroup_id = g.id
+where m.user_id = (select id from slack.users where name = 'johndoe')
+order by g.name;
 ```
 
 ### Messages from a Specific Channel
