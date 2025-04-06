@@ -276,7 +276,7 @@ options (
 - The `id` field is the user ID and is used as the primary key
 - Requires the `users:read` scope
 - Email field requires the `users:read.email` scope
-- Supports query pushdown for filtering by `is_admin`, `is_bot`, `name`, and `email`
+- Supports query pushdown for filtering by `name`, `email`, and `team_id` directly via the Slack API
 - Supports sorting by `name`, `real_name`, and `email`
 - Supports LIMIT and OFFSET clauses for pagination
 
@@ -356,7 +356,7 @@ This FDW supports the following condition pushdowns:
 | Resource  | Supported Filters                   | Sorting                | Limit/Offset |
 | --------- | ----------------------------------- | ---------------------- | ------------ |
 | messages  | channel_id, oldest, latest          | No                     | No           |
-| users     | is_admin, is_bot, name, email       | name, real_name, email | Yes          |
+| users     | name, email, team_id                | name, real_name, email | Yes          |
 | channels  | types (public/private)              | No                     | No           |
 | files     | channel_id, user_id, ts_from, ts_to | No                     | No           |
 | team-info | *(no filter support)*               | No                     | No           |

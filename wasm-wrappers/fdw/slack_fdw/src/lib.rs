@@ -351,12 +351,19 @@ impl SlackFdw {
             for qual in quals.iter() {
                 if qual.operator().as_str() == "=" && !qual.use_or() {
                     match qual.field().as_str() {
-                        // These filters will be applied server-side via the API
+                        // Server-side filtering via the Slack API
+                        "team_id" => {
+                            if let Value::Cell(Cell::String(team_id)) = qual.value() {
+                                params.push(("team_id".to_string(), team_id.clone()));
+                            }
+                        },
+                        // Search by display name or real name
                         "name" => {
                             if let Value::Cell(Cell::String(name)) = qual.value() {
                                 params.push(("query".to_string(), name.clone()));
                             }
                         },
+                        // Search by email address
                         "email" => {
                             if let Value::Cell(Cell::String(email)) = qual.value() {
                                 params.push(("email".to_string(), email.clone()));
@@ -379,39 +386,7 @@ impl SlackFdw {
                 .filter_map(|m| serde_json::from_value(m.clone()).ok())
                 .collect::<Vec<User>>();
             
-            // Filter users based on quals if needed
-            let quals = ctx.get_quals();
-            if !quals.is_empty() {
-                users.retain(|user| {
-                    for qual in quals.iter() {
-                        match (qual.field().as_str(), qual.operator().as_str()) {
-                            ("is_admin", "=") => {
-                                if let Value::Cell(Cell::Bool(is_admin)) = qual.value() {
-                                    if user.is_admin != Some(is_admin) {
-                                        return false;
-                                    }
-                                }
-                            },
-                            ("is_bot", "=") => {
-                                if let Value::Cell(Cell::Bool(is_bot)) = qual.value() {
-                                    if user.is_bot != is_bot {
-                                        return false;
-                                    }
-                                }
-                            },
-                            ("name", "=") => {
-                                if let Value::Cell(Cell::String(name)) = qual.value() {
-                                    if user.name != name {
-                                        return false;
-                                    }
-                                }
-                            },
-                            _ => {}
-                        }
-                    }
-                    true
-                });
-            }
+            // No client-side filtering - rely solely on the API's filtering
             
             // Apply sorting if requested
             if !self.sorts.is_empty() {
