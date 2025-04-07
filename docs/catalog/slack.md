@@ -18,7 +18,7 @@ The Slack Wrapper is a WebAssembly (Wasm) foreign data wrapper which allows you 
 | Version | Wasm Package URL                                                                              | Checksum                                                           |
 | ------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
 | 0.0.6   | `https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.6/slack_fdw.wasm` | `349cb556f87a0233e25eb608a77e840531bc87f1acf9916856268bdcdd9973e2` |
-| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.6/slack_fdw.wasm` | `(Coming soon)`                                                    |
+| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.1.0/slack_fdw.wasm` | `(Coming soon)`                                                    |
 
 ## Preparation
 
@@ -84,10 +84,10 @@ We need to provide Postgres with the credentials to access Slack and any additio
     create server slack_server
       foreign data wrapper wasm_wrapper
       options (
-        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.6/slack_fdw.wasm',
         fdw_package_name 'supabase:slack-fdw',
-        fdw_package_version '0.0.6',
-        fdw_package_checksum '(checksum will be generated on release)',
+        fdw_package_url '{See: "Available Versions"}',
+        fdw_package_checksum '{See: "Available Versions"}',
+        fdw_package_version '{See: "Available Versions"}', -- eg: 0.1.0
         api_token_id '<key_ID>', -- The Key ID from Vault
         workspace 'your-workspace' -- Optional workspace name
       );
@@ -99,10 +99,10 @@ We need to provide Postgres with the credentials to access Slack and any additio
     create server slack_server
       foreign data wrapper wasm_wrapper
       options (
-        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.6/slack_fdw.wasm',
         fdw_package_name 'supabase:slack-fdw',
-        fdw_package_version '0.0.6',
-        fdw_package_checksum '(checksum will be generated on release)',
+        fdw_package_url '{See: "Available Versions"}',
+        fdw_package_checksum '{See: "Available Versions"}',
+        fdw_package_version '{See: "Available Versions"}', -- eg: 0.1.0
         api_token 'xoxb-your-slack-token',
         workspace 'your-workspace' -- Optional workspace name
       );
