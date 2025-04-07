@@ -106,9 +106,6 @@ impl SlackFdw {
         unsafe { &mut (*INSTANCE) }
     }
 
-    // This was left as a placeholder - in production we don't use the SlackClient
-    // but directly make requests via the HTTP interface
-
     // Map Slack UserGroup to PostgreSQL Row
     fn usergroup_to_row(&self, usergroup: &UserGroup, row: &Row) -> Result<(), FdwError> {
         // Basic information
