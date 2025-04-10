@@ -41,17 +41,19 @@ create foreign data wrapper firebase_wrapper
 By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
 
 ```sql
--- Save your Firebase credentials in Vault and retrieve the `key_id`
-insert into vault.secrets (name, secret)
-values (
-  'firebase',
+-- Save your Firebase credentials in Vault
+select vault.create_secret(
   '{
       "type": "service_account",
       "project_id": "your_gcp_project_id",
       ...
-  }'
-)
-returning key_id;
+  }',
+  'firebase',
+  'Firebase API key for Wrappers'
+);
+
+-- Retrieve the `key_id`
+select key_id from vault.decrypted_secrets where name = 'firebase';
 ```
 
 ### Connecting to Firebase
