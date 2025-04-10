@@ -49,13 +49,15 @@ By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server
 This FDW uses key-pair authentication to access Snowflake SQL Rest API, please refer to [Snowflake docs](https://docs.snowflake.com/en/developer-guide/sql-api/authenticating#label-sql-api-authenticating-key-pair) for more details about the key-pair authentication.
 
 ```sql
--- Save your Snowflake private key in Vault and retrieve the `key_id`
-insert into vault.secrets (name, secret)
-values (
+-- Save your Snowflake private key in Vault
+select vault.create_secret(
+  E'-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----',
   'snowflake',
-  E'-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----'
-)
-returning key_id;
+  'Snowflake private key for Wrappers'
+);
+
+-- Retrieve the `key_id`
+select key_id from vault.decrypted_secrets where name = 'snowflake';
 ```
 
 ### Connecting to Snowflake
