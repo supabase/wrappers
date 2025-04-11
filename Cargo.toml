@@ -14,6 +14,7 @@ exclude = [
     "wasm-wrappers/fdw/notion_fdw",
     "wasm-wrappers/fdw/orb_fdw",
     "wasm-wrappers/fdw/paddle_fdw",
+    "wasm-wrappers/fdw/slack_fdw",
     "wasm-wrappers/fdw/snowflake_fdw",
 ]
 resolver = "2"

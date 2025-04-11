@@ -1,0 +1,6 @@
+[dependencies]
+litemap = { version = "=0.6.0" }
+zerofrom = { version = "=0.1.5" }
+
+[build]
+target = "wasm32-wasip1"
