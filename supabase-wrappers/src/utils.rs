@@ -165,7 +165,7 @@ pub fn get_vault_secret(secret_id: &str) -> Option<String> {
         Ok(sid) => {
             let sid = sid.into_bytes();
             match Spi::get_one_with_args::<String>(
-                "select decrypted_secret from vault.decrypted_secrets where key_id = $1",
+                "select decrypted_secret from vault.decrypted_secrets where id = $1 or key_id = $1",
                 vec![(
                     PgBuiltInOids::UUIDOID.oid(),
                     pgrx::Uuid::from_bytes(sid).into_datum(),
