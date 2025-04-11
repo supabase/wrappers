@@ -62,7 +62,7 @@ jobs:
   # =============================================================
   test_wasm:
     name: Run Wasm wrappers tests
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
 
     steps:
     - name: Checkout code
@@ -81,24 +81,14 @@ jobs:
 
     - run: |
         sudo apt remove -y postgres*
-        sudo apt-get install -y wget gnupg
-        sudo sh -c 'echo "deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
-        wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
-        sudo apt-get update -y -qq --fix-missing
-        sudo apt-get install -y \
-          clang-10 \
-          llvm-10 \
-          clang \
-          gcc \
-          make \
-          build-essential \
-          libz-dev \
-          zlib1g-dev \
-          strace \
-          libssl-dev \
-          pkg-config \
-          postgresql-15 \
-          postgresql-server-dev-15
+        sudo apt -y install curl ca-certificates build-essential pkg-config libssl-dev
+        sudo install -d /usr/share/postgresql-common/pgdg
+        sudo curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
+        . /etc/os-release
+        sudo sh -c "echo 'deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $VERSION_CODENAME-pgdg main' > /etc/apt/sources.list.d/pgdg.list"
+        sudo apt update -y -qq --fix-missing
+        sudo apt -y install postgresql-client-15 postgresql-15 postgresql-server-dev-15
+        sudo apt -y autoremove && sudo apt -y clean
         sudo chmod a+rwx `/usr/lib/postgresql/15/bin/pg_config --pkglibdir` `/usr/lib/postgresql/15/bin/pg_config --sharedir`/extension /var/run/postgresql/
 
     - run: cargo install cargo-pgrx --version 0.12.9
