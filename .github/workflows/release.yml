@@ -42,7 +42,7 @@ jobs:
         features:
           - "all_fdws"
         box:
-          - { runner: ubuntu-20.04, arch: amd64 }
+          - { runner: ubuntu-24.04, arch: amd64 }
           - { runner: arm-runner, arch: arm64 }
     runs-on: ${{ matrix.box.runner }}
     timeout-minutes: 90
@@ -56,17 +56,17 @@ jobs:
         run: |
           cd wrappers
 
-          # Add postgres package repo
-          sudo sh -c 'echo "deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
-          wget -qO- https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo tee /etc/apt/trusted.gpg.d/pgdg.asc &>/dev/null
-
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends git build-essential libpq-dev curl libreadline6-dev zlib1g-dev pkg-config cmake
-          sudo apt-get install -y --no-install-recommends libreadline-dev zlib1g-dev flex bison libxml2-dev libxslt-dev libssl-dev libxml2-utils xsltproc ccache
-          sudo apt-get install -y --no-install-recommends clang libclang-dev gcc tree
-
-          # Install requested postgres version
-          sudo apt install -y postgresql-${{ matrix.postgres }} postgresql-server-dev-${{ matrix.postgres }} -y
+          # Add postgres package repo and install requested postgres version
+          sudo apt remove -y postgres*
+          sudo apt -y install curl ca-certificates build-essential pkg-config libssl-dev
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          . /etc/os-release
+          sudo sh -c "echo 'deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $VERSION_CODENAME-pgdg main' > /etc/apt/sources.list.d/pgdg.list"
+          sudo apt update -y -qq --fix-missing
+          sudo apt -y install postgresql-${{ matrix.postgres }} postgresql-server-dev-${{ matrix.postgres }}
+          sudo apt -y autoremove && sudo apt -y clean
+          sudo chmod a+rwx `/usr/lib/postgresql/${{ matrix.postgres }}/bin/pg_config --pkglibdir` `/usr/lib/postgresql/${{ matrix.postgres }}/bin/pg_config --sharedir`/extension /var/run/postgresql/
 
           # Ensure installed pg_config is first on path
           export PATH=$PATH:/usr/lib/postgresql/${{ matrix.postgres }}/bin
