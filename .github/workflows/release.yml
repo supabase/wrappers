@@ -2,6 +2,7 @@ name: Release
 
 
 on:
+  pull_request:
   push:
     # Sequence of patterns matched against refs/tags
     tags:
@@ -21,7 +22,8 @@ jobs:
         id: create_release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ github.ref_name }}
+          #tag: ${{ github.ref_name }}
+          tag: v0.4.6
         run: |
           gh release create "$tag" \
               --repo="$GITHUB_REPOSITORY" \
@@ -57,6 +59,7 @@ jobs:
           cd wrappers
 
           # Add postgres package repo and install requested postgres version
+          sudo apt update
           sudo apt remove -y postgres*
           sudo apt -y install curl ca-certificates build-essential pkg-config libssl-dev
           sudo install -d /usr/share/postgresql-common/pgdg
