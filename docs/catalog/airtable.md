@@ -43,15 +43,12 @@ By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server
 Get your token from [Airtable's developer portal](https://airtable.com/create/tokens).
 
 ```sql
--- Save your Airtable API key in Vault
+-- Save your Airtable API key in Vault and retrieve the created `key_id`
 select vault.create_secret(
   '<Airtable API Key or PAT>', -- Airtable API key or Personal Access Token (PAT)
   'airtable',
   'Airtable API key for Wrappers'
 );
-
--- Retrieve the `key_id`
-select key_id from vault.decrypted_secrets where name = 'airtable';
 ```
 
 ### Connecting to Airtable
