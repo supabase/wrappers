@@ -40,15 +40,12 @@ create foreign data wrapper mssql_wrapper
 By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
 
 ```sql
--- Save your SQL Server connection string in Vault
+-- Save your SQL Server connection string in Vault and retrieve the created `key_id`
 select vault.create_secret(
   'Server=localhost,1433;User=sa;Password=my_password;Database=master;IntegratedSecurity=false;TrustServerCertificate=true;encrypt=DANGER_PLAINTEXT;ApplicationName=wrappers',
   'mssql',
   'MS SQL Server connection string for Wrappers'
 );
-
--- Retrieve the `key_id`
-select key_id from vault.decrypted_secrets where name = 'mssql';
 ```
 
 The connection string is an [ADO.NET connection string](https://learn.microsoft.com/en-us/dotnet/framework/data/adonet/connection-strings), which specifies connection parameters in semicolon-delimited string.
