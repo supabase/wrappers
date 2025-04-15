@@ -18,7 +18,7 @@ The Slack Wrapper is a WebAssembly (Wasm) foreign data wrapper which allows you 
 | Version | Wasm Package URL                                                                              | Checksum                                                           |
 | ------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
 | 0.0.6   | `https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.6/slack_fdw.wasm` | `349cb556f87a0233e25eb608a77e840531bc87f1acf9916856268bdcdd9973e2` |
-| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.1.0/slack_fdw.wasm` | `(Coming soon)`                                                    |
+| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.1.0/slack_fdw.wasm` | `5b022b441c0007e31d792ecb1341bfffed1c29cb865eb0c7969989dff0e8fdc3` |
 
 ## Preparation
 
