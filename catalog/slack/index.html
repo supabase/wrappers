@@ -12,13 +12,13 @@
         <meta name="author" content="supabase">
       
       
-        <link rel="canonical" href="https://supabase.github.io/wrappers/catalog/clerk/">
+        <link rel="canonical" href="https://supabase.github.io/wrappers/catalog/slack/">
       
       
-        <link rel="prev" href="../calendly/">
+        <link rel="prev" href="../paddle/">
       
       
-        <link rel="next" href="../cfd1/">
+        <link rel="next" href="../snowflake/">
       
       
       <link rel="icon" href="../../assets/favicon.ico">
@@ -26,7 +26,7 @@
     
     
       
-        <title>Clerk - Wrappers</title>
+        <title>Slack - Wrappers</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#clerk" class="md-skip">
+        <a href="#slack" class="md-skip">
           Skip to content
         </a>
       
@@ -113,7 +113,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Clerk
+              Slack
             
           </span>
         </div>
@@ -838,30 +838,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    Clerk
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../clerk/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -870,683 +850,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#available-versions" class="md-nav__link">
-    <span class="md-ellipsis">
-      Available Versions
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#preparation" class="md-nav__link">
-    <span class="md-ellipsis">
-      Preparation
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Preparation">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#enable-wrappers" class="md-nav__link">
-    <span class="md-ellipsis">
-      Enable Wrappers
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#enable-the-clerk-wrapper" class="md-nav__link">
-    <span class="md-ellipsis">
-      Enable the Clerk Wrapper
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#store-your-credentials-optional" class="md-nav__link">
-    <span class="md-ellipsis">
-      Store your credentials (optional)
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#connecting-to-clerk" class="md-nav__link">
-    <span class="md-ellipsis">
-      Connecting to Clerk
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#create-a-schema" class="md-nav__link">
-    <span class="md-ellipsis">
-      Create a schema
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#options" class="md-nav__link">
-    <span class="md-ellipsis">
-      Options
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#entities" class="md-nav__link">
-    <span class="md-ellipsis">
-      Entities
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Entities">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#allow-list" class="md-nav__link">
-    <span class="md-ellipsis">
-      Allow-list
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Allow-list">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations" class="md-nav__link">
-    <span class="md-ellipsis">
-      Operations
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#block-list" class="md-nav__link">
-    <span class="md-ellipsis">
-      Block-list
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Block-list">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      Operations
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#domains" class="md-nav__link">
-    <span class="md-ellipsis">
-      Domains
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Domains">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      Operations
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#invitations" class="md-nav__link">
-    <span class="md-ellipsis">
-      Invitations
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Invitations">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations_3" class="md-nav__link">
-    <span class="md-ellipsis">
-      Operations
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_3" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_3" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#jwt-templates" class="md-nav__link">
-    <span class="md-ellipsis">
-      JWT Templates
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="JWT Templates">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations_4" class="md-nav__link">
-    <span class="md-ellipsis">
-      Operations
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_4" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_4" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#oauth-applications" class="md-nav__link">
-    <span class="md-ellipsis">
-      OAuth Applications
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="OAuth Applications">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations_5" class="md-nav__link">
-    <span class="md-ellipsis">
-      Operations
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_5" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_5" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#organizations" class="md-nav__link">
-    <span class="md-ellipsis">
-      Organizations
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Organizations">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations_6" class="md-nav__link">
-    <span class="md-ellipsis">
-      Operations
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_6" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_6" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#organization-invitations" class="md-nav__link">
-    <span class="md-ellipsis">
-      Organization Invitations
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Organization Invitations">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations_7" class="md-nav__link">
-    <span class="md-ellipsis">
-      Operations
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_7" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_7" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#organization-memberships" class="md-nav__link">
-    <span class="md-ellipsis">
-      Organization Memberships
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Organization Memberships">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations_8" class="md-nav__link">
-    <span class="md-ellipsis">
-      Operations
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_8" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_8" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#redirect-urls" class="md-nav__link">
-    <span class="md-ellipsis">
-      Redirect URLs
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Redirect URLs">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations_9" class="md-nav__link">
-    <span class="md-ellipsis">
-      Operations
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_9" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_9" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#saml-connections" class="md-nav__link">
-    <span class="md-ellipsis">
-      SAML Connections
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="SAML Connections">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations_10" class="md-nav__link">
-    <span class="md-ellipsis">
-      Operations
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_10" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_10" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#users" class="md-nav__link">
-    <span class="md-ellipsis">
-      Users
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Users">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations_11" class="md-nav__link">
-    <span class="md-ellipsis">
-      Operations
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_11" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_11" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#query-pushdown-support" class="md-nav__link">
-    <span class="md-ellipsis">
-      Query Pushdown Support
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#supported-data-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      Supported Data Types
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#limitations" class="md-nav__link">
-    <span class="md-ellipsis">
-      Limitations
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      Examples
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Examples">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#basic-example" class="md-nav__link">
-    <span class="md-ellipsis">
-      Basic example
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#query-json-attributes" class="md-nav__link">
-    <span class="md-ellipsis">
-      Query JSON attributes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1661,10 +964,30 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../slack/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Slack
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   <span class="md-ellipsis">
@@ -1673,6 +996,557 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#available-versions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Available Versions
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#preparation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Preparation
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Preparation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#enable-wrappers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Enable Wrappers
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#enable-the-slack-wrapper" class="md-nav__link">
+    <span class="md-ellipsis">
+      Enable the Slack Wrapper
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create-a-slack-api-token" class="md-nav__link">
+    <span class="md-ellipsis">
+      Create a Slack API Token
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#store-credentials-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      Store credentials (optional)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#connecting-to-slack" class="md-nav__link">
+    <span class="md-ellipsis">
+      Connecting to Slack
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create-a-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      Create a schema
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#entities" class="md-nav__link">
+    <span class="md-ellipsis">
+      Entities
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Entities">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#messages" class="md-nav__link">
+    <span class="md-ellipsis">
+      Messages
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Messages">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#channels" class="md-nav__link">
+    <span class="md-ellipsis">
+      Channels
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Channels">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#operations_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notes_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#users" class="md-nav__link">
+    <span class="md-ellipsis">
+      Users
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Users">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#operations_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notes_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#user-groups" class="md-nav__link">
+    <span class="md-ellipsis">
+      User Groups
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="User Groups">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#operations_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notes_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#user-group-members" class="md-nav__link">
+    <span class="md-ellipsis">
+      User Group Members
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="User Group Members">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#operations_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notes_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#files" class="md-nav__link">
+    <span class="md-ellipsis">
+      Files
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Files">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#operations_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notes_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#team-info" class="md-nav__link">
+    <span class="md-ellipsis">
+      Team Info
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Team Info">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#operations_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notes_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#query-pushdown-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      Query Pushdown Support
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#supported-data-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Supported Data Types
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#required-slack-api-scopes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Required Slack API Scopes
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Required Slack API Scopes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#adding-scopes-to-an-existing-app" class="md-nav__link">
+    <span class="md-ellipsis">
+      Adding Scopes to an Existing App
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Limitations
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      Troubleshooting
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#error-slack-api-error-missing_scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      Error: "Slack API error: missing_scope"
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#error-channel_id-is-required-for-querying-messages" class="md-nav__link">
+    <span class="md-ellipsis">
+      Error: "channel_id is required for querying messages"
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#error-rate-limit-exceeded" class="md-nav__link">
+    <span class="md-ellipsis">
+      Error: "Rate limit exceeded"
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Examples
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      Basic Example
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#user-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      User Information
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#user-groups-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      User Groups Example
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#messages-from-a-specific-channel" class="md-nav__link">
+    <span class="md-ellipsis">
+      Messages from a Specific Channel
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -2301,27 +2175,36 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#enable-the-clerk-wrapper" class="md-nav__link">
+  <a href="#enable-the-slack-wrapper" class="md-nav__link">
     <span class="md-ellipsis">
-      Enable the Clerk Wrapper
+      Enable the Slack Wrapper
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#store-your-credentials-optional" class="md-nav__link">
+  <a href="#create-a-slack-api-token" class="md-nav__link">
     <span class="md-ellipsis">
-      Store your credentials (optional)
+      Create a Slack API Token
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#connecting-to-clerk" class="md-nav__link">
+  <a href="#store-credentials-optional" class="md-nav__link">
     <span class="md-ellipsis">
-      Connecting to Clerk
+      Store credentials (optional)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#connecting-to-slack" class="md-nav__link">
+    <span class="md-ellipsis">
+      Connecting to Slack
     </span>
   </a>
   
@@ -2342,15 +2225,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#options" class="md-nav__link">
-    <span class="md-ellipsis">
-      Options
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#entities" class="md-nav__link">
     <span class="md-ellipsis">
       Entities
@@ -2361,13 +2235,13 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#allow-list" class="md-nav__link">
+  <a href="#messages" class="md-nav__link">
     <span class="md-ellipsis">
-      Allow-list
+      Messages
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Allow-list">
+    <nav class="md-nav" aria-label="Messages">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2403,13 +2277,13 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#block-list" class="md-nav__link">
+  <a href="#channels" class="md-nav__link">
     <span class="md-ellipsis">
-      Block-list
+      Channels
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Block-list">
+    <nav class="md-nav" aria-label="Channels">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2445,13 +2319,13 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#domains" class="md-nav__link">
+  <a href="#users" class="md-nav__link">
     <span class="md-ellipsis">
-      Domains
+      Users
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Domains">
+    <nav class="md-nav" aria-label="Users">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2487,13 +2361,13 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#invitations" class="md-nav__link">
+  <a href="#user-groups" class="md-nav__link">
     <span class="md-ellipsis">
-      Invitations
+      User Groups
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Invitations">
+    <nav class="md-nav" aria-label="User Groups">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2529,13 +2403,13 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#jwt-templates" class="md-nav__link">
+  <a href="#user-group-members" class="md-nav__link">
     <span class="md-ellipsis">
-      JWT Templates
+      User Group Members
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="JWT Templates">
+    <nav class="md-nav" aria-label="User Group Members">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2571,13 +2445,13 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#oauth-applications" class="md-nav__link">
+  <a href="#files" class="md-nav__link">
     <span class="md-ellipsis">
-      OAuth Applications
+      Files
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="OAuth Applications">
+    <nav class="md-nav" aria-label="Files">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2613,13 +2487,13 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#organizations" class="md-nav__link">
+  <a href="#team-info" class="md-nav__link">
     <span class="md-ellipsis">
-      Organizations
+      Team Info
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Organizations">
+    <nav class="md-nav" aria-label="Team Info">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2642,216 +2516,6 @@
         
           <li class="md-nav__item">
   <a href="#notes_6" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#organization-invitations" class="md-nav__link">
-    <span class="md-ellipsis">
-      Organization Invitations
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Organization Invitations">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations_7" class="md-nav__link">
-    <span class="md-ellipsis">
-      Operations
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_7" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_7" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#organization-memberships" class="md-nav__link">
-    <span class="md-ellipsis">
-      Organization Memberships
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Organization Memberships">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations_8" class="md-nav__link">
-    <span class="md-ellipsis">
-      Operations
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_8" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_8" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#redirect-urls" class="md-nav__link">
-    <span class="md-ellipsis">
-      Redirect URLs
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Redirect URLs">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations_9" class="md-nav__link">
-    <span class="md-ellipsis">
-      Operations
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_9" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_9" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#saml-connections" class="md-nav__link">
-    <span class="md-ellipsis">
-      SAML Connections
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="SAML Connections">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations_10" class="md-nav__link">
-    <span class="md-ellipsis">
-      Operations
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_10" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_10" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#users" class="md-nav__link">
-    <span class="md-ellipsis">
-      Users
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Users">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations_11" class="md-nav__link">
-    <span class="md-ellipsis">
-      Operations
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_11" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_11" class="md-nav__link">
     <span class="md-ellipsis">
       Notes
     </span>
@@ -2888,11 +2552,77 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#required-slack-api-scopes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Required Slack API Scopes
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Required Slack API Scopes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#adding-scopes-to-an-existing-app" class="md-nav__link">
+    <span class="md-ellipsis">
+      Adding Scopes to an Existing App
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#limitations" class="md-nav__link">
     <span class="md-ellipsis">
       Limitations
     </span>
   </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      Troubleshooting
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#error-slack-api-error-missing_scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      Error: "Slack API error: missing_scope"
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#error-channel_id-is-required-for-querying-messages" class="md-nav__link">
+    <span class="md-ellipsis">
+      Error: "channel_id is required for querying messages"
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#error-rate-limit-exceeded" class="md-nav__link">
+    <span class="md-ellipsis">
+      Error: "Rate limit exceeded"
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2909,16 +2639,34 @@
           <li class="md-nav__item">
   <a href="#basic-example" class="md-nav__link">
     <span class="md-ellipsis">
-      Basic example
+      Basic Example
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#query-json-attributes" class="md-nav__link">
+  <a href="#user-information" class="md-nav__link">
     <span class="md-ellipsis">
-      Query JSON attributes
+      User Information
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#user-groups-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      User Groups Example
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#messages-from-a-specific-channel" class="md-nav__link">
+    <span class="md-ellipsis">
+      Messages from a Specific Channel
     </span>
   </a>
   
@@ -2954,7 +2702,7 @@
     
     
     
-      <a href="../../tags/#official" class="md-tag">official</a>
+      <a href="../../tags/#communication" class="md-tag">communication</a>
     
   
 </nav>
@@ -2964,9 +2712,9 @@
   
 
 
-<h1 id="clerk">Clerk</h1>
-<p><a href="https://clerk.com/">Clerk</a> is a complete suite of embeddable UIs, flexible APIs, and admin dashboards to authenticate and manage users.</p>
-<p>The Clerk Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you to read data from Clerk for use within your Postgres database.</p>
+<h1 id="slack">Slack</h1>
+<p><a href="https://slack.com/">Slack</a> is a messaging app for business that connects people to the information they need. By bringing people together to work as one unified team, Slack transforms the way organizations communicate.</p>
+<p>The Slack Wrapper is a WebAssembly (Wasm) foreign data wrapper which allows you to query Slack workspaces, channels, messages, and users directly from your Postgres database.</p>
 <h2 id="available-versions">Available Versions</h2>
 <table>
 <thead>
@@ -2978,19 +2726,24 @@
 </thead>
 <tbody>
 <tr>
+<td>0.0.6</td>
+<td><code>https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.6/slack_fdw.wasm</code></td>
+<td><code>349cb556f87a0233e25eb608a77e840531bc87f1acf9916856268bdcdd9973e2</code></td>
+</tr>
+<tr>
 <td>0.1.0</td>
-<td><code>https://github.com/supabase/wrappers/releases/download/wasm_clerk_fdw_v0.1.0/clerk_fdw.wasm</code></td>
-<td><code>613be26b59fa4c074e0b93f0db617fcd7b468d4d02edece0b1f85fdb683ebdc4</code></td>
+<td><code>https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.1.0/slack_fdw.wasm</code></td>
+<td><code>5b022b441c0007e31d792ecb1341bfffed1c29cb865eb0c7969989dff0e8fdc3</code></td>
 </tr>
 </tbody>
 </table>
 <h2 id="preparation">Preparation</h2>
-<p>Before you can query Clerk, you need to enable the Wrappers extension and store your credentials in Postgres.</p>
+<p>Before you can query Slack, you need to enable the Wrappers extension and store your credentials in Postgres.</p>
 <h3 id="enable-wrappers">Enable Wrappers</h3>
 <p>Make sure the <code>wrappers</code> extension is installed on your database:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">extension</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">wrappers</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">extensions</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
-<h3 id="enable-the-clerk-wrapper">Enable the Clerk Wrapper</h3>
+<h3 id="enable-the-slack-wrapper">Enable the Slack Wrapper</h3>
 <p>Enable the Wasm foreign data wrapper:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
@@ -2998,22 +2751,42 @@
 <span class="w">  </span><span class="k">handler</span><span class="w"> </span><span class="n">wasm_fdw_handler</span>
 <span class="w">  </span><span class="k">validator</span><span class="w"> </span><span class="n">wasm_fdw_validator</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
-<h3 id="store-your-credentials-optional">Store your credentials (optional)</h3>
+<h3 id="create-a-slack-api-token">Create a Slack API Token</h3>
+<ol>
+<li>Visit the <a href="https://api.slack.com/apps">Slack API Apps page</a></li>
+<li>Click "Create New App" and select "From scratch"</li>
+<li>Name your app and select the workspace to install it</li>
+<li>Navigate to "OAuth &amp; Permissions" in the sidebar</li>
+<li>Under "Scopes", add the following Bot Token Scopes:</li>
+<li><code>channels:history</code> - Read messages in public channels</li>
+<li><code>channels:read</code> - View basic channel information</li>
+<li><code>users:read</code> - View users in workspace</li>
+<li><code>users:read.email</code> - View email addresses</li>
+<li><code>files:read</code> - View files shared in channels</li>
+<li><code>reactions:read</code> - View emoji reactions</li>
+<li><code>team:read</code> - View information about the workspace</li>
+<li><code>usergroups:read</code> - View user groups and their members</li>
+<li>Install the app to your workspace</li>
+<li>Copy the "Bot User OAuth Token" that starts with <code>xoxb-</code></li>
+</ol>
+<h3 id="store-credentials-optional">Store credentials (optional)</h3>
 <p>By default, Postgres stores FDW credentials inside <code>pg_catalog.pg_foreign_server</code> in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with <a href="https://supabase.com/docs/guides/database/vault">Vault</a>, which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
 <span class="normal">4</span>
 <span class="normal">5</span>
-<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Save your Clerk API key in Vault and retrieve the created `key_id`</span>
-<span class="k">select</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">create_secret</span><span class="p">(</span>
-<span class="w">  </span><span class="s1">&#39;&lt;Clerk API key&gt;&#39;</span><span class="p">,</span><span class="w"> </span><span class="c1">-- Clerk API key</span>
-<span class="w">  </span><span class="s1">&#39;clerk&#39;</span><span class="p">,</span>
-<span class="w">  </span><span class="s1">&#39;Clerk API key for Wrappers&#39;</span>
-<span class="p">);</span>
+<span class="normal">6</span>
+<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Save your Slack API token in Vault and retrieve the `key_id`</span>
+<span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">secrets</span><span class="w"> </span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">secret</span><span class="p">)</span>
+<span class="k">values</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="s1">&#39;slack&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="s1">&#39;xoxb-your-slack-token&#39;</span><span class="w"> </span><span class="c1">-- Slack Bot User OAuth Token</span>
+<span class="p">)</span>
+<span class="n">returning</span><span class="w"> </span><span class="n">key_id</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
-<h3 id="connecting-to-clerk">Connecting to Clerk</h3>
-<p>We need to provide Postgres with the credentials to access Clerk and any additional options. We can do this using the <code>create server</code> command:</p>
+<h3 id="connecting-to-slack">Connecting to Slack</h3>
+<p>We need to provide Postgres with the credentials to access Slack and any additional options. We can do this using the <code>create server</code> command:</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">With Vault</label><label for="__tabbed_1_2">Without Vault</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
@@ -3026,15 +2799,15 @@
 <span class="normal"> 7</span>
 <span class="normal"> 8</span>
 <span class="normal"> 9</span>
-<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">clerk_server</span>
+<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">slack_server</span>
 <span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_clerk_fdw_v0.1.0/clerk_fdw.wasm&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;supabase:clerk-fdw&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.1.0&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;613be26b59fa4c074e0b93f0db617fcd7b468d4d02edece0b1f85fdb683ebdc4&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">api_url</span><span class="w"> </span><span class="s1">&#39;https://api.clerk.com/v1&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- optional</span>
-<span class="w">    </span><span class="n">api_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;key_ID&gt;&#39;</span><span class="w"> </span><span class="c1">-- The Key ID from above.</span>
+<span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;supabase:slack-fdw&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;{See: &quot;Available Versions&quot;}&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;{See: &quot;Available Versions&quot;}&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;{See: &quot;Available Versions&quot;}&#39;</span><span class="p">,</span><span class="w"> </span><span class="c1">-- eg: 0.1.0</span>
+<span class="w">    </span><span class="n">api_token_id</span><span class="w"> </span><span class="s1">&#39;&lt;key_ID&gt;&#39;</span><span class="p">,</span><span class="w"> </span><span class="c1">-- The Key ID from Vault</span>
+<span class="w">    </span><span class="n">workspace</span><span class="w"> </span><span class="s1">&#39;your-workspace&#39;</span><span class="w"> </span><span class="c1">-- Optional workspace name</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 </div>
@@ -3048,80 +2821,39 @@
 <span class="normal"> 7</span>
 <span class="normal"> 8</span>
 <span class="normal"> 9</span>
-<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">clerk_server</span>
+<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">slack_server</span>
 <span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_clerk_fdw_v0.1.0/clerk_fdw.wasm&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;supabase:clerk-fdw&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.1.0&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;613be26b59fa4c074e0b93f0db617fcd7b468d4d02edece0b1f85fdb683ebdc4&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">api_url</span><span class="w"> </span><span class="s1">&#39;https://api.clerk.com/v1&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- optional</span>
-<span class="w">    </span><span class="n">api_key</span><span class="w"> </span><span class="s1">&#39;sk_test_...&#39;</span><span class="w">  </span><span class="c1">-- Clerk API key</span>
+<span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;supabase:slack-fdw&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;{See: &quot;Available Versions&quot;}&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;{See: &quot;Available Versions&quot;}&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;{See: &quot;Available Versions&quot;}&#39;</span><span class="p">,</span><span class="w"> </span><span class="c1">-- eg: 0.1.0</span>
+<span class="w">    </span><span class="n">api_token</span><span class="w"> </span><span class="s1">&#39;xoxb-your-slack-token&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">workspace</span><span class="w"> </span><span class="s1">&#39;your-workspace&#39;</span><span class="w"> </span><span class="c1">-- Optional workspace name</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 </div>
 </div>
 </div>
-<p>Note the <code>fdw_package_*</code> options are required, which specify the Wasm package metadata. You can get the available package version list from <a href="#available-versions">above</a>.</p>
+<p>The full list of server options are below:</p>
+<ul>
+<li><code>fdw_package_*</code>: required. Specify the Wasm package metadata. You can get the available package version list from <a href="#available-versions">above</a>.</li>
+<li><code>api_token</code> | <code>api_token_id</code> <ul>
+<li><code>api_token</code>:Slack Bot User OAuth Token, required if not using Vault.</li>
+<li><code>api_token_id</code>: Vault secret key ID storing the Slack token, required if using Vault.</li>
+</ul>
+</li>
+<li><code>workspace</code> - Slack workspace name, optional.</li>
+</ul>
 <h3 id="create-a-schema">Create a schema</h3>
 <p>We recommend creating a schema to hold all the foreign tables:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">clerk</span><span class="p">;</span>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">slack</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
-<h2 id="options">Options</h2>
-<p>The full list of foreign table options are below:</p>
-<ul>
-<li><code>object</code> - Object name in Clerk, required.</li>
-</ul>
-<p>Supported objects are listed below:</p>
-<table>
-<thead>
-<tr>
-<th>Object name</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>allowlist_identifiers</td>
-</tr>
-<tr>
-<td>blocklist_identifiers</td>
-</tr>
-<tr>
-<td>domains</td>
-</tr>
-<tr>
-<td>invitations</td>
-</tr>
-<tr>
-<td>jwt_templates</td>
-</tr>
-<tr>
-<td>oauth_applications</td>
-</tr>
-<tr>
-<td>organizations</td>
-</tr>
-<tr>
-<td>organization_invitations</td>
-</tr>
-<tr>
-<td>organization_memberships</td>
-</tr>
-<tr>
-<td>redirect_urls</td>
-</tr>
-<tr>
-<td>saml_connections</td>
-</tr>
-<tr>
-<td>users</td>
-</tr>
-</tbody>
-</table>
 <h2 id="entities">Entities</h2>
-<h3 id="allow-list">Allow-list</h3>
-<p>This is a list of all identifiers allowed to sign up to an instance.</p>
-<p>Ref: <a href="https://clerk.com/docs/reference/backend-api/tag/Allow-list-Block-list#operation/ListAllowlistIdentifiers">Clerk API docs</a></p>
+<p>The Slack Wrapper supports data reads from the Slack API.</p>
+<h3 id="messages">Messages</h3>
+<p>This represents messages from channels, DMs, and group messages.</p>
+<p>Ref: <a href="https://api.slack.com/methods/conversations.history">Slack conversations.history API</a></p>
 <h4 id="operations">Operations</h4>
 <table>
 <thead>
@@ -3136,7 +2868,7 @@
 </thead>
 <tbody>
 <tr>
-<td>allowlist_identifiers</td>
+<td>messages</td>
 <td style="text-align: center;">✅</td>
 <td style="text-align: center;">❌</td>
 <td style="text-align: center;">❌</td>
@@ -3157,30 +2889,28 @@
 <span class="normal"> 9</span>
 <span class="normal">10</span>
 <span class="normal">11</span>
-<span class="normal">12</span>
-<span class="normal">13</span>
-<span class="normal">14</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">clerk</span><span class="p">.</span><span class="n">allowlist_identifiers</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">invitation_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">identifier</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">identifier_type</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">instance_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">slack</span><span class="p">.</span><span class="n">messages</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">ts</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">user_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">channel_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="nb">text</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">thread_ts</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">reply_count</span><span class="w"> </span><span class="nb">integer</span>
 <span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">clerk_server</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">slack_server</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;allowlist_identifiers&#39;</span>
+<span class="w">    </span><span class="n">resource</span><span class="w"> </span><span class="s1">&#39;messages&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 <h4 id="notes">Notes</h4>
 <ul>
-<li>The <code>attrs</code> column contains additional attributes in JSON format</li>
+<li>The <code>ts</code> field is the message timestamp ID and is used as the primary key</li>
+<li>Supports query pushdown for channel filtering</li>
+<li>Requires the <code>channels:history</code> scope</li>
 </ul>
-<h3 id="block-list">Block-list</h3>
-<p>This is a list of all identifiers which are not allowed to access an instance.</p>
-<p>Ref: <a href="https://clerk.com/docs/reference/backend-api/tag/Allow-list-Block-list#operation/ListBlocklistIdentifiers">Clerk API docs</a></p>
+<h3 id="channels">Channels</h3>
+<p>This represents all channels in the workspace.</p>
+<p>Ref: <a href="https://api.slack.com/methods/conversations.list">Slack conversations.list API</a></p>
 <h4 id="operations_1">Operations</h4>
 <table>
 <thead>
@@ -3195,7 +2925,7 @@
 </thead>
 <tbody>
 <tr>
-<td>blocklist_identifiers</td>
+<td>channels</td>
 <td style="text-align: center;">✅</td>
 <td style="text-align: center;">❌</td>
 <td style="text-align: center;">❌</td>
@@ -3215,29 +2945,26 @@
 <span class="normal"> 8</span>
 <span class="normal"> 9</span>
 <span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span>
-<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">clerk</span><span class="p">.</span><span class="n">blocklist_identifiers</span><span class="w"> </span><span class="p">(</span>
+<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">slack</span><span class="p">.</span><span class="n">channels</span><span class="w"> </span><span class="p">(</span>
 <span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">identifier</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">identifier_type</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">instance_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">is_private</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span>
+<span class="w">  </span><span class="n">created</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
+<span class="w">  </span><span class="n">creator</span><span class="w"> </span><span class="nb">text</span>
 <span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">clerk_server</span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;blocklist_identifiers&#39;</span>
-<span class="w">  </span><span class="p">);</span>
+<span class="n">server</span><span class="w"> </span><span class="n">slack_server</span>
+<span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">resource</span><span class="w"> </span><span class="s1">&#39;channels&#39;</span>
+<span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 <h4 id="notes_1">Notes</h4>
 <ul>
-<li>The <code>attrs</code> column contains additional attributes in JSON format</li>
+<li>The <code>id</code> field is the channel ID and is used as the primary key</li>
+<li>Requires the <code>channels:read</code> scope</li>
 </ul>
-<h3 id="domains">Domains</h3>
-<p>This is a list of all domains for an instance.</p>
-<p>Ref: <a href="https://clerk.com/docs/reference/backend-api/tag/Domains#operation/ListDomains">Clerk API docs</a></p>
+<h3 id="users">Users</h3>
+<p>This represents all users in the workspace.</p>
+<p>Ref: <a href="https://api.slack.com/methods/users.list">Slack users.list API</a></p>
 <h4 id="operations_2">Operations</h4>
 <table>
 <thead>
@@ -3252,7 +2979,7 @@
 </thead>
 <tbody>
 <tr>
-<td>domains</td>
+<td>users</td>
 <td style="text-align: center;">✅</td>
 <td style="text-align: center;">❌</td>
 <td style="text-align: center;">❌</td>
@@ -3273,26 +3000,121 @@
 <span class="normal"> 9</span>
 <span class="normal">10</span>
 <span class="normal">11</span>
-<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">clerk</span><span class="p">.</span><span class="n">domains</span><span class="w"> </span><span class="p">(</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span>
+<span class="normal">40</span>
+<span class="normal">41</span>
+<span class="normal">42</span>
+<span class="normal">43</span>
+<span class="normal">44</span>
+<span class="normal">45</span>
+<span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span>
+<span class="normal">52</span>
+<span class="normal">53</span>
+<span class="normal">54</span>
+<span class="normal">55</span>
+<span class="normal">56</span>
+<span class="normal">57</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">slack</span><span class="p">.</span><span class="n">users</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="c1">-- Basic information</span>
 <span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
 <span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">is_satellite</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span>
-<span class="w">  </span><span class="n">frontend_api_url</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">accounts_portal_url</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
+
+<span class="w">  </span><span class="c1">-- Name and profile fields</span>
+<span class="w">  </span><span class="n">real_name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">display_name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">display_name_normalized</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">real_name_normalized</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+
+<span class="w">  </span><span class="c1">-- Contact information</span>
+<span class="w">  </span><span class="n">email</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">phone</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">skype</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+
+<span class="w">  </span><span class="c1">-- Role information</span>
+<span class="w">  </span><span class="n">is_admin</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span>
+<span class="w">  </span><span class="n">is_owner</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span>
+<span class="w">  </span><span class="n">is_primary_owner</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span>
+<span class="w">  </span><span class="n">is_bot</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span>
+<span class="w">  </span><span class="n">is_app_user</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span>
+<span class="w">  </span><span class="n">is_restricted</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span>
+<span class="w">  </span><span class="n">is_ultra_restricted</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span>
+<span class="w">  </span><span class="n">deleted</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span>
+
+<span class="w">  </span><span class="c1">-- Status information</span>
+<span class="w">  </span><span class="n">status_text</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">status_emoji</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">status_expiration</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
+<span class="w">  </span><span class="n">title</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+
+<span class="w">  </span><span class="c1">-- Team information</span>
+<span class="w">  </span><span class="n">team_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">team</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+
+<span class="w">  </span><span class="c1">-- Time zone information</span>
+<span class="w">  </span><span class="n">tz</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">tz_label</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">tz_offset</span><span class="w"> </span><span class="nb">integer</span><span class="p">,</span>
+<span class="w">  </span><span class="n">locale</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+
+<span class="w">  </span><span class="c1">-- Avatar/image URLs</span>
+<span class="w">  </span><span class="n">image_24</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">image_48</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">image_72</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">image_192</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">image_512</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+
+<span class="w">  </span><span class="c1">-- Miscellaneous</span>
+<span class="w">  </span><span class="n">color</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">updated</span><span class="w"> </span><span class="nb">bigint</span>
 <span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">clerk_server</span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;domains&#39;</span>
-<span class="w">  </span><span class="p">);</span>
+<span class="n">server</span><span class="w"> </span><span class="n">slack_server</span>
+<span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">resource</span><span class="w"> </span><span class="s1">&#39;users&#39;</span>
+<span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 <h4 id="notes_2">Notes</h4>
 <ul>
-<li>The <code>attrs</code> column contains additional attributes in JSON format</li>
+<li>The <code>id</code> field is the user ID and is used as the primary key</li>
+<li>Requires the <code>users:read</code> scope</li>
+<li>Email field requires the <code>users:read.email</code> scope</li>
+<li>Supports query pushdown for filtering by <code>name</code>, <code>email</code>, and <code>team_id</code> directly via the Slack API</li>
+<li>Supports sorting by <code>name</code>, <code>real_name</code>, and <code>email</code></li>
+<li>Supports LIMIT and OFFSET clauses for pagination</li>
 </ul>
-<h3 id="invitations">Invitations</h3>
-<p>This is a list of all non-revoked invitations for your application.</p>
-<p>Ref: <a href="https://clerk.com/docs/reference/backend-api/tag/Invitations#operation/ListInvitations">Clerk API docs</a></p>
+<h3 id="user-groups">User Groups</h3>
+<p>This represents user groups (a.k.a. user groups) in the workspace.</p>
+<p>Ref: <a href="https://api.slack.com/methods/usergroups.list">Slack usergroups.list API</a></p>
 <h4 id="operations_3">Operations</h4>
 <table>
 <thead>
@@ -3307,7 +3129,7 @@
 </thead>
 <tbody>
 <tr>
-<td>invitations</td>
+<td>usergroups</td>
 <td style="text-align: center;">✅</td>
 <td style="text-align: center;">❌</td>
 <td style="text-align: center;">❌</td>
@@ -3331,29 +3153,57 @@
 <span class="normal">12</span>
 <span class="normal">13</span>
 <span class="normal">14</span>
-<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">clerk</span><span class="p">.</span><span class="n">invitations</span><span class="w"> </span><span class="p">(</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">slack</span><span class="p">.</span><span class="n">usergroups</span><span class="w"> </span><span class="p">(</span>
 <span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">email_address</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">url</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">revoked</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span>
-<span class="w">  </span><span class="n">status</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">expires_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="w">  </span><span class="n">team_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">handle</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">description</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">is_external</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span>
+<span class="w">  </span><span class="n">date_create</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
+<span class="w">  </span><span class="n">date_update</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
+<span class="w">  </span><span class="n">date_delete</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
+<span class="w">  </span><span class="n">auto_type</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">created_by</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">updated_by</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">deleted_by</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">user_count</span><span class="w"> </span><span class="nb">integer</span><span class="p">,</span>
+<span class="w">  </span><span class="n">channel_count</span><span class="w"> </span><span class="nb">integer</span>
 <span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">clerk_server</span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;invitations&#39;</span>
-<span class="w">  </span><span class="p">);</span>
+<span class="n">server</span><span class="w"> </span><span class="n">slack_server</span>
+<span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">resource</span><span class="w"> </span><span class="s1">&#39;usergroups&#39;</span>
+<span class="p">);</span>
+
+<span class="c1">-- Get all user groups</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">slack</span><span class="p">.</span><span class="n">usergroups</span><span class="p">;</span>
+
+<span class="c1">-- Get user groups sorted by name</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">slack</span><span class="p">.</span><span class="n">usergroups</span><span class="w"> </span><span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">name</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 <h4 id="notes_3">Notes</h4>
 <ul>
-<li>The <code>attrs</code> column contains additional attributes in JSON format</li>
+<li>The <code>id</code> field is the user group ID and is used as the primary key</li>
+<li>Requires the <code>usergroups:read</code> scope</li>
+<li>Supports query pushdown for filtering by <code>team_id</code> and <code>include_disabled</code></li>
+<li>Supports sorting by <code>name</code>, <code>handle</code>, <code>date_create</code>, and <code>date_update</code></li>
+<li>Supports LIMIT and OFFSET clauses for pagination</li>
 </ul>
-<h3 id="jwt-templates">JWT Templates</h3>
-<p>This is a list of all JWT templates.</p>
-<p>Ref: <a href="https://clerk.com/docs/reference/backend-api/tag/JWT-Templates#operation/ListJWTTemplates">Clerk API docs</a></p>
+<h3 id="user-group-members">User Group Members</h3>
+<p>This represents the membership relationship between users and user groups.</p>
+<p>Ref: <a href="https://api.slack.com/methods/usergroups.users.list">Slack usergroups.users.list API</a></p>
 <h4 id="operations_4">Operations</h4>
 <table>
 <thead>
@@ -3368,7 +3218,7 @@
 </thead>
 <tbody>
 <tr>
-<td>jwt_templates</td>
+<td>usergroup_members</td>
 <td style="text-align: center;">✅</td>
 <td style="text-align: center;">❌</td>
 <td style="text-align: center;">❌</td>
@@ -3390,31 +3240,30 @@
 <span class="normal">10</span>
 <span class="normal">11</span>
 <span class="normal">12</span>
-<span class="normal">13</span>
-<span class="normal">14</span>
-<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">clerk</span><span class="p">.</span><span class="n">jwt_templates</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">lifetime</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
-<span class="w">  </span><span class="n">allowed_clock_skew</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
-<span class="w">  </span><span class="n">custom_signing_key</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span>
-<span class="w">  </span><span class="n">signing_algorithm</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">slack</span><span class="p">.</span><span class="n">usergroup_members</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">usergroup_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">usergroup_name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">usergroup_handle</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">user_id</span><span class="w"> </span><span class="nb">text</span>
 <span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">clerk_server</span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;jwt_templates&#39;</span>
-<span class="w">  </span><span class="p">);</span>
+<span class="n">server</span><span class="w"> </span><span class="n">slack_server</span>
+<span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">resource</span><span class="w"> </span><span class="s1">&#39;usergroup_members&#39;</span>
+<span class="p">);</span>
+
+<span class="c1">-- Get all user group memberships</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">slack</span><span class="p">.</span><span class="n">usergroup_members</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 <h4 id="notes_4">Notes</h4>
 <ul>
-<li>The <code>attrs</code> column contains additional attributes in JSON format</li>
+<li>The <code>usergroup_id</code> and <code>user_id</code> fields form a composite primary key</li>
+<li>Requires the <code>usergroups:read</code> scope</li>
+<li>Supports LIMIT and OFFSET clauses for pagination</li>
+<li>To avoid excessive API calls and potential rate limiting, consider using materialized views instead of direct joins</li>
 </ul>
-<h3 id="oauth-applications">OAuth Applications</h3>
-<p>This is a list of OAuth applications for an instance.</p>
-<p>Ref: <a href="https://clerk.com/docs/reference/backend-api/tag/OAuth-Applications#operation/ListOAuthApplications">Clerk API docs</a></p>
+<h3 id="files">Files</h3>
+<p>This represents files shared in the workspace.</p>
+<p>Ref: <a href="https://api.slack.com/methods/files.list">Slack files.list API</a></p>
 <h4 id="operations_5">Operations</h4>
 <table>
 <thead>
@@ -3429,7 +3278,7 @@
 </thead>
 <tbody>
 <tr>
-<td>oauth_applications</td>
+<td>files</td>
 <td style="text-align: center;">✅</td>
 <td style="text-align: center;">❌</td>
 <td style="text-align: center;">❌</td>
@@ -3452,30 +3301,30 @@
 <span class="normal">11</span>
 <span class="normal">12</span>
 <span class="normal">13</span>
-<span class="normal">14</span>
-<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">clerk</span><span class="p">.</span><span class="n">oauth_applications</span><span class="w"> </span><span class="p">(</span>
+<span class="normal">14</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">slack</span><span class="p">.</span><span class="n">files</span><span class="w"> </span><span class="p">(</span>
 <span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
 <span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">instance_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">client_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="k">public</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span>
-<span class="w">  </span><span class="n">scopes</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="w">  </span><span class="n">title</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">mimetype</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="k">size</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
+<span class="w">  </span><span class="n">url_private</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">user_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">created</span><span class="w"> </span><span class="k">timestamp</span>
 <span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">clerk_server</span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;oauth_applications&#39;</span>
-<span class="w">  </span><span class="p">);</span>
+<span class="n">server</span><span class="w"> </span><span class="n">slack_server</span>
+<span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">resource</span><span class="w"> </span><span class="s1">&#39;files&#39;</span>
+<span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 <h4 id="notes_5">Notes</h4>
 <ul>
-<li>The <code>attrs</code> column contains additional attributes in JSON format</li>
+<li>The <code>id</code> field is the file ID and is used as the primary key</li>
+<li>Requires the <code>files:read</code> scope</li>
+<li>Supports query pushdown for filtering by channel or user</li>
 </ul>
-<h3 id="organizations">Organizations</h3>
-<p>This is a list of organizations for an instance.</p>
-<p>Ref: <a href="https://clerk.com/docs/reference/backend-api/tag/Organizations#operation/ListOrganizations">Clerk API docs</a></p>
+<h3 id="team-info">Team Info</h3>
+<p>This represents information about the team/workspace.</p>
+<p>Ref: <a href="https://api.slack.com/methods/team.info">Slack team.info API</a></p>
 <h4 id="operations_6">Operations</h4>
 <table>
 <thead>
@@ -3490,7 +3339,7 @@
 </thead>
 <tbody>
 <tr>
-<td>organizations</td>
+<td>team-info</td>
 <td style="text-align: center;">✅</td>
 <td style="text-align: center;">❌</td>
 <td style="text-align: center;">❌</td>
@@ -3509,363 +3358,261 @@
 <span class="normal"> 7</span>
 <span class="normal"> 8</span>
 <span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">clerk</span><span class="p">.</span><span class="n">organizations</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">slug</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
-<span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">clerk_server</span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;organizations&#39;</span>
-<span class="w">  </span><span class="p">);</span>
-</code></pre></div></td></tr></table></div>
-<h4 id="notes_6">Notes</h4>
-<ul>
-<li>The <code>attrs</code> column contains additional attributes in JSON format</li>
-</ul>
-<h3 id="organization-invitations">Organization Invitations</h3>
-<p>This is a list of organization invitations for an instance.</p>
-<p>Ref: <a href="https://clerk.com/docs/reference/backend-api/tag/Organization-Invitations#operation/ListInstanceOrganizationInvitations">Clerk API docs</a></p>
-<h4 id="operations_7">Operations</h4>
-<table>
-<thead>
-<tr>
-<th>Object</th>
-<th style="text-align: center;">Select</th>
-<th style="text-align: center;">Insert</th>
-<th style="text-align: center;">Update</th>
-<th style="text-align: center;">Delete</th>
-<th style="text-align: center;">Truncate</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>organization_invitations</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-</tr>
-</tbody>
-</table>
-<h4 id="usage_7">Usage</h4>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span>
-<span class="normal">13</span>
-<span class="normal">14</span>
-<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">clerk</span><span class="p">.</span><span class="n">organization_invitations</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">email_address</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="k">role</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">role_name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">organization_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">status</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
-<span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">clerk_server</span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;organization_invitations&#39;</span>
-<span class="w">  </span><span class="p">);</span>
-</code></pre></div></td></tr></table></div>
-<h4 id="notes_7">Notes</h4>
-<ul>
-<li>The <code>attrs</code> column contains additional attributes in JSON format</li>
-</ul>
-<h3 id="organization-memberships">Organization Memberships</h3>
-<p>This is a list of organization user memberships for an instance.</p>
-<p>Ref: <a href="https://clerk.com/docs/reference/backend-api/tag/Organization-Memberships#operation/InstanceGetOrganizationMemberships">Clerk API docs</a></p>
-<h4 id="operations_8">Operations</h4>
-<table>
-<thead>
-<tr>
-<th>Object</th>
-<th style="text-align: center;">Select</th>
-<th style="text-align: center;">Insert</th>
-<th style="text-align: center;">Update</th>
-<th style="text-align: center;">Delete</th>
-<th style="text-align: center;">Truncate</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>organization_memberships</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-</tr>
-</tbody>
-</table>
-<h4 id="usage_8">Usage</h4>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">clerk</span><span class="p">.</span><span class="n">organization_memberships</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="k">role</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">role_name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
-<span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">clerk_server</span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;organization_memberships&#39;</span>
-<span class="w">  </span><span class="p">);</span>
-</code></pre></div></td></tr></table></div>
-<h4 id="notes_8">Notes</h4>
-<ul>
-<li>The <code>attrs</code> column contains additional attributes in JSON format</li>
-</ul>
-<h3 id="redirect-urls">Redirect URLs</h3>
-<p>This is a list of all whitelisted redirect urls for the instance.</p>
-<p>Ref: <a href="https://clerk.com/docs/reference/backend-api/tag/Redirect-URLs#operation/ListRedirectURLs">Clerk API docs</a></p>
-<h4 id="operations_9">Operations</h4>
-<table>
-<thead>
-<tr>
-<th>Object</th>
-<th style="text-align: center;">Select</th>
-<th style="text-align: center;">Insert</th>
-<th style="text-align: center;">Update</th>
-<th style="text-align: center;">Delete</th>
-<th style="text-align: center;">Truncate</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>redirect_urls</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-</tr>
-</tbody>
-</table>
-<h4 id="usage_9">Usage</h4>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">clerk</span><span class="p">.</span><span class="n">redirect_urls</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">url</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
-<span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">clerk_server</span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;redirect_urls&#39;</span>
-<span class="w">  </span><span class="p">);</span>
-</code></pre></div></td></tr></table></div>
-<h4 id="notes_9">Notes</h4>
-<ul>
-<li>The <code>attrs</code> column contains additional attributes in JSON format</li>
-</ul>
-<h3 id="saml-connections">SAML Connections</h3>
-<p>This is a list of SAML Connections for an instance.</p>
-<p>Ref: <a href="https://clerk.com/docs/reference/backend-api/tag/SAML-Connections#operation/ListSAMLConnections">Clerk API docs</a></p>
-<h4 id="operations_10">Operations</h4>
-<table>
-<thead>
-<tr>
-<th>Object</th>
-<th style="text-align: center;">Select</th>
-<th style="text-align: center;">Insert</th>
-<th style="text-align: center;">Update</th>
-<th style="text-align: center;">Delete</th>
-<th style="text-align: center;">Truncate</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>saml_connections</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-</tr>
-</tbody>
-</table>
-<h4 id="usage_10">Usage</h4>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span>
-<span class="normal">13</span>
-<span class="normal">14</span>
-<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">clerk</span><span class="p">.</span><span class="n">saml_connections</span><span class="w"> </span><span class="p">(</span>
+<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">slack</span><span class="p">.</span><span class="n">team_info</span><span class="w"> </span><span class="p">(</span>
 <span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
 <span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
 <span class="w">  </span><span class="k">domain</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">active</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span>
-<span class="w">  </span><span class="n">provider</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">user_count</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
-<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="w">  </span><span class="n">email_domain</span><span class="w"> </span><span class="nb">text</span>
 <span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">clerk_server</span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;saml_connections&#39;</span>
-<span class="w">  </span><span class="p">);</span>
+<span class="n">server</span><span class="w"> </span><span class="n">slack_server</span>
+<span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">resource</span><span class="w"> </span><span class="s1">&#39;team-info&#39;</span>
+<span class="p">);</span>
 </code></pre></div></td></tr></table></div>
-<h4 id="notes_10">Notes</h4>
+<h4 id="notes_6">Notes</h4>
 <ul>
-<li>The <code>attrs</code> column contains additional attributes in JSON format</li>
+<li>Returns a single row with team information</li>
+<li>No special scopes required beyond authentication</li>
 </ul>
-<h3 id="users">Users</h3>
-<p>This is a list of all users.</p>
-<p>Ref: <a href="https://clerk.com/docs/reference/backend-api/tag/Users#operation/GetUserList">Clerk API docs</a></p>
-<h4 id="operations_11">Operations</h4>
+<h2 id="query-pushdown-support">Query Pushdown Support</h2>
+<p>This FDW supports the following condition pushdowns:</p>
 <table>
 <thead>
 <tr>
-<th>Object</th>
-<th style="text-align: center;">Select</th>
-<th style="text-align: center;">Insert</th>
-<th style="text-align: center;">Update</th>
-<th style="text-align: center;">Delete</th>
-<th style="text-align: center;">Truncate</th>
+<th>Resource</th>
+<th>Supported Filters</th>
+<th>Sorting</th>
+<th>Limit/Offset</th>
 </tr>
 </thead>
 <tbody>
 <tr>
+<td>messages</td>
+<td>channel_id, oldest, latest</td>
+<td>No</td>
+<td>Yes*</td>
+</tr>
+<tr>
 <td>users</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
+<td>name, email, team_id</td>
+<td>name, real_name, email</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>usergroups</td>
+<td>team_id, include_disabled</td>
+<td>name, handle, date_create, date_update</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>usergroup_members</td>
+<td><em>(no filter support)</em></td>
+<td>No</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>channels</td>
+<td>types (public/private)</td>
+<td>No</td>
+<td>Yes*</td>
+</tr>
+<tr>
+<td>files</td>
+<td>channel_id, user_id, ts_from, ts_to</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td>team-info</td>
+<td><em>(no filter support)</em></td>
+<td>No</td>
+<td>No</td>
 </tr>
 </tbody>
 </table>
-<h4 id="usage_11">Usage</h4>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span>
-<span class="normal">13</span>
-<span class="normal">14</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">clerk</span><span class="p">.</span><span class="n">users</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">external_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">username</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">first_name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">last_name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
-<span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">clerk_server</span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;users&#39;</span>
-<span class="w">  </span><span class="p">);</span>
-</code></pre></div></td></tr></table></div>
-<h4 id="notes_11">Notes</h4>
-<ul>
-<li>The <code>attrs</code> column contains additional attributes in JSON format</li>
-</ul>
-<h2 id="query-pushdown-support">Query Pushdown Support</h2>
-<p>This FDW doesn't support query pushdown.</p>
+<p>* Pagination is supported through cursor-based pagination from the Slack API</p>
 <h2 id="supported-data-types">Supported Data Types</h2>
 <table>
 <thead>
 <tr>
 <th>Postgres Data Type</th>
-<th>Clerk Data Type</th>
+<th>Slack JSON Type</th>
 </tr>
 </thead>
 <tbody>
 <tr>
+<td>text</td>
+<td>string</td>
+</tr>
+<tr>
 <td>boolean</td>
-<td>Boolean</td>
+<td>boolean</td>
+</tr>
+<tr>
+<td>integer</td>
+<td>number</td>
 </tr>
 <tr>
 <td>bigint</td>
-<td>Number</td>
-</tr>
-<tr>
-<td>double precision</td>
-<td>Number</td>
-</tr>
-<tr>
-<td>text</td>
-<td>String</td>
+<td>number</td>
 </tr>
 <tr>
 <td>timestamp</td>
-<td>Time</td>
-</tr>
-<tr>
-<td>jsonb</td>
-<td>Json</td>
+<td>string (Unix timestamp)</td>
 </tr>
 </tbody>
 </table>
-<p>The Clerk API uses JSON formatted data, please refer to <a href="https://clerk.com/docs/reference/backend-api">Clerk Backend API docs</a> for more details.</p>
+<h2 id="required-slack-api-scopes">Required Slack API Scopes</h2>
+<p>Each entity type in the Slack FDW requires specific API scopes. If you get a <code>missing_scope</code> error, you may need to add additional scopes and reinstall your app to the workspace.</p>
+<table>
+<thead>
+<tr>
+<th>Entity Type</th>
+<th>Required Scopes</th>
+<th>Error If Missing</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>users</td>
+<td><code>users:read</code></td>
+<td>"The token used is not granted the required scopes"</td>
+</tr>
+<tr>
+<td>users (emails)</td>
+<td><code>users:read.email</code></td>
+<td>"missing_scope" on email fields</td>
+</tr>
+<tr>
+<td>usergroups</td>
+<td><code>usergroups:read</code></td>
+<td>"missing_scope" when querying user groups</td>
+</tr>
+<tr>
+<td>usergroup_members</td>
+<td><code>usergroups:read</code></td>
+<td>"missing_scope" when querying user group members</td>
+</tr>
+<tr>
+<td>channels</td>
+<td><code>channels:read</code></td>
+<td>"missing_scope" when querying channels</td>
+</tr>
+<tr>
+<td>messages</td>
+<td><code>channels:history</code>, <code>channels:read</code></td>
+<td>"missing_scope" when querying messages</td>
+</tr>
+<tr>
+<td>files</td>
+<td><code>files:read</code></td>
+<td>"missing_scope" when querying files</td>
+</tr>
+<tr>
+<td>team-info</td>
+<td><code>team:read</code></td>
+<td>"missing_scope" when querying team info</td>
+</tr>
+</tbody>
+</table>
+<h3 id="adding-scopes-to-an-existing-app">Adding Scopes to an Existing App</h3>
+<p>If you need to add scopes to an existing Slack app:</p>
+<ol>
+<li>Go to <a href="https://api.slack.com/apps">Your Slack Apps</a></li>
+<li>Select your app</li>
+<li>Click "OAuth &amp; Permissions" in the sidebar</li>
+<li>Under "Bot Token Scopes", click "Add an OAuth Scope"</li>
+<li>Add any missing scopes from the table above</li>
+<li>Scroll up and click "Reinstall to Workspace"</li>
+<li>Approve the new permissions</li>
+<li>Copy the new Bot User OAuth Token (it may have changed)</li>
+<li>Update your token in your database server configuration</li>
+</ol>
 <h2 id="limitations">Limitations</h2>
 <p>This section describes important limitations and considerations when using this FDW:</p>
 <ul>
-<li>Large result sets may experience slower performance due to full data transfer requirement</li>
-<li>Query pushdown is not supported</li>
-<li>Materialized views using these foreign tables may fail during logical backups</li>
+<li>Large result sets may experience slower performance due to pagination requirements</li>
+<li>Rate limits are enforced by the Slack API (Tier 2: 20+ requests/minute)</li>
+<li>Messages older than the workspace retention policy are not accessible</li>
+<li>Private channels require the <code>groups:history</code> and <code>groups:read</code> scopes</li>
+<li>Direct messages require the <code>im:history</code> and <code>im:read</code> scopes</li>
 </ul>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="error-slack-api-error-missing_scope">Error: "Slack API error: missing_scope"</h3>
+<p>This error occurs when your Slack token doesn't have all the required OAuth scopes for the resource you're trying to access.</p>
+<p><strong>Solution:</strong>
+1. Check the <a href="#required-slack-api-scopes">Required Slack API Scopes</a> section above to see which scopes are needed for the entity you're querying
+2. Follow the steps in the "Adding Scopes to an Existing App" section to add the missing scopes
+3. Reinstall your app to the workspace
+4. Update your token in the PostgreSQL server configuration</p>
+<h3 id="error-channel_id-is-required-for-querying-messages">Error: "channel_id is required for querying messages"</h3>
+<p>When querying the <code>messages</code> table, you must include a <code>WHERE channel_id = 'CXXXXXXXX'</code> clause.</p>
+<p><strong>Solution:</strong>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Incorrect (will error):</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">slack</span><span class="p">.</span><span class="n">messages</span><span class="w"> </span><span class="k">LIMIT</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span>
+
+<span class="c1">-- Correct:</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">slack</span><span class="p">.</span><span class="n">messages</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">channel_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;C01234ABCDE&#39;</span><span class="w"> </span><span class="k">LIMIT</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div></p>
+<h3 id="error-rate-limit-exceeded">Error: "Rate limit exceeded"</h3>
+<p>Slack's API enforces rate limits (Tier 2: ~20 requests/minute). </p>
+<p><strong>Solution:</strong>
+- Add more specific WHERE clauses to reduce the number of API calls
+- Use smaller LIMIT values
+- Consider materialized views for frequent queries:
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span>
+<span class="normal">7</span>
+<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">CREATE</span><span class="w"> </span><span class="n">MATERIALIZED</span><span class="w"> </span><span class="k">VIEW</span><span class="w"> </span><span class="n">slack_users</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">slack</span><span class="p">.</span><span class="n">users</span><span class="p">;</span>
+
+<span class="c1">-- Query the materialized view instead</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">slack_users</span><span class="p">;</span>
+
+<span class="c1">-- Refresh when needed (less frequently)</span>
+<span class="n">REFRESH</span><span class="w"> </span><span class="n">MATERIALIZED</span><span class="w"> </span><span class="k">VIEW</span><span class="w"> </span><span class="n">slack_users</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div></p>
 <h2 id="examples">Examples</h2>
-<p>Below are some examples on how to use Clerk foreign tables.</p>
-<h3 id="basic-example">Basic example</h3>
+<p>Below are some examples on how to use Slack foreign tables.</p>
+<h3 id="basic-example">Basic Example</h3>
 <p>This example will create a "foreign table" inside your Postgres database and query its data.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">slack</span><span class="p">.</span><span class="n">channels</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">is_private</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span>
+<span class="w">  </span><span class="n">created</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
+<span class="w">  </span><span class="n">creator</span><span class="w"> </span><span class="nb">text</span>
+<span class="p">)</span>
+<span class="n">server</span><span class="w"> </span><span class="n">slack_server</span>
+<span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">resource</span><span class="w"> </span><span class="s1">&#39;channels&#39;</span>
+<span class="p">);</span>
+
+<span class="c1">-- Query all channels</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">slack</span><span class="p">.</span><span class="n">channels</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<h3 id="user-information">User Information</h3>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -3882,37 +3629,171 @@
 <span class="normal">14</span>
 <span class="normal">15</span>
 <span class="normal">16</span>
-<span class="normal">17</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">clerk</span><span class="p">.</span><span class="n">users</span><span class="w"> </span><span class="p">(</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span>
+<span class="normal">40</span>
+<span class="normal">41</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">slack</span><span class="p">.</span><span class="n">users</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="c1">-- Basic subset of fields</span>
 <span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">external_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">username</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">first_name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">last_name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
-<span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">clerk_server</span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;users&#39;</span>
-<span class="w">  </span><span class="p">);</span>
+<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">real_name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">email</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">is_admin</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span>
+<span class="w">  </span><span class="n">is_bot</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span>
 
-<span class="c1">-- query all users</span>
-<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">clerk</span><span class="p">.</span><span class="n">users</span><span class="p">;</span>
+<span class="w">  </span><span class="c1">-- Additional useful fields</span>
+<span class="w">  </span><span class="n">display_name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">phone</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">title</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">status_text</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">status_emoji</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">team_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">image_192</span><span class="w"> </span><span class="nb">text</span>
+<span class="p">)</span>
+<span class="n">server</span><span class="w"> </span><span class="n">slack_server</span>
+<span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">resource</span><span class="w"> </span><span class="s1">&#39;users&#39;</span>
+<span class="p">);</span>
+
+<span class="c1">-- List all admin users</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">slack</span><span class="p">.</span><span class="n">users</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">is_admin</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">true</span><span class="p">;</span>
+
+<span class="c1">-- Get users ordered by name</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">slack</span><span class="p">.</span><span class="n">users</span><span class="w"> </span><span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">name</span><span class="p">;</span>
+
+<span class="c1">-- Get top 5 non-bot users ordered by real_name </span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">slack</span><span class="p">.</span><span class="n">users</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">is_bot</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">false</span><span class="w"> </span><span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">real_name</span><span class="w"> </span><span class="k">limit</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span>
+
+<span class="c1">-- Filter users by email domain</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">slack</span><span class="p">.</span><span class="n">users</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">email</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;%@example.com&#39;</span><span class="w"> </span><span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">name</span><span class="p">;</span>
+
+<span class="c1">-- Find user by name (pushes filter down to API)</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">slack</span><span class="p">.</span><span class="n">users</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;johndoe&#39;</span><span class="p">;</span>
+
+<span class="c1">-- Show user with their profile picture</span>
+<span class="k">select</span><span class="w"> </span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">real_name</span><span class="p">,</span><span class="w"> </span><span class="n">image_192</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">profile_picture</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">slack</span><span class="p">.</span><span class="n">users</span><span class="w"> </span>
+<span class="k">where</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;johndoe&#39;</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
-<p><code>attrs</code> is a special column which stores all the object attributes in JSON format, you can extract any attributes needed from it. See more examples below.</p>
-<h3 id="query-json-attributes">Query JSON attributes</h3>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- extract all email addresses from user</span>
-<span class="k">select</span>
-<span class="w">  </span><span class="n">u</span><span class="p">.</span><span class="n">id</span><span class="p">,</span>
-<span class="w">  </span><span class="n">e</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;email_address&#39;</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">email</span>
-<span class="k">from</span><span class="w"> </span><span class="n">clerk</span><span class="p">.</span><span class="n">users</span><span class="w"> </span><span class="n">u</span>
-<span class="w">  </span><span class="k">cross</span><span class="w"> </span><span class="k">join</span><span class="w"> </span><span class="n">json_array_elements</span><span class="p">((</span><span class="n">attrs</span><span class="o">-&gt;</span><span class="s1">&#39;email_addresses&#39;</span><span class="p">)::</span><span class="n">json</span><span class="p">)</span><span class="w"> </span><span class="n">e</span><span class="p">;</span>
+<h3 id="user-groups-example">User Groups Example</h3>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Create tables</span>
+<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">slack</span><span class="p">.</span><span class="n">usergroups</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">handle</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">description</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">user_count</span><span class="w"> </span><span class="nb">integer</span>
+<span class="p">)</span>
+<span class="n">server</span><span class="w"> </span><span class="n">slack_server</span>
+<span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">resource</span><span class="w"> </span><span class="s1">&#39;usergroups&#39;</span>
+<span class="p">);</span>
+
+<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">slack</span><span class="p">.</span><span class="n">usergroup_members</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">usergroup_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">usergroup_name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">usergroup_handle</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">user_id</span><span class="w"> </span><span class="nb">text</span>
+<span class="p">)</span>
+<span class="n">server</span><span class="w"> </span><span class="n">slack_server</span>
+<span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">resource</span><span class="w"> </span><span class="s1">&#39;usergroup_members&#39;</span>
+<span class="p">);</span>
+
+<span class="c1">-- Get all user groups</span>
+<span class="k">select</span><span class="w"> </span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">handle</span><span class="p">,</span><span class="w"> </span><span class="n">description</span><span class="p">,</span><span class="w"> </span><span class="n">user_count</span><span class="w"> </span>
+<span class="k">from</span><span class="w"> </span><span class="n">slack</span><span class="p">.</span><span class="n">usergroups</span><span class="w"> </span>
+<span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">name</span><span class="p">;</span>
+
+<span class="c1">-- Get all members of a user group (just IDs)</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">slack</span><span class="p">.</span><span class="n">usergroup_members</span><span class="w"> </span>
+<span class="k">where</span><span class="w"> </span><span class="n">usergroup_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;S01234ABCDE&#39;</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<h3 id="messages-from-a-specific-channel">Messages from a Specific Channel</h3>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">slack</span><span class="p">.</span><span class="n">messages</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">ts</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">user_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">channel_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="nb">text</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">thread_ts</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">reply_count</span><span class="w"> </span><span class="nb">integer</span>
+<span class="p">)</span>
+<span class="n">server</span><span class="w"> </span><span class="n">slack_server</span>
+<span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">resource</span><span class="w"> </span><span class="s1">&#39;messages&#39;</span>
+<span class="p">);</span>
+
+<span class="c1">-- Get messages from a specific channel</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">slack</span><span class="p">.</span><span class="n">messages</span><span class="w"> </span>
+<span class="k">where</span><span class="w"> </span><span class="n">channel_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;C01234ABCDE&#39;</span>
+<span class="k">limit</span><span class="w"> </span><span class="mi">100</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 
 
@@ -3946,7 +3827,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../calendly/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Calendly">
+          <a href="../paddle/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Paddle">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
@@ -3956,20 +3837,20 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                Calendly
+                Paddle
               </div>
             </div>
           </a>
         
         
           
-          <a href="../cfd1/" class="md-footer__link md-footer__link--next" aria-label="Next: Cloudflare D1">
+          <a href="../snowflake/" class="md-footer__link md-footer__link--next" aria-label="Next: Snowflake">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Cloudflare D1
+                Snowflake
               </div>
             </div>
             <div class="md-footer__button md-icon">
