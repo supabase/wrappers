@@ -2473,6 +2473,12 @@
 <span class="w">  </span><span class="s1">&#39;Redis connection URL for Wrappers&#39;</span>
 <span class="p">);</span>
 </code></pre></div></td></tr></table></div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>To connect to Redis over SSL/TLS, you can use <code>rediss://</code> protocol. For example,</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code>rediss://username:password@my-redis-12345.upstash.io:6379/#insecure
+</code></pre></div></td></tr></table></div>
+</div>
 <h3 id="connecting-to-redis">Connecting to Redis</h3>
 <p>We need to provide Postgres with the credentials to connect to Redis. We can do this using the <code>create server</code> command:</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">With Vault</label><label for="__tabbed_1_2">Without Vault</label></div>
