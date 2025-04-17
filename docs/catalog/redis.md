@@ -48,6 +48,14 @@ select vault.create_secret(
 );
 ```
 
+!!! note
+
+    To connect to Redis over SSL/TLS, you can use `rediss://` protocol. For example,
+
+    ```
+    rediss://username:password@my-redis-12345.upstash.io:6379/#insecure
+    ```
+
 ### Connecting to Redis
 
 We need to provide Postgres with the credentials to connect to Redis. We can do this using the `create server` command:
