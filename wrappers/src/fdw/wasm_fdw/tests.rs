@@ -74,24 +74,10 @@ mod tests {
                 None,
             )
             .unwrap();
+            c.update(r#"CREATE SCHEMA IF NOT EXISTS paddle"#, None, None)
+                .unwrap();
             c.update(
-                r#"
-                  CREATE FOREIGN TABLE paddle_customers (
-                    id text,
-                    name text,
-                    email text,
-                    status text,
-                    custom_data jsonb,
-                    created_at timestamp,
-                    updated_at timestamp,
-                    attrs jsonb
-                  )
-                  SERVER paddle_server
-                  OPTIONS (
-                    object 'customers',
-                    rowid_column 'id'
-                  )
-             "#,
+                r#"IMPORT FOREIGN SCHEMA paddle FROM SERVER paddle_server INTO paddle"#,
                 None,
                 None,
             )
@@ -99,7 +85,7 @@ mod tests {
 
             let results = c
                 .select(
-                    "SELECT * FROM paddle_customers WHERE id = 'ctm_01hymwgpkx639a6mkvg99563sp'",
+                    "SELECT * FROM paddle.customers WHERE id = 'ctm_01hymwgpkx639a6mkvg99563sp'",
                     None,
                     None,
                 )

@@ -19,4 +19,4 @@ package = "supabase:clerk-fdw"
 path = "wit"
 
 [package.metadata.component.target.dependencies]
-"supabase:wrappers" = { path = "../../wit" }
+"supabase:wrappers" = { path = "../../wit/v1" }

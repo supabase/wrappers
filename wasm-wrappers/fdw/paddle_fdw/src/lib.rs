@@ -6,7 +6,10 @@ use bindings::{
     exports::supabase::wrappers::routines::Guest,
     supabase::wrappers::{
         http, stats, time,
-        types::{Cell, Column, Context, FdwError, FdwResult, OptionsType, Row, TypeOid, Value},
+        types::{
+            Cell, Column, Context, FdwError, FdwResult, ImportForeignSchemaStmt, OptionsType, Row,
+            TypeOid, Value,
+        },
         utils,
     },
 };
@@ -191,6 +194,12 @@ impl PaddleFdw {
                 }
             }
             TypeOid::Json => src.as_object().map(|_| Cell::Json(src.to_string())),
+            _ => {
+                return Err(format!(
+                    "target column '{}' type is not supported",
+                    tgt_col_name
+                ));
+            }
         };
 
         Ok(cell)
@@ -234,7 +243,7 @@ impl Guest for PaddleFdw {
         Self::init();
         let this = Self::this_mut();
 
-        let opts = ctx.get_options(OptionsType::Server);
+        let opts = ctx.get_options(&OptionsType::Server);
         this.base_url = opts.require_or("api_url", "https://api.paddle.com/");
         let api_key = match opts.get("api_key") {
             Some(key) => key,
@@ -262,7 +271,7 @@ impl Guest for PaddleFdw {
 
     fn begin_scan(ctx: &Context) -> FdwResult {
         let this = Self::this_mut();
-        let opts = ctx.get_options(OptionsType::Table);
+        let opts = ctx.get_options(&OptionsType::Table);
         this.object = opts.require("object")?;
 
         this.url = None;
@@ -314,7 +323,7 @@ impl Guest for PaddleFdw {
 
     fn begin_modify(ctx: &Context) -> FdwResult {
         let this = Self::this_mut();
-        let opts = ctx.get_options(OptionsType::Table);
+        let opts = ctx.get_options(&OptionsType::Table);
         this.object = opts.require("object")?;
         this.rowid_col = opts.require("rowid_column")?;
         Ok(())
@@ -362,6 +371,63 @@ impl Guest for PaddleFdw {
 
     fn end_modify(_ctx: &Context) -> FdwResult {
         Ok(())
+    }
+
+    fn import_foreign_schema(
+        _ctx: &Context,
+        stmt: ImportForeignSchemaStmt,
+    ) -> Result<Vec<String>, FdwError> {
+        let ret = vec![
+            format!(
+                r#"create foreign table if not exists customers (
+                id text,
+                name text,
+                email text,
+                status text,
+                custom_data jsonb,
+                created_at timestamptz,
+                updated_at timestamp,
+                attrs jsonb
+            )
+            server {} options (
+                object 'customers',
+                rowid_column 'id'
+            )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists products (
+                id text,
+                name text,
+                tax_category text,
+                status text,
+                description text,
+                created_at timestamp,
+                updated_at timestamp,
+                attrs jsonb
+            )
+            server {} options (
+                object 'products',
+                rowid_column 'id'
+            )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists subscriptions (
+                id text,
+                status text,
+                created_at timestamp,
+                updated_at timestamp,
+                attrs jsonb
+            )
+            server {} options (
+                object 'subscriptions',
+                rowid_column 'id'
+            )"#,
+                stmt.server_name,
+            ),
+        ];
+        Ok(ret)
     }
 }
 

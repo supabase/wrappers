@@ -8,6 +8,7 @@ use std::marker::PhantomData;
 use crate::instance;
 use crate::options::options_to_hashmap;
 use crate::prelude::ForeignDataWrapper;
+use crate::utils::ReportableError;
 
 // Fdw private state for import_foreign_schema
 struct FdwState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
@@ -27,7 +28,7 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwState<E, W> {
 
 #[repr(u32)]
 #[derive(Debug, Clone)]
-pub enum ListType {
+pub enum ImportSchemaType {
     FdwImportSchemaAll = pgrx::pg_sys::ImportForeignSchemaType::FDW_IMPORT_SCHEMA_ALL,
     FdwImportSchemaLimitTo = pgrx::pg_sys::ImportForeignSchemaType::FDW_IMPORT_SCHEMA_LIMIT_TO,
     FdwImportSchemaExcept = pgrx::pg_sys::ImportForeignSchemaType::FDW_IMPORT_SCHEMA_EXCEPT,
@@ -38,7 +39,7 @@ pub struct ImportForeignSchemaStmt {
     pub server_name: String,
     pub remote_schema: String,
     pub local_schema: String,
-    pub list_type: ListType,
+    pub list_type: ImportSchemaType,
     pub table_list: Vec<String>,
     pub options: std::collections::HashMap<String, String>,
 }
@@ -69,17 +70,17 @@ pub(super) extern "C" fn import_foreign_schema<E: Into<ErrorReport>, W: ForeignD
 
             list_type: match (*stmt).list_type {
                 pgrx::pg_sys::ImportForeignSchemaType::FDW_IMPORT_SCHEMA_ALL => {
-                    ListType::FdwImportSchemaAll
+                    ImportSchemaType::FdwImportSchemaAll
                 }
                 pgrx::pg_sys::ImportForeignSchemaType::FDW_IMPORT_SCHEMA_LIMIT_TO => {
-                    ListType::FdwImportSchemaLimitTo
+                    ImportSchemaType::FdwImportSchemaLimitTo
                 }
                 pgrx::pg_sys::ImportForeignSchemaType::FDW_IMPORT_SCHEMA_EXCEPT => {
-                    ListType::FdwImportSchemaExcept
+                    ImportSchemaType::FdwImportSchemaExcept
                 }
                 // This should not happen, it's okay to default to FdwImportSchemaAll
                 // because PostgreSQL will filter the list anyway.
-                _ => ListType::FdwImportSchemaAll,
+                _ => ImportSchemaType::FdwImportSchemaAll,
             },
 
             table_list: {
@@ -111,7 +112,8 @@ pub(super) extern "C" fn import_foreign_schema<E: Into<ErrorReport>, W: ForeignD
         let mut state = FdwState::<E, W>::new(server_oid);
         create_stmts = state
             .instance
-            .import_foreign_schema(import_foreign_schema_stmt);
+            .import_foreign_schema(import_foreign_schema_stmt)
+            .report_unwrap();
     }
 
     pgrx::memcx::current_context(|mcx| {

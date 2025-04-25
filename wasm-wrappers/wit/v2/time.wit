@@ -1,0 +1,19 @@
+interface time {
+    type time-error = string;
+    type time-result = result<s64, time-error>;
+
+    // get seconds since Unix epoch
+    epoch-secs: func() -> s64;
+
+    // parse RFC3339 string to microseconds since Unix epoch
+    parse-from-rfc3339: func(s: string) -> time-result;
+
+    // parse string from an user-specified format to microseconds since Unix epoch
+    parse-from-str: func(s: string, fmt: string) -> time-result;
+
+    // convert microseconds since Unix epoch to RFC3339 string
+    epoch-ms-to-rfc3339: func(msecs: s64) -> result<string, time-error>;
+
+    // sleep for a while
+    sleep: func(millis: u64);
+}

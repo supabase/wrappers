@@ -111,8 +111,11 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
         Ok(())
     }
 
-    fn import_foreign_schema(&mut self, stmt: ImportForeignSchemaStmt) -> Vec<String> {
-        vec![format!(
+    fn import_foreign_schema(
+        &mut self,
+        stmt: ImportForeignSchemaStmt,
+    ) -> CognitoFdwResult<Vec<String>> {
+        Ok(vec![format!(
             r#"create foreign table if not exists users (
                 username text,
                 email text,
@@ -124,7 +127,7 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
             )
             server {} options (object 'users')"#,
             stmt.server_name
-        )]
+        )])
     }
 
     fn validator(

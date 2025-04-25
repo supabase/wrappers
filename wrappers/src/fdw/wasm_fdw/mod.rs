@@ -10,7 +10,7 @@ use thiserror::Error;
 
 use supabase_wrappers::prelude::{CreateRuntimeError, OptionsError};
 
-use self::bindings::supabase::wrappers::types::FdwError as GuestFdwError;
+use self::bindings::v1::supabase::wrappers::types::FdwError as GuestFdwError;
 
 #[derive(Error, Debug)]
 enum WasmFdwError {
@@ -25,6 +25,9 @@ enum WasmFdwError {
 
     #[error("wasmtime error: {0}")]
     Wasmtime(#[from] wasmtime::Error),
+
+    #[error("uuid error: {0}")]
+    Uuid(#[from] uuid::Error),
 
     #[error("warg error: {0}")]
     WargClient(#[from] warg_client::ClientError),

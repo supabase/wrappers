@@ -1,0 +1,11 @@
+interface jwt {
+    type jwt-error = string;
+    type jwt-result = result<string, jwt-error>;
+
+    encode: func(
+        payload: list<tuple<string, string>>,
+        algo: string,
+        key: string,
+        ttl-hours: u32
+    ) -> jwt-result;
+}

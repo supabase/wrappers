@@ -1,15 +1,17 @@
 use reqwest::{
     header::{HeaderMap, HeaderName, HeaderValue},
-    Response, StatusCode,
+    StatusCode,
 };
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 
-use super::super::bindings::supabase::wrappers::http;
+use super::super::bindings::v1::supabase::wrappers::http::{
+    Headers as GuestHeaders, HttpError as GuestHttpError,
+};
 use super::FdwHost;
 
 // convert guest headers to HeaderMap
-fn guest_to_header_map(headers: &http::Headers) -> HeaderMap {
+fn guest_to_header_map(headers: &GuestHeaders) -> HeaderMap {
     let mut header_map = HeaderMap::new();
     for (hdr, value) in headers {
         header_map.insert(
@@ -21,7 +23,7 @@ fn guest_to_header_map(headers: &http::Headers) -> HeaderMap {
 }
 
 // convert HeaderMap to guest headers
-fn header_map_to_guest(headers: &HeaderMap) -> http::Headers {
+fn header_map_to_guest(headers: &HeaderMap) -> GuestHeaders {
     headers
         .iter()
         .map(|(key, value)| {
@@ -34,8 +36,8 @@ fn header_map_to_guest(headers: &HeaderMap) -> http::Headers {
 }
 
 // create http request client with backoff retry
-fn create_client(req: &http::Request) -> Result<ClientWithMiddleware, String> {
-    let headers = guest_to_header_map(&req.headers);
+fn create_client(headers: &GuestHeaders) -> Result<ClientWithMiddleware, GuestHttpError> {
+    let headers = guest_to_header_map(headers);
     let client = reqwest::Client::builder()
         .default_headers(headers)
         .gzip(true)
@@ -47,78 +49,139 @@ fn create_client(req: &http::Request) -> Result<ClientWithMiddleware, String> {
         .build())
 }
 
-impl FdwHost {
-    // make a http request
-    fn http_request(&mut self, req: http::Request) -> http::HttpResult {
-        let client = create_client(&req)?;
-        let resp = self
-            .rt
-            .block_on(
-                match req.method {
-                    http::Method::Get => client.get(req.url),
-                    http::Method::Post => client.post(req.url),
-                    http::Method::Put => client.put(req.url),
-                    http::Method::Patch => client.patch(req.url),
-                    http::Method::Delete => client.delete(req.url),
-                }
-                .body(req.body)
-                .send(),
-            )
-            .map_err(|e| e.to_string())?;
-        self.convert_to_guest_response(resp)
-    }
-
-    // convert reqwest response to guest response
-    fn convert_to_guest_response(&mut self, resp: Response) -> http::HttpResult {
-        let url = resp.url().to_string();
-        let status_code = resp.status().as_u16();
-        let headers = header_map_to_guest(resp.headers());
-        let body = self.rt.block_on(resp.text()).map_err(|e| e.to_string())?;
-        let resp = http::Response {
-            url,
-            status_code,
-            headers,
-            body,
-        };
-        Ok(resp)
+// raise error for http status code
+fn error_for_status(status_code: u16, url: &str) -> Result<(), GuestHttpError> {
+    let status = StatusCode::from_u16(status_code).map_err(|e| e.to_string())?;
+    if status.is_client_error() || status.is_server_error() {
+        Err(format!("HTTP status error ({}) for url ({})", status, url))
+    } else {
+        Ok(())
     }
 }
 
-impl http::Host for FdwHost {
-    #[inline]
-    fn get(&mut self, req: http::Request) -> http::HttpResult {
-        self.http_request(req)
-    }
+const _: () = {
+    use super::super::bindings::v1::supabase::wrappers::http;
 
-    #[inline]
-    fn post(&mut self, req: http::Request) -> http::HttpResult {
-        self.http_request(req)
-    }
+    impl FdwHost {
+        // make a http request
+        fn http_request(&mut self, req: http::Request) -> http::HttpResult {
+            let client = create_client(&req.headers)?;
+            let resp = self
+                .rt
+                .block_on(
+                    match req.method {
+                        http::Method::Get => client.get(req.url),
+                        http::Method::Post => client.post(req.url),
+                        http::Method::Put => client.put(req.url),
+                        http::Method::Patch => client.patch(req.url),
+                        http::Method::Delete => client.delete(req.url),
+                    }
+                    .body(req.body)
+                    .send(),
+                )
+                .map_err(|e| e.to_string())?;
 
-    #[inline]
-    fn put(&mut self, req: http::Request) -> http::HttpResult {
-        self.http_request(req)
-    }
-
-    #[inline]
-    fn patch(&mut self, req: http::Request) -> http::HttpResult {
-        self.http_request(req)
-    }
-
-    #[inline]
-    fn delete(&mut self, req: http::Request) -> http::HttpResult {
-        self.http_request(req)
-    }
-
-    fn error_for_status(&mut self, resp: http::Response) -> Result<(), http::HttpError> {
-        let status = StatusCode::from_u16(resp.status_code).map_err(|e| e.to_string())?;
-        if status.is_client_error() || status.is_server_error() {
-            Err(format!(
-                "HTTP status error ({}) for url ({})",
-                status, resp.url
-            ))
-        } else {
-            Ok(())
+            let url = resp.url().to_string();
+            let status_code = resp.status().as_u16();
+            let headers = header_map_to_guest(resp.headers());
+            let body = self.rt.block_on(resp.text()).map_err(|e| e.to_string())?;
+            Ok(http::Response {
+                url,
+                status_code,
+                headers,
+                body,
+            })
         }
     }
-}
+
+    impl http::Host for FdwHost {
+        fn get(&mut self, req: http::Request) -> http::HttpResult {
+            self.http_request(req)
+        }
+
+        fn post(&mut self, req: http::Request) -> http::HttpResult {
+            self.http_request(req)
+        }
+
+        fn put(&mut self, req: http::Request) -> http::HttpResult {
+            self.http_request(req)
+        }
+
+        fn patch(&mut self, req: http::Request) -> http::HttpResult {
+            self.http_request(req)
+        }
+
+        fn delete(&mut self, req: http::Request) -> http::HttpResult {
+            self.http_request(req)
+        }
+
+        fn error_for_status(&mut self, resp: http::Response) -> Result<(), http::HttpError> {
+            error_for_status(resp.status_code, &resp.url)
+        }
+    }
+};
+
+const _: () = {
+    use super::super::bindings::v1::supabase::wrappers::http as http_v1;
+    use super::super::bindings::v2::supabase::wrappers::http;
+
+    impl From<http::Method> for http_v1::Method {
+        fn from(m: http::Method) -> Self {
+            match m {
+                http::Method::Get => http_v1::Method::Get,
+                http::Method::Post => http_v1::Method::Post,
+                http::Method::Put => http_v1::Method::Put,
+                http::Method::Patch => http_v1::Method::Patch,
+                http::Method::Delete => http_v1::Method::Delete,
+            }
+        }
+    }
+
+    impl From<http::Request> for http_v1::Request {
+        fn from(r: http::Request) -> Self {
+            Self {
+                method: r.method.into(),
+                url: r.url,
+                headers: r.headers,
+                body: r.body,
+            }
+        }
+    }
+
+    impl From<http_v1::Response> for http::Response {
+        fn from(r: http_v1::Response) -> Self {
+            Self {
+                url: r.url,
+                status_code: r.status_code,
+                headers: r.headers,
+                body: r.body,
+            }
+        }
+    }
+
+    impl http::Host for FdwHost {
+        fn get(&mut self, req: http::Request) -> http::HttpResult {
+            self.http_request(req.into()).map(|r| r.into())
+        }
+
+        fn post(&mut self, req: http::Request) -> http::HttpResult {
+            self.http_request(req.into()).map(|r| r.into())
+        }
+
+        fn put(&mut self, req: http::Request) -> http::HttpResult {
+            self.http_request(req.into()).map(|r| r.into())
+        }
+
+        fn patch(&mut self, req: http::Request) -> http::HttpResult {
+            self.http_request(req.into()).map(|r| r.into())
+        }
+
+        fn delete(&mut self, req: http::Request) -> http::HttpResult {
+            self.http_request(req.into()).map(|r| r.into())
+        }
+
+        fn error_for_status(&mut self, resp: http::Response) -> Result<(), http::HttpError> {
+            error_for_status(resp.status_code, &resp.url)
+        }
+    }
+};

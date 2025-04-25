@@ -1,0 +1,11 @@
+interface utils {
+    use types.{cell};
+
+    report-info: func(msg: string);
+    report-notice: func(msg: string);
+    report-warning: func(msg: string);
+    report-error: func(msg: string);
+
+    cell-to-string: func(cell: option<cell>) -> string;
+    get-vault-secret: func(secret-id: string) -> option<string>;
+}
