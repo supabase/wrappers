@@ -2,10 +2,8 @@ name: Deploy docs
 
 on:
   push:
-    branches:
-      - main
-    paths:
-      - "docs/catalog/**"
+    tags:
+      - docs_v*
 
 permissions: {}
 
