@@ -20,7 +20,7 @@ package = "supabase:slack-fdw"
 path = "wit"
 
 [package.metadata.component.target.dependencies]
-"supabase:wrappers" = { path = "../../wit" }
+"supabase:wrappers" = { path = "../../wit/v1" }
 
 [profile.release]
 lto = true

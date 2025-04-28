@@ -1,0 +1,41 @@
+interface routines {
+    use types.{
+        cell, row, import-foreign-schema-stmt, context, fdw-error, fdw-result,
+    };
+
+    // ----------------------------------------------
+    // foreign data wrapper interface functions
+    // ----------------------------------------------
+
+    // define host version requirement, e.g, "^1.2.3"
+    host-version-requirement: func() -> string;
+
+    // fdw initialization
+    init: func(ctx: borrow<context>) -> fdw-result;
+
+    // data scan
+    begin-scan: func(ctx: borrow<context>) -> fdw-result;
+    iter-scan: func(
+        ctx: borrow<context>,
+        row: borrow<row>,
+    ) -> result<option<u32>, fdw-error>;
+    re-scan: func(ctx: borrow<context>) -> fdw-result;
+    end-scan: func(ctx: borrow<context>) -> fdw-result;
+
+    // data modify
+    begin-modify: func(ctx: borrow<context>) -> fdw-result;
+    insert: func(ctx: borrow<context>, row: borrow<row>) -> fdw-result;
+    update: func(
+        ctx: borrow<context>,
+        rowid: cell,
+        new-row: borrow<row>,
+    ) -> fdw-result;
+    delete: func(ctx: borrow<context>, rowid: cell) -> fdw-result;
+    end-modify: func(ctx: borrow<context>) -> fdw-result;
+
+    // import foreign schema
+    import-foreign-schema: func(
+        ctx: borrow<context>,
+        stmt: import-foreign-schema-stmt,
+    ) -> result<list<string>, fdw-error>;
+}

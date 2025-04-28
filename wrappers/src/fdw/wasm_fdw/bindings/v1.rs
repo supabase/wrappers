@@ -6,12 +6,13 @@ use pgrx::{
 use wasmtime::component::bindgen;
 use wasmtime::Error as WasmError;
 
+use super::{PG_EPOCH_MS, PG_EPOCH_SEC};
 use crate::stats::Metric as HostMetric;
 use supabase_wrappers::prelude::{Cell as HostCell, Param as HostParam, Value as HostValue};
 
-bindgen!(in "../wasm-wrappers/wit");
+bindgen!("wrappers" in "../wasm-wrappers/wit/v1");
 
-use super::bindings::supabase::wrappers::{
+use self::supabase::wrappers::{
     stats::Metric as GuestMetric,
     types::{Cell as GuestCell, Param as GuestParam, Value as GuestValue},
 };
@@ -38,10 +39,10 @@ impl TryFrom<GuestCell> for HostCell {
                 Ok(Self::Date(Date::from(ts)))
             }
             // convert 'pg epoch' (2000-01-01 00:00:00) to unix epoch
-            GuestCell::Timestamp(v) => Timestamp::try_from(v - 946_684_800_000_000)
+            GuestCell::Timestamp(v) => Timestamp::try_from(v - PG_EPOCH_MS)
                 .map(Self::Timestamp)
                 .map_err(Self::Error::msg),
-            GuestCell::Timestamptz(v) => TimestampWithTimeZone::try_from(v - 946_684_800_000_000)
+            GuestCell::Timestamptz(v) => TimestampWithTimeZone::try_from(v - PG_EPOCH_MS)
                 .map(Self::Timestamptz)
                 .map_err(Self::Error::msg),
             GuestCell::Json(v) => {
@@ -67,15 +68,15 @@ impl From<&HostCell> for GuestCell {
             HostCell::Date(v) => {
                 // convert 'pg epoch' (2000-01-01 00:00:00) to unix epoch
                 let ts = Timestamp::from(*v);
-                Self::Date(ts.into_inner() / 1_000_000 + 946_684_800)
+                Self::Date(ts.into_inner() / 1_000_000 + PG_EPOCH_SEC)
             }
             HostCell::Timestamp(v) => {
                 // convert 'pg epoch' (2000-01-01 00:00:00) in macroseconds to unix epoch
-                Self::Timestamp(v.into_inner() + 946_684_800_000_000)
+                Self::Timestamp(v.into_inner() + PG_EPOCH_MS)
             }
             HostCell::Timestamptz(v) => {
                 // convert 'pg epoch' (2000-01-01 00:00:00) in macroseconds to unix epoch
-                Self::Timestamptz(v.into_inner() + 946_684_800_000_000)
+                Self::Timestamptz(v.into_inner() + PG_EPOCH_MS)
             }
             HostCell::Json(v) => Self::Json(v.0.to_string()),
             _ => todo!("Add array type support for Wasm FDW"),

@@ -122,6 +122,25 @@ Supported objects are listed below:
 
 ## Entities
 
+We can use SQL [import foreign schema](https://www.postgresql.org/docs/current/sql-importforeignschema.html) to import foreign table definitions from Paddle.
+
+For example, using below SQL can automatically create foreign tables in the `paddle` schema.
+
+```sql
+-- create all the foreign tables
+import foreign schema paddle from server paddle_server into paddle;
+
+-- or, create selected tables only
+import foreign schema paddle
+   limit to ("products", "customers")
+   from server paddle_server into paddle;
+
+-- or, create all foreign tables except selected tables
+import foreign schema paddle
+   except ("customers")
+   from server paddle_server into paddle;
+```
+
 ### Products
 
 This is an object representing Paddle Products.

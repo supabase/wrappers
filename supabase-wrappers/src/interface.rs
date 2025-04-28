@@ -787,8 +787,8 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     fn import_foreign_schema(
         &mut self,
         _stmt: crate::import_foreign_schema::ImportForeignSchemaStmt,
-    ) -> Vec<String> {
-        Vec::new()
+    ) -> Result<Vec<String>, E> {
+        Ok(Vec::new())
     }
 
     /// Returns a FdwRoutine for the FDW

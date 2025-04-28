@@ -1010,7 +1010,10 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
         Ok(())
     }
 
-    fn import_foreign_schema(&mut self, stmt: ImportForeignSchemaStmt) -> Vec<String> {
+    fn import_foreign_schema(
+        &mut self,
+        stmt: ImportForeignSchemaStmt,
+    ) -> StripeFdwResult<Vec<String>> {
         let tbl_config: TableConfig = HashMap::from_iter(
             self.table_config
                 .iter()
@@ -1019,11 +1022,11 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
         let all_tables: HashSet<&str> = HashSet::from_iter(tbl_config.keys().copied());
         let table_list = stmt.table_list.iter().map(|t| t.as_str()).collect();
         let selected = match stmt.list_type {
-            ListType::FdwImportSchemaAll => all_tables,
-            ListType::FdwImportSchemaLimitTo => {
+            ImportSchemaType::FdwImportSchemaAll => all_tables,
+            ImportSchemaType::FdwImportSchemaLimitTo => {
                 all_tables.intersection(&table_list).copied().collect()
             }
-            ListType::FdwImportSchemaExcept => {
+            ImportSchemaType::FdwImportSchemaExcept => {
                 all_tables.difference(&table_list).copied().collect()
             }
         };
@@ -1048,7 +1051,7 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
                     .unwrap_or_default()
             })
             .collect();
-        ret
+        Ok(ret)
     }
 
     fn validator(

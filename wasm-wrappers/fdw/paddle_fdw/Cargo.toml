@@ -1,6 +1,6 @@
 [package]
 name = "paddle_fdw"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 
 [lib]
@@ -20,4 +20,4 @@ package = "supabase:paddle-fdw"
 path = "wit"
 
 [package.metadata.component.target.dependencies]
-"supabase:wrappers" = { path = "../../wit" }
+"supabase:wrappers" = { path = "../../wit/v2" }

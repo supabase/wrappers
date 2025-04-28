@@ -11,13 +11,26 @@ use wasmtime::{Config, Engine, Store};
 
 use supabase_wrappers::prelude::*;
 
-use super::bindings::{
-    exports::supabase::wrappers::routines::Context,
-    supabase::wrappers::types::{Cell as GuestCell, HostContext, HostRow},
-    Wrappers,
+use super::bindings::v1::{
+    supabase::wrappers::types::{
+        Cell as GuestCellV1, HostContext as HostContextV1, HostRow as HostRowV1,
+    },
+    Wrappers as WrappersV1,
+};
+use super::bindings::v2::{
+    supabase::wrappers::types::{
+        Cell as GuestCellV2, HostContext as HostContextV2, HostRow as HostRowV2,
+        ImportForeignSchemaStmt as GuestImportForeignSchemaStmt,
+    },
+    Wrappers as WrappersV2,
 };
 use super::host::FdwHost;
 use super::{WasmFdwError, WasmFdwResult};
+
+enum Bindings {
+    V1(WrappersV1),
+    V2(WrappersV2),
+}
 
 // check minimal host version requirement, e.g, ">=1.2.3"
 fn check_version_requirement(ver_req: &str) -> WasmFdwResult<()> {
@@ -204,12 +217,219 @@ fn save_to_cache(path: &Path, bytes: &[u8]) -> WasmFdwResult<()> {
 )]
 pub(crate) struct WasmFdw {
     store: Store<FdwHost>,
-    bindings: Wrappers,
+    bindings: Bindings,
 }
 
 impl WasmFdw {
-    fn get_context(&mut self) -> Resource<Context> {
-        HostContext::new(self.store.data_mut())
+    fn call_host_version_requirement(&mut self) -> WasmFdwResult<String> {
+        let ret = match &self.bindings {
+            Bindings::V1(b) => b
+                .supabase_wrappers_routines()
+                .call_host_version_requirement(&mut self.store)?,
+            Bindings::V2(b) => b
+                .supabase_wrappers_routines()
+                .call_host_version_requirement(&mut self.store)?,
+        };
+        Ok(ret.to_string())
+    }
+
+    fn call_init(&mut self) -> WasmFdwResult<()> {
+        match &self.bindings {
+            Bindings::V1(b) => {
+                let ctx = HostContextV1::new(self.store.data_mut());
+                b.supabase_wrappers_routines()
+                    .call_init(&mut self.store, ctx)??;
+            }
+            Bindings::V2(b) => {
+                let ctx = HostContextV2::new(self.store.data_mut());
+                b.supabase_wrappers_routines()
+                    .call_init(&mut self.store, ctx)??;
+            }
+        }
+        Ok(())
+    }
+
+    fn call_begin_scan(&mut self) -> WasmFdwResult<()> {
+        match &self.bindings {
+            Bindings::V1(b) => {
+                let ctx = HostContextV1::new(self.store.data_mut());
+                b.supabase_wrappers_routines()
+                    .call_begin_scan(&mut self.store, ctx)??;
+            }
+            Bindings::V2(b) => {
+                let ctx = HostContextV2::new(self.store.data_mut());
+                b.supabase_wrappers_routines()
+                    .call_begin_scan(&mut self.store, ctx)??;
+            }
+        }
+        Ok(())
+    }
+
+    fn call_iter_scan(&mut self) -> WasmFdwResult<Option<u32>> {
+        let ret: Option<_> = match &self.bindings {
+            Bindings::V1(b) => {
+                let ctx = HostContextV1::new(self.store.data_mut());
+                let host_row = HostRowV1::new(self.store.data_mut());
+                b.supabase_wrappers_routines()
+                    .call_iter_scan(&mut self.store, ctx, host_row)??
+            }
+            Bindings::V2(b) => {
+                let ctx = HostContextV2::new(self.store.data_mut());
+                let host_row = HostRowV2::new(self.store.data_mut());
+                b.supabase_wrappers_routines()
+                    .call_iter_scan(&mut self.store, ctx, host_row)??
+            }
+        };
+        Ok(ret)
+    }
+
+    fn call_re_scan(&mut self) -> WasmFdwResult<()> {
+        match &self.bindings {
+            Bindings::V1(b) => {
+                let ctx = HostContextV1::new(self.store.data_mut());
+                b.supabase_wrappers_routines()
+                    .call_re_scan(&mut self.store, ctx)??;
+            }
+            Bindings::V2(b) => {
+                let ctx = HostContextV2::new(self.store.data_mut());
+                b.supabase_wrappers_routines()
+                    .call_re_scan(&mut self.store, ctx)??;
+            }
+        }
+        Ok(())
+    }
+
+    fn call_end_scan(&mut self) -> WasmFdwResult<()> {
+        match &self.bindings {
+            Bindings::V1(b) => {
+                let ctx = HostContextV1::new(self.store.data_mut());
+                b.supabase_wrappers_routines()
+                    .call_end_scan(&mut self.store, ctx)??;
+            }
+            Bindings::V2(b) => {
+                let ctx = HostContextV2::new(self.store.data_mut());
+                b.supabase_wrappers_routines()
+                    .call_end_scan(&mut self.store, ctx)??;
+            }
+        }
+        Ok(())
+    }
+
+    fn call_begin_modify(&mut self) -> WasmFdwResult<()> {
+        match &self.bindings {
+            Bindings::V1(b) => {
+                let ctx = HostContextV1::new(self.store.data_mut());
+                b.supabase_wrappers_routines()
+                    .call_begin_modify(&mut self.store, ctx)??;
+            }
+            Bindings::V2(b) => {
+                let ctx = HostContextV2::new(self.store.data_mut());
+                b.supabase_wrappers_routines()
+                    .call_begin_modify(&mut self.store, ctx)??;
+            }
+        }
+        Ok(())
+    }
+
+    fn call_insert(&mut self) -> WasmFdwResult<()> {
+        match &self.bindings {
+            Bindings::V1(b) => {
+                let ctx = HostContextV1::new(self.store.data_mut());
+                let host_row = HostRowV1::new(self.store.data_mut());
+                b.supabase_wrappers_routines()
+                    .call_insert(&mut self.store, ctx, host_row)??;
+            }
+            Bindings::V2(b) => {
+                let ctx = HostContextV2::new(self.store.data_mut());
+                let host_row = HostRowV2::new(self.store.data_mut());
+                b.supabase_wrappers_routines()
+                    .call_insert(&mut self.store, ctx, host_row)??;
+            }
+        }
+        Ok(())
+    }
+
+    fn call_update(&mut self, rowid: &Cell) -> WasmFdwResult<()> {
+        match &self.bindings {
+            Bindings::V1(b) => {
+                let ctx = HostContextV1::new(self.store.data_mut());
+                let host_row = HostRowV1::new(self.store.data_mut());
+                let cell = GuestCellV1::from(rowid);
+                b.supabase_wrappers_routines().call_update(
+                    &mut self.store,
+                    ctx,
+                    &cell,
+                    host_row,
+                )??;
+            }
+            Bindings::V2(b) => {
+                let ctx = HostContextV2::new(self.store.data_mut());
+                let host_row = HostRowV2::new(self.store.data_mut());
+                let cell = GuestCellV2::from(rowid);
+                b.supabase_wrappers_routines().call_update(
+                    &mut self.store,
+                    ctx,
+                    &cell,
+                    host_row,
+                )??;
+            }
+        }
+        Ok(())
+    }
+
+    fn call_delete(&mut self, rowid: &Cell) -> WasmFdwResult<()> {
+        match &self.bindings {
+            Bindings::V1(b) => {
+                let ctx = HostContextV1::new(self.store.data_mut());
+                let cell = GuestCellV1::from(rowid);
+                b.supabase_wrappers_routines()
+                    .call_delete(&mut self.store, ctx, &cell)??;
+            }
+            Bindings::V2(b) => {
+                let ctx = HostContextV2::new(self.store.data_mut());
+                let cell = GuestCellV2::from(rowid);
+                b.supabase_wrappers_routines()
+                    .call_delete(&mut self.store, ctx, &cell)??;
+            }
+        }
+        Ok(())
+    }
+
+    fn call_end_modify(&mut self) -> WasmFdwResult<()> {
+        match &self.bindings {
+            Bindings::V1(b) => {
+                let ctx = HostContextV1::new(self.store.data_mut());
+                b.supabase_wrappers_routines()
+                    .call_end_modify(&mut self.store, ctx)??;
+            }
+            Bindings::V2(b) => {
+                let ctx = HostContextV2::new(self.store.data_mut());
+                b.supabase_wrappers_routines()
+                    .call_end_modify(&mut self.store, ctx)??;
+            }
+        }
+        Ok(())
+    }
+
+    fn call_import_foreign_schema(
+        &mut self,
+        stmt: ImportForeignSchemaStmt,
+    ) -> WasmFdwResult<Vec<String>> {
+        let ret = match &self.bindings {
+            Bindings::V1(_) => {
+                return Err("import foreign schema not implemented".to_string().into());
+            }
+            Bindings::V2(b) => {
+                let ctx = HostContextV2::new(self.store.data_mut());
+                let stmt = GuestImportForeignSchemaStmt::from(stmt);
+                b.supabase_wrappers_routines().call_import_foreign_schema(
+                    &mut self.store,
+                    ctx,
+                    &stmt,
+                )??
+            }
+        };
+        Ok(ret)
     }
 }
 
@@ -232,30 +452,28 @@ impl ForeignDataWrapper<WasmFdwError> for WasmFdw {
         let component =
             download_component(&rt, &engine, pkg_url, pkg_name, pkg_version, pkg_checksum)?;
 
-        let mut linker = Linker::new(&engine);
-        Wrappers::add_to_linker(&mut linker, |host: &mut FdwHost| host)?;
-
         let mut fdw_host = FdwHost::new(rt);
         fdw_host.svr_opts.clone_from(&server.options);
 
+        let mut linker = Linker::new(&engine);
+        WrappersV1::add_to_linker(&mut linker, |host: &mut FdwHost| host)?;
+        WrappersV2::add_to_linker(&mut linker, |host: &mut FdwHost| host)?;
+
         let mut store = Store::new(&engine, fdw_host);
-        let bindings = Wrappers::instantiate(&mut store, &component, &linker)?;
+        let bindings = WrappersV1::instantiate(&mut store, &component, &linker)
+            .map(Bindings::V1)
+            .or_else(|_| {
+                WrappersV2::instantiate(&mut store, &component, &linker).map(Bindings::V2)
+            })?;
 
         let mut wasm_fdw = Self { store, bindings };
 
         // check version requirement
-        let ver_req = wasm_fdw
-            .bindings
-            .supabase_wrappers_routines()
-            .call_host_version_requirement(&mut wasm_fdw.store)?;
+        let ver_req = wasm_fdw.call_host_version_requirement()?;
         check_version_requirement(&ver_req)?;
 
         // call wasm fdw's init() function
-        let ctx = wasm_fdw.get_context();
-        wasm_fdw
-            .bindings
-            .supabase_wrappers_routines()
-            .call_init(&mut wasm_fdw.store, ctx)??;
+        wasm_fdw.call_init()?;
 
         Ok(wasm_fdw)
     }
@@ -275,23 +493,13 @@ impl ForeignDataWrapper<WasmFdwError> for WasmFdw {
         fdw_state.limit.clone_from(limit);
         fdw_state.tbl_opts.clone_from(options);
 
-        let ctx = self.get_context();
-        self.bindings
-            .supabase_wrappers_routines()
-            .call_begin_scan(&mut self.store, ctx)??;
-        Ok(())
+        self.call_begin_scan()
     }
 
     fn iter_scan(&mut self, row: &mut Row) -> WasmFdwResult<Option<()>> {
         self.store.data_mut().row.clear();
 
-        let ctx = self.get_context();
-        let host_row = HostRow::new(self.store.data_mut());
-        let ret: Option<_> = self.bindings.supabase_wrappers_routines().call_iter_scan(
-            &mut self.store,
-            ctx,
-            host_row,
-        )??;
+        let ret: Option<_> = self.call_iter_scan()?;
         if ret.is_some() {
             row.replace_with(self.store.data().row.clone());
             return Ok(Some(()));
@@ -300,72 +508,45 @@ impl ForeignDataWrapper<WasmFdwError> for WasmFdw {
     }
 
     fn re_scan(&mut self) -> WasmFdwResult<()> {
-        let ctx = self.get_context();
-        self.bindings
-            .supabase_wrappers_routines()
-            .call_re_scan(&mut self.store, ctx)??;
-        Ok(())
+        self.call_re_scan()
     }
 
     fn end_scan(&mut self) -> WasmFdwResult<()> {
-        let ctx = self.get_context();
-        self.bindings
-            .supabase_wrappers_routines()
-            .call_end_scan(&mut self.store, ctx)??;
-        Ok(())
+        self.call_end_scan()
     }
 
     fn begin_modify(&mut self, options: &HashMap<String, String>) -> WasmFdwResult<()> {
         let fdw_state = self.store.data_mut();
         fdw_state.tbl_opts.clone_from(options);
-        let ctx = self.get_context();
-        self.bindings
-            .supabase_wrappers_routines()
-            .call_begin_modify(&mut self.store, ctx)??;
-        Ok(())
+        self.call_begin_modify()
     }
 
     fn insert(&mut self, src: &Row) -> WasmFdwResult<()> {
         self.store.data_mut().row = src.clone();
-        let ctx = self.get_context();
-        let host_row = HostRow::new(self.store.data_mut());
-        self.bindings.supabase_wrappers_routines().call_insert(
-            &mut self.store,
-            ctx,
-            host_row,
-        )??;
-        Ok(())
+        self.call_insert()
     }
 
     fn update(&mut self, rowid: &Cell, new_row: &Row) -> WasmFdwResult<()> {
         self.store.data_mut().row = new_row.clone();
-        let ctx = self.get_context();
-        let host_row = HostRow::new(self.store.data_mut());
-        let cell = GuestCell::from(rowid);
-        self.bindings.supabase_wrappers_routines().call_update(
-            &mut self.store,
-            ctx,
-            &cell,
-            host_row,
-        )??;
-        Ok(())
+        self.call_update(rowid)
     }
 
     fn delete(&mut self, rowid: &Cell) -> WasmFdwResult<()> {
-        let ctx = self.get_context();
-        let cell = GuestCell::from(rowid);
-        self.bindings
-            .supabase_wrappers_routines()
-            .call_delete(&mut self.store, ctx, &cell)??;
-        Ok(())
+        self.call_delete(rowid)
     }
 
     fn end_modify(&mut self) -> WasmFdwResult<()> {
-        let ctx = self.get_context();
-        self.bindings
-            .supabase_wrappers_routines()
-            .call_end_modify(&mut self.store, ctx)??;
-        Ok(())
+        self.call_end_modify()
+    }
+
+    fn import_foreign_schema(
+        &mut self,
+        stmt: ImportForeignSchemaStmt,
+    ) -> WasmFdwResult<Vec<String>> {
+        let fdw_state = self.store.data_mut();
+        fdw_state.import_schema_opts.clone_from(&stmt.options);
+
+        self.call_import_foreign_schema(stmt)
     }
 
     fn validator(options: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) -> WasmFdwResult<()> {
