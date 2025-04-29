@@ -7,7 +7,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-wit-bindgen-rt = "0.26.0"
+wit-bindgen-rt = "0.41.0"
 
 [package.metadata.component]
 package = "supabase:helloworld-fdw"

@@ -61,6 +61,8 @@ pub enum Cell {
     StringArray(Vec<Option<String>>),
 }
 
+unsafe impl Send for Cell {}
+
 impl Clone for Cell {
     fn clone(&self) -> Self {
         match self {
