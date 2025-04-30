@@ -119,6 +119,25 @@ Supported objects are listed below:
 
 The Cal.com Wrapper supports data reads and booking writes from the Cal.com API.
 
+We can use SQL [import foreign schema](https://www.postgresql.org/docs/current/sql-importforeignschema.html) to import foreign table definitions from Cal.com.
+
+For example, using below SQL can automatically create foreign tables in the `cal` schema.
+
+```sql
+-- create all the foreign tables
+import foreign schema cal from server cal_server into cal;
+
+-- or, create selected tables only
+import foreign schema cal
+   limit to ("event_types", "bookings")
+   from server cal_server into cal;
+
+-- or, create all foreign tables except selected tables
+import foreign schema cal
+   except ("event_types")
+   from server cal_server into cal;
+```
+
 ### Profile
 
 This is an object representing your Cal.com user profile.

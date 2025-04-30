@@ -117,6 +117,19 @@ The full list of foreign table options are below:
 
 The D1 Wrapper supports data reads and writes from the Cloudflare D1 API.
 
+We can use SQL [import foreign schema](https://www.postgresql.org/docs/current/sql-importforeignschema.html) to import foreign table definitions from Cloudflare D1.
+
+For example, using below SQL can automatically create foreign tables in the `cfd1` schema.
+
+```sql
+-- create all the foreign tables
+import foreign schema cfd1 from server cfd1_server into cfd1;
+```
+
+!!! note
+
+    The `import foreign schema` statement only imports `databases` table, other tables still need to be created manually.
+
 ### D1 Databases
 
 This is an object representing a D1 database.

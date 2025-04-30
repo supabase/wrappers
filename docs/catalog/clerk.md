@@ -123,6 +123,25 @@ Supported objects are listed below:
 
 ## Entities
 
+We can use SQL [import foreign schema](https://www.postgresql.org/docs/current/sql-importforeignschema.html) to import foreign table definitions from Clerk.
+
+For example, using below SQL can automatically create foreign tables in the `clerk` schema.
+
+```sql
+-- create all the foreign tables
+import foreign schema clerk from server clerk_server into clerk;
+
+-- or, create selected tables only
+import foreign schema clerk
+   limit to ("users", "organizations")
+   from server clerk_server into clerk;
+
+-- or, create all foreign tables except selected tables
+import foreign schema clerk
+   except ("users")
+   from server clerk_server into clerk;
+```
+
 ### Allow-list
 
 This is a list of all identifiers allowed to sign up to an instance.

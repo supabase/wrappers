@@ -144,6 +144,29 @@ create foreign table hubspot.contacts (
 
 The column `user_id` is the custom property internal name, which can be found in the `Details` section of `Edit property` page on HubSpot `Settings` -> `Data Management` -> `Properties`.
 
+We can use SQL [import foreign schema](https://www.postgresql.org/docs/current/sql-importforeignschema.html) to import foreign table definitions from HubSpot.
+
+For example, using below SQL can automatically create foreign tables in the `hubspot` schema.
+
+```sql
+-- create all the foreign tables
+import foreign schema hubspot from server hubspot_server into hubspot;
+
+-- or, create selected tables only
+import foreign schema hubspot
+   limit to ("contact", "companies")
+   from server hubspot_server into hubspot;
+
+-- or, create all foreign tables except selected tables
+import foreign schema hubspot
+   except ("contacts")
+   from server hubspot_server into hubspot;
+```
+
+!!! note
+
+    The `objects` table will not be created by the `import foreign schema` statement.
+
 ### Companies
 
 This is object represents the companies and organizations that interact with your business.

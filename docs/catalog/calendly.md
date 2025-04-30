@@ -120,6 +120,25 @@ Supported objects are listed below:
 
 ## Entities
 
+We can use SQL [import foreign schema](https://www.postgresql.org/docs/current/sql-importforeignschema.html) to import foreign table definitions from Calendly.
+
+For example, using below SQL can automatically create foreign tables in the `calendly` schema.
+
+```sql
+-- create all the foreign tables
+import foreign schema calendly from server calendly_server into calendly;
+
+-- or, create selected tables only
+import foreign schema calendly
+   limit to ("event_types", "groups")
+   from server calendly_server into calendly;
+
+-- or, create all foreign tables except selected tables
+import foreign schema calendly
+   except ("event_types")
+   from server calendly_server into calendly;
+```
+
 ### Current User
 
 This is an object representing your Calendly user profile.
