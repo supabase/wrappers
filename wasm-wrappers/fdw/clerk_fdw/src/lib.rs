@@ -6,7 +6,10 @@ use bindings::{
     exports::supabase::wrappers::routines::Guest,
     supabase::wrappers::{
         http, stats, time,
-        types::{Cell, Column, Context, FdwError, FdwResult, OptionsType, Row, TypeOid},
+        types::{
+            Cell, Column, Context, FdwError, FdwResult, ImportForeignSchemaStmt, OptionsType, Row,
+            TypeOid,
+        },
         utils,
     },
 };
@@ -169,7 +172,7 @@ impl ClerkFdw {
 impl Guest for ClerkFdw {
     fn host_version_requirement() -> String {
         // semver ref: https://docs.rs/semver/latest/semver/enum.Op.html
-        "^0.1.0".to_string()
+        "^0.2.0".to_string()
     }
 
     fn init(ctx: &Context) -> FdwResult {
@@ -177,7 +180,7 @@ impl Guest for ClerkFdw {
         let this = Self::this_mut();
 
         // get foreign server options
-        let opts = ctx.get_options(OptionsType::Server);
+        let opts = ctx.get_options(&OptionsType::Server);
         this.base_url = opts.require_or("api_url", "https://api.clerk.com/v1");
         let api_key = match opts.get("api_key") {
             Some(key) => key,
@@ -206,7 +209,7 @@ impl Guest for ClerkFdw {
 
     fn begin_scan(ctx: &Context) -> FdwResult {
         let this = Self::this_mut();
-        let opts = ctx.get_options(OptionsType::Table);
+        let opts = ctx.get_options(&OptionsType::Table);
         this.object = opts.require("object")?;
         this.fetch_source_data()
     }
@@ -273,6 +276,202 @@ impl Guest for ClerkFdw {
 
     fn end_modify(_ctx: &Context) -> FdwResult {
         Ok(())
+    }
+
+    fn import_foreign_schema(
+        _ctx: &Context,
+        stmt: ImportForeignSchemaStmt,
+    ) -> Result<Vec<String>, FdwError> {
+        let ret = vec![
+            format!(
+                r#"create foreign table if not exists allowlist_identifiers (
+                    id text,
+                    invitation_id text,
+                    identifier text,
+                    identifier_type text,
+                    instance_id text,
+                    created_at timestamp,
+                    updated_at timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'allowlist_identifiers'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists blocklist_identifiers (
+                    id text,
+                    identifier text,
+                    identifier_type text,
+                    instance_id text,
+                    created_at timestamp,
+                    updated_at timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'blocklist_identifiers'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists domains (
+                    id text,
+                    name text,
+                    is_satellite boolean,
+                    frontend_api_url text,
+                    accounts_portal_url text,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'domains'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists invitations (
+                    id text,
+                    email_address text,
+                    url text,
+                    revoked boolean,
+                    status text,
+                    expires_at timestamp,
+                    created_at timestamp,
+                    updated_at timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'invitations'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists jwt_templates (
+                    id text,
+                    name text,
+                    lifetime bigint,
+                    allowed_clock_skew bigint,
+                    custom_signing_key boolean,
+                    signing_algorithm text,
+                    created_at timestamp,
+                    updated_at timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'jwt_templates'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists oauth_applications (
+                    id text,
+                    name text,
+                    instance_id text,
+                    client_id text,
+                    public boolean,
+                    scopes text,
+                    created_at timestamp,
+                    updated_at timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'oauth_applications'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists organizations (
+                    id text,
+                    name text,
+                    slug text,
+                    created_at timestamp,
+                    updated_at timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'organizations'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists organization_invitations (
+                    id text,
+                    email_address text,
+                    role text,
+                    role_name text,
+                    organization_id text,
+                    status text,
+                    created_at timestamp,
+                    updated_at timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'organization_invitations'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists organization_memberships (
+                    id text,
+                    role text,
+                    role_name text,
+                    created_at timestamp,
+                    updated_at timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'organization_memberships'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists redirect_urls (
+                    id text,
+                    url text,
+                    created_at timestamp,
+                    updated_at timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'redirect_urls'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists saml_connections (
+                    id text,
+                    name text,
+                    domain text,
+                    active boolean,
+                    provider text,
+                    user_count bigint,
+                    created_at timestamp,
+                    updated_at timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'saml_connections'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists users (
+                    id text,
+                    external_id text,
+                    username text,
+                    first_name text,
+                    last_name text,
+                    created_at timestamp,
+                    updated_at timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'users'
+                )"#,
+                stmt.server_name,
+            ),
+        ];
+        Ok(ret)
     }
 }
 

@@ -6,7 +6,10 @@ use bindings::{
     exports::supabase::wrappers::routines::Guest,
     supabase::wrappers::{
         http, stats, time,
-        types::{Cell, Column, Context, FdwError, FdwResult, OptionsType, Row, TypeOid, Value},
+        types::{
+            Cell, Column, Context, FdwError, FdwResult, ImportForeignSchemaStmt, OptionsType, Row,
+            TypeOid, Value,
+        },
         utils,
     },
 };
@@ -398,7 +401,7 @@ impl OrbFdw {
 impl Guest for OrbFdw {
     fn host_version_requirement() -> String {
         // semver ref: https://docs.rs/semver/latest/semver/enum.Op.html
-        "^0.1.0".to_string()
+        "^0.2.0".to_string()
     }
 
     fn init(ctx: &Context) -> FdwResult {
@@ -406,7 +409,7 @@ impl Guest for OrbFdw {
         let this = Self::this_mut();
 
         // get foreign server options
-        let opts = ctx.get_options(OptionsType::Server);
+        let opts = ctx.get_options(&OptionsType::Server);
         this.base_url = opts.require_or("api_url", "https://api.withorb.com/v1");
         let api_key = match opts.get("api_key") {
             Some(key) => key,
@@ -432,7 +435,7 @@ impl Guest for OrbFdw {
 
     fn begin_scan(ctx: &Context) -> FdwResult {
         let this = Self::this_mut();
-        let opts = ctx.get_options(OptionsType::Table);
+        let opts = ctx.get_options(&OptionsType::Table);
         this.object = opts.require("object")?;
         this.fetch_source_data(ctx)
     }
@@ -481,7 +484,7 @@ impl Guest for OrbFdw {
 
     fn begin_modify(ctx: &Context) -> FdwResult {
         let this = Self::this_mut();
-        let opts = ctx.get_options(OptionsType::Table);
+        let opts = ctx.get_options(&OptionsType::Table);
         this.object = opts.require("object")?;
         Ok(())
     }
@@ -552,6 +555,242 @@ impl Guest for OrbFdw {
 
     fn end_modify(_ctx: &Context) -> FdwResult {
         Ok(())
+    }
+
+    fn import_foreign_schema(
+        _ctx: &Context,
+        stmt: ImportForeignSchemaStmt,
+    ) -> Result<Vec<String>, FdwError> {
+        let ret = vec![
+            format!(
+                r#"create foreign table if not exists alerts (
+                    id text,
+                    type text,
+                    enabled boolean,
+                    customer_id text,
+                    external_customer_id text,
+                    subscription_id text,
+                    created_at timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'alerts'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists coupons (
+                    id text,
+                    redemption_code text,
+                    times_redeemed bigint,
+                    duration_in_months bigint,
+                    archived_at timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'coupons'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists credit_notes (
+                    id text,
+                    type text,
+                    total numeric(18,2),
+                    created_at timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'credit_notes'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists customers (
+                    id text,
+                    name text,
+                    email text,
+                    created_at timestamp,
+                    auto_collection boolean,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'customers',
+                    rowid_column 'id'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists credits (
+                    id text,
+                    customer_id text,
+                    external_customer_id text,
+                    balance numeric(18,2),
+                    status text,
+                    effective_date timestamp,
+                    expiry_date timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'credits'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists credits_ledger (
+                    id text,
+                    customer_id text,
+                    external_customer_id text,
+                    amount numeric(18,2),
+                    created_at timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'credits/ledger'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists dimensional_price_groups (
+                    id text,
+                    name text,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'dimensional_price_groups',
+                    rowid_column 'id'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists events_backfills (
+                    id text,
+                    status text,
+                    events_ingested bigint,
+                    created_at timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'events/backfills',
+                    rowid_column 'id'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists events_volume (
+                    count bigint,
+                    timeframe_start timestamp,
+                    timeframe_end timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'events/volume'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists invoices (
+                    id text,
+                    invoice_number text,
+                    customer_id text,
+                    external_customer_id text,
+                    subscription_id text,
+                    status text,
+                    amount_due numeric(18,2),
+                    currency text,
+                    due_date timestamp,
+                    issued_at timestamp,
+                    created_at timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'invoices',
+                    rowid_column 'id'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists items (
+                    id text,
+                    name text,
+                    created_at timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'items',
+                    rowid_column 'id'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists metrics (
+                    id text,
+                    name text,
+                    description text,
+                    status text,
+                    created_at timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'metrics',
+                    rowid_column 'id'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists plans (
+                    id text,
+                    name text,
+                    description text,
+                    status text,
+                    maximum_amount numeric(18,2),
+                    minimum_amount numeric(18,2),
+                    created_at timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'plans',
+                    rowid_column 'id'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists prices (
+                    id text,
+                    name text,
+                    external_price_id text,
+                    price_type text,
+                    maximum_amount numeric(18,2),
+                    minimum_amount numeric(18,2),
+                    created_at timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'prices',
+                    rowid_column 'id'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists subscriptions (
+                    id text,
+                    customer_id text,
+                    external_customer_id text,
+                    billing_cycle_day bigint,
+                    status text,
+                    start_date timestamp,
+                    end_date timestamp,
+                    created_at timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'subscriptions',
+                    rowid_column 'id'
+                )"#,
+                stmt.server_name,
+            ),
+        ];
+        Ok(ret)
     }
 }
 

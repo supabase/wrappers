@@ -15,9 +15,10 @@ The Clerk Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you t
 
 ## Available Versions
 
-| Version | Wasm Package URL                                                                                    | Checksum                                                           |
-| ------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_clerk_fdw_v0.1.0/clerk_fdw.wasm` | `613be26b59fa4c074e0b93f0db617fcd7b468d4d02edece0b1f85fdb683ebdc4` |
+| Version | Wasm Package URL                                                                                    | Checksum                                                           | Required Wrappers Version |
+| ------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------- |
+| 0.2.0   | `https://github.com/supabase/wrappers/releases/download/wasm_clerk_fdw_v0.2.0/clerk_fdw.wasm`       | `tbd`                                                              | >=0.5.0                   |
+| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_clerk_fdw_v0.1.0/clerk_fdw.wasm`       | `613be26b59fa4c074e0b93f0db617fcd7b468d4d02edece0b1f85fdb683ebdc4` | >=0.4.0                   |
 
 ## Preparation
 
@@ -122,6 +123,25 @@ Supported objects are listed below:
 | users                    |
 
 ## Entities
+
+We can use SQL [import foreign schema](https://www.postgresql.org/docs/current/sql-importforeignschema.html) to import foreign table definitions from Clerk.
+
+For example, using below SQL can automatically create foreign tables in the `clerk` schema.
+
+```sql
+-- create all the foreign tables
+import foreign schema clerk from server clerk_server into clerk;
+
+-- or, create selected tables only
+import foreign schema clerk
+   limit to ("users", "organizations")
+   from server clerk_server into clerk;
+
+-- or, create all foreign tables except selected tables
+import foreign schema clerk
+   except ("users")
+   from server clerk_server into clerk;
+```
 
 ### Allow-list
 

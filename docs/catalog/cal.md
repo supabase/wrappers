@@ -15,9 +15,10 @@ The Cal Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you to 
 
 ## Available Versions
 
-| Version | Wasm Package URL                                                                                | Checksum                                                           |
-| ------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_cal_fdw_v0.1.0/cal_fdw.wasm` | `4afe4fac8c51f2caa1de8483b3817d2cec3a14cd8a65a3942c8b4ff6c430f08a` |
+| Version | Wasm Package URL                                                                                | Checksum                                                           | Required Wrappers Version |
+| ------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------- |
+| 0.2.0   | `https://github.com/supabase/wrappers/releases/download/wasm_cal_fdw_v0.2.0/cal_fdw.wasm`       | `tbd`                                                              | >=0.5.0                   |
+| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_cal_fdw_v0.1.0/cal_fdw.wasm`       | `4afe4fac8c51f2caa1de8483b3817d2cec3a14cd8a65a3942c8b4ff6c430f08a` | >=0.4.0                   |
 
 ## Preparation
 
@@ -118,6 +119,25 @@ Supported objects are listed below:
 ## Entities
 
 The Cal.com Wrapper supports data reads and booking writes from the Cal.com API.
+
+We can use SQL [import foreign schema](https://www.postgresql.org/docs/current/sql-importforeignschema.html) to import foreign table definitions from Cal.com.
+
+For example, using below SQL can automatically create foreign tables in the `cal` schema.
+
+```sql
+-- create all the foreign tables
+import foreign schema cal from server cal_server into cal;
+
+-- or, create selected tables only
+import foreign schema cal
+   limit to ("event_types", "bookings")
+   from server cal_server into cal;
+
+-- or, create all foreign tables except selected tables
+import foreign schema cal
+   except ("event_types")
+   from server cal_server into cal;
+```
 
 ### Profile
 

@@ -15,10 +15,11 @@ The Notion Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you 
 
 ## Available Versions
 
-| Version | Wasm Package URL                                                                                | Checksum                                                           |
-| ------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| 0.1.1   | `https://github.com/supabase/wrappers/releases/download/wasm_notion_fdw_v0.1.1/notion_fdw.wasm` | `6dea3014f462aafd0c051c37d163fe326e7650c26a7eb5d8017a30634b5a46de` |
-| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_notion_fdw_v0.1.0/notion_fdw.wasm` | `e017263d1fc3427cc1df8071d1182cdc9e2f00363344dddb8c195c5d398a2099` |
+| Version | Wasm Package URL                                                                                    | Checksum                                                           | Required Wrappers Version |
+| ------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------- |
+| 0.2.0   | `https://github.com/supabase/wrappers/releases/download/wasm_notion_fdw_v0.2.0/notion_fdw.wasm`     | `tbd`                                                              | >=0.5.0                   |
+| 0.1.1   | `https://github.com/supabase/wrappers/releases/download/wasm_notion_fdw_v0.1.1/notion_fdw.wasm`     | `6dea3014f462aafd0c051c37d163fe326e7650c26a7eb5d8017a30634b5a46de` | >=0.4.0                   |
+| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_notion_fdw_v0.1.0/notion_fdw.wasm`     | `e017263d1fc3427cc1df8071d1182cdc9e2f00363344dddb8c195c5d398a2099` | >=0.4.0                   |
 
 ## Preparation
 
@@ -123,6 +124,25 @@ Supported objects are listed below:
 | user        |
 
 ## Entities
+
+We can use SQL [import foreign schema](https://www.postgresql.org/docs/current/sql-importforeignschema.html) to import foreign table definitions from Notion.
+
+For example, using below SQL can automatically create foreign tables in the `notion` schema.
+
+```sql
+-- create all the foreign tables
+import foreign schema notion from server notion_server into notion;
+
+-- or, create selected tables only
+import foreign schema notion
+   limit to ("blocks", "pages")
+   from server notion_server into notion;
+
+-- or, create all foreign tables except selected tables
+import foreign schema notion
+   except ("blocks")
+   from server notion_server into notion;
+```
 
 ### Block
 

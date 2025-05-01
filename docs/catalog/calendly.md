@@ -15,9 +15,10 @@ The Calendly Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows yo
 
 ## Available Versions
 
-| Version | Wasm Package URL                                                                                    | Checksum                                                           |
-| ------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_calendly_fdw_v0.1.0/calendly_fdw.wasm` | `51a19fa4b8c40afb5dcf6dc2e009189aceeba65f30eec75d56a951d78fc8893f` |
+| Version | Wasm Package URL                                                                                    | Checksum                                                           | Required Wrappers Version |
+| ------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------- |
+| 0.2.0   | `https://github.com/supabase/wrappers/releases/download/wasm_calendly_fdw_v0.2.0/calendly_fdw.wasm` | `tbd`                                                              | >=0.5.0                   |
+| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_calendly_fdw_v0.1.0/calendly_fdw.wasm` | `51a19fa4b8c40afb5dcf6dc2e009189aceeba65f30eec75d56a951d78fc8893f` | >=0.4.0                   |
 
 ## Preparation
 
@@ -119,6 +120,25 @@ Supported objects are listed below:
 | scheduled_events         |
 
 ## Entities
+
+We can use SQL [import foreign schema](https://www.postgresql.org/docs/current/sql-importforeignschema.html) to import foreign table definitions from Calendly.
+
+For example, using below SQL can automatically create foreign tables in the `calendly` schema.
+
+```sql
+-- create all the foreign tables
+import foreign schema calendly from server calendly_server into calendly;
+
+-- or, create selected tables only
+import foreign schema calendly
+   limit to ("event_types", "groups")
+   from server calendly_server into calendly;
+
+-- or, create all foreign tables except selected tables
+import foreign schema calendly
+   except ("event_types")
+   from server calendly_server into calendly;
+```
 
 ### Current User
 

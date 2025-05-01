@@ -6,7 +6,10 @@ use bindings::{
     exports::supabase::wrappers::routines::Guest,
     supabase::wrappers::{
         http, stats, time,
-        types::{Cell, Column, Context, FdwError, FdwResult, OptionsType, Row, TypeOid, Value},
+        types::{
+            Cell, Column, Context, FdwError, FdwResult, ImportForeignSchemaStmt, OptionsType, Row,
+            TypeOid, Value,
+        },
         utils,
     },
 };
@@ -281,7 +284,7 @@ impl Cfd1Fdw {
 impl Guest for Cfd1Fdw {
     fn host_version_requirement() -> String {
         // semver ref: https://docs.rs/semver/latest/semver/enum.Op.html
-        "^0.1.0".to_string()
+        "^0.2.0".to_string()
     }
 
     fn init(ctx: &Context) -> FdwResult {
@@ -289,7 +292,7 @@ impl Guest for Cfd1Fdw {
         let this = Self::this_mut();
 
         // get foreign server options
-        let opts = ctx.get_options(OptionsType::Server);
+        let opts = ctx.get_options(&OptionsType::Server);
         let account_id = opts.require("account_id")?;
         this.database_id = opts.require("database_id")?;
         this.base_url = opts.require_or(
@@ -323,7 +326,7 @@ impl Guest for Cfd1Fdw {
 
     fn begin_scan(ctx: &Context) -> FdwResult {
         let this = Self::this_mut();
-        let opts = ctx.get_options(OptionsType::Table);
+        let opts = ctx.get_options(&OptionsType::Table);
         this.table = opts.require("table")?;
         let req = this.create_request(ctx)?;
         this.fetch_source_data(req)
@@ -366,7 +369,7 @@ impl Guest for Cfd1Fdw {
 
     fn begin_modify(ctx: &Context) -> FdwResult {
         let this = Self::this_mut();
-        let opts = ctx.get_options(OptionsType::Table);
+        let opts = ctx.get_options(&OptionsType::Table);
         this.table = opts.require("table")?;
         this.rowid_col = opts.require("rowid_column")?;
         Ok(())
@@ -478,6 +481,28 @@ impl Guest for Cfd1Fdw {
 
     fn end_modify(_ctx: &Context) -> FdwResult {
         Ok(())
+    }
+
+    fn import_foreign_schema(
+        _ctx: &Context,
+        stmt: ImportForeignSchemaStmt,
+    ) -> Result<Vec<String>, FdwError> {
+        let ret = vec![format!(
+            r#"create foreign table if not exists databases (
+                    uuid text,
+                    name text,
+                    version text,
+                    num_tables bigint,
+                    file_size bigint,
+                    created_at text,
+                    _attrs jsonb
+                )
+                server {} options (
+                    table '_meta_databases'
+                )"#,
+            stmt.server_name,
+        )];
+        Ok(ret)
     }
 }
 

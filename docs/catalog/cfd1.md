@@ -15,9 +15,10 @@ The Cloudflare D1 Wrapper is a WebAssembly(Wasm) foreign data wrapper which allo
 
 ## Available Versions
 
-| Version | Wasm Package URL                                                                                | Checksum                                                           |
-| ------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_cfd1_fdw_v0.1.0/cfd1_fdw.wasm` | `783232834bb29dbd3ee6b09618c16f8a847286e63d05c54397d56c3e703fad31` |
+| Version | Wasm Package URL                                                                                    | Checksum                                                           | Required Wrappers Version |
+| ------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------- |
+| 0.2.0   | `https://github.com/supabase/wrappers/releases/download/wasm_cfd1_fdw_v0.2.0/cfd1_fdw.wasm`         | `tbd`                                                              | >=0.5.0                   |
+| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_cfd1_fdw_v0.1.0/cfd1_fdw.wasm`         | `783232834bb29dbd3ee6b09618c16f8a847286e63d05c54397d56c3e703fad31` | >=0.4.0                   |
 
 ## Preparation
 
@@ -116,6 +117,19 @@ The full list of foreign table options are below:
 ## Entities
 
 The D1 Wrapper supports data reads and writes from the Cloudflare D1 API.
+
+We can use SQL [import foreign schema](https://www.postgresql.org/docs/current/sql-importforeignschema.html) to import foreign table definitions from Cloudflare D1.
+
+For example, using below SQL can automatically create foreign tables in the `cfd1` schema.
+
+```sql
+-- create all the foreign tables
+import foreign schema cfd1 from server cfd1_server into cfd1;
+```
+
+!!! note
+
+    The `import foreign schema` statement only imports `databases` table, other tables still need to be created manually.
 
 ### D1 Databases
 

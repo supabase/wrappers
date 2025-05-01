@@ -6,7 +6,10 @@ use bindings::{
     exports::supabase::wrappers::routines::Guest,
     supabase::wrappers::{
         http, stats, time,
-        types::{Cell, Column, Context, FdwError, FdwResult, OptionsType, Row, TypeOid, Value},
+        types::{
+            Cell, Column, Context, FdwError, FdwResult, ImportForeignSchemaStmt, OptionsType, Row,
+            TypeOid, Value,
+        },
         utils,
     },
 };
@@ -209,7 +212,7 @@ impl HubspotFdw {
 impl Guest for HubspotFdw {
     fn host_version_requirement() -> String {
         // semver ref: https://docs.rs/semver/latest/semver/enum.Op.html
-        "^0.1.0".to_string()
+        "^0.2.0".to_string()
     }
 
     fn init(ctx: &Context) -> FdwResult {
@@ -217,7 +220,7 @@ impl Guest for HubspotFdw {
         let this = Self::this_mut();
 
         // get foreign server options
-        let opts = ctx.get_options(OptionsType::Server);
+        let opts = ctx.get_options(&OptionsType::Server);
         this.base_url = opts.require_or("api_url", "https://api.hubapi.com/crm/v3");
         let api_key = match opts.get("api_key") {
             Some(key) => key,
@@ -243,7 +246,7 @@ impl Guest for HubspotFdw {
 
     fn begin_scan(ctx: &Context) -> FdwResult {
         let this = Self::this_mut();
-        let opts = ctx.get_options(OptionsType::Table);
+        let opts = ctx.get_options(&OptionsType::Table);
 
         // get object name from foreign table options
         this.object = opts.require("object")?;
@@ -321,6 +324,142 @@ impl Guest for HubspotFdw {
 
     fn end_modify(_ctx: &Context) -> FdwResult {
         Ok(())
+    }
+
+    fn import_foreign_schema(
+        _ctx: &Context,
+        stmt: ImportForeignSchemaStmt,
+    ) -> Result<Vec<String>, FdwError> {
+        let ret = vec![
+            format!(
+                r#"create foreign table if not exists companies (
+                    id text,
+                    name text,
+                    domain text,
+                    created_at timestamp,
+                    updated_at timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'objects/companies'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists contacts (
+                    id text,
+                    email text,
+                    firstname text,
+                    lastname text,
+                    created_at timestamp,
+                    updated_at timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'objects/contacts'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists deals (
+                    id text,
+                    created_at timestamp,
+                    updated_at timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'objects/deals'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists feedback_submissions (
+                    id text,
+                    created_at timestamp,
+                    updated_at timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'objects/feedback_submissions'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists goals (
+                    id text,
+                    created_at timestamp,
+                    updated_at timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'objects/goal_targets'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists leads (
+                    id text,
+                    created_at timestamp,
+                    updated_at timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'objects/leads'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists line_items (
+                    id text,
+                    created_at timestamp,
+                    updated_at timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'objects/line_items'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists partner_clients (
+                    id text,
+                    created_at timestamp,
+                    updated_at timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'objects/partner_clients'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists products (
+                    id text,
+                    name text,
+                    created_at timestamp,
+                    updated_at timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'objects/products'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists tickets (
+                    id text,
+                    subject text,
+                    created_at timestamp,
+                    updated_at timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'objects/tickets'
+                )"#,
+                stmt.server_name,
+            ),
+        ];
+        Ok(ret)
     }
 }
 

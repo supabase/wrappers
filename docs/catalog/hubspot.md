@@ -15,9 +15,10 @@ The HubSpot Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you
 
 ## Available Versions
 
-| Version | Wasm Package URL                                                                                  | Checksum                                                           |
-| ------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_hubspot_fdw_v0.1.0/hubspot_fdw.wasm` | `2cbf39e9e28aa732a225db09b2186a2342c44697d4fa047652d358e292ba5521` |
+| Version | Wasm Package URL                                                                                    | Checksum                                                           | Required Wrappers Version |
+| ------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------- |
+| 0.2.0   | `https://github.com/supabase/wrappers/releases/download/wasm_hubspot_fdw_v0.2.0/hubspot_fdw.wasm`   | `tbd`                                                              | >=0.5.0                   |
+| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_hubspot_fdw_v0.1.0/hubspot_fdw.wasm`   | `2cbf39e9e28aa732a225db09b2186a2342c44697d4fa047652d358e292ba5521` | >=0.4.0                   |
 
 ## Preparation
 
@@ -143,6 +144,29 @@ create foreign table hubspot.contacts (
 ```
 
 The column `user_id` is the custom property internal name, which can be found in the `Details` section of `Edit property` page on HubSpot `Settings` -> `Data Management` -> `Properties`.
+
+We can use SQL [import foreign schema](https://www.postgresql.org/docs/current/sql-importforeignschema.html) to import foreign table definitions from HubSpot.
+
+For example, using below SQL can automatically create foreign tables in the `hubspot` schema.
+
+```sql
+-- create all the foreign tables
+import foreign schema hubspot from server hubspot_server into hubspot;
+
+-- or, create selected tables only
+import foreign schema hubspot
+   limit to ("contact", "companies")
+   from server hubspot_server into hubspot;
+
+-- or, create all foreign tables except selected tables
+import foreign schema hubspot
+   except ("contacts")
+   from server hubspot_server into hubspot;
+```
+
+!!! note
+
+    The `objects` table will not be created by the `import foreign schema` statement.
 
 ### Companies
 

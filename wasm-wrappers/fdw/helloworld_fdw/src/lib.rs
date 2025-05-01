@@ -3,7 +3,7 @@ mod bindings;
 
 use bindings::{
     exports::supabase::wrappers::routines::Guest,
-    supabase::wrappers::types::{Cell, Context, FdwError, FdwResult, Row},
+    supabase::wrappers::types::{Cell, Context, FdwError, FdwResult, ImportForeignSchemaStmt, Row},
 };
 
 #[derive(Debug, Default)]
@@ -30,7 +30,7 @@ impl HelloWorldFdw {
 impl Guest for HelloWorldFdw {
     fn host_version_requirement() -> String {
         // semver ref: https://docs.rs/semver/latest/semver/enum.Op.html
-        "^0.1.0".to_string()
+        "^0.2.0".to_string()
     }
 
     fn init(_ctx: &Context) -> FdwResult {
@@ -85,23 +85,40 @@ impl Guest for HelloWorldFdw {
     }
 
     fn begin_modify(_ctx: &Context) -> FdwResult {
-        unimplemented!("update on foreign table is not supported");
+        Err("modify on foreign table is not supported".to_owned())
     }
 
     fn insert(_ctx: &Context, _row: &Row) -> FdwResult {
-        unimplemented!("update on foreign table is not supported");
+        Ok(())
     }
 
     fn update(_ctx: &Context, _rowid: Cell, _row: &Row) -> FdwResult {
-        unimplemented!("update on foreign table is not supported");
+        Ok(())
     }
 
     fn delete(_ctx: &Context, _rowid: Cell) -> FdwResult {
-        unimplemented!("update on foreign table is not supported");
+        Ok(())
     }
 
     fn end_modify(_ctx: &Context) -> FdwResult {
-        unimplemented!("update on foreign table is not supported");
+        Ok(())
+    }
+
+    fn import_foreign_schema(
+        _ctx: &Context,
+        stmt: ImportForeignSchemaStmt,
+    ) -> Result<Vec<String>, FdwError> {
+        let ret = vec![format!(
+            r#"create foreign table if not exists helloworld (
+                id bigint,
+                col text
+            )
+            server {} options (
+                foo 'bar'
+            )"#,
+            stmt.server_name,
+        )];
+        Ok(ret)
     }
 }
 

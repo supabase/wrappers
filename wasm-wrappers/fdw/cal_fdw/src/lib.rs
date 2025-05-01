@@ -6,7 +6,10 @@ use bindings::{
     exports::supabase::wrappers::routines::Guest,
     supabase::wrappers::{
         http, stats, time,
-        types::{Cell, Column, Context, FdwError, FdwResult, OptionsType, Row, TypeOid},
+        types::{
+            Cell, Column, Context, FdwError, FdwResult, ImportForeignSchemaStmt, OptionsType, Row,
+            TypeOid,
+        },
         utils,
     },
 };
@@ -188,7 +191,7 @@ impl CalFdw {
 impl Guest for CalFdw {
     fn host_version_requirement() -> String {
         // semver ref: https://docs.rs/semver/latest/semver/enum.Op.html
-        "^0.1.0".to_string()
+        "^0.2.0".to_string()
     }
 
     fn init(ctx: &Context) -> FdwResult {
@@ -196,7 +199,7 @@ impl Guest for CalFdw {
         let this = Self::this_mut();
 
         // get foreign server options
-        let opts = ctx.get_options(OptionsType::Server);
+        let opts = ctx.get_options(&OptionsType::Server);
         this.base_url = opts.require_or("api_url", "https://api.cal.com/v2");
         let api_key = match opts.get("api_key") {
             Some(key) => key,
@@ -222,7 +225,7 @@ impl Guest for CalFdw {
 
     fn begin_scan(ctx: &Context) -> FdwResult {
         let this = Self::this_mut();
-        let opts = ctx.get_options(OptionsType::Table);
+        let opts = ctx.get_options(&OptionsType::Table);
         this.object = opts.require("object")?;
         this.fetch_source_data()
     }
@@ -262,7 +265,7 @@ impl Guest for CalFdw {
 
     fn begin_modify(ctx: &Context) -> FdwResult {
         let this = Self::this_mut();
-        let opts = ctx.get_options(OptionsType::Table);
+        let opts = ctx.get_options(&OptionsType::Table);
         let object = opts.require("object")?;
         if object != "bookings" {
             return Err("only insert on foreign table 'bookings' is supported".to_owned());
@@ -308,6 +311,76 @@ impl Guest for CalFdw {
 
     fn end_modify(_ctx: &Context) -> FdwResult {
         Ok(())
+    }
+
+    fn import_foreign_schema(
+        _ctx: &Context,
+        stmt: ImportForeignSchemaStmt,
+    ) -> Result<Vec<String>, FdwError> {
+        let ret = vec![
+            format!(
+                r#"create foreign table if not exists my_profile (
+                    id bigint,
+                    username text,
+                    email text,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'my_profile'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists event_types (
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'event-types'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists bookings (
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'bookings',
+                    rowid_column 'attrs'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists calendars (
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'calendars'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists schedules (
+                    id bigint,
+                    name text,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'schedules'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists conferencing (
+                    id bigint,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'conferencing'
+                )"#,
+                stmt.server_name,
+            ),
+        ];
+        Ok(ret)
     }
 }
 

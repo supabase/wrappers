@@ -15,10 +15,11 @@ The Paddle Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you 
 
 ## Available Versions
 
-| Version | Wasm Package URL                                                                                | Checksum                                                           |
-| ------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| 0.1.1   | `https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.1.1/paddle_fdw.wasm` | `c5ac70bb2eef33693787b7d4efce9a83cde8d4fa40889d2037403a51263ba657` |
-| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.1.0/paddle_fdw.wasm` | `7d0b902440ac2ef1af85d09807145247f14d1d8fd4d700227e5a4d84c8145409` |
+| Version | Wasm Package URL                                                                                    | Checksum                                                           | Required Wrappers Version |
+| ------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------- |
+| 0.2.0   | `https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.2.0/paddle_fdw.wasm`     | `tbd`                                                              | >=0.5.0                   |
+| 0.1.1   | `https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.1.1/paddle_fdw.wasm`     | `c5ac70bb2eef33693787b7d4efce9a83cde8d4fa40889d2037403a51263ba657` | >=0.4.0                   |
+| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.1.0/paddle_fdw.wasm`     | `7d0b902440ac2ef1af85d09807145247f14d1d8fd4d700227e5a4d84c8145409` | >=0.4.0                   |
 
 ## Preparation
 

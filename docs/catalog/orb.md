@@ -15,9 +15,10 @@ The Orb Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you to 
 
 ## Available Versions
 
-| Version | Wasm Package URL                                                                          | Checksum                                                           |
-| ------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_orb_fdw_v0.1.0/orb_fdw.wasm` | `89153a0a570257c231b78561cc909766731c828324585a5b6e2aa553902cb73a` |
+| Version | Wasm Package URL                                                                                    | Checksum                                                           | Required Wrappers Version |
+| ------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------- |
+| 0.2.0   | `https://github.com/supabase/wrappers/releases/download/wasm_orb_fdw_v0.2.0/orb_fdw.wasm`           | `tbd`                                                              | >=0.5.0                   |
+| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_orb_fdw_v0.1.0/orb_fdw.wasm`           | `89153a0a570257c231b78561cc909766731c828324585a5b6e2aa553902cb73a` | >=0.4.0                   |
 
 ## Preparation
 
@@ -127,6 +128,25 @@ Supported objects are listed below:
 - `rowid_column` - Primary key column name, optional for data scan, required for data modify
 
 ## Entities
+
+We can use SQL [import foreign schema](https://www.postgresql.org/docs/current/sql-importforeignschema.html) to import foreign table definitions from Orb.
+
+For example, using below SQL can automatically create foreign tables in the `orb` schema.
+
+```sql
+-- create all the foreign tables
+import foreign schema orb from server orb_server into orb;
+
+-- or, create selected tables only
+import foreign schema orb
+   limit to ("customers", "invoices")
+   from server orb_server into orb;
+
+-- or, create all foreign tables except selected tables
+import foreign schema orb
+   except ("customers")
+   from server orb_server into orb;
+```
 
 ### Alert
 
