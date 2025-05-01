@@ -26,7 +26,10 @@ use bindings::{
     exports::supabase::wrappers::routines::Guest,
     supabase::wrappers::{
         http, stats, time,
-        types::{Cell, Context, FdwError, FdwResult, Limit, OptionsType, Row, Sort, Value},
+        types::{
+            Cell, Context, FdwError, FdwResult, ImportForeignSchemaStmt, Limit, OptionsType, Row,
+            Sort, Value,
+        },
         utils,
     },
 };
@@ -798,14 +801,12 @@ impl SlackFdw {
         let quals = ctx.get_quals();
         if !quals.is_empty() {
             for qual in quals.iter() {
-                if qual.operator().as_str() == "=" && !qual.use_or() {
-                    match qual.field().as_str() {
-                        "types" => {
-                            if let Value::Cell(Cell::String(types)) = qual.value() {
-                                params.push(("types".to_string(), types.clone()));
-                            }
-                        }
-                        _ => {}
+                if qual.operator().as_str() == "="
+                    && !qual.use_or()
+                    && qual.field().as_str() == "types"
+                {
+                    if let Value::Cell(Cell::String(types)) = qual.value() {
+                        params.push(("types".to_string(), types.clone()));
                     }
                 }
             }
@@ -1083,7 +1084,7 @@ impl SlackFdw {
 impl Guest for SlackFdw {
     fn host_version_requirement() -> String {
         // semver ref: https://docs.rs/semver/latest/semver/enum.Op.html
-        "^0.1.0".to_string()
+        "^0.2.0".to_string()
     }
 
     fn init(ctx: &Context) -> FdwResult {
@@ -1091,7 +1092,7 @@ impl Guest for SlackFdw {
         let this = Self::this_mut();
 
         // Get foreign server options
-        let opts = ctx.get_options(OptionsType::Server);
+        let opts = ctx.get_options(&OptionsType::Server);
 
         // Get API token from options or vault
         let api_token = match opts.get("api_token") {
@@ -1131,7 +1132,7 @@ impl Guest for SlackFdw {
         let this = Self::this_mut();
 
         // Get resource from table options
-        let opts = ctx.get_options(OptionsType::Table);
+        let opts = ctx.get_options(&OptionsType::Table);
         let resource = opts.require("resource")?;
 
         // Reset pagination state
@@ -1410,6 +1411,147 @@ impl Guest for SlackFdw {
 
     fn end_modify(_ctx: &Context) -> FdwResult {
         Err("Slack FDW is read-only".to_string())
+    }
+
+    fn import_foreign_schema(
+        _ctx: &Context,
+        stmt: ImportForeignSchemaStmt,
+    ) -> Result<Vec<String>, FdwError> {
+        let ret = vec![
+            format!(
+                r#"create foreign table if not exists messages (
+                    ts text,
+                    user_id text,
+                    channel_id text,
+                    text text,
+                    thread_ts text,
+                    reply_count integer
+                )
+                server {} options (
+                    resource 'messages'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists channels (
+                    id text,
+                    name text,
+                    is_private boolean,
+                    created timestamp,
+                    creator text
+                )
+                server {} options (
+                    resource 'channels'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists users (
+                    id text,
+                    name text,
+                    real_name text,
+                    display_name text,
+                    display_name_normalized text,
+                    real_name_normalized text,
+                    email text,
+                    phone text,
+                    skype text,
+                    is_admin boolean,
+                    is_owner boolean,
+                    is_primary_owner boolean,
+                    is_bot boolean,
+                    is_app_user boolean,
+                    is_restricted boolean,
+                    is_ultra_restricted boolean,
+                    deleted boolean,
+                    status_text text,
+                    status_emoji text,
+                    status_expiration bigint,
+                    title text,
+                    team_id text,
+                    team text,
+                    tz text,
+                    tz_label text,
+                    tz_offset integer,
+                    locale text,
+                    image_24 text,
+                    image_48 text,
+                    image_72 text,
+                    image_192 text,
+                    image_512 text,
+                    color text,
+                    updated bigint
+                )
+                server {} options (
+                    resource 'users'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists usergroups (
+                    id text,
+                    team_id text,
+                    name text,
+                    handle text,
+                    description text,
+                    is_external boolean,
+                    date_create bigint,
+                    date_update bigint,
+                    date_delete bigint,
+                    auto_type text,
+                    created_by text,
+                    updated_by text,
+                    deleted_by text,
+                    user_count integer,
+                    channel_count integer
+                )
+                server {} options (
+                    resource 'usergroups'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists usergroup_members (
+                    usergroup_id text,
+                    usergroup_name text,
+                    usergroup_handle text,
+                    user_id text
+                )
+                server {} options (
+                    resource 'usergroup_members'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists files (
+                    id text,
+                    name text,
+                    title text,
+                    mimetype text,
+                    size bigint,
+                    url_private text,
+                    user_id text,
+                    created timestamp
+                )
+                server {} options (
+                    resource 'files'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists team_info (
+                    id text,
+                    name text,
+                    domain text,
+                    email_domain text
+                )
+                server {} options (
+                    resource 'team-info'
+                )"#,
+                stmt.server_name,
+            ),
+        ];
+        Ok(ret)
     }
 }
 

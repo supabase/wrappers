@@ -1,6 +1,6 @@
 [package]
 name = "slack_fdw"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 [lib]
@@ -20,7 +20,7 @@ package = "supabase:slack-fdw"
 path = "wit"
 
 [package.metadata.component.target.dependencies]
-"supabase:wrappers" = { path = "../../wit/v1" }
+"supabase:wrappers" = { path = "../../wit/v2" }
 
 [profile.release]
 lto = true

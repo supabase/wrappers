@@ -15,9 +15,10 @@ The HubSpot Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you
 
 ## Available Versions
 
-| Version | Wasm Package URL                                                                                  | Checksum                                                           |
-| ------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_hubspot_fdw_v0.1.0/hubspot_fdw.wasm` | `2cbf39e9e28aa732a225db09b2186a2342c44697d4fa047652d358e292ba5521` |
+| Version | Wasm Package URL                                                                                    | Checksum                                                           | Required Wrappers Version |
+| ------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------- |
+| 0.2.0   | `https://github.com/supabase/wrappers/releases/download/wasm_hubspot_fdw_v0.2.0/hubspot_fdw.wasm`   | `tbd`                                                              | >=0.5.0                   |
+| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_hubspot_fdw_v0.1.0/hubspot_fdw.wasm`   | `2cbf39e9e28aa732a225db09b2186a2342c44697d4fa047652d358e292ba5521` | >=0.4.0                   |
 
 ## Preparation
 

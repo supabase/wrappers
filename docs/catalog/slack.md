@@ -15,10 +15,11 @@ The Slack Wrapper is a WebAssembly (Wasm) foreign data wrapper which allows you 
 
 ## Available Versions
 
-| Version | Wasm Package URL                                                                              | Checksum                                                           |
-| ------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| 0.0.6   | `https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.6/slack_fdw.wasm` | `349cb556f87a0233e25eb608a77e840531bc87f1acf9916856268bdcdd9973e2` |
-| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.1.0/slack_fdw.wasm` | `5b022b441c0007e31d792ecb1341bfffed1c29cb865eb0c7969989dff0e8fdc3` |
+| Version | Wasm Package URL                                                                                    | Checksum                                                           | Required Wrappers Version |
+| ------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------- |
+| 0.2.0   | `https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.2.0/slack_fdw.wasm`       | `tbd`                                                              | >=0.5.0                   |
+| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.1.0/slack_fdw.wasm`       | `5b022b441c0007e31d792ecb1341bfffed1c29cb865eb0c7969989dff0e8fdc3` | >=0.4.0                   |
+| 0.0.6   | `https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.6/slack_fdw.wasm`       | `349cb556f87a0233e25eb608a77e840531bc87f1acf9916856268bdcdd9973e2` | >=0.4.0                   |
 
 ## Preparation
 
@@ -65,13 +66,12 @@ create foreign data wrapper wasm_wrapper
 By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
 
 ```sql
--- Save your Slack API token in Vault and retrieve the `key_id`
-insert into vault.secrets (name, secret)
-values (
-  'slack',
+-- Save your Slack API token in Vault and retrieve the created `key_id`
+select vault.create_secret(
   'xoxb-your-slack-token' -- Slack Bot User OAuth Token
-)
-returning key_id;
+  'slack',
+  'Slack API token for Wrappers'
+);
 ```
 
 ### Connecting to Slack
@@ -129,6 +129,25 @@ create schema if not exists slack;
 ## Entities
 
 The Slack Wrapper supports data reads from the Slack API.
+
+We can use SQL [import foreign schema](https://www.postgresql.org/docs/current/sql-importforeignschema.html) to import foreign table definitions from Slack.
+
+For example, using below SQL can automatically create foreign tables in the `slack` schema.
+
+```sql
+-- create all the foreign tables
+import foreign schema slack from server slack_server into slack;
+
+-- or, create selected tables only
+import foreign schema slack
+   limit to ("messages", "channels")
+   from server slack_server into slack;
+
+-- or, create all foreign tables except selected tables
+import foreign schema slack
+   except ("messages")
+   from server slack_server into slack;
+```
 
 ### Messages
 

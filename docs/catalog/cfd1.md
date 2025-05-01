@@ -15,9 +15,10 @@ The Cloudflare D1 Wrapper is a WebAssembly(Wasm) foreign data wrapper which allo
 
 ## Available Versions
 
-| Version | Wasm Package URL                                                                                | Checksum                                                           |
-| ------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_cfd1_fdw_v0.1.0/cfd1_fdw.wasm` | `783232834bb29dbd3ee6b09618c16f8a847286e63d05c54397d56c3e703fad31` |
+| Version | Wasm Package URL                                                                                    | Checksum                                                           | Required Wrappers Version |
+| ------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------- |
+| 0.2.0   | `https://github.com/supabase/wrappers/releases/download/wasm_cfd1_fdw_v0.2.0/cfd1_fdw.wasm`         | `tbd`                                                              | >=0.5.0                   |
+| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_cfd1_fdw_v0.1.0/cfd1_fdw.wasm`         | `783232834bb29dbd3ee6b09618c16f8a847286e63d05c54397d56c3e703fad31` | >=0.4.0                   |
 
 ## Preparation
 

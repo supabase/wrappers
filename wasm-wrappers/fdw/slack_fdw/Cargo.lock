@@ -72,7 +72,7 @@ dependencies = [
 
 [[package]]
 name = "slack_fdw"
-version = "0.0.5"
+version = "0.2.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -98,6 +98,6 @@ checksum = "5a5f39404a5da50712a4c1eecf25e90dd62b613502b7e925fd4e4d19b5c96512"
 
 [[package]]
 name = "wit-bindgen-rt"
-version = "0.26.0"
+version = "0.41.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "29c7526379ace8709ee9ab9f2bb50f112d95581063a59ef3097d9c10153886c9"
+checksum = "c4db52a11d4dfb0a59f194c064055794ee6564eb1ced88c25da2cf76e50c5621"

@@ -1,6 +1,6 @@
 [package]
 name = "notion_fdw"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 
 [lib]
@@ -20,4 +20,4 @@ package = "supabase:notion-fdw"
 path = "wit"
 
 [package.metadata.component.target.dependencies]
-"supabase:wrappers" = { path = "../../wit/v1" }
+"supabase:wrappers" = { path = "../../wit/v2" }
