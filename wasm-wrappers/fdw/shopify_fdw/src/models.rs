@@ -1,31 +1,10 @@
-use serde::{Deserialize, Serialize};
+//! Shopify data models
+//!
+//! This module defines the data structures for Shopify resources.
 
-/// General Shopify API response structure
-#[derive(Debug, Deserialize)]
-pub struct ShopifyResponse<T> {
-    pub data: Option<T>,
-    pub errors: Option<Vec<ShopifyError>>,
-}
+use serde::Deserialize;
 
-#[derive(Debug, Deserialize)]
-pub struct ShopifyError {
-    pub message: String,
-    pub code: Option<String>,
-}
-
-/// Products response
-#[derive(Debug, Deserialize)]
-pub struct ProductsResponse {
-    pub products: Vec<Product>,
-}
-
-/// Single product response
-#[derive(Debug, Deserialize)]
-pub struct ProductResponse {
-    pub product: Product,
-}
-
-/// Product resource model
+/// A Shopify product with variants, options, and images
 #[derive(Debug, Deserialize, Clone)]
 pub struct Product {
     pub id: i64,
@@ -44,7 +23,7 @@ pub struct Product {
     pub image: Option<ProductImage>,
 }
 
-/// Product variant model
+/// A variant of a Shopify product
 #[derive(Debug, Deserialize, Clone)]
 pub struct ProductVariant {
     pub id: i64,
@@ -53,9 +32,9 @@ pub struct ProductVariant {
     pub price: String,
     pub sku: Option<String>,
     pub position: i32,
-    pub inventory_policy: Option<String>,
+    pub inventory_policy: String,
     pub compare_at_price: Option<String>,
-    pub fulfillment_service: Option<String>,
+    pub fulfillment_service: String,
     pub inventory_management: Option<String>,
     pub option1: Option<String>,
     pub option2: Option<String>,
@@ -74,7 +53,7 @@ pub struct ProductVariant {
     pub requires_shipping: bool,
 }
 
-/// Product option model
+/// An option for a Shopify product
 #[derive(Debug, Deserialize, Clone)]
 pub struct ProductOption {
     pub id: i64,
@@ -84,7 +63,7 @@ pub struct ProductOption {
     pub values: Vec<String>,
 }
 
-/// Product image model
+/// An image of a Shopify product
 #[derive(Debug, Deserialize, Clone)]
 pub struct ProductImage {
     pub id: i64,
@@ -99,18 +78,7 @@ pub struct ProductImage {
     pub variant_ids: Vec<i64>,
 }
 
-/// Collection responses
-#[derive(Debug, Deserialize)]
-pub struct CustomCollectionsResponse {
-    pub custom_collections: Vec<CustomCollection>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct SmartCollectionsResponse {
-    pub smart_collections: Vec<SmartCollection>,
-}
-
-/// Custom Collection model
+/// A Shopify custom collection
 #[derive(Debug, Deserialize, Clone)]
 pub struct CustomCollection {
     pub id: i64,
@@ -125,7 +93,7 @@ pub struct CustomCollection {
     pub image: Option<CollectionImage>,
 }
 
-/// Smart Collection model
+/// A Shopify smart collection
 #[derive(Debug, Deserialize, Clone)]
 pub struct SmartCollection {
     pub id: i64,
@@ -142,6 +110,7 @@ pub struct SmartCollection {
     pub disjunctive: bool,
 }
 
+/// An image for a Shopify collection
 #[derive(Debug, Deserialize, Clone)]
 pub struct CollectionImage {
     pub created_at: String,
@@ -151,6 +120,7 @@ pub struct CollectionImage {
     pub src: String,
 }
 
+/// A rule for a Shopify smart collection
 #[derive(Debug, Deserialize, Clone)]
 pub struct CollectionRule {
     pub column: String,
@@ -158,18 +128,7 @@ pub struct CollectionRule {
     pub condition: String,
 }
 
-/// Customer responses
-#[derive(Debug, Deserialize)]
-pub struct CustomersResponse {
-    pub customers: Vec<Customer>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct CustomerResponse {
-    pub customer: Customer,
-}
-
-/// Customer model
+/// A Shopify customer
 #[derive(Debug, Deserialize, Clone)]
 pub struct Customer {
     pub id: i64,
@@ -195,7 +154,7 @@ pub struct Customer {
     pub default_address: Option<CustomerAddress>,
 }
 
-/// Customer address model
+/// An address for a Shopify customer
 #[derive(Debug, Deserialize, Clone)]
 pub struct CustomerAddress {
     pub id: i64,
@@ -217,18 +176,7 @@ pub struct CustomerAddress {
     pub default: bool,
 }
 
-/// Order responses
-#[derive(Debug, Deserialize)]
-pub struct OrdersResponse {
-    pub orders: Vec<Order>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct OrderResponse {
-    pub order: Order,
-}
-
-/// Order model
+/// A Shopify order
 #[derive(Debug, Deserialize, Clone)]
 pub struct Order {
     pub id: i64,
@@ -301,6 +249,7 @@ pub struct Order {
     pub customer: Option<Customer>,
 }
 
+/// A line item in a Shopify order
 #[derive(Debug, Deserialize, Clone)]
 pub struct LineItem {
     pub id: i64,
@@ -332,28 +281,18 @@ pub struct LineItem {
     pub origin_location: Option<Location>,
 }
 
+/// A property of a line item
 #[derive(Debug, Deserialize, Clone)]
 pub struct LineItemProperty {
     pub name: String,
     pub value: String,
 }
 
-#[derive(Debug, Deserialize, Clone)]
-pub struct PriceSet {
-    pub shop_money: Money,
-    pub presentment_money: Money,
-}
-
-#[derive(Debug, Deserialize, Clone)]
-pub struct Money {
-    pub amount: String,
-    pub currency_code: String,
-}
-
+/// A discount application
 #[derive(Debug, Deserialize, Clone)]
 pub struct DiscountApplication {
     pub target_type: String,
-    pub type_field: String,
+    pub r#type: String,
     pub value: String,
     pub value_type: String,
     pub allocation_method: String,
@@ -361,19 +300,22 @@ pub struct DiscountApplication {
     pub code: Option<String>,
 }
 
+/// A discount code
 #[derive(Debug, Deserialize, Clone)]
 pub struct DiscountCode {
     pub code: String,
     pub amount: String,
-    pub type_field: String,
+    pub r#type: String,
 }
 
+/// A note attribute
 #[derive(Debug, Deserialize, Clone)]
 pub struct NoteAttribute {
     pub name: String,
     pub value: String,
 }
 
+/// A tax line
 #[derive(Debug, Deserialize, Clone)]
 pub struct TaxLine {
     pub price: String,
@@ -382,12 +324,27 @@ pub struct TaxLine {
     pub price_set: PriceSet,
 }
 
+/// A price set
+#[derive(Debug, Deserialize, Clone)]
+pub struct PriceSet {
+    pub shop_money: Money,
+    pub presentment_money: Money,
+}
+
+/// A money value
+#[derive(Debug, Deserialize, Clone)]
+pub struct Money {
+    pub amount: String,
+    pub currency_code: String,
+}
+
+/// A shipping line
 #[derive(Debug, Deserialize, Clone)]
 pub struct ShippingLine {
     pub id: i64,
     pub title: String,
     pub price: String,
-    pub code: String,
+    pub code: Option<String>,
     pub source: String,
     pub phone: Option<String>,
     pub requested_fulfillment_service_id: Option<String>,
@@ -400,6 +357,7 @@ pub struct ShippingLine {
     pub tax_lines: Vec<TaxLine>,
 }
 
+/// A discount allocation
 #[derive(Debug, Deserialize, Clone)]
 pub struct DiscountAllocation {
     pub amount: String,
@@ -407,36 +365,39 @@ pub struct DiscountAllocation {
     pub amount_set: PriceSet,
 }
 
+/// A duty
 #[derive(Debug, Deserialize, Clone)]
 pub struct Duty {
     pub id: i64,
-    pub harmonized_system_code: String,
-    pub country_code_of_origin: String,
+    pub harmonized_system_code: Option<String>,
+    pub country_code_of_origin: Option<String>,
     pub shop_money: Money,
     pub presentment_money: Money,
     pub tax_lines: Vec<TaxLine>,
     pub admin_graphql_api_id: String,
 }
 
+/// An address
 #[derive(Debug, Deserialize, Clone)]
 pub struct Address {
     pub first_name: Option<String>,
+    pub last_name: Option<String>,
     pub address1: Option<String>,
-    pub phone: Option<String>,
+    pub address2: Option<String>,
     pub city: Option<String>,
-    pub zip: Option<String>,
     pub province: Option<String>,
     pub country: Option<String>,
-    pub last_name: Option<String>,
-    pub address2: Option<String>,
-    pub company: Option<String>,
+    pub zip: Option<String>,
+    pub phone: Option<String>,
+    pub name: Option<String>,
+    pub province_code: Option<String>,
+    pub country_code: Option<String>,
     pub latitude: Option<f64>,
     pub longitude: Option<f64>,
-    pub name: Option<String>,
-    pub country_code: Option<String>,
-    pub province_code: Option<String>,
+    pub company: Option<String>,
 }
 
+/// A fulfillment
 #[derive(Debug, Deserialize, Clone)]
 pub struct Fulfillment {
     pub id: i64,
@@ -455,12 +416,14 @@ pub struct Fulfillment {
     pub line_items: Vec<LineItem>,
 }
 
+/// A receipt
 #[derive(Debug, Deserialize, Clone)]
 pub struct Receipt {
     pub testcase: bool,
     pub authorization: String,
 }
 
+/// A refund
 #[derive(Debug, Deserialize, Clone)]
 pub struct Refund {
     pub id: i64,
@@ -469,20 +432,19 @@ pub struct Refund {
     pub note: Option<String>,
     pub user_id: Option<i64>,
     pub processed_at: String,
-    pub restock: bool,
-    pub admin_graphql_api_id: String,
     pub refund_line_items: Vec<RefundLineItem>,
     pub transactions: Vec<Transaction>,
     pub order_adjustments: Vec<OrderAdjustment>,
 }
 
+/// A refund line item
 #[derive(Debug, Deserialize, Clone)]
 pub struct RefundLineItem {
     pub id: i64,
     pub quantity: i32,
     pub line_item_id: i64,
     pub location_id: Option<i64>,
-    pub restock_type: String,
+    pub restock_type: Option<String>,
     pub subtotal: f64,
     pub total_tax: f64,
     pub subtotal_set: PriceSet,
@@ -490,6 +452,7 @@ pub struct RefundLineItem {
     pub line_item: LineItem,
 }
 
+/// A transaction
 #[derive(Debug, Deserialize, Clone)]
 pub struct Transaction {
     pub id: i64,
@@ -511,9 +474,10 @@ pub struct Transaction {
     pub receipt: Option<Receipt>,
     pub amount: String,
     pub currency: String,
-    pub admin_graphql_api_id: String,
+    pub payment_id: Option<String>,
 }
 
+/// An order adjustment
 #[derive(Debug, Deserialize, Clone)]
 pub struct OrderAdjustment {
     pub id: i64,
@@ -527,18 +491,7 @@ pub struct OrderAdjustment {
     pub tax_amount_set: PriceSet,
 }
 
-/// Inventory responses
-#[derive(Debug, Deserialize)]
-pub struct InventoryItemsResponse {
-    pub inventory_items: Vec<InventoryItem>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct InventoryLevelsResponse {
-    pub inventory_levels: Vec<InventoryLevel>,
-}
-
-/// Inventory Item model
+/// A Shopify inventory item
 #[derive(Debug, Deserialize, Clone)]
 pub struct InventoryItem {
     pub id: i64,
@@ -554,13 +507,14 @@ pub struct InventoryItem {
     pub country_harmonized_system_codes: Vec<CountryHarmonizedSystemCode>,
 }
 
+/// A country harmonized system code
 #[derive(Debug, Deserialize, Clone)]
 pub struct CountryHarmonizedSystemCode {
     pub harmonized_system_code: String,
     pub country_code: String,
 }
 
-/// Inventory Level model
+/// A Shopify inventory level
 #[derive(Debug, Deserialize, Clone)]
 pub struct InventoryLevel {
     pub inventory_item_id: i64,
@@ -569,13 +523,7 @@ pub struct InventoryLevel {
     pub updated_at: String,
 }
 
-/// Location response
-#[derive(Debug, Deserialize)]
-pub struct LocationsResponse {
-    pub locations: Vec<Location>,
-}
-
-/// Location model
+/// A Shopify location
 #[derive(Debug, Deserialize, Clone)]
 pub struct Location {
     pub id: i64,
@@ -597,13 +545,7 @@ pub struct Location {
     pub admin_graphql_api_id: String,
 }
 
-/// Shop response
-#[derive(Debug, Deserialize)]
-pub struct ShopResponse {
-    pub shop: Shop,
-}
-
-/// Shop model
+/// A Shopify shop
 #[derive(Debug, Deserialize, Clone)]
 pub struct Shop {
     pub id: i64,
@@ -660,13 +602,7 @@ pub struct Shop {
     pub enabled_presentment_currencies: Vec<String>,
 }
 
-/// Metafields response
-#[derive(Debug, Deserialize)]
-pub struct MetafieldsResponse {
-    pub metafields: Vec<Metafield>,
-}
-
-/// Metafield model
+/// A Shopify metafield
 #[derive(Debug, Deserialize, Clone)]
 pub struct Metafield {
     pub id: i64,
@@ -679,244 +615,4 @@ pub struct Metafield {
     pub updated_at: String,
     pub owner_resource: String,
     pub value_type: String,
-}
-
-// Pagination response fields
-#[derive(Debug, Deserialize)]
-pub struct ResponseLinks {
-    pub previous: Option<String>,
-    pub next: Option<String>,
-}
-
-// Helper methods for row conversion
-impl Product {
-    pub fn to_row_vec(&self) -> Vec<Option<String>> {
-        vec![
-            Some(self.id.to_string()),
-            Some(self.title.clone()),
-            self.body_html.clone(),
-            self.vendor.clone(),
-            self.product_type.clone(),
-            Some(self.created_at.clone()),
-            Some(self.updated_at.clone()),
-            self.published_at.clone(),
-            Some(self.status.clone()),
-            self.tags.clone(),
-        ]
-    }
-}
-
-impl ProductVariant {
-    pub fn to_row_vec(&self) -> Vec<Option<String>> {
-        vec![
-            Some(self.id.to_string()),
-            Some(self.product_id.to_string()),
-            Some(self.title.clone()),
-            Some(self.price.clone()),
-            self.sku.clone(),
-            Some(self.position.to_string()),
-            self.inventory_policy.clone(),
-            self.compare_at_price.clone(),
-            self.fulfillment_service.clone(),
-            self.inventory_management.clone(),
-            self.option1.clone(),
-            self.option2.clone(),
-            self.option3.clone(),
-            Some(self.created_at.clone()),
-            Some(self.updated_at.clone()),
-            Some(self.taxable.to_string()),
-            self.barcode.clone(),
-            Some(self.grams.to_string()),
-            self.image_id.map(|id| id.to_string()),
-            Some(self.weight.to_string()),
-            Some(self.weight_unit.clone()),
-            Some(self.inventory_item_id.to_string()),
-            Some(self.inventory_quantity.to_string()),
-            Some(self.old_inventory_quantity.to_string()),
-            Some(self.requires_shipping.to_string()),
-        ]
-    }
-}
-
-impl Customer {
-    pub fn to_row_vec(&self) -> Vec<Option<String>> {
-        vec![
-            Some(self.id.to_string()),
-            self.email.clone(),
-            Some(self.accepts_marketing.to_string()),
-            Some(self.created_at.clone()),
-            Some(self.updated_at.clone()),
-            self.first_name.clone(),
-            self.last_name.clone(),
-            Some(self.orders_count.to_string()),
-            Some(self.state.clone()),
-            Some(self.total_spent.clone()),
-            self.last_order_id.map(|id| id.to_string()),
-            self.note.clone(),
-            Some(self.verified_email.to_string()),
-            Some(self.tax_exempt.to_string()),
-            self.phone.clone(),
-            Some(self.tags.clone()),
-            self.last_order_name.clone(),
-            Some(self.currency.clone()),
-        ]
-    }
-}
-
-impl Order {
-    pub fn to_row_vec(&self) -> Vec<Option<String>> {
-        vec![
-            Some(self.id.to_string()),
-            self.email.clone(),
-            self.closed_at.clone(),
-            Some(self.created_at.clone()),
-            Some(self.updated_at.clone()),
-            Some(self.number.to_string()),
-            self.note.clone(),
-            Some(self.token.clone()),
-            self.gateway.clone(),
-            Some(self.test.to_string()),
-            Some(self.total_price.clone()),
-            Some(self.subtotal_price.clone()),
-            Some(self.total_weight.to_string()),
-            Some(self.total_tax.clone()),
-            Some(self.taxes_included.to_string()),
-            Some(self.currency.clone()),
-            Some(self.financial_status.clone()),
-            Some(self.confirmed.to_string()),
-            Some(self.total_discounts.clone()),
-            Some(self.total_line_items_price.clone()),
-            self.cart_token.clone(),
-            Some(self.buyer_accepts_marketing.to_string()),
-            Some(self.name.clone()),
-            self.referring_site.clone(),
-            self.landing_site.clone(),
-            self.cancelled_at.clone(),
-            self.cancel_reason.clone(),
-            Some(self.processed_at.clone()),
-            self.customer_id.map(|id| id.to_string()),
-            self.user_id.map(|id| id.to_string()),
-            self.location_id.map(|id| id.to_string()),
-            self.source_identifier.clone(),
-            self.source_url.clone(),
-            self.device_id.map(|id| id.to_string()),
-            self.phone.clone(),
-            self.customer_locale.clone(),
-            self.app_id.map(|id| id.to_string()),
-            self.browser_ip.clone(),
-            self.landing_site_ref.clone(),
-            Some(self.order_number.clone()),
-            Some(self.processing_method.clone()),
-            self.checkout_id.map(|id| id.to_string()),
-            Some(self.source_name.clone()),
-            self.fulfillment_status.clone(),
-            Some(self.tags.clone()),
-            self.contact_email.clone(),
-            Some(self.order_status_url.clone()),
-            Some(self.presentment_currency.clone()),
-        ]
-    }
-}
-
-impl InventoryItem {
-    pub fn to_row_vec(&self) -> Vec<Option<String>> {
-        vec![
-            Some(self.id.to_string()),
-            self.sku.clone(),
-            Some(self.created_at.clone()),
-            Some(self.updated_at.clone()),
-            Some(self.requires_shipping.to_string()),
-            self.cost.clone(),
-            self.country_code_of_origin.clone(),
-            self.province_code_of_origin.clone(),
-            self.harmonized_system_code.clone(),
-            Some(self.tracked.to_string()),
-        ]
-    }
-}
-
-impl InventoryLevel {
-    pub fn to_row_vec(&self) -> Vec<Option<String>> {
-        vec![
-            Some(self.inventory_item_id.to_string()),
-            Some(self.location_id.to_string()),
-            Some(self.available.to_string()),
-            Some(self.updated_at.clone()),
-        ]
-    }
-}
-
-impl Shop {
-    pub fn to_row_vec(&self) -> Vec<Option<String>> {
-        vec![
-            Some(self.id.to_string()),
-            Some(self.name.clone()),
-            Some(self.email.clone()),
-            Some(self.domain.clone()),
-            self.province.clone(),
-            Some(self.country.clone()),
-            self.address1.clone(),
-            self.zip.clone(),
-            self.city.clone(),
-            self.source.clone(),
-            self.phone.clone(),
-            self.latitude.map(|lat| lat.to_string()),
-            self.longitude.map(|lng| lng.to_string()),
-            Some(self.primary_locale.clone()),
-            self.address2.clone(),
-            Some(self.created_at.clone()),
-            Some(self.updated_at.clone()),
-            Some(self.country_code.clone()),
-            Some(self.country_name.clone()),
-            Some(self.currency.clone()),
-            self.customer_email.clone(),
-            Some(self.timezone.clone()),
-            Some(self.iana_timezone.clone()),
-            Some(self.shop_owner.clone()),
-            Some(self.money_format.clone()),
-            Some(self.money_with_currency_format.clone()),
-            Some(self.weight_unit.clone()),
-            self.province_code.clone(),
-            self.taxes_included.map(|tax| tax.to_string()),
-            self.tax_shipping.map(|tax| tax.to_string()),
-            Some(self.county_taxes.to_string()),
-            Some(self.plan_display_name.clone()),
-            Some(self.plan_name.clone()),
-            Some(self.has_discounts.to_string()),
-            Some(self.has_gift_cards.to_string()),
-            Some(self.myshopify_domain.clone()),
-            self.google_apps_domain.clone(),
-            self.google_apps_login_enabled.map(|enabled| enabled.to_string()),
-            Some(self.money_in_emails_format.clone()),
-            Some(self.money_with_currency_in_emails_format.clone()),
-            Some(self.eligible_for_payments.to_string()),
-            Some(self.requires_extra_payments_agreement.to_string()),
-            Some(self.password_enabled.to_string()),
-            Some(self.has_storefront.to_string()),
-            Some(self.eligible_for_card_reader_giveaway.to_string()),
-            Some(self.finances.to_string()),
-            Some(self.primary_location_id.to_string()),
-            Some(self.checkout_api_supported.to_string()),
-            Some(self.multi_location_enabled.to_string()),
-            Some(self.setup_required.to_string()),
-            Some(self.pre_launch_enabled.to_string()),
-        ]
-    }
-}
-
-impl Metafield {
-    pub fn to_row_vec(&self) -> Vec<Option<String>> {
-        vec![
-            Some(self.id.to_string()),
-            Some(self.namespace.clone()),
-            Some(self.key.clone()),
-            Some(self.value.clone()),
-            self.description.clone(),
-            Some(self.owner_id.to_string()),
-            Some(self.created_at.clone()),
-            Some(self.updated_at.clone()),
-            Some(self.owner_resource.clone()),
-            Some(self.value_type.clone()),
-        ]
-    }
 }
