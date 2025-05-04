@@ -1,3 +1,12 @@
+//! Wrappers is a development framework for Postgres Foreign Data Wrappers (FDW).
+//! This crate provides the core functionality and implementations for various FDWs.
+//! 
+//! # Features
+//! - Easy to implement FDW interface
+//! - Support for rich data types
+//! - Support both sync and async backends
+//! - Built on top of pgrx
+
 use pgrx::prelude::*;
 
 pg_module_magic!();
@@ -5,8 +14,10 @@ pg_module_magic!();
 extension_sql_file!("../sql/bootstrap.sql", bootstrap);
 extension_sql_file!("../sql/finalize.sql", finalize);
 
-mod fdw;
-mod stats;
+/// FDW implementations for various data sources
+pub mod fdw;
+/// Statistics collection and reporting utilities
+pub mod stats;
 
 #[cfg(test)]
 pub mod pg_test {
