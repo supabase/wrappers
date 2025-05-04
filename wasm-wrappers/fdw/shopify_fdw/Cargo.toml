@@ -1,0 +1,25 @@
+[package]
+name = "shopify_fdw"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wit-bindgen-rt = "0.41.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[package.metadata.component]
+package = "supabase:shopify-fdw"
+
+[package.metadata.component.target]
+path = "wit"
+
+[package.metadata.component.target.dependencies]
+"supabase:wrappers" = { path = "../../wit/v2" }
+
+[profile.release]
+lto = true
+opt-level = 's'

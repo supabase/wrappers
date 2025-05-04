@@ -17,3 +17,5 @@ results/
 wrappers/results/
 wrappers/regression.*
 .venv/
+
+**/.claude/settings.local.json
