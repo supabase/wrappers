@@ -57,7 +57,7 @@ The Shopify FDW will allow querying Shopify store data directly from PostgreSQL 
 - [x] Implement import_foreign_schema method
 
 ### Phase 5: Resource Methods
-- [ ] Implement fetch_products method
+- [x] Implement fetch_products method
 - [ ] Implement fetch_product_variants method
 - [ ] Implement fetch_collections methods
 - [ ] Implement fetch_customers method
@@ -70,7 +70,7 @@ The Shopify FDW will allow querying Shopify store data directly from PostgreSQL 
 - [ ] Implement fetch_shop method
 
 ### Phase 6: Row Conversion Methods
-- [ ] Implement product_to_row method
+- [x] Implement product_to_row method
 - [ ] Implement product_variant_to_row method
 - [ ] Implement collection_to_row methods
 - [ ] Implement customer_to_row method
@@ -83,13 +83,13 @@ The Shopify FDW will allow querying Shopify store data directly from PostgreSQL 
 - [ ] Implement shop_to_row method
 
 ### Phase 7: Query Pushdown & Optimization
-- [ ] Add filtering support for products
+- [x] Add filtering support for products
 - [ ] Add filtering support for customers
 - [ ] Add filtering support for orders
 - [ ] Add filtering support for inventory
 - [ ] Add filtering support for metafields
-- [ ] Implement sorting for supported resources
-- [ ] Implement limit/offset handling
+- [x] Implement sorting for supported resources
+- [x] Implement limit/offset handling
 
 ### Phase 8: Testing & Deployment
 - [ ] Write unit tests for models

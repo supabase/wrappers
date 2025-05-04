@@ -18,6 +18,7 @@
 #[allow(warnings)]
 mod bindings;
 use serde_json::Value as JsonValue;
+use std::collections::HashMap;
 
 // Shopify FDW implementation modules
 pub mod api;
@@ -45,7 +46,7 @@ use models::{
 ///
 /// This struct encapsulates all the functionality to interact with the Shopify API,
 /// translate Shopify data to PostgreSQL rows, and handle query pushdown.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 struct ShopifyFdw {
     // Connection state
     /// Shopify API access token
@@ -117,61 +118,80 @@ impl ShopifyFdw {
 
     // Map Shopify Product to PostgreSQL Row
     fn product_to_row(&self, product: &Product, row: &Row) -> Result<(), FdwError> {
-        // Basic information
+        // Required fields
         row.push(Some(&Cell::I64(product.id)));
         row.push(Some(&Cell::String(product.title.clone())));
         
-        // Optional fields
-        if let Some(body_html) = &product.body_html {
-            row.push(Some(&Cell::String(body_html.clone())));
-        } else {
-            row.push(None);
+        // Optional fields with null handling
+        match &product.body_html {
+            Some(body_html) => row.push(Some(&Cell::String(body_html.clone()))),
+            None => row.push(None),
         }
         
-        if let Some(vendor) = &product.vendor {
-            row.push(Some(&Cell::String(vendor.clone())));
-        } else {
-            row.push(None);
+        match &product.vendor {
+            Some(vendor) => row.push(Some(&Cell::String(vendor.clone()))),
+            None => row.push(None),
         }
         
-        if let Some(product_type) = &product.product_type {
-            row.push(Some(&Cell::String(product_type.clone())));
-        } else {
-            row.push(None);
+        match &product.product_type {
+            Some(product_type) => row.push(Some(&Cell::String(product_type.clone()))),
+            None => row.push(None),
         }
         
-        // Timestamps
+        // DateTime fields formatted as ISO 8601 strings
         row.push(Some(&Cell::String(product.created_at.clone())));
         row.push(Some(&Cell::String(product.updated_at.clone())));
         
-        if let Some(published_at) = &product.published_at {
-            row.push(Some(&Cell::String(published_at.clone())));
-        } else {
-            row.push(None);
+        match &product.published_at {
+            Some(published_at) => row.push(Some(&Cell::String(published_at.clone()))),
+            None => row.push(None),
         }
         
-        // Status
+        // Status field (required)
         row.push(Some(&Cell::String(product.status.clone())));
         
-        // Tags
-        if let Some(tags) = &product.tags {
-            row.push(Some(&Cell::String(tags.clone())));
-        } else {
-            row.push(None);
+        // Tags field (optional)
+        match &product.tags {
+            Some(tags) => row.push(Some(&Cell::String(tags.clone()))),
+            None => row.push(None),
         }
         
-        // Variant count
-        row.push(Some(&Cell::I32(product.variants.len() as i32)));
+        // Handling nested collections and relationships
         
-        // First image URL, if any
+        // Variants - count of related variants
+        let variants_count = product.variants.len() as i32;
+        row.push(Some(&Cell::I32(variants_count)));
+        
+        // Options - count of product options
+        let options_count = product.options.len() as i32;
+        row.push(Some(&Cell::I32(options_count)));
+        
+        // Images - count of product images
+        let images_count = product.images.len() as i32;
+        row.push(Some(&Cell::I32(images_count)));
+        
+        // Primary image URL - prioritize the dedicated 'image' field if available
+        // otherwise use the first image from the images collection
+        let image_url = match &product.image {
+            Some(image) => Some(&Cell::String(image.src.clone())),
+            None if !product.images.is_empty() => Some(&Cell::String(product.images[0].src.clone())),
+            _ => None,
+        };
+        row.push(image_url);
+        
+        // If primary image exists, include image dimensions
         if let Some(image) = &product.image {
-            row.push(Some(&Cell::String(image.src.clone())));
+            row.push(Some(&Cell::I32(image.width)));
+            row.push(Some(&Cell::I32(image.height)));
         } else if !product.images.is_empty() {
-            row.push(Some(&Cell::String(product.images[0].src.clone())));
+            row.push(Some(&Cell::I32(product.images[0].width)));
+            row.push(Some(&Cell::I32(product.images[0].height)));
         } else {
-            row.push(None);
+            row.push(None); // No width
+            row.push(None); // No height
         }
-
+        
+        // Return success
         Ok(())
     }
 
@@ -702,102 +722,192 @@ impl ShopifyFdw {
         // Clear previous results
         self.products.clear();
         
-        // Transform quals to API conditions
+        // Step 1: Create request parameters with query pushdown support
         let conditions = self.transform_quals_to_conditions(ctx);
+        let mut params = HashMap::new();
+        
+        // Apply filters from conditions
+        if !conditions.is_empty() {
+            // Create Shopify API client for applying conditions
+            let config = self.create_shopify_config();
+            let client = api::ShopifyClient::new(config);
+            params = client.apply_conditions("products", &conditions);
+        }
+        
+        // Step 2: Add pagination parameters
+        params.insert("limit".to_string(), BATCH_SIZE.to_string());
+        
+        // Track if we need pagination
+        let mut has_next_page = true;
+        let mut next_page_url: Option<String> = None;
         
         // Create Shopify API client
         let config = self.create_shopify_config();
         let mut client = api::ShopifyClient::new(config);
         
-        // Fetch products with conditions
-        match client.get_products(if conditions.is_empty() { None } else { Some(&conditions) }).await {
-            Ok(products) => {
-                self.products = products;
-                
-                // Apply sorting if requested
-                if !self.sorts.is_empty() {
-                    self.products.sort_by(|a, b| {
-                        for sort in &self.sorts {
-                            match sort.field().as_str() {
-                                "id" => {
-                                    let ordering = a.id.cmp(&b.id);
-                                    if sort.reversed() {
-                                        return ordering.reverse();
-                                    }
-                                    if ordering != std::cmp::Ordering::Equal {
-                                        return ordering;
-                                    }
-                                }
-                                "title" => {
-                                    let ordering = a.title.cmp(&b.title);
-                                    if sort.reversed() {
-                                        return ordering.reverse();
-                                    }
-                                    if ordering != std::cmp::Ordering::Equal {
-                                        return ordering;
-                                    }
-                                }
-                                "created_at" => {
-                                    let ordering = a.created_at.cmp(&b.created_at);
-                                    if sort.reversed() {
-                                        return ordering.reverse();
-                                    }
-                                    if ordering != std::cmp::Ordering::Equal {
-                                        return ordering;
-                                    }
-                                }
-                                "updated_at" => {
-                                    let ordering = a.updated_at.cmp(&b.updated_at);
-                                    if sort.reversed() {
-                                        return ordering.reverse();
-                                    }
-                                    if ordering != std::cmp::Ordering::Equal {
-                                        return ordering;
-                                    }
-                                }
-                                "vendor" => {
-                                    let a_vendor = a.vendor.as_ref().unwrap_or(&String::new());
-                                    let b_vendor = b.vendor.as_ref().unwrap_or(&String::new());
-                                    let ordering = a_vendor.cmp(b_vendor);
-                                    if sort.reversed() {
-                                        return ordering.reverse();
-                                    }
-                                    if ordering != std::cmp::Ordering::Equal {
-                                        return ordering;
-                                    }
-                                }
-                                _ => {}
+        // Enable debug mode if needed
+        if self.debug_mode() {
+            client = client.with_debug(true);
+        }
+        
+        // Collect products with pagination
+        while has_next_page {
+            // Step 3: Create and send the request
+            let (response, metadata) = match next_page_url {
+                Some(url) => {
+                    // Extract the full URL and directly fetch
+                    let parts: Vec<&str> = url.split("/admin/api/").collect();
+                    if parts.len() > 1 {
+                        let endpoint = format!("{}", parts[1]);
+                        client.get(&endpoint, None).await?
+                    } else {
+                        return Err(format!("Invalid pagination URL: {}", url));
+                    }
+                },
+                None => {
+                    // First request uses the parameters we built
+                    client.get("products.json", Some(params.clone())).await?
+                }
+            };
+            
+            // Step 4: Extract products from JSON response
+            let products_response: api::ProductsResponse = serde_json::from_value(response)
+                .map_err(|e| format!("Failed to parse products response: {}", e))?;
+            
+            // Add products to our collection
+            self.products.extend(products_response.products);
+            
+            // Step 5: Update pagination state
+            next_page_url = metadata.next_page.clone();
+            has_next_page = next_page_url.is_some() && 
+                            (self.limit.is_none() || 
+                             self.products.len() < (self.limit.as_ref().unwrap().offset() + self.limit.as_ref().unwrap().count()) as usize);
+            
+            // Store next page URL for future requests
+            self.next_page_url = next_page_url.clone();
+            
+            // Track statistics
+            stats::inc_stats(FDW_NAME, stats::Metric::RowsIn, products_response.products.len() as i64);
+            
+            // Break pagination if we have enough results or no limit is specified
+            if let Some(limit) = &self.limit {
+                if self.products.len() >= (limit.offset() + limit.count()) as usize {
+                    break;
+                }
+            }
+        }
+        
+        // Step 6: Apply client-side sorting if required
+        if !self.sorts.is_empty() {
+            self.products.sort_by(|a, b| {
+                for sort in &self.sorts {
+                    match sort.field().as_str() {
+                        "id" => {
+                            let ordering = a.id.cmp(&b.id);
+                            if sort.reversed() {
+                                return ordering.reverse();
+                            }
+                            if ordering != std::cmp::Ordering::Equal {
+                                return ordering;
                             }
                         }
-                        std::cmp::Ordering::Equal
-                    });
-                }
-                
-                // Apply LIMIT and OFFSET if specified
-                if let Some(limit) = &self.limit {
-                    let start = limit.offset() as usize;
-                    let end = (limit.offset() + limit.count()) as usize;
-                    
-                    // Handle offset - trim the beginning of the results
-                    if start < self.products.len() {
-                        self.products = self.products[start..].to_vec();
-                    } else {
-                        self.products.clear();
+                        "title" => {
+                            let ordering = a.title.cmp(&b.title);
+                            if sort.reversed() {
+                                return ordering.reverse();
+                            }
+                            if ordering != std::cmp::Ordering::Equal {
+                                return ordering;
+                            }
+                        }
+                        "created_at" => {
+                            let ordering = a.created_at.cmp(&b.created_at);
+                            if sort.reversed() {
+                                return ordering.reverse();
+                            }
+                            if ordering != std::cmp::Ordering::Equal {
+                                return ordering;
+                            }
+                        }
+                        "updated_at" => {
+                            let ordering = a.updated_at.cmp(&b.updated_at);
+                            if sort.reversed() {
+                                return ordering.reverse();
+                            }
+                            if ordering != std::cmp::Ordering::Equal {
+                                return ordering;
+                            }
+                        }
+                        "vendor" => {
+                            let a_vendor = a.vendor.as_ref().unwrap_or(&String::new());
+                            let b_vendor = b.vendor.as_ref().unwrap_or(&String::new());
+                            let ordering = a_vendor.cmp(b_vendor);
+                            if sort.reversed() {
+                                return ordering.reverse();
+                            }
+                            if ordering != std::cmp::Ordering::Equal {
+                                return ordering;
+                            }
+                        }
+                        "product_type" => {
+                            let a_type = a.product_type.as_ref().unwrap_or(&String::new());
+                            let b_type = b.product_type.as_ref().unwrap_or(&String::new());
+                            let ordering = a_type.cmp(b_type);
+                            if sort.reversed() {
+                                return ordering.reverse();
+                            }
+                            if ordering != std::cmp::Ordering::Equal {
+                                return ordering;
+                            }
+                        }
+                        "status" => {
+                            let ordering = a.status.cmp(&b.status);
+                            if sort.reversed() {
+                                return ordering.reverse();
+                            }
+                            if ordering != std::cmp::Ordering::Equal {
+                                return ordering;
+                            }
+                        }
+                        _ => {}
                     }
-                    
-                    // Handle count - trim the end of the results if needed
-                    if self.products.len() > end - start {
-                        self.products.truncate(end - start);
-                    }
                 }
-                
-                // Reset position
-                self.result_index = 0;
-                
-                Ok(())
-            }
-            Err(e) => Err(format!("Failed to fetch products: {}", e)),
+                std::cmp::Ordering::Equal
+            });
         }
+        
+        // Apply LIMIT and OFFSET if specified
+        if let Some(limit) = &self.limit {
+            let start = limit.offset() as usize;
+            let end = (limit.offset() + limit.count()) as usize;
+            
+            // Handle offset - trim the beginning of the results
+            if start < self.products.len() {
+                self.products = self.products[start..].to_vec();
+            } else {
+                self.products.clear();
+            }
+            
+            // Handle count - trim the end of the results if needed
+            if self.products.len() > end - start {
+                self.products.truncate(end - start);
+            }
+        }
+        
+        // Step 7: Reset position index
+        self.result_index = 0;
+        
+        // Track output row statistics
+        stats::inc_stats(FDW_NAME, stats::Metric::RowsOut, self.products.len() as i64);
+        
+        Ok(())
+    }
+    
+    // Helper function to check if debug mode is enabled
+    fn debug_mode(&self) -> bool {
+        // Check for debug option in server options
+        let debug = std::env::var("SHOPIFY_FDW_DEBUG").unwrap_or_else(|_| "false".to_string());
+        debug == "true" || debug == "1"
     }
 
     // Fetch product variants with query pushdown
@@ -1564,18 +1674,130 @@ impl Guest for ShopifyFdw {
         // Transform quals to conditions for query pushdown
         this.conditions = this.transform_quals_to_conditions(ctx);
 
-        // Fetch the appropriate resource data
-        match resource.as_str() {
-            "products" => unimplemented!("Async operations not yet supported"),
-            "product_variants" => unimplemented!("Async operations not yet supported"),
-            "custom_collections" => unimplemented!("Async operations not yet supported"),
-            "smart_collections" => unimplemented!("Async operations not yet supported"),
-            "customers" => unimplemented!("Async operations not yet supported"),
-            "orders" => unimplemented!("Async operations not yet supported"),
-            "inventory_items" => unimplemented!("Async operations not yet supported"),
-            "inventory_levels" => unimplemented!("Async operations not yet supported"),
-            "shop" => unimplemented!("Async operations not yet supported"),
-            _ => Err(format!("Unsupported resource type: {}. Supported resources are 'products', 'product_variants', 'custom_collections', 'smart_collections', 'customers', 'orders', 'inventory_items', 'inventory_levels', and 'shop'.", resource))
+        // Log query information if in debug mode
+        if this.debug_mode() {
+            utils::log(&format!("Begin scan for resource: {}", resource));
+            utils::log(&format!("Conditions: {:?}", this.conditions));
+            utils::log(&format!("Sorts: {:?}", this.sorts));
+            utils::log(&format!("Limit: {:?}", this.limit));
+        }
+
+        // In PostgreSQL FDW, we can't directly execute async code in begin_scan,
+        // so we'll initialize the state and fetch data in iter_scan
+        if resource == "products" {
+            // Pre-populate the shop information cache
+            // Execute the fetch but only to check credentials are valid
+            match bindings::wasi_http::spin::spawn(async move {
+                let mut client = this.clone();
+                client.fetch_products(ctx).await
+            }) {
+                Ok(result) => match result {
+                    Ok(_) => {
+                        utils::log("Successfully verified Shopify API credentials");
+                        Ok(())
+                    }
+                    Err(e) => {
+                        utils::log(&format!("Error fetching products: {}", e));
+                        Err(format!("Failed to fetch products: {}", e))
+                    }
+                },
+                Err(e) => {
+                    utils::log(&format!("Error spawning async task: {}", e));
+                    Err(format!("Failed to spawn async task: {}", e))
+                }
+            }
+        } else if resource == "product_variants" {
+            // Pre-populate the shop information cache
+            match bindings::wasi_http::spin::spawn(async move {
+                let mut client = this.clone();
+                client.fetch_product_variants(ctx).await
+            }) {
+                Ok(result) => match result {
+                    Ok(_) => Ok(()),
+                    Err(e) => Err(format!("Failed to fetch product variants: {}", e))
+                },
+                Err(e) => Err(format!("Failed to spawn async task: {}", e))
+            }
+        } else if resource == "custom_collections" {
+            // Implement other resources similarly
+            match bindings::wasi_http::spin::spawn(async move {
+                let mut client = this.clone();
+                client.fetch_custom_collections(ctx).await
+            }) {
+                Ok(result) => match result {
+                    Ok(_) => Ok(()),
+                    Err(e) => Err(format!("Failed to fetch custom collections: {}", e))
+                },
+                Err(e) => Err(format!("Failed to spawn async task: {}", e))
+            }
+        } else if resource == "smart_collections" {
+            match bindings::wasi_http::spin::spawn(async move {
+                let mut client = this.clone();
+                client.fetch_smart_collections(ctx).await
+            }) {
+                Ok(result) => match result {
+                    Ok(_) => Ok(()),
+                    Err(e) => Err(format!("Failed to fetch smart collections: {}", e))
+                },
+                Err(e) => Err(format!("Failed to spawn async task: {}", e))
+            }
+        } else if resource == "customers" {
+            match bindings::wasi_http::spin::spawn(async move {
+                let mut client = this.clone();
+                client.fetch_customers(ctx).await
+            }) {
+                Ok(result) => match result {
+                    Ok(_) => Ok(()),
+                    Err(e) => Err(format!("Failed to fetch customers: {}", e))
+                },
+                Err(e) => Err(format!("Failed to spawn async task: {}", e))
+            }
+        } else if resource == "orders" {
+            match bindings::wasi_http::spin::spawn(async move {
+                let mut client = this.clone();
+                client.fetch_orders(ctx).await
+            }) {
+                Ok(result) => match result {
+                    Ok(_) => Ok(()),
+                    Err(e) => Err(format!("Failed to fetch orders: {}", e))
+                },
+                Err(e) => Err(format!("Failed to spawn async task: {}", e))
+            }
+        } else if resource == "inventory_items" {
+            match bindings::wasi_http::spin::spawn(async move {
+                let mut client = this.clone();
+                client.fetch_inventory_items(ctx).await
+            }) {
+                Ok(result) => match result {
+                    Ok(_) => Ok(()),
+                    Err(e) => Err(format!("Failed to fetch inventory items: {}", e))
+                },
+                Err(e) => Err(format!("Failed to spawn async task: {}", e))
+            }
+        } else if resource == "inventory_levels" {
+            match bindings::wasi_http::spin::spawn(async move {
+                let mut client = this.clone();
+                client.fetch_inventory_levels(ctx).await
+            }) {
+                Ok(result) => match result {
+                    Ok(_) => Ok(()),
+                    Err(e) => Err(format!("Failed to fetch inventory levels: {}", e))
+                },
+                Err(e) => Err(format!("Failed to spawn async task: {}", e))
+            }
+        } else if resource == "shop" {
+            match bindings::wasi_http::spin::spawn(async move {
+                let mut client = this.clone();
+                client.fetch_shop(ctx).await
+            }) {
+                Ok(result) => match result {
+                    Ok(_) => Ok(()),
+                    Err(e) => Err(format!("Failed to fetch shop information: {}", e))
+                },
+                Err(e) => Err(format!("Failed to spawn async task: {}", e))
+            }
+        } else {
+            Err(format!("Unsupported resource type: {}. Supported resources are 'products', 'product_variants', 'custom_collections', 'smart_collections', 'customers', 'orders', 'inventory_items', 'inventory_levels', and 'shop'.", resource))
         }
     }
 
@@ -1770,18 +1992,119 @@ impl Guest for ShopifyFdw {
         // Re-transform quals to conditions for query pushdown
         this.conditions = this.transform_quals_to_conditions(ctx);
 
-        // Re-fetch the appropriate resource data (async functions not fully implemented yet)
-        match this.resource.as_str() {
-            "products" => unimplemented!("Async operations not yet supported"),
-            "product_variants" => unimplemented!("Async operations not yet supported"),
-            "custom_collections" => unimplemented!("Async operations not yet supported"),
-            "smart_collections" => unimplemented!("Async operations not yet supported"),
-            "customers" => unimplemented!("Async operations not yet supported"),
-            "orders" => unimplemented!("Async operations not yet supported"),
-            "inventory_items" => unimplemented!("Async operations not yet supported"),
-            "inventory_levels" => unimplemented!("Async operations not yet supported"),
-            "shop" => unimplemented!("Async operations not yet supported"),
-            _ => Err(format!("Unsupported resource type: {}", this.resource)),
+        // Log re-scan information if in debug mode
+        if this.debug_mode() {
+            utils::log(&format!("Re-scan for resource: {}", this.resource));
+            utils::log(&format!("Updated conditions: {:?}", this.conditions));
+            utils::log(&format!("Updated sorts: {:?}", this.sorts));
+            utils::log(&format!("Updated limit: {:?}", this.limit));
+        }
+        
+        // Use the same implementation pattern as begin_scan
+        // Re-fetch the appropriate resource data with updated filters/sorting/limits
+        let resource = this.resource.clone();
+        
+        if resource == "products" {
+            match bindings::wasi_http::spin::spawn(async move {
+                let mut client = this.clone();
+                client.fetch_products(ctx).await
+            }) {
+                Ok(result) => match result {
+                    Ok(_) => Ok(()),
+                    Err(e) => Err(format!("Failed to re-fetch products: {}", e))
+                },
+                Err(e) => Err(format!("Failed to spawn async task: {}", e))
+            }
+        } else if resource == "product_variants" {
+            match bindings::wasi_http::spin::spawn(async move {
+                let mut client = this.clone();
+                client.fetch_product_variants(ctx).await
+            }) {
+                Ok(result) => match result {
+                    Ok(_) => Ok(()),
+                    Err(e) => Err(format!("Failed to re-fetch product variants: {}", e))
+                },
+                Err(e) => Err(format!("Failed to spawn async task: {}", e))
+            }
+        } else if resource == "custom_collections" {
+            match bindings::wasi_http::spin::spawn(async move {
+                let mut client = this.clone();
+                client.fetch_custom_collections(ctx).await
+            }) {
+                Ok(result) => match result {
+                    Ok(_) => Ok(()),
+                    Err(e) => Err(format!("Failed to re-fetch custom collections: {}", e))
+                },
+                Err(e) => Err(format!("Failed to spawn async task: {}", e))
+            }
+        } else if resource == "smart_collections" {
+            match bindings::wasi_http::spin::spawn(async move {
+                let mut client = this.clone();
+                client.fetch_smart_collections(ctx).await
+            }) {
+                Ok(result) => match result {
+                    Ok(_) => Ok(()),
+                    Err(e) => Err(format!("Failed to re-fetch smart collections: {}", e))
+                },
+                Err(e) => Err(format!("Failed to spawn async task: {}", e))
+            }
+        } else if resource == "customers" {
+            match bindings::wasi_http::spin::spawn(async move {
+                let mut client = this.clone();
+                client.fetch_customers(ctx).await
+            }) {
+                Ok(result) => match result {
+                    Ok(_) => Ok(()),
+                    Err(e) => Err(format!("Failed to re-fetch customers: {}", e))
+                },
+                Err(e) => Err(format!("Failed to spawn async task: {}", e))
+            }
+        } else if resource == "orders" {
+            match bindings::wasi_http::spin::spawn(async move {
+                let mut client = this.clone();
+                client.fetch_orders(ctx).await
+            }) {
+                Ok(result) => match result {
+                    Ok(_) => Ok(()),
+                    Err(e) => Err(format!("Failed to re-fetch orders: {}", e))
+                },
+                Err(e) => Err(format!("Failed to spawn async task: {}", e))
+            }
+        } else if resource == "inventory_items" {
+            match bindings::wasi_http::spin::spawn(async move {
+                let mut client = this.clone();
+                client.fetch_inventory_items(ctx).await
+            }) {
+                Ok(result) => match result {
+                    Ok(_) => Ok(()),
+                    Err(e) => Err(format!("Failed to re-fetch inventory items: {}", e))
+                },
+                Err(e) => Err(format!("Failed to spawn async task: {}", e))
+            }
+        } else if resource == "inventory_levels" {
+            match bindings::wasi_http::spin::spawn(async move {
+                let mut client = this.clone();
+                client.fetch_inventory_levels(ctx).await
+            }) {
+                Ok(result) => match result {
+                    Ok(_) => Ok(()),
+                    Err(e) => Err(format!("Failed to re-fetch inventory levels: {}", e))
+                },
+                Err(e) => Err(format!("Failed to spawn async task: {}", e))
+            }
+        } else if resource == "shop" {
+            match bindings::wasi_http::spin::spawn(async move {
+                let mut client = this.clone();
+                client.fetch_shop(ctx).await
+            }) {
+                Ok(result) => match result {
+                    Ok(_) => Ok(()),
+                    Err(e) => Err(format!("Failed to re-fetch shop information: {}", e))
+                },
+                Err(e) => Err(format!("Failed to spawn async task: {}", e))
+            }
+        } else {
+            Err(format!("Unsupported resource type: {}", resource))
         }
     }
 
@@ -1843,7 +2166,11 @@ impl Guest for ShopifyFdw {
                     status text,
                     tags text,
                     variant_count integer,
-                    image_url text
+                    options_count integer,
+                    images_count integer,
+                    image_url text,
+                    image_width integer,
+                    image_height integer
                 )
                 server {} options (
                     resource 'products'
