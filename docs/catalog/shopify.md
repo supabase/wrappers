@@ -15,9 +15,9 @@ The Shopify Wrapper is a WebAssembly (Wasm) foreign data wrapper which allows yo
 
 ## Available Versions
 
-| Version | Wasm Package URL                                                                                    | Checksum                                                           | Required Wrappers Version |
-| ------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------- |
-| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_shopify_fdw_v0.1.0/shopify_fdw.wasm`   | `tbd`                                                              | >=0.5.0                   |
+| Version | Wasm Package URL                                                                                  | Checksum | Required Wrappers Version |
+| ------- | ------------------------------------------------------------------------------------------------- | -------- | ------------------------- |
+| 0.2.0   | `https://github.com/supabase/wrappers/releases/download/wasm_shopify_fdw_v0.2.0/shopify_fdw.wasm` | `tbd`    | >=0.5.0                   |
 
 ## Preparation
 
@@ -190,8 +190,8 @@ Ref: [Shopify Product Variants API](https://shopify.dev/docs/api/admin-rest/late
 
 #### Operations
 
-| Object          | Select | Insert | Update | Delete | Truncate |
-| --------------- | :----: | :----: | :----: | :----: | :------: |
+| Object           | Select | Insert | Update | Delete | Truncate |
+| ---------------- | :----: | :----: | :----: | :----: | :------: |
 | product_variants |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
 
 #### Usage
@@ -368,8 +368,8 @@ Ref: [Shopify Inventory Item API](https://shopify.dev/docs/api/admin-rest/latest
 
 #### Operations
 
-| Object         | Select | Insert | Update | Delete | Truncate |
-| -------------- | :----: | :----: | :----: | :----: | :------: |
+| Object          | Select | Insert | Update | Delete | Truncate |
+| --------------- | :----: | :----: | :----: | :----: | :------: |
 | inventory_items |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
 
 #### Usage
@@ -482,16 +482,16 @@ create foreign table shopify.shop (
 
 This FDW supports the following condition pushdowns:
 
-| Resource          | Supported Filters                   | Sorting                | Limit/Offset |
-| ----------------- | ----------------------------------- | ---------------------- | ------------ |
-| products          | id, title, vendor, product_type, created_at_min/max, updated_at_min/max, published_status | title, created_at, updated_at | Yes |
-| product_variants  | product_id, sku                     | title, price           | Yes |
-| customers         | id, email, created_at_min/max, updated_at_min/max | email, created_at   | Yes |
-| orders            | id, customer_id, financial_status, fulfillment_status, created_at_min/max | created_at, updated_at | Yes |
-| inventory_items   | ids                                 | None                   | Yes |
-| inventory_levels  | inventory_item_ids, location_ids    | None                   | Yes |
-| metafields        | owner_id, owner_resource, namespace, key | None              | Yes |
-| shop              | *(no filter support - single row)*  | N/A                    | N/A |
+| Resource         | Supported Filters                                                                         | Sorting                       | Limit/Offset |
+| ---------------- | ----------------------------------------------------------------------------------------- | ----------------------------- | ------------ |
+| products         | id, title, vendor, product_type, created_at_min/max, updated_at_min/max, published_status | title, created_at, updated_at | Yes          |
+| product_variants | product_id, sku                                                                           | title, price                  | Yes          |
+| customers        | id, email, created_at_min/max, updated_at_min/max                                         | email, created_at             | Yes          |
+| orders           | id, customer_id, financial_status, fulfillment_status, created_at_min/max                 | created_at, updated_at        | Yes          |
+| inventory_items  | ids                                                                                       | None                          | Yes          |
+| inventory_levels | inventory_item_ids, location_ids                                                          | None                          | Yes          |
+| metafields       | owner_id, owner_resource, namespace, key                                                  | None                          | Yes          |
+| shop             | *(no filter support - single row)*                                                        | N/A                           | N/A          |
 
 ## Handling Rate Limits
 
@@ -505,21 +505,21 @@ Current rate limits for most Shopify API calls are 2 requests per second, with a
 
 ## Required Scopes for Shopify API Access
 
-| Entity Type       | Required Scopes                     |
-| ----------------- | ---------------------------------- |
-| products          | `read_products`                     |
-| product_variants  | `read_products`                     |
-| product_images    | `read_products`                     |
-| collections       | `read_products`                     |
-| customers         | `read_customers`                    |
-| customer_addresses| `read_customers`                    |
-| orders            | `read_orders`                       |
-| order_line_items  | `read_orders`                       |
-| inventory_items   | `read_inventory`                    |
-| inventory_levels  | `read_inventory, read_locations`    |
-| locations         | `read_locations`                    |
-| metafields        | `read_metafields`                   |
-| shop              | `read_shop_information`             |
+| Entity Type        | Required Scopes                  |
+| ------------------ | -------------------------------- |
+| products           | `read_products`                  |
+| product_variants   | `read_products`                  |
+| product_images     | `read_products`                  |
+| collections        | `read_products`                  |
+| customers          | `read_customers`                 |
+| customer_addresses | `read_customers`                 |
+| orders             | `read_orders`                    |
+| order_line_items   | `read_orders`                    |
+| inventory_items    | `read_inventory`                 |
+| inventory_levels   | `read_inventory, read_locations` |
+| locations          | `read_locations`                 |
+| metafields         | `read_metafields`                |
+| shop               | `read_shop_information`          |
 
 ## Limitations
 
