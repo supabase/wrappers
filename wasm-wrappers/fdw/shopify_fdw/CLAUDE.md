@@ -27,24 +27,36 @@ The Shopify FDW will allow querying Shopify store data directly from PostgreSQL 
 
 ### Phase 2: Core Models
 - [x] Create initial structure for models.rs with placeholder definitions
-- [ ] Define complete product models (Product, ProductVariant, ProductImage, etc.)
-- [ ] Define complete collection models (CustomCollection, SmartCollection)
-- [ ] Define complete customer models (Customer, CustomerAddress)
-- [ ] Define complete order models (Order, LineItem, Transaction, etc.)
-- [ ] Define complete inventory models (InventoryItem, InventoryLevel, Location)
-- [ ] Define complete metafield model
-- [ ] Define complete shop model
-- [ ] Implement serialization/deserialization for all models
+- [x] Define complete product models (Product, ProductVariant, ProductImage, etc.)
+- [x] Define complete collection models (CustomCollection, SmartCollection)
+- [x] Define complete customer models (Customer, CustomerAddress)
+- [x] Define complete order models (Order, LineItem, Transaction, etc.)
+- [x] Define complete inventory models (InventoryItem, InventoryLevel, Location)
+- [x] Define complete metafield model
+- [x] Define complete shop model
+- [x] Implement serialization/deserialization for all models
+- [x] Add helper methods for row conversions
 
 ### Phase 3: API Communication
 - [x] Create initial structure for api.rs with test helpers
-- [ ] Implement authentication with Shopify API
-- [ ] Create HTTP request/response handling
-- [ ] Implement pagination support with Link headers
-- [ ] Add rate limiting handling (leaky bucket algorithm)
-- [ ] Implement error handling
+- [x] Implement authentication with Shopify API
+- [x] Create HTTP request/response handling
+- [x] Implement pagination support with Link headers
+- [x] Add rate limiting handling (leaky bucket algorithm)
+- [x] Implement error handling
 
-### Phase 4: Resource Methods
+### Phase 4: FDW Core Structure
+- [x] Create initial structure for lib.rs with FDW skeleton
+- [x] Create bindings.rs for WebAssembly interface
+- [x] Implement host_version_requirement
+- [x] Implement init method
+- [x] Implement begin_scan method
+- [x] Implement iter_scan method
+- [x] Implement re_scan method
+- [x] Implement end_scan method
+- [x] Implement import_foreign_schema method
+
+### Phase 5: Resource Methods
 - [ ] Implement fetch_products method
 - [ ] Implement fetch_product_variants method
 - [ ] Implement fetch_collections methods
@@ -57,7 +69,7 @@ The Shopify FDW will allow querying Shopify store data directly from PostgreSQL 
 - [ ] Implement fetch_metafields method
 - [ ] Implement fetch_shop method
 
-### Phase 5: Row Conversion Methods
+### Phase 6: Row Conversion Methods
 - [ ] Implement product_to_row method
 - [ ] Implement product_variant_to_row method
 - [ ] Implement collection_to_row methods
@@ -69,16 +81,6 @@ The Shopify FDW will allow querying Shopify store data directly from PostgreSQL 
 - [ ] Implement inventory_level_to_row method
 - [ ] Implement metafield_to_row method
 - [ ] Implement shop_to_row method
-
-### Phase 6: FDW Interface Implementation
-- [x] Create initial structure for lib.rs with FDW skeleton
-- [ ] Implement host_version_requirement
-- [ ] Implement init method
-- [ ] Implement begin_scan method
-- [ ] Implement iter_scan method
-- [ ] Implement re_scan method
-- [ ] Implement end_scan method
-- [ ] Implement import_foreign_schema method (optional)
 
 ### Phase 7: Query Pushdown & Optimization
 - [ ] Add filtering support for products
