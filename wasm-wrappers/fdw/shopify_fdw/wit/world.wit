@@ -1,4 +1,4 @@
-package supabase:shopify-fdw@0.2.0;
+package supabase:shopify-fdw@0.3.0;
 
 world shopify {
     import supabase:wrappers/http@0.2.0;

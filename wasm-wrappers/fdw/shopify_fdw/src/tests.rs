@@ -4,36 +4,9 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::api::ShopifyClient;
+    use crate::ShopifyFdw;
     use crate::models::*;
     use std::collections::HashMap;
-    use serde_json::json;
-    
-    // Mock HTTP client for testing
-    struct MockHttpClient {
-        responses: HashMap<String, String>,
-    }
-    
-    impl MockHttpClient {
-        fn new() -> Self {
-            MockHttpClient {
-                responses: HashMap::new(),
-            }
-        }
-        
-        fn add_response(&mut self, endpoint: &str, response: &str) {
-            self.responses.insert(endpoint.to_string(), response.to_string());
-        }
-        
-        fn get(&self, url: &str) -> Option<&str> {
-            for (endpoint, response) in &self.responses {
-                if url.contains(endpoint) {
-                    return Some(response);
-                }
-            }
-            None
-        }
-    }
     
     #[test]
     fn test_product_deserialization() {
@@ -198,19 +171,18 @@ mod tests {
         // Create a mock Link header
         let link_header = r#"<https://example.myshopify.com/admin/api/2023-10/products.json?page_info=abc123>; rel="next", <https://example.myshopify.com/admin/api/2023-10/products.json?page_info=xyz987>; rel="previous""#;
         
-        // Create a client
-        let client = ShopifyClient::new(
-            "example.myshopify.com".to_string(),
-            "test_token".to_string(),
-            "2023-10".to_string(),
-        );
+        // Create a FDW instance
+        let mut fdw = ShopifyFdw::default();
+        fdw.shop_domain = "example.myshopify.com".to_string();
+        fdw.api_token = "test_token".to_string();
+        fdw.api_version = "2023-10".to_string();
         
         // Parse the Link header
         let mut headers = HashMap::new();
         headers.insert("Link".to_string(), link_header.to_string());
         
         // Extract the next page token
-        let next_page_token = client.extract_next_page_info(&headers);
+        let next_page_token = fdw.extract_next_page_info(&headers);
         
         // Verify the token
         assert_eq!(next_page_token, Some("abc123".to_string()));

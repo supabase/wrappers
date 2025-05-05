@@ -17,6 +17,7 @@ The Shopify Wrapper is a WebAssembly (Wasm) foreign data wrapper which allows yo
 
 | Version | Wasm Package URL                                                                                  | Checksum | Required Wrappers Version |
 | ------- | ------------------------------------------------------------------------------------------------- | -------- | ------------------------- |
+| 0.3.0   | `https://github.com/supabase/wrappers/releases/download/wasm_shopify_fdw_v0.3.0/shopify_fdw.wasm` | `tbd`    | >=0.5.0                   |
 | 0.2.0   | `https://github.com/supabase/wrappers/releases/download/wasm_shopify_fdw_v0.2.0/shopify_fdw.wasm` | `tbd`    | >=0.5.0                   |
 
 ## Preparation
