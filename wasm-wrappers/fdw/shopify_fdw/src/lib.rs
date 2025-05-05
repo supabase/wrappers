@@ -886,3 +886,6 @@ CREATE FOREIGN TABLE %s (
         Err("Shopify FDW is read-only".to_string())
     }
 }
+
+// Export the Guest implementation for WebAssembly
+bindings::export!(ShopifyFdw with_types_in bindings);
