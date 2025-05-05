@@ -77,7 +77,11 @@ Some connection string examples:
 - `tcp://user:password@host:9000/clicks?compression=lz4&ping_timeout=42ms`
 - `tcp://default:PASSWORD@abc.eu-west-1.aws.clickhouse.cloud:9440/default?connection_timeout=30s&ping_before_query=false&secure=true`
 
-Check [more connection string parameters](https://github.com/suharev7/clickhouse-rs#dns).
+Check out [more connection string parameters](https://github.com/suharev7/clickhouse-rs#dns).
+
+!!! note
+
+    This ClickHouse FDW only supports native protocol port `9000` and `9440`, HTTP(S) port like `8123` and `8443` are not supported yet.
 
 ### Create a schema
 
