@@ -10,6 +10,7 @@ use supabase_wrappers::prelude::report_warning;
 const WRAPPERS_STATS_TABLE_NAME: &str = "wrappers_fdw_stats";
 
 /// Metrics that can be collected for FDWs
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum Metric {
     /// Number of times the FDW has been created
