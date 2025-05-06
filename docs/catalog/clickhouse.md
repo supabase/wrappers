@@ -176,6 +176,7 @@ This FDW supports `where`, `order by` and `limit` clause pushdown, as well as pa
 | text             | String            |
 | date             | Date              |
 | timestamp        | DateTime          |
+| uuid             | UUID              |
 | *                | Nullable&lt;T&gt; |
 
 ## Limitations

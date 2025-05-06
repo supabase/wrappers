@@ -5,6 +5,7 @@ use clickhouse_rs::{types, types::Block, types::SqlType, ClientHandle, Pool};
 use pgrx::prelude::to_timestamp;
 use regex::{Captures, Regex};
 use std::collections::HashMap;
+use uuid::Uuid;
 
 use supabase_wrappers::prelude::*;
 
@@ -65,6 +66,10 @@ fn field_to_cell(row: &types::Row<types::Complex>, i: usize) -> ClickHouseFdwRes
             let ts = to_timestamp(value.timestamp() as f64);
             Ok(Some(Cell::Timestamp(ts.to_utc())))
         }
+        SqlType::Uuid => {
+            let value = row.get::<Uuid, usize>(i)?;
+            Ok(Some(Cell::Uuid(pgrx::Uuid::from_bytes(*value.as_bytes()))))
+        }
         SqlType::Nullable(v) => match v {
             SqlType::UInt8 => {
                 let value = row.get::<Option<u8>, usize>(i)?;
@@ -120,6 +125,12 @@ fn field_to_cell(row: &types::Row<types::Complex>, i: usize) -> ClickHouseFdwRes
                     Cell::Timestamp(ts.to_utc())
                 }))
             }
+            SqlType::Uuid => {
+                let value = row.get::<Option<Uuid>, usize>(i)?;
+                Ok(value
+                    .map(|t| pgrx::Uuid::from_bytes(*t.as_bytes()))
+                    .map(Cell::Uuid))
+            }
             _ => Err(ClickHouseFdwError::UnsupportedColumnType(
                 sql_type.to_string().into(),
             )),
@@ -131,7 +142,7 @@ fn field_to_cell(row: &types::Row<types::Complex>, i: usize) -> ClickHouseFdwRes
 }
 
 #[wrappers_fdw(
-    version = "0.1.5",
+    version = "0.1.6",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/clickhouse_fdw",
     error_type = "ClickHouseFdwError"
@@ -415,25 +426,39 @@ impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
                         Cell::Date(_) => {
                             let s = c.to_string().replace('\'', "");
                             let tm = NaiveDate::parse_from_str(&s, "%Y-%m-%d")?;
-                            let epoch = NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
-                            let duration = tm - epoch;
-                            let dt = duration.num_days() as u16;
                             let val = if is_nullable {
-                                types::Value::from(Some(dt))
+                                types::Value::from(Some(tm))
                             } else {
+                                let epoch = NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
+                                let duration = tm - epoch;
+                                let dt = duration.num_days() as u16;
                                 types::Value::Date(dt)
                             };
                             Ok(val)
                         }
                         Cell::Timestamp(_) => {
                             let s = c.to_string().replace('\'', "");
-                            let naive_tm = NaiveDateTime::parse_from_str(&s, "%Y-%m-%d %H:%M:%S")?;
+                            let naive_tm = NaiveDateTime::parse_from_str(&s, "%Y-%m-%d %H:%M:%S")
+                                .or_else(|_| {
+                                NaiveDateTime::parse_from_str(&s, "%Y-%m-%d %H:%M:%S%.6f")
+                            })?;
                             let tm: DateTime<Utc> =
                                 DateTime::from_naive_utc_and_offset(naive_tm, Utc);
                             let val = if is_nullable {
                                 types::Value::Nullable(either::Either::Right(Box::new(tm.into())))
                             } else {
                                 types::Value::from(tm)
+                            };
+                            Ok(val)
+                        }
+                        Cell::Uuid(v) => {
+                            let uuid = Uuid::try_parse(&v.to_string())?;
+                            let val = if is_nullable {
+                                types::Value::Nullable(either::Either::Right(Box::new(
+                                    types::Value::Uuid(*uuid.as_bytes()),
+                                )))
+                            } else {
+                                types::Value::from(uuid)
                             };
                             Ok(val)
                         }
@@ -462,7 +487,10 @@ impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
                     continue;
                 }
                 if let Some(cell) = cell {
-                    sets.push(format!("{} = {}", col, cell));
+                    match cell {
+                        Cell::Uuid(_) => sets.push(format!("{} = '{}'", col, cell)),
+                        _ => sets.push(format!("{} = {}", col, cell)),
+                    }
                 } else {
                     sets.push(format!("{} = null", col));
                 }
