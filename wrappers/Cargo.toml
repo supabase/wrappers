@@ -34,7 +34,15 @@ bigquery_fdw = [
     "yup-oauth2",
     "thiserror",
 ]
-clickhouse_fdw = ["clickhouse-rs", "chrono", "chrono-tz", "regex", "thiserror", "either"]
+clickhouse_fdw = [
+    "clickhouse-rs",
+    "chrono",
+    "chrono-tz",
+    "regex",
+    "thiserror",
+    "either",
+    "uuid",
+]
 stripe_fdw = [
     "http",
     "reqwest",

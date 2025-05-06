@@ -3,7 +3,7 @@
 mod tests {
     use clickhouse_rs as ch;
     use pgrx::prelude::*;
-    use pgrx::{pg_test, IntoDatum};
+    use pgrx::{datum::Timestamp, pg_test, IntoDatum, Uuid};
     use supabase_wrappers::prelude::create_async_runtime;
 
     #[pg_test]
@@ -20,7 +20,13 @@ mod tests {
                 handle.execute("DROP TABLE IF EXISTS test_table").await?;
                 handle
                     .execute(
-                        "CREATE TABLE test_table (id Int64, name Nullable(TEXT)) engine = Memory",
+                        "CREATE TABLE test_table (
+                            id Int64,
+                            name Nullable(TEXT),
+                            amt Nullable(Float64),
+                            uid Nullable(UUID),
+                            created_at DateTime('UTC')
+                        ) engine = Memory",
                     )
                     .await
             })
@@ -47,7 +53,10 @@ mod tests {
                 r#"
                   CREATE FOREIGN TABLE test_table (
                     id bigint,
-                    name text
+                    name text,
+                    amt double precision,
+                    uid uuid,
+                    created_at timestamp
                   )
                   SERVER my_clickhouse_server
                   OPTIONS (
@@ -63,7 +72,10 @@ mod tests {
                 r#"
                   CREATE FOREIGN TABLE test_cust_sql (
                     id bigint,
-                    name text
+                    name text,
+                    amt double precision,
+                    uid uuid,
+                    created_at timestamp
                   )
                   SERVER my_clickhouse_server
                   OPTIONS (
@@ -80,7 +92,10 @@ mod tests {
                   CREATE FOREIGN TABLE test_param_sql (
                     id bigint,
                     name text,
-                    _name text
+                    _name text,
+                    amt double precision,
+                    uid uuid,
+                    created_at timestamp
                   )
                   SERVER my_clickhouse_server
                   OPTIONS (
@@ -136,13 +151,25 @@ mod tests {
             )
             .unwrap();
             c.update(
-                "INSERT INTO test_table (id, name) VALUES ($1, $2)",
+                "INSERT INTO test_table (id, name, amt, uid, created_at) VALUES ($1, $2, $3, $4, $5)",
                 None,
                 Some(vec![
                     (PgOid::BuiltIn(PgBuiltInOids::INT4OID), 42.into_datum()),
                     (
                         PgOid::BuiltIn(PgBuiltInOids::TEXTOID),
                         None::<String>.into_datum(),
+                    ),
+                    (
+                        PgOid::BuiltIn(PgBuiltInOids::FLOAT8OID),
+                        123.45.into_datum(),
+                    ),
+                    (
+                        PgOid::BuiltIn(PgBuiltInOids::UUIDOID),
+                        Uuid::from_bytes([42u8; 16]).into_datum(),
+                    ),
+                    (
+                        PgOid::BuiltIn(PgBuiltInOids::TIMESTAMPOID),
+                        Timestamp::new(2025, 5, 1, 2, 3, 4.0).into_datum(),
                     ),
                 ]),
             )
@@ -155,6 +182,22 @@ mod tests {
                     .unwrap()
                     .unwrap(),
                 "test"
+            );
+            assert_eq!(
+                c.select(
+                    "SELECT uid, amt, created_at FROM test_table WHERE id = 42",
+                    None,
+                    None
+                )
+                .unwrap()
+                .first()
+                .get_three::<Uuid, f64, Timestamp>()
+                .unwrap(),
+                (
+                    Some(Uuid::from_bytes([42u8; 16])),
+                    Some(123.45),
+                    Some(Timestamp::new(2025, 5, 1, 2, 3, 4.0).unwrap())
+                )
             );
             assert_eq!(
                 c.select("SELECT name FROM test_cust_sql ORDER BY name", None, None)

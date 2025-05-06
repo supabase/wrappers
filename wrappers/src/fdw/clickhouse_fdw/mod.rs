@@ -26,6 +26,9 @@ enum ClickHouseFdwError {
     #[error("datetime parse error: {0}")]
     DatetimeParseError(#[from] chrono::format::ParseError),
 
+    #[error("uuid parse error: {0}")]
+    UuidParseError(#[from] uuid::Error),
+
     #[error("{0}")]
     OptionsError(#[from] OptionsError),
 
