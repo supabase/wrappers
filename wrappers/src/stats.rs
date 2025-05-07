@@ -45,7 +45,7 @@ fn get_stats_table() -> Result<String, &'static str> {
          where a.extname = 'wrappers'",
         WRAPPERS_STATS_TABLE_NAME
     );
-    
+
     Spi::get_one(&sql)
         .map_err(|_| "wrappers extension is not installed")?
         .ok_or("fdw stats table is not created")
@@ -85,11 +85,7 @@ pub(crate) fn inc_stats(fdw_name: &str, metric: Metric, inc: i64) {
          do update set
             {} = coalesce(s.{}, 0) + excluded.{},
             updated_at = timezone('utc'::text, now())",
-        stats_table,
-        metric,
-        metric,
-        metric,
-        metric
+        stats_table, metric, metric, metric, metric
     );
 
     if let Err(e) = Spi::run_with_args(
@@ -120,11 +116,8 @@ pub(crate) fn get_metadata(fdw_name: &str) -> Option<JsonB> {
         }
     };
 
-    let sql = format!(
-        "select metadata from {} where fdw_name = $1",
-        stats_table
-    );
-    
+    let sql = format!("select metadata from {} where fdw_name = $1", stats_table);
+
     match Spi::get_one_with_args(
         &sql,
         vec![(PgBuiltInOids::TEXTOID.oid(), fdw_name.into_datum())],

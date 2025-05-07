@@ -1,6 +1,6 @@
 //! Wrappers is a development framework for Postgres Foreign Data Wrappers (FDW).
 //! This crate provides the core functionality and implementations for various FDWs.
-//! 
+//!
 //! # Features
 //! - Easy to implement FDW interface
 //! - Support for rich data types
