@@ -152,6 +152,12 @@ wasm_fdw = [
     "bytes",
     "uuid",
 ]
+iceberg_fdw = [
+    "iceberg",
+    "iceberg-catalog-memory",
+    "futures",
+    "thiserror",
+]
 # Does not include helloworld_fdw because of its general uselessness
 native_fdws = [
     "airtable_fdw",
@@ -165,6 +171,7 @@ native_fdws = [
     "mssql_fdw",
     "redis_fdw",
     "cognito_fdw",
+    "iceberg_fdw",
 ]
 all_fdws = [
     "native_fdws",
@@ -256,6 +263,10 @@ bytes = { version = "1.9.0", optional = true }
 thiserror = { version = "1.0.48", optional = true }
 anyhow  = { version = "1.0.81", optional = true }
 uuid = { version = "1.16.0", optional = true }
+
+# for iceberg_fdw
+iceberg = { version = "0.4.0", optional = true }
+iceberg-catalog-memory = { version = "0.4.0", optional = true }
 
 [dev-dependencies]
 pgrx-tests = "=0.12.9"
