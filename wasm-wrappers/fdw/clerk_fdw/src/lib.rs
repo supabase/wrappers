@@ -172,7 +172,7 @@ impl ClerkFdw {
 impl Guest for ClerkFdw {
     fn host_version_requirement() -> String {
         // semver ref: https://docs.rs/semver/latest/semver/enum.Op.html
-        "^0.2.0".to_string()
+        "^0.1.0".to_string()
     }
 
     fn init(ctx: &Context) -> FdwResult {
