@@ -27,6 +27,7 @@
 | [Cloudflare D1](./wasm-wrappers/fdw/cfd1_fdw)   | A Wasm FDW for [Cloudflare D1](https://developers.cloudflare.com/d1/)         | ✅   | ✅     |
 | [Orb](./wasm-wrappers/fdw/orb_fdw)              | A Wasm FDW for [Orb](https://www.withorb.com/)                                | ✅   | ❌     |
 | [HubSpot](./wasm-wrappers/fdw/hubspot_fdw)      | A Wasm FDW for [HubSpot](https://www.hubspot.com/)                            | ✅   | ❌     |
+| [Slack](./wasm-wrappers/fdw/slack_fdw)          | A Wasm FDW for [Slack](https://www.slack.com/)                                | ✅   | ❌     |
 
 ### Warning
 
