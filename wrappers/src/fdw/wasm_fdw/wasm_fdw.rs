@@ -210,7 +210,7 @@ fn save_to_cache(path: &Path, bytes: &[u8]) -> WasmFdwResult<()> {
 }
 
 #[wrappers_fdw(
-    version = "0.2.0",
+    version = "0.1.5",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/wasm_fdw",
     error_type = "WasmFdwError"
