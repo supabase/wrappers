@@ -1,7 +1,7 @@
 use pgrx::FromDatum;
 use pgrx::{
-    debug2, memcxt::PgMemoryContexts, pg_sys::Datum, pg_sys::Oid, prelude::*, IntoDatum,
-    PgSqlErrorCode,
+    IntoDatum, PgSqlErrorCode, debug2, memcxt::PgMemoryContexts, pg_sys::Datum, pg_sys::Oid,
+    prelude::*,
 };
 use std::collections::HashMap;
 use std::marker::PhantomData;
@@ -19,7 +19,7 @@ use crate::polyfill;
 use crate::prelude::ForeignDataWrapper;
 use crate::qual::*;
 use crate::sort::*;
-use crate::utils::{self, report_error, ReportableError, SerdeList};
+use crate::utils::{self, ReportableError, SerdeList, report_error};
 
 // Fdw private state for scan
 struct FdwState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {

@@ -96,21 +96,61 @@ services:
       timeout: 5s
       retries: 3
 
-  s3:
-    image: localstack/localstack
-    container_name: s3-mock
-    volumes:
-      - ../dockerfiles/s3/test_data:/data
-      - ../dockerfiles/s3/init:/etc/localstack/init/ready.d
+  iceberg-rest:
+    depends_on:
+      - s3
+    image: apache/iceberg-rest-fixture
+    container_name: iceberg-rest
     ports:
-      - "4566:4566"
-      - "4510-4559:4510-4559"
-    healthcheck:
-      test: curl --fail http://127.0.0.1:4566/_localstack/init || exit 1
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      
+      - "8181:8181"
+    environment:
+      - AWS_ACCESS_KEY_ID=admin
+      - AWS_SECRET_ACCESS_KEY=password
+      - AWS_REGION=us-east-1
+      - CATALOG_WAREHOUSE=s3://warehouse/
+      - CATALOG_IO__IMPL=org.apache.iceberg.aws.s3.S3FileIO
+      - CATALOG_S3_ENDPOINT=http://s3:8000
+
+  s3:
+    image: minio/minio
+    container_name: s3
+    environment:
+      - MINIO_ROOT_USER=admin
+      - MINIO_ROOT_PASSWORD=password
+      - MINIO_DOMAIN=s3
+    networks:
+      default:
+        aliases:
+          - warehouse.s3
+    ports:
+      - "8000:8000"
+      - "8001:8001"
+    command: ["server", "/data", "--address", ":8000", "--console-address", ":8001"]
+
+  s3-init:
+    depends_on:
+      - s3
+      - iceberg-rest
+    container_name: s3-init
+    build:
+      context: ../dockerfiles/s3
+    environment:
+      - AWS_ACCESS_KEY_ID=admin
+      - AWS_SECRET_ACCESS_KEY=password
+      - AWS_REGION=us-east-1
+    volumes:
+      - ../dockerfiles/s3/test_data:/test_data
+      - ../dockerfiles/s3/iceberg_seed.py:/iceberg_seed.py
+    entrypoint: |
+      /bin/sh -c "
+      until (/mc config host add s3 http://s3:8000 admin password) do echo '...waiting...' && sleep 1; done;
+      /mc rm -r --force s3/warehouse;
+      /mc mb s3/warehouse;
+      /mc policy set public s3/warehouse;
+      /mc cp --recursive /test_data/* s3/warehouse;
+      python /iceberg_seed.py
+      "
+
   mssql:
     image: mcr.microsoft.com/mssql/server:2019-latest
     container_name: mssql-wrapped

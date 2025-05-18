@@ -1,0 +1,21 @@
+[workspace]
+members = [
+    "cal_fdw",
+    "calendly_fdw",
+    "cfd1_fdw",
+    "clerk_fdw",
+    "helloworld_fdw",
+    "hubspot_fdw",
+    "notion_fdw",
+    "orb_fdw",
+    "paddle_fdw",
+    "slack_fdw",
+    "snowflake_fdw",
+]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+rust-version = "1.85"
+homepage = "https://github.com/supabase/wrappers/tree/main/wasm-wrappers"
+repository = "https://github.com/supabase/wrappers/tree/main/wasm-wrappers"

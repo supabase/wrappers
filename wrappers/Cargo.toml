@@ -1,8 +1,11 @@
 [package]
 name = "wrappers"
 version = "0.5.0"
-edition = "2021"
 publish = false
+homepage = "https://github.com/supabase/wrappers/tree/main/wrappers"
+repository = "https://github.com/supabase/wrappers/tree/main/wrappers"
+edition = { workspace = true }
+rust-version = { workspace = true }
 
 [lib]
 crate-type = ["cdylib", "lib"]
@@ -154,9 +157,17 @@ wasm_fdw = [
 ]
 iceberg_fdw = [
     "iceberg",
-    "iceberg-catalog-memory",
+    "iceberg-catalog-rest",
+    "iceberg-catalog-s3tables",
+    "arrow-array",
+    "arrow-schema",
+    "arrow-json",
+    "chrono",
     "futures",
+    "rust_decimal",
+    "serde_json",
     "thiserror",
+    "uuid",
 ]
 # Does not include helloworld_fdw because of its general uselessness
 native_fdws = [
@@ -229,8 +240,10 @@ async-compression = { version = "0.3.15", features = [
     "zlib",
 ], optional = true }
 http = { version = "0.2", optional = true }
-parquet = { version = "52.2.0", features = ["async"], optional = true }
-arrow-array = { version = "52.2.0", optional = true }
+parquet = { version = "55.1.0", features = ["async"], optional = true }
+arrow-array = { version = "55.1.0", optional = true }
+arrow-schema = { version = "55.1.0", optional = true }
+arrow-json = { version = "55.1.0", optional = true }
 
 # for mssql_fdw
 tiberius = { version = "0.12.2", features = [
@@ -265,8 +278,12 @@ anyhow  = { version = "1.0.81", optional = true }
 uuid = { version = "1.16.0", optional = true }
 
 # for iceberg_fdw
-iceberg = { version = "0.4.0", optional = true }
-iceberg-catalog-memory = { version = "0.4.0", optional = true }
+#iceberg = { git = "https://github.com/apache/iceberg-rust", branch = "main", package="iceberg", optional = true }
+iceberg = { path = "/Users/bolu/local/src/iceberg-rust/crates/iceberg", optional = true }
+#iceberg-catalog-s3tables = { git = "https://github.com/apache/iceberg-rust", branch = "main", package="iceberg-catalog-s3tables", optional = true }
+iceberg-catalog-s3tables = { path = "/Users/bolu/local/src/iceberg-rust/crates/catalog/s3tables", optional = true }
+iceberg-catalog-rest = { path = "/Users/bolu/local/src/iceberg-rust/crates/catalog/rest", optional = true }
+rust_decimal = { version = "1.37.1", optional = true }
 
 [dev-dependencies]
 pgrx-tests = "=0.12.9"

@@ -1,9 +1,9 @@
 use pgrx::list::List;
 use pgrx::pg_sys::panic::ErrorReport;
-use pgrx::{pg_sys, PgSqlErrorCode};
+use pgrx::{PgSqlErrorCode, pg_sys};
 use std::collections::HashMap;
-use std::ffi::c_void;
 use std::ffi::CStr;
+use std::ffi::c_void;
 use thiserror::Error;
 
 #[derive(Error, Debug)]

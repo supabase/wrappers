@@ -1,7 +1,7 @@
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::{
-    debug2, memcxt::PgMemoryContexts, pg_sys::Oid, prelude::*, rel::PgRelation,
-    tupdesc::PgTupleDesc, FromDatum, PgSqlErrorCode,
+    FromDatum, PgSqlErrorCode, debug2, memcxt::PgMemoryContexts, pg_sys::Oid, prelude::*,
+    rel::PgRelation, tupdesc::PgTupleDesc,
 };
 use std::collections::HashMap;
 use std::marker::PhantomData;

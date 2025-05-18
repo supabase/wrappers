@@ -2,14 +2,14 @@
 //!
 
 use crate::interface::{Cell, Column, Row};
+use pgrx::IntoDatum;
 use pgrx::list::List;
 use pgrx::pg_sys::panic::{ErrorReport, ErrorReportable};
 use pgrx::prelude::PgBuiltInOids;
 use pgrx::spi::Spi;
-use pgrx::IntoDatum;
 use pgrx::*;
-use std::ffi::c_void;
 use std::ffi::CStr;
+use std::ffi::c_void;
 use std::num::NonZeroUsize;
 use std::ptr;
 use thiserror::Error;

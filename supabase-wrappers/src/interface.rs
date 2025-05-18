@@ -1,15 +1,15 @@
 //! Provides interface types and trait to develop Postgres foreign data wrapper
 //!
 
-use crate::instance::ForeignServer;
 use crate::FdwRoutine;
+use crate::instance::ForeignServer;
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::{Date, Interval, Time, Timestamp, TimestampWithTimeZone};
 use pgrx::{
+    AllocatedByRust, AnyNumeric, FromDatum, IntoDatum, JsonB, PgBuiltInOids, PgOid,
     datum::Uuid,
     fcinfo,
-    pg_sys::{self, bytea, BuiltinOid, Datum, Oid},
-    AllocatedByRust, AnyNumeric, FromDatum, IntoDatum, JsonB, PgBuiltInOids, PgOid,
+    pg_sys::{self, BuiltinOid, Datum, Oid, bytea},
 };
 use std::collections::HashMap;
 use std::ffi::CStr;

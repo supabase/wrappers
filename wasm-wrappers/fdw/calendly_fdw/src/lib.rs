@@ -109,7 +109,7 @@ impl CalendlyFdw {
                     "count=100".to_string(),
                 ];
 
-                if let Some(ref pt) = page_token {
+                if let Some(pt) = page_token {
                     qs.push(format!("page_token={}", pt));
                 }
 
