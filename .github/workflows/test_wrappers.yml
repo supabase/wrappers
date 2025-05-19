@@ -100,9 +100,11 @@ jobs:
       run: |
         cd ./wasm-wrappers/fdw && cargo component build --release --target wasm32-unknown-unknown
 
+    # we don't want to check format for generated files, so we use
+    # 'git diff --quiet' trick here, instead of 'cargo fmt --check'
     - name: Format code
       run: |
-        cd ./wasm-wrappers/fdw && cargo fmt --check
+        cd ./wasm-wrappers/fdw && cargo fmt && git diff --quiet
 
     - name: Run clippy
       run: |
