@@ -55,7 +55,7 @@ jobs:
         cd wrappers && RUSTFLAGS="-D warnings" cargo clippy --all --tests --no-deps --features native_fdws,helloworld_fdw
 
     - name: Perform test
-      run: cd wrappers && docker compose -f .ci/docker-compose-native.yaml logs s3-init && cargo pgrx test --features "native_fdws pg15"
+      run: cd wrappers && cargo pgrx test --features "native_fdws pg15"
 
   # =============================================================
   # Wasm wrappers test
