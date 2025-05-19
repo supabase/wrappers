@@ -9470,6 +9470,7 @@ dependencies = [
  "reqwest-middleware",
  "reqwest-retry",
  "rust_decimal",
+ "rustls 0.23.27",
  "semver 1.0.26",
  "serde 1.0.219",
  "serde_json",
