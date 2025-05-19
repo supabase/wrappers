@@ -6,7 +6,9 @@ mod tests {
 
     #[pg_test]
     fn bigquery_smoketest() {
-        rustls::crypto::aws_lc_rs::default_provider().install_default().unwrap();
+        rustls::crypto::aws_lc_rs::default_provider()
+            .install_default()
+            .unwrap();
 
         Spi::connect(|mut c| {
             c.update(
