@@ -3,6 +3,7 @@
 mod tests {
     use pgrx::prelude::*;
     use serde_json::json;
+    use std::str::FromStr;
 
     #[pg_test]
     fn iceberg_smoketest() {
@@ -127,11 +128,16 @@ mod tests {
                 .filter_map(|r| {
                     r.get_by_name::<pgrx::datum::TimestampWithTimeZone, _>("tstz")
                         .unwrap()
+                        .map(|t| t.to_utc())
                 })
                 .collect::<Vec<_>>();
             assert_eq!(
                 results,
-                vec![pgrx::datum::TimestampWithTimeZone::new(2025, 5, 16, 12, 34, 56.0).unwrap()]
+                vec![
+                    pgrx::datum::TimestampWithTimeZone::from_str("2025-05-16T12:34:56+08:00")
+                        .unwrap()
+                        .to_utc()
+                ]
             );
 
             let results = c

@@ -120,7 +120,7 @@ df = pa.Table.from_pylist(
             "datetime": datetime.now() - timedelta(days=1),
             "symbol": "APL",
             "bid": 12.34, "ask": 54.32, "amt": 998,
-            "tstz": datetime(2025, 5, 16, 12, 34, 56, tzinfo=ZoneInfo("Australia/Sydney")),
+            "tstz": datetime(2025, 5, 16, 12, 34, 56, tzinfo=ZoneInfo("Asia/Singapore")),
             "details": {"created_by": "alice"},
             "map": { "nn": "qq", "nn2": "pp" },
             "bcol": True,
