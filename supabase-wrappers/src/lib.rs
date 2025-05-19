@@ -307,8 +307,8 @@ pub mod prelude {
     pub use tokio::runtime::Runtime;
 }
 
-use pgrx::AllocatedByPostgres;
 use pgrx::prelude::*;
+use pgrx::AllocatedByPostgres;
 
 mod import_foreign_schema;
 mod instance;

@@ -1,15 +1,15 @@
 use crate::prelude::*;
 use pgrx::pg_sys::Oid;
 use pgrx::{
-    FromDatum, PgBuiltInOids, PgOid,
     datum::{Array, Date, JsonB, Timestamp},
     is_a,
     list::List,
     pg_sys,
     pg_sys::Datum,
+    FromDatum, PgBuiltInOids, PgOid,
 };
-use std::ffi::CStr;
 use std::ffi::c_void;
+use std::ffi::CStr;
 use std::os::raw::c_int;
 
 use crate::interface::Param;

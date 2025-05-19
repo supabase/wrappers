@@ -1,8 +1,8 @@
 use crate::interface::Sort;
 use pgrx::list::List;
 use pgrx::{is_a, pg_sys};
-use std::ffi::CStr;
 use std::ffi::c_void;
+use std::ffi::CStr;
 
 pub(crate) unsafe fn create_sort(
     pathkey: *mut pg_sys::PathKey,
