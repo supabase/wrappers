@@ -3586,6 +3586,7 @@ dependencies = [
 [[package]]
 name = "iceberg"
 version = "0.4.0"
+source = "git+https://github.com/burmecia/iceberg-rust?branch=main#a1eaf8669c818da89ce9d7fa2bccdf162767ae74"
 dependencies = [
  "anyhow",
  "apache-avro",
@@ -3635,6 +3636,7 @@ dependencies = [
 [[package]]
 name = "iceberg-catalog-rest"
 version = "0.4.0"
+source = "git+https://github.com/burmecia/iceberg-rust?branch=main#a1eaf8669c818da89ce9d7fa2bccdf162767ae74"
 dependencies = [
  "async-trait",
  "chrono",
@@ -3654,6 +3656,7 @@ dependencies = [
 [[package]]
 name = "iceberg-catalog-s3tables"
 version = "0.4.0"
+source = "git+https://github.com/burmecia/iceberg-rust?branch=main#a1eaf8669c818da89ce9d7fa2bccdf162767ae74"
 dependencies = [
  "anyhow",
  "async-trait",

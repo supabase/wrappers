@@ -278,11 +278,9 @@ anyhow  = { version = "1.0.81", optional = true }
 uuid = { version = "1.16.0", optional = true }
 
 # for iceberg_fdw
-#iceberg = { git = "https://github.com/apache/iceberg-rust", branch = "main", package="iceberg", optional = true }
-iceberg = { path = "/Users/bolu/local/src/iceberg-rust/crates/iceberg", optional = true }
-#iceberg-catalog-s3tables = { git = "https://github.com/apache/iceberg-rust", branch = "main", package="iceberg-catalog-s3tables", optional = true }
-iceberg-catalog-s3tables = { path = "/Users/bolu/local/src/iceberg-rust/crates/catalog/s3tables", optional = true }
-iceberg-catalog-rest = { path = "/Users/bolu/local/src/iceberg-rust/crates/catalog/rest", optional = true }
+iceberg = { git = "https://github.com/burmecia/iceberg-rust", branch = "main", package="iceberg", optional = true }
+iceberg-catalog-s3tables = { git = "https://github.com/burmecia/iceberg-rust", branch = "main", package="iceberg-catalog-s3tables", optional = true }
+iceberg-catalog-rest = { git = "https://github.com/burmecia/iceberg-rust", branch = "main", package="iceberg-catalog-rest", optional = true }
 rust_decimal = { version = "1.37.1", optional = true }
 
 [dev-dependencies]
