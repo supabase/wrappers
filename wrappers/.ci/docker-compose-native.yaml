@@ -96,21 +96,6 @@ services:
       timeout: 5s
       retries: 3
 
-  iceberg-rest:
-    depends_on:
-      - s3
-    image: apache/iceberg-rest-fixture
-    container_name: iceberg-rest
-    ports:
-      - "8181:8181"
-    environment:
-      - AWS_ACCESS_KEY_ID=admin
-      - AWS_SECRET_ACCESS_KEY=password
-      - AWS_REGION=us-east-1
-      - CATALOG_WAREHOUSE=s3://warehouse/
-      - CATALOG_IO__IMPL=org.apache.iceberg.aws.s3.S3FileIO
-      - CATALOG_S3_ENDPOINT=http://s3:8000
-
   s3:
     image: minio/minio
     container_name: s3
@@ -126,11 +111,37 @@ services:
       - "8000:8000"
       - "8001:8001"
     command: ["server", "/data", "--address", ":8000", "--console-address", ":8001"]
+    healthcheck:
+      test: curl --fail http://0.0.0.0:8001/ || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  iceberg-rest:
+    depends_on:
+      s3:
+        condition: service_healthy
+    image: apache/iceberg-rest-fixture
+    container_name: iceberg-rest
+    ports:
+      - "8181:8181"
+    environment:
+      - AWS_ACCESS_KEY_ID=admin
+      - AWS_SECRET_ACCESS_KEY=password
+      - AWS_REGION=us-east-1
+      - CATALOG_WAREHOUSE=s3://warehouse/
+      - CATALOG_IO__IMPL=org.apache.iceberg.aws.s3.S3FileIO
+      - CATALOG_S3_ENDPOINT=http://s3:8000
+    healthcheck:
+      test: curl --fail http://0.0.0.0:8181/v1/config || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   s3-init:
     depends_on:
-      - s3
-      - iceberg-rest
+      iceberg-rest:
+        condition: service_healthy
     container_name: s3-init
     build:
       context: ../dockerfiles/s3
