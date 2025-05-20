@@ -10,6 +10,16 @@ use rust_decimal::Decimal;
 use supabase_wrappers::prelude::*;
 use uuid::Uuid;
 
+// extract pattern string for Iceberg 'starts with' and 'not starts with' predicate
+// e.g. return Some("name") for "like 'name%'"
+fn extract_starts_with_pattern(s: &str) -> Option<&str> {
+    if s.ends_with("%") && s.matches('%').count() == 1 {
+        s.split('%').next()
+    } else {
+        None
+    }
+}
+
 // convert Wrappers Cell to Iceberg Datum with some type flexibility
 fn cell_to_iceberg_datum(cell: &Cell, tgt_type: &Type) -> IcebergFdwResult<Option<Datum>> {
     Ok(match cell {
@@ -105,7 +115,7 @@ pub(super) fn try_pushdown(table: &Table, quals: &[Qual]) -> IcebergFdwResult<Op
                         .collect::<Result<Vec<_>, _>>()?;
                     // push down the whole predicate only when each datum can be pushed down
                     if datums.iter().any(|d| d.is_none()) {
-                        return Ok(None);
+                        continue;
                     }
                     let datums: Vec<Datum> = datums.into_iter().flatten().collect();
 
@@ -114,7 +124,7 @@ pub(super) fn try_pushdown(table: &Table, quals: &[Qual]) -> IcebergFdwResult<Op
                     } else if !qual.use_or && qual.operator == "<>" {
                         preds.push(term.is_not_in(datums));
                     } else {
-                        return Ok(None);
+                        continue;
                     }
                 }
                 Value::Cell(cell) => {
@@ -130,29 +140,52 @@ pub(super) fn try_pushdown(table: &Table, quals: &[Qual]) -> IcebergFdwResult<Op
                                 Cell::Bool(_) => term.equal_to(datum),
                                 Cell::String(v) if v == "null" => term.is_null(),
                                 _ => {
-                                    return Ok(None);
+                                    continue;
                                 }
                             },
                             "is not" => match cell {
                                 Cell::Bool(_) => term.not_equal_to(datum),
                                 Cell::String(s) if s == "null" => term.is_not_null(),
                                 _ => {
-                                    return Ok(None);
+                                    continue;
+                                }
+                            },
+                            "~~" => match cell {
+                                Cell::String(s) => {
+                                    if let Some(p) = extract_starts_with_pattern(s) {
+                                        term.starts_with(Datum::string(p))
+                                    } else {
+                                        continue;
+                                    }
+                                }
+                                _ => {
+                                    continue;
+                                }
+                            },
+                            "!~~" => match cell {
+                                Cell::String(s) => {
+                                    if let Some(p) = extract_starts_with_pattern(s) {
+                                        term.not_starts_with(Datum::string(p))
+                                    } else {
+                                        continue;
+                                    }
+                                }
+                                _ => {
+                                    continue;
                                 }
                             },
                             _ => {
-                                return Ok(None);
+                                continue;
                             }
                         };
                         preds.push(pred);
                     }
                 }
             }
-        } else {
-            return Ok(None);
         }
     }
 
+    // use logical 'AND' for multiple predicates
     let ret = preds.into_iter().reduce(|ret, p| ret.and(p));
 
     if cfg!(debug_assertions) {
