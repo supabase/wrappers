@@ -32,20 +32,15 @@ fn cell_to_iceberg_datum(cell: &Cell, tgt_type: &Type) -> IcebergFdwResult<Optio
         Cell::I32(v) => match tgt_type {
             Type::Primitive(PrimitiveType::Int) => Some(Datum::int(*v)),
             Type::Primitive(PrimitiveType::Long) => Some(Datum::long(*v)),
-            Type::Primitive(PrimitiveType::Float) => Some(Datum::float(*v as f32)),
             Type::Primitive(PrimitiveType::Double) => Some(Datum::double(*v)),
             _ => None,
         },
         Cell::F64(v) => match tgt_type {
-            Type::Primitive(PrimitiveType::Float) => Some(Datum::float(*v as f32)),
             Type::Primitive(PrimitiveType::Double) => Some(Datum::double(*v)),
             _ => None,
         },
         Cell::I64(v) => match tgt_type {
-            Type::Primitive(PrimitiveType::Int) => Some(Datum::int(*v as i32)),
             Type::Primitive(PrimitiveType::Long) => Some(Datum::long(*v)),
-            Type::Primitive(PrimitiveType::Float) => Some(Datum::float(*v as f32)),
-            Type::Primitive(PrimitiveType::Double) => Some(Datum::double(*v as f64)),
             _ => None,
         },
         Cell::Numeric(v) => {

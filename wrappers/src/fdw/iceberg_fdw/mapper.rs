@@ -79,7 +79,7 @@ impl Mapper {
         let col_name = &tgt_col.name;
         let array = src_array.as_any();
 
-        // map source filed to target column
+        // map source field to target column
         match tgt_col.type_oid {
             pg_sys::BOOLOID => {
                 if let Type::Primitive(PrimitiveType::Boolean) = src_type {

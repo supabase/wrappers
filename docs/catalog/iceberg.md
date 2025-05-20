@@ -232,7 +232,7 @@ This FDW supports `where` clause pushdown with below operators.
 | `=`, `>`, `>=`, `<`, `<=`, `<>`, `!=`      |                                  |
 | `is null`, `is not null`                   |                                  |
 | `x`, `not x`, `x is true`, `x is not true` | column `x` data type is `boolean`|
-| `x between a and b`                        | column `x` data type is `date` or `timestamp` |
+| `x between a and b`                        | column `x` data type can be datetime or numeric types |
 | `like 'abc%'`, `not like 'abc%'`           | only support `starts with` pattern |
 | `in (x, y, z)`, `not in (x, y, z)`         |                                  |
 
