@@ -15,6 +15,7 @@ use serde_json::json;
 use std::collections::HashMap;
 use std::str::FromStr;
 
+use crate::setup_rustls_default_crypto_provider;
 use supabase_wrappers::prelude::*;
 
 #[wrappers_fdw(
@@ -160,6 +161,8 @@ impl BigQueryFdw {
 
 impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
     fn new(server: ForeignServer) -> Result<Self, BigQueryFdwError> {
+        setup_rustls_default_crypto_provider();
+
         let mut ret = BigQueryFdw {
             rt: create_async_runtime()?,
             client: None,
