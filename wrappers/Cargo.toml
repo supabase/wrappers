@@ -1,8 +1,11 @@
 [package]
 name = "wrappers"
 version = "0.5.0"
-edition = "2021"
 publish = false
+homepage = "https://github.com/supabase/wrappers/tree/main/wrappers"
+repository = "https://github.com/supabase/wrappers/tree/main/wrappers"
+edition = { workspace = true }
+rust-version = { workspace = true }
 
 [lib]
 crate-type = ["cdylib", "lib"]
@@ -152,6 +155,20 @@ wasm_fdw = [
     "bytes",
     "uuid",
 ]
+iceberg_fdw = [
+    "iceberg",
+    "iceberg-catalog-rest",
+    "iceberg-catalog-s3tables",
+    "arrow-array",
+    "arrow-schema",
+    "arrow-json",
+    "chrono",
+    "futures",
+    "rust_decimal",
+    "serde_json",
+    "thiserror",
+    "uuid",
+]
 # Does not include helloworld_fdw because of its general uselessness
 native_fdws = [
     "airtable_fdw",
@@ -165,6 +182,7 @@ native_fdws = [
     "mssql_fdw",
     "redis_fdw",
     "cognito_fdw",
+    "iceberg_fdw",
 ]
 all_fdws = [
     "native_fdws",
@@ -176,6 +194,12 @@ pgrx = { version = "=0.12.9" }
 #supabase-wrappers = "0.1"
 supabase-wrappers = { path = "../supabase-wrappers", default-features = false }
 
+# Rustls is shared by some other dependencies but not directly used by Wrappers.
+# Since Rustls 0.22, it is required to choose the provider of the cryptographic
+# primitives at start.
+# ref: https://docs.rs/rustls/latest/rustls/index.html#cryptography-providers
+rustls = "0.23.27"
+
 # for clickhouse_fdw
 clickhouse-rs = { git = "https://github.com/suharev7/clickhouse-rs", rev = "abfe517101eefe36bfdb7da248690659aa284ad3", features = [
     "tls",
@@ -183,7 +207,6 @@ clickhouse-rs = { git = "https://github.com/suharev7/clickhouse-rs", rev = "abfe
 chrono = { version = "0.4", optional = true }
 chrono-tz = { version = "0.6", optional = true }
 either = { version = "1.12.0", optional = true }
-
 
 # for bigquery_fdw, firebase_fdw, airtable_fdw and etc.
 gcp-bigquery-client = { version = "0.25.1", optional = true }
@@ -205,8 +228,8 @@ regex = { version = "1", optional = true }
 url = { version = "2.3", optional = true }
 
 # for s3_fdw
-aws-config = { version = "1.1.7", features = ["behavior-version-latest"], optional = true }
-aws-sdk-s3 = { version = "1.45.0", optional = true }
+aws-config = { version = "1.6.3", features = ["behavior-version-latest"], optional = true }
+aws-sdk-s3 = { version = "1.86.0", optional = true }
 
 # for cognito fdw
 aws-sdk-cognitoidentityprovider = { version ="1.60.0", optional = true }
@@ -222,8 +245,10 @@ async-compression = { version = "0.3.15", features = [
     "zlib",
 ], optional = true }
 http = { version = "0.2", optional = true }
-parquet = { version = "52.2.0", features = ["async"], optional = true }
-arrow-array = { version = "52.2.0", optional = true }
+parquet = { version = "55.1.0", features = ["async"], optional = true }
+arrow-array = { version = "55.1.0", optional = true }
+arrow-schema = { version = "55.1.0", optional = true }
+arrow-json = { version = "55.1.0", optional = true }
 
 # for mssql_fdw
 tiberius = { version = "0.12.2", features = [
@@ -256,6 +281,12 @@ bytes = { version = "1.9.0", optional = true }
 thiserror = { version = "1.0.48", optional = true }
 anyhow  = { version = "1.0.81", optional = true }
 uuid = { version = "1.16.0", optional = true }
+
+# for iceberg_fdw
+iceberg = { git = "https://github.com/burmecia/iceberg-rust", branch = "main", package="iceberg", optional = true }
+iceberg-catalog-s3tables = { git = "https://github.com/burmecia/iceberg-rust", branch = "main", package="iceberg-catalog-s3tables", optional = true }
+iceberg-catalog-rest = { git = "https://github.com/burmecia/iceberg-rust", branch = "main", package="iceberg-catalog-rest", optional = true }
+rust_decimal = { version = "1.37.1", optional = true }
 
 [dev-dependencies]
 pgrx-tests = "=0.12.9"

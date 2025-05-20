@@ -22,6 +22,7 @@ Each FDW documentation includes a detailed "Limitations" section that describes 
 | Cloudflare D1 |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |    ✅     |
 | Firebase      |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
 | HubSpot       |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
+| Iceberg       |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
 | Logflare      |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
 | Notion        |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
 | Orb           |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |    ✅     |

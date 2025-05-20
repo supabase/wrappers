@@ -147,7 +147,7 @@ pub struct UserResponse {
     pub response_metadata: Option<ResponseMetadata>,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Default, Deserialize, Clone)]
 pub struct User {
     pub id: String,
     pub name: String,
@@ -170,7 +170,7 @@ pub struct User {
     pub color: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Default, Deserialize, Clone)]
 pub struct UserProfile {
     pub email: Option<String>,
     pub display_name: Option<String>,
@@ -365,12 +365,14 @@ mod tests {
                 status_emoji: None,
                 title: None,
                 phone: None,
+                ..Default::default()
             },
             is_admin: Some(true),
             is_owner: None,
             is_bot: false,
             deleted: false,
             updated: None,
+            ..Default::default()
         };
 
         let row = user.to_row();

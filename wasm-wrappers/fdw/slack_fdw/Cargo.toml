@@ -1,7 +1,9 @@
 [package]
 name = "slack_fdw"
 version = "0.2.0"
-edition = "2021"
+edition = { workspace = true }
+homepage = { workspace = true }
+rust-version = { workspace = true }
 
 [lib]
 crate-type = ["cdylib"]
@@ -21,7 +23,3 @@ path = "wit"
 
 [package.metadata.component.target.dependencies]
 "supabase:wrappers" = { path = "../../wit/v2" }
-
-[profile.release]
-lto = true
-opt-level = 's'

@@ -164,12 +164,12 @@ impl OrbFdw {
     //   "customer_id in ('abc', 'def')" -> "customer_id[]=abc&customer_id[]=def"
     fn translate_filter_pushdown(&self, qs: &mut Vec<String>, field: &str, value: &Value) {
         match value {
-            Value::Cell(ref c) => {
+            Value::Cell(c) => {
                 if let Cell::String(s) = c {
                     qs.push(format!("{}={}", field, s));
                 }
             }
-            Value::Array(ref arr) => {
+            Value::Array(arr) => {
                 arr.iter()
                     .filter_map(|c| match c {
                         Cell::String(s) => Some(s.as_ref()),

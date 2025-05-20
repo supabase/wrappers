@@ -1,7 +1,9 @@
 [package]
 name = "cal_fdw"
 version = "0.2.0"
-edition = "2021"
+edition = { workspace = true }
+homepage = { workspace = true }
+rust-version = { workspace = true }
 
 [lib]
 crate-type = ["cdylib"]

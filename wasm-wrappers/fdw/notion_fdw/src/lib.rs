@@ -134,7 +134,7 @@ impl NotionFdw {
                         String::default(),
                     )
                 } else {
-                    let start_cursor_str = if let Some(ref sc) = start_cursor {
+                    let start_cursor_str = if let Some(sc) = start_cursor {
                         format!(r#""start_cursor": "{}","#, sc)
                     } else {
                         String::default()
@@ -173,7 +173,7 @@ impl NotionFdw {
                         String::default(),
                     )
                 } else {
-                    let start_cursor = if let Some(ref sc) = start_cursor {
+                    let start_cursor = if let Some(sc) = start_cursor {
                         format!("&start_cursor={}", sc)
                     } else {
                         String::default()
@@ -193,7 +193,7 @@ impl NotionFdw {
                         String::default(),
                     )
                 } else if let Some(block_id) = block_id {
-                    let start_cursor = if let Some(ref sc) = start_cursor {
+                    let start_cursor = if let Some(sc) = start_cursor {
                         format!("&start_cursor={}", sc)
                     } else {
                         String::default()

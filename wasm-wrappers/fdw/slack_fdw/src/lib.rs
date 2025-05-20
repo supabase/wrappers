@@ -1155,7 +1155,10 @@ impl Guest for SlackFdw {
             "channels" => this.fetch_channels(ctx),
             "files" => this.fetch_files(ctx),
             "team-info" => this.fetch_team_info(ctx),
-            _ => Err(format!("Unsupported resource type: {}. Supported resources are 'users', 'usergroups', 'usergroup_members', 'messages', 'channels', 'files', and 'team-info'.", resource))
+            _ => Err(format!(
+                "Unsupported resource type: {}. Supported resources are 'users', 'usergroups', 'usergroup_members', 'messages', 'channels', 'files', and 'team-info'.",
+                resource
+            )),
         }
     }
 

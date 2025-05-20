@@ -21,6 +21,7 @@ nav:
           - BigQuery: "catalog/bigquery.md"
           - ClickHouse: "catalog/clickhouse.md"
           - Firebase: "catalog/firebase.md"
+          - Iceberg : "catalog/iceberg.md"
           - Logflare: "catalog/logflare.md"
           - Redis: "catalog/redis.md"
           - S3 (CSV, JSON, Parquet): "catalog/s3.md"

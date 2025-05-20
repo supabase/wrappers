@@ -19,7 +19,7 @@ jobs:
 
     - uses: actions-rs/toolchain@v1
       with:
-        toolchain: 1.84.1
+        toolchain: 1.85.1
         default: true
         override: true
         components: rustfmt, clippy

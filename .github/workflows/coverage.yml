@@ -20,7 +20,7 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.84.1
+          toolchain: 1.85.1
           components: llvm-tools-preview, rustfmt, clippy
           default: true
           override: true

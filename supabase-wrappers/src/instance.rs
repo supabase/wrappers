@@ -5,6 +5,7 @@ use crate::prelude::*;
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::*;
 
+#[derive(Debug, Clone, Default)]
 pub struct ForeignServer {
     pub server_name: String,
     pub server_type: Option<String>,
