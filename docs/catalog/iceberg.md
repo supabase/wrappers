@@ -210,6 +210,8 @@ Ref: [Iceberg Table Spec](https://iceberg.apache.org/spec/#iceberg-table-spec)
 
 #### Usage
 
+You can manually create the foreign table like below if you did not use `import foreign schema`.
+
 ```sql
 create foreign table iceberg.guides (
   id bigint,
