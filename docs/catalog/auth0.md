@@ -58,6 +58,7 @@ We need to provide Postgres with the credentials to connect to Auth0, and any ad
     create server auth0_server
       foreign data wrapper auth0_wrapper
       options (
+        url 'https://dev-<tenant-id>.us.auth0.com/api/v2/users',
         api_key_id '<key_ID>' -- The Key ID from above.
       );
     ```
