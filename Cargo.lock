@@ -1763,7 +1763,7 @@ checksum = "f46ad14479a25103f283c0f10005961cf086d8dc42205bb44c46ac563475dca6"
 [[package]]
 name = "clickhouse-rs"
 version = "1.1.0-alpha.1"
-source = "git+https://github.com/suharev7/clickhouse-rs?rev=abfe517101eefe36bfdb7da248690659aa284ad3#abfe517101eefe36bfdb7da248690659aa284ad3"
+source = "git+https://github.com/burmecia/clickhouse-rs.git?branch=supabase-patch#96ddf4105e48c140156b55ba8742f654c259a7c6"
 dependencies = [
  "byteorder",
  "cfg-if",
@@ -1773,6 +1773,7 @@ dependencies = [
  "combine",
  "crossbeam",
  "either",
+ "ethnum",
  "futures-core",
  "futures-sink",
  "futures-util",
@@ -1793,7 +1794,7 @@ dependencies = [
 [[package]]
 name = "clickhouse-rs-cityhash-sys"
 version = "0.1.2"
-source = "git+https://github.com/suharev7/clickhouse-rs?rev=abfe517101eefe36bfdb7da248690659aa284ad3#abfe517101eefe36bfdb7da248690659aa284ad3"
+source = "git+https://github.com/burmecia/clickhouse-rs.git?branch=supabase-patch#96ddf4105e48c140156b55ba8742f654c259a7c6"
 dependencies = [
  "cc",
 ]
@@ -2672,6 +2673,12 @@ dependencies = [
  "libc",
  "windows-sys 0.59.0",
 ]
+
+[[package]]
+name = "ethnum"
+version = "1.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0939f82868b77ef93ce3c3c3daf2b3c526b456741da5a1a4559e590965b6026b"
 
 [[package]]
 name = "event-listener"

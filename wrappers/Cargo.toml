@@ -201,7 +201,7 @@ supabase-wrappers = { path = "../supabase-wrappers", default-features = false }
 rustls = "0.23.27"
 
 # for clickhouse_fdw
-clickhouse-rs = { git = "https://github.com/suharev7/clickhouse-rs", rev = "abfe517101eefe36bfdb7da248690659aa284ad3", features = [
+clickhouse-rs = { git = "https://github.com/burmecia/clickhouse-rs.git", branch = "supabase-patch", features = [
     "tls",
 ], optional = true }
 chrono = { version = "0.4", optional = true }

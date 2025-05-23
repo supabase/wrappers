@@ -20,6 +20,12 @@ enum ClickHouseFdwError {
     #[error("column data type '{0}' is not supported")]
     UnsupportedColumnType(String),
 
+    #[error("parse integer from string error")]
+    ParseIntError(#[from] std::num::ParseIntError),
+
+    #[error("numeric conversion error: {0}")]
+    NumericConversionError(#[from] pgrx::numeric::Error),
+
     #[error("datetime conversion error: {0}")]
     DatetimeConversionError(#[from] DateTimeConversionError),
 
