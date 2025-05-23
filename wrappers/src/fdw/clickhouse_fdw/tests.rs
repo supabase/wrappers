@@ -25,6 +25,11 @@ mod tests {
                             name Nullable(TEXT),
                             amt Nullable(Float64),
                             uid Nullable(UUID),
+                            fstr Nullable(FixedString(5)),
+                            bignum Nullable(UInt256),
+                            dnum Nullable(Decimal(18, 3)),
+                            arr_i64 Array(Int64) default [],
+                            arr_str Array(String) default [],
                             created_at DateTime('UTC')
                         ) engine = Memory",
                     )
@@ -56,6 +61,11 @@ mod tests {
                     name text,
                     amt double precision,
                     uid uuid,
+                    fstr text,
+                    bignum text,
+                    dnum numeric,
+                    arr_i64 bigint[],
+                    arr_str text[],
                     created_at timestamp
                   )
                   SERVER my_clickhouse_server
@@ -75,6 +85,11 @@ mod tests {
                     name text,
                     amt double precision,
                     uid uuid,
+                    fstr text,
+                    bignum text,
+                    dnum numeric,
+                    arr_i64 bigint[],
+                    arr_str text[],
                     created_at timestamp
                   )
                   SERVER my_clickhouse_server
@@ -95,6 +110,11 @@ mod tests {
                     _name text,
                     amt double precision,
                     uid uuid,
+                    fstr text,
+                    bignum text,
+                    dnum numeric,
+                    arr_i64 bigint[],
+                    arr_str text[],
                     created_at timestamp
                   )
                   SERVER my_clickhouse_server
@@ -151,7 +171,8 @@ mod tests {
             )
             .unwrap();
             c.update(
-                "INSERT INTO test_table (id, name, amt, uid, created_at) VALUES ($1, $2, $3, $4, $5)",
+                "INSERT INTO test_table (id, name, amt, uid, fstr, bignum, dnum, arr_i64, arr_str, created_at)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
                 None,
                 Some(vec![
                     (PgOid::BuiltIn(PgBuiltInOids::INT4OID), 42.into_datum()),
@@ -166,6 +187,26 @@ mod tests {
                     (
                         PgOid::BuiltIn(PgBuiltInOids::UUIDOID),
                         Uuid::from_bytes([42u8; 16]).into_datum(),
+                    ),
+                    (
+                        PgOid::BuiltIn(PgBuiltInOids::TEXTOID),
+                        "abc".into_datum(),
+                    ),
+                    (
+                        PgOid::BuiltIn(PgBuiltInOids::TEXTOID),
+                        "12345678".into_datum(),
+                    ),
+                    (
+                        PgOid::BuiltIn(PgBuiltInOids::NUMERICOID),
+                        AnyNumeric::try_from(123456.789).unwrap().into_datum(),
+                    ),
+                    (
+                        PgOid::BuiltIn(PgBuiltInOids::INT8ARRAYOID),
+                        vec![123, 456].into_datum(),
+                    ),
+                    (
+                        PgOid::BuiltIn(PgBuiltInOids::TEXTARRAYOID),
+                        vec!["abc", "def"].into_datum(),
                     ),
                     (
                         PgOid::BuiltIn(PgBuiltInOids::TIMESTAMPOID),
@@ -197,6 +238,37 @@ mod tests {
                     Some(Uuid::from_bytes([42u8; 16])),
                     Some(123.45),
                     Some(Timestamp::new(2025, 5, 1, 2, 3, 4.0).unwrap())
+                )
+            );
+            assert_eq!(
+                c.select(
+                    "SELECT fstr, bignum, dnum FROM test_table WHERE id = 42",
+                    None,
+                    None
+                )
+                .unwrap()
+                .first()
+                .get_three::<&str, &str, AnyNumeric>()
+                .unwrap(),
+                (
+                    Some("abc\0\0"),
+                    Some("12345678"),
+                    Some(AnyNumeric::try_from(123456.789).unwrap())
+                )
+            );
+            assert_eq!(
+                c.select(
+                    "SELECT arr_i64, arr_str FROM test_table WHERE id = 42",
+                    None,
+                    None
+                )
+                .unwrap()
+                .first()
+                .get_two::<Vec<i64>, Vec<String>>()
+                .unwrap(),
+                (
+                    Some(vec![123i64, 456i64]),
+                    Some(vec!["abc".to_string(), "def".to_string()]),
                 )
             );
             assert_eq!(
@@ -300,6 +372,54 @@ mod tests {
                 })
                 .expect("value");
             assert_eq!(remote_value, Some("test".to_string()));
+
+            // test update data in foreign table
+            c.update(
+                "UPDATE test_table
+                 SET uid = $1, bignum = $2, arr_i64 = $3
+                 WHERE id = 42
+                ",
+                None,
+                Some(vec![
+                    (
+                        PgOid::BuiltIn(PgBuiltInOids::UUIDOID),
+                        Uuid::from_bytes([43u8; 16]).into_datum(),
+                    ),
+                    (
+                        PgOid::BuiltIn(PgBuiltInOids::TEXTOID),
+                        "87654321".into_datum(),
+                    ),
+                    (
+                        PgOid::BuiltIn(PgBuiltInOids::INT8ARRAYOID),
+                        vec![444, 222].into_datum(),
+                    ),
+                ]),
+            )
+            .unwrap();
+            assert_eq!(
+                c.select(
+                    "SELECT uid, bignum, arr_i64 FROM test_table WHERE id = 42",
+                    None,
+                    None
+                )
+                .unwrap()
+                .first()
+                .get_three::<Uuid, &str, Vec<i64>>()
+                .unwrap(),
+                (
+                    Some(Uuid::from_bytes([43u8; 16])),
+                    Some("87654321"),
+                    Some(vec![444i64, 222i64]),
+                )
+            );
+
+            // test delete data in foreign table
+            c.update("DELETE FROM test_table WHERE id = 42", None, None)
+                .unwrap();
+            assert!(c
+                .select("SELECT * FROM test_table WHERE id = 42", None, None)
+                .unwrap()
+                .is_empty());
         });
     }
 }

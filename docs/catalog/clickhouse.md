@@ -162,22 +162,35 @@ This FDW supports `where`, `order by` and `limit` clause pushdown, as well as pa
 
 ## Supported Data Types
 
-| Postgres Type    | ClickHouse Type   |
-| ---------------- | ----------------- |
-| boolean          | UInt8             |
-| smallint         | Int16             |
-| integer          | UInt16            |
-| integer          | Int32             |
-| bigint           | UInt32            |
-| bigint           | Int64             |
-| bigint           | UInt64            |
-| real             | Float32           |
-| double precision | Float64           |
-| text             | String            |
-| date             | Date              |
-| timestamp        | DateTime          |
-| uuid             | UUID              |
-| *                | Nullable&lt;T&gt; |
+| Postgres Type      | ClickHouse Type   |
+| ------------------ | ----------------- |
+| boolean            | UInt8             |
+| smallint           | Int16             |
+| integer            | UInt16            |
+| integer            | Int32             |
+| bigint             | UInt32            |
+| bigint             | Int64             |
+| bigint             | UInt64            |
+| real               | Float32           |
+| double precision   | Float64           |
+| numeric            | UInt128           |
+| numeric            | Int128            |
+| text               | UInt256           |
+| text               | Int256            |
+| numeric            | Decimal           |
+| text               | String            |
+| text               | FixedString(N)    |
+| date               | Date              |
+| timestamp          | DateTime          |
+| uuid               | UUID              |
+| boolean[]          | Array(Boolean)    |
+| smallint[]         | Array(Int16)      |
+| integer[]          | Array(Int32)      |
+| bigint[]           | Array(Int64)      |
+| real[]             | Array(Float32)    |
+| double precision[] | Array(Float64)  |
+| text[]             | Array(String)     |
+| *                  | Nullable&lt;T&gt; |
 
 ## Limitations
 
