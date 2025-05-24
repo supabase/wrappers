@@ -3590,8 +3590,8 @@ dependencies = [
 
 [[package]]
 name = "iceberg"
-version = "0.4.0"
-source = "git+https://github.com/burmecia/iceberg-rust?branch=main#a1eaf8669c818da89ce9d7fa2bccdf162767ae74"
+version = "0.5.0"
+source = "git+https://github.com/apache/iceberg-rust?rev=12485be4a30848213faea62740ad7cb5a41bd6f2#12485be4a30848213faea62740ad7cb5a41bd6f2"
 dependencies = [
  "anyhow",
  "apache-avro",
@@ -3640,8 +3640,8 @@ dependencies = [
 
 [[package]]
 name = "iceberg-catalog-rest"
-version = "0.4.0"
-source = "git+https://github.com/burmecia/iceberg-rust?branch=main#a1eaf8669c818da89ce9d7fa2bccdf162767ae74"
+version = "0.5.0"
+source = "git+https://github.com/apache/iceberg-rust?rev=12485be4a30848213faea62740ad7cb5a41bd6f2#12485be4a30848213faea62740ad7cb5a41bd6f2"
 dependencies = [
  "async-trait",
  "chrono",
@@ -3660,8 +3660,8 @@ dependencies = [
 
 [[package]]
 name = "iceberg-catalog-s3tables"
-version = "0.4.0"
-source = "git+https://github.com/burmecia/iceberg-rust?branch=main#a1eaf8669c818da89ce9d7fa2bccdf162767ae74"
+version = "0.5.0"
+source = "git+https://github.com/apache/iceberg-rust?rev=12485be4a30848213faea62740ad7cb5a41bd6f2#12485be4a30848213faea62740ad7cb5a41bd6f2"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -7266,7 +7266,7 @@ dependencies = [
 
 [[package]]
 name = "supabase-wrappers-macros"
-version = "0.1.17"
+version = "0.1.18"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -9428,7 +9428,7 @@ dependencies = [
 
 [[package]]
 name = "wrappers"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "anyhow",
  "arrow-array",

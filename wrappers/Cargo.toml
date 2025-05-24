@@ -1,6 +1,6 @@
 [package]
 name = "wrappers"
-version = "0.5.0"
+version = "0.5.1"
 publish = false
 homepage = "https://github.com/supabase/wrappers/tree/main/wrappers"
 repository = "https://github.com/supabase/wrappers/tree/main/wrappers"
@@ -283,9 +283,9 @@ anyhow  = { version = "1.0.81", optional = true }
 uuid = { version = "1.16.0", optional = true }
 
 # for iceberg_fdw
-iceberg = { git = "https://github.com/burmecia/iceberg-rust", branch = "main", package="iceberg", optional = true }
-iceberg-catalog-s3tables = { git = "https://github.com/burmecia/iceberg-rust", branch = "main", package="iceberg-catalog-s3tables", optional = true }
-iceberg-catalog-rest = { git = "https://github.com/burmecia/iceberg-rust", branch = "main", package="iceberg-catalog-rest", optional = true }
+iceberg = { git = "https://github.com/apache/iceberg-rust", rev = "12485be4a30848213faea62740ad7cb5a41bd6f2", package = "iceberg", optional = true }
+iceberg-catalog-s3tables = { git = "https://github.com/apache/iceberg-rust", rev = "12485be4a30848213faea62740ad7cb5a41bd6f2", package="iceberg-catalog-s3tables", optional = true }
+iceberg-catalog-rest = { git = "https://github.com/apache/iceberg-rust", rev = "12485be4a30848213faea62740ad7cb5a41bd6f2", package="iceberg-catalog-rest", optional = true }
 rust_decimal = { version = "1.37.1", optional = true }
 
 [dev-dependencies]

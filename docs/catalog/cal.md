@@ -17,7 +17,7 @@ The Cal Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you to 
 
 | Version | Wasm Package URL                                                                                | Checksum                                                           | Required Wrappers Version |
 | ------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------- |
-| 0.2.0   | `https://github.com/supabase/wrappers/releases/download/wasm_cal_fdw_v0.2.0/cal_fdw.wasm`       | `tbd`                                                              | >=0.5.0                   |
+| 0.2.0   | `https://github.com/supabase/wrappers/releases/download/wasm_cal_fdw_v0.2.0/cal_fdw.wasm`       | `c9d14036b370758ce75871d69e9c842bc922703d02323b73397995f4cf14491b` | >=0.5.0                   |
 | 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_cal_fdw_v0.1.0/cal_fdw.wasm`       | `4afe4fac8c51f2caa1de8483b3817d2cec3a14cd8a65a3942c8b4ff6c430f08a` | >=0.4.0                   |
 
 ## Preparation

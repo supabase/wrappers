@@ -28,7 +28,7 @@
 | [Orb](./wasm-wrappers/fdw/orb_fdw)              | A Wasm FDW for [Orb](https://www.withorb.com/)                                | ✅   | ❌     |
 | [HubSpot](./wasm-wrappers/fdw/hubspot_fdw)      | A Wasm FDW for [HubSpot](https://www.hubspot.com/)                            | ✅   | ❌     |
 | [Slack](./wasm-wrappers/fdw/slack_fdw)          | A Wasm FDW for [Slack](https://www.slack.com/)                                | ✅   | ❌     |
-| [Apache Iceberg](./wrappers/fdw/iceberg_fdw)    | A FDW for [Apache Iceberg](https://iceberg.apache.org/)                       | ✅   | ❌     |
+| [Apache Iceberg](./wrappers/src/fdw/iceberg_fdw)| A FDW for [Apache Iceberg](https://iceberg.apache.org/)                       | ✅   | ❌     |
 
 ### Warning
 

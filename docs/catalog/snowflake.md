@@ -17,7 +17,7 @@ The Snowflake Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows y
 
 | Version | Wasm Package URL                                                                                      | Checksum                                                           | Required Wrappers Version |
 | ------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------- |
-| 0.2.0   | `https://github.com/supabase/wrappers/releases/download/wasm_snowflake_fdw_v0.2.0/snowflake_fdw.wasm` | `tbd`                                                              | >=0.5.0                   |
+| 0.2.0   | `https://github.com/supabase/wrappers/releases/download/wasm_snowflake_fdw_v0.2.0/snowflake_fdw.wasm` | `921b18a1e9c20c4ef5a09af17b5d76fd6ebe56d41bcfa565b74a530420532437` | >=0.5.0                   |
 | 0.1.1   | `https://github.com/supabase/wrappers/releases/download/wasm_snowflake_fdw_v0.1.1/snowflake_fdw.wasm` | `7aaafc7edc1726bc93ddc04452d41bda9e1a264a1df2ea9bf1b00b267543b860` | >=0.4.0                   |
 | 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_snowflake_fdw_v0.1.0/snowflake_fdw.wasm` | `2fb46fd8afa63f3975dadf772338106b609b131861849356e0c09dde032d1af8` | >=0.4.0                   |
 

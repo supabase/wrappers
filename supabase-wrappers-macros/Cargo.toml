@@ -1,6 +1,6 @@
 [package]
 name = "supabase-wrappers-macros"
-version = "0.1.17"
+version = "0.1.18"
 authors = ["Supabase Inc. https://supabase.com/"]
 license = "Apache-2.0"
 description = "Postgres Foreign Data Wrapper development framework macros for supabase-wrappers"

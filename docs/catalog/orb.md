@@ -17,7 +17,7 @@ The Orb Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you to 
 
 | Version | Wasm Package URL                                                                                    | Checksum                                                           | Required Wrappers Version |
 | ------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------- |
-| 0.2.0   | `https://github.com/supabase/wrappers/releases/download/wasm_orb_fdw_v0.2.0/orb_fdw.wasm`           | `tbd`                                                              | >=0.5.0                   |
+| 0.2.0   | `https://github.com/supabase/wrappers/releases/download/wasm_orb_fdw_v0.2.0/orb_fdw.wasm`           | `f9dd3bd2a1ce3d8d7c9e0a4dae8086d5f1118b6099e9513e4e93deb2eb8a2b6c` | >=0.5.0                   |
 | 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_orb_fdw_v0.1.0/orb_fdw.wasm`           | `89153a0a570257c231b78561cc909766731c828324585a5b6e2aa553902cb73a` | >=0.4.0                   |
 
 ## Preparation
