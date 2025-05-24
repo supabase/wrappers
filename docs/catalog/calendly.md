@@ -17,7 +17,7 @@ The Calendly Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows yo
 
 | Version | Wasm Package URL                                                                                    | Checksum                                                           | Required Wrappers Version |
 | ------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------- |
-| 0.2.0   | `https://github.com/supabase/wrappers/releases/download/wasm_calendly_fdw_v0.2.0/calendly_fdw.wasm` | `tbd`                                                              | >=0.5.0                   |
+| 0.2.0   | `https://github.com/supabase/wrappers/releases/download/wasm_calendly_fdw_v0.2.0/calendly_fdw.wasm` | `1d18021cc3618440107b0d37f0a811607fdc863d9841a5da1ff9d56bc9f44df1` | >=0.5.0                   |
 | 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_calendly_fdw_v0.1.0/calendly_fdw.wasm` | `51a19fa4b8c40afb5dcf6dc2e009189aceeba65f30eec75d56a951d78fc8893f` | >=0.4.0                   |
 
 ## Preparation

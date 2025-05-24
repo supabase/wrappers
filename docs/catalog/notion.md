@@ -17,7 +17,7 @@ The Notion Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you 
 
 | Version | Wasm Package URL                                                                                    | Checksum                                                           | Required Wrappers Version |
 | ------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------- |
-| 0.2.0   | `https://github.com/supabase/wrappers/releases/download/wasm_notion_fdw_v0.2.0/notion_fdw.wasm`     | `tbd`                                                              | >=0.5.0                   |
+| 0.2.0   | `https://github.com/supabase/wrappers/releases/download/wasm_notion_fdw_v0.2.0/notion_fdw.wasm`     | `719910b65a049f1d9b82dc4f5f1466457582bec855e1e487d5c3cc1e6f986dc6` | >=0.5.0                   |
 | 0.1.1   | `https://github.com/supabase/wrappers/releases/download/wasm_notion_fdw_v0.1.1/notion_fdw.wasm`     | `6dea3014f462aafd0c051c37d163fe326e7650c26a7eb5d8017a30634b5a46de` | >=0.4.0                   |
 | 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_notion_fdw_v0.1.0/notion_fdw.wasm`     | `e017263d1fc3427cc1df8071d1182cdc9e2f00363344dddb8c195c5d398a2099` | >=0.4.0                   |
 
