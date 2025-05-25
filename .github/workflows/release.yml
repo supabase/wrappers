@@ -4,8 +4,8 @@ name: Release
 on:
   push:
     # Sequence of patterns matched against refs/tags
-    #tags:
-    #  - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+    tags:
+      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
 
 permissions:
   contents: write
@@ -21,7 +21,7 @@ jobs:
         id: create_release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          tag: v0.5.1
+          tag: ${{ github.ref_name }}
         run: |
           gh release create "$tag" \
               --repo="$GITHUB_REPOSITORY" \
@@ -38,7 +38,7 @@ jobs:
           - wrappers
         pgrx_version:
           - 0.12.9
-        postgres: [15]
+        postgres: [14, 15, 16, 17]
         features:
           - "all_fdws"
         box:
@@ -110,7 +110,7 @@ jobs:
           cargo pgrx package --no-default-features --features pg${{ matrix.postgres }},${{ matrix.features }}
 
           # Extension version and path
-          extension_version="v0.5.1"
+          extension_version=${{ github.ref_name }}
           extension_dir=../target/release/${{ matrix.extension_name }}-pg${{ matrix.postgres }}/usr/share/postgresql/${{ matrix.postgres }}/extension
           # strip the leading v
           deb_version=${extension_version:1}
@@ -128,7 +128,7 @@ jobs:
           cp `find ../target/release -type f -name "${{ matrix.extension_name }}*"` archive
 
           # name of the package directory before packaging
-          package_dir=${{ matrix.extension_name }}-v0.5.1-pg${{ matrix.postgres }}-${{ matrix.box.arch }}-linux-gnu
+          package_dir=${{ matrix.extension_name }}-${{ github.ref_name }}-pg${{ matrix.postgres }}-${{ matrix.box.arch }}-linux-gnu
 
           # Copy files into directory structure
           mkdir -p ${package_dir}/usr/lib/postgresql/lib
@@ -171,6 +171,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ env.UPLOAD_URL }}
-          asset_path: ./wrappers/${{ matrix.extension_name }}-v0.5.1-pg${{ matrix.postgres }}-${{ matrix.box.arch }}-linux-gnu.deb
-          asset_name: ${{ matrix.extension_name }}-v0.5.1-pg${{ matrix.postgres }}-${{ matrix.box.arch }}-linux-gnu.deb
+          asset_path: ./wrappers/${{ matrix.extension_name }}-${{ github.ref_name }}-pg${{ matrix.postgres }}-${{ matrix.box.arch }}-linux-gnu.deb
+          asset_name: ${{ matrix.extension_name }}-${{ github.ref_name }}-pg${{ matrix.postgres }}-${{ matrix.box.arch }}-linux-gnu.deb
           asset_content_type: application/vnd.debian.binary-package
