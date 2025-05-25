@@ -54,6 +54,7 @@ jobs:
 
       - name: build release artifacts
         run: |
+          lsb_release -a
           gcc --version
           cd wrappers
 
