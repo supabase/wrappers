@@ -116,7 +116,7 @@ impl IcebergFdw {
                 .with_filter(self.predicate.clone())
                 .build()?;
 
-            // debug the record cound and data files has been scanned
+            // debug the record count and data files has been scanned
             if cfg!(debug_assertions) {
                 let mut scan_files = self.rt.block_on(scan.plan_files())?;
                 while let Some(sf) = self.rt.block_on(scan_files.next()) {
