@@ -52,6 +52,28 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: upgrade gcc to 13 on Ubuntu 20.04
+        run: |
+          ubuntu_version=$(lsb_release -rs)
+          echo "Detected Ubuntu version: $ubuntu_version"
+
+          if [[ "$ubuntu_version" == "20.04" ]]; then
+            echo "Upgrading GCC to version 13 on Ubuntu 20.04..."
+
+            sudo apt update
+            sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+            sudo apt update
+            sudo apt install -y build-essential gcc-13 g++-13
+
+            sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100
+            sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100
+
+            echo "Using GCC version:"
+            gcc --version
+          else
+            echo "No upgrade needed for this version."
+          fi
+
       - name: build release artifacts
         run: |
           cd wrappers
@@ -59,7 +81,7 @@ jobs:
           # Add postgres package repo and install requested postgres version
           sudo apt update
           sudo apt remove -y postgres*
-          sudo apt -y install curl ca-certificates build-essential pkg-config libssl-dev
+          sudo apt -y install curl ca-certificates pkg-config libssl-dev
           sudo install -d /usr/share/postgresql-common/pgdg
           sudo curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
           . /etc/os-release
