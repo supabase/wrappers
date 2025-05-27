@@ -164,7 +164,9 @@ This FDW supports `where`, `order by` and `limit` clause pushdown, as well as pa
 
 | Postgres Type      | ClickHouse Type   |
 | ------------------ | ----------------- |
-| boolean            | UInt8             |
+| boolean            | Bool              |
+| "char"             | Int8              |
+| smallint           | UInt8             |
 | smallint           | Int16             |
 | integer            | UInt16            |
 | integer            | Int32             |
@@ -188,7 +190,7 @@ This FDW supports `where`, `order by` and `limit` clause pushdown, as well as pa
 | integer[]          | Array(Int32)      |
 | bigint[]           | Array(Int64)      |
 | real[]             | Array(Float32)    |
-| double precision[] | Array(Float64)  |
+| double precision[] | Array(Float64)    |
 | text[]             | Array(String)     |
 | *                  | Nullable&lt;T&gt; |
 

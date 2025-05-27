@@ -30,6 +30,13 @@ mod tests {
                             dnum Nullable(Decimal(18, 3)),
                             arr_i64 Array(Int64) default [],
                             arr_str Array(String) default [],
+                            is_valid Nullable(Bool),
+                            i8col Nullable(Int8),
+                            u8col Nullable(UInt8),
+                            i16col Nullable(Int16),
+                            u16col Nullable(UInt16),
+                            i32col Nullable(Int32),
+                            u32col Nullable(UInt32),
                             created_at DateTime('UTC')
                         ) engine = Memory",
                     )
@@ -66,6 +73,13 @@ mod tests {
                     dnum numeric,
                     arr_i64 bigint[],
                     arr_str text[],
+                    is_valid boolean,
+                    i8col "char",
+                    u8col smallint,
+                    i16col smallint,
+                    u16col integer,
+                    i32col integer,
+                    u32col bigint,
                     created_at timestamp
                   )
                   SERVER my_clickhouse_server
@@ -90,6 +104,13 @@ mod tests {
                     dnum numeric,
                     arr_i64 bigint[],
                     arr_str text[],
+                    is_valid boolean,
+                    i8col "char",
+                    u8col smallint,
+                    i16col smallint,
+                    u16col integer,
+                    i32col integer,
+                    u32col bigint,
                     created_at timestamp
                   )
                   SERVER my_clickhouse_server
@@ -115,6 +136,13 @@ mod tests {
                     dnum numeric,
                     arr_i64 bigint[],
                     arr_str text[],
+                    is_valid boolean,
+                    i8col "char",
+                    u8col smallint,
+                    i16col smallint,
+                    u16col integer,
+                    i32col integer,
+                    u32col bigint,
                     created_at timestamp
                   )
                   SERVER my_clickhouse_server
@@ -171,8 +199,11 @@ mod tests {
             )
             .unwrap();
             c.update(
-                "INSERT INTO test_table (id, name, amt, uid, fstr, bignum, dnum, arr_i64, arr_str, created_at)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
+                "INSERT INTO test_table (id, name, amt, uid, fstr, bignum, dnum,
+                    arr_i64, arr_str, is_valid, i8col, u8col, i16col, u16col,
+                    i32col, u32col, created_at)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
+                     $14, $15, $16, $17)",
                 None,
                 Some(vec![
                     (PgOid::BuiltIn(PgBuiltInOids::INT4OID), 42.into_datum()),
@@ -188,10 +219,7 @@ mod tests {
                         PgOid::BuiltIn(PgBuiltInOids::UUIDOID),
                         Uuid::from_bytes([42u8; 16]).into_datum(),
                     ),
-                    (
-                        PgOid::BuiltIn(PgBuiltInOids::TEXTOID),
-                        "abc".into_datum(),
-                    ),
+                    (PgOid::BuiltIn(PgBuiltInOids::TEXTOID), "abc".into_datum()),
                     (
                         PgOid::BuiltIn(PgBuiltInOids::TEXTOID),
                         "12345678".into_datum(),
@@ -208,6 +236,13 @@ mod tests {
                         PgOid::BuiltIn(PgBuiltInOids::TEXTARRAYOID),
                         vec!["abc", "def"].into_datum(),
                     ),
+                    (PgOid::BuiltIn(PgBuiltInOids::BOOLOID), false.into_datum()),
+                    (PgOid::BuiltIn(PgBuiltInOids::CHAROID), 42.into_datum()),
+                    (PgOid::BuiltIn(PgBuiltInOids::INT2OID), 43.into_datum()),
+                    (PgOid::BuiltIn(PgBuiltInOids::INT2OID), 44.into_datum()),
+                    (PgOid::BuiltIn(PgBuiltInOids::INT4OID), 45.into_datum()),
+                    (PgOid::BuiltIn(PgBuiltInOids::INT4OID), 46.into_datum()),
+                    (PgOid::BuiltIn(PgBuiltInOids::INT8OID), 47.into_datum()),
                     (
                         PgOid::BuiltIn(PgBuiltInOids::TIMESTAMPOID),
                         Timestamp::new(2025, 5, 1, 2, 3, 4.0).into_datum(),
@@ -270,6 +305,42 @@ mod tests {
                     Some(vec![123i64, 456i64]),
                     Some(vec!["abc".to_string(), "def".to_string()]),
                 )
+            );
+            assert_eq!(
+                c.select(
+                    "SELECT is_valid, i8col, u8col FROM test_table WHERE id = 42",
+                    None,
+                    None
+                )
+                .unwrap()
+                .first()
+                .get_three::<bool, i8, i16>()
+                .unwrap(),
+                (Some(false), Some(42), Some(43))
+            );
+            assert_eq!(
+                c.select(
+                    "SELECT i16col, u16col FROM test_table WHERE id = 42",
+                    None,
+                    None
+                )
+                .unwrap()
+                .first()
+                .get_two::<i16, i32>()
+                .unwrap(),
+                (Some(44), Some(45),)
+            );
+            assert_eq!(
+                c.select(
+                    "SELECT i32col, u32col FROM test_table WHERE id = 42",
+                    None,
+                    None
+                )
+                .unwrap()
+                .first()
+                .get_two::<i32, i64>()
+                .unwrap(),
+                (Some(46), Some(47),)
             );
             assert_eq!(
                 c.select("SELECT name FROM test_cust_sql ORDER BY name", None, None)
