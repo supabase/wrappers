@@ -37,7 +37,7 @@ jobs:
         extension_name:
           - wrappers
         pgrx_version:
-          - 0.12.9
+          - 0.14.3
         postgres: [14, 15, 16, 17]
         features:
           - "all_fdws"
@@ -147,7 +147,7 @@ jobs:
           cd ${package_dir}/usr/share/postgresql/${{ matrix.postgres }}/extension
           cp -s ../../../../../var/lib/postgresql/extension/${{ matrix.extension_name }}.control .
           cp -s ../../../../../var/lib/postgresql/extension/${{ matrix.extension_name }}*.sql .
-          cd ../../../../../.. 
+          cd ../../../../../..
 
           mkdir -p ${package_dir}/DEBIAN
           touch ${package_dir}/DEBIAN/control
@@ -160,7 +160,7 @@ jobs:
           # Create deb package
           sudo chown -R root:root ${package_dir}
           sudo chmod -R 00755 ${package_dir}
-          sudo dpkg-deb --build --root-owner-group ${package_dir} 
+          sudo dpkg-deb --build --root-owner-group ${package_dir}
 
       - name: Get upload url
         run: echo UPLOAD_URL=$(curl --silent https://api.github.com/repos/${{ github.repository }}/releases/latest | jq .upload_url --raw-output) >> $GITHUB_ENV
