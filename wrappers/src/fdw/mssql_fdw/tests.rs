@@ -58,12 +58,12 @@ mod tests {
         })
         .expect("insert test data");
 
-        Spi::connect(|mut c| {
+        Spi::connect_mut(|c| {
             c.update(
                 r#"CREATE FOREIGN DATA WRAPPER mssql_wrapper
                          HANDLER mssql_fdw_handler VALIDATOR mssql_fdw_validator"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -73,7 +73,7 @@ mod tests {
                            conn_string 'Server=localhost,1433;User=sa;Password=Password1234_56;Database=master;IntegratedSecurity=false;TrustServerCertificate=true;encrypt=DANGER_PLAINTEXT;ApplicationName=wrappers'
                          )"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -91,7 +91,7 @@ mod tests {
                   )
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -106,7 +106,7 @@ mod tests {
                   )
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
 
@@ -114,7 +114,7 @@ mod tests {
                 .select(
                     "SELECT name, amount FROM mssql_users WHERE id = 42",
                     None,
-                    None,
+                    &[],
                 )
                 .unwrap()
                 .filter_map(|r| {
@@ -129,7 +129,7 @@ mod tests {
             );
 
             let results = c
-                .select("SELECT name FROM mssql_users ORDER BY id DESC", None, None)
+                .select("SELECT name FROM mssql_users ORDER BY id DESC", None, &[])
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("name").unwrap())
                 .collect::<Vec<_>>();
@@ -139,7 +139,7 @@ mod tests {
                 .select(
                     "SELECT name FROM mssql_users ORDER BY id LIMIT 2 OFFSET 1",
                     None,
-                    None,
+                    &[],
                 )
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("name").unwrap())
@@ -150,7 +150,7 @@ mod tests {
                 .select(
                     "SELECT name FROM mssql_users WHERE name like 'ba%' ORDER BY id",
                     None,
-                    None,
+                    &[],
                 )
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("name").unwrap())
@@ -161,7 +161,7 @@ mod tests {
                 .select(
                     "SELECT name FROM mssql_users WHERE name not like 'ba%'",
                     None,
-                    None,
+                    &[],
                 )
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("name").unwrap())
@@ -172,7 +172,7 @@ mod tests {
                 .select(
                     "SELECT name FROM mssql_users_cust_sql ORDER BY id",
                     None,
-                    None,
+                    &[],
                 )
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("name").unwrap())
@@ -183,7 +183,7 @@ mod tests {
                 .select(
                     "SELECT name FROM mssql_users WHERE is_admin is true",
                     None,
-                    None,
+                    &[],
                 )
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("name").unwrap())
@@ -193,7 +193,7 @@ mod tests {
 
         let result = std::panic::catch_unwind(|| {
             Spi::connect(|c| {
-                c.select("SELECT name FROM mssql_users LIMIT 2 OFFSET 1", None, None)
+                c.select("SELECT name FROM mssql_users LIMIT 2 OFFSET 1", None, &[])
                     .is_err()
             })
         });

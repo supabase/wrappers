@@ -157,7 +157,7 @@ fn download_from_url(
 fn get_cache_path(url: &str, name: &str, version: &str) -> WasmFdwResult<PathBuf> {
     let hash = Sha256::digest(format!(
         "{}:{}:{}@{}",
-        unsafe { pg_sys::GetUserId().as_u32() },
+        unsafe { pg_sys::GetUserId().to_u32() },
         url,
         name,
         version

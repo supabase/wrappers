@@ -5,12 +5,12 @@ mod tests {
 
     #[pg_test]
     fn airtable_smoketest() {
-        Spi::connect(|mut c| {
+        Spi::connect_mut(|c| {
             c.update(
                 r#"CREATE FOREIGN DATA WRAPPER airtable_wrapper
                          HANDLER airtable_fdw_handler VALIDATOR airtable_fdw_validator"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -21,7 +21,7 @@ mod tests {
                             api_key 'apiKey'
                          )"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -44,7 +44,7 @@ mod tests {
                   )
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -60,7 +60,7 @@ mod tests {
                   )
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
 
@@ -76,7 +76,7 @@ mod tests {
                 .select(
                     "SELECT bool_field FROM airtable_table WHERE bool_field = False",
                     None,
-                    None,
+                    &[],
                 )
                 .expect("No results for a given query")
                 .filter_map(|r| {
@@ -87,7 +87,7 @@ mod tests {
             assert_eq!(results, vec![false]);
 
             let results = c
-                .select("SELECT string_field FROM airtable_table", None, None)
+                .select("SELECT string_field FROM airtable_table", None, &[])
                 .expect("No results for a given query")
                 .filter_map(|r| {
                     r.get_by_name::<&str, _>("string_field")
@@ -97,7 +97,7 @@ mod tests {
             assert_eq!(results, vec!["two", "three"]);
 
             let results = c
-                .select("SELECT numeric_field FROM airtable_table", None, None)
+                .select("SELECT numeric_field FROM airtable_table", None, &[])
                 .expect("No results for a given query")
                 .filter_map(|r| {
                     r.get_by_name::<pgrx::AnyNumeric, _>("numeric_field")
@@ -110,7 +110,7 @@ mod tests {
             );
 
             let results = c
-                .select("SELECT timestamp_field FROM airtable_table", None, None)
+                .select("SELECT timestamp_field FROM airtable_table", None, &[])
                 .expect("No results for a given query")
                 .filter_map(|r| {
                     r.get_by_name::<pgrx::prelude::Timestamp, _>("timestamp_field")
@@ -121,7 +121,7 @@ mod tests {
             assert_eq!(results, vec!["2023-07-19T06:39:15", "2023-07-20T06:39:15"]);
 
             let results = c
-                .select("SELECT object_field FROM airtable_table", None, None)
+                .select("SELECT object_field FROM airtable_table", None, &[])
                 .expect("No results for a given query")
                 .filter_map(|r| {
                     r.get_by_name::<pgrx::JsonB, _>("object_field")
@@ -133,7 +133,7 @@ mod tests {
             assert_eq!(results, vec!["bar", "baz"]);
 
             let results = c
-                .select("SELECT strings_array_field FROM airtable_table", None, None)
+                .select("SELECT strings_array_field FROM airtable_table", None, &[])
                 .expect("No results for a given query")
                 .filter_map(|r| {
                     r.get_by_name::<pgrx::JsonB, _>("strings_array_field")
@@ -147,7 +147,7 @@ mod tests {
                 .select(
                     "SELECT numerics_array_field FROM airtable_table",
                     None,
-                    None,
+                    &[],
                 )
                 .expect("No results for a given query")
                 .filter_map(|r| {
@@ -159,7 +159,7 @@ mod tests {
             assert_eq!(results, vec![vec![1, 2], vec![3, 4]]);
 
             let results = c
-                .select("SELECT bools_array_field FROM airtable_table", None, None)
+                .select("SELECT bools_array_field FROM airtable_table", None, &[])
                 .expect("No results for a given query")
                 .filter_map(|r| {
                     r.get_by_name::<pgrx::JsonB, _>("bools_array_field")
@@ -170,7 +170,7 @@ mod tests {
             assert_eq!(results, vec![vec![false], vec![true, false, true]]);
 
             let results = c
-                .select("SELECT objects_array_field FROM airtable_table", None, None)
+                .select("SELECT objects_array_field FROM airtable_table", None, &[])
                 .expect("No results for a given query")
                 .filter_map(|r| {
                     r.get_by_name::<pgrx::JsonB, _>("objects_array_field")
@@ -182,7 +182,7 @@ mod tests {
             assert_eq!(results, vec![vec!["bar", "baz"], vec!["qux"]]);
 
             let results = c
-                .select("SELECT string_field FROM airtable_view", None, None)
+                .select("SELECT string_field FROM airtable_view", None, &[])
                 .expect("No results for a given query")
                 .filter_map(|r| {
                     r.get_by_name::<&str, _>("string_field")

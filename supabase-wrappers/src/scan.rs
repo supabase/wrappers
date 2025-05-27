@@ -110,7 +110,7 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwState<E, W> {
 impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> utils::SerdeList for FdwState<E, W> {}
 
 #[pg_guard]
-pub(super) extern "C" fn get_foreign_rel_size<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
+pub(super) extern "C-unwind" fn get_foreign_rel_size<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     root: *mut pg_sys::PlannerInfo,
     baserel: *mut pg_sys::RelOptInfo,
     foreigntableid: pg_sys::Oid,
@@ -118,7 +118,7 @@ pub(super) extern "C" fn get_foreign_rel_size<E: Into<ErrorReport>, W: ForeignDa
     debug2!("---> get_foreign_rel_size");
     unsafe {
         // refresh leftover memory context
-        let ctx_name = format!("Wrappers_scan_{}", foreigntableid.as_u32());
+        let ctx_name = format!("Wrappers_scan_{}", foreigntableid.to_u32());
         let ctx = memctx::refresh_wrappers_memctx(&ctx_name);
 
         // create scan state
@@ -152,7 +152,7 @@ pub(super) extern "C" fn get_foreign_rel_size<E: Into<ErrorReport>, W: ForeignDa
 }
 
 #[pg_guard]
-pub(super) extern "C" fn get_foreign_paths<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
+pub(super) extern "C-unwind" fn get_foreign_paths<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     root: *mut pg_sys::PlannerInfo,
     baserel: *mut pg_sys::RelOptInfo,
     _foreigntableid: pg_sys::Oid,
@@ -194,7 +194,7 @@ pub(super) extern "C" fn get_foreign_paths<E: Into<ErrorReport>, W: ForeignDataW
 }
 
 #[pg_guard]
-pub(super) extern "C" fn get_foreign_plan<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
+pub(super) extern "C-unwind" fn get_foreign_plan<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     _root: *mut pg_sys::PlannerInfo,
     baserel: *mut pg_sys::RelOptInfo,
     _foreigntableid: pg_sys::Oid,
@@ -234,7 +234,7 @@ pub(super) extern "C" fn get_foreign_plan<E: Into<ErrorReport>, W: ForeignDataWr
 }
 
 #[pg_guard]
-pub(super) extern "C" fn explain_foreign_scan<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
+pub(super) extern "C-unwind" fn explain_foreign_scan<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     node: *mut pg_sys::ForeignScanState,
     es: *mut pg_sys::ExplainState,
 ) {
@@ -292,7 +292,7 @@ unsafe fn assign_paramenter_value<E: Into<ErrorReport>, W: ForeignDataWrapper<E>
 }
 
 #[pg_guard]
-pub(super) extern "C" fn begin_foreign_scan<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
+pub(super) extern "C-unwind" fn begin_foreign_scan<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     node: *mut pg_sys::ForeignScanState,
     eflags: c_int,
 ) {
@@ -326,7 +326,7 @@ pub(super) extern "C" fn begin_foreign_scan<E: Into<ErrorReport>, W: ForeignData
 }
 
 #[pg_guard]
-pub(super) extern "C" fn iterate_foreign_scan<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
+pub(super) extern "C-unwind" fn iterate_foreign_scan<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     node: *mut pg_sys::ForeignScanState,
 ) -> *mut pg_sys::TupleTableSlot {
     // `debug!` macros are quite expensive at the moment, so avoid logging in the inner loop
@@ -370,7 +370,7 @@ pub(super) extern "C" fn iterate_foreign_scan<E: Into<ErrorReport>, W: ForeignDa
 }
 
 #[pg_guard]
-pub(super) extern "C" fn re_scan_foreign_scan<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
+pub(super) extern "C-unwind" fn re_scan_foreign_scan<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     node: *mut pg_sys::ForeignScanState,
 ) {
     debug2!("---> re_scan_foreign_scan");
@@ -384,7 +384,7 @@ pub(super) extern "C" fn re_scan_foreign_scan<E: Into<ErrorReport>, W: ForeignDa
 }
 
 #[pg_guard]
-pub(super) extern "C" fn end_foreign_scan<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
+pub(super) extern "C-unwind" fn end_foreign_scan<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     node: *mut pg_sys::ForeignScanState,
 ) {
     debug2!("---> end_foreign_scan");

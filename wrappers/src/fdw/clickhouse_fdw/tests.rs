@@ -3,12 +3,12 @@
 mod tests {
     use clickhouse_rs as ch;
     use pgrx::prelude::*;
-    use pgrx::{datum::Timestamp, pg_test, IntoDatum, Uuid};
+    use pgrx::{datum::Timestamp, pg_test, Uuid};
     use supabase_wrappers::prelude::create_async_runtime;
 
     #[pg_test]
     fn clickhouse_smoketest() {
-        Spi::connect(|mut c| {
+        Spi::connect_mut(|c| {
             let clickhouse_pool = ch::Pool::new("tcp://default:default@localhost:9000/default");
 
             let rt = create_async_runtime().expect("failed to create runtime");
@@ -48,7 +48,7 @@ mod tests {
                 r#"CREATE FOREIGN DATA WRAPPER clickhouse_wrapper
                          HANDLER click_house_fdw_handler VALIDATOR click_house_fdw_validator"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -58,7 +58,7 @@ mod tests {
                            conn_string 'tcp://default:default@localhost:9000/default'
                          )"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -89,7 +89,7 @@ mod tests {
                   )
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -119,7 +119,7 @@ mod tests {
                   )
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
 
@@ -152,12 +152,12 @@ mod tests {
                   )
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
 
             assert_eq!(
-                c.select("SELECT * FROM test_table", None, None)
+                c.select("SELECT * FROM test_table", None, &[])
                     .unwrap()
                     .len(),
                 0
@@ -165,37 +165,25 @@ mod tests {
             c.update(
                 "INSERT INTO test_table (name) VALUES ($1)",
                 None,
-                Some(vec![(
-                    PgOid::BuiltIn(PgBuiltInOids::TEXTOID),
-                    "test".into_datum(),
-                )]),
+                &["test".into()],
             )
             .unwrap();
             c.update(
                 "INSERT INTO test_table (name) VALUES ($1)",
                 None,
-                Some(vec![(
-                    PgOid::BuiltIn(PgBuiltInOids::TEXTOID),
-                    "test2".into_datum(),
-                )]),
+                &["test2".into()],
             )
             .unwrap();
             c.update(
                 "INSERT INTO test_table (name) VALUES ($1)",
                 None,
-                Some(vec![(
-                    PgOid::BuiltIn(PgBuiltInOids::TEXTOID),
-                    "test3".into_datum(),
-                )]),
+                &["test3".into()],
             )
             .unwrap();
             c.update(
                 "INSERT INTO test_table (name) VALUES ($1)",
                 None,
-                Some(vec![(
-                    PgOid::BuiltIn(PgBuiltInOids::TEXTOID),
-                    "test4".into_datum(),
-                )]),
+                &["test4".into()],
             )
             .unwrap();
             c.update(
@@ -205,53 +193,29 @@ mod tests {
                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
                      $14, $15, $16, $17)",
                 None,
-                Some(vec![
-                    (PgOid::BuiltIn(PgBuiltInOids::INT4OID), 42.into_datum()),
-                    (
-                        PgOid::BuiltIn(PgBuiltInOids::TEXTOID),
-                        None::<String>.into_datum(),
-                    ),
-                    (
-                        PgOid::BuiltIn(PgBuiltInOids::FLOAT8OID),
-                        123.45.into_datum(),
-                    ),
-                    (
-                        PgOid::BuiltIn(PgBuiltInOids::UUIDOID),
-                        Uuid::from_bytes([42u8; 16]).into_datum(),
-                    ),
-                    (PgOid::BuiltIn(PgBuiltInOids::TEXTOID), "abc".into_datum()),
-                    (
-                        PgOid::BuiltIn(PgBuiltInOids::TEXTOID),
-                        "12345678".into_datum(),
-                    ),
-                    (
-                        PgOid::BuiltIn(PgBuiltInOids::NUMERICOID),
-                        AnyNumeric::try_from(123456.789).unwrap().into_datum(),
-                    ),
-                    (
-                        PgOid::BuiltIn(PgBuiltInOids::INT8ARRAYOID),
-                        vec![123, 456].into_datum(),
-                    ),
-                    (
-                        PgOid::BuiltIn(PgBuiltInOids::TEXTARRAYOID),
-                        vec!["abc", "def"].into_datum(),
-                    ),
-                    (PgOid::BuiltIn(PgBuiltInOids::BOOLOID), false.into_datum()),
-                    (PgOid::BuiltIn(PgBuiltInOids::CHAROID), 42.into_datum()),
-                    (PgOid::BuiltIn(PgBuiltInOids::INT2OID), 43.into_datum()),
-                    (PgOid::BuiltIn(PgBuiltInOids::INT2OID), 44.into_datum()),
-                    (PgOid::BuiltIn(PgBuiltInOids::INT4OID), 45.into_datum()),
-                    (PgOid::BuiltIn(PgBuiltInOids::INT4OID), 46.into_datum()),
-                    (PgOid::BuiltIn(PgBuiltInOids::INT8OID), 47.into_datum()),
-                    (
-                        PgOid::BuiltIn(PgBuiltInOids::TIMESTAMPOID),
-                        Timestamp::new(2025, 5, 1, 2, 3, 4.0).into_datum(),
-                    ),
-                ]),
+                &[
+                    42.into(),
+                    None::<String>.into(),
+                    123.45.into(),
+                    pgrx::Uuid::from_bytes([42u8; 16]).into(),
+                    "abc".into(),
+                    "12345678".into(),
+                    pgrx::AnyNumeric::try_from(123456.789).unwrap().into(),
+                    vec![123i64, 456i64].into(),
+                    vec!["abc", "def"].into(),
+                    false.into(),
+                    42i8.into(),
+                    43i16.into(),
+                    44i16.into(),
+                    45i32.into(),
+                    46i32.into(),
+                    47i64.into(),
+                    Timestamp::new(2025, 5, 1, 2, 3, 4.0).into(),
+                ]
             )
             .unwrap();
             assert_eq!(
-                c.select("SELECT name FROM test_table ORDER BY name", None, None)
+                c.select("SELECT name FROM test_table ORDER BY name", None, &[])
                     .unwrap()
                     .first()
                     .get_one::<&str>()
@@ -263,7 +227,7 @@ mod tests {
                 c.select(
                     "SELECT uid, amt, created_at FROM test_table WHERE id = 42",
                     None,
-                    None
+                    &[]
                 )
                 .unwrap()
                 .first()
@@ -279,7 +243,7 @@ mod tests {
                 c.select(
                     "SELECT fstr, bignum, dnum FROM test_table WHERE id = 42",
                     None,
-                    None
+                    &[]
                 )
                 .unwrap()
                 .first()
@@ -295,7 +259,7 @@ mod tests {
                 c.select(
                     "SELECT arr_i64, arr_str FROM test_table WHERE id = 42",
                     None,
-                    None
+                    &[]
                 )
                 .unwrap()
                 .first()
@@ -310,7 +274,7 @@ mod tests {
                 c.select(
                     "SELECT is_valid, i8col, u8col FROM test_table WHERE id = 42",
                     None,
-                    None
+                    &[]
                 )
                 .unwrap()
                 .first()
@@ -322,7 +286,7 @@ mod tests {
                 c.select(
                     "SELECT i16col, u16col FROM test_table WHERE id = 42",
                     None,
-                    None
+                    &[]
                 )
                 .unwrap()
                 .first()
@@ -334,7 +298,7 @@ mod tests {
                 c.select(
                     "SELECT i32col, u32col FROM test_table WHERE id = 42",
                     None,
-                    None
+                    &[]
                 )
                 .unwrap()
                 .first()
@@ -343,7 +307,7 @@ mod tests {
                 (Some(46), Some(47),)
             );
             assert_eq!(
-                c.select("SELECT name FROM test_cust_sql ORDER BY name", None, None)
+                c.select("SELECT name FROM test_cust_sql ORDER BY name", None, &[])
                     .unwrap()
                     .first()
                     .get_one::<&str>()
@@ -356,10 +320,7 @@ mod tests {
                 c.select(
                     "SELECT name FROM test_table WHERE name = $1",
                     None,
-                    Some(vec![(
-                        PgOid::BuiltIn(PgBuiltInOids::TEXTOID),
-                        "test2".into_datum()
-                    )])
+                    &["test2".into()]
                 )
                 .unwrap()
                 .first()
@@ -373,10 +334,7 @@ mod tests {
                 c.select(
                     "SELECT name FROM test_cust_sql WHERE name = $1",
                     None,
-                    Some(vec![(
-                        PgOid::BuiltIn(PgBuiltInOids::TEXTOID),
-                        "test2".into_datum()
-                    )])
+                    &["test2".into()]
                 )
                 .unwrap()
                 .first()
@@ -390,10 +348,7 @@ mod tests {
                 c.select(
                     "SELECT name FROM test_param_sql WHERE _name = $1",
                     None,
-                    Some(vec![(
-                        PgOid::BuiltIn(PgBuiltInOids::TEXTOID),
-                        "test2".into_datum()
-                    )])
+                    &["test2".into()]
                 )
                 .unwrap()
                 .first()
@@ -407,7 +362,7 @@ mod tests {
                 c.select(
                     "SELECT name FROM test_table ORDER by name LIMIT 1 OFFSET 1",
                     None,
-                    None
+                    &[]
                 )
                 .unwrap()
                 .first()
@@ -420,7 +375,7 @@ mod tests {
                 c.select(
                     "SELECT name FROM test_cust_sql ORDER BY name LIMIT 2 OFFSET 2",
                     None,
-                    None
+                    &[]
                 )
                 .unwrap()
                 .first()
@@ -451,27 +406,18 @@ mod tests {
                  WHERE id = 42
                 ",
                 None,
-                Some(vec![
-                    (
-                        PgOid::BuiltIn(PgBuiltInOids::UUIDOID),
-                        Uuid::from_bytes([43u8; 16]).into_datum(),
-                    ),
-                    (
-                        PgOid::BuiltIn(PgBuiltInOids::TEXTOID),
-                        "87654321".into_datum(),
-                    ),
-                    (
-                        PgOid::BuiltIn(PgBuiltInOids::INT8ARRAYOID),
-                        vec![444, 222].into_datum(),
-                    ),
-                ]),
+                &[
+                    pgrx::Uuid::from_bytes([43u8; 16]).into(),
+                    "87654321".into(),
+                    vec![444i64, 222i64].into(),
+                ],
             )
             .unwrap();
             assert_eq!(
                 c.select(
                     "SELECT uid, bignum, arr_i64 FROM test_table WHERE id = 42",
                     None,
-                    None
+                    &[]
                 )
                 .unwrap()
                 .first()
@@ -485,10 +431,10 @@ mod tests {
             );
 
             // test delete data in foreign table
-            c.update("DELETE FROM test_table WHERE id = 42", None, None)
+            c.update("DELETE FROM test_table WHERE id = 42", None, &[])
                 .unwrap();
             assert!(c
-                .select("SELECT * FROM test_table WHERE id = 42", None, None)
+                .select("SELECT * FROM test_table WHERE id = 42", None, &[])
                 .unwrap()
                 .is_empty());
         });

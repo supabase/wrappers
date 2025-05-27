@@ -90,10 +90,9 @@ pub(crate) fn inc_stats(fdw_name: &str, metric: Metric, inc: i64) {
 
     if let Err(e) = Spi::run_with_args(
         &sql,
-        Some(vec![
-            (PgBuiltInOids::TEXTOID.oid(), fdw_name.into_datum()),
-            (PgBuiltInOids::INT8OID.oid(), inc.into_datum()),
-        ]),
+        &[
+            fdw_name.into(), inc.into(),
+        ],
     ) {
         report_warning(&format!("Failed to increment stats: {}", e));
     }
@@ -120,7 +119,7 @@ pub(crate) fn get_metadata(fdw_name: &str) -> Option<JsonB> {
 
     match Spi::get_one_with_args(
         &sql,
-        vec![(PgBuiltInOids::TEXTOID.oid(), fdw_name.into_datum())],
+        &[fdw_name.into()],
     ) {
         Ok(metadata) => metadata,
         Err(e) => {
@@ -163,10 +162,9 @@ pub(crate) fn set_metadata(fdw_name: &str, metadata: Option<JsonB>) {
 
     if let Err(err) = Spi::run_with_args(
         &sql,
-        Some(vec![
-            (PgBuiltInOids::TEXTOID.oid(), fdw_name.into_datum()),
-            (PgBuiltInOids::JSONBOID.oid(), metadata.into_datum()),
-        ]),
+        &[
+            fdw_name.into(), metadata.into(),
+        ],
     ) {
         report_warning(&format!("Failed to set metadata: {}", err));
     }

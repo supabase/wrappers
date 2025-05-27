@@ -5,12 +5,12 @@ mod tests {
 
     #[pg_test]
     fn logflare_smoketest() {
-        Spi::connect(|mut c| {
+        Spi::connect_mut(|c| {
             c.update(
                 r#"CREATE FOREIGN DATA WRAPPER logflare_wrapper
                          HANDLER logflare_fdw_handler VALIDATOR logflare_fdw_validator"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -21,7 +21,7 @@ mod tests {
                             api_key 'apiKey'
                          )"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -38,12 +38,12 @@ mod tests {
                   )
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
 
             let results = c
-                .select("SELECT * FROM logflare_table", None, None)
+                .select("SELECT * FROM logflare_table", None, &[])
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("id").unwrap())
                 .collect::<Vec<_>>();

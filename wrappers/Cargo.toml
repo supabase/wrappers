@@ -19,7 +19,6 @@ unexpected_cfgs = { level = "warn", check-cfg = ['cfg(pgrx_embed)'] }
 
 [features]
 default = ["pg15"]
-pg12 = ["pgrx/pg12", "pgrx-tests/pg12", "supabase-wrappers/pg12"]
 pg13 = ["pgrx/pg13", "pgrx-tests/pg13", "supabase-wrappers/pg13"]
 pg14 = ["pgrx/pg14", "pgrx-tests/pg14", "supabase-wrappers/pg14"]
 pg15 = ["pgrx/pg15", "pgrx-tests/pg15", "supabase-wrappers/pg15"]
@@ -190,7 +189,7 @@ all_fdws = [
 ]
 
 [dependencies]
-pgrx = { version = "=0.12.9" }
+pgrx = { version = "=0.14.3" }
 #supabase-wrappers = "0.1"
 supabase-wrappers = { path = "../supabase-wrappers", default-features = false }
 
@@ -289,4 +288,4 @@ iceberg-catalog-rest = { git = "https://github.com/apache/iceberg-rust", rev = "
 rust_decimal = { version = "1.37.1", optional = true }
 
 [dev-dependencies]
-pgrx-tests = "=0.12.9"
+pgrx-tests = "=0.14.3"

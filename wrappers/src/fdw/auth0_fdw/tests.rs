@@ -31,12 +31,12 @@ mod tests {
             family_name: Some("Doe".to_string()),
         };
 
-        Spi::connect(|mut c| {
+        Spi::connect_mut(|c| {
             c.update(
                 r#"create foreign data wrapper auth0_wrapper
                          handler auth0_fdw_handler validator auth0_fdw_validator"#,
                 None,
-                None,
+                &[],
             )
             .expect("Failed to create foreign data wrapper");
             c.update(
@@ -47,7 +47,7 @@ mod tests {
                             api_key 'apiKey'
                          )"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -81,7 +81,7 @@ mod tests {
                   )
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             /*
@@ -91,7 +91,7 @@ mod tests {
                 .select(
                     "SELECT * FROM auth0_users WHERE email = 'john@doe.com'",
                     None,
-                    None,
+                    &[],
                 )
                 .expect("Failed to select from auth0_users")
                 .map(|r| Auth0User {

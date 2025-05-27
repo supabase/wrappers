@@ -4,7 +4,6 @@
 use crate::interface::{Cell, Column, Row};
 use pgrx::list::List;
 use pgrx::pg_sys::panic::{ErrorReport, ErrorReportable};
-use pgrx::prelude::PgBuiltInOids;
 use pgrx::spi::Spi;
 use pgrx::IntoDatum;
 use pgrx::*;
@@ -166,10 +165,7 @@ pub fn get_vault_secret(secret_id: &str) -> Option<String> {
             let sid = sid.into_bytes();
             match Spi::get_one_with_args::<String>(
                 "select decrypted_secret from vault.decrypted_secrets where id = $1 or key_id = $1",
-                vec![(
-                    PgBuiltInOids::UUIDOID.oid(),
-                    pgrx::Uuid::from_bytes(sid).into_datum(),
-                )],
+                &[pgrx::Uuid::from_bytes(sid).into()],
             ) {
                 Ok(decrypted) => decrypted,
                 Err(err) => {
@@ -198,7 +194,7 @@ pub fn get_vault_secret(secret_id: &str) -> Option<String> {
 pub fn get_vault_secret_by_name(secret_name: &str) -> Option<String> {
     match Spi::get_one_with_args::<String>(
         "select decrypted_secret from vault.decrypted_secrets where name = $1",
-        vec![(PgBuiltInOids::TEXTOID.oid(), secret_name.into_datum())],
+            &[secret_name.into()]
     ) {
         Ok(decrypted) => decrypted,
         Err(err) => {
