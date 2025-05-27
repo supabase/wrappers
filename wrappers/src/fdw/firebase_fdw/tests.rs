@@ -55,11 +55,7 @@ mod tests {
             .unwrap();
 
             let results = c
-                .select(
-                    "SELECT email FROM firebase_users order by email",
-                    None,
-                    &[],
-                )
+                .select("SELECT email FROM firebase_users order by email", None, &[])
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("email").unwrap())
                 .collect::<Vec<_>>();

@@ -144,11 +144,7 @@ mod tests {
             assert_eq!(results, vec![vec!["foo", "bar"], vec!["baz", "qux"]]);
 
             let results = c
-                .select(
-                    "SELECT numerics_array_field FROM airtable_table",
-                    None,
-                    &[],
-                )
+                .select("SELECT numerics_array_field FROM airtable_table", None, &[])
                 .expect("No results for a given query")
                 .filter_map(|r| {
                     r.get_by_name::<pgrx::JsonB, _>("numerics_array_field")

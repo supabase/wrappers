@@ -211,7 +211,7 @@ mod tests {
                     46i32.into(),
                     47i64.into(),
                     Timestamp::new(2025, 5, 1, 2, 3, 4.0).into(),
-                ]
+                ],
             )
             .unwrap();
             assert_eq!(

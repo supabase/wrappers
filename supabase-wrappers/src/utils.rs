@@ -194,7 +194,7 @@ pub fn get_vault_secret(secret_id: &str) -> Option<String> {
 pub fn get_vault_secret_by_name(secret_name: &str) -> Option<String> {
     match Spi::get_one_with_args::<String>(
         "select decrypted_secret from vault.decrypted_secrets where name = $1",
-            &[secret_name.into()]
+        &[secret_name.into()],
     ) {
         Ok(decrypted) => decrypted,
         Err(err) => {

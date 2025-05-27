@@ -129,11 +129,7 @@ mod tests {
             );
 
             let results = c
-                .select(
-                    "SELECT attrs->>'id' as id FROM stripe.customers",
-                    None,
-                    &[],
-                )
+                .select("SELECT attrs->>'id' as id FROM stripe.customers", None, &[])
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("id").unwrap())
                 .collect::<Vec<_>>();

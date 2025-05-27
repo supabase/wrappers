@@ -45,7 +45,10 @@ pub struct ImportForeignSchemaStmt {
 }
 
 #[pg_guard]
-pub(super) extern "C-unwind" fn import_foreign_schema<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
+pub(super) extern "C-unwind" fn import_foreign_schema<
+    E: Into<ErrorReport>,
+    W: ForeignDataWrapper<E>,
+>(
     stmt: *mut pg_sys::ImportForeignSchemaStmt,
     server_oid: pg_sys::Oid,
 ) -> *mut pg_sys::List {

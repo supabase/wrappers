@@ -57,11 +57,7 @@ mod tests {
             assert_eq!(results, vec!["APL"]);
 
             let results = c
-                .select(
-                    "SELECT icol FROM iceberg.bids WHERE icol = 1234",
-                    None,
-                    &[],
-                )
+                .select("SELECT icol FROM iceberg.bids WHERE icol = 1234", None, &[])
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<i32, _>("icol").unwrap())
                 .collect::<Vec<_>>();

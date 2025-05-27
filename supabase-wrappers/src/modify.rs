@@ -162,7 +162,10 @@ pub(super) extern "C-unwind" fn add_foreign_update_targets(
 }
 
 #[pg_guard]
-pub(super) extern "C-unwind" fn plan_foreign_modify<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
+pub(super) extern "C-unwind" fn plan_foreign_modify<
+    E: Into<ErrorReport>,
+    W: ForeignDataWrapper<E>,
+>(
     root: *mut pg_sys::PlannerInfo,
     plan: *mut pg_sys::ModifyTable,
     result_relation: pg_sys::Index,
@@ -247,7 +250,10 @@ pub(super) extern "C-unwind" fn plan_foreign_modify<E: Into<ErrorReport>, W: For
 }
 
 #[pg_guard]
-pub(super) extern "C-unwind" fn begin_foreign_modify<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
+pub(super) extern "C-unwind" fn begin_foreign_modify<
+    E: Into<ErrorReport>,
+    W: ForeignDataWrapper<E>,
+>(
     mtstate: *mut pg_sys::ModifyTableState,
     rinfo: *mut pg_sys::ResultRelInfo,
     fdw_private: *mut pg_sys::List,
@@ -280,7 +286,10 @@ pub(super) extern "C-unwind" fn begin_foreign_modify<E: Into<ErrorReport>, W: Fo
 }
 
 #[pg_guard]
-pub(super) extern "C-unwind" fn exec_foreign_insert<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
+pub(super) extern "C-unwind" fn exec_foreign_insert<
+    E: Into<ErrorReport>,
+    W: ForeignDataWrapper<E>,
+>(
     _estate: *mut pg_sys::EState,
     rinfo: *mut pg_sys::ResultRelInfo,
     slot: *mut pg_sys::TupleTableSlot,
@@ -309,7 +318,10 @@ unsafe fn get_rowid_cell<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
 }
 
 #[pg_guard]
-pub(super) extern "C-unwind" fn exec_foreign_delete<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
+pub(super) extern "C-unwind" fn exec_foreign_delete<
+    E: Into<ErrorReport>,
+    W: ForeignDataWrapper<E>,
+>(
     _estate: *mut pg_sys::EState,
     rinfo: *mut pg_sys::ResultRelInfo,
     slot: *mut pg_sys::TupleTableSlot,
@@ -331,7 +343,10 @@ pub(super) extern "C-unwind" fn exec_foreign_delete<E: Into<ErrorReport>, W: For
 }
 
 #[pg_guard]
-pub(super) extern "C-unwind" fn exec_foreign_update<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
+pub(super) extern "C-unwind" fn exec_foreign_update<
+    E: Into<ErrorReport>,
+    W: ForeignDataWrapper<E>,
+>(
     _estate: *mut pg_sys::EState,
     rinfo: *mut pg_sys::ResultRelInfo,
     slot: *mut pg_sys::TupleTableSlot,
@@ -375,7 +390,10 @@ pub(super) extern "C-unwind" fn exec_foreign_update<E: Into<ErrorReport>, W: For
 }
 
 #[pg_guard]
-pub(super) extern "C-unwind" fn end_foreign_modify<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
+pub(super) extern "C-unwind" fn end_foreign_modify<
+    E: Into<ErrorReport>,
+    W: ForeignDataWrapper<E>,
+>(
     _estate: *mut pg_sys::EState,
     rinfo: *mut pg_sys::ResultRelInfo,
 ) {

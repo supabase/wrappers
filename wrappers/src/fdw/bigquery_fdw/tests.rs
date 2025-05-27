@@ -78,7 +78,7 @@ mod tests {
             */
 
             let results = c
-                .select("SELECT * FROM test_table", None, &[],)
+                .select("SELECT * FROM test_table", None, &[])
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("name").unwrap())
                 .collect::<Vec<_>>();
@@ -98,7 +98,7 @@ mod tests {
             assert_eq!(results, vec!["bar"]);
 
             let results = c
-                .select("SELECT name FROM test_table_with_subquery", None, &[],)
+                .select("SELECT name FROM test_table_with_subquery", None, &[])
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("name").unwrap())
                 .collect::<Vec<_>>();
@@ -106,7 +106,7 @@ mod tests {
             assert_eq!(results, vec!["FOO", "BAR"]);
 
             let results = c
-                .select("SELECT num::text FROM test_table ORDER BY num", None, &[],)
+                .select("SELECT num::text FROM test_table ORDER BY num", None, &[])
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("num").unwrap())
                 .collect::<Vec<_>>();
@@ -116,15 +116,12 @@ mod tests {
             c.update(
                 "INSERT INTO test_table (id, name) VALUES ($1, $2)",
                 None,
-                &[
-                    42.into(),
-                    "baz".into(),
-                ]
+                &[42.into(), "baz".into()],
             )
             .unwrap();
 
             let results = c
-                .select("SELECT name FROM test_table", None, &[],)
+                .select("SELECT name FROM test_table", None, &[])
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("name").unwrap())
                 .collect::<Vec<_>>();
@@ -133,29 +130,22 @@ mod tests {
             c.update(
                 "UPDATE test_table SET name = $1 WHERE id = $2",
                 None,
-                &[
-                    "qux".into(),
-                    42.into(),
-                ]
+                &["qux".into(), 42.into()],
             )
             .unwrap();
 
             let results = c
-                .select("SELECT name FROM test_table ORDER BY id", None, &[],)
+                .select("SELECT name FROM test_table ORDER BY id", None, &[])
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("name").unwrap())
                 .collect::<Vec<_>>();
             assert_eq!(results, vec!["foo", "bar", "qux"]);
 
-            c.update(
-                "DELETE FROM test_table WHERE id = $1",
-                None,
-                &[42.into()]
-            )
-            .unwrap();
+            c.update("DELETE FROM test_table WHERE id = $1", None, &[42.into()])
+                .unwrap();
 
             let results = c
-                .select("SELECT name FROM test_table ORDER BY id", None, &[],)
+                .select("SELECT name FROM test_table ORDER BY id", None, &[])
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("name").unwrap())
                 .collect::<Vec<_>>();
