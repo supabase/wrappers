@@ -5,12 +5,12 @@ mod tests {
 
     #[pg_test]
     fn wasm_smoketest() {
-        Spi::connect(|mut c| {
+        Spi::connect_mut(|c| {
             c.update(
                 r#"CREATE FOREIGN DATA WRAPPER wasm_wrapper
                      HANDLER wasm_fdw_handler VALIDATOR wasm_fdw_validator"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
 
@@ -29,7 +29,7 @@ mod tests {
                        private_key E'-----BEGIN PRIVATE KEY-----\nMIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQCOQv0mMe1yElR8\nhiQgduWu7OrMR3iW8xbu+i04LkMDKB/JtdMl1Mq3Gs/XWUB07BOIytcK4L7k1Z/3\nnkTGvib85S5+VLsngBzWltltvCOfnM2uCLWHmVpfMR1WVFrCU1r7NP92U2APpwvN\ncJps39VNyQWTm+TvQN25enqAC2uR6xdvItb86dn4Tab3KcAXj0f0qHompa8SSwBO\nGZFpgAjt7QFPWTniNQyBU7wXTntwV+a2WC/bf1i9MRAf8bqSr+yqijLHVGrmBPSb\njmvo/8bj69DzeY2//gZXAMe1m6cEjXPm2MY/POd66Xg1YZDzYsv95GZ54kJ+EgEF\n9rjsi/J5AgMBAAECggEAAsG9kh3pkgpU5Mzcqlxjew5QRoEkDxjK2vqyIaKT3d3L\nL+d8HgGPpBi66ltqalmgz0fO/wD38gtJvEyu3IMW0lPGoOAXeF59MJNfx0acEh3B\nxpuYmPYZ0DptbRzZXWasHq4aPTrEY8lC60pBU9bKlWVN3FxrBU/mfA+pjA2smflC\n54brJTsSb1/1xAExxsvB2Leb6VcNWKRCaN6Z4gdWd1Qofi080LVWxE3MXhxHpTMj\nVf3KHhKI5DHJXlZPU/w4KXOlp99UH0vnx3EJzD07kI+nR2k7tfh8PxwFzn8g6hEC\nK9Q+HmzUUTxFh1M8eXi7IMRjLRJThVSl/Kbqr6cpeQKBgQC+410aRuHUteQIgJBQ\nbceAOjEh5MetByIEFdXLEgYspl1rSjN/JoIMUguyJ8KZGj5G3NaRaJklNOofYekI\nhIL3SBWZ9U58MJVMnSUVeBdazCu0k9HnOfOFrFJIDoRPBfjnP0UJmC+9ggoVayOX\nVW5psrxGiQXWiG7mho1bshSlNwKBgQC+yX1wFSF8gGsAb41iw60K9W+O5PLVWxAu\nYst8CQTY64RVctvAypWtNTb4nmIBe9aX9k5loe+uv8Zse/t1hgCVGR7n70EyT9Y+\nGNrGqYtVjtZQ+L+dAivrlUKsTDGqzWldUTg7gpOqkFaQbV0O11ytyKJKYXCpTrL2\nwib6V4X9zwKBgQCllTJAxfXFfxZUbblBm0iwKUpPXVX7+LEAHDS9F2B1wMZOeCod\nhLjQmSb+HlFGX6Zf79bMgZA+3xyrplHviorUmBns2AaB4d7Qe4wciHSx1WOgG427\n5uAgNy+Uw8rvhX24koB/Zx0aZT/7/lj8QCYr19hL0zZWNzkEDPl37gzMlwKBgQC3\noOsww8XVNSzH4JZupvOYhp53JHltTRaH7uL3YR7fQd++9qv4JYRmj793D8o4r17e\nKF1QiMpOoZpzs+lVNkK9Ps52YduYdys33WhEqc7H7JDuolya3Ao11xWzDCsJwGdX\nP+MltAo4sm/+1qQosrQrN96sRJjQ/ERYKIqnjTIUFQKBgQC6xaC5SB1UMepFbTVa\n2tuRuYwcrU/NxjeW85SAyeyv2dMg7S+Ot8mnA1Js2O0NHlczUZgRZalYkCuSUE78\nb6rIbezIW2azrw3tqAAPLsB+rhXvaUpICoybu+j6aCiqtZYsDx7zIj/FTD27Tpwx\nYfLx1Erqd3vM/LzOIaIOqlfETw==\n-----END PRIVATE KEY-----'
                        )"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -48,12 +48,12 @@ mod tests {
                   )
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
 
             let results = c
-                .select("SELECT * FROM snowflake_mytable WHERE id = 42", None, None)
+                .select("SELECT * FROM snowflake_mytable WHERE id = 42", None, &[])
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("name").unwrap())
                 .collect::<Vec<_>>();
@@ -71,15 +71,15 @@ mod tests {
                        api_key '1234567890'
                      )"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
-            c.update(r#"CREATE SCHEMA IF NOT EXISTS paddle"#, None, None)
+            c.update(r#"CREATE SCHEMA IF NOT EXISTS paddle"#, None, &[])
                 .unwrap();
             c.update(
                 r#"IMPORT FOREIGN SCHEMA paddle FROM SERVER paddle_server INTO paddle"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
 
@@ -87,7 +87,7 @@ mod tests {
                 .select(
                     "SELECT * FROM paddle.customers WHERE id = 'ctm_01hymwgpkx639a6mkvg99563sp'",
                     None,
-                    None,
+                    &[],
                 )
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("email").unwrap())
@@ -106,7 +106,7 @@ mod tests {
                        api_key '1234567890'
                      )"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -125,7 +125,7 @@ mod tests {
                   )
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
 
@@ -133,7 +133,7 @@ mod tests {
                 .select(
                     "SELECT * FROM notion_pages WHERE id = '5a67c86f-d0da-4d0a-9dd7-f4cf164e6247'",
                     None,
-                    None,
+                    &[],
                 )
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("url").unwrap())
@@ -156,7 +156,7 @@ mod tests {
                        api_key '1234567890'
                      )"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -173,12 +173,12 @@ mod tests {
                   )
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
 
             let results = c
-                .select("SELECT * FROM calendly_event_types", None, None)
+                .select("SELECT * FROM calendly_event_types", None, &[])
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("uri").unwrap())
                 .collect::<Vec<_>>();
@@ -199,7 +199,7 @@ mod tests {
                        api_key '1234567890'
                      )"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -216,12 +216,12 @@ mod tests {
                   )
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
 
             let results = c
-                .select("SELECT * FROM cal_my_profile", None, None)
+                .select("SELECT * FROM cal_my_profile", None, &[])
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<i64, _>("id").unwrap())
                 .collect::<Vec<_>>();
@@ -241,7 +241,7 @@ mod tests {
                        api_token 'ccc'
                      )"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -257,12 +257,12 @@ mod tests {
                   )
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
 
             let results = c
-                .select("SELECT * FROM cfd1_table order by id", None, None)
+                .select("SELECT * FROM cfd1_table order by id", None, &[])
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<i64, _>("id").unwrap())
                 .collect::<Vec<_>>();
@@ -280,7 +280,7 @@ mod tests {
                        api_key 'ccc'
                      )"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -301,12 +301,12 @@ mod tests {
                   )
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
 
             let results = c
-                .select("SELECT * FROM clerk_table", None, None)
+                .select("SELECT * FROM clerk_table", None, &[])
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("id").unwrap())
                 .collect::<Vec<_>>();
@@ -324,7 +324,7 @@ mod tests {
                        api_key 'ccc'
                      )"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -343,12 +343,12 @@ mod tests {
                   )
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
 
             let results = c
-                .select("SELECT * FROM orb_table", None, None)
+                .select("SELECT * FROM orb_table", None, &[])
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("id").unwrap())
                 .collect::<Vec<_>>();
@@ -366,7 +366,7 @@ mod tests {
                        api_key 'ccc'
                      )"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -387,12 +387,12 @@ mod tests {
                   )
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
 
             let results = c
-                .select("SELECT id, user_id FROM hubspot_table", None, None)
+                .select("SELECT id, user_id FROM hubspot_table", None, &[])
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("user_id").unwrap())
                 .collect::<Vec<_>>();

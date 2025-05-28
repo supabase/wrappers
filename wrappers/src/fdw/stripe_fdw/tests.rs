@@ -5,12 +5,12 @@ mod tests {
 
     #[pg_test]
     fn stripe_smoketest() {
-        Spi::connect(|mut c| {
+        Spi::connect_mut(|c| {
             c.update(
                 r#"CREATE FOREIGN DATA WRAPPER stripe_wrapper
                          HANDLER stripe_fdw_handler VALIDATOR stripe_fdw_validator"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -21,20 +21,20 @@ mod tests {
                            api_key 'sk_test_51LUmojFkiV6mfx3cpEzG9VaxhA86SA4DIj3b62RKHnRC0nhPp2JBbAmQ1izsX9RKD8rlzvw2xpY54AwZtXmWciif00Qi8J0w3O'  -- Stripe API Key, required
                          )"#,
                 None,
-                None,
+                &[],
             ).unwrap();
-            c.update(r#"CREATE SCHEMA IF NOT EXISTS stripe"#, None, None)
+            c.update(r#"CREATE SCHEMA IF NOT EXISTS stripe"#, None, &[])
                 .unwrap();
             c.update(
                 r#"IMPORT FOREIGN SCHEMA stripe FROM SERVER my_stripe_server INTO stripe"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
                 r#"IMPORT FOREIGN SCHEMA stripe FROM SERVER my_stripe_server INTO stripe"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -42,7 +42,7 @@ mod tests {
                   LIMIT TO ("checkout_sessions", "customers", "balance", "non-exists")
                   FROM SERVER my_stripe_server INTO stripe"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -50,12 +50,12 @@ mod tests {
                   EXCEPT ("checkout_sessions", "customers", "balance", "non-exists")
                   FROM SERVER my_stripe_server INTO stripe"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
 
             let results = c
-                .select("SELECT * FROM stripe.accounts", None, None)
+                .select("SELECT * FROM stripe.accounts", None, &[])
                 .unwrap()
                 .filter_map(|r| {
                     r.get_by_name::<&str, _>("email")
@@ -70,7 +70,7 @@ mod tests {
                 .select(
                     "SELECT * FROM stripe.balance WHERE balance_type IS NOT NULL",
                     None,
-                    None,
+                    &[],
                 )
                 .unwrap()
                 .filter_map(|r| {
@@ -86,7 +86,7 @@ mod tests {
             );
 
             let results = c
-                .select("SELECT * FROM stripe.balance_transactions", None, None)
+                .select("SELECT * FROM stripe.balance_transactions", None, &[])
                 .unwrap()
                 .filter_map(|r| {
                     r.get_by_name::<i64, _>("amount")
@@ -100,7 +100,7 @@ mod tests {
             assert_eq!(results, vec![((((100, "usd"), 0), "available"), "charge")]);
 
             let results = c
-                .select("SELECT * FROM stripe.charges", None, None)
+                .select("SELECT * FROM stripe.charges", None, &[])
                 .unwrap()
                 .filter_map(|r| {
                     r.get_by_name::<i64, _>("amount")
@@ -112,7 +112,7 @@ mod tests {
             assert_eq!(results, vec![((100, "usd"), "succeeded")]);
 
             let results = c
-                .select("SELECT * FROM stripe.customers", None, None)
+                .select("SELECT * FROM stripe.customers", None, &[])
                 .unwrap()
                 .filter_map(|r| {
                     r.get_by_name::<&str, _>("id")
@@ -129,11 +129,7 @@ mod tests {
             );
 
             let results = c
-                .select(
-                    "SELECT attrs->>'id' as id FROM stripe.customers",
-                    None,
-                    None,
-                )
+                .select("SELECT attrs->>'id' as id FROM stripe.customers", None, &[])
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("id").unwrap())
                 .collect::<Vec<_>>();
@@ -143,7 +139,7 @@ mod tests {
                 .select(
                     "SELECT id, display_name FROM stripe.billing_meters",
                     None,
-                    None,
+                    &[],
                 )
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("id").unwrap())
@@ -154,7 +150,7 @@ mod tests {
                 .select(
                     "SELECT attrs->>'id' as id FROM stripe.checkout_sessions",
                     None,
-                    None,
+                    &[],
                 )
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("id").unwrap())
@@ -178,7 +174,7 @@ mod tests {
             // assert!(results.is_empty());
 
             let results = c
-                .select("SELECT * FROM stripe.disputes", None, None)
+                .select("SELECT * FROM stripe.disputes", None, &[])
                 .unwrap()
                 .filter_map(|r| {
                     r.get_by_name::<&str, _>("id")
@@ -193,7 +189,7 @@ mod tests {
             );
 
             let results = c
-                .select("SELECT * FROM stripe.events", None, None)
+                .select("SELECT * FROM stripe.events", None, &[])
                 .unwrap()
                 .filter_map(|r| {
                     r.get_by_name::<&str, _>("id")
@@ -207,7 +203,7 @@ mod tests {
             );
 
             let results = c
-                .select("SELECT * FROM stripe.files", None, None)
+                .select("SELECT * FROM stripe.files", None, &[])
                 .unwrap()
                 .filter_map(|r| {
                     r.get_by_name::<&str, _>("id")
@@ -232,7 +228,7 @@ mod tests {
             );
 
             let results = c
-                .select("SELECT * FROM stripe.file_links", None, None)
+                .select("SELECT * FROM stripe.file_links", None, &[])
                 .unwrap()
                 .filter_map(|r| {
                     r.get_by_name::<&str, _>("id")
@@ -253,7 +249,7 @@ mod tests {
             );
 
             let results = c
-                .select("SELECT * FROM stripe.invoices", None, None)
+                .select("SELECT * FROM stripe.invoices", None, &[])
                 .unwrap()
                 .filter_map(|r| {
                     r.get_by_name::<&str, _>("customer")
@@ -269,7 +265,7 @@ mod tests {
             );
 
             let results = c
-                .select("SELECT * FROM stripe.payment_intents", None, None)
+                .select("SELECT * FROM stripe.payment_intents", None, &[])
                 .unwrap()
                 .filter_map(|r| {
                     r.get_by_name::<i64, _>("amount")
@@ -280,7 +276,7 @@ mod tests {
             assert_eq!(results, vec![(1099, "usd")]);
 
             let results = c
-                .select("SELECT * FROM stripe.payouts", None, None)
+                .select("SELECT * FROM stripe.payouts", None, &[])
                 .unwrap()
                 .filter_map(|r| {
                     r.get_by_name::<&str, _>("id")
@@ -296,7 +292,7 @@ mod tests {
             );
 
             let results = c
-                .select("SELECT * FROM stripe.prices", None, None)
+                .select("SELECT * FROM stripe.prices", None, &[])
                 .unwrap()
                 .filter_map(|r| {
                     r.get_by_name::<&str, _>("id")
@@ -319,7 +315,7 @@ mod tests {
             );
 
             let results = c
-                .select("SELECT * FROM stripe.products", None, None)
+                .select("SELECT * FROM stripe.products", None, &[])
                 .unwrap()
                 .filter_map(|r| {
                     r.get_by_name::<&str, _>("name")
@@ -334,7 +330,7 @@ mod tests {
             );
 
             let results = c
-                .select("SELECT * FROM stripe.refunds", None, None)
+                .select("SELECT * FROM stripe.refunds", None, &[])
                 .unwrap()
                 .filter_map(|r| {
                     r.get_by_name::<&str, _>("id")
@@ -350,7 +346,7 @@ mod tests {
             );
 
             let results = c
-                .select("SELECT * FROM stripe.setup_attempts where setup_intent='seti_1Pgag7B7WZ01zgkWSgwGdb8Z'", None, None).unwrap()
+                .select("SELECT * FROM stripe.setup_attempts where setup_intent='seti_1Pgag7B7WZ01zgkWSgwGdb8Z'", None, &[]).unwrap()
                 .filter_map(|r| {
                     r.get_by_name::<&str, _>("id")
                         .unwrap()
@@ -367,7 +363,7 @@ mod tests {
             );
 
             let results = c
-                .select("SELECT * FROM stripe.setup_intents", None, None)
+                .select("SELECT * FROM stripe.setup_intents", None, &[])
                 .unwrap()
                 .filter_map(|r| {
                     r.get_by_name::<&str, _>("id")
@@ -385,7 +381,7 @@ mod tests {
             );
 
             let results = c
-                .select("SELECT * FROM stripe.subscriptions", None, None)
+                .select("SELECT * FROM stripe.subscriptions", None, &[])
                 .unwrap()
                 .filter_map(|r| {
                     r.get_by_name::<&str, _>("customer")
@@ -410,7 +406,7 @@ mod tests {
             );
 
             let results = c
-                .select("SELECT * FROM stripe.topups", None, None)
+                .select("SELECT * FROM stripe.topups", None, &[])
                 .unwrap()
                 .filter_map(|r| {
                     r.get_by_name::<&str, _>("id")
@@ -426,7 +422,7 @@ mod tests {
             );
 
             let results = c
-                .select("SELECT * FROM stripe.transfers", None, None)
+                .select("SELECT * FROM stripe.transfers", None, &[])
                 .unwrap()
                 .filter_map(|r| {
                     r.get_by_name::<&str, _>("id")
@@ -457,14 +453,14 @@ mod tests {
                 VALUES ('test@test.com', 'test name', null)
                 "#,
                 None,
-                None,
+                &[],
             );
 
             let results = c
                 .select(
                     "SELECT * FROM stripe.customers WHERE email = 'test@test.com'",
                     None,
-                    None,
+                    &[],
                 ).unwrap()
                 .filter_map(|r| {
                     r.get_by_name::<&str, _>("email")
@@ -484,14 +480,14 @@ mod tests {
                 WHERE email = 'test@test.com'
                 "#,
                 None,
-                None,
+                &[],
             );
 
             let results = c
                 .select(
                     "SELECT * FROM stripe.customers WHERE email = 'test@test.com'",
                     None,
-                    None,
+                    &[],
                 ).unwrap()
                 .filter_map(|r| {
                     r.get_by_name::<&str, _>("email").unwrap().and_then(|v| v.value::<&str>()).zip(
@@ -510,14 +506,14 @@ mod tests {
                 DELETE FROM stripe.customers WHERE email = 'test@test.com'
                 "#,
                 None,
-                None,
+                &[],
             );
 
             let results = c
                 .select(
                     "SELECT * FROM stripe.customers WHERE email = 'test@test.com'",
                     None,
-                    None,
+                    &[],
                 ).unwrap()
                 .filter_map(|r| {
                     r.get_by_name::<&str, _>("email").unwrap().and_then(|v| v.value::<&str>()).zip(

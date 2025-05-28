@@ -7,12 +7,12 @@ mod tests {
 
     #[pg_test]
     fn iceberg_smoketest() {
-        Spi::connect(|mut c| {
+        Spi::connect_mut(|c| {
             c.update(
                 r#"CREATE FOREIGN DATA WRAPPER iceberg_wrapper
                      HANDLER iceberg_fdw_handler VALIDATOR iceberg_fdw_validator"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -26,20 +26,20 @@ mod tests {
                        s3_endpoint_url 'http://localhost:8000'
                      )"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
-            c.update(r#"CREATE SCHEMA IF NOT EXISTS iceberg"#, None, None)
+            c.update(r#"CREATE SCHEMA IF NOT EXISTS iceberg"#, None, &[])
                 .unwrap();
             c.update(
                 r#"IMPORT FOREIGN SCHEMA "docs_example" FROM SERVER iceberg_server INTO iceberg"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
 
             let results = c
-                .select("SELECT * FROM iceberg.bids order by symbol", None, None)
+                .select("SELECT * FROM iceberg.bids order by symbol", None, &[])
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("symbol").unwrap())
                 .collect::<Vec<_>>();
@@ -49,7 +49,7 @@ mod tests {
                 .select(
                     "SELECT * FROM iceberg.bids WHERE symbol in ('APL', 'XXX')",
                     None,
-                    None,
+                    &[],
                 )
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("symbol").unwrap())
@@ -57,11 +57,7 @@ mod tests {
             assert_eq!(results, vec!["APL"]);
 
             let results = c
-                .select(
-                    "SELECT icol FROM iceberg.bids WHERE icol = 1234",
-                    None,
-                    None,
-                )
+                .select("SELECT icol FROM iceberg.bids WHERE icol = 1234", None, &[])
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<i32, _>("icol").unwrap())
                 .collect::<Vec<_>>();
@@ -71,7 +67,7 @@ mod tests {
                 .select(
                     "SELECT lcol FROM iceberg.bids WHERE lcol >= 5678",
                     None,
-                    None,
+                    &[],
                 )
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<i64, _>("lcol").unwrap())
@@ -79,7 +75,7 @@ mod tests {
             assert_eq!(results, vec![5678]);
 
             let results = c
-                .select("SELECT symbol FROM iceberg.bids WHERE bcol", None, None)
+                .select("SELECT symbol FROM iceberg.bids WHERE bcol", None, &[])
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("symbol").unwrap())
                 .collect::<Vec<_>>();
@@ -89,7 +85,7 @@ mod tests {
                 .select(
                     "SELECT symbol FROM iceberg.bids WHERE bcol is true",
                     None,
-                    None,
+                    &[],
                 )
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("symbol").unwrap())
@@ -100,7 +96,7 @@ mod tests {
                 .select(
                     "SELECT symbol FROM iceberg.bids WHERE amt is null and ask = 11.22",
                     None,
-                    None,
+                    &[],
                 )
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("symbol").unwrap())
@@ -111,7 +107,7 @@ mod tests {
                 .select(
                     "SELECT dt FROM iceberg.bids WHERE dt = date '2025-05-16'",
                     None,
-                    None,
+                    &[],
                 )
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<pgrx::datum::Date, _>("dt").unwrap())
@@ -122,7 +118,7 @@ mod tests {
                 .select(
                     "SELECT tstz FROM iceberg.bids WHERE symbol = 'APL'",
                     None,
-                    None,
+                    &[],
                 )
                 .unwrap()
                 .filter_map(|r| {
@@ -144,7 +140,7 @@ mod tests {
                 .select(
                     "SELECT bin FROM iceberg.bids WHERE symbol = 'MCS'",
                     None,
-                    None,
+                    &[],
                 )
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&[u8], _>("bin").unwrap())
@@ -155,7 +151,7 @@ mod tests {
                 .select(
                     "SELECT uid FROM iceberg.bids WHERE symbol = 'MCS'",
                     None,
-                    None,
+                    &[],
                 )
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<pgrx::datum::Uuid, _>("uid").unwrap())
@@ -166,7 +162,7 @@ mod tests {
                 .select(
                     "SELECT details FROM iceberg.bids WHERE symbol = 'APL'",
                     None,
-                    None,
+                    &[],
                 )
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<pgrx::datum::JsonB, _>("details").unwrap())
@@ -178,7 +174,7 @@ mod tests {
                 .select(
                     "SELECT list FROM iceberg.bids WHERE symbol = 'MCS'",
                     None,
-                    None,
+                    &[],
                 )
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<pgrx::datum::JsonB, _>("list").unwrap())
@@ -190,7 +186,7 @@ mod tests {
                 .select(
                     "SELECT map FROM iceberg.bids WHERE symbol = 'APL'",
                     None,
-                    None,
+                    &[],
                 )
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<pgrx::datum::JsonB, _>("map").unwrap())

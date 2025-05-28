@@ -112,7 +112,7 @@ impl From<HostParam> for GuestParam {
     fn from(value: HostParam) -> Self {
         Self {
             id: value.id as u32,
-            type_oid: value.type_oid.as_u32(),
+            type_oid: value.type_oid.to_u32(),
         }
     }
 }
