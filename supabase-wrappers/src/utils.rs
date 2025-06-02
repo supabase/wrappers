@@ -2,11 +2,12 @@
 //!
 
 use crate::interface::{Cell, Column, Row};
-use pgrx::list::List;
-use pgrx::pg_sys::panic::{ErrorReport, ErrorReportable};
-use pgrx::spi::Spi;
-use pgrx::IntoDatum;
-use pgrx::*;
+use pgrx::{
+    list::List,
+    pg_sys::panic::{ErrorReport, ErrorReportable},
+    spi::Spi,
+    IntoDatum, *,
+};
 use std::ffi::c_void;
 use std::ffi::CStr;
 use std::num::NonZeroUsize;
@@ -296,12 +297,10 @@ pub(super) unsafe fn extract_target_columns(
 // trait for "serialize" and "deserialize" state from specified memory context,
 // so that it is safe to be carried between the planning and the execution
 pub(super) trait SerdeList {
-    unsafe fn serialize_to_list(state: PgBox<Self>, mut ctx: PgMemoryContexts) -> *mut pg_sys::List
+    unsafe fn serialize_to_list(state: PgBox<Self>) -> *mut pg_sys::List
     where
         Self: Sized,
     {
-        let mut old_ctx = ctx.set_as_current();
-
         let ret = memcx::current_context(|mcx| {
             let mut ret = List::<*mut c_void>::Nil;
             let val = state.into_pg() as i64;
@@ -317,8 +316,6 @@ pub(super) trait SerdeList {
             ret.unstable_push_in_context(cst as _, mcx);
             ret.into_ptr()
         });
-
-        old_ctx.set_as_current();
 
         ret
     }
