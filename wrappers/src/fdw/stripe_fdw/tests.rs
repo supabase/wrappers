@@ -440,6 +440,46 @@ mod tests {
                 )]
             );
 
+            let results = c
+                .select(
+                    r#"
+                    CREATE OR REPLACE FUNCTION pg_temp.count_estimate(
+                        query text
+                    ) RETURNS integer LANGUAGE plpgsql AS $$
+                    DECLARE
+                        plan jsonb;
+                    BEGIN
+                        EXECUTE 'EXPLAIN (FORMAT JSON)' || query INTO plan;
+                        RETURN plan->0->'Plan'->'Plan Rows';
+                    END;
+                    $$;
+
+                    with approximation as (
+                        select reltuples as estimate
+                        from pg_class
+                        where relname = 'products' and relkind = 'f'
+                    )
+                    select
+                      case
+                        when estimate = -1 then (select pg_temp.count_estimate('select * from stripe.products;'))
+                        when estimate > 50000 then estimate
+                        else (select count(*) from stripe.products)
+                      end as count,
+                      estimate = -1 or estimate > 50000 as is_estimate
+                    from approximation
+                    "#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|r| {
+                    r.get_by_name::<f32, _>("count")
+                        .unwrap()
+                        .zip(r.get_by_name::<bool, _>("is_estimate").unwrap())
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(results, vec![(1.0, true)]);
+
             // Stripe mock container is currently stateless, so we cannot test
             // data modify for now but will keep the code below for future use.
             //
