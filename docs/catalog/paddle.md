@@ -66,10 +66,10 @@ We need to provide Postgres with the credentials to access Paddle, and any addit
     create server paddle_server
       foreign data wrapper wasm_wrapper
       options (
-        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.1.1/paddle_fdw.wasm',
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.2.0/paddle_fdw.wasm',
         fdw_package_name 'supabase:paddle-fdw',
-        fdw_package_version '0.1.1',
-        fdw_package_checksum 'c5ac70bb2eef33693787b7d4efce9a83cde8d4fa40889d2037403a51263ba657',
+        fdw_package_version '0.2.0',
+        fdw_package_checksum 'e788b29ae46c158643e1e1f229d94b28a9af8edbd3233f59c5a79053c25da213',
         api_url 'https://sandbox-api.paddle.com', -- Use https://api.paddle.com for live account
         api_key_id '<key_ID>' -- The Key ID from above.
       );
@@ -81,10 +81,10 @@ We need to provide Postgres with the credentials to access Paddle, and any addit
     create server paddle_server
       foreign data wrapper wasm_wrapper
       options (
-        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.1.1/paddle_fdw.wasm',
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.2.0/paddle_fdw.wasm',
         fdw_package_name 'supabase:paddle-fdw',
-        fdw_package_version '0.1.1',
-        fdw_package_checksum 'c5ac70bb2eef33693787b7d4efce9a83cde8d4fa40889d2037403a51263ba657',
+        fdw_package_version '0.2.0',
+        fdw_package_checksum 'e788b29ae46c158643e1e1f229d94b28a9af8edbd3233f59c5a79053c25da213',
         api_url 'https://sandbox-api.paddle.com', -- Use https://api.paddle.com for live account
         api_key 'bb4e69088ea07a98a90565ac610c63654423f8f1e2d48b39b5'
       );
