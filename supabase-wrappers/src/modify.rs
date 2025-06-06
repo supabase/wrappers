@@ -1,7 +1,12 @@
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::{
-    debug2, memcxt::PgMemoryContexts, pg_sys::Oid, prelude::*, rel::PgRelation,
-    tupdesc::PgTupleDesc, FromDatum, PgSqlErrorCode,
+    debug2,
+    memcxt::PgMemoryContexts,
+    pg_sys::{MemoryContext, MemoryContextData, Oid},
+    prelude::*,
+    rel::PgRelation,
+    tupdesc::PgTupleDesc,
+    FromDatum, PgSqlErrorCode,
 };
 use std::collections::HashMap;
 use std::marker::PhantomData;
@@ -30,7 +35,7 @@ struct FdwModifyState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
 
     // temporary memory context per foreign table, created under Wrappers root
     // memory context
-    tmp_ctx: PgMemoryContexts,
+    tmp_ctx: MemoryContext,
     _phantom: PhantomData<E>,
 
     #[cfg(feature = "pg13")]
@@ -38,7 +43,7 @@ struct FdwModifyState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
 }
 
 impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwModifyState<E, W> {
-    unsafe fn new(foreigntableid: Oid, tmp_ctx: PgMemoryContexts) -> Self {
+    unsafe fn new(foreigntableid: Oid, tmp_ctx: MemoryContext) -> Self {
         Self {
             instance: instance::create_fdw_instance_from_table_id(foreigntableid),
             rowid_name: String::default(),
@@ -206,9 +211,9 @@ pub(super) extern "C-unwind" fn plan_foreign_modify<
             if attname == rowid_name {
                 let ftable_id = rel.oid();
 
-                // refresh leftover memory context
+                // create memory context for modify
                 let ctx_name = format!("Wrappers_modify_{}", ftable_id.to_u32());
-                let ctx = memctx::refresh_wrappers_memctx(&ctx_name);
+                let ctx = memctx::create_wrappers_memctx(&ctx_name);
 
                 // create modify state
                 let mut state = FdwModifyState::<E, W>::new(ftable_id, ctx);
@@ -233,10 +238,17 @@ pub(super) extern "C-unwind" fn plan_foreign_modify<
                     }
                 }
 
-                // install callback to drop the state when memory context is reset
-                let mut ctx = PgMemoryContexts::For(state.tmp_ctx.value());
-                let p = PgBox::from_pg(ctx.leak_and_drop_on_delete(state));
-                return FdwModifyState::serialize_to_list(p, ctx);
+                // box the modify state and 'serialize' state to a list, the state
+                // pointer is stored as an integer constant in the list, so it can be
+                // `deserialized` when executing the plan later.
+                // Note that the state itself is not serialized to any memory contexts,
+                // it just sits in Rust managed Box'ed memory and will be dropped when
+                // end_foreign_modify() is called.
+                return PgMemoryContexts::For(state.tmp_ctx).switch_to(|_| {
+                    let p = Box::leak(Box::new(state)) as *mut FdwModifyState<E, W>;
+                    let state = PgBox::<FdwModifyState<E, W>>::from_pg(p as _);
+                    FdwModifyState::serialize_to_list(state)
+                });
             }
         }
 
@@ -275,7 +287,7 @@ pub(super) extern "C-unwind" fn begin_foreign_modify<
         let subplan = (*(*(*mtstate).mt_plans.offset(_subplan_index as _))).plan;
         #[cfg(not(feature = "pg13"))]
         let subplan = (*polyfill::outer_plan_state(&mut (*mtstate).ps)).plan;
-        let rowid_name_c = PgMemoryContexts::CurrentMemoryContext.pstrdup(&state.rowid_name);
+        let rowid_name_c = PgMemoryContexts::For(state.tmp_ctx).pstrdup(&state.rowid_name);
         state.rowid_attno =
             pg_sys::ExecFindJunkAttributeInTlist((*subplan).targetlist, rowid_name_c);
 
@@ -301,8 +313,10 @@ pub(super) extern "C-unwind" fn exec_foreign_insert<
             (*rinfo).ri_FdwState as *mut FdwModifyState<E, W>,
         );
 
-        let row = utils::tuple_table_slot_to_row(slot);
-        state.insert(&row).report_unwrap();
+        PgMemoryContexts::For(state.tmp_ctx).switch_to(|_| {
+            let row = utils::tuple_table_slot_to_row(slot);
+            state.insert(&row).report_unwrap();
+        });
     }
 
     slot
@@ -333,10 +347,12 @@ pub(super) extern "C-unwind" fn exec_foreign_delete<
             (*rinfo).ri_FdwState as *mut FdwModifyState<E, W>,
         );
 
-        let cell = get_rowid_cell(&state, plan_slot);
-        if let Some(rowid) = cell {
-            state.delete(&rowid).report_unwrap();
-        }
+        PgMemoryContexts::For(state.tmp_ctx).switch_to(|_| {
+            let cell = get_rowid_cell(&state, plan_slot);
+            if let Some(rowid) = cell {
+                state.delete(&rowid).report_unwrap();
+            }
+        });
     }
 
     slot
@@ -358,32 +374,34 @@ pub(super) extern "C-unwind" fn exec_foreign_update<
             (*rinfo).ri_FdwState as *mut FdwModifyState<E, W>,
         );
 
-        let rowid_cell = get_rowid_cell(&state, plan_slot);
-        if let Some(rowid) = rowid_cell {
-            let mut new_row = utils::tuple_table_slot_to_row(plan_slot);
+        PgMemoryContexts::For(state.tmp_ctx).switch_to(|_| {
+            let rowid_cell = get_rowid_cell(&state, plan_slot);
+            if let Some(rowid) = rowid_cell {
+                let mut new_row = utils::tuple_table_slot_to_row(plan_slot);
 
-            // remove junk attributes, including rowid attribute, from the new row
-            // so we only keep the updated new attributes
-            let tup_desc = PgTupleDesc::from_pg_copy((*slot).tts_tupleDescriptor);
-            new_row.retain(|(col, _)| {
-                let is_ft_col = tup_desc.iter().filter(|a| !a.attisdropped).any(|a| {
-                    let attr_name = pgrx::name_data_to_str(&a.attname);
-                    attr_name == col.as_str()
+                // remove junk attributes, including rowid attribute, from the new row
+                // so we only keep the updated new attributes
+                let tup_desc = PgTupleDesc::from_pg_copy((*slot).tts_tupleDescriptor);
+                new_row.retain(|(col, _)| {
+                    let is_ft_col = tup_desc.iter().filter(|a| !a.attisdropped).any(|a| {
+                        let attr_name = pgrx::name_data_to_str(&a.attname);
+                        attr_name == col.as_str()
+                    });
+
+                    #[cfg(not(feature = "pg13"))]
+                    {
+                        is_ft_col && state.rowid_name != col.as_str()
+                    }
+
+                    #[cfg(feature = "pg13")]
+                    {
+                        is_ft_col && state.update_cols.iter().any(|c| c == col.as_str())
+                    }
                 });
 
-                #[cfg(not(feature = "pg13"))]
-                {
-                    is_ft_col && state.rowid_name != col.as_str()
-                }
-
-                #[cfg(feature = "pg13")]
-                {
-                    is_ft_col && state.update_cols.iter().any(|c| c == col.as_str())
-                }
-            });
-
-            state.update(&rowid, &new_row).report_unwrap();
-        }
+                state.update(&rowid, &new_row).report_unwrap();
+            }
+        });
     }
 
     slot
@@ -400,9 +418,24 @@ pub(super) extern "C-unwind" fn end_foreign_modify<
     debug2!("---> end_foreign_modify");
     unsafe {
         let fdw_state = (*rinfo).ri_FdwState as *mut FdwModifyState<E, W>;
-        if !fdw_state.is_null() {
-            let mut state = PgBox::<FdwModifyState<E, W>>::from_pg(fdw_state);
-            state.end_modify().report_unwrap();
+        if fdw_state.is_null() {
+            return;
         }
+
+        // the modify state is actually not allocated by PG, but we use 'from_pg()'
+        // here just to tell PgBox don't free the state, instead we will handle
+        // drop the state by ourselves
+        let mut state = PgBox::<FdwModifyState<E, W>>::from_pg(fdw_state);
+        state.end_modify().report_unwrap();
+
+        // remove the allocated memory context
+        memctx::delete_wrappers_memctx(state.tmp_ctx);
+        state.tmp_ctx = ptr::null::<MemoryContextData>() as _;
+
+        (*rinfo).ri_FdwState = ptr::null::<FdwModifyState<E, W>>() as _;
+
+        // drop the scan state, so the fdw instance can be dropped too
+        let boxed_fdw_state = Box::from_raw(fdw_state);
+        drop(boxed_fdw_state);
     }
 }
