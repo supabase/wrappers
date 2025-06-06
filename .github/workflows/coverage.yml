@@ -12,7 +12,8 @@ permissions:
 jobs:
   code-coverage:
     name: Code Coverage
-    runs-on: [larger-runner-4cpu]
+    runs-on:
+      group: Default Larger Runners
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
