@@ -46,8 +46,9 @@ fn field_to_cell(src_row: &tiberius::Row, tgt_col: &Column) -> MssqlFdwResult<Op
         }
         PgOid::BuiltIn(PgBuiltInOids::NUMERICOID) => src_row
             .try_get::<Decimal, &str>(col_name)?
-            .and_then(|v| v.to_i128())
-            .map(pgrx::AnyNumeric::from)
+            .and_then(|v| v.to_f64())
+            .map(pgrx::AnyNumeric::try_from)
+            .transpose()?
             .map(Cell::Numeric),
         PgOid::BuiltIn(PgBuiltInOids::TEXTOID) => src_row
             .try_get::<&str, &str>(col_name)?
@@ -93,7 +94,7 @@ impl CellFormatter for MssqlCellFormatter {
 }
 
 #[wrappers_fdw(
-    version = "0.1.2",
+    version = "0.1.3",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/mssql_fdw",
     error_type = "MssqlFdwError"

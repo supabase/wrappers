@@ -6,12 +6,12 @@ mod tests {
 
     #[pg_test]
     fn bigquery_smoketest() {
-        Spi::connect(|mut c| {
+        Spi::connect_mut(|c| {
             c.update(
                 r#"CREATE FOREIGN DATA WRAPPER bigquery_wrapper
                          HANDLER big_query_fdw_handler VALIDATOR big_query_fdw_validator"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -24,7 +24,7 @@ mod tests {
                            mock_auth 'true'
                          )"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -32,7 +32,16 @@ mod tests {
                   CREATE FOREIGN TABLE test_table (
                     id bigint,
                     name text,
-                    num numeric
+                    num numeric,
+                    is_active boolean,
+                    col_int8 "char",
+                    col_int16 smallint,
+                    col_int32 integer,
+                    col_float32 real,
+                    col_float64 double precision,
+                    attrs jsonb,
+                    signup_dt date,
+                    created_at timestamp
                   )
                   SERVER my_bigquery_server
                   OPTIONS (
@@ -41,7 +50,7 @@ mod tests {
                   )
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -56,7 +65,7 @@ mod tests {
                   )
              "#,
                 None,
-                None,
+                &[],
             ).unwrap();
 
             /*
@@ -69,7 +78,7 @@ mod tests {
             */
 
             let results = c
-                .select("SELECT name FROM test_table", None, None)
+                .select("SELECT * FROM test_table", None, &[])
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("name").unwrap())
                 .collect::<Vec<_>>();
@@ -80,7 +89,7 @@ mod tests {
                 .select(
                     "SELECT name FROM test_table ORDER BY id DESC, name LIMIT 1",
                     None,
-                    None,
+                    &[],
                 )
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("name").unwrap())
@@ -89,7 +98,7 @@ mod tests {
             assert_eq!(results, vec!["bar"]);
 
             let results = c
-                .select("SELECT name FROM test_table_with_subquery", None, None)
+                .select("SELECT name FROM test_table_with_subquery", None, &[])
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("name").unwrap())
                 .collect::<Vec<_>>();
@@ -97,33 +106,50 @@ mod tests {
             assert_eq!(results, vec!["FOO", "BAR"]);
 
             let results = c
-                .select("SELECT num::text FROM test_table ORDER BY num", None, None)
+                .select("SELECT num::text FROM test_table ORDER BY num", None, &[])
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("num").unwrap())
                 .collect::<Vec<_>>();
 
             assert_eq!(results, vec!["0.123", "1234.56789"]);
 
-            // DISABLED: error: [FIXME]
-            // insert failed: Request error (error: error decoding response body: missing field `status` at line 1 column 436)
-
-            /*
             c.update(
-                "INSERT INTO test_table (name) VALUES ($1)",
+                "INSERT INTO test_table (id, name) VALUES ($1, $2)",
                 None,
-                Some(vec![(
-                    PgOid::BuiltIn(PgBuiltInOids::TEXTOID),
-                    "baz".into_datum(),
-                )]),
-            );
+                &[42.into(), "baz".into()],
+            )
+            .unwrap();
 
             let results = c
-                .select("SELECT name FROM test_table", None, None)
+                .select("SELECT name FROM test_table", None, &[])
+                .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("name").unwrap())
                 .collect::<Vec<_>>();
-
             assert_eq!(results, vec!["foo", "bar", "baz"]);
-             */
+
+            c.update(
+                "UPDATE test_table SET name = $1 WHERE id = $2",
+                None,
+                &["qux".into(), 42.into()],
+            )
+            .unwrap();
+
+            let results = c
+                .select("SELECT name FROM test_table ORDER BY id", None, &[])
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("name").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(results, vec!["foo", "bar", "qux"]);
+
+            c.update("DELETE FROM test_table WHERE id = $1", None, &[42.into()])
+                .unwrap();
+
+            let results = c
+                .select("SELECT name FROM test_table ORDER BY id", None, &[])
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("name").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(results, vec!["foo", "bar"]);
         });
     }
 }

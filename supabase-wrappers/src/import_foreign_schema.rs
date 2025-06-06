@@ -1,11 +1,14 @@
 use pg_sys::{AsPgCStr, Oid};
+use pgrx::list::List;
 use pgrx::pg_sys::panic::ErrorReport;
-use pgrx::{debug2, prelude::*, PgList};
+use pgrx::{debug2, prelude::*};
+use std::ffi::c_void;
 use std::marker::PhantomData;
 
 use crate::instance;
 use crate::options::options_to_hashmap;
 use crate::prelude::ForeignDataWrapper;
+use crate::utils::ReportableError;
 
 // Fdw private state for import_foreign_schema
 struct FdwState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
@@ -25,7 +28,7 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwState<E, W> {
 
 #[repr(u32)]
 #[derive(Debug, Clone)]
-pub enum ListType {
+pub enum ImportSchemaType {
     FdwImportSchemaAll = pgrx::pg_sys::ImportForeignSchemaType::FDW_IMPORT_SCHEMA_ALL,
     FdwImportSchemaLimitTo = pgrx::pg_sys::ImportForeignSchemaType::FDW_IMPORT_SCHEMA_LIMIT_TO,
     FdwImportSchemaExcept = pgrx::pg_sys::ImportForeignSchemaType::FDW_IMPORT_SCHEMA_EXCEPT,
@@ -36,13 +39,16 @@ pub struct ImportForeignSchemaStmt {
     pub server_name: String,
     pub remote_schema: String,
     pub local_schema: String,
-    pub list_type: ListType,
+    pub list_type: ImportSchemaType,
     pub table_list: Vec<String>,
     pub options: std::collections::HashMap<String, String>,
 }
 
 #[pg_guard]
-pub(super) extern "C" fn import_foreign_schema<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
+pub(super) extern "C-unwind" fn import_foreign_schema<
+    E: Into<ErrorReport>,
+    W: ForeignDataWrapper<E>,
+>(
     stmt: *mut pg_sys::ImportForeignSchemaStmt,
     server_oid: pg_sys::Oid,
 ) -> *mut pg_sys::List {
@@ -67,30 +73,40 @@ pub(super) extern "C" fn import_foreign_schema<E: Into<ErrorReport>, W: ForeignD
 
             list_type: match (*stmt).list_type {
                 pgrx::pg_sys::ImportForeignSchemaType::FDW_IMPORT_SCHEMA_ALL => {
-                    ListType::FdwImportSchemaAll
+                    ImportSchemaType::FdwImportSchemaAll
                 }
                 pgrx::pg_sys::ImportForeignSchemaType::FDW_IMPORT_SCHEMA_LIMIT_TO => {
-                    ListType::FdwImportSchemaLimitTo
+                    ImportSchemaType::FdwImportSchemaLimitTo
                 }
                 pgrx::pg_sys::ImportForeignSchemaType::FDW_IMPORT_SCHEMA_EXCEPT => {
-                    ListType::FdwImportSchemaExcept
+                    ImportSchemaType::FdwImportSchemaExcept
                 }
                 // This should not happen, it's okay to default to FdwImportSchemaAll
                 // because PostgreSQL will filter the list anyway.
-                _ => ListType::FdwImportSchemaAll,
+                _ => ImportSchemaType::FdwImportSchemaAll,
             },
 
             table_list: {
-                let tables: PgList<pg_sys::RangeVar> = PgList::from_pg((*stmt).table_list);
-                tables
-                    .iter_ptr()
-                    .map(|item| {
-                        std::ffi::CStr::from_ptr(item.as_mut().unwrap().relname)
-                            .to_str()
-                            .unwrap()
-                            .to_string()
-                    })
-                    .collect()
+                pgrx::memcx::current_context(|mcx| {
+                    let mut ret = Vec::new();
+
+                    if let Some(tables) =
+                        List::<*mut c_void>::downcast_ptr_in_memcx((*stmt).table_list, mcx)
+                    {
+                        ret = tables
+                            .iter()
+                            .map(|item| {
+                                let rv = *item as *mut pg_sys::RangeVar;
+                                std::ffi::CStr::from_ptr((*rv).relname)
+                                    .to_str()
+                                    .unwrap()
+                                    .to_string()
+                            })
+                            .collect();
+                    }
+
+                    ret
+                })
             },
 
             options: options_to_hashmap((*stmt).options).unwrap(),
@@ -99,13 +115,15 @@ pub(super) extern "C" fn import_foreign_schema<E: Into<ErrorReport>, W: ForeignD
         let mut state = FdwState::<E, W>::new(server_oid);
         create_stmts = state
             .instance
-            .import_foreign_schema(import_foreign_schema_stmt);
+            .import_foreign_schema(import_foreign_schema_stmt)
+            .report_unwrap();
     }
 
-    let mut ret: PgList<std::ffi::c_char> = PgList::new();
-    for command in create_stmts {
-        ret.push(command.as_pg_cstr());
-    }
-
-    ret.into_pg()
+    pgrx::memcx::current_context(|mcx| {
+        let mut ret = List::<*mut c_void>::Nil;
+        for command in create_stmts {
+            ret.unstable_push_in_context(command.as_pg_cstr() as _, mcx);
+        }
+        ret.into_ptr()
+    })
 }

@@ -127,14 +127,8 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
             buf: String::new(),
         };
 
-        // get is_mock flag
-        let is_mock: bool = server.options.get("is_mock") == Some(&"true".to_string());
-
         // get credentials
-        let creds = if is_mock {
-            // LocalStack uses hardcoded credentials
-            Some(("test".to_string(), "test".to_string()))
-        } else {
+        let creds = {
             match server.options.get("vault_access_key_id") {
                 Some(vault_access_key_id) => {
                     // if using credentials stored in Vault
@@ -159,16 +153,7 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
         };
 
         // get region
-        let default_region = "us-east-1".to_string();
-        let region = if is_mock {
-            default_region
-        } else {
-            server
-                .options
-                .get("aws_region")
-                .map(|t| t.to_owned())
-                .unwrap_or(default_region)
-        };
+        let region = require_option_or("aws_region", &server.options, "us-east-1");
 
         // set AWS environment variables and create shared config from them
         env::set_var("AWS_ACCESS_KEY_ID", creds.0);
@@ -196,8 +181,8 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
         // virtual-hosted style: https://bucket.s3.amazonaws.com/image.png
         //
         // ref: https://docs.aws.amazon.com/AmazonS3/latest/userguide/VirtualHosting.html
-        let path_style_url: bool =
-            server.options.get("path_style_url") == Some(&"true".to_string());
+        let path_style_url =
+            server.options.get("path_style_url").map(|s| s.as_str()) == Some("true");
 
         let config = ret.rt.block_on(config_loader.load());
 
@@ -205,15 +190,8 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
 
         // create S3 client
         let mut s3_config_builder = s3::config::Builder::from(&config);
-        let client = if is_mock {
-            s3_config_builder = s3_config_builder
-                .endpoint_url("http://localhost:4566/")
-                .force_path_style(true);
-            s3::Client::from_conf(s3_config_builder.build())
-        } else {
-            s3_config_builder = s3_config_builder.force_path_style(path_style_url);
-            s3::Client::from_conf(s3_config_builder.build())
-        };
+        s3_config_builder = s3_config_builder.force_path_style(path_style_url);
+        let client = s3::Client::from_conf(s3_config_builder.build());
         ret.client = Some(client);
 
         Ok(ret)

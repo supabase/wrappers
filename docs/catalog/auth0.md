@@ -13,19 +13,21 @@ tags:
 
 The Auth0 Wrapper allows you to read data from your Auth0 tenant for use within your Postgres database.
 
-!!! warning
-
-    Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
-
 ## Preparation
 
-Before you get started, make sure the `wrappers` extension is installed on your database:
+Before you can query Auth0, you need to enable the Wrappers extension and store your credentials in Postgres.
+
+### Enable Wrappers
+
+Make sure the `wrappers` extension is installed on your database:
 
 ```sql
 create extension if not exists wrappers with schema extensions;
 ```
 
-and then create the foreign data wrapper:
+### Enable the Auth0 Wrapper
+
+Enable the `auth0_wrapper` FDW:
 
 ```sql
 create foreign data wrapper auth0_wrapper
@@ -33,23 +35,22 @@ create foreign data wrapper auth0_wrapper
   validator auth0_fdw_validator;
 ```
 
-### Secure your credentials (optional)
+### Store your credentials (optional)
 
-By default, Postgres stores FDW credentials inide `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
+By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
 
 ```sql
--- Save your Auth0 API key in Vault and retrieve the `key_id`
-insert into vault.secrets (name, secret)
-values (
+-- Save your Auth0 API key in Vault and retrieve the created `key_id`
+select vault.create_secret(
+  '<Auth0 API Key or PAT>', -- Auth0 API key or Personal Access Token (PAT)
   'auth0',
-  '<Auth0 API Key or PAT>' -- Auth0 API key or Personal Access Token (PAT)
-)
-returning key_id;
+  'Auth0 API key for Wrappers'
+);
 ```
 
 ### Connecting to Auth0
 
-We need to provide Postgres with the credentials to connect to Airtable, and any additional options. We can do this using the `create server` command:
+We need to provide Postgres with the credentials to connect to Auth0, and any additional options. We can do this using the `create server` command:
 
 === "With Vault"
 
@@ -57,6 +58,7 @@ We need to provide Postgres with the credentials to connect to Airtable, and any
     create server auth0_server
       foreign data wrapper auth0_wrapper
       options (
+        url 'https://dev-<tenant-id>.us.auth0.com/api/v2/users',
         api_key_id '<key_ID>' -- The Key ID from above.
       );
     ```
@@ -73,47 +75,67 @@ We need to provide Postgres with the credentials to connect to Airtable, and any
     );
     ```
 
-## Creating Foreign Tables
+### Create a schema
+
+We recommend creating a schema to hold all the foreign tables:
+
+```sql
+create schema if not exists auth0;
+```
+
+## Entities
+
+The Auth0 Wrapper supports data reads from Auth0 API.
+
+### Users
 
 The Auth0 Wrapper supports data reads from Auth0's [Management API List users endpoint](https://auth0.com/docs/api/management/v2/users/get-users) endpoint (_read only_).
 
-| Auth0   | Select | Insert | Update | Delete | Truncate |
-| ------- | :----: | :----: | :----: | :----: | :------: |
-| Records |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+#### Operations
 
-For example:
+| Object | Select | Insert | Update | Delete | Truncate |
+| ------ | :----: | :----: | :----: | :----: | :------: |
+| Users  |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
+
+#### Usage
 
 ```sql
-create foreign table my_foreign_table (
+create foreign table auth0.my_foreign_table (
   name text
   -- other fields
 )
 server auth0_server
 options (
-  object 'users',
+  object 'users'
 );
 ```
 
-### Foreign table options
+#### Notes
 
-The full list of foreign table options are below:
-
-- `objects` - Auth0 object to select from. Currently only supports `users`
+- Currently only supports the `users` object
 
 ## Query Pushdown Support
 
 This FDW doesn't support query pushdown.
 
+## Limitations
+
+This section describes important limitations and considerations when using this FDW:
+
+- No query pushdown support, all filtering must be done locally
+- Large result sets may experience slower performance due to full data transfer requirement
+- Only supports the `users` object from Auth0 Management API
+- Cannot modify Auth0 user properties via FDW
+- Materialized views using these foreign tables may fail during logical backups
+
 ## Examples
 
-Some examples on how to use Auth0 foreign tables.
+### Basic Auth0 Users Query
 
-### Basic example
-
-This will create a "foreign table" inside your Postgres database called `auth0_table`:
+This example demonstrates querying Auth0 users data.
 
 ```sql
-create foreign table auth0_table (
+create foreign table auth0.auth0_table (
   created_at text,
   email text,
   email_verified bool,
@@ -123,11 +145,10 @@ create foreign table auth0_table (
   options (
     object 'users'
   );
-
 ```
 
 You can now fetch your Auth0 data from within your Postgres database:
 
 ```sql
-select * from auth0;
+select * from auth0.auth0_table;
 ```

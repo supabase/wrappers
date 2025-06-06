@@ -1,0 +1,36 @@
+interface http {
+    type headers = list<tuple<string, string>>;
+
+    variant method {
+        get,
+        post,
+        put,
+        patch,
+        delete,
+    }
+
+    record request {
+        method: method,
+        url: string,
+        headers: headers,
+        body: string,
+    }
+
+    record response {
+        url: string,
+        status-code: u16,
+        headers: headers,
+        body: string,
+    }
+
+    type http-error = string;
+    type http-result = result<response, http-error>;
+
+    get: func(req: request) -> http-result;
+    post: func(req: request) -> http-result;
+    put: func(req: request) -> http-result;
+    patch: func(req: request) -> http-result;
+    delete: func(req: request) -> http-result;
+
+    error-for-status: func(resp: response) -> result<_, http-error>;
+}

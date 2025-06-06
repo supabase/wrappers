@@ -5,25 +5,26 @@ mod tests {
 
     #[pg_test]
     fn s3_smoketest() {
-        Spi::connect(|mut c| {
+        Spi::connect_mut(|c| {
             c.update(
                 r#"CREATE FOREIGN DATA WRAPPER s3_wrapper
                      HANDLER s3_fdw_handler VALIDATOR s3_fdw_validator"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
                 r#"CREATE SERVER s3_server
                      FOREIGN DATA WRAPPER s3_wrapper
                      OPTIONS (
-                       aws_access_key_id 'test',
-                       aws_secret_access_key 'test',
+                       aws_access_key_id 'admin',
+                       aws_secret_access_key 'password',
                        aws_region 'us-east-1',
-                       is_mock 'true'
+                       endpoint_url 'http://localhost:8000',
+                       path_style_url 'true'
                      )"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
 
@@ -38,13 +39,13 @@ mod tests {
                 )
                 SERVER s3_server
                 OPTIONS (
-                    uri 's3://test/test_data.csv',
+                    uri 's3://warehouse/test_data.csv',
                     format 'csv',
                     has_header 'true'
                   )
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
 
@@ -59,14 +60,14 @@ mod tests {
                 )
                 SERVER s3_server
                 OPTIONS (
-                    uri 's3://test/test_data.csv.gz',
+                    uri 's3://warehouse/test_data.csv.gz',
                     format 'csv',
                     has_header 'true',
                     compress 'gzip'
                   )
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
 
@@ -81,12 +82,12 @@ mod tests {
                 )
                 SERVER s3_server
                 OPTIONS (
-                    uri 's3://test/test_data.jsonl',
+                    uri 's3://warehouse/test_data.jsonl',
                     format 'jsonl'
                   )
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
 
@@ -101,13 +102,13 @@ mod tests {
                 )
                 SERVER s3_server
                 OPTIONS (
-                    uri 's3://test/test_data.jsonl.bz2',
+                    uri 's3://warehouse/test_data.jsonl.bz2',
                     format 'jsonl',
                     compress 'bzip2'
                   )
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
 
@@ -123,12 +124,12 @@ mod tests {
                 )
                 SERVER s3_server
                 OPTIONS (
-                    uri 's3://test/test_data.parquet',
+                    uri 's3://warehouse/test_data.parquet',
                     format 'parquet'
                   )
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
 
@@ -144,20 +145,20 @@ mod tests {
                 )
                 SERVER s3_server
                 OPTIONS (
-                    uri 's3://test/test_data.parquet.gz',
+                    uri 's3://warehouse/test_data.parquet.gz',
                     format 'parquet',
                     compress 'gzip'
                   )
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
 
             let check_test_table = |table| {
                 let sql = format!("SELECT * FROM {} ORDER BY name LIMIT 1", table);
                 let results = c
-                    .select(&sql, None, None)
+                    .select(&sql, None, &[])
                     .unwrap()
                     .filter_map(|r| {
                         r.get_by_name::<&str, _>("name")
@@ -177,7 +178,7 @@ mod tests {
             let check_parquet_table = |table| {
                 let sql = format!("SELECT * FROM {} ORDER BY id LIMIT 1", table);
                 let results = c
-                    .select(&sql, None, None)
+                    .select(&sql, None, &[])
                     .unwrap()
                     .filter_map(|r| {
                         r.get_by_name::<i32, _>("id")

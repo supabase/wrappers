@@ -1,10 +1,21 @@
 use crate::stats;
 #[allow(deprecated)]
 use chrono::{DateTime, Datelike, NaiveDate, NaiveDateTime, Utc};
-use clickhouse_rs::{types, types::Block, types::SqlType, ClientHandle, Pool};
+use clickhouse_rs::{
+    types,
+    types::Block,
+    types::SqlType,
+    types::Value as ChValue,
+    types::{i256, u256},
+    ClientHandle, Pool,
+};
+use pgrx::datum::numeric::AnyNumeric;
 use pgrx::prelude::to_timestamp;
 use regex::{Captures, Regex};
 use std::collections::HashMap;
+use std::str::FromStr;
+use std::sync::Arc;
+use uuid::Uuid;
 
 use supabase_wrappers::prelude::*;
 
@@ -13,16 +24,25 @@ use super::{ClickHouseFdwError, ClickHouseFdwResult};
 fn field_to_cell(row: &types::Row<types::Complex>, i: usize) -> ClickHouseFdwResult<Option<Cell>> {
     let sql_type = row.sql_type(i)?;
     match sql_type {
+        SqlType::Bool => {
+            let value = row.get::<bool, usize>(i)?;
+            Ok(Some(Cell::Bool(value)))
+        }
+        SqlType::Int8 => {
+            let value = row.get::<i8, usize>(i)?;
+            Ok(Some(Cell::I8(value)))
+        }
         SqlType::UInt8 => {
-            // Bool is stored as UInt8 in ClickHouse, so we treat it as bool here
+            // up-cast UInt8 to i16
             let value = row.get::<u8, usize>(i)?;
-            Ok(Some(Cell::Bool(value != 0)))
+            Ok(Some(Cell::I16(value as i16)))
         }
         SqlType::Int16 => {
             let value = row.get::<i16, usize>(i)?;
             Ok(Some(Cell::I16(value)))
         }
         SqlType::UInt16 => {
+            // up-cast UInt16 to i32
             let value = row.get::<u16, usize>(i)?;
             Ok(Some(Cell::I32(value as i32)))
         }
@@ -31,6 +51,7 @@ fn field_to_cell(row: &types::Row<types::Complex>, i: usize) -> ClickHouseFdwRes
             Ok(Some(Cell::I32(value)))
         }
         SqlType::UInt32 => {
+            // up-cast UInt32 to i64
             let value = row.get::<u32, usize>(i)?;
             Ok(Some(Cell::I64(value as i64)))
         }
@@ -42,15 +63,38 @@ fn field_to_cell(row: &types::Row<types::Complex>, i: usize) -> ClickHouseFdwRes
             let value = row.get::<f64, usize>(i)?;
             Ok(Some(Cell::F64(value)))
         }
-        SqlType::UInt64 => {
-            let value = row.get::<u64, usize>(i)?;
-            Ok(Some(Cell::I64(value as i64)))
-        }
         SqlType::Int64 => {
             let value = row.get::<i64, usize>(i)?;
             Ok(Some(Cell::I64(value)))
         }
-        SqlType::String => {
+        SqlType::UInt64 => {
+            let value = row.get::<u64, usize>(i)?;
+            Ok(Some(Cell::I64(value as i64)))
+        }
+        SqlType::Int128 => {
+            let value = row.get::<i128, usize>(i)?;
+            Ok(Some(Cell::Numeric(AnyNumeric::from(value))))
+        }
+        SqlType::UInt128 => {
+            let value = row.get::<u128, usize>(i)?;
+            Ok(Some(Cell::Numeric(AnyNumeric::from(value))))
+        }
+        SqlType::Int256 => {
+            let value = row.get::<i256, usize>(i)?;
+            Ok(Some(Cell::String(value.to_string())))
+        }
+        SqlType::UInt256 => {
+            let value = row.get::<u256, usize>(i)?;
+            Ok(Some(Cell::String(value.to_string())))
+        }
+        SqlType::Decimal(_u, _s) => {
+            let value = row.get::<types::Decimal, usize>(i)?;
+            let value_str = value.to_string();
+            Ok(Some(Cell::Numeric(AnyNumeric::try_from(
+                value_str.as_str(),
+            )?)))
+        }
+        SqlType::String | SqlType::FixedString(_) => {
             let value = row.get::<String, usize>(i)?;
             Ok(Some(Cell::String(value)))
         }
@@ -65,10 +109,78 @@ fn field_to_cell(row: &types::Row<types::Complex>, i: usize) -> ClickHouseFdwRes
             let ts = to_timestamp(value.timestamp() as f64);
             Ok(Some(Cell::Timestamp(ts.to_utc())))
         }
+        SqlType::Uuid => {
+            let value = row.get::<Uuid, usize>(i)?;
+            Ok(Some(Cell::Uuid(pgrx::Uuid::from_bytes(*value.as_bytes()))))
+        }
+        SqlType::Array(SqlType::Bool) => {
+            let value = row
+                .get::<Vec<bool>, usize>(i)?
+                .into_iter()
+                .map(Some)
+                .collect();
+            Ok(Some(Cell::BoolArray(value)))
+        }
+        SqlType::Array(SqlType::Int16) => {
+            let value = row
+                .get::<Vec<i16>, usize>(i)?
+                .into_iter()
+                .map(Some)
+                .collect();
+            Ok(Some(Cell::I16Array(value)))
+        }
+        SqlType::Array(SqlType::Int32) => {
+            let value = row
+                .get::<Vec<i32>, usize>(i)?
+                .into_iter()
+                .map(Some)
+                .collect();
+            Ok(Some(Cell::I32Array(value)))
+        }
+        SqlType::Array(SqlType::Int64) => {
+            let value = row
+                .get::<Vec<i64>, usize>(i)?
+                .into_iter()
+                .map(Some)
+                .collect();
+            Ok(Some(Cell::I64Array(value)))
+        }
+        SqlType::Array(SqlType::Float32) => {
+            let value = row
+                .get::<Vec<f32>, usize>(i)?
+                .into_iter()
+                .map(Some)
+                .collect();
+            Ok(Some(Cell::F32Array(value)))
+        }
+        SqlType::Array(SqlType::Float64) => {
+            let value = row
+                .get::<Vec<f64>, usize>(i)?
+                .into_iter()
+                .map(Some)
+                .collect();
+            Ok(Some(Cell::F64Array(value)))
+        }
+        SqlType::Array(SqlType::String) => {
+            let value = row
+                .get::<Vec<String>, usize>(i)?
+                .into_iter()
+                .map(Some)
+                .collect();
+            Ok(Some(Cell::StringArray(value)))
+        }
         SqlType::Nullable(v) => match v {
+            SqlType::Bool => {
+                let value = row.get::<Option<bool>, usize>(i)?;
+                Ok(value.map(Cell::Bool))
+            }
+            SqlType::Int8 => {
+                let value = row.get::<Option<i8>, usize>(i)?;
+                Ok(value.map(Cell::I8))
+            }
             SqlType::UInt8 => {
                 let value = row.get::<Option<u8>, usize>(i)?;
-                Ok(value.map(|t| Cell::Bool(t != 0)))
+                Ok(value.map(|t| Cell::I16(t as _)))
             }
             SqlType::Int16 => {
                 let value = row.get::<Option<i16>, usize>(i)?;
@@ -94,15 +206,42 @@ fn field_to_cell(row: &types::Row<types::Complex>, i: usize) -> ClickHouseFdwRes
                 let value = row.get::<Option<f64>, usize>(i)?;
                 Ok(value.map(Cell::F64))
             }
-            SqlType::UInt64 => {
-                let value = row.get::<Option<u64>, usize>(i)?;
-                Ok(value.map(|t| Cell::I64(t as _)))
-            }
             SqlType::Int64 => {
                 let value = row.get::<Option<i64>, usize>(i)?;
                 Ok(value.map(Cell::I64))
             }
-            SqlType::String => {
+            SqlType::UInt64 => {
+                let value = row.get::<Option<u64>, usize>(i)?;
+                Ok(value.map(|t| Cell::I64(t as _)))
+            }
+            SqlType::Int128 => {
+                let value = row.get::<Option<i128>, usize>(i)?;
+                Ok(value.map(|t| Cell::Numeric(AnyNumeric::from(t))))
+            }
+            SqlType::UInt128 => {
+                let value = row.get::<Option<u128>, usize>(i)?;
+                Ok(value.map(|t| Cell::Numeric(AnyNumeric::from(t))))
+            }
+            SqlType::Int256 => {
+                let value = row.get::<Option<i256>, usize>(i)?;
+                Ok(value.map(|t| Cell::String(t.to_string())))
+            }
+            SqlType::UInt256 => {
+                let value = row.get::<Option<u256>, usize>(i)?;
+                Ok(value.map(|t| Cell::String(t.to_string())))
+            }
+            SqlType::Decimal(_u, _s) => {
+                let value = row.get::<Option<types::Decimal>, usize>(i)?;
+                if let Some(value) = value {
+                    let value_str = value.to_string();
+                    Ok(Some(Cell::Numeric(AnyNumeric::try_from(
+                        value_str.as_str(),
+                    )?)))
+                } else {
+                    Ok(None)
+                }
+            }
+            SqlType::String | SqlType::FixedString(_) => {
                 let value = row.get::<Option<String>, usize>(i)?;
                 Ok(value.map(Cell::String))
             }
@@ -120,6 +259,12 @@ fn field_to_cell(row: &types::Row<types::Complex>, i: usize) -> ClickHouseFdwRes
                     Cell::Timestamp(ts.to_utc())
                 }))
             }
+            SqlType::Uuid => {
+                let value = row.get::<Option<Uuid>, usize>(i)?;
+                Ok(value
+                    .map(|t| pgrx::Uuid::from_bytes(*t.as_bytes()))
+                    .map(Cell::Uuid))
+            }
             _ => Err(ClickHouseFdwError::UnsupportedColumnType(
                 sql_type.to_string().into(),
             )),
@@ -130,8 +275,32 @@ fn field_to_cell(row: &types::Row<types::Complex>, i: usize) -> ClickHouseFdwRes
     }
 }
 
+fn array_cell_to_clickhouse_value<T: Clone>(
+    v: impl AsRef<[Option<T>]>,
+    array_type: &'static SqlType,
+    is_nullable: bool,
+) -> ClickHouseFdwResult<ChValue>
+where
+    ChValue: From<T>,
+{
+    let v: Vec<ChValue> = v
+        .as_ref()
+        .iter()
+        .flatten()
+        .cloned()
+        .map(ChValue::from)
+        .collect();
+    let arr = ChValue::Array(array_type, Arc::new(v));
+    let val = if is_nullable {
+        ChValue::Nullable(either::Either::Right(Box::new(arr)))
+    } else {
+        arr
+    };
+    Ok(val)
+}
+
 #[wrappers_fdw(
-    version = "0.1.5",
+    version = "0.1.7",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/clickhouse_fdw",
     error_type = "ClickHouseFdwError"
@@ -333,15 +502,17 @@ impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
                         continue;
                     }
 
-                    let (i, _) = block
+                    let cell = if let Some((i, _)) = block
                         .columns()
                         .iter()
                         .enumerate()
                         .find(|(_, c)| c.name() == tgt_col.name)
-                        .unwrap();
-                    let cell = field_to_cell(&src_row, i)?;
-                    let col_name = src_row.name(i).unwrap();
-                    row.push(col_name, cell);
+                    {
+                        field_to_cell(&src_row, i)?
+                    } else {
+                        None
+                    };
+                    row.push(&tgt_col.name, cell);
                 }
                 self.row_idx += 1;
                 return Ok(Some(()));
@@ -374,70 +545,215 @@ impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
             for (col_name, cell) in src.iter() {
                 let col_name = col_name.to_owned();
                 let tgt_col = probe.get_column(col_name.as_ref())?;
-                let is_nullable = matches!(tgt_col.sql_type(), SqlType::Nullable(_));
+                let tgt_type = tgt_col.sql_type();
+                let is_nullable = matches!(tgt_type, SqlType::Nullable(_));
 
                 let value = cell
                     .as_ref()
                     .map(|c| match c {
                         Cell::Bool(v) => {
                             let val = if is_nullable {
-                                types::Value::from(Some(*v))
+                                ChValue::from(Some(*v))
                             } else {
-                                types::Value::from(*v)
+                                ChValue::from(*v)
                             };
                             Ok(val)
                         }
+                        Cell::I8(v) => {
+                            let val = if is_nullable {
+                                ChValue::from(Some(*v))
+                            } else {
+                                ChValue::from(*v)
+                            };
+                            Ok(val)
+                        }
+                        Cell::I16(v) => match tgt_col.sql_type() {
+                            // i16 can be converted to 2 ClickHouse types: Int16 and UInt8
+                            SqlType::Int16 | SqlType::Nullable(SqlType::Int16) => {
+                                let val = if is_nullable {
+                                    ChValue::from(Some(*v))
+                                } else {
+                                    ChValue::from(*v)
+                                };
+                                Ok(val)
+                            }
+                            SqlType::UInt8 | SqlType::Nullable(SqlType::UInt8) => {
+                                let val = if is_nullable {
+                                    ChValue::from(Some(*v as u8))
+                                } else {
+                                    ChValue::from(*v as u8)
+                                };
+                                Ok(val)
+                            }
+                            _ => Err(ClickHouseFdwError::UnsupportedColumnType(
+                                tgt_type.to_string().into(),
+                            )),
+                        },
+                        Cell::F32(v) => {
+                            let val = if is_nullable {
+                                ChValue::from(Some(*v))
+                            } else {
+                                ChValue::from(*v)
+                            };
+                            Ok(val)
+                        }
+                        Cell::I32(v) => match tgt_col.sql_type() {
+                            // i32 can be converted to 2 ClickHouse types: Int32 and UInt16
+                            SqlType::Int32 | SqlType::Nullable(SqlType::Int32) => {
+                                let val = if is_nullable {
+                                    ChValue::from(Some(*v))
+                                } else {
+                                    ChValue::from(*v)
+                                };
+                                Ok(val)
+                            }
+                            SqlType::UInt16 | SqlType::Nullable(SqlType::UInt16) => {
+                                let val = if is_nullable {
+                                    ChValue::from(Some(*v as u16))
+                                } else {
+                                    ChValue::from(*v as u16)
+                                };
+                                Ok(val)
+                            }
+                            _ => Err(ClickHouseFdwError::UnsupportedColumnType(
+                                tgt_type.to_string().into(),
+                            )),
+                        },
                         Cell::F64(v) => {
                             let val = if is_nullable {
-                                types::Value::from(Some(*v))
+                                ChValue::from(Some(*v))
                             } else {
-                                types::Value::from(*v)
+                                ChValue::from(*v)
                             };
                             Ok(val)
                         }
-                        Cell::I64(v) => {
+                        Cell::I64(v) => match tgt_col.sql_type() {
+                            // i64 can be converted to 2 ClickHouse types: Int64 and UInt32
+                            SqlType::Int64 | SqlType::Nullable(SqlType::Int64) => {
+                                let val = if is_nullable {
+                                    ChValue::from(Some(*v))
+                                } else {
+                                    ChValue::from(*v)
+                                };
+                                Ok(val)
+                            }
+                            SqlType::UInt32 | SqlType::Nullable(SqlType::UInt32) => {
+                                let val = if is_nullable {
+                                    ChValue::from(Some(*v as u32))
+                                } else {
+                                    ChValue::from(*v as u32)
+                                };
+                                Ok(val)
+                            }
+                            _ => Err(ClickHouseFdwError::UnsupportedColumnType(
+                                tgt_type.to_string().into(),
+                            )),
+                        },
+                        Cell::Numeric(v) => {
+                            let v = types::Decimal::from_str(v.normalize())?;
                             let val = if is_nullable {
-                                types::Value::from(Some(*v))
+                                ChValue::from(Some(v))
                             } else {
-                                types::Value::from(*v)
+                                ChValue::from(v)
                             };
                             Ok(val)
                         }
                         Cell::String(v) => {
                             let s = v.as_str();
-                            let val = if is_nullable {
-                                types::Value::from(Some(s))
-                            } else {
-                                types::Value::from(s)
+
+                            // i256 and u256 are saved as string in Postgres, so we parse it
+                            // back to ClickHouse if target column is Int256 or UInt256
+                            let val = match tgt_col.sql_type() {
+                                SqlType::Int256 | SqlType::Nullable(SqlType::Int256) => {
+                                    let v = i256::from_str(s)?;
+                                    if is_nullable {
+                                        ChValue::from(Some(v))
+                                    } else {
+                                        ChValue::from(v)
+                                    }
+                                }
+                                SqlType::UInt256 | SqlType::Nullable(SqlType::UInt256) => {
+                                    let v = u256::from_str(s)?;
+                                    if is_nullable {
+                                        ChValue::from(Some(v))
+                                    } else {
+                                        ChValue::from(v)
+                                    }
+                                }
+                                _ => {
+                                    // other than i256 and u256, convert it to string as normal
+                                    if is_nullable {
+                                        ChValue::from(Some(s))
+                                    } else {
+                                        ChValue::from(s)
+                                    }
+                                }
                             };
                             Ok(val)
                         }
                         Cell::Date(_) => {
                             let s = c.to_string().replace('\'', "");
                             let tm = NaiveDate::parse_from_str(&s, "%Y-%m-%d")?;
-                            let epoch = NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
-                            let duration = tm - epoch;
-                            let dt = duration.num_days() as u16;
                             let val = if is_nullable {
-                                types::Value::from(Some(dt))
+                                ChValue::from(Some(tm))
                             } else {
-                                types::Value::Date(dt)
+                                let epoch = NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
+                                let duration = tm - epoch;
+                                let dt = duration.num_days() as u16;
+                                ChValue::Date(dt)
                             };
                             Ok(val)
                         }
                         Cell::Timestamp(_) => {
                             let s = c.to_string().replace('\'', "");
-                            let naive_tm = NaiveDateTime::parse_from_str(&s, "%Y-%m-%d %H:%M:%S")?;
+                            let naive_tm = NaiveDateTime::parse_from_str(&s, "%Y-%m-%d %H:%M:%S")
+                                .or_else(|_| {
+                                NaiveDateTime::parse_from_str(&s, "%Y-%m-%d %H:%M:%S%.6f")
+                            })?;
                             let tm: DateTime<Utc> =
                                 DateTime::from_naive_utc_and_offset(naive_tm, Utc);
                             let val = if is_nullable {
-                                types::Value::Nullable(either::Either::Right(Box::new(tm.into())))
+                                ChValue::Nullable(either::Either::Right(Box::new(tm.into())))
                             } else {
-                                types::Value::from(tm)
+                                ChValue::from(tm)
                             };
                             Ok(val)
                         }
-                        _ => Err(ClickHouseFdwError::UnsupportedColumnType(c.to_string())),
+                        Cell::Uuid(v) => {
+                            let uuid = Uuid::try_parse(&v.to_string())?;
+                            let val = if is_nullable {
+                                ChValue::Nullable(either::Either::Right(Box::new(ChValue::Uuid(
+                                    *uuid.as_bytes(),
+                                ))))
+                            } else {
+                                ChValue::from(uuid)
+                            };
+                            Ok(val)
+                        }
+                        Cell::BoolArray(v) => {
+                            array_cell_to_clickhouse_value(v, &SqlType::Bool, is_nullable)
+                        }
+                        Cell::I16Array(v) => {
+                            array_cell_to_clickhouse_value(v, &SqlType::Int16, is_nullable)
+                        }
+                        Cell::I32Array(v) => {
+                            array_cell_to_clickhouse_value(v, &SqlType::Int32, is_nullable)
+                        }
+                        Cell::I64Array(v) => {
+                            array_cell_to_clickhouse_value(v, &SqlType::Int64, is_nullable)
+                        }
+                        Cell::F32Array(v) => {
+                            array_cell_to_clickhouse_value(v, &SqlType::Float32, is_nullable)
+                        }
+                        Cell::F64Array(v) => {
+                            array_cell_to_clickhouse_value(v, &SqlType::Float64, is_nullable)
+                        }
+                        Cell::StringArray(v) => {
+                            array_cell_to_clickhouse_value(v, &SqlType::String, is_nullable)
+                        }
+                        _ => Err(ClickHouseFdwError::UnsupportedColumnType(
+                            tgt_type.to_string().into(),
+                        )),
                     })
                     .transpose()?;
 
@@ -462,7 +778,10 @@ impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
                     continue;
                 }
                 if let Some(cell) = cell {
-                    sets.push(format!("{} = {}", col, cell));
+                    match cell {
+                        Cell::Uuid(_) => sets.push(format!("{} = '{}'", col, cell)),
+                        _ => sets.push(format!("{} = {}", col, cell)),
+                    }
                 } else {
                     sets.push(format!("{} = null", col));
                 }

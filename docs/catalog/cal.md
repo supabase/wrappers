@@ -1,0 +1,453 @@
+---
+source:
+documentation:
+author: supabase
+tags:
+  - wasm
+  - official
+---
+
+# Cal.com
+
+[Cal.com](https://cal.com/) is an open source scheduling platform.
+
+The Cal Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you to read data from your Cal.com account for use within your Postgres database.
+
+## Available Versions
+
+| Version | Wasm Package URL                                                                                | Checksum                                                           | Required Wrappers Version |
+| ------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------- |
+| 0.2.0   | `https://github.com/supabase/wrappers/releases/download/wasm_cal_fdw_v0.2.0/cal_fdw.wasm`       | `c9d14036b370758ce75871d69e9c842bc922703d02323b73397995f4cf14491b` | >=0.5.0                   |
+| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_cal_fdw_v0.1.0/cal_fdw.wasm`       | `4afe4fac8c51f2caa1de8483b3817d2cec3a14cd8a65a3942c8b4ff6c430f08a` | >=0.4.0                   |
+
+## Preparation
+
+Before you can query Cal.com, you need to enable the Wrappers extension and store your credentials in Postgres.
+
+### Enable Wrappers
+
+Make sure the `wrappers` extension is installed on your database:
+
+```sql
+create extension if not exists wrappers with schema extensions;
+```
+
+### Enable the Cal.com Wrapper
+
+Enable the Wasm foreign data wrapper:
+
+```sql
+create foreign data wrapper wasm_wrapper
+  handler wasm_fdw_handler
+  validator wasm_fdw_validator;
+```
+
+### Store your credentials (optional)
+
+By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
+
+```sql
+-- Save your Cal.com API key in Vault and retrieve the created `key_id`
+select vault.create_secret(
+  '<Cal.com API key>', -- Cal.com API key
+  'cal',
+  'Cal.com API key for Wrappers'
+);
+```
+
+### Connecting to Cal.com
+
+We need to provide Postgres with the credentials to access Cal.com and any additional options. We can do this using the `create server` command:
+
+=== "With Vault"
+
+    ```sql
+    create server cal_server
+      foreign data wrapper wasm_wrapper
+      options (
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_cal_fdw_v0.1.0/cal_fdw.wasm',
+        fdw_package_name 'supabase:cal-fdw',
+        fdw_package_version '0.1.0',
+        fdw_package_checksum '4afe4fac8c51f2caa1de8483b3817d2cec3a14cd8a65a3942c8b4ff6c430f08a',
+        api_url 'https://api.cal.com/v2',  -- optional
+        api_key_id '<key_ID>' -- The Key ID from above.
+      );
+    ```
+
+=== "Without Vault"
+
+    ```sql
+    create server cal_server
+      foreign data wrapper wasm_wrapper
+      options (
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_cal_fdw_v0.1.0/cal_fdw.wasm',
+        fdw_package_name 'supabase:cal-fdw',
+        fdw_package_version '0.1.0',
+        fdw_package_checksum '4afe4fac8c51f2caa1de8483b3817d2cec3a14cd8a65a3942c8b4ff6c430f08a',
+        api_url 'https://api.cal.com/v2',  -- optional
+        api_key 'cal_live_1234...'  -- Cal.com API key
+      );
+    ```
+
+Note the `fdw_package_*` options are required, which specify the Wasm package metadata. You can get the available package version list from [above](#available-versions).
+
+### Create a schema
+
+We recommend creating a schema to hold all the foreign tables:
+
+```sql
+create schema if not exists cal;
+```
+
+## Options
+
+The full list of foreign table options are below:
+
+- `object` - Object name in Cal.com, required.
+
+Supported objects are listed below:
+
+| Object name  |
+| ------------ |
+| my_profile   |
+| event-types  |
+| bookings     |
+| calendars    |
+| schedules    |
+| conferencing |
+
+## Entities
+
+The Cal.com Wrapper supports data reads and booking writes from the Cal.com API.
+
+We can use SQL [import foreign schema](https://www.postgresql.org/docs/current/sql-importforeignschema.html) to import foreign table definitions from Cal.com.
+
+For example, using below SQL can automatically create foreign tables in the `cal` schema.
+
+```sql
+-- create all the foreign tables
+import foreign schema cal from server cal_server into cal;
+
+-- or, create selected tables only
+import foreign schema cal
+   limit to ("event_types", "bookings")
+   from server cal_server into cal;
+
+-- or, create all foreign tables except selected tables
+import foreign schema cal
+   except ("event_types")
+   from server cal_server into cal;
+```
+
+### Profile
+
+This is an object representing your Cal.com user profile.
+
+Ref: [Cal.com API docs](https://cal.com/docs/api-reference/v2/introduction)
+
+#### Operations
+
+| Object  | Select | Insert | Update | Delete | Truncate |
+| ------- | :----: | :----: | :----: | :----: | :------: |
+| Profile |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
+
+#### Usage
+
+```sql
+create foreign table cal.my_profile (
+  id bigint,
+  username text,
+  email text,
+  attrs jsonb
+)
+  server cal_server
+  options (
+    object 'my_profile'
+  );
+```
+
+#### Notes
+
+- The `attrs` column contains all profile attributes in JSON format
+
+### Event Types
+
+This is an object representing Cal.com event types.
+
+Ref: [Cal.com API docs](https://cal.com/docs/api-reference/v2/introduction)
+
+#### Operations
+
+| Object      | Select | Insert | Update | Delete | Truncate |
+| ----------- | :----: | :----: | :----: | :----: | :------: |
+| Event Types |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
+
+#### Usage
+
+```sql
+create foreign table cal.event_types (
+  attrs jsonb
+)
+  server cal_server
+  options (
+    object 'event-types'
+  );
+```
+
+#### Notes
+
+- The `attrs` column contains all event type attributes in JSON format
+- Extract specific fields using JSON operators, for example:
+  ```sql
+  select
+    etg->'profile'->>'name' as profile,
+    et->>'id' as id,
+    et->>'title' as title
+  from cal.event_types t
+    cross join json_array_elements((attrs->'eventTypeGroups')::json) etg
+    cross join json_array_elements((etg->'eventTypes')::json) et;
+  ```
+
+### Bookings
+
+This is an object representing Cal.com bookings.
+
+Ref: [Cal.com API docs](https://cal.com/docs/api-reference/v2/bookings/create-a-booking)
+
+#### Operations
+
+| Object   | Select | Insert | Update | Delete | Truncate |
+| -------- | :----: | :----: | :----: | :----: | :------: |
+| Bookings |   ✅    |   ✅    |   ❌    |   ❌    |    ❌     |
+
+#### Usage
+
+```sql
+create foreign table cal.bookings (
+  attrs jsonb
+)
+  server cal_server
+  options (
+    object 'bookings',
+    rowid_column 'attrs'
+  );
+```
+
+#### Notes
+
+- Supports both reading and creating bookings
+- The `attrs` column contains all booking attributes in JSON format
+- Example of creating a booking:
+  ```sql
+  insert into cal.bookings(attrs)
+  values (
+    '{
+      "start": "2024-12-12T10:30:00.000Z",
+      "eventTypeId": 123456,
+      "attendee": {
+        "name": "Test Name",
+        "email": "test.name@example.com",
+        "timeZone": "America/New_York"
+      }
+    }'::jsonb
+  );
+  ```
+- Additional fields like `guests` or `metadata` can be added to the booking JSON
+- For more details on booking options, refer to [Cal.com documentation](https://cal.com/docs/api-reference/v2/bookings/create-a-booking)
+
+### Calendars
+
+This is an object representing Cal.com calendars.
+
+Ref: [Cal.com API docs](https://cal.com/docs/api-reference/v2/introduction)
+
+#### Operations
+
+| Object    | Select | Insert | Update | Delete | Truncate |
+| --------- | :----: | :----: | :----: | :----: | :------: |
+| Calendars |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
+
+#### Usage
+
+```sql
+create foreign table cal.calendars (
+  attrs jsonb
+)
+  server cal_server
+  options (
+    object 'calendars'
+  );
+```
+
+#### Notes
+
+- The `attrs` column contains all calendar attributes in JSON format
+
+### Schedules
+
+This is an object representing Cal.com schedules.
+
+Ref: [Cal.com API docs](https://cal.com/docs/api-reference/v2/introduction)
+
+#### Operations
+
+| Object    | Select | Insert | Update | Delete | Truncate |
+| --------- | :----: | :----: | :----: | :----: | :------: |
+| Schedules |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
+
+#### Usage
+
+```sql
+create foreign table cal.schedules (
+  id bigint,
+  name text,
+  attrs jsonb
+)
+  server cal_server
+  options (
+    object 'schedules'
+  );
+```
+
+#### Notes
+
+- The `attrs` column contains additional schedule attributes in JSON format
+
+### Conferencing
+
+This is an object representing Cal.com conferencing settings.
+
+Ref: [Cal.com API docs](https://cal.com/docs/api-reference/v2/introduction)
+
+#### Operations
+
+| Object       | Select | Insert | Update | Delete | Truncate |
+| ------------ | :----: | :----: | :----: | :----: | :------: |
+| Conferencing |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
+
+#### Usage
+
+```sql
+create foreign table cal.conferencing (
+  id bigint,
+  attrs jsonb
+)
+  server cal_server
+  options (
+    object 'conferencing'
+  );
+```
+
+#### Notes
+
+- The `attrs` column contains all conferencing attributes in JSON format
+
+## Query Pushdown Support
+
+This FDW doesn't support query pushdown.
+
+## Supported Data Types
+
+| Postgres Data Type | Cal.com Data Type |
+| ------------------ | ----------------- |
+| boolean            | Boolean           |
+| bigint             | Number            |
+| double precision   | Number            |
+| text               | String            |
+| jsonb              | Json              |
+
+The Cal.com API uses JSON formatted data, please refer to [Cal.com API docs](https://cal.com/docs/api-reference/v2/introduction) for more details.
+
+## Limitations
+
+This section describes important limitations and considerations when using this FDW:
+
+- Only supports Cal.com API v2
+- Large result sets may experience slower performance due to full data transfer requirement
+- Write operations limited to booking creation only
+- Materialized views using these foreign tables may fail during logical backups
+
+## Examples
+
+Below are some examples on how to use Cal.com foreign tables.
+
+### Basic example
+
+This example will create a "foreign table" inside your Postgres database and query its data. 
+
+```sql
+create foreign table cal.my_profile (
+  id bigint,
+  username text,
+  email text,
+  attrs jsonb
+)
+  server cal_server
+  options (
+    object 'my_profile'
+  );
+
+-- query current user used for the Cal.com API request
+select * from cal.my_profile;
+```
+
+`attrs` is a special column which stores all the object attributes in JSON format, you can extract any attributes needed from it. See more examples below.
+
+### Query JSON attributes
+
+```sql
+create foreign table cal.bookings (
+  attrs jsonb
+)
+  server cal_server
+  options (
+    object 'bookings',
+    rowid_column 'attrs'
+  );
+
+create foreign table cal.event_types (
+  attrs jsonb
+)
+  server cal_server
+  options (
+    object 'event-types'
+  );
+
+-- extract bookings
+select
+  bk->>'id' as id,
+  bk->>'title' as title,
+  bk->>'userPrimaryEmail' as email
+from cal.bookings t
+  cross join json_array_elements((attrs->'bookings')::json) bk;
+
+-- extract event types
+select
+  etg->'profile'->>'name' as profile,
+  et->>'id' as id,
+  et->>'title' as title
+from cal.event_types t
+  cross join json_array_elements((attrs->'eventTypeGroups')::json) etg
+  cross join json_array_elements((etg->'eventTypes')::json) et;
+```
+
+### Make a booking
+
+Once we know an event type ID (we can get it from above example, here we suppose it is `123456`), we can make a booking using below SQL.
+
+```
+insert into cal.bookings(attrs)
+values (
+  '{
+     "start": "2024-12-12T10:30:00.000Z",
+     "eventTypeId": 123456,
+     "attendee": {
+       "name": "Test Name",
+       "email": "test.name@example.com",
+       "timeZone": "America/New_York"
+     }
+  }'::jsonb
+);
+```
+
+To add more details to the booking, such as `guests` or `metadata`, refer to [Cal.com documentation](https://cal.com/docs/api-reference/v2/bookings/create-a-booking).

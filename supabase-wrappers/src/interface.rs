@@ -4,7 +4,7 @@
 use crate::instance::ForeignServer;
 use crate::FdwRoutine;
 use pgrx::pg_sys::panic::ErrorReport;
-use pgrx::prelude::{Date, Interval, Timestamp, TimestampWithTimeZone};
+use pgrx::prelude::{Date, Interval, Time, Timestamp, TimestampWithTimeZone};
 use pgrx::{
     datum::Uuid,
     fcinfo,
@@ -45,6 +45,7 @@ pub enum Cell {
     Numeric(AnyNumeric),
     String(String),
     Date(Date),
+    Time(Time),
     Timestamp(Timestamp),
     Timestamptz(TimestampWithTimeZone),
     Interval(Interval),
@@ -60,6 +61,8 @@ pub enum Cell {
     StringArray(Vec<Option<String>>),
 }
 
+unsafe impl Send for Cell {}
+
 impl Clone for Cell {
     fn clone(&self) -> Self {
         match self {
@@ -73,6 +76,7 @@ impl Clone for Cell {
             Cell::Numeric(v) => Cell::Numeric(v.clone()),
             Cell::String(v) => Cell::String(v.clone()),
             Cell::Date(v) => Cell::Date(*v),
+            Cell::Time(v) => Cell::Time(*v),
             Cell::Timestamp(v) => Cell::Timestamp(*v),
             Cell::Timestamptz(v) => Cell::Timestamptz(*v),
             Cell::Interval(v) => Cell::Interval(*v),
@@ -126,6 +130,17 @@ impl fmt::Display for Cell {
                     f,
                     "'{}'",
                     dt_cstr.to_str().expect("date should be a valid string")
+                )
+            },
+            Cell::Time(v) => unsafe {
+                let ts =
+                    fcinfo::direct_function_call_as_datum(pg_sys::time_out, &[(*v).into_datum()])
+                        .expect("cell should be a valid time");
+                let ts_cstr = CStr::from_ptr(ts.cast_mut_ptr());
+                write!(
+                    f,
+                    "'{}'",
+                    ts_cstr.to_str().expect("time hould be a valid string")
                 )
             },
             Cell::Timestamp(v) => unsafe {
@@ -198,6 +213,7 @@ impl IntoDatum for Cell {
             Cell::Numeric(v) => v.into_datum(),
             Cell::String(v) => v.into_datum(),
             Cell::Date(v) => v.into_datum(),
+            Cell::Time(v) => v.into_datum(),
             Cell::Timestamp(v) => v.into_datum(),
             Cell::Timestamptz(v) => v.into_datum(),
             Cell::Interval(v) => v.into_datum(),
@@ -230,6 +246,7 @@ impl IntoDatum for Cell {
             || other == pg_sys::NUMERICOID
             || other == pg_sys::TEXTOID
             || other == pg_sys::DATEOID
+            || other == pg_sys::TIMEOID
             || other == pg_sys::TIMESTAMPOID
             || other == pg_sys::TIMESTAMPTZOID
             || other == pg_sys::INTERVALOID
@@ -280,6 +297,9 @@ impl FromDatum for Cell {
             }
             PgOid::BuiltIn(PgBuiltInOids::DATEOID) => {
                 Date::from_datum(datum, is_null).map(Cell::Date)
+            }
+            PgOid::BuiltIn(PgBuiltInOids::TIMEOID) => {
+                Time::from_datum(datum, is_null).map(Cell::Time)
             }
             PgOid::BuiltIn(PgBuiltInOids::TIMESTAMPOID) => {
                 Timestamp::from_datum(datum, is_null).map(Cell::Timestamp)
@@ -769,8 +789,8 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     fn import_foreign_schema(
         &mut self,
         _stmt: crate::import_foreign_schema::ImportForeignSchemaStmt,
-    ) -> Vec<String> {
-        Vec::new()
+    ) -> Result<Vec<String>, E> {
+        Ok(Vec::new())
     }
 
     /// Returns a FdwRoutine for the FDW

@@ -14,19 +14,21 @@ tags:
 1. [Authentication Users](https://firebase.google.com/docs/auth/users) (_read only_)
 2. [Firestore Database Documents](https://firebase.google.com/docs/firestore) (_read only_)
 
-!!! warning
-
-    Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
-
 ## Preparation
 
-Before you get started, make sure the `wrappers` extension is installed on your database:
+Before you can query Firebase, you need to enable the Wrappers extension and store your credentials in Postgres.
+
+### Enable Wrappers
+
+Make sure the `wrappers` extension is installed on your database:
 
 ```sql
 create extension if not exists wrappers with schema extensions;
 ```
 
-and then create the foreign data wrapper:
+### Enable the Firebase Wrapper
+
+Enable the `firebase_wrapper` FDW:
 
 ```sql
 create foreign data wrapper firebase_wrapper
@@ -34,22 +36,21 @@ create foreign data wrapper firebase_wrapper
   validator firebase_fdw_validator;
 ```
 
-### Secure your credentials (optional)
+### Store your credentials (optional)
 
-By default, Postgres stores FDW credentials inide `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
+By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
 
 ```sql
--- Save your Firebase credentials in Vault and retrieve the `key_id`
-insert into vault.secrets (name, secret)
-values (
-  'firebase',
+-- Save your Firebase credentials in Vault and retrieve the created `key_id`
+select vault.create_secret(
   '{
       "type": "service_account",
       "project_id": "your_gcp_project_id",
       ...
-  }'
-)
-returning key_id;
+  }',
+  'firebase',
+  'Firebase API key for Wrappers'
+);
 ```
 
 ### Connecting to Firebase
@@ -84,19 +85,44 @@ We need to provide Postgres with the credentials to connect to Firebase, and any
        );
     ```
 
-## Creating Foreign Tables
+### Create a schema
 
-The Firebase Wrapper supports reading data from below Firebase's objects:
-
-| Firebase                     | Select | Insert | Update | Delete | Truncate |
-| ---------------------------- | :----: | :----: | :----: | :----: | :------: |
-| Authentication Users         |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
-| Firestore Database Documents |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
-
-For example:
+We recommend creating a schema to hold all the foreign tables:
 
 ```sql
-create foreign table firebase_users (
+create schema if not exists firebase;
+```
+
+## Options
+
+The full list of foreign table options are below:
+
+- `object` - Object name in Firebase, required.
+
+  For Authenciation users, the object name is fixed to `auth/users`. For Firestore documents, its format is `firestore/<collection_id>`, note that collection id must be a full path id. For example,
+
+  - `firestore/my-collection`
+  - `firestore/my-collection/my-document/another-collection`
+
+
+## Entities
+
+### Authentication Users
+
+This is an object representing Firebase Authentication Users.
+
+Ref: [Firebase Authentication Users](https://firebase.google.com/docs/auth/users)
+
+#### Operations
+
+| Object               | Select | Insert | Update | Delete | Truncate |
+| -------------------- | :----: | :----: | :----: | :----: | :------: |
+| Authentication Users |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
+
+#### Usage
+
+```sql
+create foreign table firebase.users (
   uid text,
   email text,
   created_at timestamp,
@@ -108,22 +134,59 @@ create foreign table firebase_users (
   );
 ```
 
-Note there is a meta column `attrs` in the foreign table, which contains all the returned data from Firebase as json format.
+#### Notes
 
-### Foreign table options
+- The `attrs` column contains all user attributes in JSON format
+- This is a special collection with unique metadata fields
 
-The full list of foreign table options are below:
+### Firestore Database Documents
 
-- `object` - Object name in Firebase, required.
+This is an object representing Firestore Database Documents.
 
-  For Authenciation users, the object name is fixed to `auth/users`. For Firestore documents, its format is `firestore/<collection_id>`, note that collection id must be a full path id. For example,
+Ref: [Firestore Database](https://firebase.google.com/docs/firestore)
 
+#### Operations
+
+| Object                       | Select | Insert | Update | Delete | Truncate |
+| ---------------------------- | :----: | :----: | :----: | :----: | :------: |
+| Firestore Database Documents |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
+
+#### Usage
+
+```sql
+create foreign table firebase.docs (
+  name text,
+  created_at timestamp,
+  updated_at timestamp,
+  attrs jsonb
+)
+  server firebase_server
+  options (
+    object 'firestore/user-profiles'
+  );
+```
+
+#### Notes
+
+- The `name`, `created_at`, and `updated_at` are automatic metadata fields on all Firestore collections
+- Collection ID must be a full path ID in the format `firestore/<collection_id>`
+- Examples of valid collection paths:
   - `firestore/my-collection`
   - `firestore/my-collection/my-document/another-collection`
+- The `attrs` column contains all document attributes in JSON format
 
 ## Query Pushdown Support
 
 This FDW doesn't support query pushdown.
+
+## Limitations
+
+This section describes important limitations and considerations when using this FDW:
+
+- Only support read-only access to Authentication Users and Firestore Database Documents
+- Default maximum row count limit is 10,000 records
+- Full result sets are loaded into memory, which can impact PostgreSQL performance with large datasets
+- Materialized views using these foreign tables may fail during logical backups
 
 ## Examples
 
@@ -134,7 +197,7 @@ Some examples on how to use Firebase foreign tables.
 To map a Firestore collection provide its location using the format `firestore/<collection_id>` as the `object` option as shown below.
 
 ```sql
-create foreign table firebase_docs (
+create foreign table firebase.docs (
   name text,
   created_at timestamp,
   updated_at timestamp,
@@ -153,7 +216,7 @@ Note that `name`, `created_at`, and `updated_at`, are automatic metadata fields 
 The `auth/users` collection is a special case with unique metadata. The following shows how to map Firebase users to PostgreSQL table.
 
 ```sql
-create foreign table firebase_users (
+create foreign table firebase.users (
   uid text,
   email text,
   created_at timestamp,

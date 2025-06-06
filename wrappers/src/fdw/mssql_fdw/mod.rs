@@ -23,6 +23,9 @@ enum MssqlFdwError {
     TiberiusError(#[from] tiberius::error::Error),
 
     #[error("{0}")]
+    PgrxNumericError(#[from] pgrx::datum::numeric_support::error::Error),
+
+    #[error("{0}")]
     CreateRuntimeError(#[from] CreateRuntimeError),
 
     #[error("{0}")]

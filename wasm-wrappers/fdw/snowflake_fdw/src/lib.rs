@@ -6,7 +6,10 @@ use bindings::{
     exports::supabase::wrappers::routines::Guest,
     supabase::wrappers::{
         http, jwt, stats, time,
-        types::{Cell, Column, Context, FdwError, FdwResult, OptionsType, Row, TypeOid},
+        types::{
+            Cell, Column, Context, FdwError, FdwResult, ImportForeignSchemaStmt, OptionsType, Row,
+            TypeOid,
+        },
         utils,
     },
 };
@@ -273,7 +276,7 @@ impl Guest for SnowflakeFdw {
     }
 
     fn init(ctx: &Context) -> FdwResult {
-        let opts = ctx.get_options(OptionsType::Server);
+        let opts = ctx.get_options(&OptionsType::Server);
         let api_url = opts.require_or(
             "api_url",
             "https://{}.snowflakecomputing.com/api/v2/statements",
@@ -326,7 +329,7 @@ impl Guest for SnowflakeFdw {
 
     fn begin_scan(ctx: &Context) -> FdwResult {
         let this = Self::this_mut();
-        let opts = ctx.get_options(OptionsType::Table);
+        let opts = ctx.get_options(&OptionsType::Table);
         this.table = opts.require("table")?;
 
         let sql = this.deparse(ctx);
@@ -399,7 +402,7 @@ impl Guest for SnowflakeFdw {
 
     fn begin_modify(ctx: &Context) -> FdwResult {
         let this = Self::this_mut();
-        let opts = ctx.get_options(OptionsType::Table);
+        let opts = ctx.get_options(&OptionsType::Table);
         this.table = opts.require("table")?;
         this.rowid_col = opts.require("rowid_column")?;
         Ok(())
@@ -459,6 +462,13 @@ impl Guest for SnowflakeFdw {
 
     fn end_modify(_ctx: &Context) -> FdwResult {
         Ok(())
+    }
+
+    fn import_foreign_schema(
+        _ctx: &Context,
+        _stmt: ImportForeignSchemaStmt,
+    ) -> Result<Vec<String>, FdwError> {
+        Err("import foreign schema is not supported".to_string())
     }
 }
 

@@ -29,7 +29,7 @@ jobs:
       - name: Set up Rust
         run: |
           # install Rust
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile minimal --default-toolchain stable && \
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile minimal --default-toolchain 1.85.1 && \
             rustup --version && \
             rustc --version && \
             cargo --version
@@ -38,7 +38,13 @@ jobs:
           rustup target add wasm32-unknown-unknown
 
           # install Wasm component
-          cargo install cargo-component --locked
+          cargo install cargo-component --version 0.21.1
+
+          # install rustfmt for the toolchain
+          rustup component add rustfmt
+
+          # show all installed packagies
+          cargo install --list
 
       - name: Build Wasm FDW
         run: |

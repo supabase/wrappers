@@ -1,7 +1,6 @@
 [package]
 name = "supabase-wrappers"
-version = "0.1.20"
-edition = "2021"
+version = "0.1.22"
 authors = ["Supabase Inc. https://supabase.com/"]
 license = "Apache-2.0"
 description = "Postgres Foreign Data Wrapper development framework in Rust."
@@ -9,29 +8,33 @@ homepage = "https://github.com/supabase/wrappers/tree/main/supabase-wrappers"
 repository = "https://github.com/supabase/wrappers/tree/main/supabase-wrappers"
 categories = ["database"]
 keywords = ["database", "postgres", "postgresql", "extension"]
+edition = { workspace = true }
+rust-version = { workspace = true }
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(pgrx_embed)'] }
 
 [features]
-default = ["cshim", "pg15"]
-cshim = ["pgrx/cshim"]
+default = ["pg15"]
 pg13 = ["pgrx/pg13", "pgrx-tests/pg13"]
 pg14 = ["pgrx/pg14", "pgrx-tests/pg14"]
 pg15 = ["pgrx/pg15", "pgrx-tests/pg15"]
 pg16 = ["pgrx/pg16", "pgrx-tests/pg16"]
-pg17 = ["pgrx/pg17", "pgrx-tests/pg17" ]
+pg17 = ["pgrx/pg17", "pgrx-tests/pg17"]
 pg_test = []
 
 [dependencies]
-pgrx = { version = "=0.12.6", default-features = false }
-thiserror = "1.0.48"
-tokio = { version = "1.35", features = ["rt", "net"] }
-uuid = { version = "1.2.2" }
+pgrx = { version = "=0.14.3", default-features = false }
+thiserror = "1.0.63"
+tokio = { version = "1.43", features = ["rt", "net"] }
+uuid = { version = "1.10.0" }
 supabase-wrappers-macros = { version = "0.1", path = "../supabase-wrappers-macros" }
 
 [dev-dependencies]
-pgrx-tests = "=0.12.6"
+pgrx-tests = "=0.14.3"
 
 [package.metadata.docs.rs]
-features = ["pg15", "cshim"]
+features = ["pg15"]
 no-default-features = true
 # Enable `#[cfg(docsrs)]` (https://docs.rs/about/builds#cross-compiling)
 rustc-args = ["--cfg", "docsrs"]

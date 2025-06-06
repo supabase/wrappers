@@ -13,42 +13,29 @@ tags:
 
 The Snowflake Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you to read and write data from Snowflake within your Postgres database.
 
-!!! warning
-
-    Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
-
-## Supported Data Types
-
-| Postgres Data Type | Snowflake Data Type |
-| ------------------ | ------------------- |
-| boolean            | BOOLEAN             |
-| smallint           | SMALLINT            |
-| integer            | INT                 |
-| bigint             | BIGINT              |
-| real               | FLOAT4              |
-| double precision   | FLOAT8              |
-| numeric            | NUMBER              |
-| text               | VARCHAR             |
-| date               | DATE                |
-| timestamp          | TIMESTAMP_NTZ       |
-| timestamptz        | TIMESTAMP_TZ        |
-
 ## Available Versions
 
-| Version | Wasm Package URL                                                                                      | Checksum                                                           |
-| ------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| 0.1.1   | `https://github.com/supabase/wrappers/releases/download/wasm_snowflake_fdw_v0.1.1/snowflake_fdw.wasm` | `7aaafc7edc1726bc93ddc04452d41bda9e1a264a1df2ea9bf1b00b267543b860` |
-| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_snowflake_fdw_v0.1.0/snowflake_fdw.wasm` | `2fb46fd8afa63f3975dadf772338106b609b131861849356e0c09dde032d1af8` |
+| Version | Wasm Package URL                                                                                      | Checksum                                                           | Required Wrappers Version |
+| ------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------- |
+| 0.2.0   | `https://github.com/supabase/wrappers/releases/download/wasm_snowflake_fdw_v0.2.0/snowflake_fdw.wasm` | `921b18a1e9c20c4ef5a09af17b5d76fd6ebe56d41bcfa565b74a530420532437` | >=0.5.0                   |
+| 0.1.1   | `https://github.com/supabase/wrappers/releases/download/wasm_snowflake_fdw_v0.1.1/snowflake_fdw.wasm` | `7aaafc7edc1726bc93ddc04452d41bda9e1a264a1df2ea9bf1b00b267543b860` | >=0.4.0                   |
+| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_snowflake_fdw_v0.1.0/snowflake_fdw.wasm` | `2fb46fd8afa63f3975dadf772338106b609b131861849356e0c09dde032d1af8` | >=0.4.0                   |
 
 ## Preparation
 
-Before you get started, make sure the `wrappers` extension is installed on your database:
+Before you can query Snowflake, you need to enable the Wrappers extension and store your credentials in Postgres.
+
+### Enable Wrappers
+
+Make sure the `wrappers` extension is installed on your database:
 
 ```sql
 create extension if not exists wrappers with schema extensions;
 ```
 
-and then create the Wasm foreign data wrapper:
+### Enable the Snowflake Wrapper
+
+Enable the Wasm foreign data wrapper:
 
 ```sql
 create foreign data wrapper wasm_wrapper
@@ -56,20 +43,19 @@ create foreign data wrapper wasm_wrapper
   validator wasm_fdw_validator;
 ```
 
-### Secure your credentials (optional)
+### Store your credentials (optional)
 
 By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
 
 This FDW uses key-pair authentication to access Snowflake SQL Rest API, please refer to [Snowflake docs](https://docs.snowflake.com/en/developer-guide/sql-api/authenticating#label-sql-api-authenticating-key-pair) for more details about the key-pair authentication.
 
 ```sql
--- Save your Snowflake private key in Vault and retrieve the `key_id`
-insert into vault.secrets (name, secret)
-values (
+-- Save your Snowflake private key in Vault and retrieve the created `key_id`
+select vault.create_secret(
+  E'-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----',
   'snowflake',
-  E'-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----'
-)
-returning key_id;
+  'Snowflake private key for Wrappers'
+);
 ```
 
 ### Connecting to Snowflake
@@ -120,15 +106,31 @@ We recommend creating a schema to hold all the foreign tables:
 create schema if not exists snowflake;
 ```
 
-## Creating Foreign Tables
+## Options
 
-The Snowflake Wrapper supports data reads and writes from Snowflake.
+The full list of foreign table options are below:
 
-| Integration | Select | Insert | Update | Delete | Truncate |
+- `table` - Source table or view name in Snowflake, required.
+
+  This option can also be a subquery enclosed in parentheses.
+
+- `rowid_column` - Primary key column name, optional for data scan, required for data modify
+
+## Entities
+
+### Snowflake Tables/Views
+
+This is an object representing a Snowflake table or view.
+
+Ref: [Snowflake docs](https://docs.snowflake.com/en/sql-reference/sql/create-table)
+
+#### Operations
+
+| Object      | Select | Insert | Update | Delete | Truncate |
 | ----------- | :----: | :----: | :----: | :----: | :------: |
-| Snowflake   |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
+| table/view  |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
 
-For example:
+#### Usage
 
 ```sql
 create foreign table snowflake.mytable (
@@ -145,27 +147,47 @@ create foreign table snowflake.mytable (
   );
 ```
 
-### Foreign table options
+#### Notes
 
-The full list of foreign table options are below:
-
-- `table` - Source table or view name in Snowflake, required.
-
-  This can also be a subquery enclosed in parentheses, for example,
-
-  ```sql
-  table '(select * from mydatabase.public.mytable where id = 42)'
-  ```
-
-- `rowid_column` - Primary key column name, optional for data scan, required for data modify
+- Supports both tables and views as data sources
+- Can use subqueries in `table` option
+- Requires `rowid_column` for data modification operations
+- Supports query pushdown for `where`, `order by`, and `limit` clauses
+- Column names must match between Snowflake and foreign table
+- Data types must be compatible according to type mapping table
 
 ## Query Pushdown Support
 
 This FDW supports `where`, `order by` and `limit` clause pushdown.
 
+## Supported Data Types
+
+| Postgres Data Type | Snowflake Data Type |
+| ------------------ | ------------------- |
+| boolean            | BOOLEAN             |
+| smallint           | SMALLINT            |
+| integer            | INT                 |
+| bigint             | BIGINT              |
+| real               | FLOAT4              |
+| double precision   | FLOAT8              |
+| numeric            | NUMBER              |
+| text               | VARCHAR             |
+| date               | DATE                |
+| timestamp          | TIMESTAMP_NTZ       |
+| timestamptz        | TIMESTAMP_TZ        |
+
+## Limitations
+
+This section describes important limitations and considerations when using this FDW:
+
+- Large result sets may experience slower performance due to full data transfer requirement
+- Column names must exactly match between Snowflake and foreign table
+- Foreign tables with subquery option cannot support data modify
+- Materialized views using these foreign tables may fail during logical backups
+
 ## Examples
 
-Some examples on how to use Snowflake foreign tables.
+### Basic Example
 
 Let's prepare the source table in Snowflake first:
 
@@ -189,15 +211,7 @@ insert into mydatabase.public.mytable(id, name, num, dt, ts)
 values (43, 'bar', 56.78, '2024-05-19', '2024-05-19 12:34:56');
 ```
 
-### Basic example
-
-This example will create a "foreign table" inside your Postgres database and query its data. First, we can create a schema to hold all the Snowflake foreign tables.
-
-```sql
-create schema if not exists snowflake;
-```
-
-Then create the foreign table and query it, for example:
+This example will create a "foreign table" inside your Postgres database and query its data.
 
 ```sql
 create foreign table snowflake.mytable (
@@ -216,9 +230,9 @@ create foreign table snowflake.mytable (
 select * from snowflake.mytable;
 ```
 
-### Data modify example
+### Data Modify Example
 
-This example will modify data in a "foreign table" inside your Postgres database, note that `rowid_column` option is mandatory for data modify:
+This example will modify data in a "foreign table" inside your Postgres database, note that `rowid_column` option is required for data modify:
 
 ```sql
 -- insert new data

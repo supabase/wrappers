@@ -13,19 +13,21 @@ tags:
 
 The Cognito wrapper allows you to read data from your Cognito Userpool within your Postgres database.
 
-!!! warning
-
-    Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
-
 ## Preparation
 
-Before you get started, make sure the `wrappers` extension is installed on your database:
+Before you can query AWS Cognito, you need to enable the Wrappers extension and store your credentials in Postgres.
+
+### Enable Wrappers
+
+Make sure the `wrappers` extension is installed on your database:
 
 ```sql
 create extension if not exists wrappers with schema extensions;
 ```
 
-and then create the foreign data wrapper:
+### Enable the Cognito Wrapper
+
+Enable the `cognito_wrapper` FDW:
 
 ```sql
 create foreign data wrapper cognito_wrapper
@@ -33,17 +35,17 @@ create foreign data wrapper cognito_wrapper
   validator cognito_fdw_validator;
 ```
 
-### Secure your credentials (optional)
+### Store your credentials (optional)
 
-By default, Postgres stores FDW credentials inide `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers are designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
+By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers are designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
 
 ```sql
-insert into vault.secrets (name, secret)
-values (
-  'cognito_secret_access_key',
-  '<secret access key>'
-)
-returning key_id;
+-- Save your Cognito secret access key in Vault and retrieve the created `key_id`
+select vault.create_secret(
+  '<secret access key>',
+  'cognito',
+  'Cognito secret key for Wrappers'
+);
 ```
 
 ### Connecting to Cognito
@@ -76,49 +78,90 @@ We need to provide Postgres with the credentials to connect to Cognito, and any 
       );
     ```
 
-## Creating Foreign Tables
+### Create a schema
 
-The Cognito Wrapper supports data reads from Cognito's [User Records](https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-identity-pools.html) endpoint (_read only_).
-
-| Cognito | Select | Insert | Update | Delete | Truncate |
-| ------- | :----: | :----: | :----: | :----: | :------: |
-| Records |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
-
-For example:
+We recommend creating a schema to hold all the foreign tables:
 
 ```sql
-create foreign table cognito (
-    email text,
-    username text
+create schema if not exists cognito;
+```
+
+## Entities
+
+We can use SQL [import foreign schema](https://www.postgresql.org/docs/current/sql-importforeignschema.html) to import foreign table definitions from Cognito.
+
+For example, using below SQL can automatically create foreign table in the `cognito` schema.
+
+```sql
+import foreign schema cognito from server cognito_server into cognito;
+```
+
+The foreign table will be created as below:
+
+### Users
+
+This is an object representing Cognito User Records.
+
+Ref: [AWS Cognito User Records](https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-identity-pools.html)
+
+#### Operations
+
+| Object | Select | Insert | Update | Delete | Truncate |
+| ------ | :----: | :----: | :----: | :----: | :------: |
+| Users  |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
+
+#### Usage
+
+```sql
+create foreign table cognito.users (
+  username text,
+  email text,
+  status text,
+  enabled boolean,
+  created_at timestamp,
+  updated_at timestamp,
+  attributes jsonb
 )
 server cognito_server
 options (
-    object 'users'
+  object 'users'
 );
 ```
 
-### Foreign table options
+#### Notes
 
-The full list of foreign table options are below:
-
-- `object`: type of object we are querying. For now, only `users` is supported
+- Only the columns listed above are accepted in the foreign table
+- The `attributes` column contains additional user attributes in JSON format
 
 ## Query Pushdown Support
 
 This FDW doesn't support query pushdown.
 
-## Examples
+## Limitations
 
-Some examples on how to use Cognito foreign tables.
+This section describes important limitations and considerations when using this FDW:
+
+- No query pushdown support, all filtering must be done locally
+- Large result sets may experience slower performance due to full data transfer requirement
+- Only supports User Pool objects from Cognito API
+- No support for Identity Pool operations
+- Materialized views using these foreign tables may fail during logical backups
+
+## Examples
 
 ### Basic example
 
 This will create a "foreign table" inside your Postgres database called `cognito_table`:
 
 ```sql
-create foreign table cognito_table (
+create foreign table cognito.users (
+  username text,
   email text,
-  username text
+  status text,
+  enabled boolean,
+  created_at timestamp,
+  updated_at timestamp,
+  attributes jsonb
 )
 server cognito_server
 options (
@@ -129,5 +172,5 @@ options (
 You can now fetch your Cognito data from within your Postgres database:
 
 ```sql
-select * from cognito_table;
+select * from cognito.users;
 ```

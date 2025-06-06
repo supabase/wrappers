@@ -106,12 +106,12 @@ mod tests {
 
         // perform test
 
-        Spi::connect(|mut c| {
+        Spi::connect_mut(|c| {
             c.update(
                 r#"CREATE FOREIGN DATA WRAPPER redis_wrapper
                          HANDLER redis_fdw_handler VALIDATOR redis_fdw_validator"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -121,7 +121,7 @@ mod tests {
                            conn_url 'redis://127.0.0.1'
                          )"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -136,7 +136,7 @@ mod tests {
                     );
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -151,7 +151,7 @@ mod tests {
                     );
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -167,7 +167,7 @@ mod tests {
                     );
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -182,7 +182,7 @@ mod tests {
                     );
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -198,7 +198,7 @@ mod tests {
                     );
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -214,7 +214,7 @@ mod tests {
                     );
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -230,7 +230,7 @@ mod tests {
                     );
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -246,7 +246,7 @@ mod tests {
                     );
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -262,19 +262,19 @@ mod tests {
                     );
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
 
             let results = c
-                .select("SELECT * FROM redis_list", None, None)
+                .select("SELECT * FROM redis_list", None, &[])
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("element").unwrap())
                 .collect::<Vec<_>>();
             assert_eq!(results, vec!["foo", "bar", "42"]);
 
             let results = c
-                .select("SELECT * FROM redis_set ORDER BY 1", None, None)
+                .select("SELECT * FROM redis_set ORDER BY 1", None, &[])
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("element").unwrap())
                 .collect::<Vec<_>>();
@@ -284,7 +284,7 @@ mod tests {
                 .select(
                     "SELECT key, value FROM redis_hash WHERE key = 'foo'",
                     None,
-                    None,
+                    &[],
                 )
                 .unwrap()
                 .filter_map(|r| {
@@ -296,7 +296,7 @@ mod tests {
             assert_eq!(results, vec![("foo", "bar")]);
 
             let results = c
-                .select("SELECT * FROM redis_zset", None, None)
+                .select("SELECT * FROM redis_zset", None, &[])
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("element").unwrap())
                 .collect::<Vec<_>>();
@@ -306,7 +306,7 @@ mod tests {
                 .select(
                     "SELECT items::text FROM redis_stream ORDER BY id DESC",
                     None,
-                    None,
+                    &[],
                 )
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("items").unwrap())
@@ -320,7 +320,7 @@ mod tests {
                 .select(
                     "SELECT key, items::text FROM redis_multi_lists ORDER BY key",
                     None,
-                    None,
+                    &[],
                 )
                 .unwrap()
                 .filter_map(|r| {
@@ -341,7 +341,7 @@ mod tests {
                 .select(
                     "SELECT key, items::text FROM redis_multi_sets ORDER BY key",
                     None,
-                    None,
+                    &[],
                 )
                 .unwrap()
                 .filter_map(|r| {
@@ -359,7 +359,7 @@ mod tests {
                 .select(
                     "SELECT key, items::text FROM redis_multi_hashes ORDER BY key",
                     None,
-                    None,
+                    &[],
                 )
                 .unwrap()
                 .filter_map(|r| {
@@ -380,7 +380,7 @@ mod tests {
                 .select(
                     "SELECT key, items::text FROM redis_multi_zsets ORDER BY key",
                     None,
-                    None,
+                    &[],
                 )
                 .unwrap()
                 .filter_map(|r| {

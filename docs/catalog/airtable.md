@@ -13,19 +13,21 @@ tags:
 
 The Airtable Wrapper allows you to read data from your Airtable bases/tables within your Postgres database.
 
-!!! warning
-
-    Restoring a logical backup of a database with a materialized view using a foreign table can fail. For this reason, either do not use foreign tables in materialized views or use them in databases with physical backups enabled.
-
 ## Preparation
 
-Before you get started, make sure the `wrappers` extension is installed on your database:
+Before you can query Airtable, you need to enable the Wrappers extension and store your credentials in Postgres.
+
+### Enable Wrappers
+
+Make sure the `wrappers` extension is installed on your database:
 
 ```sql
 create extension if not exists wrappers with schema extensions;
 ```
 
-and then create the foreign data wrapper:
+### Enable the Airtable Wrapper
+
+Enable the `airtable_wrapper` FDW:
 
 ```sql
 create foreign data wrapper airtable_wrapper
@@ -33,18 +35,20 @@ create foreign data wrapper airtable_wrapper
   validator airtable_fdw_validator;
 ```
 
-### Secure your credentials (optional)
+### Store your credentials (optional)
 
-By default, Postgres stores FDW credentials inide `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
+By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
+
+
+Get your token from [Airtable's developer portal](https://airtable.com/create/tokens).
 
 ```sql
--- Save your Airtable API key in Vault and retrieve the `key_id`
-insert into vault.secrets (name, secret)
-values (
+-- Save your Airtable API key in Vault and retrieve the created `key_id`
+select vault.create_secret(
+  '<Airtable API Key or PAT>', -- Airtable API key or Personal Access Token (PAT)
   'airtable',
-  '<Airtable API Key or PAT>' -- Airtable API key or Personal Access Token (PAT)
-)
-returning key_id;
+  'Airtable API key for Wrappers'
+);
 ```
 
 ### Connecting to Airtable
@@ -72,7 +76,15 @@ We need to provide Postgres with the credentials to connect to Airtable, and any
       );
     ```
 
-## Creating Foreign Tables
+### Create a schema
+
+We recommend creating a schema to hold all the foreign tables:
+
+```sql
+create schema if not exists airtable;
+```
+
+## Entities
 
 The Airtable Wrapper supports data reads from the Airtable API.
 
@@ -82,15 +94,23 @@ The Airtable Wrapper supports data reads from Airtable's [Records](https://airta
 
 #### Operations
 
-| Airtable | Select | Insert | Update | Delete | Truncate |
-| -------- | :----: | :----: | :----: | :----: | :------: |
-| Records  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Object  | Select | Insert | Update | Delete | Truncate |
+| ------- | :----: | :----: | :----: | :----: | :------: |
+| Records |   ✅    |   ❌    |   ❌    |   ❌    |    ❌     |
 
 #### Usage
 
+Get your base ID and table ID from your table's URL.
+
+![airtable_credentials](../assets/airtable_credentials.png)
+
+!!! note
+
+    Foreign tables must be lowercase, regardless of capitalization in Airtable.
+
 ```sql
-create foreign table my_foreign_table (
-  name text
+create foreign table airtable.my_foreign_table (
+  message text
   -- other fields
 )
 server airtable_server
@@ -100,28 +120,62 @@ options (
 );
 ```
 
-#### Options
+#### Notes
 
-The full list of foreign table options are below:
-
-- `base_id` - Airtable Base ID the table belongs to, required.
-- `table_id` - Airtable table ID, required.
-- `view_id` - Airtable view ID, optional.
+- The table requires both `base_id` and `table_id` options
+- Optional `view_id` can be specified to query a specific view
 
 ## Query Pushdown Support
 
 This FDW doesn't support query pushdown.
 
-## Examples
+## Supported Data Types
 
-Some examples on how to use Airtable foreign tables.
+| Postgres Data Type | Airtable Data Type |
+| ------------------ | ------------------ |
+| boolean            | Checkbox           |
+| smallint           | Number             |
+| integer            | Number             |
+| bigint             | Autonumber         |
+| bigint             | Number             |
+| real               | Number             |
+| double precision   | Number             |
+| numeric            | Number             |
+| numeric            | Currency           |
+| numeric            | Percent            |
+| text               | Single line text   |
+| text               | Long text          |
+| text               | Single select      |
+| text               | Phone number       |
+| text               | Email              |
+| text               | URL                |
+| date               | Date               |
+| timestamp          | Created time       |
+| timestamp          | Last modified time |
+| jsonb              | Multiple select    |
+| jsonb              | Created by         |
+| jsonb              | Last modified by   |
+| jsonb              | User               |
+
+## Limitations
+
+This section describes important limitations and considerations when using this FDW:
+
+- No query pushdown support, all filtering must be done locally
+- Large result sets may experience slower performance due to full data transfer requirement
+- No support for Airtable formulas or computed fields
+- Views must be pre-configured in Airtable
+- No support for Airtable's block features
+- Materialized views using these foreign tables may fail during logical backups
+
+## Examples
 
 ### Query an Airtable table
 
 This will create a "foreign table" inside your Postgres database called `airtable_table`:
 
 ```sql
-create foreign table airtable_table (
+create foreign table airtable.airtable_table (
   name text,
   notes text,
   content text,
@@ -138,7 +192,7 @@ options (
 You can now fetch your Airtable data from within your Postgres database:
 
 ```sql
-select * from airtable_table;
+select * from airtable.airtable_table;
 ```
 
 ### Query an Airtable view
@@ -146,7 +200,7 @@ select * from airtable_table;
 We can also create a foreign table from an Airtable View called `airtable_view`:
 
 ```sql
-create foreign table airtable_view (
+create foreign table airtable.airtable_view (
   name text,
   notes text,
   content text,
@@ -164,5 +218,5 @@ options (
 You can now fetch your Airtable data from within your Postgres database:
 
 ```sql
-select * from airtable_view;
+select * from airtable.airtable_view;
 ```

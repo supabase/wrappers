@@ -6,7 +6,10 @@ use bindings::{
     exports::supabase::wrappers::routines::Guest,
     supabase::wrappers::{
         http, stats, time,
-        types::{Cell, Column, Context, FdwError, FdwResult, OptionsType, Row, TypeOid, Value},
+        types::{
+            Cell, Column, Context, FdwError, FdwResult, ImportForeignSchemaStmt, OptionsType, Row,
+            TypeOid, Value,
+        },
         utils,
     },
 };
@@ -131,7 +134,7 @@ impl NotionFdw {
                         String::default(),
                     )
                 } else {
-                    let start_cursor_str = if let Some(ref sc) = start_cursor {
+                    let start_cursor_str = if let Some(sc) = start_cursor {
                         format!(r#""start_cursor": "{}","#, sc)
                     } else {
                         String::default()
@@ -170,7 +173,7 @@ impl NotionFdw {
                         String::default(),
                     )
                 } else {
-                    let start_cursor = if let Some(ref sc) = start_cursor {
+                    let start_cursor = if let Some(sc) = start_cursor {
                         format!("&start_cursor={}", sc)
                     } else {
                         String::default()
@@ -190,7 +193,7 @@ impl NotionFdw {
                         String::default(),
                     )
                 } else if let Some(block_id) = block_id {
-                    let start_cursor = if let Some(ref sc) = start_cursor {
+                    let start_cursor = if let Some(sc) = start_cursor {
                         format!("&start_cursor={}", sc)
                     } else {
                         String::default()
@@ -296,6 +299,8 @@ impl NotionFdw {
         let children = self.make_request("block", Some(block_id), ctx)?;
 
         for child in children.iter() {
+            ret.push(child.clone());
+
             let has_children = child
                 .pointer("/has_children")
                 .and_then(|v| v.as_bool())
@@ -307,8 +312,6 @@ impl NotionFdw {
                 }
             }
         }
-
-        ret.extend(children);
 
         Ok(ret)
     }
@@ -404,7 +407,7 @@ impl Guest for NotionFdw {
         let this = Self::this_mut();
 
         // get foreign server options
-        let opts = ctx.get_options(OptionsType::Server);
+        let opts = ctx.get_options(&OptionsType::Server);
         this.base_url = opts.require_or("api_url", "https://api.notion.com/v1");
         let api_key = match opts.get("api_key") {
             Some(key) => key,
@@ -433,7 +436,7 @@ impl Guest for NotionFdw {
 
     fn begin_scan(ctx: &Context) -> FdwResult {
         let this = Self::this_mut();
-        let opts = ctx.get_options(OptionsType::Table);
+        let opts = ctx.get_options(&OptionsType::Table);
         this.object = opts.require("object")?;
 
         this.fetch_source_data(ctx)
@@ -490,6 +493,71 @@ impl Guest for NotionFdw {
 
     fn end_modify(_ctx: &Context) -> FdwResult {
         Ok(())
+    }
+
+    fn import_foreign_schema(
+        _ctx: &Context,
+        stmt: ImportForeignSchemaStmt,
+    ) -> Result<Vec<String>, FdwError> {
+        let ret = vec![
+            format!(
+                r#"create foreign table if not exists blocks (
+                    id text,
+                    page_id text,
+                    type text,
+                    created_time timestamp,
+                    last_edited_time timestamp,
+                    archived boolean,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'block'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists pages (
+                    id text,
+                    url text,
+                    created_time timestamp,
+                    last_edited_time timestamp,
+                    archived boolean,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'page'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists databases (
+                    id text,
+                    url text,
+                    created_time timestamp,
+                    last_edited_time timestamp,
+                    archived boolean,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'database'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists users (
+                    id text,
+                    name text,
+                    type text,
+                    avatar_url text,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'user'
+                )"#,
+                stmt.server_name,
+            ),
+        ];
+        Ok(ret)
     }
 }
 

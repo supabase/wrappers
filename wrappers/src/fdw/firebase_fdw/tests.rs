@@ -6,12 +6,12 @@ mod tests {
 
     #[pg_test]
     fn firebase_smoketest() {
-        Spi::connect(|mut c| {
+        Spi::connect_mut(|c| {
             c.update(
                 r#"CREATE FOREIGN DATA WRAPPER firebase_wrapper
                          HANDLER firebase_fdw_handler VALIDATOR firebase_fdw_validator"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -22,7 +22,7 @@ mod tests {
                           access_token 'owner'
                          )"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
 
@@ -50,16 +50,12 @@ mod tests {
                 )
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
 
             let results = c
-                .select(
-                    "SELECT email FROM firebase_users order by email",
-                    None,
-                    None,
-                )
+                .select("SELECT email FROM firebase_users order by email", None, &[])
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("email").unwrap())
                 .collect::<Vec<_>>();
@@ -81,12 +77,12 @@ mod tests {
                 )
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
 
             let results = c
-                .select("SELECT name,attrs FROM firebase_docs", None, None)
+                .select("SELECT name,attrs FROM firebase_docs", None, &[])
                 .unwrap()
                 .filter_map(|r| {
                     r.get_by_name::<&str, _>("name").unwrap().zip(
@@ -122,12 +118,12 @@ mod tests {
                 )
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
 
             let results = c
-                .select("SELECT name,attrs FROM firebase_docs_nested", None, None)
+                .select("SELECT name,attrs FROM firebase_docs_nested", None, &[])
                 .unwrap()
                 .filter_map(|r| {
                     r.get_by_name::<&str, _>("name").unwrap().zip(

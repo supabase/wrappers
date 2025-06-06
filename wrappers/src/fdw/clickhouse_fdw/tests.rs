@@ -3,13 +3,13 @@
 mod tests {
     use clickhouse_rs as ch;
     use pgrx::prelude::*;
-    use pgrx::{pg_test, IntoDatum};
+    use pgrx::{datum::Timestamp, pg_test, Uuid};
     use supabase_wrappers::prelude::create_async_runtime;
 
     #[pg_test]
     fn clickhouse_smoketest() {
-        Spi::connect(|mut c| {
-            let clickhouse_pool = ch::Pool::new("tcp://default:@localhost:9000/default");
+        Spi::connect_mut(|c| {
+            let clickhouse_pool = ch::Pool::new("tcp://default:default@localhost:9000/default");
 
             let rt = create_async_runtime().expect("failed to create runtime");
             let mut handle = rt
@@ -20,7 +20,25 @@ mod tests {
                 handle.execute("DROP TABLE IF EXISTS test_table").await?;
                 handle
                     .execute(
-                        "CREATE TABLE test_table (id Int64, name Nullable(TEXT)) engine = Memory",
+                        "CREATE TABLE test_table (
+                            id Int64,
+                            name Nullable(TEXT),
+                            amt Nullable(Float64),
+                            uid Nullable(UUID),
+                            fstr Nullable(FixedString(5)),
+                            bignum Nullable(UInt256),
+                            dnum Nullable(Decimal(18, 3)),
+                            arr_i64 Array(Int64) default [],
+                            arr_str Array(String) default [],
+                            is_valid Nullable(Bool),
+                            i8col Nullable(Int8),
+                            u8col Nullable(UInt8),
+                            i16col Nullable(Int16),
+                            u16col Nullable(UInt16),
+                            i32col Nullable(Int32),
+                            u32col Nullable(UInt32),
+                            created_at DateTime('UTC')
+                        ) engine = Memory",
                     )
                     .await
             })
@@ -30,24 +48,39 @@ mod tests {
                 r#"CREATE FOREIGN DATA WRAPPER clickhouse_wrapper
                          HANDLER click_house_fdw_handler VALIDATOR click_house_fdw_validator"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
                 r#"CREATE SERVER my_clickhouse_server
                          FOREIGN DATA WRAPPER clickhouse_wrapper
                          OPTIONS (
-                           conn_string 'tcp://default:@localhost:9000/default'
+                           conn_string 'tcp://default:default@localhost:9000/default'
                          )"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
                 r#"
                   CREATE FOREIGN TABLE test_table (
                     id bigint,
-                    name text
+                    name text,
+                    amt double precision,
+                    uid uuid,
+                    fstr text,
+                    bignum text,
+                    dnum numeric,
+                    arr_i64 bigint[],
+                    arr_str text[],
+                    is_valid boolean,
+                    i8col "char",
+                    u8col smallint,
+                    i16col smallint,
+                    u16col integer,
+                    i32col integer,
+                    u32col bigint,
+                    created_at timestamp
                   )
                   SERVER my_clickhouse_server
                   OPTIONS (
@@ -56,14 +89,29 @@ mod tests {
                   )
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
                 r#"
                   CREATE FOREIGN TABLE test_cust_sql (
                     id bigint,
-                    name text
+                    name text,
+                    amt double precision,
+                    uid uuid,
+                    fstr text,
+                    bignum text,
+                    dnum numeric,
+                    arr_i64 bigint[],
+                    arr_str text[],
+                    is_valid boolean,
+                    i8col "char",
+                    u8col smallint,
+                    i16col smallint,
+                    u16col integer,
+                    i32col integer,
+                    u32col bigint,
+                    created_at timestamp
                   )
                   SERVER my_clickhouse_server
                   OPTIONS (
@@ -71,7 +119,7 @@ mod tests {
                   )
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
 
@@ -80,7 +128,22 @@ mod tests {
                   CREATE FOREIGN TABLE test_param_sql (
                     id bigint,
                     name text,
-                    _name text
+                    _name text,
+                    amt double precision,
+                    uid uuid,
+                    fstr text,
+                    bignum text,
+                    dnum numeric,
+                    arr_i64 bigint[],
+                    arr_str text[],
+                    is_valid boolean,
+                    i8col "char",
+                    u8col smallint,
+                    i16col smallint,
+                    u16col integer,
+                    i32col integer,
+                    u32col bigint,
+                    created_at timestamp
                   )
                   SERVER my_clickhouse_server
                   OPTIONS (
@@ -89,12 +152,12 @@ mod tests {
                   )
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
 
             assert_eq!(
-                c.select("SELECT * FROM test_table", None, None)
+                c.select("SELECT * FROM test_table", None, &[])
                     .unwrap()
                     .len(),
                 0
@@ -102,53 +165,57 @@ mod tests {
             c.update(
                 "INSERT INTO test_table (name) VALUES ($1)",
                 None,
-                Some(vec![(
-                    PgOid::BuiltIn(PgBuiltInOids::TEXTOID),
-                    "test".into_datum(),
-                )]),
+                &["test".into()],
             )
             .unwrap();
             c.update(
                 "INSERT INTO test_table (name) VALUES ($1)",
                 None,
-                Some(vec![(
-                    PgOid::BuiltIn(PgBuiltInOids::TEXTOID),
-                    "test2".into_datum(),
-                )]),
+                &["test2".into()],
             )
             .unwrap();
             c.update(
                 "INSERT INTO test_table (name) VALUES ($1)",
                 None,
-                Some(vec![(
-                    PgOid::BuiltIn(PgBuiltInOids::TEXTOID),
-                    "test3".into_datum(),
-                )]),
+                &["test3".into()],
             )
             .unwrap();
             c.update(
                 "INSERT INTO test_table (name) VALUES ($1)",
                 None,
-                Some(vec![(
-                    PgOid::BuiltIn(PgBuiltInOids::TEXTOID),
-                    "test4".into_datum(),
-                )]),
+                &["test4".into()],
             )
             .unwrap();
             c.update(
-                "INSERT INTO test_table (id, name) VALUES ($1, $2)",
+                "INSERT INTO test_table (id, name, amt, uid, fstr, bignum, dnum,
+                    arr_i64, arr_str, is_valid, i8col, u8col, i16col, u16col,
+                    i32col, u32col, created_at)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
+                     $14, $15, $16, $17)",
                 None,
-                Some(vec![
-                    (PgOid::BuiltIn(PgBuiltInOids::INT4OID), 42.into_datum()),
-                    (
-                        PgOid::BuiltIn(PgBuiltInOids::TEXTOID),
-                        None::<String>.into_datum(),
-                    ),
-                ]),
+                &[
+                    42.into(),
+                    None::<String>.into(),
+                    123.45.into(),
+                    pgrx::Uuid::from_bytes([42u8; 16]).into(),
+                    "abc".into(),
+                    "12345678".into(),
+                    pgrx::AnyNumeric::try_from(123456.789).unwrap().into(),
+                    vec![123i64, 456i64].into(),
+                    vec!["abc", "def"].into(),
+                    false.into(),
+                    42i8.into(),
+                    43i16.into(),
+                    44i16.into(),
+                    45i32.into(),
+                    46i32.into(),
+                    47i64.into(),
+                    Timestamp::new(2025, 5, 1, 2, 3, 4.0).into(),
+                ],
             )
             .unwrap();
             assert_eq!(
-                c.select("SELECT name FROM test_table ORDER BY name", None, None)
+                c.select("SELECT name FROM test_table ORDER BY name", None, &[])
                     .unwrap()
                     .first()
                     .get_one::<&str>()
@@ -157,7 +224,90 @@ mod tests {
                 "test"
             );
             assert_eq!(
-                c.select("SELECT name FROM test_cust_sql ORDER BY name", None, None)
+                c.select(
+                    "SELECT uid, amt, created_at FROM test_table WHERE id = 42",
+                    None,
+                    &[]
+                )
+                .unwrap()
+                .first()
+                .get_three::<Uuid, f64, Timestamp>()
+                .unwrap(),
+                (
+                    Some(Uuid::from_bytes([42u8; 16])),
+                    Some(123.45),
+                    Some(Timestamp::new(2025, 5, 1, 2, 3, 4.0).unwrap())
+                )
+            );
+            assert_eq!(
+                c.select(
+                    "SELECT fstr, bignum, dnum FROM test_table WHERE id = 42",
+                    None,
+                    &[]
+                )
+                .unwrap()
+                .first()
+                .get_three::<&str, &str, AnyNumeric>()
+                .unwrap(),
+                (
+                    Some("abc\0\0"),
+                    Some("12345678"),
+                    Some(AnyNumeric::try_from(123456.789).unwrap())
+                )
+            );
+            assert_eq!(
+                c.select(
+                    "SELECT arr_i64, arr_str FROM test_table WHERE id = 42",
+                    None,
+                    &[]
+                )
+                .unwrap()
+                .first()
+                .get_two::<Vec<i64>, Vec<String>>()
+                .unwrap(),
+                (
+                    Some(vec![123i64, 456i64]),
+                    Some(vec!["abc".to_string(), "def".to_string()]),
+                )
+            );
+            assert_eq!(
+                c.select(
+                    "SELECT is_valid, i8col, u8col FROM test_table WHERE id = 42",
+                    None,
+                    &[]
+                )
+                .unwrap()
+                .first()
+                .get_three::<bool, i8, i16>()
+                .unwrap(),
+                (Some(false), Some(42), Some(43))
+            );
+            assert_eq!(
+                c.select(
+                    "SELECT i16col, u16col FROM test_table WHERE id = 42",
+                    None,
+                    &[]
+                )
+                .unwrap()
+                .first()
+                .get_two::<i16, i32>()
+                .unwrap(),
+                (Some(44), Some(45),)
+            );
+            assert_eq!(
+                c.select(
+                    "SELECT i32col, u32col FROM test_table WHERE id = 42",
+                    None,
+                    &[]
+                )
+                .unwrap()
+                .first()
+                .get_two::<i32, i64>()
+                .unwrap(),
+                (Some(46), Some(47),)
+            );
+            assert_eq!(
+                c.select("SELECT name FROM test_cust_sql ORDER BY name", None, &[])
                     .unwrap()
                     .first()
                     .get_one::<&str>()
@@ -170,10 +320,7 @@ mod tests {
                 c.select(
                     "SELECT name FROM test_table WHERE name = $1",
                     None,
-                    Some(vec![(
-                        PgOid::BuiltIn(PgBuiltInOids::TEXTOID),
-                        "test2".into_datum()
-                    )])
+                    &["test2".into()]
                 )
                 .unwrap()
                 .first()
@@ -187,10 +334,7 @@ mod tests {
                 c.select(
                     "SELECT name FROM test_cust_sql WHERE name = $1",
                     None,
-                    Some(vec![(
-                        PgOid::BuiltIn(PgBuiltInOids::TEXTOID),
-                        "test2".into_datum()
-                    )])
+                    &["test2".into()]
                 )
                 .unwrap()
                 .first()
@@ -204,10 +348,7 @@ mod tests {
                 c.select(
                     "SELECT name FROM test_param_sql WHERE _name = $1",
                     None,
-                    Some(vec![(
-                        PgOid::BuiltIn(PgBuiltInOids::TEXTOID),
-                        "test2".into_datum()
-                    )])
+                    &["test2".into()]
                 )
                 .unwrap()
                 .first()
@@ -221,7 +362,7 @@ mod tests {
                 c.select(
                     "SELECT name FROM test_table ORDER by name LIMIT 1 OFFSET 1",
                     None,
-                    None
+                    &[]
                 )
                 .unwrap()
                 .first()
@@ -234,7 +375,7 @@ mod tests {
                 c.select(
                     "SELECT name FROM test_cust_sql ORDER BY name LIMIT 2 OFFSET 2",
                     None,
-                    None
+                    &[]
                 )
                 .unwrap()
                 .first()
@@ -257,6 +398,45 @@ mod tests {
                 })
                 .expect("value");
             assert_eq!(remote_value, Some("test".to_string()));
+
+            // test update data in foreign table
+            c.update(
+                "UPDATE test_table
+                 SET uid = $1, bignum = $2, arr_i64 = $3
+                 WHERE id = 42
+                ",
+                None,
+                &[
+                    pgrx::Uuid::from_bytes([43u8; 16]).into(),
+                    "87654321".into(),
+                    vec![444i64, 222i64].into(),
+                ],
+            )
+            .unwrap();
+            assert_eq!(
+                c.select(
+                    "SELECT uid, bignum, arr_i64 FROM test_table WHERE id = 42",
+                    None,
+                    &[]
+                )
+                .unwrap()
+                .first()
+                .get_three::<Uuid, &str, Vec<i64>>()
+                .unwrap(),
+                (
+                    Some(Uuid::from_bytes([43u8; 16])),
+                    Some("87654321"),
+                    Some(vec![444i64, 222i64]),
+                )
+            );
+
+            // test delete data in foreign table
+            c.update("DELETE FROM test_table WHERE id = 42", None, &[])
+                .unwrap();
+            assert!(c
+                .select("SELECT * FROM test_table WHERE id = 42", None, &[])
+                .unwrap()
+                .is_empty());
         });
     }
 }

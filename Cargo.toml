@@ -5,12 +5,15 @@ members = [
     "wrappers",
 ]
 exclude = [
-    "wasm-wrappers/fdw/helloworld_fdw",
-    "wasm-wrappers/fdw/snowflake_fdw",
-    "wasm-wrappers/fdw/paddle_fdw",
-    "wasm-wrappers/fdw/notion_fdw",
+    "wasm-wrappers",
 ]
 resolver = "2"
+
+[workspace.package]
+edition = "2021"
+rust-version = "1.85.1"
+homepage = "https://github.com/supabase/wrappers"
+repository = "https://github.com/supabase/wrappers"
 
 [profile.dev]
 panic = "unwind"

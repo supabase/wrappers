@@ -1,0 +1,25 @@
+[package]
+name = "calendly_fdw"
+version = "0.2.0"
+edition = { workspace = true }
+homepage = { workspace = true }
+rust-version = { workspace = true }
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wit-bindgen-rt = "0.41.0"
+serde_json = "1.0"
+chrono = "0.4.38"
+
+[package.metadata.component]
+package = "supabase:calendly-fdw"
+
+[package.metadata.component.dependencies]
+
+[package.metadata.component.target]
+path = "wit"
+
+[package.metadata.component.target.dependencies]
+"supabase:wrappers" = { path = "../../wit/v2" }

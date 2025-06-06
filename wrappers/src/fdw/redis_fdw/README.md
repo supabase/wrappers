@@ -10,5 +10,5 @@ This is a foreign data wrapper for [Redis](https://redis.io/). It is developed u
 
 | Version | Date       | Notes                                                |
 | ------- | ---------- | ---------------------------------------------------- |
+| 0.1.1   | 2024-11-28 | Added TLS support                                    |
 | 0.1.0   | 2023-12-29 | Initial version                                      |
-

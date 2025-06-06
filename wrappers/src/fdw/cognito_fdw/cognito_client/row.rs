@@ -1,39 +1,13 @@
-use aws_sdk_cognitoidentityprovider::types::UserType;
-use chrono::DateTime;
-use serde::Deserialize;
-use serde_json::Value;
-use supabase_wrappers::prelude::Cell;
-use supabase_wrappers::prelude::Column;
-use supabase_wrappers::prelude::Row;
+#![allow(clippy::result_large_err)]
+use aws_sdk_cognitoidentityprovider::primitives::DateTime;
+use aws_sdk_cognitoidentityprovider::types::{AttributeType, UserType};
+use serde_json::{json, Value};
+use supabase_wrappers::prelude::{Cell, Column, Row};
 
-use aws_sdk_cognitoidentityprovider::types::AttributeType;
-use serde_json::json;
+use super::super::CognitoFdwError;
 
-#[derive(Debug, Deserialize, PartialEq)]
-pub struct ResultPayload {
-    pub(crate) users: Vec<CognitoUser>,
-    pub(crate) next_page_offset: Option<u64>,
-}
-
-#[derive(Debug, Deserialize, PartialEq)]
-pub struct CognitoUser {
-    pub created_at: String,
-    pub email: String,
-    pub email_verified: bool,
-    pub identities: Option<serde_json::Value>,
-    // Additional fields from UserType
-    pub username: String,
-    pub status: Option<String>,
-}
-
-#[derive(Debug)]
-pub enum IntoRowError {
-    #[allow(dead_code)]
-    UnsupportedColumnType(String),
-}
-
-pub trait IntoRow {
-    fn into_row(self, columns: &[Column]) -> Result<Row, IntoRowError>;
+pub(in super::super) trait IntoRow {
+    fn into_row(self, columns: &[Column]) -> Result<Row, CognitoFdwError>;
 }
 
 fn serialize_attributes(attributes: &Vec<AttributeType>) -> Value {
@@ -48,46 +22,59 @@ fn serialize_attributes(attributes: &Vec<AttributeType>) -> Value {
     json!(attrs)
 }
 
+fn convert_to_timestamp(dt: DateTime) -> Cell {
+    let millis = dt.to_millis().expect("timestamp should be valid");
+    // convert Unix epoch to Postgres epoch
+    let ts = pgrx::prelude::Timestamp::try_from(millis * 1000 - 946_684_800_000_000)
+        .expect("timestamp should be converted Postgres epoch");
+    Cell::Timestamp(ts)
+}
+
 impl IntoRow for UserType {
-    fn into_row(self, columns: &[Column]) -> Result<Row, IntoRowError> {
+    fn into_row(self, columns: &[Column]) -> Result<Row, CognitoFdwError> {
         let mut row = Row::new();
 
         for column in columns {
             match column.name.as_str() {
                 "username" => {
-                    if let Some(ref username) = self.username {
-                        row.push("username", Some(Cell::String(username.to_string())));
-                    }
+                    row.push("username", self.username.clone().map(Cell::String));
                 }
                 "attributes" => {
                     if let Some(ref attributes) = self.attributes {
                         let serialized_attributes = serialize_attributes(attributes);
-
                         let attributes_json_b = pgrx::JsonB(serialized_attributes);
                         row.push("attributes", Some(Cell::Json(attributes_json_b)));
                     }
                 }
                 "created_at" => {
-                    if let Some(created_at) = self.extract_attribute_value("created_at") {
-                        let parsed_date = DateTime::parse_from_rfc3339(&created_at)
-                            .expect("Failed to parse date");
-                        let ts = pgrx::prelude::Timestamp::try_from(parsed_date.timestamp())
-                            .expect("valid timestamp");
-                        row.push("created_at", Some(Cell::Timestamp(ts)));
-                    }
+                    row.push(
+                        "created_at",
+                        self.user_create_date.map(convert_to_timestamp),
+                    );
+                }
+                "updated_at" => {
+                    row.push(
+                        "updated_at",
+                        self.user_last_modified_date.map(convert_to_timestamp),
+                    );
                 }
                 "email" => {
-                    if let Some(email) = self.extract_attribute_value("email") {
-                        row.push("email", Some(Cell::String(email)));
-                    }
+                    let value = self.extract_attribute_value("email").map(Cell::String);
+                    row.push("email", value);
+                }
+                "enabled" => {
+                    row.push("enabled", Some(Cell::Bool(self.enabled)));
                 }
                 "status" => {
-                    if let Some(status) = self.extract_attribute_value("status") {
-                        row.push("status", Some(Cell::String(status)));
-                    }
+                    row.push(
+                        "status",
+                        self.user_status
+                            .clone()
+                            .map(|s| Cell::String(s.as_str().to_owned())),
+                    );
                 }
                 _ => {
-                    return Err(IntoRowError::UnsupportedColumnType(column.name.clone()));
+                    return Err(CognitoFdwError::UnsupportedColumn(column.name.clone()));
                 }
             }
         }
@@ -96,7 +83,7 @@ impl IntoRow for UserType {
     }
 }
 
-pub trait UserTypeExt {
+pub(in super::super) trait UserTypeExt {
     fn extract_attribute_value(&self, attr_name: &str) -> Option<String>;
 }
 

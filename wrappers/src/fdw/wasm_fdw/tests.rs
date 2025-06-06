@@ -5,12 +5,12 @@ mod tests {
 
     #[pg_test]
     fn wasm_smoketest() {
-        Spi::connect(|mut c| {
+        Spi::connect_mut(|c| {
             c.update(
                 r#"CREATE FOREIGN DATA WRAPPER wasm_wrapper
                      HANDLER wasm_fdw_handler VALIDATOR wasm_fdw_validator"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
 
@@ -19,7 +19,7 @@ mod tests {
                 r#"CREATE SERVER snowflake_server
                      FOREIGN DATA WRAPPER wasm_wrapper
                      OPTIONS (
-                       fdw_package_url 'file://../../../wasm-wrappers/fdw/snowflake_fdw/target/wasm32-unknown-unknown/release/snowflake_fdw.wasm',
+                       fdw_package_url 'file://../../../wasm-wrappers/fdw/target/wasm32-unknown-unknown/release/snowflake_fdw.wasm',
                        fdw_package_name 'supabase:snowflake-fdw',
                        fdw_package_version '>=0.1.0',
                        api_url 'http://localhost:8096/snowflake/{}',
@@ -29,7 +29,7 @@ mod tests {
                        private_key E'-----BEGIN PRIVATE KEY-----\nMIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQCOQv0mMe1yElR8\nhiQgduWu7OrMR3iW8xbu+i04LkMDKB/JtdMl1Mq3Gs/XWUB07BOIytcK4L7k1Z/3\nnkTGvib85S5+VLsngBzWltltvCOfnM2uCLWHmVpfMR1WVFrCU1r7NP92U2APpwvN\ncJps39VNyQWTm+TvQN25enqAC2uR6xdvItb86dn4Tab3KcAXj0f0qHompa8SSwBO\nGZFpgAjt7QFPWTniNQyBU7wXTntwV+a2WC/bf1i9MRAf8bqSr+yqijLHVGrmBPSb\njmvo/8bj69DzeY2//gZXAMe1m6cEjXPm2MY/POd66Xg1YZDzYsv95GZ54kJ+EgEF\n9rjsi/J5AgMBAAECggEAAsG9kh3pkgpU5Mzcqlxjew5QRoEkDxjK2vqyIaKT3d3L\nL+d8HgGPpBi66ltqalmgz0fO/wD38gtJvEyu3IMW0lPGoOAXeF59MJNfx0acEh3B\nxpuYmPYZ0DptbRzZXWasHq4aPTrEY8lC60pBU9bKlWVN3FxrBU/mfA+pjA2smflC\n54brJTsSb1/1xAExxsvB2Leb6VcNWKRCaN6Z4gdWd1Qofi080LVWxE3MXhxHpTMj\nVf3KHhKI5DHJXlZPU/w4KXOlp99UH0vnx3EJzD07kI+nR2k7tfh8PxwFzn8g6hEC\nK9Q+HmzUUTxFh1M8eXi7IMRjLRJThVSl/Kbqr6cpeQKBgQC+410aRuHUteQIgJBQ\nbceAOjEh5MetByIEFdXLEgYspl1rSjN/JoIMUguyJ8KZGj5G3NaRaJklNOofYekI\nhIL3SBWZ9U58MJVMnSUVeBdazCu0k9HnOfOFrFJIDoRPBfjnP0UJmC+9ggoVayOX\nVW5psrxGiQXWiG7mho1bshSlNwKBgQC+yX1wFSF8gGsAb41iw60K9W+O5PLVWxAu\nYst8CQTY64RVctvAypWtNTb4nmIBe9aX9k5loe+uv8Zse/t1hgCVGR7n70EyT9Y+\nGNrGqYtVjtZQ+L+dAivrlUKsTDGqzWldUTg7gpOqkFaQbV0O11ytyKJKYXCpTrL2\nwib6V4X9zwKBgQCllTJAxfXFfxZUbblBm0iwKUpPXVX7+LEAHDS9F2B1wMZOeCod\nhLjQmSb+HlFGX6Zf79bMgZA+3xyrplHviorUmBns2AaB4d7Qe4wciHSx1WOgG427\n5uAgNy+Uw8rvhX24koB/Zx0aZT/7/lj8QCYr19hL0zZWNzkEDPl37gzMlwKBgQC3\noOsww8XVNSzH4JZupvOYhp53JHltTRaH7uL3YR7fQd++9qv4JYRmj793D8o4r17e\nKF1QiMpOoZpzs+lVNkK9Ps52YduYdys33WhEqc7H7JDuolya3Ao11xWzDCsJwGdX\nP+MltAo4sm/+1qQosrQrN96sRJjQ/ERYKIqnjTIUFQKBgQC6xaC5SB1UMepFbTVa\n2tuRuYwcrU/NxjeW85SAyeyv2dMg7S+Ot8mnA1Js2O0NHlczUZgRZalYkCuSUE78\nb6rIbezIW2azrw3tqAAPLsB+rhXvaUpICoybu+j6aCiqtZYsDx7zIj/FTD27Tpwx\nYfLx1Erqd3vM/LzOIaIOqlfETw==\n-----END PRIVATE KEY-----'
                        )"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -48,12 +48,12 @@ mod tests {
                   )
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
 
             let results = c
-                .select("SELECT * FROM snowflake_mytable WHERE id = 42", None, None)
+                .select("SELECT * FROM snowflake_mytable WHERE id = 42", None, &[])
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("name").unwrap())
                 .collect::<Vec<_>>();
@@ -64,44 +64,30 @@ mod tests {
                 r#"CREATE SERVER paddle_server
                      FOREIGN DATA WRAPPER wasm_wrapper
                      OPTIONS (
-                       fdw_package_url 'file://../../../wasm-wrappers/fdw/paddle_fdw/target/wasm32-unknown-unknown/release/paddle_fdw.wasm',
+                       fdw_package_url 'file://../../../wasm-wrappers/fdw/target/wasm32-unknown-unknown/release/paddle_fdw.wasm',
                        fdw_package_name 'supabase:paddle-fdw',
                        fdw_package_version '>=0.1.0',
                        api_url 'http://localhost:8096/paddle',
                        api_key '1234567890'
                      )"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
+            c.update(r#"CREATE SCHEMA IF NOT EXISTS paddle"#, None, &[])
+                .unwrap();
             c.update(
-                r#"
-                  CREATE FOREIGN TABLE paddle_customers (
-                    id text,
-                    name text,
-                    email text,
-                    status text,
-                    custom_data jsonb,
-                    created_at timestamp,
-                    updated_at timestamp,
-                    attrs jsonb
-                  )
-                  SERVER paddle_server
-                  OPTIONS (
-                    object 'customers',
-                    rowid_column 'id'
-                  )
-             "#,
+                r#"IMPORT FOREIGN SCHEMA paddle FROM SERVER paddle_server INTO paddle"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
 
             let results = c
                 .select(
-                    "SELECT * FROM paddle_customers WHERE id = 'ctm_01hymwgpkx639a6mkvg99563sp'",
+                    "SELECT * FROM paddle.customers WHERE id = 'ctm_01hymwgpkx639a6mkvg99563sp'",
                     None,
-                    None,
+                    &[],
                 )
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("email").unwrap())
@@ -113,14 +99,14 @@ mod tests {
                 r#"CREATE SERVER notion_server
                      FOREIGN DATA WRAPPER wasm_wrapper
                      OPTIONS (
-                       fdw_package_url 'file://../../../wasm-wrappers/fdw/notion_fdw/target/wasm32-unknown-unknown/release/notion_fdw.wasm',
+                       fdw_package_url 'file://../../../wasm-wrappers/fdw/target/wasm32-unknown-unknown/release/notion_fdw.wasm',
                        fdw_package_name 'supabase:notion-fdw',
                        fdw_package_version '>=0.1.0',
                        api_url 'http://localhost:8096/notion',
                        api_key '1234567890'
                      )"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
             c.update(
@@ -139,7 +125,7 @@ mod tests {
                   )
              "#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
 
@@ -147,7 +133,7 @@ mod tests {
                 .select(
                     "SELECT * FROM notion_pages WHERE id = '5a67c86f-d0da-4d0a-9dd7-f4cf164e6247'",
                     None,
-                    None,
+                    &[],
                 )
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("url").unwrap())
@@ -156,6 +142,261 @@ mod tests {
                 results,
                 vec!["https://www.notion.so/test-page3-5a67c86fd0da4d0a9dd7f4cf164e6247"]
             );
+
+            // Calendly FDW test
+            c.update(
+                r#"CREATE SERVER calendly_server
+                     FOREIGN DATA WRAPPER wasm_wrapper
+                     OPTIONS (
+                       fdw_package_url 'file://../../../wasm-wrappers/fdw/target/wasm32-unknown-unknown/release/calendly_fdw.wasm',
+                       fdw_package_name 'supabase:calendly-fdw',
+                       fdw_package_version '>=0.1.0',
+                       organization 'https://api.calendly.com/organizations/xxx',
+                       api_url 'http://localhost:8096/calendly',
+                       api_key '1234567890'
+                     )"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"
+                  CREATE FOREIGN TABLE calendly_event_types (
+                    uri text,
+                    created_at timestamp,
+                    updated_at timestamp,
+                    attrs jsonb
+                  )
+                  SERVER calendly_server
+                  OPTIONS (
+                    object 'event_types'
+                  )
+             "#,
+                None,
+                &[],
+            )
+            .unwrap();
+
+            let results = c
+                .select("SELECT * FROM calendly_event_types", None, &[])
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("uri").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(
+                results,
+                vec!["https://api.calendly.com/event_types/158ecbf6-79bb-4205-a5fc-a7fefa5883a2"]
+            );
+
+            // Cal.com FDW test
+            c.update(
+                r#"CREATE SERVER cal_server
+                     FOREIGN DATA WRAPPER wasm_wrapper
+                     OPTIONS (
+                       fdw_package_url 'file://../../../wasm-wrappers/fdw/target/wasm32-unknown-unknown/release/cal_fdw.wasm',
+                       fdw_package_name 'supabase:cal-fdw',
+                       fdw_package_version '>=0.1.0',
+                       api_url 'http://localhost:8096/cal',
+                       api_key '1234567890'
+                     )"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"
+                  CREATE FOREIGN TABLE cal_my_profile (
+                    id bigint,
+                    username text,
+                    email text,
+                    attrs jsonb
+                  )
+                  SERVER cal_server
+                  OPTIONS (
+                    object 'my_profile'
+                  )
+             "#,
+                None,
+                &[],
+            )
+            .unwrap();
+
+            let results = c
+                .select("SELECT * FROM cal_my_profile", None, &[])
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<i64, _>("id").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(results, vec![1234567]);
+
+            // Cloudflare D1 FDW test
+            c.update(
+                r#"CREATE SERVER cfd1_server
+                     FOREIGN DATA WRAPPER wasm_wrapper
+                     OPTIONS (
+                       fdw_package_url 'file://../../../wasm-wrappers/fdw/target/wasm32-unknown-unknown/release/cfd1_fdw.wasm',
+                       fdw_package_name 'supabase:cfd1-fdw',
+                       fdw_package_version '>=0.1.0',
+                       api_url 'http://localhost:8096/cfd1',
+                       account_id 'aaa',
+                       database_id 'bbb',
+                       api_token 'ccc'
+                     )"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"
+                  CREATE FOREIGN TABLE cfd1_table (
+                    id bigint,
+                    name text,
+                    _attrs jsonb
+                  )
+                  SERVER cfd1_server
+                  OPTIONS (
+                    table 'test_table'
+                  )
+             "#,
+                None,
+                &[],
+            )
+            .unwrap();
+
+            let results = c
+                .select("SELECT * FROM cfd1_table order by id", None, &[])
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<i64, _>("id").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(results, vec![42, 123]);
+
+            // Clerk FDW test
+            c.update(
+                r#"CREATE SERVER clerk_server
+                     FOREIGN DATA WRAPPER wasm_wrapper
+                     OPTIONS (
+                       fdw_package_url 'file://../../../wasm-wrappers/fdw/target/wasm32-unknown-unknown/release/clerk_fdw.wasm',
+                       fdw_package_name 'supabase:clerk-fdw',
+                       fdw_package_version '>=0.1.0',
+                       api_url 'http://localhost:8096/clerk',
+                       api_key 'ccc'
+                     )"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"
+                  CREATE FOREIGN TABLE clerk_table (
+                    id text,
+                    external_id text,
+                    username text,
+                    first_name text,
+                    last_name text,
+                    created_at timestamp,
+                    updated_at timestamp,
+                    attrs jsonb
+                  )
+                  SERVER clerk_server
+                  OPTIONS (
+                    object 'users'
+                  )
+             "#,
+                None,
+                &[],
+            )
+            .unwrap();
+
+            let results = c
+                .select("SELECT * FROM clerk_table", None, &[])
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("id").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(results, vec!["user_2rvWkk90azWI2o3PH4LDuCMDPPh"]);
+
+            // Orb FDW test
+            c.update(
+                r#"CREATE SERVER orb_server
+                     FOREIGN DATA WRAPPER wasm_wrapper
+                     OPTIONS (
+                       fdw_package_url 'file://../../../wasm-wrappers/fdw/target/wasm32-unknown-unknown/release/orb_fdw.wasm',
+                       fdw_package_name 'supabase:orb-fdw',
+                       fdw_package_version '>=0.1.0',
+                       api_url 'http://localhost:8096/orb',
+                       api_key 'ccc'
+                     )"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"
+                  CREATE FOREIGN TABLE orb_table (
+                    id text,
+                    name text,
+                    email text,
+                    created_at timestamp,
+                    auto_collection boolean,
+                    attrs jsonb
+                  )
+                  SERVER orb_server
+                  OPTIONS (
+                    object 'customers'
+                  )
+             "#,
+                None,
+                &[],
+            )
+            .unwrap();
+
+            let results = c
+                .select("SELECT * FROM orb_table", None, &[])
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("id").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(results, vec!["XimGiw3pnsgusvc3"]);
+
+            // HubSpot FDW test
+            c.update(
+                r#"CREATE SERVER hubspot_server
+                     FOREIGN DATA WRAPPER wasm_wrapper
+                     OPTIONS (
+                       fdw_package_url 'file://../../../wasm-wrappers/fdw/target/wasm32-unknown-unknown/release/hubspot_fdw.wasm',
+                       fdw_package_name 'supabase:hubspot-fdw',
+                       fdw_package_version '>=0.1.0',
+                       api_url 'http://localhost:8096/hubspot',
+                       api_key 'ccc'
+                     )"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"
+                  CREATE FOREIGN TABLE hubspot_table (
+                    id text,
+                    email text,
+                    firstname text,
+                    lastname text,
+                    user_id text,
+                    created_at timestamp,
+                    updated_at timestamp,
+                    attrs jsonb
+                  )
+                  SERVER hubspot_server
+                  OPTIONS (
+                    object 'objects/contacts'
+                  )
+             "#,
+                None,
+                &[],
+            )
+            .unwrap();
+
+            let results = c
+                .select("SELECT id, user_id FROM hubspot_table", None, &[])
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("user_id").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(results, vec!["8527", "8528"]);
         });
     }
 }

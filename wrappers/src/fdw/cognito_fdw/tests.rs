@@ -6,12 +6,12 @@ mod tests {
 
     #[pg_test]
     fn cognito_smoketest() {
-        Spi::connect(|mut c| {
+        Spi::connect_mut(|c| {
             c.update(
                 r#"create foreign data wrapper cognito_wrapper
                          handler cognito_fdw_handler validator cognito_fdw_validator"#,
                 None,
-                None,
+                &[],
             )
             .expect("Failed to create foreign data wrapper");
             c.update(
@@ -25,30 +25,23 @@ mod tests {
                             region 'ap-southeast-1'
                          )"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
+            c.update(r#"CREATE SCHEMA IF NOT EXISTS cognito"#, None, &[])
+                .unwrap();
             c.update(
-                r#"
-                  CREATE FOREIGN TABLE cognito_view (
-                    email text,
-                    username text
-                  )
-                  SERVER cognito_server
-                  options (
-                    object 'users'
-                  )
-             "#,
+                r#"IMPORT FOREIGN SCHEMA cognito FROM SERVER cognito_server INTO cognito"#,
                 None,
-                None,
+                &[],
             )
             .unwrap();
 
             let results = c
                 .select(
-                    "SELECT * FROM cognito_view WHERE email = 'test1'",
+                    "SELECT * FROM cognito.users WHERE email = 'test1'",
                     None,
-                    None,
+                    &[],
                 )
                 .expect("One record for the query")
                 .collect::<Vec<_>>();
