@@ -1,7 +1,10 @@
 use pgrx::FromDatum;
 use pgrx::{
-    debug2, memcxt::PgMemoryContexts, pg_sys::Datum, pg_sys::Oid, prelude::*, IntoDatum,
-    PgSqlErrorCode,
+    debug2,
+    memcxt::PgMemoryContexts,
+    pg_sys::{Datum, MemoryContext, MemoryContextData, Oid},
+    prelude::*,
+    IntoDatum, PgSqlErrorCode,
 };
 use std::collections::HashMap;
 use std::marker::PhantomData;
@@ -43,7 +46,7 @@ struct FdwState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
 
     // temporary memory context per foreign table, created under Wrappers root
     // memory context
-    tmp_ctx: PgMemoryContexts,
+    tmp_ctx: MemoryContext,
 
     // query result list
     values: Vec<Datum>,
@@ -53,7 +56,7 @@ struct FdwState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
 }
 
 impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwState<E, W> {
-    unsafe fn new(foreigntableid: Oid, tmp_ctx: PgMemoryContexts) -> Self {
+    unsafe fn new(foreigntableid: Oid, tmp_ctx: MemoryContext) -> Self {
         Self {
             instance: instance::create_fdw_instance_from_table_id(foreigntableid),
             quals: Vec::new(),
@@ -120,37 +123,38 @@ pub(super) extern "C-unwind" fn get_foreign_rel_size<
 ) {
     debug2!("---> get_foreign_rel_size");
     unsafe {
-        // refresh leftover memory context
+        // create memory context for scan
         let ctx_name = format!("Wrappers_scan_{}", foreigntableid.to_u32());
-        let ctx = memctx::refresh_wrappers_memctx(&ctx_name);
+        let ctx = memctx::create_wrappers_memctx(&ctx_name);
 
         // create scan state
         let mut state = FdwState::<E, W>::new(foreigntableid, ctx);
 
-        // extract qual list
-        state.quals = extract_quals(root, baserel, foreigntableid);
+        PgMemoryContexts::For(state.tmp_ctx).switch_to(|_| {
+            // extract qual list
+            state.quals = extract_quals(root, baserel, foreigntableid);
 
-        // extract target column list from target and restriction expression
-        state.tgts = utils::extract_target_columns(root, baserel);
+            // extract target column list from target and restriction expression
+            state.tgts = utils::extract_target_columns(root, baserel);
 
-        // extract sort list
-        state.sorts = extract_sorts(root, baserel, foreigntableid);
+            // extract sort list
+            state.sorts = extract_sorts(root, baserel, foreigntableid);
 
-        // extract limit
-        state.limit = extract_limit(root, baserel, foreigntableid);
+            // extract limit
+            state.limit = extract_limit(root, baserel, foreigntableid);
 
-        // get foreign table options
-        let ftable = pg_sys::GetForeignTable(foreigntableid);
-        state.opts = options_to_hashmap((*ftable).options).report_unwrap();
+            // get foreign table options
+            let ftable = pg_sys::GetForeignTable(foreigntableid);
+            state.opts = options_to_hashmap((*ftable).options).report_unwrap();
+        });
 
         // get estimate row count and mean row width
         let (rows, width) = state.get_rel_size().report_unwrap();
         (*baserel).rows = rows as f64;
         (*(*baserel).reltarget).width = width;
 
-        // install callback to drop the state when memory context is reset
-        let ctx = state.tmp_ctx.value();
-        (*baserel).fdw_private = PgMemoryContexts::For(ctx).leak_and_drop_on_delete(state) as _;
+        // save the state for following callbacks
+        (*baserel).fdw_private = Box::leak(Box::new(state)) as *mut FdwState<E, W> as _;
     }
 }
 
@@ -221,10 +225,9 @@ pub(super) extern "C-unwind" fn get_foreign_plan<E: Into<ErrorReport>, W: Foreig
         // `deserialized` when executing the plan later.
         // Note that the state itself is not serialized to any memory contexts,
         // it just sits in Rust managed Box'ed memory and will be dropped when
-        // the state's temporary memory context (state.tmp_ctx) is reset at the
-        // beginning of next query run.
-        let ctx = PgMemoryContexts::For(state.tmp_ctx.value());
-        let fdw_private = FdwState::serialize_to_list(state, ctx);
+        // end_foreign_scan() is called.
+        let fdw_private =
+            PgMemoryContexts::For(state.tmp_ctx).switch_to(|_| FdwState::serialize_to_list(state));
 
         pg_sys::make_foreignscan(
             tlist,
@@ -256,7 +259,7 @@ pub(super) extern "C-unwind" fn explain_foreign_scan<
 
         let state = PgBox::<FdwState<E, W>>::from_pg(fdw_state);
 
-        let ctx = PgMemoryContexts::CurrentMemoryContext;
+        let ctx = PgMemoryContexts::For(state.tmp_ctx);
 
         let label = ctx.pstrdup("Wrappers");
 
@@ -363,21 +366,23 @@ pub(super) extern "C-unwind" fn iterate_foreign_scan<
                 return slot;
             }
 
-            for i in 0..state.row.cells.len() {
-                let att_idx = state.tgts[i].num - 1;
-                let cell = state.row.cells.get_unchecked_mut(i);
-                match cell.take() {
-                    Some(cell) => {
-                        state.values[att_idx] = cell.into_datum().unwrap();
-                        state.nulls[att_idx] = false;
+            PgMemoryContexts::For(state.tmp_ctx).switch_to(|_| {
+                for i in 0..state.row.cells.len() {
+                    let att_idx = state.tgts[i].num - 1;
+                    let cell = state.row.cells.get_unchecked_mut(i);
+                    match cell.take() {
+                        Some(cell) => {
+                            state.values[att_idx] = cell.into_datum().unwrap();
+                            state.nulls[att_idx] = false;
+                        }
+                        None => state.nulls[att_idx] = true,
                     }
-                    None => state.nulls[att_idx] = true,
                 }
-            }
 
-            (*slot).tts_values = state.values.as_mut_ptr();
-            (*slot).tts_isnull = state.nulls.as_mut_ptr();
-            pg_sys::ExecStoreVirtualTuple(slot);
+                (*slot).tts_values = state.values.as_mut_ptr();
+                (*slot).tts_isnull = state.nulls.as_mut_ptr();
+                pg_sys::ExecStoreVirtualTuple(slot);
+            });
         }
 
         slot
@@ -412,7 +417,20 @@ pub(super) extern "C-unwind" fn end_foreign_scan<E: Into<ErrorReport>, W: Foreig
             return;
         }
 
+        // the scan state is actually not allocated by PG, but we use 'from_pg()'
+        // here just to tell PgBox don't free the state, instead we will handle
+        // drop the state by ourselves
         let mut state = PgBox::<FdwState<E, W>>::from_pg(fdw_state);
         state.end_scan().report_unwrap();
+
+        // remove the allocated memory context
+        memctx::delete_wrappers_memctx(state.tmp_ctx);
+        state.tmp_ctx = ptr::null::<MemoryContextData>() as _;
+
+        (*node).fdw_state = ptr::null::<FdwState<E, W>>() as _;
+
+        // drop the scan state, so the fdw instance can be dropped too
+        let boxed_fdw_state = Box::from_raw(fdw_state);
+        drop(boxed_fdw_state);
     }
 }
