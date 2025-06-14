@@ -169,8 +169,15 @@ iceberg_fdw = [
     "uuid",
 ]
 duckdb_fdw = [
+    "arrow-array",
+    "arrow-schema",
+    "arrow-json",
+    "chrono",
     "duckdb",
+    "regex",
+    "serde_json",
     "thiserror",
+    "uuid",
 ]
 # Does not include helloworld_fdw because of its general uselessness
 native_fdws = [

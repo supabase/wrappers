@@ -1,75 +1,12 @@
 use crate::stats;
-use duckdb::{self, types::Type as DuckdbType, Connection};
-use pgrx::{pg_sys, prelude::to_timestamp, PgBuiltInOids, PgOid};
+use duckdb::{self, Connection};
+use pgrx::pg_sys;
 use std::collections::HashMap;
+use std::path::Path;
 
 use supabase_wrappers::prelude::*;
 
-use super::{DuckdbFdwError, DuckdbFdwResult};
-
-// convert a DuckDB  field to a wrappers cell
-fn field_to_cell(
-    src_row: &duckdb::Row<'_>,
-    col_idx: usize,
-    tgt_col: &Column,
-) -> Result<Option<Cell>, duckdb::Error> {
-    match PgOid::from(tgt_col.type_oid) {
-        PgOid::BuiltIn(PgBuiltInOids::BOOLOID) => src_row
-            .get::<_, Option<bool>>(col_idx)
-            .map(|v| v.map(Cell::Bool)),
-        PgOid::BuiltIn(PgBuiltInOids::CHAROID) => src_row
-            .get::<_, Option<i8>>(col_idx)
-            .map(|v| v.map(Cell::I8)),
-        PgOid::BuiltIn(PgBuiltInOids::INT2OID) => src_row
-            .get::<_, Option<i16>>(col_idx)
-            .map(|v| v.map(Cell::I16)),
-        PgOid::BuiltIn(PgBuiltInOids::FLOAT4OID) => src_row
-            .get::<_, Option<f32>>(col_idx)
-            .map(|v| v.map(Cell::F32)),
-        PgOid::BuiltIn(PgBuiltInOids::INT4OID) => src_row
-            .get::<_, Option<i32>>(col_idx)
-            .map(|v| v.map(Cell::I32)),
-        PgOid::BuiltIn(PgBuiltInOids::FLOAT8OID) => src_row
-            .get::<_, Option<f64>>(col_idx)
-            .map(|v| v.map(Cell::F64)),
-        PgOid::BuiltIn(PgBuiltInOids::INT8OID) => src_row
-            .get::<_, Option<i64>>(col_idx)
-            .map(|v| v.map(Cell::I64)),
-        PgOid::BuiltIn(PgBuiltInOids::NUMERICOID) => src_row
-            .get::<_, Option<i64>>(col_idx)
-            .map(|v| v.map(pgrx::AnyNumeric::from).map(Cell::Numeric)),
-        PgOid::BuiltIn(PgBuiltInOids::TEXTOID) => src_row
-            .get::<_, Option<String>>(col_idx)
-            .map(|v| v.map(Cell::String)),
-        PgOid::BuiltIn(PgBuiltInOids::DATEOID) => src_row.get::<_, Option<i64>>(col_idx).map(|v| {
-            v.map(|v| {
-                let ts = to_timestamp((v * 86_400) as f64);
-                Cell::Date(pgrx::prelude::Date::from(ts))
-            })
-        }),
-        PgOid::BuiltIn(PgBuiltInOids::TIMESTAMPOID) => {
-            src_row.get::<_, Option<i64>>(col_idx).map(|v| {
-                v.map(|v| {
-                    let ts = to_timestamp((v / 1_000_000) as _);
-                    Cell::Timestamp(ts.to_utc())
-                })
-            })
-        }
-        PgOid::BuiltIn(PgBuiltInOids::TIMESTAMPTZOID) => {
-            src_row.get::<_, Option<i64>>(col_idx).map(|v| {
-                v.map(|v| {
-                    let ts = to_timestamp((v / 1_000_000) as _);
-                    Cell::Timestamptz(ts)
-                })
-            })
-        }
-        _ => Err(duckdb::Error::InvalidColumnType(
-            col_idx,
-            tgt_col.name.clone(),
-            DuckdbType::Any,
-        )),
-    }
-}
+use super::{mapper, server_type::ServerType, DuckdbFdwError, DuckdbFdwResult};
 
 #[wrappers_fdw(
     version = "0.1.0",
@@ -78,6 +15,8 @@ fn field_to_cell(
     error_type = "DuckdbFdwError"
 )]
 pub(crate) struct DuckdbFdw {
+    svr_type: ServerType,
+    svr_opts: HashMap<String, String>,
     conn: Connection,
     table: String,
     scan_result: Vec<Row>,
@@ -86,6 +25,22 @@ pub(crate) struct DuckdbFdw {
 
 impl DuckdbFdw {
     const FDW_NAME: &'static str = "DuckdbFdw";
+
+    fn init_duckdb(&self) -> DuckdbFdwResult<()> {
+        let sql = String::default()
+            + if self.svr_type.is_iceberg() { "install iceberg;load iceberg;" } else { "" }
+            + &self.svr_type.get_create_secret_sql(&self.svr_opts)
+            + &self.svr_type.get_attach_sql(&self.svr_opts)?
+            // security tips: https://duckdb.org/docs/stable/operations_manual/securing_duckdb/overview
+            + "
+                set disabled_filesystems = 'LocalFileSystem';
+                set allow_community_extensions = false;
+                set lock_configuration = true;
+            ";
+        self.conn.execute_batch(&sql)?;
+
+        Ok(())
+    }
 
     fn deparse(
         &self,
@@ -147,46 +102,63 @@ impl DuckdbFdw {
 
         Ok(sql)
     }
+
+    fn get_table_ddl(
+        &self,
+        tbl_duckdb: &str,
+        tbl_pg: &str,
+        server_name: &str,
+        is_strict: bool,
+    ) -> DuckdbFdwResult<String> {
+        let mut fields: Vec<String> = Vec::new();
+
+        // 'information_schema.columns' table won't have the external table
+        // column info as for now, so we use 'show' statement to fetch it from remote
+        let sql = format!(r#"show {tbl_duckdb}"#);
+        let mut stmt = self.conn.prepare(&sql)?;
+        let mut columns = stmt.query([])?;
+        while let Some(col) = columns.next()? {
+            let col_name = col.get::<_, String>("column_name")?;
+            let col_type = col.get::<_, String>("column_type")?;
+            let is_null = if col.get::<_, String>("null")? == "YES" {
+                ""
+            } else {
+                "not null"
+            };
+
+            if let Some(pg_type) = mapper::map_column_type(tbl_pg, &col_name, &col_type, is_strict)?
+            {
+                fields.push(format!("{} {} {}", col_name, pg_type, is_null));
+            }
+        }
+
+        let ret = if !fields.is_empty() {
+            format!(
+                r#"create foreign table if not exists {} ({})
+                server {} options (table '{}')"#,
+                tbl_pg,
+                fields.join(","),
+                server_name,
+                tbl_duckdb.replace("'", "''"),
+            )
+        } else {
+            String::default()
+        };
+
+        Ok(ret)
+    }
 }
 
 impl ForeignDataWrapper<DuckdbFdwError> for DuckdbFdw {
     fn new(server: ForeignServer) -> DuckdbFdwResult<Self> {
+        let svr_type = ServerType::new(&server.options)?;
         let conn = Connection::open_in_memory()?;
-
-        // create secret if key is specified in options
-        if let Some(key_type) = server.options.get("key_type") {
-            let mut params = vec![format!("type {key_type}")];
-
-            if let Some(key_id) = server.options.get("key_id") {
-                params.push(format!("key_id '{key_id}'"));
-            } else if let Some(vault_key_id) = server.options.get("vault_key_id") {
-                params.push(format!(
-                    "key_id '{}'",
-                    get_vault_secret(vault_key_id).unwrap_or_default()
-                ));
-            }
-
-            if let Some(key_secret) = server.options.get("key_secret") {
-                params.push(format!("secret '{key_secret}'"));
-            } else if let Some(vault_key_secret) = server.options.get("vault_key_secret") {
-                params.push(format!(
-                    "secret '{}'",
-                    get_vault_secret(vault_key_secret).unwrap_or_default()
-                ));
-            }
-
-            if let Some(key_region) = server.options.get("key_region") {
-                params.push(format!("region '{key_region}'"));
-            }
-
-            let sql = format!("create secret ({});", params.join(","));
-            //report_info(&format!("secret sql=={}", sql));
-            conn.execute_batch(&sql)?;
-        }
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
 
         Ok(DuckdbFdw {
+            svr_type,
+            svr_opts: server.options.clone(),
             conn,
             table: String::default(),
             scan_result: Vec::new(),
@@ -204,16 +176,22 @@ impl ForeignDataWrapper<DuckdbFdwError> for DuckdbFdw {
     ) -> DuckdbFdwResult<()> {
         self.table = require_option("table", options)?.to_string();
 
+        // initialise DuckDB
+        self.init_duckdb()?;
+
         // compile sql query to run on DuckDB
         let sql = self.deparse(quals, columns, sorts, limit)?;
-        //report_info(&format!("sql=={}", sql));
+        if cfg!(debug_assertions) {
+            log_debug1(&format!("sql on DuckDB: {sql}"));
+        }
 
+        // run sql query on DuckDB
         let mut stmt = self.conn.prepare(&sql)?;
-        let tgt_rows: Result<Vec<_>, _> = stmt
-            .query_map([], |src_row| {
+        let tgt_rows: Result<Vec<_>, DuckdbFdwError> = stmt
+            .query_and_then([], |src_row| {
                 let mut tgt_row = Row::new();
                 for (col_idx, tgt_col) in columns.iter().enumerate() {
-                    let cell = field_to_cell(src_row, col_idx, tgt_col)?;
+                    let cell = mapper::map_cell(src_row, col_idx, tgt_col)?;
                     tgt_row.push(&tgt_col.name, cell);
                 }
                 Ok(tgt_row)
@@ -256,12 +234,93 @@ impl ForeignDataWrapper<DuckdbFdwError> for DuckdbFdw {
         Ok(())
     }
 
+    fn import_foreign_schema(
+        &mut self,
+        import_stmt: ImportForeignSchemaStmt,
+    ) -> DuckdbFdwResult<Vec<String>> {
+        let is_strict =
+            require_option_or("strict", &import_stmt.options, "false").to_lowercase() == "true";
+        let mut ret: Vec<String> = Vec::new();
+
+        // initialise DuckDB
+        self.init_duckdb()?;
+
+        // table list, 1st element is table name in DuckDB, 2nd is the table name in PG
+        let tables: Vec<(String, String)> = if self.svr_type.is_iceberg() {
+            let db_name = self.svr_type.as_str();
+
+            // get schema list
+            let sql = "
+                    select schema_name
+                    from information_schema.schemata
+                    where catalog_name = ?
+                      and schema_name is not null
+                ";
+            let mut stmt = self.conn.prepare(sql)?;
+            let schemas = stmt
+                .query_map([db_name], |row| row.get::<_, String>(0))?
+                .collect::<Result<Vec<_>, _>>()?;
+
+            let mut tables = Vec::new();
+
+            for schema in schemas {
+                let sql = "
+                        select table_name
+                        from information_schema.tables
+                        where table_catalog = ?
+                          and table_schema = ?
+                        order by table_name
+                    ";
+                let mut stmt = self.conn.prepare(sql)?;
+                let tbls = stmt
+                    .query_map([db_name, &schema], |row| row.get::<_, String>(0))?
+                    .collect::<Result<Vec<_>, _>>()?;
+                tables.extend(tbls.into_iter().map(|t| format!("{db_name}.{schema}.{t}")));
+            }
+
+            tables
+                .iter()
+                .map(|t| (t.clone(), t.replace(".", "_")))
+                .collect()
+        } else {
+            let tables = require_option_or("tables", &import_stmt.options, "")
+                .split(",")
+                .map(|t| t.trim())
+                .filter(|t| !t.is_empty())
+                .enumerate()
+                .map(|(idx, table)| {
+                    let prefix = format!("{0}_{idx}", import_stmt.remote_schema);
+                    let p = Path::new(table);
+                    if let Some(stem) = p.file_stem() {
+                        let stem = stem.to_string_lossy().to_string();
+                        if stem.chars().all(|c| c.is_alphanumeric() || c == '_') {
+                            return (format!("'{table}'"), format!("{prefix}_{stem}"));
+                        }
+                    }
+                    (format!("'{table}'"), prefix.to_string())
+                })
+                .collect();
+            tables
+        };
+
+        // get each table DDL
+        for (tbl_duckdb, tbl_pg) in tables {
+            let ddl =
+                self.get_table_ddl(&tbl_duckdb, &tbl_pg, &import_stmt.server_name, is_strict)?;
+            ret.push(ddl);
+        }
+
+        Ok(ret)
+    }
+
     fn validator(
         options: Vec<Option<String>>,
         catalog: Option<pg_sys::Oid>,
     ) -> DuckdbFdwResult<()> {
         if let Some(oid) = catalog {
-            if oid == FOREIGN_TABLE_RELATION_ID {
+            if oid == FOREIGN_SERVER_RELATION_ID {
+                check_options_contain(&options, "type")?;
+            } else if oid == FOREIGN_TABLE_RELATION_ID {
                 check_options_contain(&options, "table")?;
             }
         }
