@@ -694,7 +694,7 @@ import foreign schema s3
   options (
     tables '
       s3://my_bucket/products.parquet
-	'
+    '
   );
 
 select * from duckdb.s3_0_products;
@@ -725,10 +725,10 @@ First, create a `s3_tables` server:
 create server duckdb_server
   foreign data wrapper duckdb_wrapper
   options (
-	type 's3_tables',
+    type 's3_tables',
     key_id '<AWS_access_key_ID>',
     secret '<AWS_secret_access_key>',
-	region 'us-east-1',
+    region 'us-east-1',
     s3_tables_arn 'arn:aws:s3tables:us-east-1:203212701384:bucket/my-bucket'
   );
 ```
@@ -751,9 +751,9 @@ create server duckdb_server
   foreign data wrapper duckdb_wrapper
   options (
     type 'r2_catalog',
-	token '<R2 API token>',
-	warehouse '2b303ef0293bc91a0217a0381af14a3e_r2-data-catalog-tutorial',
-	catalog_uri 'https://catalog.cloudflarestorage.com/2b303ef0293bc91a0217a0381af14a3e/r2-data-catalog-tutorial'
+    token '<R2 API token>',
+    warehouse '2b303ef0293bc91a0217a0381af14a3e_r2-data-catalog-tutorial',
+    catalog_uri 'https://catalog.cloudflarestorage.com/2b303ef0293bc91a0217a0381af14a3e/r2-data-catalog-tutorial'
   );
 ```
 
@@ -780,5 +780,3 @@ where name = 'Alice' and score = 80;
 -- 'order by' and 'limit' will be pushed down to DuckDB
 select * from duckdb.r2_catalog_default_people order by id limit 2;
 ```
-
-
