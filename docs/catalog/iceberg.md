@@ -345,9 +345,9 @@ create server iceberg_server
   options (
     aws_access_key_id '<R2_access_key_ID>',
     aws_secret_access_key '<R2_secret_access_key>',
-	token '<R2 API token>',
-	warehouse 'xxx_r2-data-catalog-tutorial',
-	"s3.endpoint" 'https://xxx.r2.cloudflarestorage.com',
+    token '<R2 API token>',
+    warehouse 'xxx_r2-data-catalog-tutorial',
+    "s3.endpoint" 'https://xxx.r2.cloudflarestorage.com',
     catalog_uri 'https://catalog.cloudflarestorage.com/xxx/r2-data-catalog-tutorial'
   );
 ```
