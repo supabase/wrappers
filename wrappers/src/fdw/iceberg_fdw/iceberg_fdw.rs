@@ -27,7 +27,7 @@ fn copy_option(map: &mut HashMap<String, String>, from_key: &str, to_key: &str) 
 }
 
 #[wrappers_fdw(
-    version = "0.1.0",
+    version = "0.1.1",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/iceberg_fdw",
     error_type = "IcebergFdwError"

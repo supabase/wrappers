@@ -10,5 +10,6 @@ This is a foreign data wrapper for [Apache Iceberg](https://iceberg.apache.org/)
 
 | Version | Date       | Notes                                                |
 | ------- | ---------- | ---------------------------------------------------- |
+| 0.1.1   | 2025-05-15 | Refactor server options passdown                     |
 | 0.1.0   | 2025-05-07 | Initial version                                      |
 
