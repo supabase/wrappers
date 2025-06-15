@@ -17,6 +17,15 @@ use supabase_wrappers::prelude::*;
 use super::{mapper::Mapper, pushdown::try_pushdown, IcebergFdwError, IcebergFdwResult};
 use crate::stats;
 
+// copy an option to another in an option HashMap, if the target option
+// doesn't exist
+fn copy_option(map: &mut HashMap<String, String>, from_key: &str, to_key: &str) {
+    if !map.contains_key(to_key) {
+        let value = map.get(from_key).cloned().unwrap_or_default();
+        map.insert(to_key.to_string(), value);
+    }
+}
+
 #[wrappers_fdw(
     version = "0.1.0",
     author = "Supabase",
@@ -145,54 +154,53 @@ impl IcebergFdw {
 
 impl ForeignDataWrapper<IcebergFdwError> for IcebergFdw {
     fn new(server: ForeignServer) -> IcebergFdwResult<Self> {
-        // get aws config from server options
-        let (aws_key_id, aws_secret_key) = match server.options.get("vault_access_key_id") {
-            Some(key_id) => {
-                let secret_key = require_option("vault_secret_access_key", &server.options)?;
-                get_vault_secret(key_id)
-                    .zip(get_vault_secret(secret_key))
-                    .ok_or(IcebergFdwError::VaultError(
-                        "cannot get credentials from Vault".into(),
-                    ))?
-            }
-            None => {
-                let key_id = require_option("aws_access_key_id", &server.options)?.to_string();
-                let secret_key =
-                    require_option("aws_secret_access_key", &server.options)?.to_string();
-                (key_id, secret_key)
-            }
-        };
-        let aws_region = require_option_or("aws_region", &server.options, "us-east-1");
-        let s3_endpoint_url = server.options.get("s3_endpoint_url");
+        // transform server options into properties for catalog creation
+        let mut props: HashMap<String, String> = server
+            .options
+            .iter()
+            .map(|(k, v)| -> IcebergFdwResult<_> {
+                // get decrypted text from options with 'vault_' prefix
+                let value = if k.starts_with("vault_") {
+                    if let Some(val) = get_vault_secret(v) {
+                        val
+                    } else {
+                        return Err(IcebergFdwError::VaultError(format!(
+                            "cannot decrypt for '{k}' from Vault"
+                        )));
+                    }
+                } else {
+                    v.clone()
+                };
+                let key = k.strip_prefix("vault_").unwrap_or(k).to_string();
+                Ok((key, value))
+            })
+            .collect::<IcebergFdwResult<Vec<_>>>()?
+            .into_iter()
+            .collect();
 
-        // set properties passed to catalog config
-        let mut props: HashMap<String, String> = HashMap::new();
-        props.insert("aws_access_key_id".into(), aws_key_id.clone());
-        props.insert("aws_secret_access_key".into(), aws_secret_key.clone());
-        props.insert("region_name".into(), aws_region.to_owned());
-        props.insert("s3.access-key-id".into(), aws_key_id);
-        props.insert("s3.secret-access-key".into(), aws_secret_key);
-        props.insert("s3.region".into(), aws_region.into());
-        if let Some(s3_endpoint_url) = s3_endpoint_url {
-            props.insert("s3.endpoint".into(), s3_endpoint_url.into());
-        }
+        // copy AWS credentials if they're not set by user
+        copy_option(&mut props, "aws_access_key_id", "s3.access-key-id");
+        copy_option(&mut props, "aws_secret_access_key", "s3.secret-access-key");
+        copy_option(&mut props, "region_name", "s3.region");
 
         let rt = create_async_runtime()?;
 
         // create catalog
         // note: only below services are supported now:
         //   1. S3 tables
-        //   2. REST catalog with S3 as backend storage
+        //   2. REST catalog with S3 (or compatible) as backend storage
         let catalog: Box<dyn Catalog> =
-            if let Some(aws_s3table_arn) = server.options.get("aws_s3table_bucket_arn") {
+            if let Some(aws_s3table_arn) = props.get("aws_s3table_bucket_arn") {
                 let catalog_config = S3TablesCatalogConfig::builder()
                     .table_bucket_arn(aws_s3table_arn.into())
                     .properties(props)
                     .build();
                 Box::new(rt.block_on(S3TablesCatalog::new(catalog_config))?)
             } else {
-                let catalog_uri = require_option("catalog_uri", &server.options)?;
+                let catalog_uri = require_option("catalog_uri", &props)?;
+                let warehouse = require_option_or("warehouse", &props, "warehouse");
                 let catalog_config = RestCatalogConfig::builder()
+                    .warehouse(warehouse.into())
                     .uri(catalog_uri.into())
                     .props(props)
                     .build();
