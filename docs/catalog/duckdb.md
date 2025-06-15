@@ -765,6 +765,7 @@ import foreign schema "default"
 
 select * from duckdb.r2_catalog_default_people;
 ```
+
 ### Query Pushdown Examples
 
 Follow the above [Read R2 Data Catalog example](#read-cloudflare-r2-data-catalog), below are some query pushdown examples:
