@@ -20,6 +20,7 @@ nav:
           - AWS Cognito: "catalog/cognito.md"
           - BigQuery: "catalog/bigquery.md"
           - ClickHouse: "catalog/clickhouse.md"
+          - DuckDB: "catalog/duckdb.md"
           - Firebase: "catalog/firebase.md"
           - Iceberg : "catalog/iceberg.md"
           - Logflare: "catalog/logflare.md"
