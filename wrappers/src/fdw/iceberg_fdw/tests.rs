@@ -21,9 +21,9 @@ mod tests {
                      OPTIONS (
                        aws_access_key_id 'admin',
                        aws_secret_access_key 'password',
-                       aws_region 'us-east-1',
                        catalog_uri 'http://localhost:8181',
-                       s3_endpoint_url 'http://localhost:8000'
+                       warehouse 'warehouse',
+                       "s3.endpoint" 'http://localhost:8000'
                      )"#,
                 None,
                 &[],

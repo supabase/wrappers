@@ -43,9 +43,9 @@ By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server
 -- Save your AWS credentials in Vault and retrieve the created
 -- `aws_access_key_id` and `aws_secret_access_key`
 select vault.create_secret(
-  '<access key id>',
-  'aws_access_key_id',
-  'AWS access key for Wrappers'
+  '<access key id>',  -- secret to be encrypted
+  'aws_access_key_id',  -- secret name
+  'AWS access key for Wrappers'  -- secret description
 );
 select vault.create_secret(
   '<secret access key>'
@@ -56,24 +56,26 @@ select vault.create_secret(
 
 ### Connecting to Icerberg
 
-We need to provide Postgres with the credentials to connect to Iceberg. We can do this using the `create server` command:
+We need to provide Postgres with the credentials to connect to Iceberg. We can do this using the `create server` command.
+
+For any server options need to be stored in Vault, you can add a prefix `vault_` to its name and use the secret ID returned from the `select vault.create_secret()` statement as the option value.
 
 #### Connecting to AWS S3 Tables
 
 === "With Vault"
 
     ```sql
-    create server iceberg_fdw
+    create server iceberg_server
       foreign data wrapper iceberg_wrapper
       options (
         -- The key id saved in Vault from above
-        vault_access_key_id '<key_ID>',
+        vault_aws_access_key_id '<key_ID>',
 
         -- The secret id saved in Vault from above
-        vault_secret_access_key '<secret_key>',
+        vault_aws_secret_access_key '<secret_key>',
 
         -- AWS region
-        aws_region 'us-east-1',
+        region_name 'us-east-1',
 
         -- AWS S3 table bucket ARN
         aws_s3table_bucket_arn 'arn:aws:s3tables:us-east-1:204203087419:bucket/my-table-bucket'
@@ -83,7 +85,7 @@ We need to provide Postgres with the credentials to connect to Iceberg. We can d
 === "Without Vault"
 
     ```sql
-    create server iceberg_fdw
+    create server iceberg_server
       foreign data wrapper iceberg_wrapper
       options (
         -- The AWS access key ID
@@ -93,42 +95,45 @@ We need to provide Postgres with the credentials to connect to Iceberg. We can d
         aws_secret_access_key '<secret_key>',
 
         -- AWS region
-        aws_region 'us-east-1',
+        region_name 'us-east-1',
 
         -- AWS S3 table bucket ARN
         aws_s3table_bucket_arn 'arn:aws:s3tables:us-east-1:204203087419:bucket/my-table-bucket'
       );
     ```
 
-#### Connecting to Iceberg REST Catalog + AWS S3
+#### Connecting to Iceberg REST Catalog + AWS S3 (or compatible) storage
 
 === "With Vault"
 
     ```sql
-    create server iceberg_fdw
+    create server iceberg_server
       foreign data wrapper iceberg_wrapper
       options (
         -- The key id saved in Vault from above
-        vault_access_key_id '<key_ID>',
+        vault_aws_access_key_id '<key_ID>',
 
         -- The secret id saved in Vault from above
-        vault_secret_access_key '<secret_key>',
+        vault_aws_secret_access_key '<secret_key>',
 
         -- AWS region
-        aws_region 'us-east-1',
+        region_name 'us-east-1',
 
         -- Iceberg REST Catalog URI
         catalog_uri 'https://rest-catalog/ws',
 
+        -- Warehouse name
+        warehouse 'warehouse',
+
         -- AWS S3 endpoint URL, optional
-        s3_endpoint_url 'https://alternative-s3-storage:8000'
+        "s3.endpoint" 'https://alternative-s3-storage:8000'
       );
     ```
 
 === "Without Vault"
 
     ```sql
-    create server iceberg_fdw
+    create server iceberg_server
       foreign data wrapper iceberg_wrapper
       options (
         -- The key id saved in Vault from above
@@ -138,15 +143,22 @@ We need to provide Postgres with the credentials to connect to Iceberg. We can d
         aws_secret_access_key '<secret_key>',
 
         -- AWS region
-        aws_region 'us-east-1',
+        region_name 'us-east-1',
 
         -- Iceberg REST Catalog URI
         catalog_uri 'https://rest-catalog/ws',
 
+        -- Warehouse name
+        warehouse 'warehouse',
+
         -- AWS S3 endpoint URL, optional
-        s3_endpoint_url 'https://alternative-s3-storage:8000'
+        "s3.endpoint" 'https://alternative-s3-storage:8000'
       );
     ```
+
+!!! info
+
+    For other optional S3 options, please refer to [PyIceberg S3 Configuration](https://py.iceberg.apache.org/configuration/#s3).
 
 ### Create a schema
 
@@ -170,17 +182,18 @@ For example, using below SQL can automatically create foreign tables in the `ice
 
 ```sql
 -- create all the foreign tables from Iceberg "docs_example" namespace
-import foreign schema "docs_example" from server iceberg_server into iceberg;
+import foreign schema "docs_example"
+  from server iceberg_server into iceberg;
 
 -- or, only create "readme" and "guides" foreign tables
 import foreign schema "docs_example"
-   limit to ("readme", "guides")
-   from server iceberg_server into iceberg;
+  limit to ("readme", "guides")
+  from server iceberg_server into iceberg;
 
 -- or, create all foreign tables except "readme"
 import foreign schema "docs_example"
-   except ("readme")
-   from server iceberg_server into iceberg;
+  except ("readme")
+  from server iceberg_server into iceberg;
 ```
 
 !!! note
@@ -219,7 +232,7 @@ create foreign table iceberg.guides (
   content text,
   created_at timestamp
 )
-  server iceberg_fdw
+  server iceberg_server
   options (
     table 'docs_example.guides'
   );
@@ -276,18 +289,32 @@ This section describes important limitations and considerations when using this 
 - Only supports specific data type mappings between Postgres and Iceberg
 - Only supports read operations (no INSERT, UPDATE, DELETE, or TRUNCATE)
 - [Apache Iceberg schema evolution](https://iceberg.apache.org/spec/#schema-evolution) is not supported
-- When using Iceberg REST catalog, only supports AWS S3 as the storage
+- When using Iceberg REST catalog, only supports AWS S3 (or compatible) as the storage
 - Materialized views using these foreign tables may fail during logical backups
 
 ## Examples
 
 ### Basic Example
 
-First, import foreign tables from Iceberg namespace `docs_example`:
+First, create a server for AWS S3 Tables:
+
+```sql
+create server iceberg_server
+  foreign data wrapper iceberg_wrapper
+  options (
+    aws_access_key_id '<AWS_access_key_ID>',
+    aws_secret_access_key '<AWS_secret_access_key>',
+    region_name 'us-east-1',
+    aws_s3table_bucket_arn 'arn:aws:s3tables:us-east-1:204203087419:bucket/my-table-bucket'
+  );
+```
+
+Import the foreign table:
 
 ```sql
 -- Run below SQL to import all tables under namespace 'docs_example'
-import foreign schema "docs_example" from server iceberg_server into iceberg;
+import foreign schema "docs_example"
+  from server iceberg_server into iceberg;
 
 -- or, create the foreign table manually
 create foreign table if not exists iceberg.guides (
@@ -296,7 +323,7 @@ create foreign table if not exists iceberg.guides (
   content text,
   created_at timestamp
 )
-  server iceberg_fdw
+  server iceberg_server
   options (
     table 'docs_example.guides'
   );
@@ -306,6 +333,31 @@ Then query the foreign table:
 
 ```sql
 select * from iceberg.guides;
+```
+
+### Read Cloudflare R2 Data Catalog
+
+First, follow the steps in [Getting Started Guide](https://developers.cloudflare.com/r2/data-catalog/get-started/) to create a R2 Catalog on Cloudflare. Once it is completed, create a server like below:
+
+```sql
+create server iceberg_server
+  foreign data wrapper iceberg_wrapper
+  options (
+    aws_access_key_id '<R2_access_key_ID>',
+    aws_secret_access_key '<R2_secret_access_key>',
+    token '<R2 API token>',
+    warehouse 'xxx_r2-data-catalog-tutorial',
+    "s3.endpoint" 'https://xxx.r2.cloudflarestorage.com',
+    catalog_uri 'https://catalog.cloudflarestorage.com/xxx/r2-data-catalog-tutorial'
+  );
+```
+
+Then, import all the tables in `default` namespace and query it:
+
+```sql
+import foreign schema "default" from server iceberg_server into iceberg;
+
+select * from iceberg.people;
 ```
 
 ### Query Pushdown Examples

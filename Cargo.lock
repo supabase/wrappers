@@ -3583,8 +3583,9 @@ dependencies = [
 
 [[package]]
 name = "iceberg"
-version = "0.5.0"
-source = "git+https://github.com/apache/iceberg-rust?rev=12485be4a30848213faea62740ad7cb5a41bd6f2#12485be4a30848213faea62740ad7cb5a41bd6f2"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2ad4b76a13ef469b09493330c4360630499949f4984478b77d6a70d252caf8b4"
 dependencies = [
  "anyhow",
  "apache-avro",
@@ -3633,8 +3634,9 @@ dependencies = [
 
 [[package]]
 name = "iceberg-catalog-rest"
-version = "0.5.0"
-source = "git+https://github.com/apache/iceberg-rust?rev=12485be4a30848213faea62740ad7cb5a41bd6f2#12485be4a30848213faea62740ad7cb5a41bd6f2"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0d744269adcd9a89cea578b6e8443186cb9d5e7d41a47679f3b1d5b71842820e"
 dependencies = [
  "async-trait",
  "chrono",
@@ -3653,8 +3655,8 @@ dependencies = [
 
 [[package]]
 name = "iceberg-catalog-s3tables"
-version = "0.5.0"
-source = "git+https://github.com/apache/iceberg-rust?rev=12485be4a30848213faea62740ad7cb5a41bd6f2#12485be4a30848213faea62740ad7cb5a41bd6f2"
+version = "0.5.1"
+source = "git+https://github.com/burmecia/iceberg-rust?rev=e565bc43c1b9fa6b25a601f68bcec1423a984cc1#e565bc43c1b9fa6b25a601f68bcec1423a984cc1"
 dependencies = [
  "anyhow",
  "async-trait",
