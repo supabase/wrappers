@@ -574,7 +574,17 @@ import foreign schema s3
   );
 ```
 
-With explicitly specified sources tables, the imported foreign table names have the schema and sequence number as prefix. For example, by using belew statement,
+The imported table name format from Iceberg-like server is:
+
+- `<server_type>_<schema_name>_<table_name>`
+
+For example, the above statement will import a table name `s3_tables_docs_example_guides`.
+
+For other types of server with explicitly specified sources tables, the imported foreign table names have the schema and sequence number as prefix with this format:
+
+- `<schema_name>_<sequence_number>_<filename_stem>`
+
+For example, by using belew statement,
 
 ```sql
 import foreign schema s3
@@ -589,8 +599,8 @@ import foreign schema s3
 
 The imported foreign table names are:
 
-- `duckdb.s3_0_products`
-- `duckdb.s3_1_users`
+- `s3_0_products`
+- `s3_1_users`
 
 !!! note
 
