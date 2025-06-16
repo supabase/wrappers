@@ -20,6 +20,7 @@ Each FDW documentation includes a detailed "Limitations" section that describes 
 | Clerk         |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
 | ClickHouse    |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |    ✅     |
 | Cloudflare D1 |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |    ✅     |
+| DuckDB        |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
 | Firebase      |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
 | HubSpot       |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
 | Iceberg       |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |

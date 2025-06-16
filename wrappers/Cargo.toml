@@ -168,6 +168,17 @@ iceberg_fdw = [
     "thiserror",
     "uuid",
 ]
+duckdb_fdw = [
+    "arrow-array",
+    "arrow-schema",
+    "arrow-json",
+    "chrono",
+    "duckdb",
+    "regex",
+    "serde_json",
+    "thiserror",
+    "uuid",
+]
 # Does not include helloworld_fdw because of its general uselessness
 native_fdws = [
     "airtable_fdw",
@@ -286,6 +297,9 @@ iceberg = { version = "0.5.1", optional = true }
 iceberg-catalog-s3tables = { git = "https://github.com/burmecia/iceberg-rust", rev = "e565bc43c1b9fa6b25a601f68bcec1423a984cc1", package="iceberg-catalog-s3tables", optional = true }
 iceberg-catalog-rest = { version = "0.5.1", optional = true }
 rust_decimal = { version = "1.37.1", optional = true }
+
+# for duckdb_fdw
+duckdb = { version = "1.3.0", features = ["bundled"], optional = true }
 
 [dev-dependencies]
 pgrx-tests = "=0.14.3"

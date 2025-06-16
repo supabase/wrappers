@@ -39,3 +39,6 @@ mod wasm_fdw;
 
 #[cfg(feature = "iceberg_fdw")]
 mod iceberg_fdw;
+
+#[cfg(feature = "duckdb_fdw")]
+mod duckdb_fdw;
