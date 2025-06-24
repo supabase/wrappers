@@ -1,6 +1,6 @@
 [package]
 name = "wrappers"
-version = "0.5.2"
+version = "0.5.3"
 publish = false
 homepage = "https://github.com/supabase/wrappers/tree/main/wrappers"
 repository = "https://github.com/supabase/wrappers/tree/main/wrappers"
@@ -193,6 +193,7 @@ native_fdws = [
     "redis_fdw",
     "cognito_fdw",
     "iceberg_fdw",
+    "duckdb_fdw",
 ]
 all_fdws = [
     "native_fdws",
