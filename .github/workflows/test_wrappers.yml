@@ -14,7 +14,8 @@ jobs:
   # =============================================================
   test_native:
     name: Run native wrappers tests
-    runs-on: ubuntu-24.04
+    runs-on:
+      group: Default Larger Runners
 
     steps:
     - name: Checkout code
@@ -62,7 +63,8 @@ jobs:
   # =============================================================
   test_wasm:
     name: Run Wasm wrappers tests
-    runs-on: ubuntu-24.04
+    runs-on:
+      group: Default Larger Runners
 
     steps:
     - name: Checkout code
