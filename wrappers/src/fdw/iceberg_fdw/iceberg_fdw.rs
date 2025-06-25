@@ -367,16 +367,7 @@ impl ForeignDataWrapper<IcebergFdwError> for IcebergFdw {
         catalog: Option<pg_sys::Oid>,
     ) -> IcebergFdwResult<()> {
         if let Some(oid) = catalog {
-            if oid == FOREIGN_SERVER_RELATION_ID {
-                // AWS credential pair must be specified together
-                let a = check_options_contain(&options, "aws_access_key_id");
-                let b = check_options_contain(&options, "aws_secret_access_key");
-                match (a, b) {
-                    (a @ Err(_), Ok(_)) => a.map(|_| ())?,
-                    (Ok(_), b @ Err(_)) => b.map(|_| ())?,
-                    _ => (),
-                }
-            } else if oid == FOREIGN_TABLE_RELATION_ID {
+            if oid == FOREIGN_TABLE_RELATION_ID {
                 // check required option
                 check_options_contain(&options, "table")?;
             }
