@@ -107,7 +107,7 @@ unsafe fn find_rowid_column(
 
 #[cfg(feature = "pg13")]
 #[pg_guard]
-pub(super) extern "C" fn add_foreign_update_targets(
+pub(super) extern "C-unwind" fn add_foreign_update_targets(
     parsetree: *mut pg_sys::Query,
     _target_rte: *mut pg_sys::RangeTblEntry,
     target_relation: pg_sys::Relation,
