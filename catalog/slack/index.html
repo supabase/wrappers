@@ -434,6 +434,10 @@
       
         
       
+        
+      
+        
+      
     
     
       
@@ -584,11 +588,53 @@
   
   
     <li class="md-nav__item">
+      <a href="../duckdb/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    DuckDB
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../firebase/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
     Firebase
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../iceberg/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Iceberg
   </span>
   
 
@@ -2722,18 +2768,27 @@
 <th>Version</th>
 <th>Wasm Package URL</th>
 <th>Checksum</th>
+<th>Required Wrappers Version</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>0.0.6</td>
-<td><code>https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.6/slack_fdw.wasm</code></td>
-<td><code>349cb556f87a0233e25eb608a77e840531bc87f1acf9916856268bdcdd9973e2</code></td>
+<td>0.2.0</td>
+<td><code>https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.2.0/slack_fdw.wasm</code></td>
+<td><code>bfb0d22ffea2092c049773302c049162a2a57ddc265da59a83116bf29ed40c3a</code></td>
+<td>&gt;=0.5.0</td>
 </tr>
 <tr>
 <td>0.1.0</td>
 <td><code>https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.1.0/slack_fdw.wasm</code></td>
 <td><code>5b022b441c0007e31d792ecb1341bfffed1c29cb865eb0c7969989dff0e8fdc3</code></td>
+<td>&gt;=0.4.0</td>
+</tr>
+<tr>
+<td>0.0.6</td>
+<td><code>https://github.com/supabase/wrappers/releases/download/wasm_slack_fdw_v0.0.6/slack_fdw.wasm</code></td>
+<td><code>349cb556f87a0233e25eb608a77e840531bc87f1acf9916856268bdcdd9973e2</code></td>
+<td>&gt;=0.4.0</td>
 </tr>
 </tbody>
 </table>
@@ -2776,14 +2831,12 @@
 <span class="normal">3</span>
 <span class="normal">4</span>
 <span class="normal">5</span>
-<span class="normal">6</span>
-<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Save your Slack API token in Vault and retrieve the `key_id`</span>
-<span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">secrets</span><span class="w"> </span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">secret</span><span class="p">)</span>
-<span class="k">values</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="s1">&#39;slack&#39;</span><span class="p">,</span>
+<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Save your Slack API token in Vault and retrieve the created `key_id`</span>
+<span class="k">select</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">create_secret</span><span class="p">(</span>
 <span class="w">  </span><span class="s1">&#39;xoxb-your-slack-token&#39;</span><span class="w"> </span><span class="c1">-- Slack Bot User OAuth Token</span>
-<span class="p">)</span>
-<span class="n">returning</span><span class="w"> </span><span class="n">key_id</span><span class="p">;</span>
+<span class="w">  </span><span class="s1">&#39;slack&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="s1">&#39;Slack API token for Wrappers&#39;</span>
+<span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 <h3 id="connecting-to-slack">Connecting to Slack</h3>
 <p>We need to provide Postgres with the credentials to access Slack and any additional options. We can do this using the <code>create server</code> command:</p>
@@ -2851,6 +2904,32 @@
 </code></pre></div></td></tr></table></div>
 <h2 id="entities">Entities</h2>
 <p>The Slack Wrapper supports data reads from the Slack API.</p>
+<p>We can use SQL <a href="https://www.postgresql.org/docs/current/sql-importforeignschema.html">import foreign schema</a> to import foreign table definitions from Slack.</p>
+<p>For example, using below SQL can automatically create foreign tables in the <code>slack</code> schema.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- create all the foreign tables</span>
+<span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">slack</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">slack_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">slack</span><span class="p">;</span>
+
+<span class="c1">-- or, create selected tables only</span>
+<span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">slack</span>
+<span class="w">   </span><span class="k">limit</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="p">(</span><span class="ss">&quot;messages&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;channels&quot;</span><span class="p">)</span>
+<span class="w">   </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">slack_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">slack</span><span class="p">;</span>
+
+<span class="c1">-- or, create all foreign tables except selected tables</span>
+<span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">slack</span>
+<span class="w">   </span><span class="k">except</span><span class="w"> </span><span class="p">(</span><span class="ss">&quot;messages&quot;</span><span class="p">)</span>
+<span class="w">   </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">slack_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">slack</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
 <h3 id="messages">Messages</h3>
 <p>This represents messages from channels, DMs, and group messages.</p>
 <p>Ref: <a href="https://api.slack.com/methods/conversations.history">Slack conversations.history API</a></p>

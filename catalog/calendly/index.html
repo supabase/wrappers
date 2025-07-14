@@ -434,6 +434,10 @@
       
         
       
+        
+      
+        
+      
     
     
       
@@ -584,11 +588,53 @@
   
   
     <li class="md-nav__item">
+      <a href="../duckdb/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    DuckDB
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../firebase/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
     Firebase
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../iceberg/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Iceberg
   </span>
   
 
@@ -2386,13 +2432,21 @@
 <th>Version</th>
 <th>Wasm Package URL</th>
 <th>Checksum</th>
+<th>Required Wrappers Version</th>
 </tr>
 </thead>
 <tbody>
 <tr>
+<td>0.2.0</td>
+<td><code>https://github.com/supabase/wrappers/releases/download/wasm_calendly_fdw_v0.2.0/calendly_fdw.wasm</code></td>
+<td><code>1d18021cc3618440107b0d37f0a811607fdc863d9841a5da1ff9d56bc9f44df1</code></td>
+<td>&gt;=0.5.0</td>
+</tr>
+<tr>
 <td>0.1.0</td>
 <td><code>https://github.com/supabase/wrappers/releases/download/wasm_calendly_fdw_v0.1.0/calendly_fdw.wasm</code></td>
 <td><code>51a19fa4b8c40afb5dcf6dc2e009189aceeba65f30eec75d56a951d78fc8893f</code></td>
+<td>&gt;=0.4.0</td>
 </tr>
 </tbody>
 </table>
@@ -2518,6 +2572,32 @@
 </tbody>
 </table>
 <h2 id="entities">Entities</h2>
+<p>We can use SQL <a href="https://www.postgresql.org/docs/current/sql-importforeignschema.html">import foreign schema</a> to import foreign table definitions from Calendly.</p>
+<p>For example, using below SQL can automatically create foreign tables in the <code>calendly</code> schema.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- create all the foreign tables</span>
+<span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">calendly</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">calendly_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">calendly</span><span class="p">;</span>
+
+<span class="c1">-- or, create selected tables only</span>
+<span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">calendly</span>
+<span class="w">   </span><span class="k">limit</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="p">(</span><span class="ss">&quot;event_types&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;groups&quot;</span><span class="p">)</span>
+<span class="w">   </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">calendly_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">calendly</span><span class="p">;</span>
+
+<span class="c1">-- or, create all foreign tables except selected tables</span>
+<span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">calendly</span>
+<span class="w">   </span><span class="k">except</span><span class="w"> </span><span class="p">(</span><span class="ss">&quot;event_types&quot;</span><span class="p">)</span>
+<span class="w">   </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">calendly_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">calendly</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
 <h3 id="current-user">Current User</h3>
 <p>This is an object representing your Calendly user profile.</p>
 <p>Ref: <a href="https://developer.calendly.com/api-docs">Calendly API docs</a></p>

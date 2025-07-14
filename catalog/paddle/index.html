@@ -434,6 +434,10 @@
       
         
       
+        
+      
+        
+      
     
     
       
@@ -584,11 +588,53 @@
   
   
     <li class="md-nav__item">
+      <a href="../duckdb/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    DuckDB
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../firebase/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
     Firebase
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../iceberg/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Iceberg
   </span>
   
 
@@ -2236,18 +2282,27 @@
 <th>Version</th>
 <th>Wasm Package URL</th>
 <th>Checksum</th>
+<th>Required Wrappers Version</th>
 </tr>
 </thead>
 <tbody>
 <tr>
+<td>0.2.0</td>
+<td><code>https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.2.0/paddle_fdw.wasm</code></td>
+<td><code>e788b29ae46c158643e1e1f229d94b28a9af8edbd3233f59c5a79053c25da213</code></td>
+<td>&gt;=0.5.0</td>
+</tr>
+<tr>
 <td>0.1.1</td>
 <td><code>https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.1.1/paddle_fdw.wasm</code></td>
 <td><code>c5ac70bb2eef33693787b7d4efce9a83cde8d4fa40889d2037403a51263ba657</code></td>
+<td>&gt;=0.4.0</td>
 </tr>
 <tr>
 <td>0.1.0</td>
 <td><code>https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.1.0/paddle_fdw.wasm</code></td>
 <td><code>7d0b902440ac2ef1af85d09807145247f14d1d8fd4d700227e5a4d84c8145409</code></td>
+<td>&gt;=0.4.0</td>
 </tr>
 </tbody>
 </table>
@@ -2296,10 +2351,10 @@
 <span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">paddle_server</span>
 <span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.1.1/paddle_fdw.wasm&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.2.0/paddle_fdw.wasm&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;supabase:paddle-fdw&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.1.1&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;c5ac70bb2eef33693787b7d4efce9a83cde8d4fa40889d2037403a51263ba657&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.2.0&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;e788b29ae46c158643e1e1f229d94b28a9af8edbd3233f59c5a79053c25da213&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">api_url</span><span class="w"> </span><span class="s1">&#39;https://sandbox-api.paddle.com&#39;</span><span class="p">,</span><span class="w"> </span><span class="c1">-- Use https://api.paddle.com for live account</span>
 <span class="w">    </span><span class="n">api_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;key_ID&gt;&#39;</span><span class="w"> </span><span class="c1">-- The Key ID from above.</span>
 <span class="w">  </span><span class="p">);</span>
@@ -2318,10 +2373,10 @@
 <span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">paddle_server</span>
 <span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.1.1/paddle_fdw.wasm&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.2.0/paddle_fdw.wasm&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;supabase:paddle-fdw&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.1.1&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;c5ac70bb2eef33693787b7d4efce9a83cde8d4fa40889d2037403a51263ba657&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.2.0&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;e788b29ae46c158643e1e1f229d94b28a9af8edbd3233f59c5a79053c25da213&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">api_url</span><span class="w"> </span><span class="s1">&#39;https://sandbox-api.paddle.com&#39;</span><span class="p">,</span><span class="w"> </span><span class="c1">-- Use https://api.paddle.com for live account</span>
 <span class="w">    </span><span class="n">api_key</span><span class="w"> </span><span class="s1">&#39;bb4e69088ea07a98a90565ac610c63654423f8f1e2d48b39b5&#39;</span>
 <span class="w">  </span><span class="p">);</span>
@@ -2377,6 +2432,32 @@
 <li><code>rowid_column</code> - Primary key column name, optional for data scan, required for data modify</li>
 </ul>
 <h2 id="entities">Entities</h2>
+<p>We can use SQL <a href="https://www.postgresql.org/docs/current/sql-importforeignschema.html">import foreign schema</a> to import foreign table definitions from Paddle.</p>
+<p>For example, using below SQL can automatically create foreign tables in the <code>paddle</code> schema.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- create all the foreign tables</span>
+<span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">paddle</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">paddle_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">paddle</span><span class="p">;</span>
+
+<span class="c1">-- or, create selected tables only</span>
+<span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">paddle</span>
+<span class="w">   </span><span class="k">limit</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="p">(</span><span class="ss">&quot;products&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;customers&quot;</span><span class="p">)</span>
+<span class="w">   </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">paddle_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">paddle</span><span class="p">;</span>
+
+<span class="c1">-- or, create all foreign tables except selected tables</span>
+<span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">paddle</span>
+<span class="w">   </span><span class="k">except</span><span class="w"> </span><span class="p">(</span><span class="ss">&quot;customers&quot;</span><span class="p">)</span>
+<span class="w">   </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">paddle_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">paddle</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
 <h3 id="products">Products</h3>
 <p>This is an object representing Paddle Products.</p>
 <p>Ref: <a href="https://developer.paddle.com/api-reference/about/data-types">Paddle API docs</a></p>

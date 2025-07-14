@@ -434,6 +434,10 @@
       
         
       
+        
+      
+        
+      
     
     
       
@@ -584,11 +588,53 @@
   
   
     <li class="md-nav__item">
+      <a href="../duckdb/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    DuckDB
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../firebase/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
     Firebase
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../iceberg/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Iceberg
   </span>
   
 
@@ -2974,13 +3020,21 @@
 <th>Version</th>
 <th>Wasm Package URL</th>
 <th>Checksum</th>
+<th>Required Wrappers Version</th>
 </tr>
 </thead>
 <tbody>
 <tr>
+<td>0.2.0</td>
+<td><code>https://github.com/supabase/wrappers/releases/download/wasm_hubspot_fdw_v0.2.0/hubspot_fdw.wasm</code></td>
+<td><code>223f0e8d7557bd24f51b58fb89dcd3c1431719105acca0754ce35dfd1139296a</code></td>
+<td>&gt;=0.5.0</td>
+</tr>
+<tr>
 <td>0.1.0</td>
 <td><code>https://github.com/supabase/wrappers/releases/download/wasm_hubspot_fdw_v0.1.0/hubspot_fdw.wasm</code></td>
 <td><code>2cbf39e9e28aa732a225db09b2186a2342c44697d4fa047652d358e292ba5521</code></td>
+<td>&gt;=0.4.0</td>
 </tr>
 </tbody>
 </table>
@@ -3144,6 +3198,36 @@
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 <p>The column <code>user_id</code> is the custom property internal name, which can be found in the <code>Details</code> section of <code>Edit property</code> page on HubSpot <code>Settings</code> -&gt; <code>Data Management</code> -&gt; <code>Properties</code>.</p>
+<p>We can use SQL <a href="https://www.postgresql.org/docs/current/sql-importforeignschema.html">import foreign schema</a> to import foreign table definitions from HubSpot.</p>
+<p>For example, using below SQL can automatically create foreign tables in the <code>hubspot</code> schema.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- create all the foreign tables</span>
+<span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">hubspot</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">hubspot_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">hubspot</span><span class="p">;</span>
+
+<span class="c1">-- or, create selected tables only</span>
+<span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">hubspot</span>
+<span class="w">   </span><span class="k">limit</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="p">(</span><span class="ss">&quot;contact&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;companies&quot;</span><span class="p">)</span>
+<span class="w">   </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">hubspot_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">hubspot</span><span class="p">;</span>
+
+<span class="c1">-- or, create all foreign tables except selected tables</span>
+<span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">hubspot</span>
+<span class="w">   </span><span class="k">except</span><span class="w"> </span><span class="p">(</span><span class="ss">&quot;contacts&quot;</span><span class="p">)</span>
+<span class="w">   </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">hubspot_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">hubspot</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The <code>objects</code> table will not be created by the <code>import foreign schema</code> statement.</p>
+</div>
 <h3 id="companies">Companies</h3>
 <p>This is object represents the companies and organizations that interact with your business.</p>
 <p>Ref: <a href="https://developers.hubspot.com/docs/reference/api/crm/objects/companies">HubSpot API docs</a></p>

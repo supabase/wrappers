@@ -434,6 +434,10 @@
       
         
       
+        
+      
+        
+      
     
     
       
@@ -584,11 +588,53 @@
   
   
     <li class="md-nav__item">
+      <a href="../duckdb/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    DuckDB
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../firebase/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
     Firebase
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../iceberg/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Iceberg
   </span>
   
 
@@ -2170,13 +2216,21 @@
 <th>Version</th>
 <th>Wasm Package URL</th>
 <th>Checksum</th>
+<th>Required Wrappers Version</th>
 </tr>
 </thead>
 <tbody>
 <tr>
+<td>0.2.0</td>
+<td><code>https://github.com/supabase/wrappers/releases/download/wasm_cfd1_fdw_v0.2.0/cfd1_fdw.wasm</code></td>
+<td><code>0f1d022d9733b5dd0c39d65f35ffcfd86102e7ee53e72d8cf94749500c224c0d</code></td>
+<td>&gt;=0.5.0</td>
+</tr>
+<tr>
 <td>0.1.0</td>
 <td><code>https://github.com/supabase/wrappers/releases/download/wasm_cfd1_fdw_v0.1.0/cfd1_fdw.wasm</code></td>
 <td><code>783232834bb29dbd3ee6b09618c16f8a847286e63d05c54397d56c3e703fad31</code></td>
+<td>&gt;=0.4.0</td>
 </tr>
 </tbody>
 </table>
@@ -2287,6 +2341,16 @@
 </ul>
 <h2 id="entities">Entities</h2>
 <p>The D1 Wrapper supports data reads and writes from the Cloudflare D1 API.</p>
+<p>We can use SQL <a href="https://www.postgresql.org/docs/current/sql-importforeignschema.html">import foreign schema</a> to import foreign table definitions from Cloudflare D1.</p>
+<p>For example, using below SQL can automatically create foreign tables in the <code>cfd1</code> schema.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- create all the foreign tables</span>
+<span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">cfd1</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">cfd1_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">cfd1</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The <code>import foreign schema</code> statement only imports <code>databases</code> table, other tables still need to be created manually.</p>
+</div>
 <h3 id="d1-databases">D1 Databases</h3>
 <p>This is an object representing a D1 database.</p>
 <p>Ref: <a href="https://developers.cloudflare.com/api/operations/cloudflare-d1-list-databases">D1 databases docs</a></p>

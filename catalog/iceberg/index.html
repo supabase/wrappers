@@ -12,13 +12,13 @@
         <meta name="author" content="supabase">
       
       
-        <link rel="canonical" href="https://supabase.github.io/wrappers/catalog/auth0/">
+        <link rel="canonical" href="https://supabase.github.io/wrappers/catalog/iceberg/">
       
       
-        <link rel="prev" href="../airtable/">
+        <link rel="prev" href="../firebase/">
       
       
-        <link rel="next" href="../cognito/">
+        <link rel="next" href="../logflare/">
       
       
       <link rel="icon" href="../../assets/favicon.ico">
@@ -26,7 +26,7 @@
     
     
       
-        <title>Auth0 - Wrappers</title>
+        <title>Iceberg - Wrappers</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#auth0" class="md-skip">
+        <a href="#apache-iceberg" class="md-skip">
           Skip to content
         </a>
       
@@ -113,7 +113,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Auth0
+              Iceberg
             
           </span>
         </div>
@@ -501,30 +501,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    Auth0
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../auth0/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -533,185 +513,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#preparation" class="md-nav__link">
-    <span class="md-ellipsis">
-      Preparation
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Preparation">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#enable-wrappers" class="md-nav__link">
-    <span class="md-ellipsis">
-      Enable Wrappers
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#enable-the-auth0-wrapper" class="md-nav__link">
-    <span class="md-ellipsis">
-      Enable the Auth0 Wrapper
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#store-your-credentials-optional" class="md-nav__link">
-    <span class="md-ellipsis">
-      Store your credentials (optional)
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#connecting-to-auth0" class="md-nav__link">
-    <span class="md-ellipsis">
-      Connecting to Auth0
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#create-a-schema" class="md-nav__link">
-    <span class="md-ellipsis">
-      Create a schema
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#entities" class="md-nav__link">
-    <span class="md-ellipsis">
-      Entities
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Entities">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#users" class="md-nav__link">
-    <span class="md-ellipsis">
-      Users
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Users">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations" class="md-nav__link">
-    <span class="md-ellipsis">
-      Operations
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#query-pushdown-support" class="md-nav__link">
-    <span class="md-ellipsis">
-      Query Pushdown Support
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#limitations" class="md-nav__link">
-    <span class="md-ellipsis">
-      Limitations
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      Examples
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Examples">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#basic-auth0-users-query" class="md-nav__link">
-    <span class="md-ellipsis">
-      Basic Auth0 Users Query
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -826,10 +627,30 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../iceberg/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Iceberg
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   <span class="md-ellipsis">
@@ -838,6 +659,236 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#preparation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Preparation
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Preparation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#enable-wrappers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Enable Wrappers
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#enable-the-iceberg-wrapper" class="md-nav__link">
+    <span class="md-ellipsis">
+      Enable the Iceberg Wrapper
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#store-your-credentials-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      Store your credentials (optional)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#connecting-to-icerberg" class="md-nav__link">
+    <span class="md-ellipsis">
+      Connecting to Icerberg
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Connecting to Icerberg">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#connecting-to-aws-s3-tables" class="md-nav__link">
+    <span class="md-ellipsis">
+      Connecting to AWS S3 Tables
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#connecting-to-iceberg-rest-catalog-aws-s3-or-compatible-storage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Connecting to Iceberg REST Catalog + AWS S3 (or compatible) storage
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create-a-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      Create a schema
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#options" class="md-nav__link">
+    <span class="md-ellipsis">
+      Options
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#entities" class="md-nav__link">
+    <span class="md-ellipsis">
+      Entities
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Entities">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#iceberg-tables" class="md-nav__link">
+    <span class="md-ellipsis">
+      Iceberg Tables
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Iceberg Tables">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#query-pushdown-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      Query Pushdown Support
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#supported-data-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Supported Data Types
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Limitations
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Examples
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      Basic Example
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#read-cloudflare-r2-data-catalog" class="md-nav__link">
+    <span class="md-ellipsis">
+      Read Cloudflare R2 Data Catalog
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#query-pushdown-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Query Pushdown Examples
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1840,9 +1891,9 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#enable-the-auth0-wrapper" class="md-nav__link">
+  <a href="#enable-the-iceberg-wrapper" class="md-nav__link">
     <span class="md-ellipsis">
-      Enable the Auth0 Wrapper
+      Enable the Iceberg Wrapper
     </span>
   </a>
   
@@ -1858,11 +1909,35 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#connecting-to-auth0" class="md-nav__link">
+  <a href="#connecting-to-icerberg" class="md-nav__link">
     <span class="md-ellipsis">
-      Connecting to Auth0
+      Connecting to Icerberg
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Connecting to Icerberg">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#connecting-to-aws-s3-tables" class="md-nav__link">
+    <span class="md-ellipsis">
+      Connecting to AWS S3 Tables
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#connecting-to-iceberg-rest-catalog-aws-s3-or-compatible-storage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Connecting to Iceberg REST Catalog + AWS S3 (or compatible) storage
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
         
@@ -1881,6 +1956,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#options" class="md-nav__link">
+    <span class="md-ellipsis">
+      Options
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#entities" class="md-nav__link">
     <span class="md-ellipsis">
       Entities
@@ -1891,13 +1975,13 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#users" class="md-nav__link">
+  <a href="#iceberg-tables" class="md-nav__link">
     <span class="md-ellipsis">
-      Users
+      Iceberg Tables
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Users">
+    <nav class="md-nav" aria-label="Iceberg Tables">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1913,15 +1997,6 @@
   <a href="#usage" class="md-nav__link">
     <span class="md-ellipsis">
       Usage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
     </span>
   </a>
   
@@ -1947,6 +2022,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#supported-data-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Supported Data Types
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#limitations" class="md-nav__link">
     <span class="md-ellipsis">
       Limitations
@@ -1966,9 +2050,27 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#basic-auth0-users-query" class="md-nav__link">
+  <a href="#basic-example" class="md-nav__link">
     <span class="md-ellipsis">
-      Basic Auth0 Users Query
+      Basic Example
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#read-cloudflare-r2-data-catalog" class="md-nav__link">
+    <span class="md-ellipsis">
+      Read Cloudflare R2 Data Catalog
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#query-pushdown-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Query Pushdown Examples
     </span>
   </a>
   
@@ -2014,81 +2116,275 @@
   
 
 
-<h1 id="auth0">Auth0</h1>
-<p><a href="https://auth0.com/">Auth0</a> is a flexible, drop-in solution to add authentication and authorization services to your applications</p>
-<p>The Auth0 Wrapper allows you to read data from your Auth0 tenant for use within your Postgres database.</p>
+<h1 id="apache-iceberg">Apache Iceberg</h1>
+<p><a href="https://iceberg.apache.org/">Apache Iceberg</a> is a high performance open-source format for large analytic tables.</p>
+<p>The Iceberg Wrapper allows you to read data from Apache Iceberg within your Postgres database.</p>
 <h2 id="preparation">Preparation</h2>
-<p>Before you can query Auth0, you need to enable the Wrappers extension and store your credentials in Postgres.</p>
+<p>Before you can query Iceberg, you need to enable the Wrappers extension and store your credentials in Postgres.</p>
 <h3 id="enable-wrappers">Enable Wrappers</h3>
 <p>Make sure the <code>wrappers</code> extension is installed on your database:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">extension</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">wrappers</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">extensions</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
-<h3 id="enable-the-auth0-wrapper">Enable the Auth0 Wrapper</h3>
-<p>Enable the <code>auth0_wrapper</code> FDW:</p>
+<h3 id="enable-the-iceberg-wrapper">Enable the Iceberg Wrapper</h3>
+<p>Enable the <code>iceberg_wrapper</code> FDW:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
-<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">auth0_wrapper</span>
-<span class="w">  </span><span class="k">handler</span><span class="w"> </span><span class="n">auth0_fdw_handler</span>
-<span class="w">  </span><span class="k">validator</span><span class="w"> </span><span class="n">auth0_fdw_validator</span><span class="p">;</span>
+<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">iceberg_wrapper</span>
+<span class="w">  </span><span class="k">handler</span><span class="w"> </span><span class="n">iceberg_fdw_handler</span>
+<span class="w">  </span><span class="k">validator</span><span class="w"> </span><span class="n">iceberg_fdw_validator</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 <h3 id="store-your-credentials-optional">Store your credentials (optional)</h3>
 <p>By default, Postgres stores FDW credentials inside <code>pg_catalog.pg_foreign_server</code> in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with <a href="https://supabase.com/docs/guides/database/vault">Vault</a>, which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Save your Auth0 API key in Vault and retrieve the created `key_id`</span>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Save your AWS credentials in Vault and retrieve the created</span>
+<span class="c1">-- `aws_access_key_id` and `aws_secret_access_key`</span>
 <span class="k">select</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">create_secret</span><span class="p">(</span>
-<span class="w">  </span><span class="s1">&#39;&lt;Auth0 API Key or PAT&gt;&#39;</span><span class="p">,</span><span class="w"> </span><span class="c1">-- Auth0 API key or Personal Access Token (PAT)</span>
-<span class="w">  </span><span class="s1">&#39;auth0&#39;</span><span class="p">,</span>
-<span class="w">  </span><span class="s1">&#39;Auth0 API key for Wrappers&#39;</span>
+<span class="w">  </span><span class="s1">&#39;&lt;access key id&gt;&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- secret to be encrypted</span>
+<span class="w">  </span><span class="s1">&#39;aws_access_key_id&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- secret name</span>
+<span class="w">  </span><span class="s1">&#39;AWS access key for Wrappers&#39;</span><span class="w">  </span><span class="c1">-- secret description</span>
+<span class="p">);</span>
+<span class="k">select</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">create_secret</span><span class="p">(</span>
+<span class="w">  </span><span class="s1">&#39;&lt;secret access key&gt;&#39;</span>
+<span class="w">  </span><span class="s1">&#39;aws_secret_access_key&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="s1">&#39;AWS secret access key for Wrappers&#39;</span>
 <span class="p">);</span>
 </code></pre></div></td></tr></table></div>
-<h3 id="connecting-to-auth0">Connecting to Auth0</h3>
-<p>We need to provide Postgres with the credentials to connect to Auth0, and any additional options. We can do this using the <code>create server</code> command:</p>
+<h3 id="connecting-to-icerberg">Connecting to Icerberg</h3>
+<p>We need to provide Postgres with the credentials to connect to Iceberg. We can do this using the <code>create server</code> command.</p>
+<p>For any server options need to be stored in Vault, you can add a prefix <code>vault_</code> to its name and use the secret ID returned from the <code>select vault.create_secret()</code> statement as the option value.</p>
+<h4 id="connecting-to-aws-s3-tables">Connecting to AWS S3 Tables</h4>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">With Vault</label><label for="__tabbed_1_2">Without Vault</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">auth0_server</span>
-<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">auth0_wrapper</span>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">iceberg_server</span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">iceberg_wrapper</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">url</span><span class="w"> </span><span class="s1">&#39;https://dev-&lt;tenant-id&gt;.us.auth0.com/api/v2/users&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">api_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;key_ID&gt;&#39;</span><span class="w"> </span><span class="c1">-- The Key ID from above.</span>
+<span class="w">    </span><span class="c1">-- The key id saved in Vault from above</span>
+<span class="w">    </span><span class="n">vault_aws_access_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;key_ID&gt;&#39;</span><span class="p">,</span>
+
+<span class="w">    </span><span class="c1">-- The secret id saved in Vault from above</span>
+<span class="w">    </span><span class="n">vault_aws_secret_access_key</span><span class="w"> </span><span class="s1">&#39;&lt;secret_key&gt;&#39;</span><span class="p">,</span>
+
+<span class="w">    </span><span class="c1">-- AWS region</span>
+<span class="w">    </span><span class="n">region_name</span><span class="w"> </span><span class="s1">&#39;us-east-1&#39;</span><span class="p">,</span>
+
+<span class="w">    </span><span class="c1">-- AWS S3 table bucket ARN</span>
+<span class="w">    </span><span class="n">aws_s3table_bucket_arn</span><span class="w"> </span><span class="s1">&#39;arn:aws:s3tables:us-east-1:204203087419:bucket/my-table-bucket&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 </div>
 <div class="tabbed-block">
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">iceberg_server</span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">iceberg_wrapper</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="c1">-- The AWS access key ID</span>
+<span class="w">    </span><span class="n">aws_access_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;key_ID&gt;&#39;</span><span class="p">,</span>
+
+<span class="w">    </span><span class="c1">-- The AWS secret access key</span>
+<span class="w">    </span><span class="n">aws_secret_access_key</span><span class="w"> </span><span class="s1">&#39;&lt;secret_key&gt;&#39;</span><span class="p">,</span>
+
+<span class="w">    </span><span class="c1">-- AWS region</span>
+<span class="w">    </span><span class="n">region_name</span><span class="w"> </span><span class="s1">&#39;us-east-1&#39;</span><span class="p">,</span>
+
+<span class="w">    </span><span class="c1">-- AWS S3 table bucket ARN</span>
+<span class="w">    </span><span class="n">aws_s3table_bucket_arn</span><span class="w"> </span><span class="s1">&#39;arn:aws:s3tables:us-east-1:204203087419:bucket/my-table-bucket&#39;</span>
+<span class="w">  </span><span class="p">);</span>
+</code></pre></div></td></tr></table></div>
+</div>
+</div>
+</div>
+<h4 id="connecting-to-iceberg-rest-catalog-aws-s3-or-compatible-storage">Connecting to Iceberg REST Catalog + AWS S3 (or compatible) storage</h4>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">With Vault</label><label for="__tabbed_2_2">Without Vault</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">iceberg_server</span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">iceberg_wrapper</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="c1">-- The key id saved in Vault from above</span>
+<span class="w">    </span><span class="n">vault_aws_access_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;key_ID&gt;&#39;</span><span class="p">,</span>
+
+<span class="w">    </span><span class="c1">-- The secret id saved in Vault from above</span>
+<span class="w">    </span><span class="n">vault_aws_secret_access_key</span><span class="w"> </span><span class="s1">&#39;&lt;secret_key&gt;&#39;</span><span class="p">,</span>
+
+<span class="w">    </span><span class="c1">-- AWS region</span>
+<span class="w">    </span><span class="n">region_name</span><span class="w"> </span><span class="s1">&#39;us-east-1&#39;</span><span class="p">,</span>
+
+<span class="w">    </span><span class="c1">-- Iceberg REST Catalog URI</span>
+<span class="w">    </span><span class="n">catalog_uri</span><span class="w"> </span><span class="s1">&#39;https://rest-catalog/ws&#39;</span><span class="p">,</span>
+
+<span class="w">    </span><span class="c1">-- Warehouse name</span>
+<span class="w">    </span><span class="n">warehouse</span><span class="w"> </span><span class="s1">&#39;warehouse&#39;</span><span class="p">,</span>
+
+<span class="w">    </span><span class="c1">-- AWS S3 endpoint URL, optional</span>
+<span class="w">    </span><span class="ss">&quot;s3.endpoint&quot;</span><span class="w"> </span><span class="s1">&#39;https://alternative-s3-storage:8000&#39;</span>
+<span class="w">  </span><span class="p">);</span>
+</code></pre></div></td></tr></table></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">iceberg_server</span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">iceberg_wrapper</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="c1">-- The key id saved in Vault from above</span>
+<span class="w">    </span><span class="n">aws_access_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;key_ID&gt;&#39;</span><span class="p">,</span>
+
+<span class="w">    </span><span class="c1">-- The secret id saved in Vault from above</span>
+<span class="w">    </span><span class="n">aws_secret_access_key</span><span class="w"> </span><span class="s1">&#39;&lt;secret_key&gt;&#39;</span><span class="p">,</span>
+
+<span class="w">    </span><span class="c1">-- AWS region</span>
+<span class="w">    </span><span class="n">region_name</span><span class="w"> </span><span class="s1">&#39;us-east-1&#39;</span><span class="p">,</span>
+
+<span class="w">    </span><span class="c1">-- Iceberg REST Catalog URI</span>
+<span class="w">    </span><span class="n">catalog_uri</span><span class="w"> </span><span class="s1">&#39;https://rest-catalog/ws&#39;</span><span class="p">,</span>
+
+<span class="w">    </span><span class="c1">-- Warehouse name</span>
+<span class="w">    </span><span class="n">warehouse</span><span class="w"> </span><span class="s1">&#39;warehouse&#39;</span><span class="p">,</span>
+
+<span class="w">    </span><span class="c1">-- AWS S3 endpoint URL, optional</span>
+<span class="w">    </span><span class="ss">&quot;s3.endpoint&quot;</span><span class="w"> </span><span class="s1">&#39;https://alternative-s3-storage:8000&#39;</span>
+<span class="w">  </span><span class="p">);</span>
+</code></pre></div></td></tr></table></div>
+</div>
+</div>
+</div>
+<div class="admonition info">
+<p class="admonition-title">Info</p>
+<p>For other optional S3 options, please refer to <a href="https://py.iceberg.apache.org/configuration/#s3">PyIceberg S3 Configuration</a>.</p>
+</div>
+<h3 id="create-a-schema">Create a schema</h3>
+<p>We recommend creating a schema to hold all the foreign tables:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">iceberg</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<h2 id="options">Options</h2>
+<p>The full list of foreign table options are below:</p>
+<ul>
+<li><code>table</code> - Fully qualified source table name with all namespaces in Iceberg, required.</li>
+</ul>
+<h2 id="entities">Entities</h2>
+<p>We can use SQL <a href="https://www.postgresql.org/docs/current/sql-importforeignschema.html">import foreign schema</a> to import foreign table definitions from Iceberg.</p>
+<p>For example, using below SQL can automatically create foreign tables in the <code>iceberg</code> schema.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- create all the foreign tables from Iceberg &quot;docs_example&quot; namespace</span>
+<span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="ss">&quot;docs_example&quot;</span>
+<span class="w">  </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">iceberg_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">iceberg</span><span class="p">;</span>
+
+<span class="c1">-- or, only create &quot;readme&quot; and &quot;guides&quot; foreign tables</span>
+<span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="ss">&quot;docs_example&quot;</span>
+<span class="w">  </span><span class="k">limit</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="p">(</span><span class="ss">&quot;readme&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;guides&quot;</span><span class="p">)</span>
+<span class="w">  </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">iceberg_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">iceberg</span><span class="p">;</span>
+
+<span class="c1">-- or, create all foreign tables except &quot;readme&quot;</span>
+<span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="ss">&quot;docs_example&quot;</span>
+<span class="w">  </span><span class="k">except</span><span class="w"> </span><span class="p">(</span><span class="ss">&quot;readme&quot;</span><span class="p">)</span>
+<span class="w">  </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">iceberg_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">iceberg</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>By default, the <code>import foreign schema</code> statement will silently skip all the incompatible columns. Use the option <code>strict</code> to prevent this behavior. For example,</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
 <span class="normal">4</span>
 <span class="normal">5</span>
-<span class="normal">6</span>
-<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- create server and specify custom options</span>
-<span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">auth0_server</span>
-<span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">auth0_wrapper</span>
+<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="ss">&quot;docs_example&quot;</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">iceberg_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">iceberg</span>
 <span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">url</span><span class="w"> </span><span class="s1">&#39;https://dev-&lt;tenant-id&gt;.us.auth0.com/api/v2/users&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">api_key</span><span class="w"> </span><span class="s1">&#39;&lt;your_api_key&gt;&#39;</span>
+<span class="w">  </span><span class="c1">-- this will fail the &#39;import foreign schema&#39; statement when Iceberg table</span>
+<span class="w">  </span><span class="c1">-- column cannot be mapped to Postgres</span>
+<span class="w">  </span><span class="k">strict</span><span class="w"> </span><span class="s1">&#39;true&#39;</span>
 <span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 </div>
-</div>
-</div>
-<h3 id="create-a-schema">Create a schema</h3>
-<p>We recommend creating a schema to hold all the foreign tables:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">auth0</span><span class="p">;</span>
-</code></pre></div></td></tr></table></div>
-<h2 id="entities">Entities</h2>
-<p>The Auth0 Wrapper supports data reads from Auth0 API.</p>
-<h3 id="users">Users</h3>
-<p>The Auth0 Wrapper supports data reads from Auth0's <a href="https://auth0.com/docs/api/management/v2/users/get-users">Management API List users endpoint</a> endpoint (<em>read only</em>).</p>
+<h3 id="iceberg-tables">Iceberg Tables</h3>
+<p>This is an object representing Iceberg table.</p>
+<p>Ref: <a href="https://iceberg.apache.org/spec/#iceberg-table-spec">Iceberg Table Spec</a></p>
 <h4 id="operations">Operations</h4>
 <table>
 <thead>
@@ -2103,7 +2399,7 @@
 </thead>
 <tbody>
 <tr>
-<td>Users</td>
+<td>table</td>
 <td style="text-align: center;">✅</td>
 <td style="text-align: center;">❌</td>
 <td style="text-align: center;">❌</td>
@@ -2113,40 +2409,7 @@
 </tbody>
 </table>
 <h4 id="usage">Usage</h4>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span>
-<span class="normal">7</span>
-<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">auth0</span><span class="p">.</span><span class="n">my_foreign_table</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span>
-<span class="w">  </span><span class="c1">-- other fields</span>
-<span class="p">)</span>
-<span class="n">server</span><span class="w"> </span><span class="n">auth0_server</span>
-<span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;users&#39;</span>
-<span class="p">);</span>
-</code></pre></div></td></tr></table></div>
-<h4 id="notes">Notes</h4>
-<ul>
-<li>Currently only supports the <code>users</code> object</li>
-</ul>
-<h2 id="query-pushdown-support">Query Pushdown Support</h2>
-<p>This FDW doesn't support query pushdown.</p>
-<h2 id="limitations">Limitations</h2>
-<p>This section describes important limitations and considerations when using this FDW:</p>
-<ul>
-<li>No query pushdown support, all filtering must be done locally</li>
-<li>Large result sets may experience slower performance due to full data transfer requirement</li>
-<li>Only supports the <code>users</code> object from Auth0 Management API</li>
-<li>Cannot modify Auth0 user properties via FDW</li>
-<li>Materialized views using these foreign tables may fail during logical backups</li>
-</ul>
-<h2 id="examples">Examples</h2>
-<h3 id="basic-auth0-users-query">Basic Auth0 Users Query</h3>
-<p>This example demonstrates querying Auth0 users data.</p>
+<p>You can manually create the foreign table like below if you did not use <code>import foreign schema</code>.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -2156,19 +2419,245 @@
 <span class="normal"> 7</span>
 <span class="normal"> 8</span>
 <span class="normal"> 9</span>
-<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">auth0</span><span class="p">.</span><span class="n">auth0_table</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">email</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">email_verified</span><span class="w"> </span><span class="n">bool</span><span class="p">,</span>
-<span class="w">  </span><span class="n">identities</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">iceberg</span><span class="p">.</span><span class="n">guides</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
+<span class="w">  </span><span class="n">title</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">content</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span>
 <span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">auth0_server</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">iceberg_server</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;users&#39;</span>
+<span class="w">    </span><span class="k">table</span><span class="w"> </span><span class="s1">&#39;docs_example.guides&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
-<p>You can now fetch your Auth0 data from within your Postgres database:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">auth0</span><span class="p">.</span><span class="n">auth0_table</span><span class="p">;</span>
+<h2 id="query-pushdown-support">Query Pushdown Support</h2>
+<p>This FDW supports <code>where</code> clause pushdown with below operators.</p>
+<table>
+<thead>
+<tr>
+<th>Operator</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>=</code>, <code>&gt;</code>, <code>&gt;=</code>, <code>&lt;</code>, <code>&lt;=</code>, <code>&lt;&gt;</code>, <code>!=</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>is null</code>, <code>is not null</code></td>
+<td></td>
+</tr>
+<tr>
+<td><code>x</code>, <code>not x</code>, <code>x is true</code>, <code>x is not true</code></td>
+<td>column <code>x</code> data type is <code>boolean</code></td>
+</tr>
+<tr>
+<td><code>x between a and b</code></td>
+<td>column <code>x</code> data type can be datetime or numeric types</td>
+</tr>
+<tr>
+<td><code>like 'abc%'</code>, <code>not like 'abc%'</code></td>
+<td>only support <code>starts with</code> pattern</td>
+</tr>
+<tr>
+<td><code>in (x, y, z)</code>, <code>not in (x, y, z)</code></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>For multiple filters, only logical <code>AND</code> is supported. For example,</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- this can be pushed down</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">b</span><span class="p">;</span>
+
+<span class="c1">-- this cannot be pushed down</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="k">or</span><span class="w"> </span><span class="n">y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">b</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+</div>
+<h2 id="supported-data-types">Supported Data Types</h2>
+<table>
+<thead>
+<tr>
+<th>Postgres Type</th>
+<th>Iceberg Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>boolean</td>
+<td>boolean</td>
+</tr>
+<tr>
+<td>real</td>
+<td>float</td>
+</tr>
+<tr>
+<td>integer</td>
+<td>int</td>
+</tr>
+<tr>
+<td>double precision</td>
+<td>double</td>
+</tr>
+<tr>
+<td>bigint</td>
+<td>long</td>
+</tr>
+<tr>
+<td>numeric</td>
+<td>decimal</td>
+</tr>
+<tr>
+<td>text</td>
+<td>string</td>
+</tr>
+<tr>
+<td>date</td>
+<td>date</td>
+</tr>
+<tr>
+<td>time</td>
+<td>time</td>
+</tr>
+<tr>
+<td>timestamp</td>
+<td>timestamp, timestamp_ns</td>
+</tr>
+<tr>
+<td>timestamptz</td>
+<td>timestamptz, timestamptz_ns</td>
+</tr>
+<tr>
+<td>jsonb</td>
+<td>struct, list, map</td>
+</tr>
+<tr>
+<td>bytea</td>
+<td>binary</td>
+</tr>
+<tr>
+<td>uuid</td>
+<td>uuid</td>
+</tr>
+</tbody>
+</table>
+<h2 id="limitations">Limitations</h2>
+<p>This section describes important limitations and considerations when using this FDW:</p>
+<ul>
+<li>Only supports specific data type mappings between Postgres and Iceberg</li>
+<li>Only supports read operations (no INSERT, UPDATE, DELETE, or TRUNCATE)</li>
+<li><a href="https://iceberg.apache.org/spec/#schema-evolution">Apache Iceberg schema evolution</a> is not supported</li>
+<li>When using Iceberg REST catalog, only supports AWS S3 (or compatible) as the storage</li>
+<li>Materialized views using these foreign tables may fail during logical backups</li>
+</ul>
+<h2 id="examples">Examples</h2>
+<h3 id="basic-example">Basic Example</h3>
+<p>First, create a server for AWS S3 Tables:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span>
+<span class="normal">7</span>
+<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">iceberg_server</span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">iceberg_wrapper</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">aws_access_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;AWS_access_key_ID&gt;&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">aws_secret_access_key</span><span class="w"> </span><span class="s1">&#39;&lt;AWS_secret_access_key&gt;&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">region_name</span><span class="w"> </span><span class="s1">&#39;us-east-1&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">aws_s3table_bucket_arn</span><span class="w"> </span><span class="s1">&#39;arn:aws:s3tables:us-east-1:204203087419:bucket/my-table-bucket&#39;</span>
+<span class="w">  </span><span class="p">);</span>
+</code></pre></div></td></tr></table></div>
+<p>Import the foreign table:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Run below SQL to import all tables under namespace &#39;docs_example&#39;</span>
+<span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="ss">&quot;docs_example&quot;</span>
+<span class="w">  </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">iceberg_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">iceberg</span><span class="p">;</span>
+
+<span class="c1">-- or, create the foreign table manually</span>
+<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">iceberg</span><span class="p">.</span><span class="n">guides</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
+<span class="w">  </span><span class="n">title</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">content</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span>
+<span class="p">)</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">iceberg_server</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">table</span><span class="w"> </span><span class="s1">&#39;docs_example.guides&#39;</span>
+<span class="w">  </span><span class="p">);</span>
+</code></pre></div></td></tr></table></div>
+<p>Then query the foreign table:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">iceberg</span><span class="p">.</span><span class="n">guides</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<h3 id="read-cloudflare-r2-data-catalog">Read Cloudflare R2 Data Catalog</h3>
+<p>First, follow the steps in <a href="https://developers.cloudflare.com/r2/data-catalog/get-started/">Getting Started Guide</a> to create a R2 Catalog on Cloudflare. Once it is completed, create a server like below:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">iceberg_server</span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">iceberg_wrapper</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">aws_access_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;R2_access_key_ID&gt;&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">aws_secret_access_key</span><span class="w"> </span><span class="s1">&#39;&lt;R2_secret_access_key&gt;&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">token</span><span class="w"> </span><span class="s1">&#39;&lt;R2 API token&gt;&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">warehouse</span><span class="w"> </span><span class="s1">&#39;xxx_r2-data-catalog-tutorial&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="ss">&quot;s3.endpoint&quot;</span><span class="w"> </span><span class="s1">&#39;https://xxx.r2.cloudflarestorage.com&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">catalog_uri</span><span class="w"> </span><span class="s1">&#39;https://catalog.cloudflarestorage.com/xxx/r2-data-catalog-tutorial&#39;</span>
+<span class="w">  </span><span class="p">);</span>
+</code></pre></div></td></tr></table></div>
+<p>Then, import all the tables in <code>default</code> namespace and query it:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="ss">&quot;default&quot;</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">iceberg_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">iceberg</span><span class="p">;</span>
+
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">iceberg</span><span class="p">.</span><span class="n">people</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<h3 id="query-pushdown-examples">Query Pushdown Examples</h3>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- the filter &#39;id = 42&#39; will be pushed down to Iceberg</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">iceberg</span><span class="p">.</span><span class="n">guides</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">42</span><span class="p">;</span>
+
+<span class="c1">-- the pushdown filter can also be on the partition column &#39;created_at&#39;,</span>
+<span class="c1">-- this can greatly reduce query cost</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">iceberg</span><span class="p">.</span><span class="n">guides</span>
+<span class="k">where</span><span class="w"> </span><span class="n">created_at</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="k">timestamp</span><span class="w"> </span><span class="s1">&#39;2025-05-16 12:34:56&#39;</span><span class="p">;</span>
+
+<span class="c1">-- multiple filters must use logical &#39;AND&#39;</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">iceberg</span><span class="p">.</span><span class="n">guides</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">42</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">title</span><span class="w"> </span><span class="k">like</span><span class="w"> </span><span class="s1">&#39;Supabase%&#39;</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 
 
@@ -2202,7 +2691,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../airtable/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Airtable">
+          <a href="../firebase/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Firebase">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
@@ -2212,20 +2701,20 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                Airtable
+                Firebase
               </div>
             </div>
           </a>
         
         
           
-          <a href="../cognito/" class="md-footer__link md-footer__link--next" aria-label="Next: AWS Cognito">
+          <a href="../logflare/" class="md-footer__link md-footer__link--next" aria-label="Next: Logflare">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                AWS Cognito
+                Logflare
               </div>
             </div>
             <div class="md-footer__button md-icon">

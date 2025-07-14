@@ -18,7 +18,7 @@
         <link rel="prev" href="../bigquery/">
       
       
-        <link rel="next" href="../firebase/">
+        <link rel="next" href="../duckdb/">
       
       
       <link rel="icon" href="../../assets/favicon.ico">
@@ -436,6 +436,10 @@
       
         
       
+        
+      
+        
+      
     
     
       
@@ -816,11 +820,53 @@
   
   
     <li class="md-nav__item">
+      <a href="../duckdb/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    DuckDB
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../firebase/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
     Firebase
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../iceberg/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Iceberg
   </span>
   
 
@@ -2100,7 +2146,11 @@
 <li><code>tcp://user:password@host:9000/clicks?compression=lz4&amp;ping_timeout=42ms</code></li>
 <li><code>tcp://default:PASSWORD@abc.eu-west-1.aws.clickhouse.cloud:9440/default?connection_timeout=30s&amp;ping_before_query=false&amp;secure=true</code></li>
 </ul>
-<p>Check <a href="https://github.com/suharev7/clickhouse-rs#dns">more connection string parameters</a>.</p>
+<p>Check out <a href="https://github.com/suharev7/clickhouse-rs#dns">more connection string parameters</a>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This ClickHouse FDW only supports native protocol port <code>9000</code> and <code>9440</code>, HTTP(S) port like <code>8123</code> and <code>8443</code> are not supported yet.</p>
+</div>
 <h3 id="create-a-schema">Create a schema</h3>
 <p>We recommend creating a schema to hold all the foreign tables:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">clickhouse</span><span class="p">;</span>
@@ -2206,6 +2256,14 @@
 <tbody>
 <tr>
 <td>boolean</td>
+<td>Bool</td>
+</tr>
+<tr>
+<td>"char"</td>
+<td>Int8</td>
+</tr>
+<tr>
+<td>smallint</td>
 <td>UInt8</td>
 </tr>
 <tr>
@@ -2241,8 +2299,32 @@
 <td>Float64</td>
 </tr>
 <tr>
+<td>numeric</td>
+<td>UInt128</td>
+</tr>
+<tr>
+<td>numeric</td>
+<td>Int128</td>
+</tr>
+<tr>
+<td>text</td>
+<td>UInt256</td>
+</tr>
+<tr>
+<td>text</td>
+<td>Int256</td>
+</tr>
+<tr>
+<td>numeric</td>
+<td>Decimal</td>
+</tr>
+<tr>
 <td>text</td>
 <td>String</td>
+</tr>
+<tr>
+<td>text</td>
+<td>FixedString(N)</td>
 </tr>
 <tr>
 <td>date</td>
@@ -2251,6 +2333,38 @@
 <tr>
 <td>timestamp</td>
 <td>DateTime</td>
+</tr>
+<tr>
+<td>uuid</td>
+<td>UUID</td>
+</tr>
+<tr>
+<td>boolean[]</td>
+<td>Array(Boolean)</td>
+</tr>
+<tr>
+<td>smallint[]</td>
+<td>Array(Int16)</td>
+</tr>
+<tr>
+<td>integer[]</td>
+<td>Array(Int32)</td>
+</tr>
+<tr>
+<td>bigint[]</td>
+<td>Array(Int64)</td>
+</tr>
+<tr>
+<td>real[]</td>
+<td>Array(Float32)</td>
+</tr>
+<tr>
+<td>double precision[]</td>
+<td>Array(Float64)</td>
+</tr>
+<tr>
+<td>text[]</td>
+<td>Array(String)</td>
 </tr>
 <tr>
 <td>*</td>
@@ -2372,13 +2486,13 @@
         
         
           
-          <a href="../firebase/" class="md-footer__link md-footer__link--next" aria-label="Next: Firebase">
+          <a href="../duckdb/" class="md-footer__link md-footer__link--next" aria-label="Next: DuckDB">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Firebase
+                DuckDB
               </div>
             </div>
             <div class="md-footer__button md-icon">
