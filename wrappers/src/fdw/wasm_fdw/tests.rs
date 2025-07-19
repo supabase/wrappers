@@ -423,7 +423,11 @@ mod tests {
             .unwrap();
 
             let results = c
-                .select("SELECT * FROM gravatar.profiles where email = ''", None, &[])
+                .select(
+                    "SELECT * FROM gravatar.profiles where email = ''",
+                    None,
+                    &[],
+                )
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("display_name").unwrap())
                 .collect::<Vec<_>>();
