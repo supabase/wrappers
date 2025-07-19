@@ -4,6 +4,7 @@ members = [
     "calendly_fdw",
     "cfd1_fdw",
     "clerk_fdw",
+    "gravatar_fdw",
     "helloworld_fdw",
     "hubspot_fdw",
     "notion_fdw",

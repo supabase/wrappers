@@ -397,6 +397,37 @@ mod tests {
                 .filter_map(|r| r.get_by_name::<&str, _>("user_id").unwrap())
                 .collect::<Vec<_>>();
             assert_eq!(results, vec!["8527", "8528"]);
+
+            // Gravatar FDW test
+            c.update(
+                r#"CREATE SERVER gravatar_server
+                     FOREIGN DATA WRAPPER wasm_wrapper
+                     OPTIONS (
+                       fdw_package_url 'file://../../../wasm-wrappers/fdw/target/wasm32-unknown-unknown/release/gravatar_fdw.wasm',
+                       fdw_package_name 'supabase:gravatar-fdw',
+                       fdw_package_version '0.1.0',
+                       api_url 'http://localhost:8096/gravatar',
+                       api_key 'test'
+                     )"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(r#"CREATE SCHEMA IF NOT EXISTS gravatar"#, None, &[])
+                .unwrap();
+            c.update(
+                r#"IMPORT FOREIGN SCHEMA gravatar FROM SERVER gravatar_server INTO gravatar"#,
+                None,
+                &[],
+            )
+            .unwrap();
+
+            let results = c
+                .select("SELECT * FROM gravatar.profiles where email = ''", None, &[])
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("display_name").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(results, vec!["Test"]);
         });
     }
 }

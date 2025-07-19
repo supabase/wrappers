@@ -334,6 +334,47 @@ class MockServer(BaseHTTPRequestHandler):
   }
 }
             '''
+        elif fdw == "gravatar":
+            body = '''
+{
+  "hash": "973dfe463ec85785f5f95af5ba3906eedb2d931c24e69824a89ea65dba4e813b",
+  "display_name": "Test",
+  "profile_url": "https://gravatar.com/test",
+  "avatar_url": "https://1.gravatar.com/avatar/0133ce4a2479bd7267f37e3b2f5a741c4aaab910950434d7f14e89bddfe1",
+  "avatar_alt_text": "",
+  "location": "",
+  "description": "",
+  "job_title": "",
+  "company": "",
+  "verified_accounts": [],
+  "pronunciation": "",
+  "pronouns": "",
+  "timezone": "",
+  "languages": [],
+  "first_name": "",
+  "last_name": "",
+  "is_organization": false,
+  "links": [],
+  "interests": [],
+  "payments": {
+    "links": [],
+    "crypto_wallets": []
+  },
+  "contact_info": {},
+  "gallery": [],
+  "number_verified_accounts": 0,
+  "last_profile_edit": "2025-07-19T00:42:37Z",
+  "registration_date": "2023-04-25T12:17:23Z",
+  "section_visibility": {
+    "hidden_contact_info": false,
+    "hidden_links": false,
+    "hidden_interests": false,
+    "hidden_wallet": false,
+    "hidden_photos": false,
+    "hidden_verified_accounts": false
+  }
+}
+            '''
         else:
             self.send_response(404)
             return
