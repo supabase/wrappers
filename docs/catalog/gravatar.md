@@ -13,6 +13,8 @@ tags:
 
 The Gravatar Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you to read profile data from Gravatar for use within your Postgres database.
 
+This wrapper is [contributed and supported by Automattic](https://github.com/Automattic/gravatar-wasm-fdw).
+
 ## Available Versions
 
 | Version | Wasm Package URL                                                                                    | Checksum                                                           | Required Wrappers Version |
