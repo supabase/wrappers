@@ -9,16 +9,16 @@
         <meta name="description" content="A PostgreSQL extension for connecting to external data sources">
       
       
-        <meta name="author" content="supabase">
+        <meta name="author" content="Automattic">
       
       
-        <link rel="canonical" href="https://supabase.github.io/wrappers/catalog/wasm/">
+        <link rel="canonical" href="https://supabase.github.io/wrappers/catalog/gravatar/">
       
       
-        <link rel="prev" href="../mssql/">
+        <link rel="prev" href="../cfd1/">
       
       
-        <link rel="next" href="../cal/">
+        <link rel="next" href="../hubspot/">
       
       
       <link rel="icon" href="../../assets/favicon.ico">
@@ -26,7 +26,7 @@
     
     
       
-        <title>Wasm Wrappers - Wrappers</title>
+        <title>Gravatar - Wrappers</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#wasm-wrappers" class="md-skip">
+        <a href="#gravatar" class="md-skip">
           Skip to content
         </a>
       
@@ -113,7 +113,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Wasm Wrappers
+              Gravatar
             
           </span>
         </div>
@@ -814,7 +814,7 @@
           
           
           <div class="md-nav__link md-nav__container">
-            <a href="./" class="md-nav__link md-nav__link--active">
+            <a href="../wasm/" class="md-nav__link ">
               
   
   <span class="md-ellipsis">
@@ -825,7 +825,7 @@
             </a>
             
               
-              <label class="md-nav__link md-nav__link--active" for="__nav_2_3" id="__nav_2_3_label" tabindex="">
+              <label class="md-nav__link " for="__nav_2_3" id="__nav_2_3_label" tabindex="">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
@@ -928,10 +928,30 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../gravatar/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Gravatar
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   <span class="md-ellipsis">
@@ -940,6 +960,221 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#available-versions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Available Versions
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#preparation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Preparation
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Preparation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#enable-wrappers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Enable Wrappers
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#enable-the-gravatar-wrapper" class="md-nav__link">
+    <span class="md-ellipsis">
+      Enable the Gravatar Wrapper
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#store-your-credentials-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      Store your credentials (optional)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#connecting-to-gravatar" class="md-nav__link">
+    <span class="md-ellipsis">
+      Connecting to Gravatar
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create-a-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      Create a schema
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#options" class="md-nav__link">
+    <span class="md-ellipsis">
+      Options
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#entities" class="md-nav__link">
+    <span class="md-ellipsis">
+      Entities
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Entities">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#profiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      Profiles
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Profiles">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#query-pushdown-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      Query Pushdown Support
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#supported-data-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Supported Data Types
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Limitations
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Examples
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      Basic example
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#query-json-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Query JSON attributes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1638,6 +1873,209 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#available-versions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Available Versions
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#preparation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Preparation
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Preparation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#enable-wrappers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Enable Wrappers
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#enable-the-gravatar-wrapper" class="md-nav__link">
+    <span class="md-ellipsis">
+      Enable the Gravatar Wrapper
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#store-your-credentials-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      Store your credentials (optional)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#connecting-to-gravatar" class="md-nav__link">
+    <span class="md-ellipsis">
+      Connecting to Gravatar
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create-a-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      Create a schema
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#options" class="md-nav__link">
+    <span class="md-ellipsis">
+      Options
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#entities" class="md-nav__link">
+    <span class="md-ellipsis">
+      Entities
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Entities">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#profiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      Profiles
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Profiles">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Operations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Notes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#query-pushdown-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      Query Pushdown Support
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#supported-data-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Supported Data Types
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Limitations
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Examples
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      Basic example
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#query-json-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Query JSON attributes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -1661,7 +2099,7 @@
     
     
     
-      <a href="../../tags/#official" class="md-tag">official</a>
+      <a href="../../tags/#community" class="md-tag">community</a>
     
   
 </nav>
@@ -1671,102 +2109,305 @@
   
 
 
-<h1 id="wasm-wrappers">Wasm Wrappers</h1>
-<p>Foreign data wrappers built with Wasm which can be used on Supabase platform.</p>
-<div class="grid cards">
-<ul>
-<li>
-<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14.745 0v.129a2.752 2.752 0 1 1-5.504 0V0H0v24h24V0h-9.255zm-3.291 21.431-1.169-5.783h-.02l-1.264 5.783H7.39l-1.824-8.497h1.59l1.088 5.783h.02l1.311-5.783h1.487l1.177 5.854h.02l1.242-5.854h1.561l-2.027 8.497h-1.581zm8.755 0-.542-1.891h-2.861l-.417 1.891h-1.59l2.056-8.497h2.509l2.5 8.497h-1.655zm-2.397-6.403-.694 3.118h2.159l-.796-3.118h-.669z"/></svg></span> &nbsp; <strong><a href="../cal/">Cal.com</a></strong></p>
-<hr />
-<p>Foreign data wrapper for <a href="https://cal.com/">Cal.com</a>.</p>
-<p>Supported by <a href="https://www.supabase.com">Supabase</a></p>
-<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7.75 6.5a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5Z"/><path d="M2.5 1h8.44a1.5 1.5 0 0 1 1.06.44l10.25 10.25a1.5 1.5 0 0 1 0 2.12l-8.44 8.44a1.5 1.5 0 0 1-2.12 0L1.44 12A1.497 1.497 0 0 1 1 10.94V2.5A1.5 1.5 0 0 1 2.5 1Zm0 1.5v8.44l10.25 10.25 8.44-8.44L10.94 2.5Z"/></svg></span> <a href="https://github.com/supabase/wrappers/releases/tag/cal_fdw_v0.1.0">v0.1.0</a> &nbsp;
-<span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M15.22 4.97a.75.75 0 0 1 1.06 0l6.5 6.5a.75.75 0 0 1 0 1.06l-6.5 6.5a.749.749 0 0 1-1.275-.326.749.749 0 0 1 .215-.734L21.19 12l-5.97-5.97a.75.75 0 0 1 0-1.06Zm-6.44 0a.75.75 0 0 1 0 1.06L2.81 12l5.97 5.97a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215l-6.5-6.5a.75.75 0 0 1 0-1.06l6.5-6.5a.75.75 0 0 1 1.06 0Z"/></svg></span> <a href="https://github.com/supabase/wrappers/tree/wasm_cal_fdw_v0.1.0/wasm-wrappers/fdw/calendly_fdw">source</a> &nbsp;
-<span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 9h5.5L13 3.5V9M6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4c0-1.11.89-2 2-2m9 16v-2H6v2h9m3-4v-2H6v2h12Z"/></svg></span> <a href="../cal/">docs</a></p>
-</li>
-<li>
-<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14.745 0v.129a2.752 2.752 0 1 1-5.504 0V0H0v24h24V0h-9.255zm-3.291 21.431-1.169-5.783h-.02l-1.264 5.783H7.39l-1.824-8.497h1.59l1.088 5.783h.02l1.311-5.783h1.487l1.177 5.854h.02l1.242-5.854h1.561l-2.027 8.497h-1.581zm8.755 0-.542-1.891h-2.861l-.417 1.891h-1.59l2.056-8.497h2.509l2.5 8.497h-1.655zm-2.397-6.403-.694 3.118h2.159l-.796-3.118h-.669z"/></svg></span> &nbsp; <strong><a href="../calendly/">Calendly</a></strong></p>
-<hr />
-<p>Foreign data wrapper for <a href="https://calendly.com/">Calendly</a>.</p>
-<p>Supported by <a href="https://www.supabase.com">Supabase</a></p>
-<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7.75 6.5a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5Z"/><path d="M2.5 1h8.44a1.5 1.5 0 0 1 1.06.44l10.25 10.25a1.5 1.5 0 0 1 0 2.12l-8.44 8.44a1.5 1.5 0 0 1-2.12 0L1.44 12A1.497 1.497 0 0 1 1 10.94V2.5A1.5 1.5 0 0 1 2.5 1Zm0 1.5v8.44l10.25 10.25 8.44-8.44L10.94 2.5Z"/></svg></span> <a href="https://github.com/supabase/wrappers/releases/tag/calendly_fdw_v0.1.0">v0.1.0</a> &nbsp;
-<span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M15.22 4.97a.75.75 0 0 1 1.06 0l6.5 6.5a.75.75 0 0 1 0 1.06l-6.5 6.5a.749.749 0 0 1-1.275-.326.749.749 0 0 1 .215-.734L21.19 12l-5.97-5.97a.75.75 0 0 1 0-1.06Zm-6.44 0a.75.75 0 0 1 0 1.06L2.81 12l5.97 5.97a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215l-6.5-6.5a.75.75 0 0 1 0-1.06l6.5-6.5a.75.75 0 0 1 1.06 0Z"/></svg></span> <a href="https://github.com/supabase/wrappers/tree/wasm_calendly_fdw_v0.1.0/wasm-wrappers/fdw/calendly_fdw">source</a> &nbsp;
-<span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 9h5.5L13 3.5V9M6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4c0-1.11.89-2 2-2m9 16v-2H6v2h9m3-4v-2H6v2h12Z"/></svg></span> <a href="../calendly/">docs</a></p>
-</li>
-<li>
-<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14.745 0v.129a2.752 2.752 0 1 1-5.504 0V0H0v24h24V0h-9.255zm-3.291 21.431-1.169-5.783h-.02l-1.264 5.783H7.39l-1.824-8.497h1.59l1.088 5.783h.02l1.311-5.783h1.487l1.177 5.854h.02l1.242-5.854h1.561l-2.027 8.497h-1.581zm8.755 0-.542-1.891h-2.861l-.417 1.891h-1.59l2.056-8.497h2.509l2.5 8.497h-1.655zm-2.397-6.403-.694 3.118h2.159l-.796-3.118h-.669z"/></svg></span> &nbsp; <strong><a href="../clerk/">Clerk</a></strong></p>
-<hr />
-<p>Foreign data wrapper for <a href="https://clerk.com/">Clerk</a>.</p>
-<p>Supported by <a href="https://www.supabase.com">Supabase</a></p>
-<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7.75 6.5a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5Z"/><path d="M2.5 1h8.44a1.5 1.5 0 0 1 1.06.44l10.25 10.25a1.5 1.5 0 0 1 0 2.12l-8.44 8.44a1.5 1.5 0 0 1-2.12 0L1.44 12A1.497 1.497 0 0 1 1 10.94V2.5A1.5 1.5 0 0 1 2.5 1Zm0 1.5v8.44l10.25 10.25 8.44-8.44L10.94 2.5Z"/></svg></span> <a href="https://github.com/supabase/wrappers/releases/tag/clerk_fdw_v0.1.0">v0.1.0</a> &nbsp;
-<span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M15.22 4.97a.75.75 0 0 1 1.06 0l6.5 6.5a.75.75 0 0 1 0 1.06l-6.5 6.5a.749.749 0 0 1-1.275-.326.749.749 0 0 1 .215-.734L21.19 12l-5.97-5.97a.75.75 0 0 1 0-1.06Zm-6.44 0a.75.75 0 0 1 0 1.06L2.81 12l5.97 5.97a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215l-6.5-6.5a.75.75 0 0 1 0-1.06l6.5-6.5a.75.75 0 0 1 1.06 0Z"/></svg></span> <a href="https://github.com/supabase/wrappers/tree/wasm_clerk_fdw_v0.1.0/wasm-wrappers/fdw/clerk_fdw">source</a> &nbsp;
-<span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 9h5.5L13 3.5V9M6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4c0-1.11.89-2 2-2m9 16v-2H6v2h9m3-4v-2H6v2h12Z"/></svg></span> <a href="../clerk/">docs</a></p>
-</li>
-<li>
-<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14.745 0v.129a2.752 2.752 0 1 1-5.504 0V0H0v24h24V0h-9.255zm-3.291 21.431-1.169-5.783h-.02l-1.264 5.783H7.39l-1.824-8.497h1.59l1.088 5.783h.02l1.311-5.783h1.487l1.177 5.854h.02l1.242-5.854h1.561l-2.027 8.497h-1.581zm8.755 0-.542-1.891h-2.861l-.417 1.891h-1.59l2.056-8.497h2.509l2.5 8.497h-1.655zm-2.397-6.403-.694 3.118h2.159l-.796-3.118h-.669z"/></svg></span> &nbsp; <strong><a href="../gravatar/">Gravatar</a></strong></p>
-<hr />
-<p>Foreign data wrapper for <a href="https://gravatar.com/">Gravatar</a>.</p>
-<p>Supported by <a href="https://automattic.com/">Automattic</a></p>
-<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7.75 6.5a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5Z"/><path d="M2.5 1h8.44a1.5 1.5 0 0 1 1.06.44l10.25 10.25a1.5 1.5 0 0 1 0 2.12l-8.44 8.44a1.5 1.5 0 0 1-2.12 0L1.44 12A1.497 1.497 0 0 1 1 10.94V2.5A1.5 1.5 0 0 1 2.5 1Zm0 1.5v8.44l10.25 10.25 8.44-8.44L10.94 2.5Z"/></svg></span> <a href="https://github.com/Automattic/gravatar-wasm-fdw/releases/tag/v0.2.0">v0.2.0</a> &nbsp;
-<span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M15.22 4.97a.75.75 0 0 1 1.06 0l6.5 6.5a.75.75 0 0 1 0 1.06l-6.5 6.5a.749.749 0 0 1-1.275-.326.749.749 0 0 1 .215-.734L21.19 12l-5.97-5.97a.75.75 0 0 1 0-1.06Zm-6.44 0a.75.75 0 0 1 0 1.06L2.81 12l5.97 5.97a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215l-6.5-6.5a.75.75 0 0 1 0-1.06l6.5-6.5a.75.75 0 0 1 1.06 0Z"/></svg></span> <a href="https://github.com/Automattic/gravatar-wasm-fdw">source</a> &nbsp;
-<span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 9h5.5L13 3.5V9M6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4c0-1.11.89-2 2-2m9 16v-2H6v2h9m3-4v-2H6v2h12Z"/></svg></span> <a href="../gravatar/">docs</a></p>
-</li>
-<li>
-<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14.745 0v.129a2.752 2.752 0 1 1-5.504 0V0H0v24h24V0h-9.255zm-3.291 21.431-1.169-5.783h-.02l-1.264 5.783H7.39l-1.824-8.497h1.59l1.088 5.783h.02l1.311-5.783h1.487l1.177 5.854h.02l1.242-5.854h1.561l-2.027 8.497h-1.581zm8.755 0-.542-1.891h-2.861l-.417 1.891h-1.59l2.056-8.497h2.509l2.5 8.497h-1.655zm-2.397-6.403-.694 3.118h2.159l-.796-3.118h-.669z"/></svg></span> &nbsp; <strong><a href="../cfd1/">Cloudflare D1</a></strong></p>
-<hr />
-<p>Foreign data wrapper for <a href="https://developers.cloudflare.com/d1/">Cloudflare D1</a>.</p>
-<p>Supported by <a href="https://www.supabase.com">Supabase</a></p>
-<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7.75 6.5a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5Z"/><path d="M2.5 1h8.44a1.5 1.5 0 0 1 1.06.44l10.25 10.25a1.5 1.5 0 0 1 0 2.12l-8.44 8.44a1.5 1.5 0 0 1-2.12 0L1.44 12A1.497 1.497 0 0 1 1 10.94V2.5A1.5 1.5 0 0 1 2.5 1Zm0 1.5v8.44l10.25 10.25 8.44-8.44L10.94 2.5Z"/></svg></span> <a href="https://github.com/supabase/wrappers/releases/tag/cfd1_fdw_v0.1.0">v0.1.0</a> &nbsp;
-<span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M15.22 4.97a.75.75 0 0 1 1.06 0l6.5 6.5a.75.75 0 0 1 0 1.06l-6.5 6.5a.749.749 0 0 1-1.275-.326.749.749 0 0 1 .215-.734L21.19 12l-5.97-5.97a.75.75 0 0 1 0-1.06Zm-6.44 0a.75.75 0 0 1 0 1.06L2.81 12l5.97 5.97a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215l-6.5-6.5a.75.75 0 0 1 0-1.06l6.5-6.5a.75.75 0 0 1 1.06 0Z"/></svg></span> <a href="https://github.com/supabase/wrappers/tree/wasm_cfd1_fdw_v0.1.0/wasm-wrappers/fdw/cfd1_fdw">source</a> &nbsp;
-<span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 9h5.5L13 3.5V9M6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4c0-1.11.89-2 2-2m9 16v-2H6v2h9m3-4v-2H6v2h12Z"/></svg></span> <a href="../cfd1/">docs</a></p>
-</li>
-<li>
-<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14.745 0v.129a2.752 2.752 0 1 1-5.504 0V0H0v24h24V0h-9.255zm-3.291 21.431-1.169-5.783h-.02l-1.264 5.783H7.39l-1.824-8.497h1.59l1.088 5.783h.02l1.311-5.783h1.487l1.177 5.854h.02l1.242-5.854h1.561l-2.027 8.497h-1.581zm8.755 0-.542-1.891h-2.861l-.417 1.891h-1.59l2.056-8.497h2.509l2.5 8.497h-1.655zm-2.397-6.403-.694 3.118h2.159l-.796-3.118h-.669z"/></svg></span> &nbsp; <strong><a href="../hubspot/">HubSpot</a></strong></p>
-<hr />
-<p>Foreign data wrapper for <a href="https://www.hubspot.com/">HubSpot</a>.</p>
-<p>Supported by <a href="https://www.supabase.com">Supabase</a></p>
-<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7.75 6.5a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5Z"/><path d="M2.5 1h8.44a1.5 1.5 0 0 1 1.06.44l10.25 10.25a1.5 1.5 0 0 1 0 2.12l-8.44 8.44a1.5 1.5 0 0 1-2.12 0L1.44 12A1.497 1.497 0 0 1 1 10.94V2.5A1.5 1.5 0 0 1 2.5 1Zm0 1.5v8.44l10.25 10.25 8.44-8.44L10.94 2.5Z"/></svg></span> <a href="https://github.com/supabase/wrappers/releases/tag/wasm_hubspot_fdw_v0.1.0">v0.1.0</a> &nbsp;
-<span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M15.22 4.97a.75.75 0 0 1 1.06 0l6.5 6.5a.75.75 0 0 1 0 1.06l-6.5 6.5a.749.749 0 0 1-1.275-.326.749.749 0 0 1 .215-.734L21.19 12l-5.97-5.97a.75.75 0 0 1 0-1.06Zm-6.44 0a.75.75 0 0 1 0 1.06L2.81 12l5.97 5.97a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215l-6.5-6.5a.75.75 0 0 1 0-1.06l6.5-6.5a.75.75 0 0 1 1.06 0Z"/></svg></span> <a href="https://github.com/supabase/wrappers/tree/wasm_hubspot_fdw_v0.1.1/wasm-wrappers/fdw/hubspot_fdw">source</a> &nbsp;
-<span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 9h5.5L13 3.5V9M6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4c0-1.11.89-2 2-2m9 16v-2H6v2h9m3-4v-2H6v2h12Z"/></svg></span> <a href="../hubspot/">docs</a></p>
-</li>
-<li>
-<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14.745 0v.129a2.752 2.752 0 1 1-5.504 0V0H0v24h24V0h-9.255zm-3.291 21.431-1.169-5.783h-.02l-1.264 5.783H7.39l-1.824-8.497h1.59l1.088 5.783h.02l1.311-5.783h1.487l1.177 5.854h.02l1.242-5.854h1.561l-2.027 8.497h-1.581zm8.755 0-.542-1.891h-2.861l-.417 1.891h-1.59l2.056-8.497h2.509l2.5 8.497h-1.655zm-2.397-6.403-.694 3.118h2.159l-.796-3.118h-.669z"/></svg></span> &nbsp; <strong><a href="../notion/">Notion</a></strong></p>
-<hr />
-<p>Foreign data wrapper for <a href="https://notion.so/">Notion</a>.</p>
-<p>Supported by <a href="https://www.supabase.com">Supabase</a></p>
-<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7.75 6.5a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5Z"/><path d="M2.5 1h8.44a1.5 1.5 0 0 1 1.06.44l10.25 10.25a1.5 1.5 0 0 1 0 2.12l-8.44 8.44a1.5 1.5 0 0 1-2.12 0L1.44 12A1.497 1.497 0 0 1 1 10.94V2.5A1.5 1.5 0 0 1 2.5 1Zm0 1.5v8.44l10.25 10.25 8.44-8.44L10.94 2.5Z"/></svg></span> <a href="https://github.com/supabase/wrappers/releases/tag/wasm_notion_fdw_v0.1.1">v0.1.1</a> &nbsp;
-<span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M15.22 4.97a.75.75 0 0 1 1.06 0l6.5 6.5a.75.75 0 0 1 0 1.06l-6.5 6.5a.749.749 0 0 1-1.275-.326.749.749 0 0 1 .215-.734L21.19 12l-5.97-5.97a.75.75 0 0 1 0-1.06Zm-6.44 0a.75.75 0 0 1 0 1.06L2.81 12l5.97 5.97a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215l-6.5-6.5a.75.75 0 0 1 0-1.06l6.5-6.5a.75.75 0 0 1 1.06 0Z"/></svg></span> <a href="https://github.com/supabase/wrappers/tree/wasm_notion_fdw_v0.1.1/wasm-wrappers/fdw/notion_fdw">source</a> &nbsp;
-<span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 9h5.5L13 3.5V9M6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4c0-1.11.89-2 2-2m9 16v-2H6v2h9m3-4v-2H6v2h12Z"/></svg></span> <a href="../notion/">docs</a></p>
-</li>
-<li>
-<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14.745 0v.129a2.752 2.752 0 1 1-5.504 0V0H0v24h24V0h-9.255zm-3.291 21.431-1.169-5.783h-.02l-1.264 5.783H7.39l-1.824-8.497h1.59l1.088 5.783h.02l1.311-5.783h1.487l1.177 5.854h.02l1.242-5.854h1.561l-2.027 8.497h-1.581zm8.755 0-.542-1.891h-2.861l-.417 1.891h-1.59l2.056-8.497h2.509l2.5 8.497h-1.655zm-2.397-6.403-.694 3.118h2.159l-.796-3.118h-.669z"/></svg></span> &nbsp; <strong><a href="../orb/">Orb</a></strong></p>
-<hr />
-<p>Foreign data wrapper for <a href="https://www.withorb.com/">Orb</a>.</p>
-<p>Supported by <a href="https://www.supabase.com">Supabase</a></p>
-<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7.75 6.5a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5Z"/><path d="M2.5 1h8.44a1.5 1.5 0 0 1 1.06.44l10.25 10.25a1.5 1.5 0 0 1 0 2.12l-8.44 8.44a1.5 1.5 0 0 1-2.12 0L1.44 12A1.497 1.497 0 0 1 1 10.94V2.5A1.5 1.5 0 0 1 2.5 1Zm0 1.5v8.44l10.25 10.25 8.44-8.44L10.94 2.5Z"/></svg></span> <a href="https://github.com/supabase/wrappers/releases/tag/orb_fdw_v0.1.0">v0.1.0</a> &nbsp;
-<span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M15.22 4.97a.75.75 0 0 1 1.06 0l6.5 6.5a.75.75 0 0 1 0 1.06l-6.5 6.5a.749.749 0 0 1-1.275-.326.749.749 0 0 1 .215-.734L21.19 12l-5.97-5.97a.75.75 0 0 1 0-1.06Zm-6.44 0a.75.75 0 0 1 0 1.06L2.81 12l5.97 5.97a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215l-6.5-6.5a.75.75 0 0 1 0-1.06l6.5-6.5a.75.75 0 0 1 1.06 0Z"/></svg></span> <a href="https://github.com/supabase/wrappers/tree/wasm_orb_fdw_v0.1.0/wasm-wrappers/fdw/orb_fdw">source</a> &nbsp;
-<span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 9h5.5L13 3.5V9M6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4c0-1.11.89-2 2-2m9 16v-2H6v2h9m3-4v-2H6v2h12Z"/></svg></span> <a href="../orb/">docs</a></p>
-</li>
-<li>
-<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14.745 0v.129a2.752 2.752 0 1 1-5.504 0V0H0v24h24V0h-9.255zm-3.291 21.431-1.169-5.783h-.02l-1.264 5.783H7.39l-1.824-8.497h1.59l1.088 5.783h.02l1.311-5.783h1.487l1.177 5.854h.02l1.242-5.854h1.561l-2.027 8.497h-1.581zm8.755 0-.542-1.891h-2.861l-.417 1.891h-1.59l2.056-8.497h2.509l2.5 8.497h-1.655zm-2.397-6.403-.694 3.118h2.159l-.796-3.118h-.669z"/></svg></span> &nbsp; <strong><a href="../paddle/">Paddle</a></strong></p>
-<hr />
-<p>Foreign data wrapper for <a href="https://www.paddle.com/">Paddle</a>.</p>
-<p>Supported by <a href="https://www.supabase.com">Supabase</a></p>
-<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7.75 6.5a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5Z"/><path d="M2.5 1h8.44a1.5 1.5 0 0 1 1.06.44l10.25 10.25a1.5 1.5 0 0 1 0 2.12l-8.44 8.44a1.5 1.5 0 0 1-2.12 0L1.44 12A1.497 1.497 0 0 1 1 10.94V2.5A1.5 1.5 0 0 1 2.5 1Zm0 1.5v8.44l10.25 10.25 8.44-8.44L10.94 2.5Z"/></svg></span> <a href="https://github.com/supabase/wrappers/releases/tag/wasm_paddle_fdw_v0.1.1">v0.1.1</a> &nbsp;
-<span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M15.22 4.97a.75.75 0 0 1 1.06 0l6.5 6.5a.75.75 0 0 1 0 1.06l-6.5 6.5a.749.749 0 0 1-1.275-.326.749.749 0 0 1 .215-.734L21.19 12l-5.97-5.97a.75.75 0 0 1 0-1.06Zm-6.44 0a.75.75 0 0 1 0 1.06L2.81 12l5.97 5.97a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215l-6.5-6.5a.75.75 0 0 1 0-1.06l6.5-6.5a.75.75 0 0 1 1.06 0Z"/></svg></span> <a href="https://github.com/supabase/wrappers/tree/wasm_paddle_fdw_v0.1.1/wasm-wrappers/fdw/paddle_fdw">source</a> &nbsp;
-<span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 9h5.5L13 3.5V9M6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4c0-1.11.89-2 2-2m9 16v-2H6v2h9m3-4v-2H6v2h12Z"/></svg></span> <a href="../paddle/">docs</a></p>
-</li>
-<li>
-<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14.745 0v.129a2.752 2.752 0 1 1-5.504 0V0H0v24h24V0h-9.255zm-3.291 21.431-1.169-5.783h-.02l-1.264 5.783H7.39l-1.824-8.497h1.59l1.088 5.783h.02l1.311-5.783h1.487l1.177 5.854h.02l1.242-5.854h1.561l-2.027 8.497h-1.581zm8.755 0-.542-1.891h-2.861l-.417 1.891h-1.59l2.056-8.497h2.509l2.5 8.497h-1.655zm-2.397-6.403-.694 3.118h2.159l-.796-3.118h-.669z"/></svg></span> &nbsp; <strong><a href="../snowflake/">Snowflake</a></strong></p>
-<hr />
-<p>Foreign data wrapper for <a href="https://www.snowflake.com/en/">Snowflake</a>.</p>
-<p>Supported by <a href="https://www.supabase.com">Supabase</a></p>
-<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M7.75 6.5a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5Z"/><path d="M2.5 1h8.44a1.5 1.5 0 0 1 1.06.44l10.25 10.25a1.5 1.5 0 0 1 0 2.12l-8.44 8.44a1.5 1.5 0 0 1-2.12 0L1.44 12A1.497 1.497 0 0 1 1 10.94V2.5A1.5 1.5 0 0 1 2.5 1Zm0 1.5v8.44l10.25 10.25 8.44-8.44L10.94 2.5Z"/></svg></span> <a href="https://github.com/supabase/wrappers/releases/tag/wasm_snowflake_fdw_v0.1.1">v0.1.1</a> &nbsp;
-<span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M15.22 4.97a.75.75 0 0 1 1.06 0l6.5 6.5a.75.75 0 0 1 0 1.06l-6.5 6.5a.749.749 0 0 1-1.275-.326.749.749 0 0 1 .215-.734L21.19 12l-5.97-5.97a.75.75 0 0 1 0-1.06Zm-6.44 0a.75.75 0 0 1 0 1.06L2.81 12l5.97 5.97a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215l-6.5-6.5a.75.75 0 0 1 0-1.06l6.5-6.5a.75.75 0 0 1 1.06 0Z"/></svg></span> <a href="https://github.com/supabase/wrappers/tree/wasm_snowflake_fdw_v0.1.1/wasm-wrappers/fdw/snowflake_fdw">source</a> &nbsp;
-<span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 9h5.5L13 3.5V9M6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4c0-1.11.89-2 2-2m9 16v-2H6v2h9m3-4v-2H6v2h12Z"/></svg></span> <a href="../snowflake/">docs</a></p>
-</li>
-</ul>
+<h1 id="gravatar">Gravatar</h1>
+<p><a href="https://gravatar.com/">Gravatar</a> is a service for providing globally unique avatars.</p>
+<p>The Gravatar Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you to read profile data from Gravatar for use within your Postgres database.</p>
+<p>This wrapper is <a href="https://github.com/Automattic/gravatar-wasm-fdw">contributed and supported by Automattic</a>.</p>
+<h2 id="available-versions">Available Versions</h2>
+<table>
+<thead>
+<tr>
+<th>Version</th>
+<th>Wasm Package URL</th>
+<th>Checksum</th>
+<th>Required Wrappers Version</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.2.0</td>
+<td><code>https://github.com/Automattic/gravatar-wasm-fdw/releases/download/v0.2.0/gravatar_fdw.wasm</code></td>
+<td><code>5273ae07e66bc2f1bb5a23d7b9e0342463971691e587bbd6f9466814a8bac11c</code></td>
+<td>&gt;=0.5.0</td>
+</tr>
+</tbody>
+</table>
+<h2 id="preparation">Preparation</h2>
+<p>Before you can query Gravatar, you need to enable the Wrappers extension and store your credentials in Postgres.</p>
+<h3 id="enable-wrappers">Enable Wrappers</h3>
+<p>Make sure the <code>wrappers</code> extension is installed on your database:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">extension</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">wrappers</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">extensions</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<h3 id="enable-the-gravatar-wrapper">Enable the Gravatar Wrapper</h3>
+<p>Enable the Wasm foreign data wrapper:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
+<span class="w">  </span><span class="k">handler</span><span class="w"> </span><span class="n">wasm_fdw_handler</span>
+<span class="w">  </span><span class="k">validator</span><span class="w"> </span><span class="n">wasm_fdw_validator</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<h3 id="store-your-credentials-optional">Store your credentials (optional)</h3>
+<p>By default, Postgres stores FDW credentials inside <code>pg_catalog.pg_foreign_server</code> in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with <a href="https://supabase.com/docs/guides/database/vault">Vault</a>, which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Save your Gravatar API key in Vault and retrieve the created `key_id`</span>
+<span class="k">select</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">create_secret</span><span class="p">(</span>
+<span class="w">  </span><span class="s1">&#39;&lt;Gravatar API key&gt;&#39;</span><span class="p">,</span><span class="w"> </span><span class="c1">-- Gravatar API key</span>
+<span class="w">  </span><span class="s1">&#39;Gravatar&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="s1">&#39;Gravatar API key for Wrappers&#39;</span>
+<span class="p">);</span>
+</code></pre></div></td></tr></table></div>
+<h3 id="connecting-to-gravatar">Connecting to Gravatar</h3>
+<p>We need to provide Postgres with the credentials to access Gravatar and any additional options. We can do this using the <code>create server</code> command:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">With Vault</label><label for="__tabbed_1_2">Without Vault</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">gravatar_server</span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/Automattic/gravatar-wasm-fdw/releases/download/v0.2.0/gravatar_fdw.wasm&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;automattic:gravatar-fdw&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.2.0&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;5273ae07e66bc2f1bb5a23d7b9e0342463971691e587bbd6f9466814a8bac11c&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">api_url</span><span class="w"> </span><span class="s1">&#39;https://api.gravatar.com/v3&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- optional</span>
+<span class="w">    </span><span class="n">api_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;key_ID&gt;&#39;</span><span class="w"> </span><span class="c1">-- The Key ID from above.</span>
+<span class="w">  </span><span class="p">);</span>
+</code></pre></div></td></tr></table></div>
 </div>
+<div class="tabbed-block">
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">gravatar_server</span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/Automattic/gravatar-wasm-fdw/releases/download/v0.2.0/gravatar_fdw.wasm&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;automattic:gravatar-fdw&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.2.0&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;5273ae07e66bc2f1bb5a23d7b9e0342463971691e587bbd6f9466814a8bac11c&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">api_url</span><span class="w"> </span><span class="s1">&#39;https://api.gravatar.com/v3&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- optional</span>
+<span class="w">    </span><span class="n">api_key</span><span class="w"> </span><span class="s1">&#39;&lt;Gravatar API key&gt;&#39;</span><span class="w">  </span><span class="c1">-- Gravatar API key</span>
+<span class="w">  </span><span class="p">);</span>
+</code></pre></div></td></tr></table></div>
+</div>
+</div>
+</div>
+<p>Note the <code>fdw_package_*</code> options are required, which specify the Wasm package metadata. You can get the available package version list from <a href="#available-versions">above</a>.</p>
+<h3 id="create-a-schema">Create a schema</h3>
+<p>We recommend creating a schema to hold all the foreign tables:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">gravatar</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<h2 id="options">Options</h2>
+<p>The full list of foreign table options are below:</p>
+<ul>
+<li><code>table</code> - Component name in Gravatar, required.</li>
+</ul>
+<p>Supported components are listed below:</p>
+<table>
+<thead>
+<tr>
+<th>Component name</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>profiles</td>
+</tr>
+</tbody>
+</table>
+<h2 id="entities">Entities</h2>
+<p>We can use SQL <a href="https://www.postgresql.org/docs/current/sql-importforeignschema.html">import foreign schema</a> to import foreign table definitions from Gravatar.</p>
+<p>For example, using below SQL can automatically create foreign tables in the <code>gravatar</code> schema.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- create all the foreign tables</span>
+<span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">gravatar</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">gravatar_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">gravatar</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<h3 id="profiles">Profiles</h3>
+<p>This is the user profile provided by Gravatar.</p>
+<p>Ref: <a href="https://docs.gravatar.com/sdk/profiles/">Gravatar API docs</a></p>
+<h4 id="operations">Operations</h4>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th style="text-align: center;">Select</th>
+<th style="text-align: center;">Insert</th>
+<th style="text-align: center;">Update</th>
+<th style="text-align: center;">Delete</th>
+<th style="text-align: center;">Truncate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>profiles</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+</tr>
+</tbody>
+</table>
+<h4 id="usage">Usage</h4>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">gravatar</span><span class="p">.</span><span class="n">profiles</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">hash</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">email</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">display_name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">profile_url</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">avatar_url</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">avatar_alt_text</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="k">location</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">description</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">job_title</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">company</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">verified_accounts</span><span class="w"> </span><span class="n">jsonb</span><span class="p">,</span>
+<span class="w">  </span><span class="n">pronunciation</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">pronouns</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">timezone</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">languages</span><span class="w"> </span><span class="n">jsonb</span><span class="p">,</span>
+<span class="w">  </span><span class="n">first_name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">last_name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">is_organization</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span>
+<span class="w">  </span><span class="n">links</span><span class="w"> </span><span class="n">jsonb</span><span class="p">,</span>
+<span class="w">  </span><span class="n">interests</span><span class="w"> </span><span class="n">jsonb</span><span class="p">,</span>
+<span class="w">  </span><span class="n">payments</span><span class="w"> </span><span class="n">jsonb</span><span class="p">,</span>
+<span class="w">  </span><span class="n">contact_info</span><span class="w"> </span><span class="n">jsonb</span><span class="p">,</span>
+<span class="w">  </span><span class="n">number_verified_accounts</span><span class="w"> </span><span class="nb">integer</span><span class="p">,</span>
+<span class="w">  </span><span class="n">last_profile_edit</span><span class="w"> </span><span class="k">timestamp</span><span class="w"> </span><span class="k">without</span><span class="w"> </span><span class="k">time</span><span class="w"> </span><span class="k">zone</span><span class="p">,</span>
+<span class="w">  </span><span class="n">registration_date</span><span class="w"> </span><span class="k">timestamp</span><span class="w"> </span><span class="k">without</span><span class="w"> </span><span class="k">time</span><span class="w"> </span><span class="k">zone</span><span class="p">,</span>
+<span class="w">  </span><span class="n">json</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="p">)</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">gravatar_server</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">table</span><span class="w"> </span><span class="s1">&#39;profiles&#39;</span>
+<span class="w">  </span><span class="p">);</span>
+</code></pre></div></td></tr></table></div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>You can use <code>import foreign schema</code> statement to automatically create the <code>profiles</code> foreign table <a href="#entities">see above</a></p>
+</div>
+<h4 id="notes">Notes</h4>
+<ul>
+<li>The <code>json</code> column contains additional attributes in JSON format</li>
+</ul>
+<h2 id="query-pushdown-support">Query Pushdown Support</h2>
+<p>This FDW only supports <code>email equal condition (email = )</code> query pushdown and it is mandatory. For example,</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">gravatar</span><span class="p">.</span><span class="n">profiles</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">email</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;email@example.com&#39;</span><span class="p">;</span>
+
+<span class="c1">-- no result if the email equal condition is not specified</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">gravatar</span><span class="p">.</span><span class="n">profiles</span>
+</code></pre></div></td></tr></table></div>
+<h2 id="supported-data-types">Supported Data Types</h2>
+<table>
+<thead>
+<tr>
+<th>Postgres Data Type</th>
+<th>Gravatar Data Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>boolean</td>
+<td>Boolean</td>
+</tr>
+<tr>
+<td>bigint</td>
+<td>Number</td>
+</tr>
+<tr>
+<td>text</td>
+<td>String</td>
+</tr>
+<tr>
+<td>timestamp</td>
+<td>Time</td>
+</tr>
+<tr>
+<td>jsonb</td>
+<td>Json</td>
+</tr>
+</tbody>
+</table>
+<p>The Gravatar API uses JSON formatted data, please refer to <a href="https://docs.gravatar.com/sdk/profiles/">Gravatar API docs</a> for more details.</p>
+<h2 id="limitations">Limitations</h2>
+<p>This section describes important limitations and considerations when using this FDW:</p>
+<ul>
+<li>Only supports <code>profiles</code> component</li>
+<li>Only <code>email equal condition (email = )</code> query pushdown is supported</li>
+<li>Materialized views using these foreign tables may fail during logical backups</li>
+</ul>
+<h2 id="examples">Examples</h2>
+<p>Below are some examples on how to use gravatar foreign tables.</p>
+<h3 id="basic-example">Basic example</h3>
+<p>This example will create a "foreign table" inside your Postgres database and query its data.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">gravatar</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">gravatar_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">gravatar</span><span class="p">;</span>
+
+<span class="c1">-- query an user profile </span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">gravatar</span><span class="p">.</span><span class="n">profiles</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">email</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;email@example.com&#39;</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<p><code>json</code> is a special column which stores all the object attributes in JSON format, you can extract any attributes needed from it. See more examples below.</p>
+<h3 id="query-json-attributes">Query JSON attributes</h3>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">json</span><span class="o">-&gt;</span><span class="s1">&#39;section_visibility&#39;</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">section_visibility</span>
+<span class="k">from</span><span class="w"> </span><span class="n">gravatar</span><span class="p">.</span><span class="n">profiles</span><span class="w"> </span><span class="n">p</span>
+<span class="k">where</span><span class="w"> </span><span class="n">email</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;email@example.com&#39;</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
 
 
 
@@ -1799,7 +2440,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../mssql/" class="md-footer__link md-footer__link--prev" aria-label="Previous: SQL Server">
+          <a href="../cfd1/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Cloudflare D1">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
@@ -1809,20 +2450,20 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                SQL Server
+                Cloudflare D1
               </div>
             </div>
           </a>
         
         
           
-          <a href="../cal/" class="md-footer__link md-footer__link--next" aria-label="Next: Cal.com">
+          <a href="../hubspot/" class="md-footer__link md-footer__link--next" aria-label="Next: HubSpot">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Cal.com
+                HubSpot
               </div>
             </div>
             <div class="md-footer__button md-icon">
