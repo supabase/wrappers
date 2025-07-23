@@ -403,9 +403,10 @@ mod tests {
                 r#"CREATE SERVER gravatar_server
                      FOREIGN DATA WRAPPER wasm_wrapper
                      OPTIONS (
-                       fdw_package_url 'file://../../../wasm-wrappers/fdw/target/wasm32-unknown-unknown/release/gravatar_fdw.wasm',
-                       fdw_package_name 'supabase:gravatar-fdw',
-                       fdw_package_version '0.1.0',
+                       fdw_package_url 'https://github.com/Automattic/gravatar-wasm-fdw/releases/download/v0.2.0/gravatar_fdw.wasm',
+                       fdw_package_name 'automattic:gravatar-fdw',
+                       fdw_package_version '0.2.0',
+                       fdw_package_checksum '5273ae07e66bc2f1bb5a23d7b9e0342463971691e587bbd6f9466814a8bac11c',
                        api_url 'http://localhost:8096/gravatar',
                        api_key 'test'
                      )"#,
@@ -424,7 +425,7 @@ mod tests {
 
             let results = c
                 .select(
-                    "SELECT * FROM gravatar.profiles where email = ''",
+                    "SELECT * FROM gravatar.profiles where email = 'email@example.com'",
                     None,
                     &[],
                 )

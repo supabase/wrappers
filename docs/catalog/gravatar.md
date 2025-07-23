@@ -1,10 +1,10 @@
 ---
 source:
 documentation:
-author: supabase
+author: Automattic
 tags:
   - wasm
-  - official
+  - community
 ---
 
 # Gravatar
@@ -16,8 +16,8 @@ The Gravatar Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows yo
 ## Available Versions
 
 | Version | Wasm Package URL                                                                                    | Checksum                                                           | Required Wrappers Version |
-| ------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------- |
-| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_gravatar_fdw_v0.1.0/gravatar_fdw.wasm` | `tbd` | >=0.5.0                   |
+| ------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | ------------------------- |
+| 0.2.0   | `https://github.com/Automattic/gravatar-wasm-fdw/releases/download/v0.2.0/gravatar_fdw.wasm` | `5273ae07e66bc2f1bb5a23d7b9e0342463971691e587bbd6f9466814a8bac11c` | >=0.5.0                   |
 
 ## Preparation
 
@@ -64,10 +64,10 @@ We need to provide Postgres with the credentials to access Gravatar and any addi
     create server gravatar_server
       foreign data wrapper wasm_wrapper
       options (
-        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_gravatar_fdw_v0.1.0/gravatar_fdw.wasm',
-        fdw_package_name 'supabase:gravatar-fdw',
-        fdw_package_version '0.1.0',
-        fdw_package_checksum 'tbd',
+        fdw_package_url 'https://github.com/Automattic/gravatar-wasm-fdw/releases/download/v0.2.0/gravatar_fdw.wasm',
+        fdw_package_name 'automattic:gravatar-fdw',
+        fdw_package_version '0.2.0',
+        fdw_package_checksum '5273ae07e66bc2f1bb5a23d7b9e0342463971691e587bbd6f9466814a8bac11c',
         api_url 'https://api.gravatar.com/v3',  -- optional
         api_key_id '<key_ID>' -- The Key ID from above.
       );
@@ -79,10 +79,10 @@ We need to provide Postgres with the credentials to access Gravatar and any addi
     create server gravatar_server
       foreign data wrapper wasm_wrapper
       options (
-        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_gravatar_fdw_v0.1.0/gravatar_fdw.wasm',
-        fdw_package_name 'supabase:gravatar-fdw',
-        fdw_package_version '0.1.0',
-        fdw_package_checksum 'tbd',
+        fdw_package_url 'https://github.com/Automattic/gravatar-wasm-fdw/releases/download/v0.2.0/gravatar_fdw.wasm',
+        fdw_package_name 'automattic:gravatar-fdw',
+        fdw_package_version '0.2.0',
+        fdw_package_checksum '5273ae07e66bc2f1bb5a23d7b9e0342463971691e587bbd6f9466814a8bac11c',
         api_url 'https://api.gravatar.com/v3',  -- optional
         api_key '<Gravatar API key>'  -- Gravatar API key
       );
@@ -151,7 +151,7 @@ create foreign table gravatar.profiles (
   pronunciation text,
   pronouns text,
   timezone text,
-  language jsonb,
+  languages jsonb,
   first_name text,
   last_name text,
   is_organization boolean,
@@ -159,10 +159,10 @@ create foreign table gravatar.profiles (
   interests jsonb,
   payments jsonb,
   contact_info jsonb,
-  number_verified_accounts bigint,
-  last_profile_edit text,
-  registration_date text,
-  attrs jsonb
+  number_verified_accounts integer,
+  last_profile_edit timestamp without time zone,
+  registration_date timestamp without time zone,
+  json jsonb
 )
   server gravatar_server
   options (
@@ -172,11 +172,11 @@ create foreign table gravatar.profiles (
 
 !!! note
 
-    You can use `import foreign schema` statement to automatically create the `profiles` foreign table as [described above](#entities)
+    You can use `import foreign schema` statement to automatically create the `profiles` foreign table [see above](#entities)
 
 #### Notes
 
-- The `attrs` column contains additional attributes in JSON format
+- The `json` column contains additional attributes in JSON format
 
 ## Query Pushdown Support
 
@@ -185,7 +185,7 @@ This FDW only supports `email equal condition (email = )` query pushdown and it 
 ```sql
 select * from gravatar.profiles where email = 'email@example.com';
 
--- emapty result without the email equal condition
+-- no result if the email equal condition is not specified
 select * from gravatar.profiles
 ```
 
@@ -224,12 +224,12 @@ import foreign schema gravatar from server gravatar_server into gravatar;
 select * from gravatar.profiles where email = 'email@example.com';
 ```
 
-`attrs` is a special column which stores all the object attributes in JSON format, you can extract any attributes needed from it. See more examples below.
+`json` is a special column which stores all the object attributes in JSON format, you can extract any attributes needed from it. See more examples below.
 
 ### Query JSON attributes
 
 ```sql
-select p.attrs->'section_visibility' as section_visibility
+select p.json->'section_visibility' as section_visibility
 from gravatar.profiles p
 where email = 'email@example.com';
 ```

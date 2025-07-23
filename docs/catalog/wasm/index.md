@@ -55,10 +55,10 @@ Foreign data wrappers built with Wasm which can be used on Supabase platform.
 
     Foreign data wrapper for [Gravatar](https://gravatar.com/).
 
-    Supported by [Supabase](https://www.supabase.com)
+    Supported by [Automattic](https://automattic.com/)
 
-    :octicons-tag-24: [v0.1.0](https://github.com/supabase/wrappers/releases/tag/gravatar_fdw_v0.1.0) &nbsp;
-    :octicons-code-24: [source](https://github.com/supabase/wrappers/tree/wasm_gravatar_fdw_v0.1.0/wasm-wrappers/fdw/gravatar_fdw) &nbsp;
+    :octicons-tag-24: [v0.2.0](https://github.com/Automattic/gravatar-wasm-fdw/releases/tag/v0.2.0) &nbsp;
+    :octicons-code-24: [source](https://github.com/Automattic/gravatar-wasm-fdw) &nbsp;
     :material-file-document: [docs](../gravatar.md)
 
 - :simple-webassembly: &nbsp; **[Cloudflare D1](../cfd1.md)**
