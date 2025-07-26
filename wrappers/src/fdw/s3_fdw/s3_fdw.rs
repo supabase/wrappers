@@ -25,7 +25,7 @@ enum Parser {
 }
 
 #[wrappers_fdw(
-    version = "0.1.4",
+    version = "0.1.5",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/s3_fdw",
     error_type = "S3FdwError"
