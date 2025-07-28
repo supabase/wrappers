@@ -88,9 +88,10 @@ impl AsyncRead for S3ParquetReader {
         };
 
         // calculate request range
-        let object_remaining = object_size - self.pos;
+        let object_remaining = object_size.saturating_sub(self.pos);
         let remaining = min(buf.remaining() as u64, object_remaining);
-        let range = format!("bytes={}-{}", self.pos, self.pos + remaining - 1);
+        let upper_bound = self.pos.saturating_add(remaining).saturating_sub(1);
+        let range = format!("bytes={}-{}", self.pos, upper_bound);
 
         // wait on current thread to get object contents
         match futures::executor::block_on(
@@ -102,8 +103,20 @@ impl AsyncRead for S3ParquetReader {
                 .send(),
         ) {
             Ok(output) => {
+                let pre_filled = buf.filled().len();
                 let mut rdr = output.body.into_async_read();
-                AsyncRead::poll_read(Pin::new(&mut rdr), cx, buf)
+                match AsyncRead::poll_read(Pin::new(&mut rdr), cx, buf) {
+                    Poll::Ready(result) => match result {
+                        Ok(_) => {
+                            // calculate consumed length of bytes and add it to current position
+                            let consumed = buf.filled().len().saturating_sub(pre_filled);
+                            self.pos = self.pos.saturating_add(consumed as u64);
+                            Poll::Ready(Ok(()))
+                        }
+                        Err(err) => Poll::Ready(Err(err)),
+                    },
+                    Poll::Pending => Poll::Pending,
+                }
             }
             Err(err) => Poll::Ready(Err(to_io_error(err))),
         }
@@ -296,15 +309,23 @@ impl S3Parquet {
                         }
                     }
                     pg_sys::TEXTOID => {
-                        let arr = col
-                            .as_any()
-                            .downcast_ref::<array::BinaryArray>()
-                            .ok_or(S3FdwError::ColumnTypeNotMatch(tgt_col.name.clone()))?;
-                        if arr.is_null(self.batch_idx) {
+                        // 'text' type can be converted from StringArray, StringViewArray and
+                        // generic BinaryArray
+                        if col.is_null(self.batch_idx) {
                             None
-                        } else {
+                        } else if let Some(arr) = col.as_any().downcast_ref::<array::StringArray>()
+                        {
+                            Some(Cell::String(arr.value(self.batch_idx).to_string()))
+                        } else if let Some(arr) =
+                            col.as_any().downcast_ref::<array::StringViewArray>()
+                        {
+                            Some(Cell::String(arr.value(self.batch_idx).to_string()))
+                        } else if let Some(arr) = col.as_any().downcast_ref::<array::BinaryArray>()
+                        {
                             let s = String::from_utf8_lossy(arr.value(self.batch_idx));
                             Some(Cell::String(s.to_string()))
+                        } else {
+                            return Err(S3FdwError::ColumnTypeNotMatch(tgt_col.name.clone()));
                         }
                     }
                     pg_sys::DATEOID => {
