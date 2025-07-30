@@ -38,6 +38,7 @@ pub(crate) struct IcebergFdw {
     catalog: Box<dyn Catalog>,
     table: Option<Table>,
     predicate: Option<Predicate>,
+    batch_size: Option<usize>,
 
     // copy of target columns
     tgt_cols: Vec<Column>,
@@ -126,7 +127,7 @@ impl IcebergFdw {
             let mut scan_builder = table
                 .scan()
                 .select(self.tgt_cols.iter().map(|c| c.name.clone()))
-                .with_batch_size(Some(8192));
+                .with_batch_size(self.batch_size);
             if let Some(predicate) = &self.predicate {
                 scan_builder = scan_builder.with_filter(predicate.clone());
             }
@@ -189,6 +190,10 @@ impl ForeignDataWrapper<IcebergFdwError> for IcebergFdw {
         copy_option(&mut props, "aws_secret_access_key", "s3.secret-access-key");
         copy_option(&mut props, "region_name", "s3.region");
 
+        let batch_size = require_option_or("batch_size", &server.options, "4096")
+            .parse::<usize>()
+            .unwrap_or(4096);
+
         let rt = create_async_runtime()?;
 
         // create catalog
@@ -220,6 +225,7 @@ impl ForeignDataWrapper<IcebergFdwError> for IcebergFdw {
             catalog,
             table: None,
             predicate: None,
+            batch_size: batch_size.into(),
             tgt_cols: Vec::new(),
             stream: None,
             row_data: VecDeque::new(),
