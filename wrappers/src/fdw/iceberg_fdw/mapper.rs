@@ -74,7 +74,7 @@ impl Mapper {
         src_array: &array::ArrayRef,
         src_type: &Type,
         rec_offset: usize,
-    ) -> IcebergFdwResult<Option<Cell>> {
+    ) -> IcebergFdwResult<Cell> {
         let mut cell: Option<Cell> = None;
         let col_name = &tgt_col.name;
         let array = src_array.as_any();
@@ -307,6 +307,9 @@ impl Mapper {
                 return Err(IcebergFdwError::UnsupportedColumnType(col_name.into()));
             }
         }
-        Ok(cell)
+
+        cell.ok_or_else(|| {
+            IcebergFdwError::IncompatibleColumnType(col_name.into(), (*src_type).to_string())
+        })
     }
 }

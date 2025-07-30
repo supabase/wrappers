@@ -1,16 +1,16 @@
-use arrow_array::RecordBatch;
+use arrow_array::{array::ArrayRef, RecordBatch};
 use futures::StreamExt;
 use iceberg::{
     expr::Predicate,
     scan::ArrowRecordBatchStream,
-    spec::{PrimitiveType, Type},
+    spec::{NestedFieldRef, PrimitiveType, Type},
     table::Table,
     Catalog, NamespaceIdent, TableIdent,
 };
 use iceberg_catalog_rest::{RestCatalog, RestCatalogConfig};
 use iceberg_catalog_s3tables::{S3TablesCatalog, S3TablesCatalogConfig};
 use pgrx::pg_sys;
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 use supabase_wrappers::prelude::*;
 
@@ -27,88 +27,93 @@ fn copy_option(map: &mut HashMap<String, String>, from_key: &str, to_key: &str) 
 }
 
 #[wrappers_fdw(
-    version = "0.1.1",
+    version = "0.1.2",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/iceberg_fdw",
     error_type = "IcebergFdwError"
 )]
 pub(crate) struct IcebergFdw {
     rt: Runtime,
+    mapper: Mapper,
     catalog: Box<dyn Catalog>,
     table: Option<Table>,
-    predicate: Predicate,
+    predicate: Option<Predicate>,
+    batch_size: Option<usize>,
+
+    // copy of target columns
     tgt_cols: Vec<Column>,
+
+    // recrod batch stream
     stream: Option<ArrowRecordBatchStream>,
-    batch: Option<RecordBatch>,
-    mapper: Mapper,
-    rec_offset: usize,
+
+    // converted cells for the batch
+    row_data: VecDeque<Vec<Option<Cell>>>,
+
+    // cached source fields for the batch
+    src_fields: Vec<NestedFieldRef>,
+
+    // for stats: total number of records and bytes read
+    num_rows: usize,
+    bytes_in: usize,
 }
 
 impl IcebergFdw {
     const FDW_NAME: &'static str = "IcebergFdw";
 
     // fetch next record batch from Arrow record batch stream
+    // and convert it local cached row data
     fn next_batch(&mut self) -> IcebergFdwResult<()> {
         if let Some(stream) = &mut self.stream {
-            self.batch = if let Some(result) = self.rt.block_on(stream.next()) {
+            if let Some(result) = self.rt.block_on(stream.next()) {
                 let batch = result?;
+                self.record_batch_to_row_data(&batch)?;
                 if batch.num_rows() > 0 {
-                    stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsIn, batch.num_rows() as _);
-                    stats::inc_stats(
-                        Self::FDW_NAME,
-                        stats::Metric::BytesIn,
-                        batch.get_array_memory_size() as _,
-                    );
-                    Some(batch)
-                } else {
-                    None
+                    self.num_rows += batch.num_rows();
+                    self.bytes_in += batch.get_array_memory_size();
                 }
-            } else {
-                None
-            };
+            }
 
             self.mapper.reset();
-            self.rec_offset = 0;
         }
         Ok(())
     }
 
-    // convert a batch record to a row
-    fn record_to_row(&self, batch: &RecordBatch, row: &mut Row) -> IcebergFdwResult<()> {
-        if let Some(table) = &self.table {
-            // get source table schema
-            let schema = table.metadata().current_schema();
+    // convert record batch to row data
+    fn record_batch_to_row_data(&mut self, batch: &RecordBatch) -> IcebergFdwResult<()> {
+        let mut cols: Vec<ArrayRef> = Vec::new();
 
-            for tgt_col in &self.tgt_cols {
-                let col_name = &tgt_col.name;
+        self.row_data = VecDeque::with_capacity(batch.num_rows());
 
+        for tgt_col in &self.tgt_cols {
+            let col_name = &tgt_col.name;
+            let array = batch
+                .column_by_name(col_name)
+                .ok_or_else(|| IcebergFdwError::ColumnNotFound(col_name.into()))?;
+            cols.push(array.clone());
+        }
+
+        for rec_offset in 0..batch.num_rows() {
+            let mut cells = Vec::with_capacity(batch.num_columns());
+
+            for (col_idx, tgt_col) in self.tgt_cols.iter().enumerate() {
                 // get source data array
-                let array = batch
-                    .column_by_name(col_name)
-                    .ok_or(IcebergFdwError::ColumnNotFound(col_name.into()))?;
-                if array.is_null(self.rec_offset) {
-                    row.push(col_name, None);
+                let array = &cols[col_idx];
+                if array.is_null(rec_offset) {
+                    cells.push(None);
                     continue;
                 }
 
-                // get source field and type
-                let field = schema
-                    .field_by_name_case_insensitive(col_name)
-                    .ok_or(IcebergFdwError::ColumnNotFound(col_name.into()))?;
-                let src_type = field.field_type.as_ref();
+                // get source field type
+                let src_type = self.src_fields[col_idx].field_type.as_ref();
 
                 // map source to target cell
-                let cell: Option<Cell> =
-                    self.mapper
-                        .map_cell(batch, tgt_col, array, src_type, self.rec_offset)?;
-                if cell.is_none() {
-                    return Err(IcebergFdwError::IncompatibleColumnType(
-                        col_name.into(),
-                        (*src_type).to_string(),
-                    ));
-                }
-                row.push(col_name, cell);
+                let cell = self
+                    .mapper
+                    .map_cell(batch, tgt_col, array, src_type, rec_offset)?;
+                cells.push(Some(cell));
             }
+
+            self.row_data.push_back(cells);
         }
 
         Ok(())
@@ -119,11 +124,14 @@ impl IcebergFdw {
         self.reset();
 
         if let Some(table) = &self.table {
-            let scan = table
+            let mut scan_builder = table
                 .scan()
                 .select(self.tgt_cols.iter().map(|c| c.name.clone()))
-                .with_filter(self.predicate.clone())
-                .build()?;
+                .with_batch_size(self.batch_size);
+            if let Some(predicate) = &self.predicate {
+                scan_builder = scan_builder.with_filter(predicate.clone());
+            }
+            let scan = scan_builder.build()?;
 
             // debug the record count and data files has been scanned
             if cfg!(debug_assertions) {
@@ -137,7 +145,7 @@ impl IcebergFdw {
                 }
             }
 
-            // save record stream
+            // convert to record stream and cache it locally
             self.stream = self.rt.block_on(scan.to_arrow())?.into();
         }
 
@@ -146,9 +154,8 @@ impl IcebergFdw {
 
     fn reset(&mut self) {
         self.stream = None;
-        self.batch = None;
+        self.row_data.clear();
         self.mapper.reset();
-        self.rec_offset = 0;
     }
 }
 
@@ -183,6 +190,10 @@ impl ForeignDataWrapper<IcebergFdwError> for IcebergFdw {
         copy_option(&mut props, "aws_secret_access_key", "s3.secret-access-key");
         copy_option(&mut props, "region_name", "s3.region");
 
+        let batch_size = require_option_or("batch_size", &server.options, "4096")
+            .parse::<usize>()
+            .unwrap_or(4096);
+
         let rt = create_async_runtime()?;
 
         // create catalog
@@ -213,12 +224,15 @@ impl ForeignDataWrapper<IcebergFdwError> for IcebergFdw {
             rt,
             catalog,
             table: None,
-            predicate: Predicate::AlwaysTrue,
+            predicate: None,
+            batch_size: batch_size.into(),
             tgt_cols: Vec::new(),
             stream: None,
-            batch: None,
+            row_data: VecDeque::new(),
+            src_fields: Vec::new(),
             mapper: Mapper::default(),
-            rec_offset: 0,
+            num_rows: 0,
+            bytes_in: 0,
         })
     }
 
@@ -232,7 +246,17 @@ impl ForeignDataWrapper<IcebergFdwError> for IcebergFdw {
     ) -> IcebergFdwResult<()> {
         let tbl_ident = TableIdent::from_strs(require_option("table", options)?.split("."))?;
         let table = self.rt.block_on(self.catalog.load_table(&tbl_ident))?;
-        self.predicate = try_pushdown(&table, quals)?.unwrap_or(Predicate::AlwaysTrue);
+
+        let schema = table.metadata().current_schema();
+        for tgt_col in columns {
+            let col_name = &tgt_col.name;
+            let field = schema
+                .field_by_name_case_insensitive(col_name)
+                .ok_or_else(|| IcebergFdwError::ColumnNotFound(col_name.into()))?;
+            self.src_fields.push(field.clone());
+        }
+
+        self.predicate = try_pushdown(&table, quals)?;
         self.table = table.into();
         self.tgt_cols = columns.to_vec();
 
@@ -240,21 +264,22 @@ impl ForeignDataWrapper<IcebergFdwError> for IcebergFdw {
     }
 
     fn iter_scan(&mut self, row: &mut Row) -> IcebergFdwResult<Option<()>> {
-        if self.stream.is_some() {
-            if let Some(batch) = &self.batch {
-                if self.rec_offset >= batch.num_rows() {
-                    self.next_batch()?;
-                }
-            } else {
-                self.next_batch()?;
-            }
-
-            if let Some(batch) = &self.batch {
-                self.record_to_row(batch, row)?;
-                self.rec_offset += 1;
-                return Ok(Some(()));
-            }
+        if self.row_data.is_empty() {
+            self.next_batch()?;
         }
+
+        if let Some(cells) = self.row_data.pop_front() {
+            let src_row = Row {
+                cols: self.tgt_cols.iter().map(|c| c.name.clone()).collect(),
+                cells,
+            };
+            row.replace_with(src_row);
+            return Ok(Some(()));
+        }
+
+        stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsIn, self.num_rows as _);
+        stats::inc_stats(Self::FDW_NAME, stats::Metric::BytesIn, self.bytes_in as _);
+
         Ok(None)
     }
 
