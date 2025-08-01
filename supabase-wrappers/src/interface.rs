@@ -188,7 +188,7 @@ impl fmt::Display for Cell {
                     write!(f, r#"'\x{}'"#, hex)
                 }
             }
-            Cell::Uuid(v) => write!(f, "{}", v),
+            Cell::Uuid(v) => write!(f, "'{}'", v),
             Cell::BoolArray(v) => write_array(v, f),
             Cell::I16Array(v) => write_array(v, f),
             Cell::I32Array(v) => write_array(v, f),

@@ -429,6 +429,18 @@ mod tests {
                     Some(vec![444i64, 222i64]),
                 )
             );
+            assert_eq!(
+                c.select(
+                    "SELECT uid FROM test_table WHERE uid = $1",
+                    None,
+                    &[pgrx::Uuid::from_bytes([43u8; 16]).into(),],
+                )
+                .unwrap()
+                .first()
+                .get_one::<Uuid>()
+                .unwrap(),
+                Some(Uuid::from_bytes([43u8; 16])),
+            );
 
             // test delete data in foreign table
             c.update("DELETE FROM test_table WHERE id = 42", None, &[])

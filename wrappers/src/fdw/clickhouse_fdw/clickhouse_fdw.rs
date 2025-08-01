@@ -778,10 +778,7 @@ impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
                     continue;
                 }
                 if let Some(cell) = cell {
-                    match cell {
-                        Cell::Uuid(_) => sets.push(format!("{} = '{}'", col, cell)),
-                        _ => sets.push(format!("{} = {}", col, cell)),
-                    }
+                    sets.push(format!("{} = {}", col, cell));
                 } else {
                     sets.push(format!("{} = null", col));
                 }
