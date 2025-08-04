@@ -9,6 +9,7 @@ members = [
     "notion_fdw",
     "orb_fdw",
     "paddle_fdw",
+    "shopify_fdw",
     "slack_fdw",
     "snowflake_fdw",
 ]
