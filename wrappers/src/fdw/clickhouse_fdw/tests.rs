@@ -257,7 +257,7 @@ mod tests {
             );
             assert_eq!(
                 c.select(
-                    "SELECT arr_i64, arr_str FROM test_table WHERE id = 42",
+                    "SELECT arr_i64, arr_str FROM test_table WHERE id = 42 and array['abc','def'] @> arr_str",
                     None,
                     &[]
                 )
