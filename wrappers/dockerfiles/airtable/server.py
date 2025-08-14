@@ -41,7 +41,7 @@ if __name__ == "__main__":
     client.create(
         test_table,
         {
-            "bool_field": True,
+            "BOOL_field": True,
             "numeric_field": 1,
             "string_field": "two",
             "timestamp_field": "2023-07-19T06:39:15.000Z",
@@ -55,7 +55,7 @@ if __name__ == "__main__":
     client.create(
         test_table,
         {
-            "bool_field": False,
+            "BOOL_field": False,
             "numeric_field": 2,
             "string_field": "three",
             "timestamp_field": "2023-07-20T06:39:15.000Z",
