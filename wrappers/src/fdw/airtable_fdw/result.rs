@@ -95,8 +95,9 @@ impl AirtableRecord {
                 continue;
             }
 
+            let col_name_lowercase = col.name.to_lowercase();
             let cell = match col.type_oid {
-                pg_sys::BOOLOID => self.fields.0.get(&col.name).map_or_else(
+                pg_sys::BOOLOID => self.fields.0.get(&col_name_lowercase).map_or_else(
                     || Ok(None),
                     |val| {
                         if let Value::Bool(v) = val {
@@ -106,7 +107,7 @@ impl AirtableRecord {
                         }
                     },
                 ),
-                pg_sys::CHAROID => self.fields.0.get(&col.name).map_or_else(
+                pg_sys::CHAROID => self.fields.0.get(&col_name_lowercase).map_or_else(
                     || Ok(None),
                     |val| {
                         if let Value::Number(v) = val {
@@ -116,7 +117,7 @@ impl AirtableRecord {
                         }
                     },
                 ),
-                pg_sys::INT2OID => self.fields.0.get(&col.name).map_or_else(
+                pg_sys::INT2OID => self.fields.0.get(&col_name_lowercase).map_or_else(
                     || Ok(None),
                     |val| {
                         if let Value::Number(v) = val {
@@ -126,7 +127,7 @@ impl AirtableRecord {
                         }
                     },
                 ),
-                pg_sys::FLOAT4OID => self.fields.0.get(&col.name).map_or_else(
+                pg_sys::FLOAT4OID => self.fields.0.get(&col_name_lowercase).map_or_else(
                     || Ok(None),
                     |val| {
                         if let Value::Number(v) = val {
@@ -136,7 +137,7 @@ impl AirtableRecord {
                         }
                     },
                 ),
-                pg_sys::INT4OID => self.fields.0.get(&col.name).map_or_else(
+                pg_sys::INT4OID => self.fields.0.get(&col_name_lowercase).map_or_else(
                     || Ok(None),
                     |val| {
                         if let Value::Number(v) = val {
@@ -146,7 +147,7 @@ impl AirtableRecord {
                         }
                     },
                 ),
-                pg_sys::FLOAT8OID => self.fields.0.get(&col.name).map_or_else(
+                pg_sys::FLOAT8OID => self.fields.0.get(&col_name_lowercase).map_or_else(
                     || Ok(None),
                     |val| {
                         if let Value::Number(v) = val {
@@ -156,7 +157,7 @@ impl AirtableRecord {
                         }
                     },
                 ),
-                pg_sys::INT8OID => self.fields.0.get(&col.name).map_or_else(
+                pg_sys::INT8OID => self.fields.0.get(&col_name_lowercase).map_or_else(
                     || Ok(None),
                     |val| {
                         if let Value::Number(v) = val {
@@ -166,7 +167,7 @@ impl AirtableRecord {
                         }
                     },
                 ),
-                pg_sys::NUMERICOID => match self.fields.0.get(&col.name) {
+                pg_sys::NUMERICOID => match self.fields.0.get(&col_name_lowercase) {
                     Some(val) => {
                         if let Value::Number(v) = val {
                             let n = match v.as_f64() {
@@ -180,7 +181,7 @@ impl AirtableRecord {
                     }
                     None => Ok(None),
                 },
-                pg_sys::TEXTOID => self.fields.0.get(&col.name).map_or_else(
+                pg_sys::TEXTOID => self.fields.0.get(&col_name_lowercase).map_or_else(
                     || Ok(None),
                     |val| {
                         if let Value::String(v) = val {
@@ -190,7 +191,7 @@ impl AirtableRecord {
                         }
                     },
                 ),
-                pg_sys::DATEOID => self.fields.0.get(&col.name).map_or_else(
+                pg_sys::DATEOID => self.fields.0.get(&col_name_lowercase).map_or_else(
                     || Ok(None),
                     |val| {
                         if let Value::String(v) = val {
@@ -202,7 +203,7 @@ impl AirtableRecord {
                         }
                     },
                 ),
-                pg_sys::TIMESTAMPOID => self.fields.0.get(&col.name).map_or_else(
+                pg_sys::TIMESTAMPOID => self.fields.0.get(&col_name_lowercase).map_or_else(
                     || Ok(None),
                     |val| {
                         if let Value::String(v) = val {
@@ -215,7 +216,7 @@ impl AirtableRecord {
                         }
                     },
                 ),
-                pg_sys::TIMESTAMPTZOID => self.fields.0.get(&col.name).map_or_else(
+                pg_sys::TIMESTAMPTZOID => self.fields.0.get(&col_name_lowercase).map_or_else(
                     || Ok(None),
                     |val| {
                         if let Value::String(v) = val {
@@ -229,7 +230,7 @@ impl AirtableRecord {
                     },
                 ),
                 // TODO: Think about adding support for BOOLARRAYOID, NUMERICARRAYOID, TEXTARRAYOID and rest of array types.
-                pg_sys::JSONBOID => self.fields.0.get(&col.name).map_or_else(
+                pg_sys::JSONBOID => self.fields.0.get(&col_name_lowercase).map_or_else(
                     || Ok(None),
                     |val| Ok(Some(Cell::Json(pgrx::JsonB(val.clone())))),
                 ),

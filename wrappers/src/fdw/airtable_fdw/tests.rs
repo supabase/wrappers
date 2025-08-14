@@ -27,7 +27,7 @@ mod tests {
             c.update(
                 r#"
                   CREATE FOREIGN TABLE airtable_table (
-                    bool_field bool,
+                    "BOOL_FIELD" bool,
                     numeric_field numeric,
                     string_field text,
                     timestamp_field timestamp,
@@ -74,14 +74,14 @@ mod tests {
             */
             let results = c
                 .select(
-                    "SELECT bool_field FROM airtable_table WHERE bool_field = False",
+                    r#"SELECT "BOOL_FIELD" FROM airtable_table WHERE "BOOL_FIELD" = False"#,
                     None,
                     &[],
                 )
                 .expect("No results for a given query")
                 .filter_map(|r| {
-                    r.get_by_name::<bool, _>("bool_field")
-                        .expect("bool_field is missing")
+                    r.get_by_name::<bool, _>("BOOL_FIELD")
+                        .expect("BOOL_FIELD is missing")
                 })
                 .collect::<Vec<_>>();
             assert_eq!(results, vec![false]);
