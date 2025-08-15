@@ -9,7 +9,7 @@ use supabase_wrappers::prelude::*;
 use super::{mapper, server_type::ServerType, DuckdbFdwError, DuckdbFdwResult};
 
 #[wrappers_fdw(
-    version = "0.1.0",
+    version = "0.1.1",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/duckdb_fdw",
     error_type = "DuckdbFdwError"
@@ -27,17 +27,26 @@ impl DuckdbFdw {
     const FDW_NAME: &'static str = "DuckdbFdw";
 
     fn init_duckdb(&self) -> DuckdbFdwResult<()> {
-        let sql = String::default()
+        let sql_batch = String::default()
             + if self.svr_type.is_iceberg() { "install iceberg;load iceberg;" } else { "" }
-            + &self.svr_type.get_create_secret_sql(&self.svr_opts)
-            + &self.svr_type.get_attach_sql(&self.svr_opts)?
             // security tips: https://duckdb.org/docs/stable/operations_manual/securing_duckdb/overview
             + "
                 set disabled_filesystems = 'LocalFileSystem';
                 set allow_community_extensions = false;
                 set lock_configuration = true;
-            ";
-        self.conn.execute_batch(&sql)?;
+            "
+            + &self.svr_type.get_create_secret_sql(&self.svr_opts)
+            + &self.svr_type.get_attach_sql(&self.svr_opts)?;
+
+        // execute_batch() won't raise error when one of the statements failed,
+        // so we execute each sql separately
+        for sql in sql_batch
+            .split(";")
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+        {
+            self.conn.execute(sql, [])?;
+        }
 
         Ok(())
     }

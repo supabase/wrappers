@@ -267,7 +267,7 @@ A `create server` statement example:
         warehouse 'my_warehouse',
 
         -- R2 Data Catalog URI
-        catalog_uri 'https://catalog.cloudflarestorage.com/1a4d06e707l56a1a724719292be42e3a/r2-data-catalog'
+        catalog_uri 'catalog.cloudflarestorage.com/1a4d06e707l56a1a724719292be42e3a/r2-data-catalog'
       );
     ```
 
@@ -286,7 +286,7 @@ A `create server` statement example:
         warehouse 'my_warehouse',
 
         -- R2 Data Catalog URI
-        catalog_uri 'https://catalog.cloudflarestorage.com/1a4d06e707l56a1a724719292be42e3a/r2-data-catalog'
+        catalog_uri 'catalog.cloudflarestorage.com/1a4d06e707l56a1a724719292be42e3a/r2-data-catalog'
       );
     ```
 
@@ -385,8 +385,10 @@ A `create server` statement example:
         -- Warehouse name
         warehouse 'warehouse',
 
+        use_ssl 'false',
+
         -- Lakekeeper REST Catalog URI
-        catalog_uri 'http://lakekeeper:8181/catalog'
+        catalog_uri 'lakekeeper:8181/catalog'
       );
     ```
 
@@ -411,8 +413,10 @@ A `create server` statement example:
         -- Warehouse name
         warehouse 'warehouse',
 
+        use_ssl 'false',
+
         -- Lakekeeper REST Catalog URI
-        catalog_uri 'http://lakekeeper:8181/catalog'
+        catalog_uri 'lakekeeper:8181/catalog'
       );
     ```
 
@@ -763,7 +767,7 @@ create server duckdb_server
     type 'r2_catalog',
     token '<R2 API token>',
     warehouse '2b303ef0293bc91a0217a0381af14a3e_r2-data-catalog-tutorial',
-    catalog_uri 'https://catalog.cloudflarestorage.com/2b303ef0293bc91a0217a0381af14a3e/r2-data-catalog-tutorial'
+    catalog_uri 'catalog.cloudflarestorage.com/2b303ef0293bc91a0217a0381af14a3e/r2-data-catalog-tutorial'
   );
 ```
 
