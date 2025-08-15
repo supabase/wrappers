@@ -9,7 +9,7 @@ use supabase_wrappers::prelude::*;
 use super::{mapper, server_type::ServerType, DuckdbFdwError, DuckdbFdwResult};
 
 #[wrappers_fdw(
-    version = "0.1.0",
+    version = "0.1.1",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/duckdb_fdw",
     error_type = "DuckdbFdwError"
