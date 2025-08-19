@@ -98,7 +98,7 @@ impl ShopifyFdw {
                 } else {
                     Some(Cell::Json(src.to_string()))
                 }
-            },
+            }
             _ => {
                 return Err(format!(
                     "target column '{}' type is not supported",
@@ -337,8 +337,15 @@ impl Guest for ShopifyFdw {
         stmt: ImportForeignSchemaStmt,
     ) -> Result<Vec<String>, FdwError> {
         let mut ret = Vec::new();
+        let objects = [
+            "products",
+            "customers",
+            "orders",
+            "locations",
+            "draftorders",
+        ];
 
-        for object in ["products", "customers", "orders", "locations"] {
+        for object in objects {
             let field_map = get_field_map(object);
             let mut cols: Vec<String> = field_map
                 .iter()

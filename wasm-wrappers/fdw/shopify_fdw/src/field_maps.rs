@@ -4,11 +4,15 @@ use std::collections::HashMap;
 // key: field name, value: (field type, GraphQL fragment, fragments)
 pub(super) type FieldMap = HashMap<String, (String, String, Vec<String>)>;
 
-// done: Location, Order, 
+// done: Location, Order, draftOrder, MetaField,
+// CustomerPaymentMethod, StoreCreditAccount, ProductOption
+//
+// not do: Company, CompanyContact, CompanyLocation,
+// StandardMetafieldDefinitionTemplate, SubscriptionContract,
 
-// todo: draftOrder, Company, CompanyContact, CompanyLocation, MetaField,
-// CustomerPaymentMethod, StoreCreditAccount, SubscriptionContract, 
-// ProductOption, Collection, ProductVariant, Media, App, Publication
+// todo: ,
+// , ,
+// , Collection, ProductVariant, Media, App, Publication
 // SellingPlanGroup, SalesAgreement, CustomerVisit
 // FulfillmentOrder, Fulfillment, LineItem, BusinessEntity
 // PaymentTerms, Refund, RefundLineItem, Return, ShippingLine
@@ -210,11 +214,7 @@ OrderRiskSummary {
         "products" => HashMap::from([
             (
                 "availablePublicationsCount",
-                (
-                    "jsonb",
-                    "{ count precision }",
-                    vec![],
-                )
+                ("jsonb", "{ count precision }", vec![]),
             ),
             (
                 "bundleComponents",
@@ -239,24 +239,13 @@ OrderRiskSummary {
                         }
                     }",
                     vec![],
-                )
-            ),
-            (
-                "category",
-                (
-                    "jsonb",
-                    "{ ...TaxonomyCategoryFields }",
-                    vec![category],
                 ),
             ),
             (
-                "collections",
-                (
-                    "jsonb",
-                    "(first: 250) { id }",
-                    vec![],
-                )
+                "category",
+                ("jsonb", "{ ...TaxonomyCategoryFields }", vec![category]),
             ),
+            ("collections", ("jsonb", "(first: 250) { id }", vec![])),
             (
                 "combinedListing",
                 (
@@ -271,7 +260,7 @@ OrderRiskSummary {
                         parentProduct { id }
                     }",
                     vec![],
-                )
+                ),
             ),
             ("combinedListingRole", ("text", "", vec![])),
             (
@@ -287,7 +276,7 @@ OrderRiskSummary {
                         }
                     }",
                     vec![money_v2],
-                )
+                ),
             ),
             ("createdAt", ("timestamp", "", vec![])),
             ("defaultCursor", ("text", "", vec![])),
@@ -303,15 +292,11 @@ OrderRiskSummary {
                         }
                     }",
                     vec![event],
-                )
+                ),
             ),
             (
                 "featuredMedia",
-                (
-                    "jsonb",
-                    "{ ...MediaFields }",
-                    vec![media],
-                )
+                ("jsonb", "{ ...MediaFields }", vec![media]),
             ),
             (
                 "feedback",
@@ -319,7 +304,7 @@ OrderRiskSummary {
                     "jsonb",
                     "{ ...ResourceFeedbackFields }",
                     vec![resource_feedback],
-                )
+                ),
             ),
             ("giftCardTemplateSuffix", ("text", "", vec![])),
             ("handle", ("text", "", vec![])),
@@ -332,20 +317,9 @@ OrderRiskSummary {
             ("legacyResourceId", ("bigint", "", vec![])),
             (
                 "media",
-                (
-                    "jsonb",
-                    "(first: 250) { ...MediaFields }",
-                    vec![media],
-                )
+                ("jsonb", "(first: 250) { ...MediaFields }", vec![media]),
             ),
-            (
-                "mediaCount",
-                (
-                    "jsonb",
-                    "{ count precision }",
-                    vec![],
-                )
-            ),
+            ("mediaCount", ("jsonb", "{ count precision }", vec![])),
             (
                 "metafields",
                 (
@@ -358,14 +332,7 @@ OrderRiskSummary {
             ),
             ("onlineStorePreviewUrl", ("text", "", vec![])),
             ("onlineStoreUrl", ("text", "", vec![])),
-            (
-                "options",
-                (
-                    "jsonb",
-                    "(first: 250) { id name }",
-                    vec![],
-                )
-            ),
+            ("options", ("jsonb", "(first: 250) { id name }", vec![])),
             (
                 "priceRangeV2",
                 (
@@ -379,7 +346,7 @@ OrderRiskSummary {
                         }
                     }",
                     vec![money_v2],
-                )
+                ),
             ),
             (
                 "productComponents",
@@ -405,15 +372,11 @@ OrderRiskSummary {
                         }
                     }",
                     vec![],
-                )
+                ),
             ),
             (
                 "productComponentsCount",
-                (
-                    "jsonb",
-                    "{ count precision }",
-                    vec![],
-                )
+                ("jsonb", "{ count precision }", vec![]),
             ),
             (
                 "productParents",
@@ -423,7 +386,7 @@ OrderRiskSummary {
                         nodes { id }
                     }",
                     vec![],
-                )
+                ),
             ),
             ("productType", ("text", "", vec![])),
             ("publishedAt", ("timestamp", "", vec![])),
@@ -437,7 +400,7 @@ OrderRiskSummary {
                     "jsonb",
                     "{ ...ResourcePublicationV2Fields }",
                     vec![publishable, resource_publication_v2],
-                )
+                ),
             ),
             (
                 "resourcePublications",
@@ -449,15 +412,11 @@ OrderRiskSummary {
                         }
                     }",
                     vec![publishable, resource_publication],
-                )
+                ),
             ),
             (
                 "resourcePublicationsCount",
-                (
-                    "jsonb",
-                    "{ count precision }",
-                    vec![],
-                )
+                ("jsonb", "{ count precision }", vec![]),
             ),
             (
                 "resourcePublicationsV2",
@@ -469,7 +428,7 @@ OrderRiskSummary {
                         }
                     }",
                     vec![publishable, resource_publication_v2],
-                )
+                ),
             ),
             (
                 "sellingPlanGroups",
@@ -479,24 +438,13 @@ OrderRiskSummary {
                         nodes { id name }
                     }",
                     vec![],
-                )
+                ),
             ),
             (
                 "sellingPlanGroupsCount",
-                (
-                    "jsonb",
-                    "{ count precision }",
-                    vec![],
-                )
+                ("jsonb", "{ count precision }", vec![]),
             ),
-            (
-                "seo",
-                (
-                    "jsonb",
-                    "{ description title }",
-                    vec![],
-                )
-            ),
+            ("seo", ("jsonb", "{ description title }", vec![])),
             ("status", ("text", "", vec![])),
             ("tags", ("jsonb", "", vec![])),
             ("templateSuffix", ("text", "", vec![])),
@@ -511,7 +459,7 @@ OrderRiskSummary {
                         nodes { id }
                     }",
                     vec![],
-                )
+                ),
             ),
             ("updatedAt", ("timestamp", "", vec![])),
             (
@@ -522,16 +470,9 @@ OrderRiskSummary {
                         nodes { id }
                     }",
                     vec![],
-                )
+                ),
             ),
-            (
-                "variantsCount",
-                (
-                    "jsonb",
-                    "{ count precision }",
-                    vec![],
-                )
-            ),
+            ("variantsCount", ("jsonb", "{ count precision }", vec![])),
             ("vendor", ("text", "", vec![])),
         ]),
 
@@ -555,15 +496,11 @@ OrderRiskSummary {
                         }
                     }}",
                     vec![mailing_address],
-                )
+                ),
             ),
             (
                 "amountSpent",
-                (
-                    "jsonb",
-                    "{ ...MoneyV2Fields }",
-                    vec![money_v2],
-                )
+                ("jsonb", "{ ...MoneyV2Fields }", vec![money_v2]),
             ),
             ("canDelete", ("boolean", "", vec![])),
             (
@@ -599,7 +536,7 @@ OrderRiskSummary {
                         updatedAt
                     }",
                     vec![],
-                )
+                ),
             ),
             ("createdAt", ("timestamp", "", vec![])),
             ("dataSaleOptOut", ("boolean", "", vec![])),
@@ -609,7 +546,7 @@ OrderRiskSummary {
                     "jsonb",
                     "{ ...MailingAddressFields }",
                     vec![mailing_address],
-                )
+                ),
             ),
             (
                 "defaultEmailAddress",
@@ -617,7 +554,7 @@ OrderRiskSummary {
                     "jsonb",
                     "{ ...CustomerEmailAddressFields }",
                     vec![customer_email_address],
-                )
+                ),
             ),
             (
                 "defaultPhoneNumber",
@@ -625,7 +562,7 @@ OrderRiskSummary {
                     "jsonb",
                     "{ ...CustomerPhoneNumberFields }",
                     vec![customer_phone_number],
-                )
+                ),
             ),
             ("displayName", ("text", "", vec![])),
             (
@@ -638,27 +575,16 @@ OrderRiskSummary {
                         }
                     }",
                     vec![event],
-                )
+                ),
             ),
             ("firstName", ("text", "", vec![])),
             ("id", ("text", "", vec![])),
             (
                 "image",
-                (
-                    "jsonb",
-                    "{ ...ImageFields }",
-                    vec![metafield, image],
-                ),
+                ("jsonb", "{ ...ImageFields }", vec![metafield, image]),
             ),
             ("lastName", ("text", "", vec![])),
-            (
-                "lastOrder",
-                (
-                    "jsonb",
-                    "{ id }",
-                    vec![],
-                )
-            ),
+            ("lastOrder", ("jsonb", "{ id }", vec![])),
             ("legacyResourceId", ("bigint", "", vec![])),
             ("lifetimeDuration", ("text", "", vec![])),
             ("locale", ("text", "", vec![])),
@@ -668,7 +594,7 @@ OrderRiskSummary {
                     "jsonb",
                     "{ ...CustomerMergeableFields }",
                     vec![customer_mergeable],
-                )
+                ),
             ),
             (
                 "metafields",
@@ -691,7 +617,7 @@ OrderRiskSummary {
                         nodes { id }
                     }",
                     vec![],
-                )
+                ),
             ),
             (
                 "paymentMethods",
@@ -701,7 +627,7 @@ OrderRiskSummary {
                         nodes { id }
                     }",
                     vec![],
-                )
+                ),
             ),
             ("productSubscriberStatus", ("text", "", vec![])),
             ("state", ("text", "", vec![])),
@@ -714,7 +640,7 @@ OrderRiskSummary {
                         rfmGroup
                     }",
                     vec![],
-                )
+                ),
             ),
             (
                 "storeCreditAccounts",
@@ -724,7 +650,7 @@ OrderRiskSummary {
                         nodes { id }
                     }",
                     vec![],
-                )
+                ),
             ),
             (
                 "subscriptionContracts",
@@ -734,7 +660,7 @@ OrderRiskSummary {
                         nodes { id }
                     }",
                     vec![],
-                )
+                ),
             ),
             ("tags", ("text", "", vec![])),
             ("taxExempt", ("boolean", "", vec![])),
@@ -756,7 +682,7 @@ OrderRiskSummary {
                         taxLines { ...TaxLineFields }
                     }",
                     vec![money_v2, money_bag, tax_line],
-                )
+                ),
             ),
             (
                 "agreements",
@@ -766,7 +692,7 @@ OrderRiskSummary {
                         nodes { id }
                     }",
                     vec![],
-                )
+                ),
             ),
             (
                 "alerts",
@@ -786,7 +712,7 @@ OrderRiskSummary {
                         title
                     }",
                     vec![],
-                )
+                ),
             ),
             (
                 "app",
@@ -798,7 +724,7 @@ OrderRiskSummary {
                         name
                     }",
                     vec![image],
-                )
+                ),
             ),
             (
                 "billingAddress",
@@ -806,17 +732,13 @@ OrderRiskSummary {
                     "jsonb",
                     "{ ...MailingAddressFields }",
                     vec![mailing_address],
-                )
+                ),
             ),
-            ("billingAddressMatchesShippingAddress", ("boolean", "", vec![])),
             (
-                "cancellation",
-                (
-                    "jsonb",
-                    "{ staffNote }",
-                    vec![],
-                )
+                "billingAddressMatchesShippingAddress",
+                ("boolean", "", vec![]),
             ),
+            ("cancellation", ("jsonb", "{ staffNote }", vec![])),
             ("cancelledAt", ("timestamp", "", vec![])),
             ("cancelReason", ("text", "", vec![])),
             ("canMarkAsPaid", ("boolean", "", vec![])),
@@ -824,11 +746,7 @@ OrderRiskSummary {
             ("capturable", ("boolean", "", vec![])),
             (
                 "cartDiscountAmountSet",
-                (
-                    "jsonb",
-                    "{ ...MoneyBagFields }",
-                    vec![money_v2, money_bag],
-                )
+                ("jsonb", "{ ...MoneyBagFields }", vec![money_v2, money_bag]),
             ),
             (
                 "channelInformation",
@@ -848,7 +766,7 @@ OrderRiskSummary {
                         id
                     }",
                     vec![],
-                )
+                ),
             ),
             ("clientIp", ("text", "", vec![])),
             ("closed", ("boolean", "", vec![])),
@@ -859,28 +777,16 @@ OrderRiskSummary {
             ("currencyCode", ("text", "", vec![])),
             (
                 "currentCartDiscountAmountSet",
-                (
-                    "jsonb",
-                    "{ ...MoneyBagFields }",
-                    vec![money_v2, money_bag],
-                )
+                ("jsonb", "{ ...MoneyBagFields }", vec![money_v2, money_bag]),
             ),
             (
                 "currentShippingPriceSet",
-                (
-                    "jsonb",
-                    "{ ...MoneyBagFields }",
-                    vec![money_v2, money_bag],
-                )
+                ("jsonb", "{ ...MoneyBagFields }", vec![money_v2, money_bag]),
             ),
             ("currentSubtotalLineItemsQuantity", ("bigint", "", vec![])),
             (
                 "currentSubtotalPriceSet",
-                (
-                    "jsonb",
-                    "{ ...MoneyBagFields }",
-                    vec![money_v2, money_bag],
-                )
+                ("jsonb", "{ ...MoneyBagFields }", vec![money_v2, money_bag]),
             ),
             (
                 "currentTaxLines",
@@ -888,58 +794,31 @@ OrderRiskSummary {
                     "jsonb",
                     "{ ...TaxLineFields }",
                     vec![money_v2, money_bag, tax_line],
-                )
+                ),
             ),
             (
                 "currentTotalAdditionalFeesSet",
-                (
-                    "jsonb",
-                    "{ ...MoneyBagFields }",
-                    vec![money_v2, money_bag],
-                )
+                ("jsonb", "{ ...MoneyBagFields }", vec![money_v2, money_bag]),
             ),
             (
                 "currentTotalDiscountsSet",
-                (
-                    "jsonb",
-                    "{ ...MoneyBagFields }",
-                    vec![money_v2, money_bag],
-                )
+                ("jsonb", "{ ...MoneyBagFields }", vec![money_v2, money_bag]),
             ),
             (
                 "currentTotalDutiesSet",
-                (
-                    "jsonb",
-                    "{ ...MoneyBagFields }",
-                    vec![money_v2, money_bag],
-                )
+                ("jsonb", "{ ...MoneyBagFields }", vec![money_v2, money_bag]),
             ),
             (
                 "currentTotalPriceSet",
-                (
-                    "jsonb",
-                    "{ ...MoneyBagFields }",
-                    vec![money_v2, money_bag],
-                )
+                ("jsonb", "{ ...MoneyBagFields }", vec![money_v2, money_bag]),
             ),
             (
                 "currentTotalTaxSet",
-                (
-                    "jsonb",
-                    "{ ...MoneyBagFields }",
-                    vec![money_v2, money_bag],
-                )
+                ("jsonb", "{ ...MoneyBagFields }", vec![money_v2, money_bag]),
             ),
             ("currentTotalWeight", ("bigint", "", vec![])),
             ("customAttributes", ("jsonb", "", vec![])),
-            (
-                "customer",
-                (
-                    "jsonb",
-                    "{ id }",
-                    vec![],
-                )
-            ),
+            ("customer", ("jsonb", "{ id }", vec![])),
             ("customerAcceptsMarketing", ("boolean", "", vec![])),
             (
                 "customerJourneySummary",
@@ -957,7 +836,7 @@ OrderRiskSummary {
                         ready
                     }",
                     vec![],
-                )
+                ),
             ),
             ("customerLocale", ("text", "", vec![])),
             (
@@ -974,7 +853,7 @@ OrderRiskSummary {
                         }
                     }",
                     vec![],
-                )
+                ),
             ),
             ("discountCode", ("text", "", vec![])),
             ("discountCodes", ("jsonb", "", vec![])),
@@ -984,7 +863,7 @@ OrderRiskSummary {
                     "jsonb",
                     "{ ...MailingAddressFields }",
                     vec![mailing_address],
-                )
+                ),
             ),
             ("displayFinancialStatus", ("text", "", vec![])),
             ("displayFulfillmentStatus", ("text", "", vec![])),
@@ -998,7 +877,7 @@ OrderRiskSummary {
                         status
                     }",
                     vec![mailing_address],
-                )
+                ),
             ),
             ("dutiesIncluded", ("boolean", "", vec![])),
             ("edited", ("boolean", "", vec![])),
@@ -1014,7 +893,7 @@ OrderRiskSummary {
                         }
                     }",
                     vec![event],
-                )
+                ),
             ),
             ("fulfillable", ("boolean", "", vec![])),
             (
@@ -1025,7 +904,7 @@ OrderRiskSummary {
                         nodes { id }
                     }",
                     vec![],
-                )
+                ),
             ),
             (
                 "fulfillments",
@@ -1035,15 +914,11 @@ OrderRiskSummary {
                         id
                     }",
                     vec![],
-                )
+                ),
             ),
             (
                 "fulfillmentsCount",
-                (
-                    "jsonb",
-                    "{ count precision }",
-                    vec![],
-                )
+                ("jsonb", "{ count precision }", vec![]),
             ),
             ("fullyPaid", ("boolean", "", vec![])),
             ("hasTimelineComment", ("boolean", "", vec![])),
@@ -1057,7 +932,7 @@ OrderRiskSummary {
                         nodes { id }
                     }",
                     vec![],
-                )
+                ),
             ),
             (
                 "localizedFields",
@@ -1073,15 +948,11 @@ OrderRiskSummary {
                         }
                     }",
                     vec![],
-                )
+                ),
             ),
             (
                 "merchantBusinessEntity",
-                (
-                    "jsonb",
-                    "{ id displayName }",
-                    vec![],
-                )
+                ("jsonb", "{ id displayName }", vec![]),
             ),
             ("merchantEditable", ("boolean", "", vec![])),
             ("merchantEditableErrors", ("jsonb", "", vec![])),
@@ -1095,7 +966,7 @@ OrderRiskSummary {
                         name
                     }",
                     vec![image],
-                )
+                ),
             ),
             (
                 "metafields",
@@ -1110,11 +981,7 @@ OrderRiskSummary {
             ("name", ("text", "", vec![])),
             (
                 "netPaymentSet",
-                (
-                    "jsonb",
-                    "{ ...MoneyBagFields }",
-                    vec![money_v2, money_bag],
-                )
+                ("jsonb", "{ ...MoneyBagFields }", vec![money_v2, money_bag]),
             ),
             (
                 "nonFulfillableLineItems",
@@ -1124,33 +991,21 @@ OrderRiskSummary {
                         nodes { id }
                     }",
                     vec![],
-                )
+                ),
             ),
             ("note", ("text", "", vec![])),
             ("number", ("bigint", "", vec![])),
             (
                 "originalTotalAdditionalFeesSet",
-                (
-                    "jsonb",
-                    "{ ...MoneyBagFields }",
-                    vec![money_v2, money_bag],
-                )
+                ("jsonb", "{ ...MoneyBagFields }", vec![money_v2, money_bag]),
             ),
             (
                 "originalTotalDutiesSet",
-                (
-                    "jsonb",
-                    "{ ...MoneyBagFields }",
-                    vec![money_v2, money_bag],
-                )
+                ("jsonb", "{ ...MoneyBagFields }", vec![money_v2, money_bag]),
             ),
             (
                 "originalTotalPriceSet",
-                (
-                    "jsonb",
-                    "{ ...MoneyBagFields }",
-                    vec![money_v2, money_bag],
-                )
+                ("jsonb", "{ ...MoneyBagFields }", vec![money_v2, money_bag]),
             ),
             (
                 "paymentCollectionDetails",
@@ -1164,38 +1019,20 @@ OrderRiskSummary {
                         }
                     }",
                     vec![],
-                )
+                ),
             ),
             ("paymentGatewayNames", ("text", "", vec![])),
-            (
-                "paymentTerms",
-                (
-                    "jsonb",
-                    "{ id }",
-                    vec![],
-                )
-            ),
+            ("paymentTerms", ("jsonb", "{ id }", vec![])),
             ("phone", ("text", "", vec![])),
             ("poNumber", ("text", "", vec![])),
             ("presentmentCurrencyCode", ("text", "", vec![])),
             ("processedAt", ("timestamp", "", vec![])),
             ("processedAt", ("timestamp", "", vec![])),
-            (
-                "publication",
-                (
-                    "jsonb",
-                    "{ id }",
-                    vec![],
-                )
-            ),
+            ("publication", ("jsonb", "{ id }", vec![])),
             ("refundable", ("boolean", "", vec![])),
             (
                 "refundDiscrepancySet",
-                (
-                    "jsonb",
-                    "{ ...MoneyBagFields }",
-                    vec![money_v2, money_bag],
-                )
+                ("jsonb", "{ ...MoneyBagFields }", vec![money_v2, money_bag]),
             ),
             (
                 "refunds",
@@ -1210,14 +1047,7 @@ OrderRiskSummary {
             ("registeredSourceUrl", ("text", "", vec![])),
             ("requiresShipping", ("boolean", "", vec![])),
             ("restockable", ("boolean", "", vec![])),
-            (
-                "retailLocation",
-                (
-                    "jsonb",
-                    "{ id }",
-                    vec![],
-                )
-            ),
+            ("retailLocation", ("jsonb", "{ id }", vec![])),
             (
                 "returns",
                 (
@@ -1226,7 +1056,7 @@ OrderRiskSummary {
                         nodes { id }
                     }",
                     vec![],
-                )
+                ),
             ),
             ("returnStatus", ("text", "", vec![])),
             (
@@ -1235,7 +1065,7 @@ OrderRiskSummary {
                     "jsonb",
                     "{ ...OrderRiskSummaryFields }",
                     vec![order_risk_summary],
-                )
+                ),
             ),
             (
                 "shippingAddress",
@@ -1243,16 +1073,9 @@ OrderRiskSummary {
                     "jsonb",
                     "{ ...MailingAddressFields }",
                     vec![mailing_address],
-                )
+                ),
             ),
-            (
-                "shippingLine",
-                (
-                    "jsonb",
-                    "{ id }",
-                    vec![],
-                )
-            ),
+            ("shippingLine", ("jsonb", "{ id }", vec![])),
             (
                 "shippingLines",
                 (
@@ -1261,7 +1084,7 @@ OrderRiskSummary {
                         nodes { id }
                     }",
                     vec![],
-                )
+                ),
             ),
             (
                 "shopifyProtect",
@@ -1274,7 +1097,7 @@ OrderRiskSummary {
                         status
                     }",
                     vec![],
-                )
+                ),
             ),
             ("sourceIdentifier", ("text", "", vec![])),
             ("sourceName", ("text", "", vec![])),
@@ -1302,17 +1125,13 @@ OrderRiskSummary {
                         }
                     }",
                     vec![image],
-                )
+                ),
             ),
             ("statusPageUrl", ("text", "", vec![])),
             ("subtotalLineItemsQuantity", ("bigint", "", vec![])),
             (
                 "subtotalPriceSet",
-                (
-                    "jsonb",
-                    "{ ...MoneyBagFields }",
-                    vec![money_v2, money_bag],
-                )
+                ("jsonb", "{ ...MoneyBagFields }", vec![money_v2, money_bag]),
             ),
             (
                 "suggestedRefund",
@@ -1360,7 +1179,7 @@ OrderRiskSummary {
                         totalTaxSet { ...MoneyBagFields }
                     }",
                     vec![money_v2, money_bag, tax_line],
-                )
+                ),
             ),
             ("tags", ("jsonb", "", vec![])),
             ("taxesIncluded", ("boolean", "", vec![])),
@@ -1371,16 +1190,12 @@ OrderRiskSummary {
                     "jsonb",
                     "{ ...TaxLineFields }",
                     vec![money_v2, money_bag, tax_line],
-                )
+                ),
             ),
             ("test", ("boolean", "", vec![])),
             (
                 "totalCapturableSet",
-                (
-                    "jsonb",
-                    "{ ...MoneyBagFields }",
-                    vec![money_v2, money_bag],
-                )
+                ("jsonb", "{ ...MoneyBagFields }", vec![money_v2, money_bag]),
             ),
             (
                 "totalCashRoundingAdjustment",
@@ -1391,96 +1206,49 @@ OrderRiskSummary {
                         refundSet { ...MoneyBagFields }
                     }",
                     vec![money_v2, money_bag],
-                )
+                ),
             ),
             (
                 "totalDiscountsSet",
-                (
-                    "jsonb",
-                    "{ ...MoneyBagFields }",
-                    vec![money_v2, money_bag],
-                )
+                ("jsonb", "{ ...MoneyBagFields }", vec![money_v2, money_bag]),
             ),
             (
                 "totalOutstandingSet",
-                (
-                    "jsonb",
-                    "{ ...MoneyBagFields }",
-                    vec![money_v2, money_bag],
-                )
+                ("jsonb", "{ ...MoneyBagFields }", vec![money_v2, money_bag]),
             ),
             (
                 "totalPriceSet",
-                (
-                    "jsonb",
-                    "{ ...MoneyBagFields }",
-                    vec![money_v2, money_bag],
-                )
+                ("jsonb", "{ ...MoneyBagFields }", vec![money_v2, money_bag]),
             ),
             (
                 "totalReceivedSet",
-                (
-                    "jsonb",
-                    "{ ...MoneyBagFields }",
-                    vec![money_v2, money_bag],
-                )
+                ("jsonb", "{ ...MoneyBagFields }", vec![money_v2, money_bag]),
             ),
             (
                 "totalRefundedSet",
-                (
-                    "jsonb",
-                    "{ ...MoneyBagFields }",
-                    vec![money_v2, money_bag],
-                )
+                ("jsonb", "{ ...MoneyBagFields }", vec![money_v2, money_bag]),
             ),
             (
                 "totalRefundedShippingSet",
-                (
-                    "jsonb",
-                    "{ ...MoneyBagFields }",
-                    vec![money_v2, money_bag],
-                )
+                ("jsonb", "{ ...MoneyBagFields }", vec![money_v2, money_bag]),
             ),
             (
                 "totalShippingPriceSet",
-                (
-                    "jsonb",
-                    "{ ...MoneyBagFields }",
-                    vec![money_v2, money_bag],
-                )
+                ("jsonb", "{ ...MoneyBagFields }", vec![money_v2, money_bag]),
             ),
             (
                 "totalTaxSet",
-                (
-                    "jsonb",
-                    "{ ...MoneyBagFields }",
-                    vec![money_v2, money_bag],
-                )
+                ("jsonb", "{ ...MoneyBagFields }", vec![money_v2, money_bag]),
             ),
             (
                 "totalTipReceivedSet",
-                (
-                    "jsonb",
-                    "{ ...MoneyBagFields }",
-                    vec![money_v2, money_bag],
-                )
+                ("jsonb", "{ ...MoneyBagFields }", vec![money_v2, money_bag]),
             ),
             ("totalWeight", ("bigint", "", vec![])),
-            (
-                "transactions",
-                (
-                    "jsonb",
-                    "{ id }",
-                    vec![],
-                )
-            ),
+            ("transactions", ("jsonb", "{ id }", vec![])),
             (
                 "transactionsCount",
-                (
-                    "jsonb",
-                    "{ count precision }",
-                    vec![],
-                )
+                ("jsonb", "{ count precision }", vec![]),
             ),
             ("unpaid", ("boolean", "", vec![])),
             ("updatedAt", ("timestamp", "", vec![])),
@@ -1508,7 +1276,7 @@ OrderRiskSummary {
                         zip
                     }",
                     vec![],
-                )
+                ),
             ),
             ("addressVerified", ("boolean", "", vec![])),
             ("createdAt", ("timestamp", "", vec![])),
@@ -1532,7 +1300,7 @@ OrderRiskSummary {
                         type
                     }",
                     vec![],
-                )
+                ),
             ),
             ("fulfillsOnlineOrders", ("boolean", "", vec![])),
             ("hasActiveInventory", ("boolean", "", vec![])),
@@ -1546,7 +1314,7 @@ OrderRiskSummary {
                         nodes { id }
                     }",
                     vec![],
-                )
+                ),
             ),
             ("isActive", ("boolean", "", vec![])),
             ("isFulfillmentService", ("boolean", "", vec![])),
@@ -1559,8 +1327,8 @@ OrderRiskSummary {
                         instructions
                         pickupTime
                     }",
-                    vec![]
-                )
+                    vec![],
+                ),
             ),
             (
                 "metafields",
@@ -1590,13 +1358,424 @@ OrderRiskSummary {
                         zip
                     }",
                     vec![],
-                )
+                ),
             ),
             ("updatedAt", ("timestamp", "", vec![])),
         ]),
 
         // ref: https://shopify.dev/docs/api/admin-graphql/latest/objects/draftorder
         "draftorders" => HashMap::from([
+            ("acceptAutomaticDiscounts", ("boolean", "", vec![])),
+            ("allowDiscountCodesInCheckout", ("boolean", "", vec![])),
+            ("allVariantPricesOverridden", ("boolean", "", vec![])),
+            ("anyVariantPricesOverridden", ("boolean", "", vec![])),
+            (
+                "appliedDiscount",
+                (
+                    "jsonb",
+                    "{
+                        amountSet { ...MoneyBagFields }
+                        description
+                        title
+                        value
+                        valueType
+                    }",
+                    vec![money_v2, money_bag],
+                ),
+            ),
+            (
+                "billingAddress",
+                (
+                    "jsonb",
+                    "{ ...MailingAddressFields }",
+                    vec![mailing_address],
+                ),
+            ),
+            (
+                "billingAddressMatchesShippingAddress",
+                ("boolean", "", vec![]),
+            ),
+            ("completedAt", ("timestamp", "", vec![])),
+            ("createdAt", ("timestamp", "", vec![])),
+            ("currencyCode", ("text", "", vec![])),
+            ("customAttributes", ("jsonb", "", vec![])),
+            ("customer", ("jsonb", "{ id }", vec![])),
+            ("defaultCursor", ("text", "", vec![])),
+            ("discountCodes", ("jsonb", "", vec![])),
+            ("email", ("text", "", vec![])),
+            (
+                "events",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes {
+                            ...EventFields
+                        }
+                    }",
+                    vec![event],
+                ),
+            ),
+            ("hasTimelineComment", ("boolean", "", vec![])),
+            ("id", ("text", "", vec![])),
+            ("invoiceEmailTemplateSubject", ("text", "", vec![])),
+            ("invoiceSentAt", ("timestamp", "", vec![])),
+            ("invoiceUrl", ("text", "", vec![])),
+            ("legacyResourceId", ("bigint", "", vec![])),
+            (
+                "lineItems",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes { id }
+                    }",
+                    vec![],
+                ),
+            ),
+            (
+                "lineItemsSubtotalPrice",
+                ("jsonb", "{ ...MoneyBagFields }", vec![money_v2, money_bag]),
+            ),
+            (
+                "localizedFields",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes {
+                            countryCode
+                            key
+                            purpose
+                            title
+                            value
+                        }
+                    }",
+                    vec![],
+                ),
+            ),
+            (
+                "metafields",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes { ...MetafieldFields }
+                    }",
+                    vec![metafield],
+                ),
+            ),
+            ("name", ("text", "", vec![])),
+            ("note2", ("text", "", vec![])),
+            ("order", ("jsonb", "{ id }", vec![])),
+            ("paymentTerms", ("jsonb", "{ id }", vec![])),
+            ("phone", ("text", "", vec![])),
+            (
+                "platformDiscounts",
+                (
+                    "jsonb",
+                    "{
+                        allocations {
+                            id
+                            quantity
+                            reductionAmount { ...MoneyBagFields }
+                            reductionAmountSet { ...MoneyBagFields }
+                            target
+                        }
+                        automaticDiscount
+                        bxgyDiscount
+                        code
+                        discountClasses
+                        discountNode {
+                            discount
+                            events (first: 250) {
+                                nodes { ...EventFields }
+                            }
+                            id
+                            metafields (first: 250) {
+                                nodes { ...MetafieldFields }
+                            }
+                        }
+                        id
+                        presentationLevel
+                        shortSummary
+                        summary
+                        title
+                        totalAmount { ...MoneyBagFields }
+                        totalAmountPriceSet { ...MoneyBagFields }
+                    }",
+                    vec![event, metafield, money_v2, money_bag],
+                ),
+            ),
+            ("poNumber", ("text", "", vec![])),
+            ("presentmentCurrencyCode", ("text", "", vec![])),
+            ("purchasingEntity", ("text", "", vec![])),
+            ("ready", ("boolean", "", vec![])),
+            ("reserveInventoryUntil", ("timestamp", "", vec![])),
+            (
+                "shippingAddress",
+                (
+                    "jsonb",
+                    "{ ...MailingAddressFields }",
+                    vec![mailing_address],
+                ),
+            ),
+            ("shippingLine", ("jsonb", "{ id }", vec![])),
+            ("status", ("text", "", vec![])),
+            (
+                "subtotalPriceSet",
+                ("jsonb", "{ ...MoneyBagFields }", vec![money_v2, money_bag]),
+            ),
+            ("tags", ("jsonb", "", vec![])),
+            ("taxesIncluded", ("boolean", "", vec![])),
+            ("taxExempt", ("boolean", "", vec![])),
+            (
+                "taxLines",
+                (
+                    "jsonb",
+                    "{ ...TaxLineFields }",
+                    vec![money_v2, money_bag, tax_line],
+                ),
+            ),
+            (
+                "totalDiscountsSet",
+                ("jsonb", "{ ...MoneyBagFields }", vec![money_v2, money_bag]),
+            ),
+            (
+                "totalLineItemsPriceSet",
+                ("jsonb", "{ ...MoneyBagFields }", vec![money_v2, money_bag]),
+            ),
+            (
+                "totalPriceSet",
+                ("jsonb", "{ ...MoneyBagFields }", vec![money_v2, money_bag]),
+            ),
+            ("totalQuantityOfLineItems", ("bigint", "", vec![])),
+            (
+                "totalShippingPriceSet",
+                ("jsonb", "{ ...MoneyBagFields }", vec![money_v2, money_bag]),
+            ),
+            (
+                "totalTaxSet",
+                ("jsonb", "{ ...MoneyBagFields }", vec![money_v2, money_bag]),
+            ),
+            ("totalWeight", ("bigint", "", vec![])),
+            ("transformerFingerprint", ("text", "", vec![])),
+            ("updatedAt", ("timestamp", "", vec![])),
+            ("visibleToCustomer", ("boolean", "", vec![])),
+            (
+                "warnings",
+                (
+                    "jsonb",
+                    "{
+                        errorCode
+                        field
+                        message
+                    }",
+                    vec![],
+                ),
+            ),
+        ]),
+
+        // ref: https://shopify.dev/docs/api/admin-graphql/latest/objects/metafield
+        "metafields" => HashMap::from([
+            ("compareDigest", ("text", "", vec![])),
+            ("createdAt", ("timestamp", "", vec![])),
+            (
+                "definition",
+                (
+                    "jsonb",
+                    "{
+                        access {
+                            admin
+                            customerAccount
+                            storefront
+                        }
+                        capabilities {
+                            adminFilterable {
+                                eligible
+                                enabled
+                                status
+                            }
+                            smartCollectionCondition {
+                                eligible
+                                enabled
+                            }
+                            uniqueValues {
+                                eligible
+                                enabled
+                            }
+                        }
+                        constraints {
+                            key
+                            values (first: 250) {
+                                nodes { value }
+                            }
+                        }
+                        description
+                        id
+                        key
+                        metafields (first: 250) {
+                            nodes { ...MetafieldFields }
+                        }
+                        metafieldsCount
+                        name
+                        namespace
+                        ownerType
+                        pinnedPosition
+                        standardTemplate {
+                            id
+                            name
+                            description
+                            key
+                        }
+                        type {
+                            category
+                            name
+                            supportedValidations {
+                                name
+                                type
+                            }
+                            supportsDefinitionMigrations
+                        }
+                        useAsCollectionCondition
+                        validations {
+                            name
+                            type
+                            value
+                        }
+                        validationStatus
+                    }",
+                    vec![metafield],
+                ),
+            ),
+            ("id", ("text", "", vec![])),
+            ("jsonValue", ("json", "", vec![])),
+            ("key", ("text", "", vec![])),
+            ("legacyResourceId", ("bigint", "", vec![])),
+            ("namespace", ("text", "", vec![])),
+            (
+                "owner",
+                (
+                    "jsonb",
+                    "{
+                        metafields (first: 250) {
+                            nodes { ...MetafieldFields }
+                        }
+                    }",
+                    vec![metafield],
+                ),
+            ),
+            ("ownerType", ("text", "", vec![])),
+            ("reference", ("text", "", vec![])),
+            (
+                "references",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes { }
+                    }",
+                    vec![],
+                ),
+            ),
+            ("type", ("text", "", vec![])),
+            ("updatedAt", ("timestamp", "", vec![])),
+            ("value", ("text", "", vec![])),
+        ]),
+
+        // ref: https://shopify.dev/docs/api/admin-graphql/latest/objects/customerpaymentmethod
+        "customerpaymentmethods" => HashMap::from([
+            ("customer", ("jsonb", "{ id }", vec![])),
+            ("id", ("text", "", vec![])),
+            ("instrument", ("text", "", vec![])),
+            ("revokedAt", ("timestamp", "", vec![])),
+            ("revokedReason", ("text", "", vec![])),
+            (
+                "subscriptionContracts",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes { id }
+                    }",
+                    vec![],
+                ),
+            ),
+        ]),
+
+        // ref: https://shopify.dev/docs/api/admin-graphql/latest/objects/storecreditaccount
+        "storecreditaccounts" => HashMap::from([
+            ("balance", ("jsonb", "{ ...MoneyV2Fields }", vec![money_v2])),
+            ("id", ("text", "", vec![])),
+            (
+                "owner",
+                (
+                    "jsonb",
+                    "{
+                        storeCreditAccounts (first: 250) {
+                            nodes { id }
+                        }
+                    }",
+                    vec![],
+                ),
+            ),
+            (
+                "transactions",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes {
+                            account { id }
+                            amount { ...MoneyV2Fields }
+                            balanceAfterTransaction { ...MoneyV2Fields }
+                            createdAt
+                            event
+                            origin
+                        }
+                    }",
+                    vec![money_v2],
+                ),
+            ),
+        ]),
+
+        // ref: https://shopify.dev/docs/api/admin-graphql/latest/objects/productoption
+        "productoptions" => HashMap::from([
+            ("id", ("text", "", vec![])),
+            (
+                "linkedMetafield",
+                (
+                    "jsonb",
+                    "{
+                        key
+                        namespace
+                    }",
+                    vec![],
+                ),
+            ),
+            ("name", ("text", "", vec![])),
+            (
+                "optionValues",
+                (
+                    "jsonb",
+                    "{
+                        hasVariants
+                        id
+                        linkedMetafieldValue
+                        name
+                        swatch {
+                            color
+                            image {
+                                alt
+                                createdAt
+                                fileStatus
+                                id
+                                image { ...ImageFields }
+                                mediaContentType
+                                mimeType
+                                status
+                                updatedAt
+                            }
+                        }
+                    }",
+                    vec![image],
+                ),
+            ),
+            ("position", ("bigint", "", vec![])),
+            ("values", ("jsonb", "", vec![])),
         ]),
 
         _ => HashMap::new(),
@@ -1605,12 +1784,15 @@ OrderRiskSummary {
     // convert all elements to owned
     field_map
         .into_iter()
-        .map(|(k, v)| (
-                k.to_owned(), (
+        .map(|(k, v)| {
+            (
+                k.to_owned(),
+                (
                     v.0.to_owned(),
                     v.1.to_owned(),
-                    v.2.iter().map(|v| v.to_string()).collect()
-                )
-        ))
+                    v.2.iter().map(|v| v.to_string()).collect(),
+                ),
+            )
+        })
         .collect()
 }
