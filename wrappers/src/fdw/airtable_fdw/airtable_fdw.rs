@@ -28,7 +28,7 @@ fn create_client(api_key: &str) -> Result<ClientWithMiddleware, AirtableFdwError
 }
 
 #[wrappers_fdw(
-    version = "0.1.4",
+    version = "0.1.5",
     author = "Ankur Goyal",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/airtable_fdw",
     error_type = "AirtableFdwError"

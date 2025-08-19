@@ -394,7 +394,14 @@ impl ClickHouseFdw {
         if !quals.is_empty() {
             let cond = quals
                 .iter()
-                .filter(|q| !self.params.iter().any(|p| p.field == q.field))
+                .filter(|q| {
+                    let is_param = self.params.iter().any(|p| p.field == q.field);
+                    let is_array = match &q.value {
+                        Value::Cell(c) => c.is_array(),
+                        _ => false,
+                    };
+                    !is_param && !is_array
+                })
                 .map(|q| q.deparse())
                 .collect::<Vec<String>>()
                 .join(" and ");
@@ -778,10 +785,7 @@ impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
                     continue;
                 }
                 if let Some(cell) = cell {
-                    match cell {
-                        Cell::Uuid(_) => sets.push(format!("{} = '{}'", col, cell)),
-                        _ => sets.push(format!("{} = {}", col, cell)),
-                    }
+                    sets.push(format!("{} = {}", col, cell));
                 } else {
                     sets.push(format!("{} = null", col));
                 }

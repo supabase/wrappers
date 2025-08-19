@@ -61,6 +61,22 @@ pub enum Cell {
     StringArray(Vec<Option<String>>),
 }
 
+impl Cell {
+    /// Check if cell is an array type
+    pub fn is_array(&self) -> bool {
+        matches!(
+            self,
+            Cell::BoolArray(_)
+                | Cell::I16Array(_)
+                | Cell::I32Array(_)
+                | Cell::I64Array(_)
+                | Cell::F32Array(_)
+                | Cell::F64Array(_)
+                | Cell::StringArray(_)
+        )
+    }
+}
+
 unsafe impl Send for Cell {}
 
 impl Clone for Cell {
@@ -188,7 +204,7 @@ impl fmt::Display for Cell {
                     write!(f, r#"'\x{}'"#, hex)
                 }
             }
-            Cell::Uuid(v) => write!(f, "{}", v),
+            Cell::Uuid(v) => write!(f, "'{}'", v),
             Cell::BoolArray(v) => write_array(v, f),
             Cell::I16Array(v) => write_array(v, f),
             Cell::I32Array(v) => write_array(v, f),
