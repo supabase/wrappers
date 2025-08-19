@@ -1,5 +1,6 @@
 #[allow(warnings)]
 mod bindings;
+mod field_maps;
 use serde_json::{json, Map as JsonMap, Value as JsonValue};
 
 use bindings::{
@@ -13,6 +14,7 @@ use bindings::{
         utils,
     },
 };
+use field_maps::get_field_map;
 
 #[derive(Debug, Default)]
 struct ShopifyFdw {
@@ -43,7 +45,11 @@ impl ShopifyFdw {
     }
 
     // convert Shopify response data field to a cell
-    fn src_field_to_cell(&self, src_row: &JsonValue, tgt_col: &Column) -> Result<Option<Cell>, FdwError> {
+    fn src_field_to_cell(
+        &self,
+        src_row: &JsonValue,
+        tgt_col: &Column,
+    ) -> Result<Option<Cell>, FdwError> {
         let tgt_col_name = tgt_col.name();
 
         // put all properties into 'attrs' JSON column
@@ -86,7 +92,13 @@ impl ShopifyFdw {
                     None
                 }
             }
-            TypeOid::Json => src.as_object().map(|_| Cell::Json(src.to_string())),
+            TypeOid::Json => {
+                if src.is_null() {
+                    None
+                } else {
+                    Some(Cell::Json(src.to_string()))
+                }
+            },
             _ => {
                 return Err(format!(
                     "target column '{}' type is not supported",
@@ -100,42 +112,55 @@ impl ShopifyFdw {
 
     // create a request instance
     fn create_request(&self, ctx: &Context) -> Result<http::Request, FdwError> {
-        let tgt_cols = ctx.get_columns()
-            .iter()
-            .filter(|c| c.name() != "attrs")
-            .map(|c| {
-                let col_name = c.name();
-                match col_name.as_str() {
-                    "category" => {
-                        "category { ancestorIds id }".to_owned()
-                    }
-                    _ => col_name
-                }
-            })
-            .collect::<Vec<_>>()
-            .join(" ");
-
+        // make cursor
         let cursor = if let Some(ref cursor) = self.src_cursor {
             format!("\\\"{cursor}\\\"")
         } else {
             "null".to_string()
         };
 
-        let query = format!(r#"{{
+        // make fields
+        let field_map = get_field_map(&self.object);
+        let mut fragments: Vec<String> = Vec::new();
+        let tgt_cols = ctx
+            .get_columns()
+            .iter()
+            .filter(|c| c.name() != "attrs")
+            .map(|c| {
+                let col_name = c.name();
+                let fragment = field_map
+                    .get(&col_name)
+                    .map(|v| {
+                        fragments.extend(v.2.clone());
+                        v.1.clone()
+                    })
+                    .unwrap_or_default();
+                format!("{} {}", col_name, fragment)
+            })
+            .collect::<Vec<_>>()
+            .join(" ");
+
+        // make framents
+        fragments.sort();
+        fragments.dedup();
+        let fragments = fragments.join(" ");
+
+        // combine all to make the final query
+        let query = format!(
+            r#"{{
             "query": "
-                fragment ProductFields on Product {{
-                    id
-                    title
-                }}
-                query GetProducts {{
-                    products(first: {BATCH_SIZE}, after: {cursor}) {{
-                        nodes {{ ...ProductFields }}
+                {fragments}
+                query GetObjects {{
+                    {}(first: {BATCH_SIZE}, after: {cursor}) {{
+                        nodes {{ {tgt_cols} }}
                         pageInfo {{ hasNextPage endCursor }}
                     }} 
                 }}
             "
-        }}"#);
-        let body = query.replace("\n", "");
+        }}"#,
+            self.object
+        );
+        let body = query.split_ascii_whitespace().collect::<Vec<_>>().join(" ");
 
         Ok(http::Request {
             method: http::Method::Post,
@@ -157,33 +182,37 @@ impl ShopifyFdw {
         http::error_for_status(&resp).map_err(|err| format!("{}: {}", err, resp.body))?;
 
         // transform response to json
-        let resp_json: JsonValue =
-            serde_json::from_str(&resp.body).map_err(|e| e.to_string())?;
+        let resp_json: JsonValue = serde_json::from_str(&resp.body).map_err(|e| e.to_string())?;
         utils::report_info(&format!("==resp: {:?}", resp.body));
 
-        // return when there is error message in response
-        if let Some(msg) = resp_json.pointer("/errors/0/message").and_then(|v| v.as_str()) {
+        // return when there are error messages in response
+        if let Some(msg) = resp_json
+            .pointer("/errors/0/message")
+            .and_then(|v| v.as_str())
+        {
             return Err(msg.to_owned());
         }
 
-        let resp_data = resp_json.pointer("/data/products/nodes").and_then(|v| {
-            if v.is_array() {
-                v.as_array().cloned()
-            } else {
-                None
-            }
-        })
-        .ok_or("cannot get query result data")?;
+        let resp_data = resp_json
+            .pointer(&format!("/data/{}/nodes", self.object))
+            .and_then(|v| {
+                if v.is_array() {
+                    v.as_array().cloned()
+                } else {
+                    None
+                }
+            })
+            .ok_or("cannot get query result data")?;
         self.src_rows.extend(resp_data);
 
         // save pagination next cursor if any
         let has_next_page = resp_json
-            .pointer("/data/products/pageInfo/hasNextPage")
+            .pointer(&format!("/data/{}/pageInfo/hasNextPage", self.object))
             .and_then(|v| v.as_bool())
             .unwrap_or_default();
         self.src_cursor = if has_next_page {
             resp_json
-                .pointer("/data/products/pageInfo/endCursor")
+                .pointer(&format!("/data/{}/pageInfo/endCursor", self.object))
                 .and_then(|v| v.as_str())
                 .map(|v| v.to_owned())
         } else {
@@ -208,7 +237,10 @@ impl Guest for ShopifyFdw {
 
         let opts = ctx.get_options(&OptionsType::Server);
         let shop = opts.require("shop")?;
-        this.base_url = format!("https://{}.myshopify.com/admin/api/2025-07/graphql.json", shop);
+        this.base_url = format!(
+            "https://{}.myshopify.com/admin/api/2025-07/graphql.json",
+            shop
+        );
         let token = match opts.get("access_token") {
             Some(token) => token,
             None => {
@@ -304,22 +336,28 @@ impl Guest for ShopifyFdw {
         _ctx: &Context,
         stmt: ImportForeignSchemaStmt,
     ) -> Result<Vec<String>, FdwError> {
-        let ret = vec![
-            format!(
-                r#"create foreign table if not exists products (
-                    "availablePublicationsCount" jsonb,
-                    "bundleComponents" jsonb,
-                    "category" jsonb,
-                    id text,
-                    title text,
-                    attrs jsonb
-                )
+        let mut ret = Vec::new();
+
+        for object in ["products", "customers", "orders", "locations"] {
+            let field_map = get_field_map(object);
+            let mut cols: Vec<String> = field_map
+                .iter()
+                .map(|(col_name, (col_type, _, _))| format!(r#""{}" {}"#, col_name, col_type))
+                .collect();
+            cols.sort();
+            let sql = format!(
+                r#"create foreign table if not exists {} ({}, attrs jsonb)
                 server {} options (
-                    object 'products'
+                    object '{}'
                 )"#,
+                object,
+                cols.join(","),
                 stmt.server_name,
-            ),
-        ];
+                object,
+            );
+            ret.push(sql);
+        }
+
         Ok(ret)
     }
 }
