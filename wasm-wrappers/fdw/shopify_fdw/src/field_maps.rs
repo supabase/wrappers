@@ -6,13 +6,14 @@ pub(super) type FieldMap = HashMap<String, (String, String, Vec<String>)>;
 
 // done: Location, Order, draftOrder, MetaField,
 // CustomerPaymentMethod, StoreCreditAccount, ProductOption
+// Collection, ProductVariant, 
 //
 // not do: Company, CompanyContact, CompanyLocation,
 // StandardMetafieldDefinitionTemplate, SubscriptionContract,
+// InventoryItem
 
 // todo: ,
-// , ,
-// , Collection, ProductVariant, Media, App, Publication
+// , Media, App, Publication
 // SellingPlanGroup, SalesAgreement, CustomerVisit
 // FulfillmentOrder, Fulfillment, LineItem, BusinessEntity
 // PaymentTerms, Refund, RefundLineItem, Return, ShippingLine
@@ -1776,6 +1777,350 @@ OrderRiskSummary {
             ),
             ("position", ("bigint", "", vec![])),
             ("values", ("jsonb", "", vec![])),
+        ]),
+
+        // ref: https://shopify.dev/docs/api/admin-graphql/latest/objects/collection
+        "collections" => HashMap::from([
+            (
+                "availablePublicationsCount",
+                ("jsonb", "{ count precision }", vec![]),
+            ),
+            ("description", ("text", "", vec![])),
+            ("descriptionHtml", ("text", "", vec![])),
+            (
+                "events",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes {
+                            ...EventFields
+                        }
+                    }",
+                    vec![event],
+                ),
+            ),
+            (
+                "feedback",
+                (
+                    "jsonb",
+                    "{ ...ResourceFeedbackFields }",
+                    vec![resource_feedback],
+                ),
+            ),
+            ("handle", ("text", "", vec![])),
+            ("hasProduct", ("boolean", "", vec![])),
+            ("id", ("text", "", vec![])),
+            ("image", ("jsonb", "{ ...ImageFields }", vec![image])),
+            ("legacyResourceId", ("bigint", "", vec![])),
+            (
+                "metafields",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes { ...MetafieldFields }
+                    }",
+                    vec![metafield],
+                ),
+            ),
+            (
+                "products",
+                ("jsonb", "(first: 250) { nodes { id } }", vec![]),
+            ),
+            ("productsCount", ("jsonb", "{ count precision }", vec![])),
+            ("publishedOnCurrentPublication", ("boolean", "", vec![])),
+            ("publishedOnPublication", ("boolean", "", vec![])),
+            (
+                "resourcePublications",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes {
+                            ...ResourcePublicationFields
+                        }
+                    }",
+                    vec![publishable, resource_publication],
+                ),
+            ),
+            (
+                "resourcePublicationsCount",
+                ("jsonb", "{ count precision }", vec![]),
+            ),
+            (
+                "resourcePublicationsV2",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes {
+                            ...ResourcePublicationV2Fields
+                        }
+                    }",
+                    vec![publishable, resource_publication_v2],
+                ),
+            ),
+            (
+                "ruleSet",
+                (
+                    "jsonb",
+                    "{
+                        appliedDisjunctively
+                        rules {
+                            column
+                            condition
+                            conditionObject
+                            relation
+                        }
+                    }",
+                    vec![],
+                ),
+            ),
+            ("seo", ("jsonb", "{ description title }", vec![])),
+            ("sortOrder", ("text", "", vec![])),
+            ("templateSuffix", ("text", "", vec![])),
+            ("title", ("text", "", vec![])),
+            (
+                "unpublishedPublications",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes { id }
+                    }",
+                    vec![],
+                ),
+            ),
+            ("updatedAt", ("timestamp", "", vec![])),
+        ]),
+
+        // ref: https://shopify.dev/docs/api/admin-graphql/latest/objects/productvariant
+        "productvariants" => HashMap::from([
+            ("availableForSale", ("boolean", "", vec![])),
+            ("barcode", ("text", "", vec![])),
+            ("compareAtPrice", ("text", "", vec![])),
+            ("createdAt", ("timestamp", "", vec![])),
+            ("defaultCursor", ("text", "", vec![])),
+            (
+                "deliveryProfile",
+                (
+                    "jsonb",
+                    "{
+                        activeMethodDefinitionsCount
+                        default
+                        id
+                        legacyMode
+                        locationsWithoutRatesCount
+                        name
+                        originLocationCount
+                        productVariantsCount { count precision }
+                        profileItems (first: 250) {
+                            nodes {
+                                id
+                                product { id }
+                                variants (first: 250) {
+                                    nodes { id }
+                                }
+                            }
+                        }
+                        profileLocationGroups {
+                            countriesInAnyZone {
+                                country {
+                                    code { countryCode restOfWorld }
+                                    id
+                                    name
+                                    provinces {
+                                        code
+                                        id
+                                        name
+                                        translatedName
+                                    }
+                                }
+                                zone
+                            }
+                            locationGroup {
+                                id
+                                locations (first: 250) {
+                                    nodes { id }
+                                }
+                                locationsCount { count precision }
+                            }
+                            locationGroupZones (first: 250) {
+                                nodes {
+                                    methodDefinitionCounts {
+                                        participantDefinitionsCount
+                                        rateDefinitionsCount
+                                    }
+                                    methodDefinitions (first: 250) {
+                                        nodes {
+                                            active
+                                            description
+                                            id
+                                            methodConditions {
+                                                conditionCriteria
+                                                field
+                                                id
+                                                operator
+                                            }
+                                            name
+                                            rateProvider
+                                        }
+                                    }
+                                    zone {
+                                        countries { id name }
+                                        id
+                                        name
+                                    }
+                                }
+                            }
+                        }
+                        sellingPlanGroups (first: 250) {
+                            nodes { id name }
+                        }
+                        unassignedLocations { id }
+                        unassignedLocationsPaginated (first: 250) {
+                            nodes { id }
+                        }
+                        zoneCountryCount
+                    }",
+                    vec![],
+                ),
+            ),
+            ("displayName", ("text", "", vec![])),
+            (
+                "events",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes {
+                            ...EventFields
+                        }
+                    }",
+                    vec![event],
+                ),
+            ),
+            ("id", ("text", "", vec![])),
+            (
+                "image",
+                ("jsonb", "{ ...ImageFields }", vec![metafield, image]),
+            ),
+            ("inventoryItem", ("jsonb", "{ id sku }", vec![])),
+            ("inventoryPolicy", ("text", "", vec![])),
+            ("inventoryQuantity", ("bigint", "", vec![])),
+            ("legacyResourceId", ("bigint", "", vec![])),
+            (
+                "media",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes { id }
+                    }",
+                    vec![],
+                ),
+            ),
+            (
+                "metafields",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes { ...MetafieldFields }
+                    }",
+                    vec![metafield],
+                ),
+            ),
+            ("position", ("bigint", "", vec![])),
+            ("price", ("numeric", "", vec![])),
+            ("product", ("jsonb", "{ id }", vec![])),
+            (
+                "productParents",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes { id }
+                    }",
+                    vec![],
+                ),
+            ),
+            (
+                "productVariantComponents",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes {
+                            id
+                            productVariant { id }
+                            quantity
+                        }
+                    }",
+                    vec![],
+                ),
+            ),
+            ("requiresComponents", ("boolean", "", vec![])),
+            (
+                "selectedOptions",
+                (
+                    "jsonb",
+                    "{
+                        name
+                        optionValue {
+                            hasVariants
+                            id
+                            linkedMetafieldValue
+                            name
+                            swatch {
+                                color
+                                image {
+                                    alt
+                                    createdAt
+                                    fileStatus
+                                    id
+                                    image { ...ImageFields }
+                                    mediaContentType
+                                    mimeType
+                                    status
+                                    updatedAt
+                                }
+                            }
+                        }
+                        value
+                    }",
+                    vec![],
+                ),
+            ),
+            ("sellableOnlineQuantity", ("bigint", "", vec![])),
+            (
+                "sellingPlanGroups",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes { id name }
+                    }",
+                    vec![],
+                ),
+            ),
+            (
+                "sellingPlanGroupsCount",
+                ("jsonb", "{ count precision }", vec![]),
+            ),
+            ("showUnitPrice", ("boolean", "", vec![])),
+            ("sku", ("text", "", vec![])),
+            ("taxable", ("boolean", "", vec![])),
+            ("title", ("text", "", vec![])),
+            (
+                "unitPrice",
+                ("jsonb", "{ ...MoneyV2Fields }", vec![money_v2]),
+            ),
+            (
+                "unitPriceMeasurement",
+                (
+                    "jsonb",
+                    "{
+                        measuredType
+                        quantityUnit
+                        quantityValue
+                        referenceUnit
+                        referenceValue
+                    }",
+                    vec![],
+                ),
+            ),
+            ("updatedAt", ("timestamp", "", vec![])),
         ]),
 
         _ => HashMap::new(),
