@@ -43,7 +43,7 @@ jobs:
           - "all_fdws"
         box:
           - { runner: ubuntu-24.04, arch: amd64 }
-          - { runner: arm-runner, arch: arm64 }
+          - { runner: u22-arm-runner, arch: arm64 }
     runs-on: ${{ matrix.box.runner }}
     timeout-minutes: 90
     steps:
