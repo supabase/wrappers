@@ -460,15 +460,17 @@ mod tests {
             .unwrap();
 
             let results = c
-                .select(
-                    "SELECT id FROM shopify.products order by id",
-                    None,
-                    &[],
-                )
+                .select("SELECT id FROM shopify.products order by id", None, &[])
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("id").unwrap())
                 .collect::<Vec<_>>();
-            assert_eq!(results, vec!["gid://shopify/Product/9975063609658", "gid://shopify/Product/9975063904570"]);
+            assert_eq!(
+                results,
+                vec![
+                    "gid://shopify/Product/9975063609658",
+                    "gid://shopify/Product/9975063904570"
+                ]
+            );
         });
     }
 }
