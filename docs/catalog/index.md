@@ -31,6 +31,7 @@ Each FDW documentation includes a detailed "Limitations" section that describes 
 | Paddle        |   ✅   |   ✅   |   ✅   |   ❌   |    ❌    |    ✅     |
 | Redis         |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
 | S3            |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
+| Shopify       |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
 | Snowflake     |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |    ✅     |
 | Stripe        |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |    ✅     |
 | SQL Server    |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ✅     |
@@ -52,4 +53,5 @@ See [Developing a Wasm Wrapper](../guides/create-wasm-wrapper.md) for instructio
 | Notion        | [Supabase](https://supabase.com) | [Link](notion.md)    | [Link](https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/notion_fdw)    |
 | Orb           | [Supabase](https://supabase.com) | [Link](orb.md)       | [Link](https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/orb_fdw)  |
 | Paddle        | [Supabase](https://supabase.com) | [Link](paddle.md)    | [Link](https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/paddle_fdw)    |
+| Shopify       | [Supabase](https://supabase.com) | [Link](shopify.md)   | [Link](https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/shopify_fdw)   |
 | Snowflake     | [Supabase](https://supabase.com) | [Link](snowflake.md) | [Link](https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/snowflake_fdw) |

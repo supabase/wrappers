@@ -1,7 +1,7 @@
 #[allow(warnings)]
 mod bindings;
 mod field_maps;
-use serde_json::{json, Map as JsonMap, Value as JsonValue};
+use serde_json::Value as JsonValue;
 
 use bindings::{
     exports::supabase::wrappers::routines::Guest,
@@ -44,6 +44,20 @@ impl ShopifyFdw {
         unsafe { &mut (*INSTANCE) }
     }
 
+    fn object_singular(&self) -> &str {
+        match self.object.as_str() {
+            "products" => "product",
+            "customers" => "customer",
+            "orders" => "order",
+            "locations" => "location",
+            "draftOrders" => "draftOrder",
+            "collections" => "collection",
+            "productVariants" => "productVariant",
+            "fulfillmentOrders" => "fulfillmentOrder",
+            _ => self.object.as_str(),
+        }
+    }
+
     // convert Shopify response data field to a cell
     fn src_field_to_cell(
         &self,
@@ -66,7 +80,11 @@ impl ShopifyFdw {
         let cell = match tgt_col.type_oid() {
             TypeOid::Bool => src.as_bool().map(Cell::Bool),
             TypeOid::F64 => src.as_f64().map(Cell::F64),
-            TypeOid::I64 => src.as_i64().map(Cell::I64),
+            TypeOid::I64 => src
+                .as_i64()
+                .or_else(|| src.as_str().map(|v| v.parse::<i64>().unwrap_or_default()))
+                .map(Cell::I64),
+            TypeOid::Numeric => src.as_f64().map(Cell::Numeric),
             TypeOid::String => src.as_str().map(|v| Cell::String(v.to_owned())),
             TypeOid::Date => {
                 if let Some(s) = src.as_str() {
@@ -145,21 +163,85 @@ impl ShopifyFdw {
         fragments.dedup();
         let fragments = fragments.join(" ");
 
+        let quals = ctx.get_quals();
+
+        // get id filter from quals
+        let id_filter = quals.iter().find_map(|qual| {
+            if qual.operator().as_str() == "=" && !qual.use_or() && qual.field().as_str() == "id" {
+                if let Value::Cell(Cell::String(id)) = qual.value() {
+                    return Some(id.clone());
+                }
+            }
+            None
+        });
+        let id_filter = match self.object.as_str() {
+            "app" | "businessEntities" | "shop" => Some(String::new()),
+            "customerPaymentMethod"
+            | "storeCreditAccount"
+            | "fulfillment"
+            | "refund"
+            | "return"
+            | "inventoryLevel" => {
+                if id_filter.is_none() {
+                    return Err(
+                        "column 'id' is not specified with an value in query condition".to_string(),
+                    );
+                }
+                id_filter
+            }
+            _ => id_filter,
+        };
+
         // combine all to make the final query
-        let query = format!(
-            r#"{{
-            "query": "
-                {fragments}
-                query GetObjects {{
-                    {}(first: {BATCH_SIZE}, after: {cursor}) {{
-                        nodes {{ {tgt_cols} }}
-                        pageInfo {{ hasNextPage endCursor }}
-                    }} 
-                }}
-            "
-        }}"#,
-            self.object
-        );
+        let query = if let Some(id_filter) = id_filter {
+            if id_filter.is_empty() {
+                format!(
+                    r#"{{
+                    "query": "
+                        {fragments}
+                        query QueryObject {{
+                            {} {{
+                                {tgt_cols}
+                            }} 
+                        }}
+                    "
+                }}"#,
+                    self.object
+                )
+            } else {
+                format!(
+                    r#"{{
+                    "query": "
+                        {fragments}
+                        query QueryObject($input: ID!) {{
+                            {}(id: $input) {{
+                                {tgt_cols}
+                            }} 
+                        }}
+                    ",
+                    "variables": {{
+                        "input": "{id_filter}"
+                    }}
+                }}"#,
+                    self.object_singular()
+                )
+            }
+        } else {
+            format!(
+                r#"{{
+                "query": "
+                    {fragments}
+                    query {{
+                        {}(first: {BATCH_SIZE}, after: {cursor}) {{
+                            nodes {{ {tgt_cols} }}
+                            pageInfo {{ hasNextPage endCursor }}
+                        }} 
+                    }}
+                "
+            }}"#,
+                self.object
+            )
+        };
         let body = query.split_ascii_whitespace().collect::<Vec<_>>().join(" ");
 
         Ok(http::Request {
@@ -177,13 +259,11 @@ impl ShopifyFdw {
 
         // make request to remote endpoint
         let req = self.create_request(ctx)?;
-        utils::report_info(&format!("==req: {:?}", req));
         let resp = http::post(&req)?;
         http::error_for_status(&resp).map_err(|err| format!("{}: {}", err, resp.body))?;
 
         // transform response to json
         let resp_json: JsonValue = serde_json::from_str(&resp.body).map_err(|e| e.to_string())?;
-        utils::report_info(&format!("==resp: {:?}", resp.body));
 
         // return when there are error messages in response
         if let Some(msg) = resp_json
@@ -195,11 +275,13 @@ impl ShopifyFdw {
 
         let resp_data = resp_json
             .pointer(&format!("/data/{}/nodes", self.object))
+            .or_else(|| resp_json.pointer(&format!("/data/{}", self.object)))
+            .or_else(|| resp_json.pointer(&format!("/data/{}", self.object_singular())))
             .and_then(|v| {
                 if v.is_array() {
                     v.as_array().cloned()
                 } else {
-                    None
+                    Some(vec![v.clone()])
                 }
             })
             .ok_or("cannot get query result data")?;
@@ -237,10 +319,15 @@ impl Guest for ShopifyFdw {
 
         let opts = ctx.get_options(&OptionsType::Server);
         let shop = opts.require("shop")?;
+
+        // make up base url from server options
         this.base_url = format!(
             "https://{}.myshopify.com/admin/api/2025-07/graphql.json",
             shop
         );
+        this.base_url = opts.require_or("api_url", &this.base_url);
+
+        // retrieve api access token
         let token = match opts.get("access_token") {
             Some(token) => token,
             None => {
@@ -338,11 +425,23 @@ impl Guest for ShopifyFdw {
     ) -> Result<Vec<String>, FdwError> {
         let mut ret = Vec::new();
         let objects = [
-            "products",
+            "app",
+            "businessEntities",
+            "collections",
+            "customerPaymentMethod",
             "customers",
-            "orders",
+            "draftOrders",
+            "fulfillment",
+            "fulfillmentOrders",
+            "inventoryLevel",
             "locations",
-            "draftorders",
+            "orders",
+            "productVariants",
+            "products",
+            "refund",
+            "return",
+            "shop",
+            "storeCreditAccount",
         ];
 
         for object in objects {

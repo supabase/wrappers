@@ -505,6 +505,34 @@ class MockServer(BaseHTTPRequestHandler):
   "success": true
 }
             '''
+        elif fdw == "shopify":
+            body = '''
+{
+  "data": {
+    "products": {
+      "nodes": [
+        {
+          "id": "gid://shopify/Product/9975063609658"
+        },
+        {
+          "id": "gid://shopify/Product/9975063904570"
+        }
+      ]
+    }
+  },
+  "extensions": {
+    "cost": {
+      "requestedQueryCost": 13,
+      "actualQueryCost": 7,
+      "throttleStatus": {
+        "maximumAvailable": 2000,
+        "currentlyAvailable": 1993,
+        "restoreRate": 100
+      }
+    }
+  }
+}
+            '''
         else:
             self.send_response(404)
             return

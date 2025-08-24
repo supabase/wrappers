@@ -433,6 +433,42 @@ mod tests {
                 .filter_map(|r| r.get_by_name::<&str, _>("display_name").unwrap())
                 .collect::<Vec<_>>();
             assert_eq!(results, vec!["Test"]);
+
+            // Shopify FDW test
+            c.update(
+                r#"CREATE SERVER shopify_server
+                     FOREIGN DATA WRAPPER wasm_wrapper
+                     OPTIONS (
+                       fdw_package_url 'file://../../../wasm-wrappers/fdw/target/wasm32-unknown-unknown/release/shopify_fdw.wasm',
+                       fdw_package_name 'supabase:shopify-fdw',
+                       fdw_package_version '>=0.1.0',
+                       api_url 'http://localhost:8096/shopify',
+                       shop 'test',
+                       access_token 'ccc'
+                     )"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(r#"CREATE SCHEMA IF NOT EXISTS shopify"#, None, &[])
+                .unwrap();
+            c.update(
+                r#"IMPORT FOREIGN SCHEMA shopify FROM SERVER shopify_server INTO shopify"#,
+                None,
+                &[],
+            )
+            .unwrap();
+
+            let results = c
+                .select(
+                    "SELECT id FROM shopify.products order by id",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("id").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(results, vec!["gid://shopify/Product/9975063609658", "gid://shopify/Product/9975063904570"]);
         });
     }
 }

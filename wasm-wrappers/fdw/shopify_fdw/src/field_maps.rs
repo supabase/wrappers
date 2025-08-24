@@ -1,23 +1,10 @@
 use std::collections::HashMap;
 
 // object field map
-// key: field name, value: (field type, GraphQL fragment, fragments)
+// key: field name
+// value: (field pg type, GraphQL query, dependent fragments)
 pub(super) type FieldMap = HashMap<String, (String, String, Vec<String>)>;
 
-// done: Location, Order, draftOrder, MetaField,
-// CustomerPaymentMethod, StoreCreditAccount, ProductOption
-// Collection, ProductVariant, 
-//
-// not do: Company, CompanyContact, CompanyLocation,
-// StandardMetafieldDefinitionTemplate, SubscriptionContract,
-// InventoryItem
-
-// todo: ,
-// , Media, App, Publication
-// SellingPlanGroup, SalesAgreement, CustomerVisit
-// FulfillmentOrder, Fulfillment, LineItem, BusinessEntity
-// PaymentTerms, Refund, RefundLineItem, Return, ShippingLine
-// OrderTransaction, InventoryLevel
 pub(super) fn get_field_map(object: &str) -> FieldMap {
     // fragments
     let mailing_address = "fragment MailingAddressFields on MailingAddress {
@@ -79,6 +66,8 @@ pub(super) fn get_field_map(object: &str) -> FieldMap {
     let metafield = "fragment MetafieldFields on Metafield {
         id
         key
+        namespace
+        type
         value
     }";
     let image = "fragment ImageFields on Image {
@@ -208,6 +197,148 @@ OrderRiskSummary {
         }
         recommendation
     }";
+    let staff_member = "fragment StaffMemberFields on StaffMember {
+        accountType
+        active
+        avatar { ...ImageFields }
+        email
+        exists
+        firstName
+        id
+        initials
+        isShopOwner
+        lastName
+        locale
+        name
+        phone
+        privateData {
+            accountSettingsUrl
+            createdAt
+        }
+    }";
+    let line_item = "fragment LineItemFields on LineItem {
+        currentQuantity
+        discountedTotalSet { ...MoneyBagFields }
+        discountedUnitPriceAfterAllDiscountsSet { ...MoneyBagFields }
+        discountedUnitPriceSet { ...MoneyBagFields }
+        id
+        isGiftCard
+        merchantEditable
+        name
+        nonFulfillableQuantity
+        originalTotalSet { ...MoneyBagFields }
+        originalUnitPriceSet { ...MoneyBagFields }
+        product { id }
+        quantity
+        refundableQuantity
+        requiresShipping
+        restockable
+        sku
+        taxable
+        taxLines { ...TaxLineFields }
+        title
+        totalDiscountSet { ...MoneyBagFields }
+        unfulfilledDiscountedTotalSet { ...MoneyBagFields }
+        unfulfilledOriginalTotalSet { ...MoneyBagFields }
+        unfulfilledQuantity
+        variant { id }
+        variantTitle
+        vendor
+    }";
+    let payment_terms = "fragment PaymentTermsFields on PaymentTerms {
+        draftOrder { id }
+        dueInDays
+        id
+        order { id }
+        overdue
+        paymentSchedules (first: 250) {
+            nodes {
+                completedAt
+                dueAt
+                id
+                issuedAt
+                paymentTerms { id }
+            }
+        }
+        paymentTermsName
+        paymentTermsType
+    }";
+    let refund_line_item = "fragment RefundLineItemFields on RefundLineItem {
+        id
+        lineItem { id }
+        location { id }
+        priceSet { ...MoneyBagFields }
+        quantity
+        restocked
+        restockType
+        subtotalSet { ...MoneyBagFields }
+        totalTaxSet { ...MoneyBagFields }
+    }";
+    let shipping_line = "fragment ShippingLineFields on ShippingLine {
+        carrierIdentifier
+        code
+        currentDiscountedPriceSet { ...MoneyBagFields }
+        custom
+        deliveryCategory
+        discountAllocations {
+            allocatedAmountSet { ...MoneyBagFields }
+            discountApplication {
+                allocationMethod
+                index
+                targetSelection
+                targetType
+                value
+            }
+        }
+        discountedPriceSet { ...MoneyBagFields }
+        id
+        isRemoved
+        originalPriceSet { ...MoneyBagFields }
+        phone
+        shippingRateHandle
+        source
+        taxLines { ...TaxLineFields }
+        title
+    }";
+    let order_transaction = "fragment OrderTransactionFields on OrderTransaction {
+        accountNumber
+        amountRoundingSet { ...MoneyBagFields }
+        amountSet { ...MoneyBagFields }
+        authorizationCode
+        authorizationExpiresAt
+        createdAt
+        currencyExchangeAdjustment {
+            adjustment { ...MoneyV2Fields }
+            finalAmountSet { ...MoneyV2Fields }
+            id
+            originalAmountSet { ...MoneyV2Fields }
+        }
+        device { id }
+        errorCode
+        fees {
+            amount { ...MoneyV2Fields }
+            flatFee { ...MoneyV2Fields }
+            flatFeeName
+            id
+            rate
+            rateName
+            taxAmount { ...MoneyV2Fields }
+            type
+        }
+        formattedGateway
+        gateway
+        id
+        kind
+        location { id }
+        manuallyCapturable
+        manualPaymentGateway
+        maximumRefundableV2 { ...MoneyV2Fields }
+        multiCapturable
+        order { id }
+        paymentId
+        status
+        user { id }
+    }";
 
     // field map
     let field_map = match object {
@@ -246,7 +377,16 @@ OrderRiskSummary {
                 "category",
                 ("jsonb", "{ ...TaxonomyCategoryFields }", vec![category]),
             ),
-            ("collections", ("jsonb", "(first: 250) { id }", vec![])),
+            (
+                "collections",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes { id }
+                    }",
+                    vec![],
+                ),
+            ),
             (
                 "combinedListing",
                 (
@@ -313,12 +453,17 @@ OrderRiskSummary {
             ("hasOutOfStockVariants", ("boolean", "", vec![])),
             ("hasVariantsThatRequiresComponents", ("boolean", "", vec![])),
             ("id", ("text", "", vec![])),
-            ("inCollection", ("boolean", "", vec![])),
             ("isGiftCard", ("boolean", "", vec![])),
             ("legacyResourceId", ("bigint", "", vec![])),
             (
                 "media",
-                ("jsonb", "(first: 250) { ...MediaFields }", vec![media]),
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes {...MediaFields }
+                    }",
+                    vec![media],
+                ),
             ),
             ("mediaCount", ("jsonb", "{ count precision }", vec![])),
             (
@@ -333,7 +478,32 @@ OrderRiskSummary {
             ),
             ("onlineStorePreviewUrl", ("text", "", vec![])),
             ("onlineStoreUrl", ("text", "", vec![])),
-            ("options", ("jsonb", "(first: 250) { id name }", vec![])),
+            (
+                "options",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        id
+                        name
+                        optionValues {
+                            hasVariants
+                            id
+                            linkedMetafieldValue
+                            name
+                            swatch {
+                                color
+                                image {
+                                    id
+                                    image { ...ImageFields }
+                                }
+                            }
+                        }
+                        position
+                        values
+                    }",
+                    vec![metafield, image],
+                ),
+            ),
             (
                 "priceRangeV2",
                 (
@@ -354,9 +524,9 @@ OrderRiskSummary {
                 (
                     "jsonb",
                     "(first: 250) {
-                        nodes: {
+                        nodes {
                             componentVariants (first: 250) {
-                                nodes: { id }
+                                nodes { id }
                             }
                             componentVariantsCount {
                                 count
@@ -391,9 +561,7 @@ OrderRiskSummary {
             ),
             ("productType", ("text", "", vec![])),
             ("publishedAt", ("timestamp", "", vec![])),
-            ("publishedInContext", ("boolean", "", vec![])),
             ("publishedOnCurrentPublication", ("boolean", "", vec![])),
-            ("publishedOnPublication", ("boolean", "", vec![])),
             ("requiresSellingPlan", ("boolean", "", vec![])),
             (
                 "resourcePublicationOnCurrentPublication",
@@ -724,7 +892,7 @@ OrderRiskSummary {
                         id
                         name
                     }",
-                    vec![image],
+                    vec![metafield, image],
                 ),
             ),
             (
@@ -818,7 +986,7 @@ OrderRiskSummary {
                 ("jsonb", "{ ...MoneyBagFields }", vec![money_v2, money_bag]),
             ),
             ("currentTotalWeight", ("bigint", "", vec![])),
-            ("customAttributes", ("jsonb", "", vec![])),
+            ("customAttributes", ("jsonb", "{ key value }", vec![])),
             ("customer", ("jsonb", "{ id }", vec![])),
             ("customerAcceptsMarketing", ("boolean", "", vec![])),
             (
@@ -877,7 +1045,7 @@ OrderRiskSummary {
                         initiatedAs
                         status
                     }",
-                    vec![mailing_address],
+                    vec![],
                 ),
             ),
             ("dutiesIncluded", ("boolean", "", vec![])),
@@ -930,9 +1098,9 @@ OrderRiskSummary {
                 (
                     "jsonb",
                     "(first: 250) {
-                        nodes { id }
+                        nodes { ...LineItemFields }
                     }",
-                    vec![],
+                    vec![money_v2, money_bag, tax_line, line_item],
                 ),
             ),
             (
@@ -966,7 +1134,7 @@ OrderRiskSummary {
                         id
                         name
                     }",
-                    vec![image],
+                    vec![metafield, image],
                 ),
             ),
             (
@@ -1023,7 +1191,10 @@ OrderRiskSummary {
                 ),
             ),
             ("paymentGatewayNames", ("text", "", vec![])),
-            ("paymentTerms", ("jsonb", "{ id }", vec![])),
+            (
+                "paymentTerms",
+                ("jsonb", "{ ...PaymentTermsFields }", vec![payment_terms]),
+            ),
             ("phone", ("text", "", vec![])),
             ("poNumber", ("text", "", vec![])),
             ("presentmentCurrencyCode", ("text", "", vec![])),
@@ -1035,16 +1206,7 @@ OrderRiskSummary {
                 "refundDiscrepancySet",
                 ("jsonb", "{ ...MoneyBagFields }", vec![money_v2, money_bag]),
             ),
-            (
-                "refunds",
-                (
-                    "jsonb",
-                    "(first: 250) {
-                       id
-                    }",
-                    vec![],
-                ),
-            ),
+            ("refunds", ("jsonb", "(first: 250) { id }", vec![])),
             ("registeredSourceUrl", ("text", "", vec![])),
             ("requiresShipping", ("boolean", "", vec![])),
             ("restockable", ("boolean", "", vec![])),
@@ -1076,15 +1238,24 @@ OrderRiskSummary {
                     vec![mailing_address],
                 ),
             ),
-            ("shippingLine", ("jsonb", "{ id }", vec![])),
+            (
+                "shippingLine",
+                (
+                    "jsonb",
+                    "{ ...ShippingLineFields }",
+                    vec![money_v2, money_bag, tax_line, shipping_line],
+                ),
+            ),
             (
                 "shippingLines",
                 (
                     "jsonb",
                     "(first: 250) {
-                        nodes { id }
+                        nodes {
+                            ...ShippingLineFields
+                        }
                     }",
-                    vec![],
+                    vec![money_v2, money_bag, tax_line, shipping_line],
                 ),
             ),
             (
@@ -1106,26 +1277,8 @@ OrderRiskSummary {
                 "staffMember",
                 (
                     "jsonb",
-                    "{
-                        accountType
-                        active
-                        avatar { ...ImageFields }
-                        email
-                        exists
-                        firstName
-                        id
-                        initials
-                        isShopOwner
-                        lastName
-                        locale
-                        name
-                        phone
-                        privateData {
-                            accountSettingsUrl
-                            createdAt
-                        }
-                    }",
-                    vec![image],
+                    "{ ...StaffMemberFields }",
+                    vec![metafield, image, staff_member],
                 ),
             ),
             ("statusPageUrl", ("text", "", vec![])),
@@ -1154,7 +1307,9 @@ OrderRiskSummary {
                                 }
                             }
                         }
-                        refundLineItems { id }
+                        refundLineItems {
+                            ...RefundLineItemFields
+                        }
                         shipping {
                             amountSet { ...MoneyBagFields }
                             maximumRefundableSet { ...MoneyBagFields }
@@ -1179,7 +1334,7 @@ OrderRiskSummary {
                         totalDutiesSet { ...MoneyBagFields }
                         totalTaxSet { ...MoneyBagFields }
                     }",
-                    vec![money_v2, money_bag, tax_line],
+                    vec![money_v2, money_bag, tax_line, refund_line_item],
                 ),
             ),
             ("tags", ("jsonb", "", vec![])),
@@ -1246,7 +1401,14 @@ OrderRiskSummary {
                 ("jsonb", "{ ...MoneyBagFields }", vec![money_v2, money_bag]),
             ),
             ("totalWeight", ("bigint", "", vec![])),
-            ("transactions", ("jsonb", "{ id }", vec![])),
+            (
+                "transactions",
+                (
+                    "jsonb",
+                    "{ ...OrderTransactionFields }",
+                    vec![money_v2, money_bag, order_transaction],
+                ),
+            ),
             (
                 "transactionsCount",
                 ("jsonb", "{ count precision }", vec![]),
@@ -1365,7 +1527,7 @@ OrderRiskSummary {
         ]),
 
         // ref: https://shopify.dev/docs/api/admin-graphql/latest/objects/draftorder
-        "draftorders" => HashMap::from([
+        "draftOrders" => HashMap::from([
             ("acceptAutomaticDiscounts", ("boolean", "", vec![])),
             ("allowDiscountCodesInCheckout", ("boolean", "", vec![])),
             ("allVariantPricesOverridden", ("boolean", "", vec![])),
@@ -1399,7 +1561,7 @@ OrderRiskSummary {
             ("completedAt", ("timestamp", "", vec![])),
             ("createdAt", ("timestamp", "", vec![])),
             ("currencyCode", ("text", "", vec![])),
-            ("customAttributes", ("jsonb", "", vec![])),
+            ("customAttributes", ("jsonb", "{ key value }", vec![])),
             ("customer", ("jsonb", "{ id }", vec![])),
             ("defaultCursor", ("text", "", vec![])),
             ("discountCodes", ("jsonb", "", vec![])),
@@ -1427,9 +1589,56 @@ OrderRiskSummary {
                 (
                     "jsonb",
                     "(first: 250) {
-                        nodes { id }
+                        nodes {
+                            appliedDiscount {
+                                amountSet { ...MoneyBagFields }
+                                description
+                                title
+                                value
+                                valueType
+                            }
+                            approximateDiscountedUnitPriceSet { ...MoneyBagFields }
+                            components { id } 
+                            custom
+                            customAttributes { key value }
+                            customAttributesV2 { key value }
+                            discountedTotalSet { ...MoneyBagFields }
+                            fulfillmentService {
+                                callbackUrl
+                                handle
+                                id
+                                inventoryManagement
+                                location { id }
+                                permitsSkuSharing
+                                requiresShippingMethod
+                                serviceName
+                                trackingSupport
+                                type
+                            }
+                            id
+                            image { ...ImageFields }
+                            isGiftCard
+                            name
+                            originalTotalSet { ...MoneyBagFields }
+                            originalUnitPriceSet { ...MoneyBagFields }
+                            originalUnitPriceWithCurrency { ...MoneyV2Fields }
+                            priceOverride { ...MoneyV2Fields }
+                            product { id }
+                            quantity
+                            requiresShipping
+                            sku
+                            taxable
+                            taxLines { ...TaxLineFields }
+                            title
+                            totalDiscountSet { ...MoneyBagFields }
+                            uuid
+                            variant { id }
+                            variantTitle
+                            vendor
+                            weight { unit value }
+                        }
                     }",
-                    vec![],
+                    vec![money_v2, money_bag, tax_line, metafield, image],
                 ),
             ),
             (
@@ -1465,7 +1674,10 @@ OrderRiskSummary {
             ("name", ("text", "", vec![])),
             ("note2", ("text", "", vec![])),
             ("order", ("jsonb", "{ id }", vec![])),
-            ("paymentTerms", ("jsonb", "{ id }", vec![])),
+            (
+                "paymentTerms",
+                ("jsonb", "{ ...PaymentTermsFields }", vec![payment_terms]),
+            ),
             ("phone", ("text", "", vec![])),
             (
                 "platformDiscounts",
@@ -1475,7 +1687,7 @@ OrderRiskSummary {
                         allocations {
                             id
                             quantity
-                            reductionAmount { ...MoneyBagFields }
+                            reductionAmount { ...MoneyV2Fields }
                             reductionAmountSet { ...MoneyBagFields }
                             target
                         }
@@ -1498,7 +1710,7 @@ OrderRiskSummary {
                         shortSummary
                         summary
                         title
-                        totalAmount { ...MoneyBagFields }
+                        totalAmount { ...MoneyV2Fields }
                         totalAmountPriceSet { ...MoneyBagFields }
                     }",
                     vec![event, metafield, money_v2, money_bag],
@@ -1517,7 +1729,14 @@ OrderRiskSummary {
                     vec![mailing_address],
                 ),
             ),
-            ("shippingLine", ("jsonb", "{ id }", vec![])),
+            (
+                "shippingLine",
+                (
+                    "jsonb",
+                    "{ ...ShippingLineFields }",
+                    vec![money_v2, money_bag, tax_line, shipping_line],
+                ),
+            ),
             ("status", ("text", "", vec![])),
             (
                 "subtotalPriceSet",
@@ -1573,114 +1792,8 @@ OrderRiskSummary {
             ),
         ]),
 
-        // ref: https://shopify.dev/docs/api/admin-graphql/latest/objects/metafield
-        "metafields" => HashMap::from([
-            ("compareDigest", ("text", "", vec![])),
-            ("createdAt", ("timestamp", "", vec![])),
-            (
-                "definition",
-                (
-                    "jsonb",
-                    "{
-                        access {
-                            admin
-                            customerAccount
-                            storefront
-                        }
-                        capabilities {
-                            adminFilterable {
-                                eligible
-                                enabled
-                                status
-                            }
-                            smartCollectionCondition {
-                                eligible
-                                enabled
-                            }
-                            uniqueValues {
-                                eligible
-                                enabled
-                            }
-                        }
-                        constraints {
-                            key
-                            values (first: 250) {
-                                nodes { value }
-                            }
-                        }
-                        description
-                        id
-                        key
-                        metafields (first: 250) {
-                            nodes { ...MetafieldFields }
-                        }
-                        metafieldsCount
-                        name
-                        namespace
-                        ownerType
-                        pinnedPosition
-                        standardTemplate {
-                            id
-                            name
-                            description
-                            key
-                        }
-                        type {
-                            category
-                            name
-                            supportedValidations {
-                                name
-                                type
-                            }
-                            supportsDefinitionMigrations
-                        }
-                        useAsCollectionCondition
-                        validations {
-                            name
-                            type
-                            value
-                        }
-                        validationStatus
-                    }",
-                    vec![metafield],
-                ),
-            ),
-            ("id", ("text", "", vec![])),
-            ("jsonValue", ("json", "", vec![])),
-            ("key", ("text", "", vec![])),
-            ("legacyResourceId", ("bigint", "", vec![])),
-            ("namespace", ("text", "", vec![])),
-            (
-                "owner",
-                (
-                    "jsonb",
-                    "{
-                        metafields (first: 250) {
-                            nodes { ...MetafieldFields }
-                        }
-                    }",
-                    vec![metafield],
-                ),
-            ),
-            ("ownerType", ("text", "", vec![])),
-            ("reference", ("text", "", vec![])),
-            (
-                "references",
-                (
-                    "jsonb",
-                    "(first: 250) {
-                        nodes { }
-                    }",
-                    vec![],
-                ),
-            ),
-            ("type", ("text", "", vec![])),
-            ("updatedAt", ("timestamp", "", vec![])),
-            ("value", ("text", "", vec![])),
-        ]),
-
         // ref: https://shopify.dev/docs/api/admin-graphql/latest/objects/customerpaymentmethod
-        "customerpaymentmethods" => HashMap::from([
+        "customerPaymentMethod" => HashMap::from([
             ("customer", ("jsonb", "{ id }", vec![])),
             ("id", ("text", "", vec![])),
             ("instrument", ("text", "", vec![])),
@@ -1699,7 +1812,7 @@ OrderRiskSummary {
         ]),
 
         // ref: https://shopify.dev/docs/api/admin-graphql/latest/objects/storecreditaccount
-        "storecreditaccounts" => HashMap::from([
+        "storeCreditAccount" => HashMap::from([
             ("balance", ("jsonb", "{ ...MoneyV2Fields }", vec![money_v2])),
             ("id", ("text", "", vec![])),
             (
@@ -1733,52 +1846,6 @@ OrderRiskSummary {
             ),
         ]),
 
-        // ref: https://shopify.dev/docs/api/admin-graphql/latest/objects/productoption
-        "productoptions" => HashMap::from([
-            ("id", ("text", "", vec![])),
-            (
-                "linkedMetafield",
-                (
-                    "jsonb",
-                    "{
-                        key
-                        namespace
-                    }",
-                    vec![],
-                ),
-            ),
-            ("name", ("text", "", vec![])),
-            (
-                "optionValues",
-                (
-                    "jsonb",
-                    "{
-                        hasVariants
-                        id
-                        linkedMetafieldValue
-                        name
-                        swatch {
-                            color
-                            image {
-                                alt
-                                createdAt
-                                fileStatus
-                                id
-                                image { ...ImageFields }
-                                mediaContentType
-                                mimeType
-                                status
-                                updatedAt
-                            }
-                        }
-                    }",
-                    vec![image],
-                ),
-            ),
-            ("position", ("bigint", "", vec![])),
-            ("values", ("jsonb", "", vec![])),
-        ]),
-
         // ref: https://shopify.dev/docs/api/admin-graphql/latest/objects/collection
         "collections" => HashMap::from([
             (
@@ -1808,9 +1875,11 @@ OrderRiskSummary {
                 ),
             ),
             ("handle", ("text", "", vec![])),
-            ("hasProduct", ("boolean", "", vec![])),
             ("id", ("text", "", vec![])),
-            ("image", ("jsonb", "{ ...ImageFields }", vec![image])),
+            (
+                "image",
+                ("jsonb", "{ ...ImageFields }", vec![metafield, image]),
+            ),
             ("legacyResourceId", ("bigint", "", vec![])),
             (
                 "metafields",
@@ -1828,7 +1897,6 @@ OrderRiskSummary {
             ),
             ("productsCount", ("jsonb", "{ count precision }", vec![])),
             ("publishedOnCurrentPublication", ("boolean", "", vec![])),
-            ("publishedOnPublication", ("boolean", "", vec![])),
             (
                 "resourcePublications",
                 (
@@ -1891,7 +1959,7 @@ OrderRiskSummary {
         ]),
 
         // ref: https://shopify.dev/docs/api/admin-graphql/latest/objects/productvariant
-        "productvariants" => HashMap::from([
+        "productVariants" => HashMap::from([
             ("availableForSale", ("boolean", "", vec![])),
             ("barcode", ("text", "", vec![])),
             ("compareAtPrice", ("text", "", vec![])),
@@ -2009,9 +2077,9 @@ OrderRiskSummary {
                 (
                     "jsonb",
                     "(first: 250) {
-                        nodes { id }
+                        nodes {...MediaFields }
                     }",
-                    vec![],
+                    vec![media],
                 ),
             ),
             (
@@ -2080,7 +2148,7 @@ OrderRiskSummary {
                         }
                         value
                     }",
-                    vec![],
+                    vec![metafield, image],
                 ),
             ),
             ("sellableOnlineQuantity", ("bigint", "", vec![])),
@@ -2121,6 +2189,1139 @@ OrderRiskSummary {
                 ),
             ),
             ("updatedAt", ("timestamp", "", vec![])),
+        ]),
+
+        // ref: https://shopify.dev/docs/api/admin-graphql/latest/objects/app
+        "app" => HashMap::from([
+            ("apiKey", ("text", "", vec![])),
+            ("appStoreAppUrl", ("text", "", vec![])),
+            ("appStoreDeveloperUrl", ("text", "", vec![])),
+            (
+                "availableAccessScopes",
+                ("jsonb", "{ description handle }", vec![]),
+            ),
+            (
+                "banner",
+                ("jsonb", "{ ...ImageFields }", vec![metafield, image]),
+            ),
+            ("description", ("text", "", vec![])),
+            ("developerName", ("text", "", vec![])),
+            ("developerType", ("text", "", vec![])),
+            ("embedded", ("boolean", "", vec![])),
+            (
+                "failedRequirements",
+                (
+                    "jsonb",
+                    "{
+                        action { id title url }
+                        message
+                    }",
+                    vec![],
+                ),
+            ),
+            ("features", ("jsonb", "", vec![])),
+            (
+                "feedback",
+                (
+                    "jsonb",
+                    "{
+                        app { id title }
+                        feedbackGeneratedAt
+                        link { label url }
+                        messages { field message }
+                        state
+                    }",
+                    vec![],
+                ),
+            ),
+            ("handle", ("text", "", vec![])),
+            (
+                "icon",
+                ("jsonb", "{ ...ImageFields }", vec![metafield, image]),
+            ),
+            ("id", ("text", "", vec![])),
+            ("installation", ("jsonb", "{ id launchUrl }", vec![])),
+            ("installUrl", ("text", "", vec![])),
+            ("isPostPurchaseAppInUse", ("boolean", "", vec![])),
+            (
+                "optionalAccessScopes",
+                ("jsonb", "{ description handle }", vec![]),
+            ),
+            ("previouslyInstalled", ("boolean", "", vec![])),
+            ("pricingDetails", ("text", "", vec![])),
+            ("pricingDetailsSummary", ("text", "", vec![])),
+            ("privacyPolicyUrl", ("text", "", vec![])),
+            ("publicCategory", ("text", "", vec![])),
+            ("published", ("boolean", "", vec![])),
+            (
+                "requestedAccessScopes",
+                ("jsonb", "{ description handle }", vec![]),
+            ),
+            (
+                "screenshots",
+                ("jsonb", "{ ...ImageFields }", vec![metafield, image]),
+            ),
+            ("shopifyDeveloped", ("boolean", "", vec![])),
+            ("title", ("text", "", vec![])),
+            ("uninstallMessage", ("text", "", vec![])),
+            ("webhookApiVersion", ("text", "", vec![])),
+        ]),
+
+        // ref: https://shopify.dev/docs/api/admin-graphql/latest/objects/fulfillmentorder
+        "fulfillmentOrders" => HashMap::from([
+            (
+                "assignedLocation",
+                (
+                    "jsonb",
+                    "{
+                        address1
+                        address2
+                        city
+                        countryCode
+                        location { id }
+                        name
+                        phone
+                        province
+                        zip
+                    }",
+                    vec![],
+                ),
+            ),
+            ("channelId", ("text", "", vec![])),
+            ("createdAt", ("timestamp", "", vec![])),
+            (
+                "deliveryMethod",
+                (
+                    "jsonb",
+                    "{
+                        additionalInformation {
+                            instructions
+                            phone
+                        }
+                        brandedPromise {
+                            handle
+                            name
+                        }
+                        id
+                        maxDeliveryDateTime
+                        methodType
+                        minDeliveryDateTime
+                        presentedName
+                        serviceCode
+                        sourceReference
+                    }",
+                    vec![],
+                ),
+            ),
+            (
+                "destination",
+                (
+                    "jsonb",
+                    "{
+                        address1
+                        address2
+                        city
+                        company
+                        countryCode
+                        email
+                        firstName
+                        id
+                        lastName
+                        location { id }
+                        phone
+                        province
+                        zip
+                    }",
+                    vec![],
+                ),
+            ),
+            ("fulfillAt", ("timestamp", "", vec![])),
+            ("fulfillBy", ("timestamp", "", vec![])),
+            (
+                "fulfillmentHolds",
+                (
+                    "jsonb",
+                    "{
+                        displayReason
+                        handle
+                        heldByApp { id }
+                        heldByRequestingApp
+                        id
+                        reason
+                        reasonNotes
+                    }",
+                    vec![],
+                ),
+            ),
+            (
+                "fulfillmentOrdersForMerge",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes { id }
+                    }",
+                    vec![],
+                ),
+            ),
+            (
+                "fulfillments",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes { id }
+                    }",
+                    vec![],
+                ),
+            ),
+            ("id", ("text", "", vec![])),
+            ("internationalDuties", ("jsonb", "{ incoterm }", vec![])),
+            (
+                "lineItems",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes {
+                            financialSummaries {
+                                approximateDiscountedUnitPriceSet { ...MoneyBagFields }
+                                discountAllocations {
+                                    approximateAllocatedAmountPerItem { ...MoneyBagFields }
+                                    discountApplication {
+                                        allocationMethod
+                                        targetSelection
+                                        targetType
+                                    }
+                                }
+                                originalUnitPriceSet { ...MoneyBagFields }
+                                quantity
+                            }
+                            id
+                            image { ...ImageFields }
+                            inventoryItemId
+                            lineItem { ...LineItemFields }
+                            productTitle
+                            remainingQuantity
+                            requiresShipping
+                            sku
+                            totalQuantity
+                            variant { id }
+                            variantTitle
+                            vendor
+                            warnings { description title }
+                            weight { unit value }
+                        }
+                    }",
+                    vec![money_v2, money_bag, tax_line, line_item, metafield, image],
+                ),
+            ),
+            (
+                "locationsForMove",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes {
+                            availableLineItems (first: 250) {
+                                nodes { id }
+                            }
+                            availableLineItemsCount {
+                                count
+                                precision
+                            }
+                            location { id }
+                            message
+                            movable
+                            unavailableLineItems (first: 250) {
+                                nodes { id }
+                            }
+                            unavailableLineItemsCount {
+                                count
+                                precision
+                            }
+                        }
+                    }",
+                    vec![],
+                ),
+            ),
+            (
+                "merchantRequests",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes {
+                            fulfillmentOrder { id }
+                            id
+                            kind
+                            message
+                            requestOptions
+                            responseData
+                            sentAt
+                        }
+                    }",
+                    vec![],
+                ),
+            ),
+            ("order", ("jsonb", "{ id }", vec![])),
+            ("orderId", ("text", "", vec![])),
+            ("orderName", ("text", "", vec![])),
+            ("orderProcessedAt", ("timestamp", "", vec![])),
+            ("requestStatus", ("text", "", vec![])),
+            ("status", ("text", "", vec![])),
+            (
+                "supportedActions",
+                ("jsonb", "{ action externalUrl }", vec![]),
+            ),
+            ("updatedAt", ("timestamp", "", vec![])),
+        ]),
+
+        // ref: https://shopify.dev/docs/api/admin-graphql/latest/objects/fulfillment
+        "fulfillment" => HashMap::from([
+            ("createdAt", ("timestamp", "", vec![])),
+            ("deliveredAt", ("timestamp", "", vec![])),
+            ("displayStatus", ("text", "", vec![])),
+            ("estimatedDeliveryAt", ("timestamp", "", vec![])),
+            (
+                "events",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes {
+                            ...EventFields
+                        }
+                    }",
+                    vec![event],
+                ),
+            ),
+            (
+                "fulfillmentLineItems",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes { id }
+                    }",
+                    vec![],
+                ),
+            ),
+            (
+                "fulfillmentOrders",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes { id }
+                    }",
+                    vec![],
+                ),
+            ),
+            ("id", ("text", "", vec![])),
+            ("inTransitAt", ("timestamp", "", vec![])),
+            ("legacyResourceId", ("bigint", "", vec![])),
+            ("location", ("jsonb", "{ id }", vec![])),
+            ("name", ("text", "", vec![])),
+            ("order", ("jsonb", "{ id }", vec![])),
+            (
+                "originAddress",
+                (
+                    "jsonb",
+                    "{
+                        address1
+                        address2
+                        city
+                        countryCode
+                        provinceCode
+                        zip
+                    }",
+                    vec![],
+                ),
+            ),
+            ("requiresShipping", ("boolean", "", vec![])),
+            (
+                "service",
+                (
+                    "jsonb",
+                    "{
+                        callbackUrl
+                        handle
+                        id
+                        inventoryManagement
+                        location { id }
+                        permitsSkuSharing
+                        requiresShippingMethod
+                        serviceName
+                        trackingSupport
+                        type
+                    }",
+                    vec![],
+                ),
+            ),
+            ("status", ("text", "", vec![])),
+            ("totalQuantity", ("bigint", "", vec![])),
+            (
+                "trackingInfo",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        company
+                        number
+                        url
+                    }",
+                    vec![],
+                ),
+            ),
+            ("updatedAt", ("timestamp", "", vec![])),
+        ]),
+
+        // ref: https://shopify.dev/docs/api/admin-graphql/latest/objects/businessentity
+        "businessEntities" => HashMap::from([
+            (
+                "address",
+                (
+                    "jsonb",
+                    "{
+                        address1
+                        address2
+                        city
+                        countryCode
+                        province
+                        zip
+                    }",
+                    vec![],
+                ),
+            ),
+            ("archived", ("boolean", "", vec![])),
+            ("companyName", ("text", "", vec![])),
+            ("displayName", ("text", "", vec![])),
+            ("id", ("text", "", vec![])),
+            ("primary", ("boolean", "", vec![])),
+            (
+                "shopifyPaymentsAccount",
+                (
+                    "jsonb",
+                    "{
+                        accountOpenerName
+                        activated
+                        balance { ...MoneyV2Fields }
+                        balanceTransactions (first: 250) {
+                            nodes { id }
+                        }
+                        bankAccounts (first: 250) {
+                            nodes {
+                                accountNumberLastDigits
+                                bankName
+                                country
+                                createdAt
+                                currency
+                                id
+                                payouts (first: 250) {
+                                    nodes { id }
+                                }
+                                status
+                            }
+                        }
+                        chargeStatementDescriptors {
+                            default
+                            prefix
+                        }
+                        country
+                        defaultCurrency
+                        disputes (first: 250) {
+                            nodes { id }
+                        }
+                        id
+                        onboardable
+                        payouts (first: 250) {
+                            nodes { id }
+                        }
+                        payoutSchedule {
+                            interval
+                            monthlyAnchor
+                            weeklyAnchor
+                        }
+                        payoutStatementDescriptor
+                    }",
+                    vec![money_v2],
+                ),
+            ),
+        ]),
+
+        // ref: https://shopify.dev/docs/api/admin-graphql/latest/objects/refund
+        "refund" => HashMap::from([
+            ("createdAt", ("timestamp", "", vec![])),
+            (
+                "duties",
+                (
+                    "jsonb",
+                    "{
+                        amountSet { ...MoneyBagFields }
+                        originalDuty {
+                            countryCodeOfOrigin
+                            harmonizedSystemCode
+                            id
+                            price { ...MoneyBagFields }
+                            taxLines { ...TaxLineFields }
+                        }
+                    }",
+                    vec![money_v2, money_bag, tax_line],
+                ),
+            ),
+            ("id", ("text", "", vec![])),
+            ("legacyResourceId", ("bigint", "", vec![])),
+            ("note", ("text", "", vec![])),
+            ("order", ("jsonb", "{ id }", vec![])),
+            (
+                "orderAdjustments",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes {
+                            amountSet { ...MoneyBagFields }
+                            id
+                            reason
+                            taxAmountSet { ...MoneyBagFields }
+                        }
+                    }",
+                    vec![money_v2, money_bag],
+                ),
+            ),
+            (
+                "refundLineItems",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes {
+                            ...RefundLineItemFields
+                        }
+                    }",
+                    vec![money_v2, money_bag, refund_line_item],
+                ),
+            ),
+            (
+                "refundShippingLines",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes {
+                            id
+                            shippingLine {
+                                carrierIdentifier
+                                code
+                                currentDiscountedPriceSet { ...MoneyBagFields }
+                                custom
+                                deliveryCategory
+                                discountAllocations {
+                                    allocatedAmountSet { ...MoneyBagFields }
+                                    discountApplication {
+                                        allocationMethod
+                                        index
+                                        targetSelection
+                                        targetType
+                                        value
+                                    }
+                                }
+                                discountedPriceSet { ...MoneyBagFields }
+                                id
+                                isRemoved
+                                originalPriceSet { ...MoneyBagFields }
+                                phone
+                                shippingRateHandle
+                                source
+                                taxLines { ...TaxLineFields }
+                                title
+                            }
+                            subtotalAmountSet { ...MoneyBagFields }
+                            taxAmountSet { ...MoneyBagFields }
+                        }
+                    }",
+                    vec![money_v2, money_bag, tax_line],
+                ),
+            ),
+            ("return", ("jsonb", "{ id }", vec![])),
+            (
+                "staffMember",
+                (
+                    "jsonb",
+                    "{ ...StaffMemberFields }",
+                    vec![metafield, image, staff_member],
+                ),
+            ),
+            (
+                "totalRefundedSet",
+                ("jsonb", "{ ...MoneyBagFields }", vec![money_v2, money_bag]),
+            ),
+            (
+                "transactions",
+                (
+                    "jsonb",
+                    "{ ...OrderTransactionFields }",
+                    vec![money_v2, money_bag, order_transaction],
+                ),
+            ),
+            ("updatedAt", ("timestamp", "", vec![])),
+        ]),
+
+        // ref: https://shopify.dev/docs/api/admin-graphql/latest/objects/return
+        "return" => HashMap::from([
+            ("closedAt", ("timestamp", "", vec![])),
+            ("createdAt", ("timestamp", "", vec![])),
+            ("decline", ("jsonb", "{ note reason }", vec![])),
+            (
+                "exchangeLineItems",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes {
+                            id
+                            lineItems { id }
+                            processableQuantity
+                            processedQuantity
+                            quantity
+                            unprocessedQuantity
+                            variantId
+                        }
+                    }",
+                    vec![],
+                ),
+            ),
+            ("id", ("text", "", vec![])),
+            ("name", ("text", "", vec![])),
+            ("order", ("jsonb", "{ id }", vec![])),
+            (
+                "refunds",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes { id }
+                    }",
+                    vec![],
+                ),
+            ),
+            ("requestApprovedAt", ("timestamp", "", vec![])),
+            (
+                "returnLineItems",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes {
+                            customerNote
+                            id
+                            processableQuantity
+                            processedQuantity
+                            quantity
+                            refundableQuantity
+                            refundedQuantity
+                            returnReason
+                            returnReasonNote
+                            unprocessedQuantity
+                        }
+                    }",
+                    vec![],
+                ),
+            ),
+            (
+                "returnShippingFees",
+                (
+                    "jsonb",
+                    "{
+                        amountSet { ...MoneyBagFields }
+                        id
+                    }",
+                    vec![money_v2, money_bag],
+                ),
+            ),
+            (
+                "reverseFulfillmentOrders",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes {
+                            id
+                            lineItems (first: 250) {
+                                nodes { id }
+                            }
+                            order { id }
+                            reverseDeliveries (first: 250) {
+                                nodes { id }
+                            }
+                            status
+                            thirdPartyConfirmation {
+                                    status
+                            }
+                        }
+                    }",
+                    vec![],
+                ),
+            ),
+            ("status", ("text", "", vec![])),
+            ("totalQuantity", ("bigint", "", vec![])),
+        ]),
+
+        // ref: https://shopify.dev/docs/api/admin-graphql/latest/objects/inventorylevel
+        "inventoryLevel" => HashMap::from([
+            ("canDeactivate", ("boolean", "", vec![])),
+            ("createdAt", ("timestamp", "", vec![])),
+            ("deactivationAlert", ("text", "", vec![])),
+            ("id", ("text", "", vec![])),
+            ("item", ("jsonb", "{ id sku }", vec![])),
+            ("location", ("jsonb", "{ id }", vec![])),
+            (
+                "scheduledChanges",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes {
+                            expectedAt
+                            fromName
+                            inventoryLevel { id }
+                            ledgerDocumentUri
+                            quantity
+                            toName
+                        }
+                    }",
+                    vec![],
+                ),
+            ),
+            ("updatedAt", ("timestamp", "", vec![])),
+        ]),
+
+        // ref: https://shopify.dev/docs/api/admin-graphql/latest/objects/shop
+        "shop" => HashMap::from([
+            (
+                "accountOwner",
+                (
+                    "jsonb",
+                    "{ ...StaffMemberFields }",
+                    vec![metafield, image, staff_member],
+                ),
+            ),
+            (
+                "alerts",
+                (
+                    "jsonb",
+                    "{
+                        action {
+                            title
+                            url
+                        }
+                        description
+                    }",
+                    vec![],
+                ),
+            ),
+            (
+                "allProductCategoriesList",
+                (
+                    "jsonb",
+                    "{
+                        ancestorIds
+                        childrenIds
+                        fullName
+                        id
+                        isArchived
+                        isLeaf
+                        isRoot
+                        level
+                        name
+                        parentId
+                    }",
+                    vec![],
+                ),
+            ),
+            (
+                "availableChannelApps",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes { id }
+                    }",
+                    vec![],
+                ),
+            ),
+            (
+                "billingAddress",
+                (
+                    "jsonb",
+                    "{
+                        address1
+                        address2
+                        city
+                        company
+                        coordinatesValidated
+                        country
+                        countryCodeV2
+                        formatted
+                        formattedArea
+                        id
+                        latitude
+                        longitude
+                        phone
+                        province
+                        provinceCode
+                        zip
+                    }",
+                    vec![],
+                ),
+            ),
+            (
+                "channelDefinitionsForInstalledChannels",
+                (
+                    "jsonb",
+                    "{
+                        channelDefinitions {
+                            channelName
+                            handle
+                            id
+                            isMarketplace
+                            subChannelName
+                        }
+                        channelName
+                    }",
+                    vec![],
+                ),
+            ),
+            ("checkoutApiSupported", ("boolean", "", vec![])),
+            ("contactEmail", ("text", "", vec![])),
+            (
+                "countriesInShippingZones",
+                (
+                    "jsonb",
+                    "{
+                        countryCodes
+                        includeRestOfWorld
+                    }",
+                    vec![],
+                ),
+            ),
+            ("createdAt", ("timestamp", "", vec![])),
+            ("currencyCode", ("text", "", vec![])),
+            (
+                "currencyFormats",
+                (
+                    "jsonb",
+                    "{
+                        moneyFormat
+                        moneyInEmailsFormat
+                        moneyWithCurrencyFormat
+                        moneyWithCurrencyInEmailsFormat
+                    }",
+                    vec![],
+                ),
+            ),
+            (
+                "currencySettings",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes {
+                            currencyCode
+                            currencyName
+                            enabled
+                            manualRate
+                            rateUpdatedAt
+                        }
+                    }",
+                    vec![],
+                ),
+            ),
+            ("customerAccounts", ("text", "", vec![])),
+            (
+                "customerAccountsV2",
+                (
+                    "jsonb",
+                    "{
+                        customerAccountsVersion
+                        loginLinksVisibleOnStorefrontAndCheckout
+                        loginRequiredAtCheckout
+                        url
+                    }",
+                    vec![],
+                ),
+            ),
+            ("customerTags", ("jsonb", "(first: 250) { nodes }", vec![])),
+            ("description", ("text", "", vec![])),
+            (
+                "draftOrderTags",
+                ("jsonb", "(first: 250) { nodes }", vec![]),
+            ),
+            ("email", ("text", "", vec![])),
+            ("enabledPresentmentCurrencies", ("text", "", vec![])),
+            (
+                "entitlements",
+                (
+                    "jsonb",
+                    "{
+                        markets {
+                            b2b {
+                                catalogs { enabled }
+                                enabled
+                            }
+                            regions {
+                                catalogs { enabled }
+                                enabled
+                            }
+                            retail {
+                                catalogs { enabled }
+                                enabled
+                            }
+                            themes { enabled }
+                        }
+                    }",
+                    vec![],
+                ),
+            ),
+            (
+                "features",
+                (
+                    "jsonb",
+                    "{
+                        avalaraAvatax
+                        branding
+                        bundles {
+                            eligibleForBundles
+                            ineligibilityReason
+                            sellsBundles
+                        }
+                        captcha
+                        cartTransform {
+                            eligibleOperations {
+                                expandOperation
+                                mergeOperation
+                                updateOperation
+                            }
+                        }
+                        dynamicRemarketing
+                        eligibleForSubscriptionMigration
+                        eligibleForSubscriptions
+                        giftCards
+                        harmonizedSystemCode
+                        legacySubscriptionGatewayEnabled
+                        liveView
+                        paypalExpressSubscriptionGatewayStatus
+                        reports
+                        sellsSubscriptions
+                        showMetrics
+                        storefront
+                        unifiedMarkets
+                        usingShopifyBalance
+                    }",
+                    vec![],
+                ),
+            ),
+            (
+                "fulfillmentServices",
+                (
+                    "jsonb",
+                    "{
+                        callbackUrl
+                        handle
+                        id
+                        inventoryManagement
+                        location { id }
+                        permitsSkuSharing
+                        requiresShippingMethod
+                        serviceName
+                        trackingSupport
+                        type
+                    }",
+                    vec![],
+                ),
+            ),
+            ("ianaTimezone", ("text", "", vec![])),
+            ("id", ("text", "", vec![])),
+            (
+                "marketingSmsConsentEnabledAtCheckout",
+                ("boolean", "", vec![]),
+            ),
+            (
+                "merchantApprovalSignals",
+                (
+                    "jsonb",
+                    "{
+                        identityVerified
+                        verifiedByShopify
+                        verifiedByShopifyTier
+                    }",
+                    vec![],
+                ),
+            ),
+            (
+                "metafields",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes { ...MetafieldFields }
+                    }",
+                    vec![metafield],
+                ),
+            ),
+            ("myshopifyDomain", ("text", "", vec![])),
+            ("name", ("text", "", vec![])),
+            (
+                "navigationSettings",
+                (
+                    "jsonb",
+                    "{
+                        id
+                        title
+                        url
+                    }",
+                    vec![],
+                ),
+            ),
+            ("orderNumberFormatPrefix", ("text", "", vec![])),
+            ("orderNumberFormatSuffix", ("text", "", vec![])),
+            (
+                "orderTags",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes
+                    }",
+                    vec![],
+                ),
+            ),
+            (
+                "paymentSettings",
+                ("jsonb", "{ supportedDigitalWallets }", vec![]),
+            ),
+            (
+                "plan",
+                (
+                    "jsonb",
+                    "{
+                        partnerDevelopment
+                        publicDisplayName
+                        shopifyPlus
+                    }",
+                    vec![],
+                ),
+            ),
+            (
+                "primaryDomain",
+                (
+                    "jsonb",
+                    "{
+                        host
+                        id
+                        localization {
+                            alternateLocales
+                            country
+                            defaultLocale
+                        }
+                        marketWebPresence {
+                            alternateLocales {
+                                locale
+                                marketWebPresences { id }
+                                name
+                                primary
+                                published
+                            }
+                            defaultLocale {
+                                locale
+                                name
+                                primary
+                                published
+                            }
+                            domain {
+                                host
+                                id
+                                localization {
+                                    alternateLocales
+                                    country
+                                    defaultLocale
+                                }
+                                marketWebPresence { id }
+                                sslEnabled
+                                url
+                            }
+                            id
+                            markets (first: 250) {
+                                nodes { id name }
+                            }
+                            rootUrls {
+                                locale
+                                url
+                            }
+                            subfolderSuffix
+                        }
+                        sslEnabled
+                        url
+                    }",
+                    vec![],
+                ),
+            ),
+            (
+                "resourceLimits",
+                (
+                    "jsonb",
+                    "{
+                        locationLimit
+                        maxProductOptions
+                        maxProductVariants
+                        redirectLimitReached
+                    }",
+                    vec![],
+                ),
+            ),
+            ("richTextEditorUrl", ("text", "", vec![])),
+            (
+                "searchFilters",
+                (
+                    "jsonb",
+                    "{
+                        productAvailability {
+                            label
+                            value
+                        }
+                    }",
+                    vec![],
+                ),
+            ),
+            ("setupRequired", ("boolean", "", vec![])),
+            ("shipsToCountries", ("json", "", vec![])),
+            ("shopOwnerName", ("text", "", vec![])),
+            (
+                "shopPolicies",
+                (
+                    "jsonb",
+                    "{
+                        body
+                        createdAt
+                        id
+                        title
+                        type
+                        updatedAt
+                        url
+                    }",
+                    vec![],
+                ),
+            ),
+            (
+                "storefrontAccessTokens",
+                (
+                    "jsonb",
+                    "(first: 250) {
+                        nodes {
+                            accessScopes {
+                                description
+                                handle
+                            }
+                            accessToken
+                            createdAt
+                            id
+                            title
+                            updatedAt
+                        }
+                    }",
+                    vec![],
+                ),
+            ),
+            ("taxesIncluded", ("boolean", "", vec![])),
+            ("taxShipping", ("boolean", "", vec![])),
+            ("timezoneAbbreviation", ("text", "", vec![])),
+            ("timezoneOffset", ("text", "", vec![])),
+            ("timezoneOffsetMinutes", ("bigint", "", vec![])),
+            ("transactionalSmsDisabled", ("boolean", "", vec![])),
+            ("unitSystem", ("text", "", vec![])),
+            ("updatedAt", ("timestamp", "", vec![])),
+            ("url", ("text", "", vec![])),
+            ("weightUnit", ("text", "", vec![])),
         ]),
 
         _ => HashMap::new(),

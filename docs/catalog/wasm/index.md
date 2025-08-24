@@ -49,18 +49,6 @@ Foreign data wrappers built with Wasm which can be used on Supabase platform.
     :octicons-code-24: [source](https://github.com/supabase/wrappers/tree/wasm_clerk_fdw_v0.1.0/wasm-wrappers/fdw/clerk_fdw) &nbsp;
     :material-file-document: [docs](../clerk.md)
 
-- :simple-webassembly: &nbsp; **[Gravatar](../gravatar.md)**
-
-    ----
-
-    Foreign data wrapper for [Gravatar](https://gravatar.com/).
-
-    Supported by [Automattic](https://automattic.com/)
-
-    :octicons-tag-24: [v0.2.0](https://github.com/Automattic/gravatar-wasm-fdw/releases/tag/v0.2.0) &nbsp;
-    :octicons-code-24: [source](https://github.com/Automattic/gravatar-wasm-fdw) &nbsp;
-    :material-file-document: [docs](../gravatar.md)
-
 - :simple-webassembly: &nbsp; **[Cloudflare D1](../cfd1.md)**
 
     ----
@@ -72,6 +60,18 @@ Foreign data wrappers built with Wasm which can be used on Supabase platform.
     :octicons-tag-24: [v0.1.0](https://github.com/supabase/wrappers/releases/tag/cfd1_fdw_v0.1.0) &nbsp;
     :octicons-code-24: [source](https://github.com/supabase/wrappers/tree/wasm_cfd1_fdw_v0.1.0/wasm-wrappers/fdw/cfd1_fdw) &nbsp;
     :material-file-document: [docs](../cfd1.md)
+
+- :simple-webassembly: &nbsp; **[Gravatar](../gravatar.md)**
+
+    ----
+
+    Foreign data wrapper for [Gravatar](https://gravatar.com/).
+
+    Supported by [Automattic](https://automattic.com/)
+
+    :octicons-tag-24: [v0.2.0](https://github.com/Automattic/gravatar-wasm-fdw/releases/tag/v0.2.0) &nbsp;
+    :octicons-code-24: [source](https://github.com/Automattic/gravatar-wasm-fdw) &nbsp;
+    :material-file-document: [docs](../gravatar.md)
 
 - :simple-webassembly: &nbsp; **[HubSpot](../hubspot.md)**
 
@@ -120,6 +120,18 @@ Foreign data wrappers built with Wasm which can be used on Supabase platform.
     :octicons-tag-24: [v0.1.1](https://github.com/supabase/wrappers/releases/tag/wasm_paddle_fdw_v0.1.1) &nbsp;
     :octicons-code-24: [source](https://github.com/supabase/wrappers/tree/wasm_paddle_fdw_v0.1.1/wasm-wrappers/fdw/paddle_fdw) &nbsp;
     :material-file-document: [docs](../paddle.md)
+
+- :simple-webassembly: &nbsp; **[Shopify](../shopify.md)**
+
+    ----
+
+    Foreign data wrapper for [Shopify](https://shopify.com/).
+
+    Supported by [Supabase](https://www.supabase.com)
+
+    :octicons-tag-24: [v0.1.0](https://github.com/supabase/wrappers/releases/tag/wasm_shopify_fdw_v0.1.0) &nbsp;
+    :octicons-code-24: [source](https://github.com/supabase/wrappers/tree/wasm_shopify_fdw_v0.1.0/wasm-wrappers/fdw/shopify_fdw) &nbsp;
+    :material-file-document: [docs](../shopify.md)
 
 - :simple-webassembly: &nbsp; **[Snowflake](../snowflake.md)**
 

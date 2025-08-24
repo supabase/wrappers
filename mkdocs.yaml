@@ -39,6 +39,7 @@ nav:
           - Notion: "catalog/notion.md"
           - Orb: "catalog/orb.md"
           - Paddle: "catalog/paddle.md"
+          - Shopify: "catalog/shopify.md"
           - Slack: "catalog/slack.md"
           - Snowflake: "catalog/snowflake.md"
   - Guides:
