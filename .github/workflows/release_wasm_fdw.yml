@@ -57,7 +57,7 @@ jobs:
           method: sha256
           output: wasm-wrappers/fdw/${{ steps.extract_info.outputs.PROJECT }}/checksum.txt
           patterns: |
-            ./wasm-wrappers/fdw/${{ steps.extract_info.outputs.PROJECT }}/target/wasm32-unknown-unknown/release/*.wasm
+            ./wasm-wrappers/fdw/target/wasm32-unknown-unknown/release/${{ steps.extract_info.outputs.PROJECT }}.wasm
 
       - name: Get project metadata JSON
         id: metadata
