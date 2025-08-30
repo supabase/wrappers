@@ -17,7 +17,7 @@ The Shopify Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you
 
 | Version | Wasm Package URL                                                                                    | Checksum                                                           | Required Wrappers Version |
 | ------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------- |
-| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_shopify_fdw_v0.1.0/shopify_fdw.wasm`           | `tbd` | >=0.5.0                   |
+| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_shopify_fdw_v0.1.0/shopify_fdw.wasm`   | `96ff21191d46f60cddca7ee456b6f6ddf206602d63b8a0e97243a2a8d1303166` | >=0.5.0                   |
 
 ## Preparation
 
@@ -67,7 +67,7 @@ We need to provide Postgres with the credentials to access Shopify and any addit
         fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_shopify_fdw_v0.1.0/shopify_fdw.wasm',
         fdw_package_name 'supabase:shopify-fdw',
         fdw_package_version '0.1.0',
-        fdw_package_checksum 'tbd',
+        fdw_package_checksum '96ff21191d46f60cddca7ee456b6f6ddf206602d63b8a0e97243a2a8d1303166',
         shop '<Shop_ID>',  -- Shop ID, e.g. teststore-0b5a
         access_token_id '<key_ID>' -- The Key ID from above.
       );
@@ -82,7 +82,7 @@ We need to provide Postgres with the credentials to access Shopify and any addit
         fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_shopify_fdw_v0.1.0/shopify_fdw.wasm',
         fdw_package_name 'supabase:shopify-fdw',
         fdw_package_version '0.1.0',
-        fdw_package_checksum 'tbd',
+        fdw_package_checksum '96ff21191d46f60cddca7ee456b6f6ddf206602d63b8a0e97243a2a8d1303166',
         shop '<Shop_ID>',  -- Shop ID, e.g. teststore-0b5a
         access_token 'shpat_6c3a2...'  -- Shopify Admin Access Token
       );
