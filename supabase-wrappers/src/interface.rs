@@ -330,7 +330,11 @@ impl FromDatum for Cell {
                 JsonB::from_datum(datum, is_null).map(Cell::Json)
             }
             PgOid::BuiltIn(PgBuiltInOids::BYTEAOID) => {
-                Some(Cell::Bytea(datum.cast_mut_ptr::<bytea>()))
+                if is_null {
+                    None
+                } else {
+                    Some(Cell::Bytea(datum.cast_mut_ptr::<bytea>()))
+                }
             }
             PgOid::BuiltIn(PgBuiltInOids::UUIDOID) => {
                 Uuid::from_datum(datum, is_null).map(Cell::Uuid)
