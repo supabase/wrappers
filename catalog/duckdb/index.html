@@ -1096,6 +1096,8 @@
       
         
       
+        
+      
     
     
       
@@ -1324,6 +1326,27 @@
   
   <span class="md-ellipsis">
     Paddle
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../shopify/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Shopify
   </span>
   
 
@@ -2743,7 +2766,7 @@
 <span class="w">    </span><span class="n">warehouse</span><span class="w"> </span><span class="s1">&#39;my_warehouse&#39;</span><span class="p">,</span>
 
 <span class="w">    </span><span class="c1">-- R2 Data Catalog URI</span>
-<span class="w">    </span><span class="n">catalog_uri</span><span class="w"> </span><span class="s1">&#39;https://catalog.cloudflarestorage.com/1a4d06e707l56a1a724719292be42e3a/r2-data-catalog&#39;</span>
+<span class="w">    </span><span class="n">catalog_uri</span><span class="w"> </span><span class="s1">&#39;catalog.cloudflarestorage.com/1a4d06e707l56a1a724719292be42e3a/r2-data-catalog&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 </div>
@@ -2773,7 +2796,7 @@
 <span class="w">    </span><span class="n">warehouse</span><span class="w"> </span><span class="s1">&#39;my_warehouse&#39;</span><span class="p">,</span>
 
 <span class="w">    </span><span class="c1">-- R2 Data Catalog URI</span>
-<span class="w">    </span><span class="n">catalog_uri</span><span class="w"> </span><span class="s1">&#39;https://catalog.cloudflarestorage.com/1a4d06e707l56a1a724719292be42e3a/r2-data-catalog&#39;</span>
+<span class="w">    </span><span class="n">catalog_uri</span><span class="w"> </span><span class="s1">&#39;catalog.cloudflarestorage.com/1a4d06e707l56a1a724719292be42e3a/r2-data-catalog&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 </div>
@@ -2980,7 +3003,9 @@
 <span class="normal">18</span>
 <span class="normal">19</span>
 <span class="normal">20</span>
-<span class="normal">21</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">duckdb_server</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">duckdb_server</span>
 <span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">duckdb_wrapper</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="k">type</span><span class="w"> </span><span class="s1">&#39;lakekeeper&#39;</span><span class="p">,</span>
@@ -2998,8 +3023,10 @@
 <span class="w">    </span><span class="c1">-- Warehouse name</span>
 <span class="w">    </span><span class="n">warehouse</span><span class="w"> </span><span class="s1">&#39;warehouse&#39;</span><span class="p">,</span>
 
+<span class="w">    </span><span class="n">use_ssl</span><span class="w"> </span><span class="s1">&#39;false&#39;</span><span class="p">,</span>
+
 <span class="w">    </span><span class="c1">-- Lakekeeper REST Catalog URI</span>
-<span class="w">    </span><span class="n">catalog_uri</span><span class="w"> </span><span class="s1">&#39;http://lakekeeper:8181/catalog&#39;</span>
+<span class="w">    </span><span class="n">catalog_uri</span><span class="w"> </span><span class="s1">&#39;lakekeeper:8181/catalog&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 </div>
@@ -3024,7 +3051,9 @@
 <span class="normal">18</span>
 <span class="normal">19</span>
 <span class="normal">20</span>
-<span class="normal">21</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">duckdb_server</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">duckdb_server</span>
 <span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">duckdb_wrapper</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="k">type</span><span class="w"> </span><span class="s1">&#39;lakekeeper&#39;</span><span class="p">,</span>
@@ -3042,8 +3071,10 @@
 <span class="w">    </span><span class="c1">-- Warehouse name</span>
 <span class="w">    </span><span class="n">warehouse</span><span class="w"> </span><span class="s1">&#39;warehouse&#39;</span><span class="p">,</span>
 
+<span class="w">    </span><span class="n">use_ssl</span><span class="w"> </span><span class="s1">&#39;false&#39;</span><span class="p">,</span>
+
 <span class="w">    </span><span class="c1">-- Lakekeeper REST Catalog URI</span>
-<span class="w">    </span><span class="n">catalog_uri</span><span class="w"> </span><span class="s1">&#39;http://lakekeeper:8181/catalog&#39;</span>
+<span class="w">    </span><span class="n">catalog_uri</span><span class="w"> </span><span class="s1">&#39;lakekeeper:8181/catalog&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 </div>
@@ -3601,7 +3632,7 @@
 <span class="w">    </span><span class="k">type</span><span class="w"> </span><span class="s1">&#39;r2_catalog&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">token</span><span class="w"> </span><span class="s1">&#39;&lt;R2 API token&gt;&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">warehouse</span><span class="w"> </span><span class="s1">&#39;2b303ef0293bc91a0217a0381af14a3e_r2-data-catalog-tutorial&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">catalog_uri</span><span class="w"> </span><span class="s1">&#39;https://catalog.cloudflarestorage.com/2b303ef0293bc91a0217a0381af14a3e/r2-data-catalog-tutorial&#39;</span>
+<span class="w">    </span><span class="n">catalog_uri</span><span class="w"> </span><span class="s1">&#39;catalog.cloudflarestorage.com/2b303ef0293bc91a0217a0381af14a3e/r2-data-catalog-tutorial&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 <p>Then, import all the tables in <code>default</code> namespace and query it:</p>
