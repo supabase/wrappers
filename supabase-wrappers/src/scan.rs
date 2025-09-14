@@ -304,10 +304,15 @@ unsafe fn assign_paramenter_value<E: Into<ErrorReport>, W: ForeignDataWrapper<E>
                 }
                 ParamKind::PARAM_EXEC => {
                     // evaluate parameter value
-                    param.expr_state = pg_sys::ExecInitExpr(param.expr, node as *mut pg_sys::PlanState);
+                    param.expr_state =
+                        pg_sys::ExecInitExpr(param.expr, node as *mut pg_sys::PlanState);
                     let mut isnull = false;
-                    if let Some(datum) = polyfill::exec_eval_expr(param.expr_state, econtext, &mut isnull) {
-                        if let Some(cell) = Cell::from_polymorphic_datum(datum, isnull, param.type_oid) {
+                    if let Some(datum) =
+                        polyfill::exec_eval_expr(param.expr_state, econtext, &mut isnull)
+                    {
+                        if let Some(cell) =
+                            Cell::from_polymorphic_datum(datum, isnull, param.type_oid)
+                        {
                             *param.eval_value.borrow_mut() = Some(Value::Cell(cell.clone()));
                             qual.value = Value::Cell(cell);
                         }

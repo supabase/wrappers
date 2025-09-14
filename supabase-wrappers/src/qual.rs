@@ -8,10 +8,10 @@ use pgrx::{
     pg_sys::Datum,
     FromDatum, PgBuiltInOids, PgOid,
 };
+use std::cell::RefCell;
 use std::ffi::c_void;
 use std::ffi::CStr;
 use std::os::raw::c_int;
-use std::cell::RefCell;
 use std::ptr;
 
 use crate::interface::Param;

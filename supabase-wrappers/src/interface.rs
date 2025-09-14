@@ -8,16 +8,16 @@ use pgrx::prelude::{Date, Interval, Time, Timestamp, TimestampWithTimeZone};
 use pgrx::{
     datum::Uuid,
     fcinfo,
-    pg_sys::{self, bytea, BuiltinOid, Datum, Oid, Expr, ExprState},
+    pg_sys::{self, bytea, BuiltinOid, Datum, Expr, ExprState, Oid},
     AllocatedByRust, AnyNumeric, FromDatum, IntoDatum, JsonB, PgBuiltInOids, PgOid,
 };
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::ffi::CStr;
 use std::fmt;
-use std::rc::Rc;
-use std::cell::RefCell;
 use std::iter::Zip;
 use std::mem;
+use std::rc::Rc;
 use std::slice::Iter;
 
 // fdw system catalog oids

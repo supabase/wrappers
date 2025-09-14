@@ -36,7 +36,9 @@ pub(super) unsafe fn exec_eval_expr(
     econtext: *mut pg_sys::ExprContext,
     isnull: *mut bool,
 ) -> Option<Datum> {
-    (*state).evalfunc.map(|evalfunc| evalfunc(state, econtext, isnull))
+    (*state)
+        .evalfunc
+        .map(|evalfunc| evalfunc(state, econtext, isnull))
 }
 
 #[cfg(not(feature = "pg13"))]
