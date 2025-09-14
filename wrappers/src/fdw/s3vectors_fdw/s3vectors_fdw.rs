@@ -120,7 +120,11 @@ impl S3VectorsFdw {
             if q.field == "data" {
                 if let Value::Cell(Cell::Bytea(bytea)) = &q.value {
                     let embd = if let Some(param) = &q.param {
-                        if let Some(Value::Cell(Cell::Bytea(b))) = *param.eval_value.borrow() {
+                        if let Some(Value::Cell(Cell::Bytea(b))) = *param
+                            .eval_value
+                            .lock()
+                            .expect("parameter eval value should be locked")
+                        {
                             Embd::from(b)
                         } else {
                             Embd::from(*bytea)
