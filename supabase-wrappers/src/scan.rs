@@ -2,7 +2,7 @@ use pgrx::FromDatum;
 use pgrx::{
     debug2,
     memcxt::PgMemoryContexts,
-    pg_sys::{Datum, MemoryContext, MemoryContextData, Oid},
+    pg_sys::{Datum, MemoryContext, MemoryContextData, Oid, ParamKind},
     prelude::*,
     IntoDatum, PgSqlErrorCode,
 };
@@ -282,22 +282,38 @@ unsafe fn assign_paramenter_value<E: Into<ErrorReport>, W: ForeignDataWrapper<E>
     node: *mut pg_sys::ForeignScanState,
     state: &mut FdwState<E, W>,
 ) {
-    // get parameter list in execution state
     let estate = (*node).ss.ps.state;
-    let plist_info = (*estate).es_param_list_info;
-    if plist_info.is_null() {
-        return;
-    }
-    let params_cnt = (*plist_info).numParams as usize;
-    let plist = (*plist_info).params.as_slice(params_cnt);
-    assert!(state.quals.iter().filter(|q| q.param.is_some()).count() <= params_cnt);
+    let econtext = (*node).ss.ps.ps_ExprContext;
 
     // assign parameter value to qual
     for qual in &mut state.quals.iter_mut() {
-        if let Some(param) = &qual.param {
-            let p: pg_sys::ParamExternData = plist[param.id - 1];
-            if let Some(value) = Cell::from_polymorphic_datum(p.value, p.isnull, p.ptype) {
-                qual.value = Value::Cell(value);
+        if let Some(param) = &mut qual.param {
+            match param.kind {
+                ParamKind::PARAM_EXTERN => {
+                    // get parameter list in execution state
+                    let plist_info = (*estate).es_param_list_info;
+                    if plist_info.is_null() {
+                        continue;
+                    }
+                    let params_cnt = (*plist_info).numParams as usize;
+                    let plist = (*plist_info).params.as_slice(params_cnt);
+                    let p: pg_sys::ParamExternData = plist[param.id - 1];
+                    if let Some(cell) = Cell::from_polymorphic_datum(p.value, p.isnull, p.ptype) {
+                        qual.value = Value::Cell(cell);
+                    }
+                }
+                ParamKind::PARAM_EXEC => {
+                    // evaluate parameter value
+                    param.expr_state = pg_sys::ExecInitExpr(param.expr, node as *mut pg_sys::PlanState);
+                    let mut isnull = false;
+                    if let Some(datum) = polyfill::exec_eval_expr(param.expr_state, econtext, &mut isnull) {
+                        if let Some(cell) = Cell::from_polymorphic_datum(datum, isnull, param.type_oid) {
+                            *param.eval_value.borrow_mut() = Some(Value::Cell(cell.clone()));
+                            qual.value = Value::Cell(cell);
+                        }
+                    }
+                }
+                _ => {}
             }
         }
     }
@@ -351,6 +367,9 @@ pub(super) extern "C-unwind" fn iterate_foreign_scan<
     // debug2!("---> iterate_foreign_scan");
     unsafe {
         let mut state = PgBox::<FdwState<E, W>>::from_pg((*node).fdw_state as _);
+
+        // evaluate parameter values
+        assign_paramenter_value(node, &mut state);
 
         // clear slot
         let slot = (*node).ss.ss_ScanTupleSlot;

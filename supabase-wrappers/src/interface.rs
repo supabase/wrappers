@@ -8,12 +8,14 @@ use pgrx::prelude::{Date, Interval, Time, Timestamp, TimestampWithTimeZone};
 use pgrx::{
     datum::Uuid,
     fcinfo,
-    pg_sys::{self, bytea, BuiltinOid, Datum, Oid},
+    pg_sys::{self, bytea, BuiltinOid, Datum, Oid, Expr, ExprState},
     AllocatedByRust, AnyNumeric, FromDatum, IntoDatum, JsonB, PgBuiltInOids, PgOid,
 };
 use std::collections::HashMap;
 use std::ffi::CStr;
 use std::fmt;
+use std::rc::Rc;
+use std::cell::RefCell;
 use std::iter::Zip;
 use std::mem;
 use std::slice::Iter;
@@ -356,6 +358,13 @@ impl FromDatum for Cell {
             PgOid::BuiltIn(PgBuiltInOids::TEXTARRAYOID) => {
                 Vec::<Option<String>>::from_datum(datum, false).map(Cell::StringArray)
             }
+            PgOid::Custom(_) => {
+                if is_null {
+                    None
+                } else {
+                    Some(Cell::Bytea(datum.cast_mut_ptr::<bytea>()))
+                }
+            }
             _ => None,
         }
     }
@@ -459,11 +468,22 @@ pub enum Value {
 /// Query parameter
 #[derive(Debug, Clone)]
 pub struct Param {
-    /// 1-based parameter id
+    /// parameter kind
+    pub kind: pg_sys::ParamKind::Type,
+
+    /// if the parameter kind is `PARAM_EXTERN`, parameter id is from 1 to n,
+    /// otherwise the parameter id is zero
     pub id: usize,
 
     /// parameter type OID
     pub type_oid: Oid,
+
+    /// parameter value which is evaluated during query execution
+    pub eval_value: Rc<RefCell<Option<Value>>>,
+
+    // internal variables for expression evaluation
+    pub(super) expr: *mut Expr,
+    pub(super) expr_state: *mut ExprState,
 }
 
 /// Query restrictions, a.k.a conditions in `WHERE` clause

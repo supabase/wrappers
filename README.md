@@ -26,6 +26,7 @@
 | [Paddle](./wasm-wrappers/fdw/paddle_fdw)        | A Wasm FDW for [Paddle](https://www.paddle.com/)                              | ✅   | ✅     |
 | [Redis](./wrappers/src/fdw/redis_fdw)           | A FDW for [Redis](https://redis.io/)                                          | ✅   | ❌     |
 | [S3](./wrappers/src/fdw/s3_fdw)                 | A FDW for [AWS S3](https://aws.amazon.com/s3/)                                | ✅   | ❌     |
+| [S3 Vectors](./wrappers/src/fdw/s3vectors_fdw)  | A FDW for [AWS S3 Vectors](https://aws.amazon.com/s3/features/vectors/)       | ✅   | ✅     |
 | [SQL Server](./wrappers/src/fdw/mssql_fdw)      | A FDW for [Microsoft SQL Server](https://www.microsoft.com/en-au/sql-server/) | ✅   | ❌     |
 | [Slack](./wasm-wrappers/fdw/slack_fdw)          | A Wasm FDW for [Slack](https://www.slack.com/)                                | ✅   | ❌     |
 | [Snowflake](./wasm-wrappers/fdw/snowflake_fdw)  | A Wasm FDW for [Snowflake](https://www.snowflake.com/)                        | ✅   | ✅     |

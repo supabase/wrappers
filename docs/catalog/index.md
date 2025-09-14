@@ -31,6 +31,7 @@ Each FDW documentation includes a detailed "Limitations" section that describes 
 | Paddle        |   ✅   |   ✅   |   ✅   |   ❌   |    ❌    |    ✅     |
 | Redis         |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
 | S3            |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
+| S3 Vectors    |   ✅   |   ✅   |   ❌   |   ✅   |    ❌    |    ✅     |
 | Shopify       |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
 | Snowflake     |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |    ✅     |
 | Stripe        |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |    ✅     |

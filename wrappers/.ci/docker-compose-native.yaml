@@ -210,3 +210,15 @@ services:
       interval: 11s
       timeout: 6s
       retries: 3
+
+  s3vectors:
+    container_name: s3vectors-local
+    build:
+      context: ../dockerfiles/s3vectors
+    ports:
+      - "4444:4444"
+    healthcheck:
+      test: curl --fail http://0.0.0.0:4444/ || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 3
