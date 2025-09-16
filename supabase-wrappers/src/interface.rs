@@ -8,7 +8,7 @@ use pgrx::prelude::{Date, Interval, Time, Timestamp, TimestampWithTimeZone};
 use pgrx::{
     datum::Uuid,
     fcinfo,
-    pg_sys::{self, bytea, BuiltinOid, Datum, Oid},
+    pg_sys::{self, bytea, BuiltinOid, Datum, Expr, ExprState, Oid},
     AllocatedByRust, AnyNumeric, FromDatum, IntoDatum, JsonB, PgBuiltInOids, PgOid,
 };
 use std::collections::HashMap;
@@ -17,6 +17,7 @@ use std::fmt;
 use std::iter::Zip;
 use std::mem;
 use std::slice::Iter;
+use std::sync::{Arc, Mutex};
 
 // fdw system catalog oids
 // https://doxygen.postgresql.org/pg__foreign__data__wrapper_8h.html
@@ -360,6 +361,13 @@ impl FromDatum for Cell {
             PgOid::BuiltIn(PgBuiltInOids::TEXTARRAYOID) => {
                 Vec::<Option<String>>::from_datum(datum, false).map(Cell::StringArray)
             }
+            PgOid::Custom(_) => {
+                if is_null {
+                    None
+                } else {
+                    Some(Cell::Bytea(datum.cast_mut_ptr::<bytea>()))
+                }
+            }
             _ => None,
         }
     }
@@ -460,14 +468,33 @@ pub enum Value {
     Array(Vec<Cell>),
 }
 
+// Struct for parameter expression value evaluation
+#[derive(Debug, Clone)]
+pub(super) struct ExprEval {
+    pub(super) expr: *mut Expr,
+    pub(super) expr_state: *mut ExprState,
+}
+
+unsafe impl Send for ExprEval {}
+
 /// Query parameter
 #[derive(Debug, Clone)]
 pub struct Param {
-    /// 1-based parameter id
+    /// parameter kind
+    pub kind: pg_sys::ParamKind::Type,
+
+    /// if the parameter kind is `PARAM_EXTERN`, parameter id is from 1 to n,
+    /// otherwise the parameter id is zero
     pub id: usize,
 
     /// parameter type OID
     pub type_oid: Oid,
+
+    /// parameter value which is evaluated during query execution
+    pub eval_value: Arc<Mutex<Option<Value>>>,
+
+    // internal variables for expression evaluation
+    pub(super) expr_eval: ExprEval,
 }
 
 /// Query restrictions, a.k.a conditions in `WHERE` clause

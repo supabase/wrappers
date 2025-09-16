@@ -26,6 +26,7 @@ nav:
           - Logflare: "catalog/logflare.md"
           - Redis: "catalog/redis.md"
           - S3 (CSV, JSON, Parquet): "catalog/s3.md"
+          - S3 Vectors: "catalog/s3vectors.md"
           - Stripe: "catalog/stripe.md"
           - SQL Server: "catalog/mssql.md"
       - Wasm:

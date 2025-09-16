@@ -19,6 +19,9 @@ mod airtable_fdw;
 #[cfg(feature = "s3_fdw")]
 mod s3_fdw;
 
+#[cfg(feature = "s3vectors_fdw")]
+mod s3vectors_fdw;
+
 #[cfg(feature = "logflare_fdw")]
 mod logflare_fdw;
 

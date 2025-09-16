@@ -30,6 +30,17 @@ pub(super) unsafe fn slot_getattr(
     values[attnum - 1]
 }
 
+// evaluate expression identified by "state" in the execution context given by "econtext"
+pub(super) unsafe fn exec_eval_expr(
+    state: *mut pg_sys::ExprState,
+    econtext: *mut pg_sys::ExprContext,
+    isnull: *mut bool,
+) -> Option<Datum> {
+    (*state)
+        .evalfunc
+        .map(|evalfunc| evalfunc(state, econtext, isnull))
+}
+
 #[cfg(not(feature = "pg13"))]
 #[inline]
 pub(super) unsafe fn outer_plan_state(node: *mut pg_sys::PlanState) -> *mut pg_sys::PlanState {

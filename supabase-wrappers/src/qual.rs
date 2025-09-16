@@ -11,6 +11,8 @@ use pgrx::{
 use std::ffi::c_void;
 use std::ffi::CStr;
 use std::os::raw::c_int;
+use std::ptr;
+use std::sync::Mutex;
 
 use crate::interface::Param;
 
@@ -196,8 +198,18 @@ pub(crate) unsafe fn extract_from_op_expr(
                         // will be extracted from execution state
                         let right = right as *mut pg_sys::Param;
                         let param = Param {
+                            kind: (*right).paramkind,
                             id: (*right).paramid as _,
                             type_oid: (*right).paramtype,
+                            eval_value: Mutex::new(None).into(),
+                            expr_eval: ExprEval {
+                                expr: if (*right).paramkind == pg_sys::ParamKind::PARAM_EXEC {
+                                    right as _
+                                } else {
+                                    ptr::null_mut()
+                                },
+                                expr_state: ptr::null_mut(),
+                            },
                         };
                         (Some(Cell::I64(0)), Some(param))
                     } else {
