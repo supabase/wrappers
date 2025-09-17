@@ -191,7 +191,12 @@ embd:5  -- indicates an embedding with 5 dimensions
 
 **Usage Examples:**
 
-See below sections for more examples.
+See the following sections for complete examples:
+
+- [Inserting Vectors](#inserting-vectors) - Examples of inserting data with `embd` type
+- [Querying Vectors](#querying-vectors) - Basic queries and vector similarity search
+- [Vector Similarity Search with Filtering](#vector-similarity-search-with-filtering) - Advanced search with metadata filtering
+- [Advanced Example: Semantic Search](#advanced-example-semantic-search) - Complete semantic search implementation
 
 **Operations:**
 
@@ -253,7 +258,34 @@ For approximate nearest neighbor search using the `<==>` operator:
 | Operation                              | Note                                     |
 | -------------------------------------- | ---------------------------------------- |
 | `data <==> vector_value`              | Vector similarity search with embeddings |
-| `metadata <==> json_filter`           | Metadata filtering during vector search   |
+| `metadata <==> json_filter`           | Metadata filtering using S3 Vectors filter expressions |
+
+**Metadata Filtering Syntax:**
+
+The `json_filter` uses S3 Vectors metadata filtering expressions with the following operators:
+
+- **Equality**: `$eq`, `$ne` - Exact match or not equal
+- **Numeric Comparisons**: `$gt`, `$gte`, `$lt`, `$lte` - Greater than, less than comparisons
+- **Array Operations**: `$in`, `$nin` - Match any/none of the values in array
+- **Existence Check**: `$exists` - Check if field exists
+- **Logical Operations**: `$and`, `$or` - Combine multiple conditions
+
+**Examples:**
+```sql
+-- Simple equality
+metadata <==> '{"category": "electronics"}'::jsonb
+
+-- Numeric range
+metadata <==> '{"price": {"$gte": 100, "$lte": 500}}'::jsonb
+
+-- Array matching
+metadata <==> '{"tags": {"$in": ["popular", "trending"]}}'::jsonb
+
+-- Complex logical conditions
+metadata <==> '{"$and": [{"category": "books"}, {"year": {"$gte": 2020}}]}'::jsonb
+```
+
+For more details on metadata filtering syntax, see the [AWS S3 Vectors metadata filtering documentation](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-vectors-metadata-filtering.html).
 
 ### Key-based Queries
 
