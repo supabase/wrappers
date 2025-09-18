@@ -37,8 +37,8 @@ jobs:
         extension_name:
           - wrappers
         pgrx_version:
-          - 0.14.3
-        postgres: [14, 15, 16, 17]
+          - 0.16.0
+        postgres: [14, 15, 16, 17, 18]
         features:
           - "all_fdws"
         box:
