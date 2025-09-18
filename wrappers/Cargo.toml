@@ -24,6 +24,7 @@ pg14 = ["pgrx/pg14", "pgrx-tests/pg14", "supabase-wrappers/pg14"]
 pg15 = ["pgrx/pg15", "pgrx-tests/pg15", "supabase-wrappers/pg15"]
 pg16 = ["pgrx/pg16", "pgrx-tests/pg16", "supabase-wrappers/pg16"]
 pg17 = ["pgrx/pg17", "pgrx-tests/pg17", "supabase-wrappers/pg17"]
+pg18 = ["pgrx/pg18", "pgrx-tests/pg18", "supabase-wrappers/pg18"]
 pg_test = []
 
 helloworld_fdw = []
@@ -211,7 +212,7 @@ all_fdws = [
 ]
 
 [dependencies]
-pgrx = { version = "=0.14.3" }
+pgrx = { version = "=0.16.0" }
 #supabase-wrappers = "0.1"
 supabase-wrappers = { path = "../supabase-wrappers", default-features = false }
 
@@ -320,4 +321,4 @@ rust_decimal = { version = "1.37.1", optional = true }
 duckdb = { version = "1.3.2", features = ["bundled"], optional = true }
 
 [dev-dependencies]
-pgrx-tests = "=0.14.3"
+pgrx-tests = "=0.16.0"
