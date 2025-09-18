@@ -15,6 +15,9 @@ pub(crate) unsafe fn create_sort(
         let sort = Sort {
             field: CStr::from_ptr(attname).to_str().unwrap().to_owned(),
             field_no: attno as usize,
+            #[cfg(feature = "pg18")]
+            reversed: (*pathkey).pk_cmptype == pg_sys::BTGreaterStrategyNumber,
+            #[cfg(not(feature = "pg18"))]
             reversed: (*pathkey).pk_strategy as u32 == pg_sys::BTGreaterStrategyNumber,
             nulls_first: (*pathkey).pk_nulls_first,
             ..Default::default()
