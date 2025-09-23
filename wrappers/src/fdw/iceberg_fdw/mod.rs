@@ -3,6 +3,8 @@ mod iceberg_fdw;
 mod mapper;
 mod pushdown;
 mod tests;
+mod utils;
+mod writer;
 
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::PgSqlErrorCode;
@@ -15,8 +17,8 @@ enum IcebergFdwError {
     #[error("column {0} is not found in source")]
     ColumnNotFound(String),
 
-    #[error("column '{0}' data type is not supported")]
-    UnsupportedColumnType(String),
+    #[error("{0}")]
+    UnsupportedType(String),
 
     #[error("column '{0}' data type '{1}' is incompatible")]
     IncompatibleColumnType(String, String),

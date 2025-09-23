@@ -10,9 +10,8 @@ from zoneinfo import ZoneInfo
 from pyiceberg.catalog import load_catalog
 from pyiceberg.schema import Schema
 from pyiceberg.partitioning import PartitionSpec, PartitionField
-from pyiceberg.transforms import DayTransform
+from pyiceberg.transforms import DayTransform, MonthTransform, YearTransform, IdentityTransform
 from pyiceberg.table.sorting import SortOrder, SortField
-from pyiceberg.transforms import IdentityTransform
 from pyiceberg.types import (
     BinaryType,
     BooleanType,
@@ -87,11 +86,15 @@ schema = Schema(
     NestedField(field_id=15, name="lcol", field_type=LongType(), required=False),
     #NestedField(field_id=16, name="Upcol", field_type=StringType(), required=False),
     #NestedField(field_id=17, name="space col", field_type=StringType(), required=False),
+    identifier_field_ids=[1],
 )
 
 partition_spec = PartitionSpec(
     PartitionField(
         source_id=1, field_id=1000, transform=DayTransform(), name="datetime_day"
+    ),
+    PartitionField(
+        source_id=2, field_id=1001, transform=IdentityTransform(), name="symbol"
     )
 )
 

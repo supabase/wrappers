@@ -193,6 +193,49 @@ mod tests {
                 .map(|v| v.0.clone())
                 .collect::<Vec<_>>();
             assert_eq!(results, vec![json!({"nn": "qq", "nn2": "pp"})]);
+
+            // test data insertion
+            c.update(
+                r#"INSERT INTO iceberg.bids(
+                      datetime, symbol, bid, ask, amt, dt, tstz, list, map,
+                      details, uid, lcol, bin
+                   ) VALUES
+                   ('2025-09-15 11:22:33', 'GOOG', 123.45, 1.23456, 123.345,
+                     '2025-09-15', '2025-09-15 11:22:33+00:00',
+                     '["row1a", "row1b"]',
+                     '{"key1a": "value1a", "key1b": "value1b"}',
+                     '{"created_by": "foo"}',
+                     null,
+                     123456789,
+                     E'\\xDEADBEEF'
+                   )
+                "#,
+                None,
+                &[],
+            )
+            .unwrap();
+
+            let results = c
+                .select(
+                    "SELECT * FROM iceberg.bids WHERE symbol = 'GOOG'",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("symbol").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(results, vec!["GOOG"]);
+            let results = c
+                .select(
+                    "SELECT details FROM iceberg.bids WHERE symbol = 'GOOG'",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<pgrx::datum::JsonB, _>("details").unwrap())
+                .map(|v| v.0.clone())
+                .collect::<Vec<_>>();
+            assert_eq!(results, vec![json!({ "created_by": "foo" })]);
         });
     }
 }

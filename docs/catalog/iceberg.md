@@ -11,7 +11,7 @@ tags:
 
 [Apache Iceberg](https://iceberg.apache.org/) is a high performance open-source format for large analytic tables.
 
-The Iceberg Wrapper allows you to read data from Apache Iceberg within your Postgres database.
+The Iceberg Wrapper allows you to read from and write to Apache Iceberg within your Postgres database.
 
 ## Preparation
 
@@ -173,6 +173,7 @@ create schema if not exists iceberg;
 The full list of foreign table options are below:
 
 - `table` - Fully qualified source table name with all namespaces in Iceberg, required.
+- `rowid_column` - The column to use as the row identifier for INSERT operations, required for data insertion.
 
 ## Entities
 
@@ -219,7 +220,7 @@ Ref: [Iceberg Table Spec](https://iceberg.apache.org/spec/#iceberg-table-spec)
 
 | Object     | Select | Insert | Update | Delete | Truncate |
 | ---------- | :----: | :----: | :----: | :----: | :------: |
-| table      |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| table      |   ✅   |   ✅   |   ❌   |   ❌   |    ❌    |
 
 #### Usage
 
@@ -234,7 +235,8 @@ create foreign table iceberg.guides (
 )
   server iceberg_server
   options (
-    table 'docs_example.guides'
+    table 'docs_example.guides',
+    rowid_column 'id'
   );
 ```
 
@@ -282,12 +284,62 @@ This FDW supports `where` clause pushdown with below operators.
 | bytea            | binary                         |
 | uuid             | uuid                           |
 
+## Data Insertion
+
+The Iceberg FDW supports inserting data into Iceberg tables using standard SQL `INSERT` statements.
+
+### Basic Insert
+
+```sql
+-- insert a single row
+insert into iceberg.guides (id, title, content, created_at)
+values (1, 'Getting Started', 'Welcome to our guides', now());
+
+-- insert multiple rows
+insert into iceberg.guides (id, title, content, created_at)
+values
+  (2, 'Advanced Guide', 'Advanced topics', now()),
+  (3, 'Best Practices', 'Tips and tricks', now());
+```
+
+### Insert from Select
+
+```sql
+-- insert data from another table
+insert into iceberg.guides (id, title, content, created_at)
+select id, title, content, created_at
+from some_other_table
+where condition = true;
+```
+
+### Partition Considerations
+
+When inserting data into partitioned Iceberg tables, the FDW automatically handles partitioning based on the table's partition spec. Data will be written to the appropriate partition directories.
+
+```sql
+-- for a table partitioned by sale_date, data is automatically partitioned
+insert into iceberg.sales (product_id, amount, sale_date)
+values (123, 99.99, '2025-01-15');
+```
+
+### Performance Tips
+
+- **Batch Inserts**: Use multi-row inserts for better performance
+- **Partition Awareness**: When possible, insert data in partition order to optimize file organization
+- **Transaction Size**: Consider breaking very large inserts into smaller transactions
+
+### Limitations for Inserts
+
+- Schema evolution during insert is not supported
+- Only append operations are supported (no upserts)
+- Complex data types (nested structs, arrays, maps) have limited support
+
 ## Limitations
 
 This section describes important limitations and considerations when using this FDW:
 
 - Only supports specific data type mappings between Postgres and Iceberg
-- Only supports read operations (no INSERT, UPDATE, DELETE, or TRUNCATE)
+- UPDATE, DELETE, and TRUNCATE operations are not supported
 - [Apache Iceberg schema evolution](https://iceberg.apache.org/spec/#schema-evolution) is not supported
 - When using Iceberg REST catalog, only supports AWS S3 (or compatible) as the storage
 - Materialized views using these foreign tables may fail during logical backups
@@ -325,7 +377,8 @@ create foreign table if not exists iceberg.guides (
 )
   server iceberg_server
   options (
-    table 'docs_example.guides'
+    table 'docs_example.guides',
+    rowid_column 'id'
   );
 ```
 
@@ -373,5 +426,34 @@ where created_at >= timestamp '2025-05-16 12:34:56';
 
 -- multiple filters must use logical 'AND'
 select * from iceberg.guides where id > 42 and title like 'Supabase%';
+```
+
+### Data Insertion Examples
+
+```sql
+-- insert a single record
+insert into iceberg.guides (id, title, content, created_at)
+values (100, 'New Guide', 'This is a new guide', now());
+
+-- insert multiple records at once
+insert into iceberg.guides (id, title, content, created_at)
+values
+  (101, 'Guide A', 'Content for Guide A', now()),
+  (102, 'Guide B', 'Content for Guide B', now()),
+  (103, 'Guide C', 'Content for Guide C', now());
+
+-- insert data from a SELECT query
+insert into iceberg.guides (id, title, content, created_at)
+select
+  id + 1000,
+  'Migrated: ' || title,
+  content,
+  created_at
+from other_guides
+where id < 10;
+
+-- verify the inserted data
+select count(*) from iceberg.guides;
+select * from iceberg.guides where id >= 100 order by id;
 ```
 
