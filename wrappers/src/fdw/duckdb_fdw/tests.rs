@@ -108,6 +108,7 @@ mod tests {
                 .select(
                     "SELECT datetime,symbol,bid,ask,details,amt,dt,tstz,bin,bcol,list,icol,map,lcol
                      FROM duckdb.iceberg_docs_example_bids
+                     WHERE symbol in ('APL', 'MCS')
                      order by symbol",
                     None,
                     &[],
