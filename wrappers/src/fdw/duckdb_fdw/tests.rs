@@ -130,7 +130,15 @@ mod tests {
                 .filter_map(|r| r.get_by_name::<pgrx::datum::JsonB, _>("details").unwrap())
                 .map(|v| v.0.clone())
                 .collect::<Vec<_>>();
-            assert_eq!(results, vec![json!({ "created_by": "alice" })]);
+            assert_eq!(
+                results,
+                vec![json!({
+                    "created_by": "alice",
+                    "balance": 222.33,
+                    "count": 42,
+                    "valid": true
+                })]
+            );
         });
     }
 
