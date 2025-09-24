@@ -71,10 +71,16 @@ def create_bids_table(catalog, namespace):
                     field_id=55, name="balance", field_type=FloatType(), required=False
                 ),
                 NestedField(
-                    field_id=56, name="count", field_type=IntegerType(), required=False
+                    field_id=56, name="balance2", field_type=DoubleType(), required=False
                 ),
                 NestedField(
-                    field_id=57, name="valid", field_type=BooleanType(), required=False
+                    field_id=57, name="count", field_type=IntegerType(), required=False
+                ),
+                NestedField(
+                    field_id=58, name="count2", field_type=LongType(), required=False
+                ),
+                NestedField(
+                    field_id=59, name="valid", field_type=BooleanType(), required=False
                 ),
             ),
         ),
@@ -85,63 +91,56 @@ def create_bids_table(catalog, namespace):
         NestedField(field_id=10, name="bin", field_type=BinaryType(), required=False),
         NestedField(field_id=11, name="bcol", field_type=BooleanType(), required=False),
         NestedField(field_id=12, name="list", field_type=ListType(
-            element_id=50,
-            element_type=StringType(),
-            required=False
+            element_id=50, element_type=StringType(), required=False
         ), required=False),
         NestedField(field_id=13, name="icol", field_type=IntegerType(), required=False),
         NestedField(field_id=14, name="map", field_type=MapType(
-            key_id=100,
-            key_type=StringType(),
-            value_id=102,
-            value_type=StringType(),
+            key_id=100, key_type=StringType(), value_id=102, value_type=StringType(),
         ), required=False),
         NestedField(field_id=15, name="lcol", field_type=LongType(), required=False),
         #NestedField(field_id=16, name="Upcol", field_type=StringType(), required=False),
         #NestedField(field_id=17, name="space col", field_type=StringType(), required=False),
-        NestedField(field_id=18, name="pat_col_year", field_type=TimestampType(), required=False),
-        NestedField(field_id=19, name="pat_col_month", field_type=DateType(), required=False),
-        NestedField(field_id=20, name="pat_col_hour", field_type=TimestampType(), required=False),
         NestedField(field_id=21, name="tcol", field_type=TimeType(), required=False),
+
         NestedField(field_id=22, name="map2", field_type=MapType(
-            key_id=200,
-            key_type=StringType(),
-            value_id=202,
-            value_type=FloatType(),
+            key_id=200, key_type=StringType(), value_id=202, value_type=FloatType(),
         ), required=False),
-        NestedField(field_id=22, name="map3", field_type=MapType(
-            key_id=300,
-            key_type=StringType(),
-            value_id=302,
-            value_type=BooleanType(),
-            value_required=False,
+        NestedField(field_id=23, name="map3", field_type=MapType(
+            key_id=204, key_type=StringType(), value_id=206, value_type=BooleanType(), value_required=False,
         ), required=False),
-        NestedField(field_id=23, name="list2", field_type=ListType(
-            element_id=400,
-            element_type=LongType(),
-            element_required=False,
-            required=False
+        NestedField(field_id=24, name="map4", field_type=MapType(
+            key_id=208, key_type=StringType(), value_id=210, value_type=IntegerType(), value_required=False,
         ), required=False),
-        NestedField(field_id=24, name="list3", field_type=ListType(
-            element_id=500,
-            element_type=FloatType(),
-            required=False
+        NestedField(field_id=25, name="map5", field_type=MapType(
+            key_id=212, key_type=StringType(), value_id=214, value_type=LongType(), value_required=False,
         ), required=False),
-        NestedField(field_id=25, name="list4", field_type=ListType(
-            element_id=510,
-            element_type=BooleanType(),
-            required=False
+        NestedField(field_id=26, name="map6", field_type=MapType(
+            key_id=216, key_type=StringType(), value_id=218, value_type=DoubleType(), value_required=False,
         ), required=False),
-        NestedField(field_id=26, name="list5", field_type=ListType(
-            element_id=520,
-            element_type=IntegerType(),
-            required=False
+
+        NestedField(field_id=27, name="list2", field_type=ListType(
+            element_id=300, element_type=LongType(), element_required=False, required=False
         ), required=False),
-        NestedField(field_id=27, name="list6", field_type=ListType(
-            element_id=530,
-            element_type=DoubleType(),
-            required=False
+        NestedField(field_id=28, name="list3", field_type=ListType(
+            element_id=302, element_type=FloatType(), element_required=False, required=False
         ), required=False),
+        NestedField(field_id=29, name="list4", field_type=ListType(
+            element_id=304, element_type=BooleanType(), element_required=False, required=False
+        ), required=False),
+        NestedField(field_id=30, name="list5", field_type=ListType(
+            element_id=306, element_type=IntegerType(), element_required=False, required=False
+        ), required=False),
+        NestedField(field_id=31, name="list6", field_type=ListType(
+            element_id=308, element_type=DoubleType(), element_required=False, required=False
+        ), required=False),
+
+        NestedField(field_id=32, name="pat_col_year", field_type=TimestampType(), required=False),
+        NestedField(field_id=33, name="pat_col_month", field_type=DateType(), required=False),
+        NestedField(field_id=34, name="pat_col_hour", field_type=TimestampType(), required=False),
+        NestedField(field_id=35, name="pat_bcol", field_type=BooleanType(), required=False),
+        NestedField(field_id=36, name="pat_icol", field_type=IntegerType(), required=False),
+        NestedField(field_id=37, name="pat_lcol", field_type=LongType(), required=False),
+        NestedField(field_id=38, name="pat_tcol", field_type=TimestampType(), required=False),
 
         identifier_field_ids=[1],
     )
@@ -151,28 +150,43 @@ def create_bids_table(catalog, namespace):
             source_id=1, field_id=1000, transform=DayTransform(), name="datetime_day"
         ),
         PartitionField(
-            source_id=2, field_id=1001, transform=IdentityTransform(), name="symbol_ident"
+            source_id=2, field_id=1002, transform=IdentityTransform(), name="symbol_ident"
         ),
         PartitionField(
-            source_id=3, field_id=1002, transform=IdentityTransform(), name="bid_ident"
+            source_id=3, field_id=1004, transform=IdentityTransform(), name="bid_ident"
         ),
         PartitionField(
-            source_id=4, field_id=1003, transform=IdentityTransform(), name="ask_ident"
+            source_id=4, field_id=1006, transform=IdentityTransform(), name="ask_ident"
         ),
         PartitionField(
-            source_id=11, field_id=1004, transform=IdentityTransform(), name="bcol_ident"
+            source_id=7, field_id=1008, transform=DayTransform(), name="dt_day"
         ),
         PartitionField(
-            source_id=13, field_id=1005, transform=IdentityTransform(), name="icol_ident"
+            source_id=11, field_id=1010, transform=IdentityTransform(), name="bcol_ident"
         ),
         PartitionField(
-            source_id=18, field_id=1006, transform=YearTransform(), name="pat_year"
+            source_id=13, field_id=1012, transform=IdentityTransform(), name="icol_ident"
         ),
         PartitionField(
-            source_id=19, field_id=1007, transform=MonthTransform(), name="pat_month"
+            source_id=32, field_id=1014, transform=YearTransform(), name="pat_year"
         ),
         PartitionField(
-            source_id=20, field_id=1008, transform=HourTransform(), name="pat_hour"
+            source_id=33, field_id=1016, transform=MonthTransform(), name="pat_month"
+        ),
+        PartitionField(
+            source_id=34, field_id=1018, transform=HourTransform(), name="pat_hour"
+        ),
+        PartitionField(
+            source_id=35, field_id=1020, transform=IdentityTransform(), name="pat_bcol_ident"
+        ),
+        PartitionField(
+            source_id=36, field_id=1022, transform=IdentityTransform(), name="pat_icol_ident"
+        ),
+        PartitionField(
+            source_id=37, field_id=1024, transform=IdentityTransform(), name="pat_lcol_ident"
+        ),
+        PartitionField(
+            source_id=38, field_id=1026, transform=MonthTransform(), name="pat_tcol_month"
         ),
     )
 

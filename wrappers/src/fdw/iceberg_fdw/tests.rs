@@ -225,21 +225,23 @@ mod tests {
                       datetime, symbol, bid, ask, amt, dt, tstz, list, map,
                       details, uid, lcol,
                       bin,
+                      map2, map3, map4, map5, map6,
+                      list2, list3, list4, list5, list6,
                       pat_col_year, pat_col_month, pat_col_hour,
-                      map2, map3,
-                      list2, list3, list4, list5, list6
+                      pat_bcol, pat_icol, pat_lcol, pat_tcol
                    ) VALUES
                    ('2025-09-15 11:22:33', 'GOOG', 123.45, 1.23456, 123.345,
                      '2025-09-15', '2025-09-15 11:22:33+00:00',
                      '["row1a", "row1b"]',
                      '{"key1a": "value1a", "key1b": "value1b"}',
-                     '{"created_by": "foo", "balance": 888.99, "count": 33, "valid": false}',
+                     '{"created_by": "foo", "balance": 888.99, "balance2": 33.44, "count": 33, "count2": 44, "valid": false}',
                      null,
                      123456789,
                      E'\\xDEADBEEF',
+                     null, null, null, null, null,
+                     null, null, null, null, null,
                      '2025-09-15 11:22:33+00:00', '2025-09-15', '2025-09-15 11:22:33',
-                     null, null,
-                     null, null, null, null, null
+                     true, 123, 345, '2025-09-15 11:22:33'
                    ),
                    ('2025-09-16 11:22:33', 'META', 123.45, 1.23456, 123.345,
                      '2025-09-16', '2025-09-16 11:22:33+00:00',
@@ -249,9 +251,10 @@ mod tests {
                      null,
                      123456789,
                      E'\\xDEADBEEF',
+                     '{"aa": 222.33}', '{"aa": null, "bb": true}', '{"aa": 123}', '{"aa": 345}', '{"aa": 12.34}',
+                     '[12, null, 56]', '[12.34, 56.78]', '[true, false]', '[1, 2]', '[123.45, 0.0]',
                      '2025-09-16 11:22:33+00:00', '2025-09-16', '2025-09-16 11:22:33',
-                     '{"123": 222.33, "456": 55.666}', '{"123": null, "456": true}',
-                     '[12, null, 56]', '[12.34, 56.78]', '[true, false]', '[1, 2]', '[123.45, 0.0]'
+                     null, null, null, null
                    )
                 "#,
                 None,
@@ -284,7 +287,9 @@ mod tests {
                 vec![json!({
                     "created_by": "foo",
                     "balance": 888.99,
+                    "balance2": 33.44,
                     "count": 33,
+                    "count2": 44,
                     "valid": false,
                 })]
             );
