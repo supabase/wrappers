@@ -571,6 +571,7 @@ impl ForeignDataWrapper<IcebergFdwError> for IcebergFdw {
                             }
                             PrimitiveType::String => "text",
                             PrimitiveType::Date => "date",
+                            PrimitiveType::Time => "time",
                             PrimitiveType::Timestamp => "timestamp",
                             PrimitiveType::Timestamptz => "timestamp with time zone",
                             PrimitiveType::Uuid => "uuid",

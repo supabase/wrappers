@@ -1,7 +1,7 @@
-use arrow_array::{array, builder::ArrayBuilder, timezone::Tz, RecordBatch};
+use arrow_array::{array, builder::*, timezone::Tz, RecordBatch};
 use arrow_json::ArrayWriter;
 use arrow_schema::DataType;
-use chrono::{DateTime, NaiveDateTime};
+use chrono::{DateTime, NaiveDateTime, Timelike};
 use iceberg::spec::{PrimitiveType, Type};
 use pgrx::{
     datum::{self, datetime_support::DateTimeConversionError, JsonB},
@@ -39,6 +39,26 @@ fn datetime_to_tstz(dt: DateTime<Tz>) -> IcebergFdwResult<datum::TimestampWithTi
 fn parse_tz(s: Option<&str>) -> IcebergFdwResult<Tz> {
     let tz = Tz::from_str(s.unwrap_or("+00:00"))?;
     Ok(tz)
+}
+
+// fill an struct with null to all fields
+fn fill_empty_struct(struct_builder: &mut StructBuilder) {
+    struct_builder.append_null();
+    for field_builder in struct_builder.field_builders_mut() {
+        if let Some(b) = field_builder.as_any_mut().downcast_mut::<StringBuilder>() {
+            b.append_null();
+        } else if let Some(b) = field_builder.as_any_mut().downcast_mut::<BooleanBuilder>() {
+            b.append_null();
+        } else if let Some(b) = field_builder.as_any_mut().downcast_mut::<Int32Builder>() {
+            b.append_null();
+        } else if let Some(b) = field_builder.as_any_mut().downcast_mut::<Int64Builder>() {
+            b.append_null();
+        } else if let Some(b) = field_builder.as_any_mut().downcast_mut::<Float32Builder>() {
+            b.append_null();
+        } else if let Some(b) = field_builder.as_any_mut().downcast_mut::<Float64Builder>() {
+            b.append_null();
+        }
+    }
 }
 
 // iceberg cell to Wrappers cell mapper
@@ -155,57 +175,30 @@ impl Mapper {
             }
             pg_sys::TIMEOID => {
                 if let Type::Primitive(PrimitiveType::Time) = src_type {
-                    if let Some(dt) = array
-                        .downcast_ref::<array::Time64NanosecondArray>()
-                        .and_then(|a| a.value_as_datetime(rec_offset))
-                        .or_else(|| {
-                            array
-                                .downcast_ref::<array::Time64MicrosecondArray>()
-                                .and_then(|a| a.value_as_datetime(rec_offset))
-                        })
+                    if let Some(t) = array
+                        .downcast_ref::<array::Time64MicrosecondArray>()
+                        .and_then(|a| a.value_as_time(rec_offset))
                         .or_else(|| {
                             array
                                 .downcast_ref::<array::Time32MillisecondArray>()
-                                .and_then(|a| a.value_as_datetime(rec_offset))
+                                .and_then(|a| a.value_as_time(rec_offset))
                         })
                         .or_else(|| {
                             array
                                 .downcast_ref::<array::Time32SecondArray>()
-                                .and_then(|a| a.value_as_datetime(rec_offset))
+                                .and_then(|a| a.value_as_time(rec_offset))
                         })
                     {
-                        let ts = naive_datetime_to_ts(dt)?;
-                        cell = Some(Cell::Time(datum::Time::from(ts)));
+                        let time =
+                            datum::Time::new(t.hour() as _, t.minute() as _, t.second() as _)?;
+                        cell = Some(Cell::Time(time));
                     }
                 }
             }
             pg_sys::TIMESTAMPOID => {
                 if let Type::Primitive(PrimitiveType::Timestamp) = src_type {
                     if let Some(dt) = array
-                        .downcast_ref::<array::TimestampNanosecondArray>()
-                        .and_then(|a| a.value_as_datetime(rec_offset))
-                        .or_else(|| {
-                            array
-                                .downcast_ref::<array::TimestampMicrosecondArray>()
-                                .and_then(|a| a.value_as_datetime(rec_offset))
-                        })
-                        .or_else(|| {
-                            array
-                                .downcast_ref::<array::TimestampMillisecondArray>()
-                                .and_then(|a| a.value_as_datetime(rec_offset))
-                        })
-                        .or_else(|| {
-                            array
-                                .downcast_ref::<array::TimestampSecondArray>()
-                                .and_then(|a| a.value_as_datetime(rec_offset))
-                        })
-                    {
-                        let ts = naive_datetime_to_ts(dt)?;
-                        cell = Some(Cell::Timestamp(ts));
-                    }
-                } else if let Type::Primitive(PrimitiveType::TimestampNs) = src_type {
-                    if let Some(dt) = array
-                        .downcast_ref::<array::TimestampNanosecondArray>()
+                        .downcast_ref::<array::TimestampMicrosecondArray>()
                         .and_then(|a| a.value_as_datetime(rec_offset))
                     {
                         let ts = naive_datetime_to_ts(dt)?;
@@ -216,46 +209,7 @@ impl Mapper {
             pg_sys::TIMESTAMPTZOID => {
                 if let Type::Primitive(PrimitiveType::Timestamptz) = src_type {
                     if let Some(dt) = array
-                        .downcast_ref::<array::TimestampNanosecondArray>()
-                        .and_then(|a| {
-                            parse_tz(a.timezone())
-                                .map(|tz| a.value_as_datetime_with_tz(rec_offset, tz))
-                                .transpose()
-                        })
-                        .or_else(|| {
-                            array
-                                .downcast_ref::<array::TimestampMicrosecondArray>()
-                                .and_then(|a| {
-                                    parse_tz(a.timezone())
-                                        .map(|tz| a.value_as_datetime_with_tz(rec_offset, tz))
-                                        .transpose()
-                                })
-                        })
-                        .or_else(|| {
-                            array
-                                .downcast_ref::<array::TimestampMillisecondArray>()
-                                .and_then(|a| {
-                                    parse_tz(a.timezone())
-                                        .map(|tz| a.value_as_datetime_with_tz(rec_offset, tz))
-                                        .transpose()
-                                })
-                        })
-                        .or_else(|| {
-                            array
-                                .downcast_ref::<array::TimestampSecondArray>()
-                                .and_then(|a| {
-                                    parse_tz(a.timezone())
-                                        .map(|tz| a.value_as_datetime_with_tz(rec_offset, tz))
-                                        .transpose()
-                                })
-                        })
-                    {
-                        let ts = datetime_to_tstz(dt?)?;
-                        cell = Some(Cell::Timestamptz(ts));
-                    }
-                } else if let Type::Primitive(PrimitiveType::TimestamptzNs) = src_type {
-                    if let Some(dt) = array
-                        .downcast_ref::<array::TimestampNanosecondArray>()
+                        .downcast_ref::<array::TimestampMicrosecondArray>()
                         .and_then(|a| {
                             parse_tz(a.timezone())
                                 .map(|tz| a.value_as_datetime_with_tz(rec_offset, tz))
@@ -322,7 +276,6 @@ impl Mapper {
         field_type: &DataType,
         cell: Option<&Cell>,
     ) -> IcebergFdwResult<()> {
-        use arrow_array::builder::*;
         use rust_decimal::prelude::ToPrimitive;
         use rust_decimal::Decimal;
         use std::convert::TryInto;
@@ -552,41 +505,22 @@ impl Mapper {
                 }
                 _ => return Err(unsupported(field_type)),
             },
-            DataType::Time64(unit) => match unit {
-                arrow_schema::TimeUnit::Microsecond => {
-                    if let Some(time_builder) = builder
-                        .as_any_mut()
-                        .downcast_mut::<Time64MicrosecondBuilder>()
-                    {
-                        match cell {
-                            Some(Cell::Time(val)) => {
-                                let micros = i64::from(*val);
-                                time_builder.append_value(micros);
-                            }
-                            _ => time_builder.append_null(),
+            DataType::Time64(arrow_schema::TimeUnit::Microsecond) => {
+                if let Some(time_builder) = builder
+                    .as_any_mut()
+                    .downcast_mut::<Time64MicrosecondBuilder>()
+                {
+                    match cell {
+                        Some(Cell::Time(val)) => {
+                            let micros = i64::from(*val);
+                            time_builder.append_value(micros);
                         }
-                    } else {
-                        return Err(unsupported(field_type));
+                        _ => time_builder.append_null(),
                     }
+                } else {
+                    return Err(unsupported(field_type));
                 }
-                arrow_schema::TimeUnit::Nanosecond => {
-                    if let Some(time_builder) = builder
-                        .as_any_mut()
-                        .downcast_mut::<Time64NanosecondBuilder>()
-                    {
-                        match cell {
-                            Some(Cell::Time(val)) => {
-                                let micros = i64::from(*val);
-                                time_builder.append_value(micros * 1_000);
-                            }
-                            _ => time_builder.append_null(),
-                        }
-                    } else {
-                        return Err(unsupported(field_type));
-                    }
-                }
-                _ => return Err(unsupported(field_type)),
-            },
+            }
             DataType::Timestamp(unit, tz) => match unit {
                 arrow_schema::TimeUnit::Second => {
                     if let Some(ts_builder) = builder
@@ -658,27 +592,7 @@ impl Mapper {
                     }
                 }
                 arrow_schema::TimeUnit::Nanosecond => {
-                    if let Some(ts_builder) = builder
-                        .as_any_mut()
-                        .downcast_mut::<TimestampNanosecondBuilder>()
-                    {
-                        let raw = match (tz.is_some(), cell) {
-                            (true, Some(Cell::Timestamptz(val))) => {
-                                Some(i64::from(*val) + PG_EPOCH_US)
-                            }
-                            (false, Some(Cell::Timestamp(val))) => {
-                                Some(i64::from(*val) + PG_EPOCH_US)
-                            }
-                            _ => None,
-                        };
-                        if let Some(micros) = raw {
-                            ts_builder.append_value(micros * 1_000);
-                        } else {
-                            ts_builder.append_null();
-                        }
-                    } else {
-                        return Err(unsupported(field_type));
-                    }
+                    return Err(unsupported(field_type));
                 }
             },
             DataType::Struct(fields) => {
@@ -810,66 +724,12 @@ impl Mapper {
                                 struct_builder.append(true);
                             } else {
                                 // not a JSON object, append null for all fields
-                                struct_builder.append_null();
-                                for field_builder in struct_builder.field_builders_mut() {
-                                    if let Some(b) =
-                                        field_builder.as_any_mut().downcast_mut::<StringBuilder>()
-                                    {
-                                        b.append_null();
-                                    } else if let Some(b) =
-                                        field_builder.as_any_mut().downcast_mut::<BooleanBuilder>()
-                                    {
-                                        b.append_null();
-                                    } else if let Some(b) =
-                                        field_builder.as_any_mut().downcast_mut::<Int32Builder>()
-                                    {
-                                        b.append_null();
-                                    } else if let Some(b) =
-                                        field_builder.as_any_mut().downcast_mut::<Int64Builder>()
-                                    {
-                                        b.append_null();
-                                    } else if let Some(b) =
-                                        field_builder.as_any_mut().downcast_mut::<Float32Builder>()
-                                    {
-                                        b.append_null();
-                                    } else if let Some(b) =
-                                        field_builder.as_any_mut().downcast_mut::<Float64Builder>()
-                                    {
-                                        b.append_null();
-                                    }
-                                }
+                                fill_empty_struct(struct_builder);
                             }
                         }
                         _ => {
                             // no cell data, append null for all fields
-                            struct_builder.append_null();
-                            for field_builder in struct_builder.field_builders_mut() {
-                                if let Some(b) =
-                                    field_builder.as_any_mut().downcast_mut::<StringBuilder>()
-                                {
-                                    b.append_null();
-                                } else if let Some(b) =
-                                    field_builder.as_any_mut().downcast_mut::<BooleanBuilder>()
-                                {
-                                    b.append_null();
-                                } else if let Some(b) =
-                                    field_builder.as_any_mut().downcast_mut::<Int32Builder>()
-                                {
-                                    b.append_null();
-                                } else if let Some(b) =
-                                    field_builder.as_any_mut().downcast_mut::<Int64Builder>()
-                                {
-                                    b.append_null();
-                                } else if let Some(b) =
-                                    field_builder.as_any_mut().downcast_mut::<Float32Builder>()
-                                {
-                                    b.append_null();
-                                } else if let Some(b) =
-                                    field_builder.as_any_mut().downcast_mut::<Float64Builder>()
-                                {
-                                    b.append_null();
-                                }
-                            }
+                            fill_empty_struct(struct_builder);
                         }
                     }
                 } else {
@@ -1027,7 +887,7 @@ impl Mapper {
                                         let value_field = &struct_fields[1];
 
                                         // process each key-value pair in the JSON object
-                                        // first process all keys
+                                        // first process all keys, only accept string as key
                                         for (key, _) in json_object {
                                             match key_field.data_type() {
                                                 DataType::Utf8 => {
@@ -1037,32 +897,6 @@ impl Mapper {
                                                         .downcast_mut::<StringBuilder>()
                                                     {
                                                         str_builder.append_value(key);
-                                                    }
-                                                }
-                                                DataType::Int32 => {
-                                                    let key_builder = map_builder.keys();
-                                                    if let Some(int_builder) = key_builder
-                                                        .as_any_mut()
-                                                        .downcast_mut::<Int32Builder>()
-                                                    {
-                                                        if let Ok(parsed_key) = key.parse::<i32>() {
-                                                            int_builder.append_value(parsed_key);
-                                                        } else {
-                                                            int_builder.append_null();
-                                                        }
-                                                    }
-                                                }
-                                                DataType::Int64 => {
-                                                    let key_builder = map_builder.keys();
-                                                    if let Some(int_builder) = key_builder
-                                                        .as_any_mut()
-                                                        .downcast_mut::<Int64Builder>()
-                                                    {
-                                                        if let Ok(parsed_key) = key.parse::<i64>() {
-                                                            int_builder.append_value(parsed_key);
-                                                        } else {
-                                                            int_builder.append_null();
-                                                        }
                                                     }
                                                 }
                                                 _ => {

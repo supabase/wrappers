@@ -116,7 +116,7 @@ mod tests {
 
             let results = c
                 .select(
-                    "SELECT tstz FROM iceberg.bids WHERE symbol = 'APL'",
+                    "SELECT tstz FROM iceberg.bids WHERE symbol like 'APL%'",
                     None,
                     &[],
                 )
@@ -168,7 +168,15 @@ mod tests {
                 .filter_map(|r| r.get_by_name::<pgrx::datum::JsonB, _>("details").unwrap())
                 .map(|v| v.0.clone())
                 .collect::<Vec<_>>();
-            assert_eq!(results, vec![json!({ "created_by": "alice" })]);
+            assert_eq!(
+                results,
+                vec![json!({
+                    "created_by": "alice",
+                    "balance": 222.33,
+                    "count": 42,
+                    "valid": true
+                })]
+            );
 
             let results = c
                 .select(
@@ -194,20 +202,56 @@ mod tests {
                 .collect::<Vec<_>>();
             assert_eq!(results, vec![json!({"nn": "qq", "nn2": "pp"})]);
 
-            // test data insertion
+            // test pushdown
+            let _results = c
+                .select(
+                    "SELECT * FROM iceberg.bids
+                    WHERE symbol not like 'APL%'
+                      AND bid = 12.34 AND ask = 56.78
+                      AND icol = 1234 AND lcol = 5678
+                      AND datetime = '2025-09-15 11:22:33'
+                      AND tstz = '2025-09-15 11:22:33+00:00'
+                      AND tcol = '12:34:56.123'
+                      AND bcol
+                    ",
+                    None,
+                    &[],
+                )
+                .unwrap();
+
+            // test data insertion with partitioning
             c.update(
                 r#"INSERT INTO iceberg.bids(
                       datetime, symbol, bid, ask, amt, dt, tstz, list, map,
-                      details, uid, lcol, bin
+                      details, uid, lcol,
+                      bin,
+                      pat_col_year, pat_col_month, pat_col_hour,
+                      map2, map3,
+                      list2, list3, list4, list5, list6
                    ) VALUES
                    ('2025-09-15 11:22:33', 'GOOG', 123.45, 1.23456, 123.345,
                      '2025-09-15', '2025-09-15 11:22:33+00:00',
                      '["row1a", "row1b"]',
                      '{"key1a": "value1a", "key1b": "value1b"}',
-                     '{"created_by": "foo"}',
+                     '{"created_by": "foo", "balance": 888.99, "count": 33, "valid": false}',
                      null,
                      123456789,
-                     E'\\xDEADBEEF'
+                     E'\\xDEADBEEF',
+                     '2025-09-15 11:22:33+00:00', '2025-09-15', '2025-09-15 11:22:33',
+                     null, null,
+                     null, null, null, null, null
+                   ),
+                   ('2025-09-16 11:22:33', 'META', 123.45, 1.23456, 123.345,
+                     '2025-09-16', '2025-09-16 11:22:33+00:00',
+                     null,
+                     null,
+                     null,
+                     null,
+                     123456789,
+                     E'\\xDEADBEEF',
+                     '2025-09-16 11:22:33+00:00', '2025-09-16', '2025-09-16 11:22:33',
+                     '{"123": 222.33, "456": 55.666}', '{"123": null, "456": true}',
+                     '[12, null, 56]', '[12.34, 56.78]', '[true, false]', '[1, 2]', '[123.45, 0.0]'
                    )
                 "#,
                 None,
@@ -235,7 +279,27 @@ mod tests {
                 .filter_map(|r| r.get_by_name::<pgrx::datum::JsonB, _>("details").unwrap())
                 .map(|v| v.0.clone())
                 .collect::<Vec<_>>();
-            assert_eq!(results, vec![json!({ "created_by": "foo" })]);
+            assert_eq!(
+                results,
+                vec![json!({
+                    "created_by": "foo",
+                    "balance": 888.99,
+                    "count": 33,
+                    "valid": false,
+                })]
+            );
+
+            // test data insertion without partitioning
+            c.update(
+                r#"INSERT INTO iceberg.asks(
+                      datetime, symbol, ask
+                   ) VALUES
+                   ('2025-09-15 11:22:33', 'APL', 123.45)
+                "#,
+                None,
+                &[],
+            )
+            .unwrap();
         });
     }
 }

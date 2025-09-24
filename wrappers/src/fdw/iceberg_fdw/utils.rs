@@ -1,7 +1,6 @@
 use arrow_array::{
     Array, BooleanArray, Date32Array, Date64Array, Float32Array, Float64Array, Int32Array,
-    Int64Array, RecordBatch, StringArray, TimestampMicrosecondArray, TimestampMillisecondArray,
-    TimestampNanosecondArray, TimestampSecondArray,
+    Int64Array, RecordBatch, StringArray, TimestampMicrosecondArray,
 };
 use iceberg::spec::{Literal, PrimitiveLiteral, Struct, TableMetadata, Transform};
 use std::collections::HashMap;
@@ -132,27 +131,6 @@ pub(super) fn compute_partition_info(
                         let timestamp_us = timestamp_array.value(row_idx);
                         days_since_epoch = Some(timestamp_us / (24 * 60 * 60 * 1_000_000));
                     }
-                } else if let Some(timestamp_array) =
-                    column.as_any().downcast_ref::<TimestampMillisecondArray>()
-                {
-                    if !timestamp_array.is_null(row_idx) {
-                        let timestamp_ms = timestamp_array.value(row_idx);
-                        days_since_epoch = Some(timestamp_ms / (24 * 60 * 60 * 1_000));
-                    }
-                } else if let Some(timestamp_array) =
-                    column.as_any().downcast_ref::<TimestampNanosecondArray>()
-                {
-                    if !timestamp_array.is_null(row_idx) {
-                        let timestamp_ns = timestamp_array.value(row_idx);
-                        days_since_epoch = Some(timestamp_ns / (24 * 60 * 60 * 1_000_000_000));
-                    }
-                } else if let Some(timestamp_array) =
-                    column.as_any().downcast_ref::<TimestampSecondArray>()
-                {
-                    if !timestamp_array.is_null(row_idx) {
-                        let timestamp_s = timestamp_array.value(row_idx);
-                        days_since_epoch = Some(timestamp_s / (24 * 60 * 60));
-                    }
                 } else if let Some(date_array) = column.as_any().downcast_ref::<Date32Array>() {
                     if !date_array.is_null(row_idx) {
                         let days = date_array.value(row_idx) as i64;
@@ -187,29 +165,6 @@ pub(super) fn compute_partition_info(
                     if !timestamp_array.is_null(row_idx) {
                         let timestamp_us = timestamp_array.value(row_idx);
                         let seconds_since_epoch = timestamp_us / 1_000_000;
-                        years_since_epoch = Some(seconds_to_years(seconds_since_epoch));
-                    }
-                } else if let Some(timestamp_array) =
-                    column.as_any().downcast_ref::<TimestampMillisecondArray>()
-                {
-                    if !timestamp_array.is_null(row_idx) {
-                        let timestamp_ms = timestamp_array.value(row_idx);
-                        let seconds_since_epoch = timestamp_ms / 1_000;
-                        years_since_epoch = Some(seconds_to_years(seconds_since_epoch));
-                    }
-                } else if let Some(timestamp_array) =
-                    column.as_any().downcast_ref::<TimestampNanosecondArray>()
-                {
-                    if !timestamp_array.is_null(row_idx) {
-                        let timestamp_ns = timestamp_array.value(row_idx);
-                        let seconds_since_epoch = timestamp_ns / 1_000_000_000;
-                        years_since_epoch = Some(seconds_to_years(seconds_since_epoch));
-                    }
-                } else if let Some(timestamp_array) =
-                    column.as_any().downcast_ref::<TimestampSecondArray>()
-                {
-                    if !timestamp_array.is_null(row_idx) {
-                        let seconds_since_epoch = timestamp_array.value(row_idx);
                         years_since_epoch = Some(seconds_to_years(seconds_since_epoch));
                     }
                 } else if let Some(date_array) = column.as_any().downcast_ref::<Date32Array>() {
@@ -251,29 +206,6 @@ pub(super) fn compute_partition_info(
                         let seconds_since_epoch = timestamp_us / 1_000_000;
                         months_since_epoch = Some(seconds_to_months(seconds_since_epoch));
                     }
-                } else if let Some(timestamp_array) =
-                    column.as_any().downcast_ref::<TimestampMillisecondArray>()
-                {
-                    if !timestamp_array.is_null(row_idx) {
-                        let timestamp_ms = timestamp_array.value(row_idx);
-                        let seconds_since_epoch = timestamp_ms / 1_000;
-                        months_since_epoch = Some(seconds_to_months(seconds_since_epoch));
-                    }
-                } else if let Some(timestamp_array) =
-                    column.as_any().downcast_ref::<TimestampNanosecondArray>()
-                {
-                    if !timestamp_array.is_null(row_idx) {
-                        let timestamp_ns = timestamp_array.value(row_idx);
-                        let seconds_since_epoch = timestamp_ns / 1_000_000_000;
-                        months_since_epoch = Some(seconds_to_months(seconds_since_epoch));
-                    }
-                } else if let Some(timestamp_array) =
-                    column.as_any().downcast_ref::<TimestampSecondArray>()
-                {
-                    if !timestamp_array.is_null(row_idx) {
-                        let seconds_since_epoch = timestamp_array.value(row_idx);
-                        months_since_epoch = Some(seconds_to_months(seconds_since_epoch));
-                    }
                 } else if let Some(date_array) = column.as_any().downcast_ref::<Date32Array>() {
                     if !date_array.is_null(row_idx) {
                         let days = date_array.value(row_idx) as i64;
@@ -311,27 +243,6 @@ pub(super) fn compute_partition_info(
                     if !timestamp_array.is_null(row_idx) {
                         let timestamp_us = timestamp_array.value(row_idx);
                         hours_since_epoch = Some(timestamp_us / (60 * 60 * 1_000_000));
-                    }
-                } else if let Some(timestamp_array) =
-                    column.as_any().downcast_ref::<TimestampMillisecondArray>()
-                {
-                    if !timestamp_array.is_null(row_idx) {
-                        let timestamp_ms = timestamp_array.value(row_idx);
-                        hours_since_epoch = Some(timestamp_ms / (60 * 60 * 1_000));
-                    }
-                } else if let Some(timestamp_array) =
-                    column.as_any().downcast_ref::<TimestampNanosecondArray>()
-                {
-                    if !timestamp_array.is_null(row_idx) {
-                        let timestamp_ns = timestamp_array.value(row_idx);
-                        hours_since_epoch = Some(timestamp_ns / (60 * 60 * 1_000_000_000));
-                    }
-                } else if let Some(timestamp_array) =
-                    column.as_any().downcast_ref::<TimestampSecondArray>()
-                {
-                    if !timestamp_array.is_null(row_idx) {
-                        let timestamp_s = timestamp_array.value(row_idx);
-                        hours_since_epoch = Some(timestamp_s / (60 * 60));
                     }
                 } else if let Some(date_array) = column.as_any().downcast_ref::<Date32Array>() {
                     if !date_array.is_null(row_idx) {
