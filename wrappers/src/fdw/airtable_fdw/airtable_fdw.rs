@@ -173,7 +173,7 @@ impl ForeignDataWrapper<AirtableFdwError> for AirtableFdw {
             if !result.is_empty() {
                 return Ok(result
                     .drain(0..1)
-                    .last()
+                    .next_back()
                     .map(|src_row| row.replace_with(src_row)));
             }
         }

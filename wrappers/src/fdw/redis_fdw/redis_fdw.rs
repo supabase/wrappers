@@ -105,7 +105,7 @@ impl RedisFdw {
             }
 
             let mut tgt_row = Row::new();
-            if let Some(val) = self.scan_result.drain(0..1).last() {
+            if let Some(val) = self.scan_result.drain(0..1).next_back() {
                 let tgt_col = &self.tgt_cols[0];
                 tgt_row.push(&tgt_col.name, Some(Cell::String(val.to_owned())));
             }

@@ -1,33 +1,42 @@
-use arrow_array::{array::ArrayRef, RecordBatch};
+use arrow_array::{array::ArrayRef, builder::ArrayBuilder, Array, RecordBatch};
 use futures::StreamExt;
 use iceberg::{
     expr::Predicate,
     scan::ArrowRecordBatchStream,
-    spec::{NestedFieldRef, PrimitiveType, Type},
+    spec::{DataFileFormat, NestedFieldRef, PrimitiveType, Type},
     table::Table,
+    transaction::{ApplyTransactionAction, Transaction},
+    writer::{
+        base_writer::data_file_writer::DataFileWriterBuilder, file_writer::ParquetWriterBuilder,
+        IcebergWriter, IcebergWriterBuilder,
+    },
     Catalog, NamespaceIdent, TableIdent,
 };
 use iceberg_catalog_rest::{RestCatalog, RestCatalogConfig};
 use iceberg_catalog_s3tables::{S3TablesCatalog, S3TablesCatalogConfig};
+use parquet::file::properties::WriterProperties;
 use pgrx::pg_sys;
 use std::collections::{HashMap, HashSet, VecDeque};
+use std::sync::Arc;
 
 use supabase_wrappers::prelude::*;
 
-use super::{mapper::Mapper, pushdown::try_pushdown, IcebergFdwError, IcebergFdwResult};
+use super::{
+    mapper::Mapper,
+    pushdown::try_pushdown,
+    utils,
+    writer::{FileNameGenerator, LocationGenerator},
+    IcebergFdwError, IcebergFdwResult,
+};
 use crate::stats;
 
-// copy an option to another in an option HashMap, if the target option
-// doesn't exist
-fn copy_option(map: &mut HashMap<String, String>, from_key: &str, to_key: &str) {
-    if !map.contains_key(to_key) {
-        let value = map.get(from_key).cloned().unwrap_or_default();
-        map.insert(to_key.to_string(), value);
-    }
+#[derive(Debug, Clone)]
+struct InputRow {
+    cells: Vec<Option<Cell>>,
 }
 
 #[wrappers_fdw(
-    version = "0.1.2",
+    version = "0.1.3",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/iceberg_fdw",
     error_type = "IcebergFdwError"
@@ -55,6 +64,9 @@ pub(crate) struct IcebergFdw {
     // for stats: total number of records and bytes read
     num_rows: usize,
     bytes_in: usize,
+
+    // for insertion: buffer for accumulating input rows before sorting
+    input_rows: Vec<InputRow>,
 }
 
 impl IcebergFdw {
@@ -138,7 +150,7 @@ impl IcebergFdw {
                 let mut scan_files = self.rt.block_on(scan.plan_files())?;
                 while let Some(sf) = self.rt.block_on(scan_files.next()) {
                     let sf = sf.unwrap();
-                    log_debug1(&format!(
+                    report_info(&format!(
                         "file scan: {:?}, {}",
                         sf.record_count, sf.data_file_path
                     ));
@@ -156,6 +168,116 @@ impl IcebergFdw {
         self.stream = None;
         self.row_data.clear();
         self.mapper.reset();
+    }
+
+    // sort input rows by partition column values
+    fn sort_rows_by_partition(
+        &mut self,
+        metadata: &iceberg::spec::TableMetadata,
+        schema: &iceberg::spec::Schema,
+    ) -> IcebergFdwResult<Vec<InputRow>> {
+        let partition_spec = metadata.default_partition_spec();
+
+        // if no partition spec, return original order
+        if partition_spec.fields().is_empty() {
+            return Ok(self.input_rows.clone());
+        }
+
+        let mut rows_with_keys = Vec::new();
+
+        // compute partition key for each row
+        for row in &self.input_rows {
+            let partition_key = self.compute_partition_key_for_input_row(metadata, schema, row)?;
+            rows_with_keys.push((row.clone(), partition_key));
+        }
+
+        // sort by partition key
+        rows_with_keys.sort_by(|a, b| a.1.cmp(&b.1));
+
+        // extract sorted rows
+        let sorted_rows = rows_with_keys.into_iter().map(|(row, _)| row).collect();
+        Ok(sorted_rows)
+    }
+
+    // compute partition key for an input row
+    fn compute_partition_key_for_input_row(
+        &self,
+        metadata: &iceberg::spec::TableMetadata,
+        schema: &iceberg::spec::Schema,
+        row: &InputRow,
+    ) -> IcebergFdwResult<String> {
+        let partition_spec = metadata.default_partition_spec();
+        let mut key_parts = Vec::new();
+
+        for partition_field in partition_spec.fields() {
+            let source_field_id = partition_field.source_id;
+            let field_name = &partition_field.name;
+
+            // find the column index for this field ID in the schema
+            let mut source_column_index = None;
+            for (idx, field) in schema.as_struct().fields().iter().enumerate() {
+                if field.id == source_field_id {
+                    source_column_index = Some(idx);
+                    break;
+                }
+            }
+            let column_index = source_column_index.ok_or_else(|| {
+                IcebergFdwError::ColumnNotFound(format!(
+                    "cannot find source column with ID {} for partition field",
+                    source_field_id
+                ))
+            })?;
+
+            // get the cell value for this column
+            if let Some(Some(cell)) = row.cells.get(column_index) {
+                // for now, just use string representation
+                // in a full implementation, you'd handle different transforms
+                key_parts.push(format!("{}={}", field_name, cell));
+            } else {
+                key_parts.push(format!("{}=null", field_name));
+            }
+        }
+
+        Ok(key_parts.join("/"))
+    }
+
+    // build record batch from sorted input rows
+    fn build_record_batch_from_rows(
+        &mut self,
+        schema: &iceberg::spec::Schema,
+        sorted_rows: &[InputRow],
+    ) -> IcebergFdwResult<RecordBatch> {
+        let schema: arrow_schema::Schema = schema.try_into()?;
+        let mut builders: Vec<Box<dyn ArrayBuilder>> = Vec::new();
+
+        for field in &schema.fields {
+            let builder = arrow_array::builder::make_builder(field.data_type(), sorted_rows.len());
+            builders.push(builder);
+        }
+
+        // populate builders with sorted row data
+        for row in sorted_rows {
+            for (col_idx, cell) in row.cells.iter().enumerate() {
+                let builder = &mut builders[col_idx];
+                let field_type = &schema.fields[col_idx].data_type();
+                self.mapper
+                    .append_array_value(builder, field_type, cell.as_ref())?;
+            }
+        }
+
+        // convert builders to arrays
+        let mut arrays: Vec<ArrayRef> = Vec::new();
+        for mut builder in builders.drain(..) {
+            let array = builder.finish();
+            arrays.push(array);
+        }
+
+        // create record batch
+        let rb_option = arrow_array::RecordBatchOptions::new().with_match_field_names(false);
+        let record_batch =
+            RecordBatch::try_new_with_options(Arc::new(schema.clone()), arrays, &rb_option)?;
+
+        Ok(record_batch)
     }
 }
 
@@ -186,9 +308,9 @@ impl ForeignDataWrapper<IcebergFdwError> for IcebergFdw {
             .collect();
 
         // copy AWS credentials if they're not set by user
-        copy_option(&mut props, "aws_access_key_id", "s3.access-key-id");
-        copy_option(&mut props, "aws_secret_access_key", "s3.secret-access-key");
-        copy_option(&mut props, "region_name", "s3.region");
+        utils::copy_option(&mut props, "aws_access_key_id", "s3.access-key-id");
+        utils::copy_option(&mut props, "aws_secret_access_key", "s3.secret-access-key");
+        utils::copy_option(&mut props, "region_name", "s3.region");
 
         let batch_size = require_option_or("batch_size", &server.options, "4096")
             .parse::<usize>()
@@ -233,6 +355,7 @@ impl ForeignDataWrapper<IcebergFdwError> for IcebergFdw {
             mapper: Mapper::default(),
             num_rows: 0,
             bytes_in: 0,
+            input_rows: Vec::new(),
         })
     }
 
@@ -292,6 +415,106 @@ impl ForeignDataWrapper<IcebergFdwError> for IcebergFdw {
         Ok(())
     }
 
+    fn begin_modify(&mut self, options: &HashMap<String, String>) -> IcebergFdwResult<()> {
+        let tbl_ident = TableIdent::from_strs(require_option("table", options)?.split("."))?;
+        self.table = self
+            .rt
+            .block_on(self.catalog.load_table(&tbl_ident))?
+            .into();
+        self.input_rows.clear();
+
+        Ok(())
+    }
+
+    fn insert(&mut self, src: &Row) -> IcebergFdwResult<()> {
+        // save the row in the input row buffer
+        self.input_rows.push(InputRow {
+            cells: src.cells.clone(),
+        });
+
+        Ok(())
+    }
+
+    fn end_modify(&mut self) -> IcebergFdwResult<()> {
+        // only write if we have rows
+        if self.input_rows.is_empty() {
+            return Ok(());
+        }
+
+        // clone the table to avoid borrowing conflicts
+        let table = match &self.table {
+            Some(table) => table.clone(),
+            None => return Ok(()),
+        };
+
+        let metadata = table.metadata();
+        let schema = metadata.current_schema();
+
+        // sort input_rows by partition column values
+        let sorted_rows = self.sort_rows_by_partition(metadata, schema)?;
+
+        // build record batch from sorted rows
+        let record_batch = self.build_record_batch_from_rows(schema, &sorted_rows)?;
+
+        // split the record batch by partition values
+        let partition_batches = utils::split_record_batch_by_partition(metadata, record_batch)?;
+
+        let mut data_files = Vec::new();
+
+        // write each partition batch separately
+        for partition_batch in partition_batches.iter() {
+            let location_generator = LocationGenerator::new(metadata, partition_batch)?;
+            let file_name_generator = FileNameGenerator::new(DataFileFormat::Parquet);
+
+            // get partition value from location generator
+            let partition_value = location_generator.partition_value();
+
+            let parquet_writer_builder = ParquetWriterBuilder::new(
+                WriterProperties::default(),
+                schema.clone(),
+                table.file_io().clone(),
+                location_generator,
+                file_name_generator,
+            );
+            let data_file_writer_builder = DataFileWriterBuilder::new(
+                parquet_writer_builder,
+                partition_value,
+                metadata.default_partition_spec().spec_id(),
+            );
+            let mut data_file_writer = self.rt.block_on(data_file_writer_builder.build())?;
+
+            // write the record batch to Iceberg and close the writer and get
+            // the data file
+            self.rt
+                .block_on(data_file_writer.write(partition_batch.clone()))?;
+            let mut part_data_files = self.rt.block_on(data_file_writer.close())?;
+
+            data_files.append(&mut part_data_files);
+        }
+
+        // create transaction and commit the changes to update table metadata
+        let tx = Transaction::new(&table);
+        let append_action = tx.fast_append().add_data_files(data_files.clone());
+        let tx = append_action.apply(tx)?;
+        let updated_table = self.rt.block_on(tx.commit(self.catalog.as_ref()))?;
+
+        // update the cached table reference with the new metadata
+        self.table = Some(updated_table);
+
+        if cfg!(debug_assertions) {
+            for data_file in &data_files {
+                report_info(&format!(
+                    "Data file: {}, records: {}, size: {} bytes",
+                    data_file.file_path(),
+                    data_file.record_count(),
+                    data_file.file_size_in_bytes()
+                ));
+            }
+        }
+
+        Ok(())
+    }
+
     fn import_foreign_schema(
         &mut self,
         stmt: ImportForeignSchemaStmt,
@@ -348,6 +571,7 @@ impl ForeignDataWrapper<IcebergFdwError> for IcebergFdw {
                             }
                             PrimitiveType::String => "text",
                             PrimitiveType::Date => "date",
+                            PrimitiveType::Time => "time",
                             PrimitiveType::Timestamp => "timestamp",
                             PrimitiveType::Timestamptz => "timestamp with time zone",
                             PrimitiveType::Uuid => "uuid",
@@ -371,15 +595,25 @@ impl ForeignDataWrapper<IcebergFdwError> for IcebergFdw {
             }
 
             if !fields.is_empty() {
+                let ident_field_ids: Vec<i32> = schema.identifier_field_ids().collect();
+                let rowid_column = if ident_field_ids.len() == 1 {
+                    schema
+                        .field_by_id(ident_field_ids[0])
+                        .map(|field| format!(", rowid_column '{}'", field.name))
+                } else {
+                    None
+                };
+
                 ret.push(format!(
                     r#"create foreign table if not exists {} (
                         {}
                     )
-                    server {} options (table '{}')"#,
+                    server {} options (table '{}'{})"#,
                     tbl.identifier().name,
                     fields.join(","),
                     stmt.server_name,
                     tbl.identifier(),
+                    rowid_column.unwrap_or_default(),
                 ));
             }
         }

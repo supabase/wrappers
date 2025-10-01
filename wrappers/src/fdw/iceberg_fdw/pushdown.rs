@@ -60,7 +60,12 @@ fn cell_to_iceberg_datum(cell: &Cell, tgt_type: &Type) -> IcebergFdwResult<Optio
         Cell::Date(v) => Some(Datum::date(v.to_unix_epoch_days())),
         Cell::Time(v) => {
             let (h, m, s, micro) = v.to_hms_micro();
-            Some(Datum::time_from_hms_micro(h as _, m as _, s as _, micro)?)
+            Some(Datum::time_from_hms_micro(
+                h as _,
+                m as _,
+                s as _,
+                micro - (s as u32) * 1_000_000,
+            )?)
         }
         Cell::Timestamp(v) => {
             let (h, m, s, micro) = v.to_hms_micro();
