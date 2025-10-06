@@ -27,7 +27,8 @@ use super::{S3VectorsFdwError, S3VectorsFdwResult};
 pub(crate) struct S3VectorsFdw {
     rt: Runtime,
     client: Client,
-    index_arn: Option<String>,
+    bucket_name: Option<String>,
+    index_name: Option<String>,
     tgt_cols: Vec<Column>,
     quals: Vec<Qual>,
     row_limit: Option<i64>,
@@ -66,7 +67,8 @@ impl S3VectorsFdw {
         let stream = self
             .client
             .list_vectors()
-            .set_index_arn(self.index_arn.clone())
+            .set_vector_bucket_name(self.bucket_name.clone())
+            .set_index_name(self.index_name.clone())
             .set_max_results(Some(500))
             .set_return_data(Some(true))
             .set_return_metadata(Some(true))
@@ -101,8 +103,9 @@ impl S3VectorsFdw {
         let result = self.rt.block_on(
             self.client
                 .get_vectors()
+                .set_vector_bucket_name(self.bucket_name.clone())
+                .set_index_name(self.index_name.clone())
                 .set_keys(Some(keys))
-                .set_index_arn(self.index_arn.clone())
                 .set_return_data(Some(true))
                 .set_return_metadata(Some(true))
                 .send(),
@@ -152,10 +155,11 @@ impl S3VectorsFdw {
         let result = self.rt.block_on(
             self.client
                 .query_vectors()
+                .set_vector_bucket_name(self.bucket_name.clone())
+                .set_index_name(self.index_name.clone())
                 .set_query_vector(query_vector)
                 .set_filter(metadata_filter)
                 .set_top_k(top_k)
-                .set_index_arn(self.index_arn.clone())
                 .set_return_distance(Some(true))
                 .set_return_metadata(Some(true))
                 .send(),
@@ -245,7 +249,8 @@ impl ForeignDataWrapper<S3VectorsFdwError> for S3VectorsFdw {
         Ok(S3VectorsFdw {
             rt,
             client,
-            index_arn: None,
+            bucket_name: None,
+            index_name: None,
             tgt_cols: Vec::new(),
             quals: Vec::new(),
             row_limit: None,
@@ -266,7 +271,8 @@ impl ForeignDataWrapper<S3VectorsFdwError> for S3VectorsFdw {
         limit: &Option<Limit>,
         options: &HashMap<String, String>,
     ) -> S3VectorsFdwResult<()> {
-        self.index_arn = require_option("index_arn", options)?.to_owned().into();
+        self.bucket_name = require_option("bucket_name", options)?.to_owned().into();
+        self.index_name = require_option("index_name", options)?.to_owned().into();
         self.tgt_cols = columns.to_vec();
         self.quals = quals.to_vec();
         self.row_limit = limit.clone().map(|limit| limit.count);
@@ -330,7 +336,8 @@ impl ForeignDataWrapper<S3VectorsFdwError> for S3VectorsFdw {
     }
 
     fn begin_modify(&mut self, options: &HashMap<String, String>) -> S3VectorsFdwResult<()> {
-        self.index_arn = require_option("index_arn", options)?.to_owned().into();
+        self.bucket_name = require_option("bucket_name", options)?.to_owned().into();
+        self.index_name = require_option("index_name", options)?.to_owned().into();
         self.insert_vectors.clear();
         Ok(())
     }
@@ -394,7 +401,8 @@ impl ForeignDataWrapper<S3VectorsFdwError> for S3VectorsFdw {
                 let _resp = self.rt.block_on(
                     self.client
                         .delete_vectors()
-                        .set_index_arn(self.index_arn.clone())
+                        .set_vector_bucket_name(self.bucket_name.clone())
+                        .set_index_name(self.index_name.clone())
                         .set_keys(Some(vec![key.to_owned()]))
                         .send(),
                 )?;
@@ -413,7 +421,8 @@ impl ForeignDataWrapper<S3VectorsFdwError> for S3VectorsFdw {
         let _ = self.rt.block_on(
             self.client
                 .put_vectors()
-                .set_index_arn(self.index_arn.clone())
+                .set_vector_bucket_name(self.bucket_name.clone())
+                .set_index_name(self.index_name.clone())
                 .set_vectors(Some(self.insert_vectors.clone()))
                 .send(),
         )?;
@@ -427,7 +436,7 @@ impl ForeignDataWrapper<S3VectorsFdwError> for S3VectorsFdw {
         &mut self,
         import_stmt: ImportForeignSchemaStmt,
     ) -> S3VectorsFdwResult<Vec<String>> {
-        let bucket_arn = require_option("bucket_arn", &import_stmt.options)?;
+        let bucket_name = require_option("bucket_name", &import_stmt.options)?;
         let mut next_token: Option<String> = None;
         let mut ret: Vec<String> = Vec::new();
 
@@ -435,7 +444,7 @@ impl ForeignDataWrapper<S3VectorsFdwError> for S3VectorsFdw {
             let mut request = self
                 .client
                 .list_indexes()
-                .set_vector_bucket_arn(Some(bucket_arn.to_owned()))
+                .set_vector_bucket_name(Some(bucket_name.to_owned()))
                 .set_max_results(Some(500));
 
             if let Some(token) = next_token {
@@ -445,14 +454,8 @@ impl ForeignDataWrapper<S3VectorsFdwError> for S3VectorsFdw {
             let resp = self.rt.block_on(request.send())?;
 
             for index in resp.indexes {
-                let index_arn = index.index_arn;
-
                 // for PostgreSQL table name compatibility
-                let index_name = index_arn
-                    .split('/')
-                    .next_back()
-                    .unwrap_or("vectors")
-                    .replace('-', "_");
+                let table_name = index.index_name.replace('-', "_");
 
                 let table_sql = format!(
                     r#"create foreign table if not exists {} (
@@ -461,10 +464,11 @@ impl ForeignDataWrapper<S3VectorsFdwError> for S3VectorsFdw {
                         metadata jsonb
                     )
                     server {} options (
-                        index_arn '{}',
+                        bucket_name '{}',
+                        index_name '{}',
                         rowid_column 'key'
                     )"#,
-                    index_name, import_stmt.server_name, index_arn
+                    table_name, import_stmt.server_name, bucket_name, index.index_name
                 );
                 ret.push(table_sql);
             }
@@ -485,7 +489,8 @@ impl ForeignDataWrapper<S3VectorsFdwError> for S3VectorsFdw {
     ) -> S3VectorsFdwResult<()> {
         if let Some(oid) = catalog {
             if oid == FOREIGN_TABLE_RELATION_ID {
-                check_options_contain(&options, "index_arn")?;
+                check_options_contain(&options, "bucket_name")?;
+                check_options_contain(&options, "index_name")?;
             }
         }
 

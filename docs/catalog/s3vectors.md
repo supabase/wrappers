@@ -110,7 +110,8 @@ create schema if not exists s3_vectors;
 
 The full list of foreign table options are below:
 
-- `index_arn` - The ARN of the S3 Vector index, required.
+- `bucket_name` - The name of the S3 Vector bucket, required.
+- `index_name` - The name of the S3 Vector index, required.
 - `rowid_column` - The column to use as the row identifier for INSERT/DELETE operations, required.
 
 ## Entities
@@ -124,7 +125,7 @@ For example, using below SQL can automatically create foreign tables in the `s3_
 import foreign schema s3_vectors
   from server s3_vectors_server into s3_vectors
   options (
-    bucket_arn 'arn:aws:s3vectors:us-east-1:123456789012:bucket/my-vector-bucket'
+    bucket_name 'my-vector-bucket'
   );
 ```
 
@@ -152,7 +153,8 @@ create foreign table s3_vectors.embeddings (
 )
   server s3_vectors_server
   options (
-    index_arn 'arn:aws:s3vectors:us-east-1:123456789012:bucket/my-vector-bucket/index/my-vector-index',
+    bucket_name 'my-vector-bucket',
+    index_name 'my-vector-index',
     rowid_column 'key'
   );
 ```
@@ -372,7 +374,7 @@ Import the foreign table:
 import foreign schema s3_vectors
   from server s3_vectors_server into s3_vectors
   options (
-    bucket_arn 'arn:aws:s3vectors:us-east-1:123456789012:bucket/my-vector-bucket'
+    bucket_name 'my-vector-bucket'
   );
 
 -- or, create the foreign table manually
@@ -383,7 +385,8 @@ create foreign table if not exists s3_vectors.embeddings (
 )
   server s3_vectors_server
   options (
-    index_arn 'arn:aws:s3vectors:us-east-1:123456789012:bucket/my-vector-bucket/index/my-vector-index',
+    bucket_name 'my-vector-bucket',
+    index_name 'my-vector-index',
     rowid_column 'key'
   );
 ```
