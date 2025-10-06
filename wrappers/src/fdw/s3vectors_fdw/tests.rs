@@ -30,7 +30,7 @@ mod tests {
             c.update(
                 r#"IMPORT FOREIGN SCHEMA "s3_vectors" FROM SERVER s3_vectors_server INTO s3_vectors
                    OPTIONS (
-                     bucket_arn 'arn:aws:s3vectors:us-east-1:213505683208:bucket/my-vector-bucket'
+                     bucket_name 'my-vector-bucket'
                    )
                 "#,
                 None,
