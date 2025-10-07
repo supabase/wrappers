@@ -14,8 +14,7 @@ jobs:
   # =============================================================
   test_native:
     name: Run native wrappers tests
-    runs-on:
-      group: Default Larger Runners
+    runs-on: blacksmith-4vcpu-ubuntu-2404
 
     steps:
     - name: Checkout code
@@ -63,8 +62,7 @@ jobs:
   # =============================================================
   test_wasm:
     name: Run Wasm wrappers tests
-    runs-on:
-      group: Default Larger Runners
+    runs-on: blacksmith-4vcpu-ubuntu-2404
 
     steps:
     - name: Checkout code
