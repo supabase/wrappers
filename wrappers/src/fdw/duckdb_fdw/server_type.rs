@@ -19,6 +19,9 @@ pub(super) enum ServerType {
     R2Catalog,
     Polaris,
     Lakekeeper,
+
+    // SQL-like Remotes
+    MotherDuck,
 }
 
 impl ServerType {
@@ -32,6 +35,7 @@ impl ServerType {
             "r2_catalog" => Self::R2Catalog,
             "polaris" => Self::Polaris,
             "lakekeeper" => Self::Lakekeeper,
+            "md" => Self::MotherDuck,
             _ => return Err(DuckdbFdwError::InvalidServerType(svr_type.to_owned())),
         };
         Ok(ret)
@@ -46,6 +50,7 @@ impl ServerType {
             Self::R2Catalog => "r2_catalog",
             Self::Polaris => "polaris",
             Self::Lakekeeper => "lakekeeper",
+            Self::MotherDuck => "md",
         }
     }
 
@@ -54,6 +59,20 @@ impl ServerType {
             self,
             Self::Iceberg | Self::S3Tables | Self::R2Catalog | Self::Polaris | Self::Lakekeeper
         )
+    }
+
+    pub(super) fn is_sql_like(&self) -> bool {
+        matches!(self, Self::MotherDuck)
+    }
+
+    pub(super) fn get_duckdb_extension_sql(&self) -> &'static str {
+        match self {
+            Self::Iceberg | Self::S3Tables | Self::R2Catalog | Self::Polaris | Self::Lakekeeper => {
+                "install iceberg;load iceberg;"
+            }
+            Self::MotherDuck => "install md;load md;",
+            _ => "",
+        }
     }
 
     fn allowed_secret_params(&self) -> Vec<&'static str> {
@@ -81,6 +100,7 @@ impl ServerType {
                 "oauth2_scope",
                 "oauth2_server_uri",
             ],
+            Self::MotherDuck => vec![],
         }
     }
 
@@ -123,12 +143,47 @@ impl ServerType {
             Self::R2Catalog | Self::Polaris | Self::Lakekeeper => {
                 vec![("iceberg", self.allowed_secret_params())]
             }
+
+            _ => vec![],
         };
 
         let mut ret = String::default();
         for (typ, params) in secrets {
             let opts = self.format_options(svr_opts, &params);
             ret.push_str(&format!("create or replace secret (type {typ}, {opts});"));
+        }
+
+        ret
+    }
+
+    pub(super) fn get_settings_sql(&self, svr_opts: &ServerOptions) -> String {
+        let settings: Vec<(&str, &str)> = match self {
+            Self::MotherDuck => {
+                let token = if svr_opts.contains_key("vault_motherduck_token") {
+                    get_vault_secret(svr_opts.get("vault_motherduck_token").unwrap())
+                } else {
+                    require_option("motherduck_token", svr_opts)
+                }
+                .expect("motherduck_token is required");
+                vec![
+                    ("motherduck_token", format!("'{}'", token.replace("'", "''")),
+                    ("motherduck_attach_mode", "'single'"),
+                    ("allow_community_extensions", "false"),
+                    // Has the same effect as below, disables the local filesystem and locks the config.
+                    ("motherduck_saas_mode", "true"),
+                ]
+            }
+            _ => {
+                vec![
+                    ("disabled_filesystems", "'LocalFileSystem'"),
+                    ("allow_community_extensions", "false"),
+                    ("lock_configuration", "true"),
+                ]
+            }
+        };
+        let mut ret = String::default();
+        for (key, value) in settings {
+            ret.push_str(&format!("set {key}={0};", ));
         }
 
         ret
@@ -143,7 +198,7 @@ impl ServerType {
                     "
                     attach '{arn}' as {db_name} (
                         type iceberg,
-                        endpoint_type s3_tables  
+                        endpoint_type s3_tables
                     );"
                 )
             }
@@ -159,6 +214,11 @@ impl ServerType {
                         endpoint '{catalog_uri}'
                     );"
                 )
+            }
+            Self::MotherDuck => {
+                let database = require_option("database", svr_opts)?.replace("'", "''");
+                let db_name = self.as_str();
+                format!("attach 'md:{database}' as {db_name};")
             }
             _ => String::default(),
         };
