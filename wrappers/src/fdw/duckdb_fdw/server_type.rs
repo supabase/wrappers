@@ -166,7 +166,10 @@ impl ServerType {
                 }
                 .expect("motherduck_token is required");
                 vec![
-                    ("motherduck_token", format!("'{}'", token.replace("'", "''")),
+                    (
+                        "motherduck_token",
+                        format!("'{}'", token.replace("'", "''")),
+                    ),
                     ("motherduck_attach_mode", "'single'"),
                     ("allow_community_extensions", "false"),
                     // Has the same effect as below, disables the local filesystem and locks the config.
@@ -183,7 +186,7 @@ impl ServerType {
         };
         let mut ret = String::default();
         for (key, value) in settings {
-            ret.push_str(&format!("set {key}={0};", ));
+            ret.push_str(&format!("set {key}={0};",));
         }
 
         ret
