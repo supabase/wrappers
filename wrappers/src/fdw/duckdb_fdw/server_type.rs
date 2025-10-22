@@ -157,36 +157,37 @@ impl ServerType {
     }
 
     pub(super) fn get_settings_sql(&self, svr_opts: &ServerOptions) -> String {
-        let settings: Vec<(&str, &str)> = match self {
+        let settings: Vec<(&str, String)> = match self {
             Self::MotherDuck => {
                 let token = if svr_opts.contains_key("vault_motherduck_token") {
-                    get_vault_secret(svr_opts.get("vault_motherduck_token").unwrap())
+                    get_vault_secret(svr_opts.get("vault_motherduck_token").unwrap()).ok_or_else(
+                        || OptionsError::OptionNameNotFound("vault_motherduck_token".to_string()),
+                    )
                 } else {
-                    require_option("motherduck_token", svr_opts)
+                    require_option("motherduck_token", svr_opts).map(|s| s.to_string())
                 }
                 .expect("motherduck_token is required");
+
+                let sanitized_token = format!("'{}'", token.replace("'", "''"));
                 vec![
-                    (
-                        "motherduck_token",
-                        format!("'{}'", token.replace("'", "''")),
-                    ),
-                    ("motherduck_attach_mode", "'single'"),
-                    ("allow_community_extensions", "false"),
+                    ("motherduck_token", sanitized_token),
+                    ("motherduck_attach_mode", "'single'".to_string()),
+                    ("allow_community_extensions", "false".to_string()),
                     // Has the same effect as below, disables the local filesystem and locks the config.
-                    ("motherduck_saas_mode", "true"),
+                    ("motherduck_saas_mode", "true".to_string()),
                 ]
             }
             _ => {
                 vec![
-                    ("disabled_filesystems", "'LocalFileSystem'"),
-                    ("allow_community_extensions", "false"),
-                    ("lock_configuration", "true"),
+                    ("disabled_filesystems", "'LocalFileSystem'".to_string()),
+                    ("allow_community_extensions", "false".to_string()),
+                    ("lock_configuration", "true".to_string()),
                 ]
             }
         };
         let mut ret = String::default();
         for (key, value) in settings {
-            ret.push_str(&format!("set {key}={0};",));
+            ret.push_str(&format!("set {key}={value};"));
         }
 
         ret
