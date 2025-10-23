@@ -54,7 +54,7 @@ select vault.create_secret(
 );
 ```
 
-### Connecting to Icerberg
+### Connecting to Iceberg
 
 We need to provide Postgres with the credentials to connect to Iceberg. We can do this using the `create server` command.
 
