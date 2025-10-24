@@ -93,7 +93,7 @@ jobs:
 
     - run: cargo install --locked cargo-pgrx --version 0.16.0
     - run: cargo pgrx init --pg15 /usr/lib/postgresql/15/bin/pg_config
-    - run: cargo install cargo-component --version 0.21.1
+    - run: cargo install --locked cargo-component --version 0.21.1
     - run: rustup target add wasm32-unknown-unknown
 
     - name: Build Wasm FDWs
