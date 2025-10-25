@@ -9,7 +9,7 @@ use supabase_wrappers::prelude::*;
 use super::{mapper, server_type::ServerType, DuckdbFdwError, DuckdbFdwResult};
 
 #[wrappers_fdw(
-    version = "0.1.1",
+    version = "0.1.2",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/duckdb_fdw",
     error_type = "DuckdbFdwError"
@@ -28,13 +28,8 @@ impl DuckdbFdw {
 
     fn init_duckdb(&self) -> DuckdbFdwResult<()> {
         let sql_batch = String::default()
-            + if self.svr_type.is_iceberg() { "install iceberg;load iceberg;" } else { "" }
-            // security tips: https://duckdb.org/docs/stable/operations_manual/securing_duckdb/overview
-            + "
-                set disabled_filesystems = 'LocalFileSystem';
-                set allow_community_extensions = false;
-                set lock_configuration = true;
-            "
+            + self.svr_type.get_duckdb_extension_sql()
+            + &self.svr_type.get_settings_sql(&self.svr_opts)
             + &self.svr_type.get_create_secret_sql(&self.svr_opts)
             + &self.svr_type.get_attach_sql(&self.svr_opts)?;
 
@@ -290,6 +285,47 @@ impl ForeignDataWrapper<DuckdbFdwError> for DuckdbFdw {
             tables
                 .iter()
                 .map(|t| (t.clone(), t.replace(".", "_")))
+                .collect()
+        } else if self.svr_type.is_sql_like() {
+            let db_name = self.svr_type.as_str();
+            let schema = import_stmt.remote_schema;
+
+            let table_list = import_stmt
+                .table_list
+                .iter()
+                .map(|name| format!("'{}'", name.replace("'", "''")))
+                .collect::<Vec<_>>()
+                .join(",");
+            let table_filter = match import_stmt.list_type {
+                ImportSchemaType::FdwImportSchemaAll => "".to_string(),
+                ImportSchemaType::FdwImportSchemaLimitTo => {
+                    format!("and table_name in ({table_list})")
+                }
+                ImportSchemaType::FdwImportSchemaExcept => {
+                    format!("and table_name not in ({table_list})")
+                }
+            };
+            let query = format!(
+                "
+                    select table_name
+                    from information_schema.tables
+                    where table_catalog = ?
+                      and table_schema = ?
+                    {table_filter}
+                    order by table_name
+                "
+            );
+            let mut stmt = self.conn.prepare(&query)?;
+            let tables = stmt
+                .query_map([db_name, &schema], |row| row.get::<_, String>(0))?
+                .collect::<Result<Vec<_>, _>>()?;
+
+            // NOTE: We don't do any munging of the postgres table names because
+            // the pg code will ignore CREATE FOREIGN TABLE statements that don't target
+            // the table names specified in the IMPORT FOREIGN SCHEMA statement.
+            tables
+                .iter()
+                .map(|t| (format!("{db_name}.{schema}.{t}"), t.clone()))
                 .collect()
         } else {
             let tables = require_option_or("tables", &import_stmt.options, "")

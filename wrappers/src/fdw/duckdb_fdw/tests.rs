@@ -50,6 +50,18 @@ mod tests {
                 &[],
             )
             .unwrap();
+            c.update(
+                r#"CREATE SERVER duckdb_server_motherduck
+                    FOREIGN DATA WRAPPER duckdb_wrapper
+                    OPTIONS (
+                        type 'md',
+                        database 'my_db',
+                        motherduck_token 'my_token'
+                    )"#,
+                None,
+                &[],
+            )
+            .unwrap();
             c.update(r#"CREATE SCHEMA IF NOT EXISTS duckdb"#, None, &[])
                 .unwrap();
             c.update(
@@ -71,7 +83,6 @@ mod tests {
                 &[],
             )
             .unwrap();
-
             let results = c
                 .select(
                     "SELECT * FROM duckdb.s3_0_test_data order by name",
