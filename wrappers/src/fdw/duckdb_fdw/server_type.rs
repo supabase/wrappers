@@ -178,6 +178,7 @@ impl ServerType {
                 ]
             }
             _ => {
+                // security tips: https://duckdb.org/docs/stable/operations_manual/securing_duckdb/overview
                 vec![
                     ("disabled_filesystems", "'LocalFileSystem'".to_string()),
                     ("allow_community_extensions", "false".to_string()),

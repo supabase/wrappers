@@ -9,7 +9,7 @@ use supabase_wrappers::prelude::*;
 use super::{mapper, server_type::ServerType, DuckdbFdwError, DuckdbFdwResult};
 
 #[wrappers_fdw(
-    version = "0.1.1",
+    version = "0.1.2",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/duckdb_fdw",
     error_type = "DuckdbFdwError"
@@ -28,8 +28,7 @@ impl DuckdbFdw {
 
     fn init_duckdb(&self) -> DuckdbFdwResult<()> {
         let sql_batch = String::default()
-            + &self.svr_type.get_duckdb_extension_sql()
-            // security tips: https://duckdb.org/docs/stable/operations_manual/securing_duckdb/overview
+            + self.svr_type.get_duckdb_extension_sql()
             + &self.svr_type.get_settings_sql(&self.svr_opts)
             + &self.svr_type.get_create_secret_sql(&self.svr_opts)
             + &self.svr_type.get_attach_sql(&self.svr_opts)?;
