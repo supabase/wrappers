@@ -199,6 +199,7 @@ native_fdws = [
     "stripe_fdw",
     "firebase_fdw",
     "s3_fdw",
+    "s3vectors_fdw",
     "logflare_fdw",
     "auth0_fdw",
     "mssql_fdw",
