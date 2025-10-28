@@ -45,6 +45,9 @@ clickhouse_fdw = [
     "thiserror",
     "either",
     "uuid",
+    "crossbeam",
+    "tokio",
+    "futures-util",
 ]
 stripe_fdw = [
     "http",
@@ -230,6 +233,8 @@ clickhouse-rs = { git = "https://github.com/burmecia/clickhouse-rs.git", branch 
 chrono = { version = "0.4", optional = true }
 chrono-tz = { version = "0.6", optional = true }
 either = { version = "1.12.0", optional = true }
+crossbeam = { version = "0.8.4", optional = true }
+futures-util = { version = "0.3.31", optional = true }
 
 # for bigquery_fdw, firebase_fdw, airtable_fdw and etc.
 gcp-bigquery-client = { version = "0.25.1", optional = true }

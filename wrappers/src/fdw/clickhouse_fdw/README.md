@@ -11,6 +11,7 @@ This is a foreign data wrapper for [ClickHouse](https://clickhouse.com/). It is 
 
 | Version | Date       | Notes                                                |
 | ------- | ---------- | ---------------------------------------------------- |
+| 0.1.8   | 2025-10-27 | Refactor to read rows with async streaming           |
 | 0.1.7   | 2025-05-22 | Added more data types support                        |
 | 0.1.6   | 2025-05-06 | Added UUID data type support                         |
 | 0.1.5   | 2024-09-30 | Support for pgrx 0.12.6                              |
