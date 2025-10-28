@@ -27,7 +27,7 @@ use crate::utils::{self, report_error, ReportableError, SerdeList};
 // Fdw private state for scan
 struct FdwState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
     // foreign data wrapper instance
-    instance: W,
+    instance: Option<W>,
 
     // query conditions
     quals: Vec<Qual>,
@@ -58,7 +58,7 @@ struct FdwState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
 impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwState<E, W> {
     unsafe fn new(foreigntableid: Oid, tmp_ctx: MemoryContext) -> Self {
         Self {
-            instance: instance::create_fdw_instance_from_table_id(foreigntableid),
+            instance: Some(instance::create_fdw_instance_from_table_id(foreigntableid)),
             quals: Vec::new(),
             tgts: Vec::new(),
             sorts: Vec::new(),
@@ -74,43 +74,84 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwState<E, W> {
 
     #[inline]
     fn get_rel_size(&mut self) -> Result<(i64, i32), E> {
-        self.instance.get_rel_size(
-            &self.quals,
-            &self.tgts,
-            &self.sorts,
-            &self.limit,
-            &self.opts,
-        )
+        if let Some(ref mut instance) = self.instance {
+            instance.get_rel_size(
+                &self.quals,
+                &self.tgts,
+                &self.sorts,
+                &self.limit,
+                &self.opts,
+            )
+        } else {
+            Ok((0, 0))
+        }
     }
 
     #[inline]
     fn begin_scan(&mut self) -> Result<(), E> {
-        self.instance.begin_scan(
-            &self.quals,
-            &self.tgts,
-            &self.sorts,
-            &self.limit,
-            &self.opts,
-        )
+        if let Some(ref mut instance) = self.instance {
+            instance.begin_scan(
+                &self.quals,
+                &self.tgts,
+                &self.sorts,
+                &self.limit,
+                &self.opts,
+            )
+        } else {
+            Ok(())
+        }
     }
 
     #[inline]
     fn iter_scan(&mut self) -> Result<Option<()>, E> {
-        self.instance.iter_scan(&mut self.row)
+        if let Some(ref mut instance) = self.instance {
+            instance.iter_scan(&mut self.row)
+        } else {
+            Ok(None)
+        }
     }
 
     #[inline]
     fn re_scan(&mut self) -> Result<(), E> {
-        self.instance.re_scan()
+        if let Some(ref mut instance) = self.instance {
+            instance.re_scan()
+        } else {
+            Ok(())
+        }
     }
 
     #[inline]
     fn end_scan(&mut self) -> Result<(), E> {
-        self.instance.end_scan()
+        if let Some(ref mut instance) = self.instance {
+            instance.end_scan()
+        } else {
+            Ok(())
+        }
     }
 }
 
 impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> utils::SerdeList for FdwState<E, W> {}
+
+impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> Drop for FdwState<E, W> {
+    fn drop(&mut self) {
+        // drop foreign data wrapper instance
+        self.instance.take();
+
+        // remove the allocated memory context
+        unsafe {
+            memctx::delete_wrappers_memctx(self.tmp_ctx);
+            self.tmp_ctx = ptr::null::<MemoryContextData>() as _;
+        }
+    }
+}
+
+// drop the scan state, so the inner fdw instance can be dropped too
+unsafe fn drop_fdw_state<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
+    fdw_state: *mut FdwState<E, W>,
+) {
+    let boxed_fdw_state = Box::from_raw(fdw_state);
+    drop(boxed_fdw_state);
+}
 
 #[pg_guard]
 pub(super) extern "C-unwind" fn get_foreign_rel_size<
@@ -350,7 +391,12 @@ pub(super) extern "C-unwind" fn begin_foreign_scan<
 
         // begin scan if it is not EXPLAIN statement
         if eflags & pg_sys::EXEC_FLAG_EXPLAIN_ONLY as c_int <= 0 {
-            state.begin_scan().report_unwrap();
+            let result = state.begin_scan();
+            if result.is_err() {
+                drop_fdw_state(state.as_ptr());
+                (*plan).fdw_private = ptr::null::<FdwState<E, W>>() as _;
+                result.report_unwrap();
+            }
 
             let rel = scan_state.ss_currentRelation;
             let tup_desc = (*rel).rd_att;
@@ -387,7 +433,13 @@ pub(super) extern "C-unwind" fn iterate_foreign_scan<
         polyfill::exec_clear_tuple(slot);
 
         state.row.clear();
-        if state.iter_scan().report_unwrap().is_some() {
+
+        let result = state.iter_scan();
+        if result.is_err() {
+            drop_fdw_state(state.as_ptr());
+            (*node).fdw_state = ptr::null::<FdwState<E, W>>() as _;
+        }
+        if result.report_unwrap().is_some() {
             if state.row.cols.len() != state.tgts.len() {
                 report_error(
                     PgSqlErrorCode::ERRCODE_FDW_INVALID_COLUMN_NUMBER,
@@ -431,7 +483,12 @@ pub(super) extern "C-unwind" fn re_scan_foreign_scan<
         let fdw_state = (*node).fdw_state as *mut FdwState<E, W>;
         if !fdw_state.is_null() {
             let mut state = PgBox::<FdwState<E, W>>::from_pg(fdw_state);
-            state.re_scan().report_unwrap();
+            let result = state.re_scan();
+            if result.is_err() {
+                drop_fdw_state(state.as_ptr());
+                (*node).fdw_state = ptr::null::<FdwState<E, W>>() as _;
+                result.report_unwrap();
+            }
         }
     }
 }
@@ -451,16 +508,10 @@ pub(super) extern "C-unwind" fn end_foreign_scan<E: Into<ErrorReport>, W: Foreig
         // here just to tell PgBox don't free the state, instead we will handle
         // drop the state by ourselves
         let mut state = PgBox::<FdwState<E, W>>::from_pg(fdw_state);
-        state.end_scan().report_unwrap();
-
-        // remove the allocated memory context
-        memctx::delete_wrappers_memctx(state.tmp_ctx);
-        state.tmp_ctx = ptr::null::<MemoryContextData>() as _;
-
+        let result = state.end_scan();
+        drop_fdw_state(state.as_ptr());
         (*node).fdw_state = ptr::null::<FdwState<E, W>>() as _;
 
-        // drop the scan state, so the fdw instance can be dropped too
-        let boxed_fdw_state = Box::from_raw(fdw_state);
-        drop(boxed_fdw_state);
+        result.report_unwrap();
     }
 }

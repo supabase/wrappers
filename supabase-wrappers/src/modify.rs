@@ -23,7 +23,7 @@ use super::utils;
 // Fdw private state for modify
 struct FdwModifyState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
     // foreign data wrapper instance
-    instance: W,
+    instance: Option<W>,
 
     // row id attribute number and type id
     rowid_name: String,
@@ -45,7 +45,7 @@ struct FdwModifyState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
 impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwModifyState<E, W> {
     unsafe fn new(foreigntableid: Oid, tmp_ctx: MemoryContext) -> Self {
         Self {
-            instance: instance::create_fdw_instance_from_table_id(foreigntableid),
+            instance: Some(instance::create_fdw_instance_from_table_id(foreigntableid)),
             rowid_name: String::default(),
             rowid_attno: 0,
             rowid_typid: Oid::INVALID,
@@ -58,27 +58,68 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwModifyState<E, W> {
     }
 
     fn begin_modify(&mut self) -> Result<(), E> {
-        self.instance.begin_modify(&self.opts)
+        if let Some(ref mut instance) = self.instance {
+            instance.begin_modify(&self.opts)
+        } else {
+            Ok(())
+        }
     }
 
     fn insert(&mut self, row: &Row) -> Result<(), E> {
-        self.instance.insert(row)
+        if let Some(ref mut instance) = self.instance {
+            instance.insert(row)
+        } else {
+            Ok(())
+        }
     }
 
     fn update(&mut self, rowid: &Cell, new_row: &Row) -> Result<(), E> {
-        self.instance.update(rowid, new_row)
+        if let Some(ref mut instance) = self.instance {
+            instance.update(rowid, new_row)
+        } else {
+            Ok(())
+        }
     }
 
     fn delete(&mut self, rowid: &Cell) -> Result<(), E> {
-        self.instance.delete(rowid)
+        if let Some(ref mut instance) = self.instance {
+            instance.delete(rowid)
+        } else {
+            Ok(())
+        }
     }
 
     fn end_modify(&mut self) -> Result<(), E> {
-        self.instance.end_modify()
+        if let Some(ref mut instance) = self.instance {
+            instance.end_modify()
+        } else {
+            Ok(())
+        }
     }
 }
 
 impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> utils::SerdeList for FdwModifyState<E, W> {}
+
+impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> Drop for FdwModifyState<E, W> {
+    fn drop(&mut self) {
+        // drop foreign data wrapper instance
+        self.instance.take();
+
+        // remove the allocated memory context
+        unsafe {
+            memctx::delete_wrappers_memctx(self.tmp_ctx);
+            self.tmp_ctx = ptr::null::<MemoryContextData>() as _;
+        }
+    }
+}
+
+// drop the modify state, so the inner fdw instance can be dropped too
+unsafe fn drop_fdw_modify_state<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
+    fdw_state: *mut FdwModifyState<E, W>,
+) {
+    let boxed_fdw_state = Box::from_raw(fdw_state);
+    drop(boxed_fdw_state);
+}
 
 // find rowid column in relation description
 unsafe fn find_rowid_column(
@@ -291,7 +332,11 @@ pub(super) extern "C-unwind" fn begin_foreign_modify<
         state.rowid_attno =
             pg_sys::ExecFindJunkAttributeInTlist((*subplan).targetlist, rowid_name_c);
 
-        state.begin_modify().report_unwrap();
+        let result = state.begin_modify();
+        if result.is_err() {
+            drop_fdw_modify_state(state.as_ptr());
+            result.report_unwrap();
+        }
 
         (*rinfo).ri_FdwState = state.into_pg() as _;
     }
@@ -315,7 +360,12 @@ pub(super) extern "C-unwind" fn exec_foreign_insert<
 
         PgMemoryContexts::For(state.tmp_ctx).switch_to(|_| {
             let row = utils::tuple_table_slot_to_row(slot);
-            state.insert(&row).report_unwrap();
+            let result = state.insert(&row);
+            if result.is_err() {
+                drop_fdw_modify_state(state.as_ptr());
+                (*rinfo).ri_FdwState = ptr::null::<FdwModifyState<E, W>>() as _;
+                result.report_unwrap();
+            }
         });
     }
 
@@ -350,7 +400,12 @@ pub(super) extern "C-unwind" fn exec_foreign_delete<
         PgMemoryContexts::For(state.tmp_ctx).switch_to(|_| {
             let cell = get_rowid_cell(&state, plan_slot);
             if let Some(rowid) = cell {
-                state.delete(&rowid).report_unwrap();
+                let result = state.delete(&rowid);
+                if result.is_err() {
+                    drop_fdw_modify_state(state.as_ptr());
+                    (*rinfo).ri_FdwState = ptr::null::<FdwModifyState<E, W>>() as _;
+                    result.report_unwrap();
+                }
             }
         });
     }
@@ -399,7 +454,12 @@ pub(super) extern "C-unwind" fn exec_foreign_update<
                     }
                 });
 
-                state.update(&rowid, &new_row).report_unwrap();
+                let result = state.update(&rowid, &new_row);
+                if result.is_err() {
+                    drop_fdw_modify_state(state.as_ptr());
+                    (*rinfo).ri_FdwState = ptr::null::<FdwModifyState<E, W>>() as _;
+                    result.report_unwrap();
+                }
             }
         });
     }
@@ -426,16 +486,10 @@ pub(super) extern "C-unwind" fn end_foreign_modify<
         // here just to tell PgBox don't free the state, instead we will handle
         // drop the state by ourselves
         let mut state = PgBox::<FdwModifyState<E, W>>::from_pg(fdw_state);
-        state.end_modify().report_unwrap();
-
-        // remove the allocated memory context
-        memctx::delete_wrappers_memctx(state.tmp_ctx);
-        state.tmp_ctx = ptr::null::<MemoryContextData>() as _;
-
+        let result = state.end_modify();
+        drop_fdw_modify_state(state.as_ptr());
         (*rinfo).ri_FdwState = ptr::null::<FdwModifyState<E, W>>() as _;
 
-        // drop the scan state, so the fdw instance can be dropped too
-        let boxed_fdw_state = Box::from_raw(fdw_state);
-        drop(boxed_fdw_state);
+        result.report_unwrap();
     }
 }
