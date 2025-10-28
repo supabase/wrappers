@@ -102,7 +102,7 @@ jobs:
           # Ensure cargo/rust on path
           source "$HOME/.cargo/env"
 
-          cargo install --locked cargo-pgrx --version ${{ matrix.pgrx_version }} --locked
+          cargo install --locked cargo-pgrx --version ${{ matrix.pgrx_version }}
           cargo pgrx init --pg${{ matrix.postgres }}=/usr/lib/postgresql/${{ matrix.postgres }}/bin/pg_config
 
           # selects the pgVer from pg_config on path
