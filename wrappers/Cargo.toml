@@ -217,7 +217,7 @@ all_fdws = [
 ]
 
 [dependencies]
-pgrx = { version = "=0.16.0" }
+pgrx = { version = "=0.16.1" }
 #supabase-wrappers = "0.1"
 supabase-wrappers = { path = "../supabase-wrappers", default-features = false }
 
@@ -328,4 +328,4 @@ rust_decimal = { version = "1.37.1", optional = true }
 duckdb = { version = "1.3.2", features = ["bundled"], optional = true }
 
 [dev-dependencies]
-pgrx-tests = "=0.16.0"
+pgrx-tests = "=0.16.1"

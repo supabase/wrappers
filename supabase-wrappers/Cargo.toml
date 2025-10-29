@@ -25,14 +25,14 @@ pg18 = ["pgrx/pg18", "pgrx-tests/pg18"]
 pg_test = []
 
 [dependencies]
-pgrx = { version = "=0.16.0", default-features = false }
+pgrx = { version = "=0.16.1", default-features = false }
 thiserror = "1.0.63"
 tokio = { version = "1.43", features = ["rt", "net"] }
 uuid = { version = "1.10.0" }
 supabase-wrappers-macros = { version = "0.1", path = "../supabase-wrappers-macros" }
 
 [dev-dependencies]
-pgrx-tests = "=0.16.0"
+pgrx-tests = "=0.16.1"
 
 [package.metadata.docs.rs]
 features = ["pg15"]
