@@ -74,7 +74,7 @@ impl ShopifyFdw {
         let src = src_row
             .as_object()
             .and_then(|v| v.get(&tgt_col_name))
-            .ok_or(format!("source column '{}' not found", tgt_col_name))?;
+            .ok_or(format!("source column '{tgt_col_name}' not found"))?;
 
         // column type mapping
         let cell = match tgt_col.type_oid() {
@@ -119,8 +119,7 @@ impl ShopifyFdw {
             }
             _ => {
                 return Err(format!(
-                    "target column '{}' type is not supported",
-                    tgt_col_name
+                    "target column '{tgt_col_name}' type is not supported"
                 ));
             }
         };
@@ -153,7 +152,7 @@ impl ShopifyFdw {
                         v.1.clone()
                     })
                     .unwrap_or_default();
-                format!("{} {}", col_name, fragment)
+                format!("{col_name} {fragment}")
             })
             .collect::<Vec<_>>()
             .join(" ");
@@ -321,10 +320,7 @@ impl Guest for ShopifyFdw {
         let shop = opts.require("shop")?;
 
         // make up base url from server options
-        this.base_url = format!(
-            "https://{}.myshopify.com/admin/api/2025-07/graphql.json",
-            shop
-        );
+        this.base_url = format!("https://{shop}.myshopify.com/admin/api/2025-07/graphql.json");
         this.base_url = opts.require_or("api_url", &this.base_url);
 
         // retrieve api access token
@@ -448,7 +444,7 @@ impl Guest for ShopifyFdw {
             let field_map = get_field_map(object);
             let mut cols: Vec<String> = field_map
                 .iter()
-                .map(|(col_name, (col_type, _, _))| format!(r#""{}" {}"#, col_name, col_type))
+                .map(|(col_name, (col_type, _, _))| format!(r#""{col_name}" {col_type}"#))
                 .collect();
             cols.sort();
             let sql = format!(

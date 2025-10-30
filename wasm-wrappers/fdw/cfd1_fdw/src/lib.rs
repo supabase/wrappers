@@ -52,7 +52,7 @@ impl Cfd1Fdw {
         let src = src_row
             .as_object()
             .and_then(|v| v.get(&tgt_col_name))
-            .ok_or(format!("source column '{}' not found", tgt_col_name))?;
+            .ok_or(format!("source column '{tgt_col_name}' not found"))?;
 
         // column type mapping
         let cell = match tgt_col.type_oid() {
@@ -62,8 +62,7 @@ impl Cfd1Fdw {
             TypeOid::Json => src.as_object().map(|_| Cell::Json(src.to_string())),
             _ => {
                 return Err(format!(
-                    "target column '{}' type is not supported",
-                    tgt_col_name
+                    "target column '{tgt_col_name}' type is not supported"
                 ));
             }
         };
@@ -125,7 +124,7 @@ impl Cfd1Fdw {
                 .map(|sort| sort.deparse())
                 .collect::<Vec<String>>()
                 .join(", ");
-            sql.push_str(&format!(" order by {}", order_by));
+            sql.push_str(&format!(" order by {order_by}"));
         }
 
         // push down limits
@@ -134,7 +133,7 @@ impl Cfd1Fdw {
         // pushing down offset.
         if let Some(limit) = limit {
             let real_limit = limit.offset() + limit.count();
-            sql.push_str(&format!(" limit {}", real_limit));
+            sql.push_str(&format!(" limit {real_limit}"));
         }
 
         sql
@@ -186,7 +185,7 @@ impl Cfd1Fdw {
                 (
                     http::Method::Post,
                     format!("{}/{}/query", self.base_url, self.database_id),
-                    format!(r#"{{ "params": {:?}, "sql": "{}" }}"#, params, sql),
+                    format!(r#"{{ "params": {params:?}, "sql": "{sql}" }}"#),
                 )
             }
         };
@@ -239,7 +238,7 @@ impl Cfd1Fdw {
                 if !success {
                     if let Some(errors) = resp_json["errors"].as_array() {
                         if !errors.is_empty() {
-                            return Err(format!("API request failed with error {:?}", errors));
+                            return Err(format!("API request failed with error {errors:?}"));
                         }
                     }
                 }
@@ -275,7 +274,7 @@ impl Cfd1Fdw {
             method: http::Method::Post,
             url: format!("{}/{}/query", self.base_url, self.database_id),
             headers: self.headers.clone(),
-            body: format!(r#"{{ "params": {:?}, "sql": "{}" }}"#, params, sql),
+            body: format!(r#"{{ "params": {params:?}, "sql": "{sql}" }}"#),
         };
         self.fetch_source_data(req)
     }
@@ -297,10 +296,7 @@ impl Guest for Cfd1Fdw {
         this.database_id = opts.require("database_id")?;
         this.base_url = opts.require_or(
             "api_url",
-            &format!(
-                "https://api.cloudflare.com/client/v4/accounts/{}/d1/database",
-                account_id
-            ),
+            &format!("https://api.cloudflare.com/client/v4/accounts/{account_id}/d1/database"),
         );
         let api_token = match opts.get("api_token") {
             Some(key) => key,
@@ -317,7 +313,7 @@ impl Guest for Cfd1Fdw {
         this.headers
             .push(("content-type".to_owned(), "application/json".to_string()));
         this.headers
-            .push(("authorization".to_owned(), format!("Bearer {}", api_token)));
+            .push(("authorization".to_owned(), format!("Bearer {api_token}")));
 
         stats::inc_stats(FDW_NAME, stats::Metric::CreateTimes, 1);
 
@@ -442,9 +438,9 @@ impl Guest for Cfd1Fdw {
 
                 // skip the param if it is setting null
                 if param == "null" {
-                    (None, format!("{} = null", col_name))
+                    (None, format!("{col_name} = null"))
                 } else {
-                    (Some(param), format!("{} = ?", col_name))
+                    (Some(param), format!("{col_name} = ?"))
                 }
             })
             .unzip();

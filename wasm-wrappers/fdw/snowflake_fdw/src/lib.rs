@@ -186,7 +186,7 @@ impl SnowflakeFdw {
                 .map(|sort| sort.deparse())
                 .collect::<Vec<String>>()
                 .join(", ");
-            sql.push_str(&format!(" order by {}", order_by));
+            sql.push_str(&format!(" order by {order_by}"));
         }
 
         // push down limits
@@ -195,7 +195,7 @@ impl SnowflakeFdw {
         // pushing down offset.
         if let Some(limit) = limit {
             let real_limit = limit.offset() + limit.count();
-            sql.push_str(&format!(" limit {}", real_limit));
+            sql.push_str(&format!(" limit {real_limit}"));
         }
 
         sql
@@ -204,7 +204,7 @@ impl SnowflakeFdw {
     // make the first SQL query request
     fn make_init_request(&mut self, sql: &str) -> FdwResult {
         let url = format!("{}?async=false", self.base_url);
-        let body = format!(r#"{{ "statement": "{}", "timeout": 60 }}"#, sql);
+        let body = format!(r#"{{ "statement": "{sql}", "timeout": 60 }}"#);
         let (mut resp, mut resp_json) = self.make_post_request(&url, &body)?;
 
         // polling query result
@@ -297,9 +297,9 @@ impl Guest for SnowflakeFdw {
         let claims = vec![
             (
                 "iss".to_owned(),
-                format!("{}.{}.SHA256:{}", acc_id, user, pub_key_fp),
+                format!("{acc_id}.{user}.SHA256:{pub_key_fp}"),
             ),
-            ("sub".to_owned(), format!("{}.{}", acc_id, user)),
+            ("sub".to_owned(), format!("{acc_id}.{user}")),
         ];
         let algo = "RS256";
         let token = jwt::encode(&claims, algo, &key, 1)?;
@@ -316,7 +316,7 @@ impl Guest for SnowflakeFdw {
         this.headers
             .push(("content-type".to_owned(), "application/json".to_string()));
         this.headers
-            .push(("authorization".to_owned(), format!("Bearer {}", token)));
+            .push(("authorization".to_owned(), format!("Bearer {token}")));
         this.headers.push((
             "x-snowflake-authorization-token-type".to_owned(),
             "KEYPAIR_JWT".to_owned(),
@@ -436,7 +436,7 @@ impl Guest for SnowflakeFdw {
             .enumerate()
             .map(|(idx, col_name)| {
                 let value = utils::cell_to_string(col_values[idx].as_ref());
-                format!("{} = {}", col_name, value)
+                format!("{col_name} = {value}")
             })
             .collect();
         let sql = format!(

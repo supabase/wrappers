@@ -88,8 +88,8 @@ impl OrbFdw {
         };
 
         let src = src_row
-            .pointer(&format!("/{}", prop_path))
-            .ok_or(format!("source column '{}' not found", prop_path))?;
+            .pointer(&format!("/{prop_path}"))
+            .ok_or(format!("source column '{prop_path}' not found"))?;
 
         // column type mapping
         let cell = match tgt_col.type_oid() {
@@ -125,8 +125,7 @@ impl OrbFdw {
             TypeOid::Json => src.as_object().map(|_| Cell::Json(src.to_string())),
             _ => {
                 return Err(format!(
-                    "target column '{}' type is not supported",
-                    tgt_col_name
+                    "target column '{tgt_col_name}' type is not supported"
                 ));
             }
         };
@@ -166,7 +165,7 @@ impl OrbFdw {
         match value {
             Value::Cell(c) => {
                 if let Cell::String(s) = c {
-                    qs.push(format!("{}={}", field, s));
+                    qs.push(format!("{field}={s}"));
                 }
             }
             Value::Array(arr) => {
@@ -176,7 +175,7 @@ impl OrbFdw {
                         _ => None,
                     })
                     .for_each(|c: &str| {
-                        qs.push(format!("{}[]={}", field, c));
+                        qs.push(format!("{field}[]={c}"));
                     });
             }
         }
@@ -288,7 +287,7 @@ impl OrbFdw {
             }
         } else {
             if let Some(ref sc) = self.src_cursor {
-                qs.push(format!("cursor={}", sc));
+                qs.push(format!("cursor={sc}"));
             }
             self.add_pushdown(&mut qs, ctx)?;
             format!("{}/{}?{}", self.base_url, self.object, qs.join("&"))
@@ -426,7 +425,7 @@ impl Guest for OrbFdw {
         this.headers
             .push(("content-type".to_owned(), "application/json".to_string()));
         this.headers
-            .push(("authorization".to_owned(), format!("Bearer {}", api_key)));
+            .push(("authorization".to_owned(), format!("Bearer {api_key}")));
 
         stats::inc_stats(FDW_NAME, stats::Metric::CreateTimes, 1);
 

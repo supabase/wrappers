@@ -476,16 +476,16 @@ impl SlackFdw {
         endpoint: &str,
         params: &[(String, String)],
     ) -> Result<http::Request, FdwError> {
-        let mut url = format!("https://slack.com/api/{}", endpoint);
+        let mut url = format!("https://slack.com/api/{endpoint}");
 
         // Add query parameters if any
         if !params.is_empty() {
             let query_string = params
                 .iter()
-                .map(|(k, v)| format!("{}={}", k, v))
+                .map(|(k, v)| format!("{k}={v}"))
                 .collect::<Vec<String>>()
                 .join("&");
-            url = format!("{}?{}", url, query_string);
+            url = format!("{url}?{query_string}");
         }
 
         Ok(http::Request {
@@ -529,7 +529,7 @@ impl SlackFdw {
                         .get("error")
                         .and_then(|e| e.as_str())
                         .unwrap_or("Unknown error");
-                    return Err(format!("Slack API error: {}", error));
+                    return Err(format!("Slack API error: {error}"));
                 }
             }
 
@@ -1117,7 +1117,7 @@ impl Guest for SlackFdw {
         this.headers
             .push(("content-type".to_owned(), "application/json".to_string()));
         this.headers
-            .push(("authorization".to_owned(), format!("Bearer {}", api_token)));
+            .push(("authorization".to_owned(), format!("Bearer {api_token}")));
 
         // Store options in the instance
         this.api_token = api_token;
@@ -1156,8 +1156,7 @@ impl Guest for SlackFdw {
             "files" => this.fetch_files(ctx),
             "team-info" => this.fetch_team_info(ctx),
             _ => Err(format!(
-                "Unsupported resource type: {}. Supported resources are 'users', 'usergroups', 'usergroup_members', 'messages', 'channels', 'files', and 'team-info'.",
-                resource
+                "Unsupported resource type: {resource}. Supported resources are 'users', 'usergroups', 'usergroup_members', 'messages', 'channels', 'files', and 'team-info'."
             )),
         }
     }
