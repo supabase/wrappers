@@ -18,7 +18,7 @@ enum BigQueryFdwError {
     OptionsError(#[from] OptionsError),
 
     #[error("big query error: {0}")]
-    BigQueryError(#[from] BQError),
+    BigQueryError(#[from] Box<BQError>),
 
     #[error("field {0} type not supported")]
     UnsupportedFieldType(String),
@@ -42,6 +42,12 @@ impl From<BigQueryFdwError> for ErrorReport {
             ),
             _ => ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, format!("{value}"), ""),
         }
+    }
+}
+
+impl From<BQError> for BigQueryFdwError {
+    fn from(value: BQError) -> Self {
+        Self::BigQueryError(value.into())
     }
 }
 

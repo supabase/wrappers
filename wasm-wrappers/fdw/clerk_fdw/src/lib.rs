@@ -54,7 +54,7 @@ impl ClerkFdw {
         let src = src_row
             .as_object()
             .and_then(|v| v.get(&tgt_col_name))
-            .ok_or(format!("source column '{}' not found", tgt_col_name))?;
+            .ok_or(format!("source column '{tgt_col_name}' not found",))?;
 
         // column type mapping
         let cell = match tgt_col.type_oid() {
@@ -81,8 +81,7 @@ impl ClerkFdw {
             TypeOid::Json => src.as_object().map(|_| Cell::Json(src.to_string())),
             _ => {
                 return Err(format!(
-                    "target column '{}' type is not supported",
-                    tgt_col_name
+                    "target column '{tgt_col_name}' type is not supported",
                 ));
             }
         };
@@ -95,7 +94,7 @@ impl ClerkFdw {
         let qs = [
             "order_by=-created_at".to_string(),
             format!("offset={}", self.src_offset),
-            format!("limit={}", BATCH_SIZE),
+            format!("limit={BATCH_SIZE}"),
         ];
         let url = format!("{}/{}?{}", self.base_url, self.object, qs.join("&"));
         let headers = self.headers.clone();
@@ -198,7 +197,7 @@ impl Guest for ClerkFdw {
         this.headers
             .push(("content-type".to_owned(), "application/json".to_string()));
         this.headers
-            .push(("authorization".to_owned(), format!("Bearer {}", api_key)));
+            .push(("authorization".to_owned(), format!("Bearer {api_key}")));
         this.headers
             .push(("clerk-api-version".to_owned(), "2021-02-05".to_string()));
 

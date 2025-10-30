@@ -13,7 +13,7 @@ use super::{AirtableFdwError, AirtableFdwResult};
 
 fn create_client(api_key: &str) -> Result<ClientWithMiddleware, AirtableFdwError> {
     let mut headers = header::HeaderMap::new();
-    let value = format!("Bearer {}", api_key);
+    let value = format!("Bearer {api_key}");
     let mut auth_value =
         header::HeaderValue::from_str(&value).map_err(|_| AirtableFdwError::InvalidApiKeyHeader)?;
     auth_value.set_sensitive(true);
@@ -62,7 +62,7 @@ impl AirtableFdw {
     ) -> AirtableFdwResult<String> {
         let mut params = Vec::new();
         if let Some(page_size) = page_size {
-            params.push(("pageSize", format!("{}", page_size)));
+            params.push(("pageSize", format!("{page_size}")));
         }
         if let Some(offset) = offset {
             params.push(("offset", offset.to_string()));

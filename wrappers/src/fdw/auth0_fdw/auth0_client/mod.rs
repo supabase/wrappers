@@ -31,7 +31,7 @@ impl Auth0Client {
         let mut headers = HeaderMap::new();
         let header_name = HeaderName::from_static("authorization"); // Use 'authorization' instead of 'api-key'
                                                                     // Format the API key as a Bearer token
-        let api_key_value = format!("Bearer {}", api_key);
+        let api_key_value = format!("Bearer {api_key}");
         let mut api_key_value = HeaderValue::from_str(&api_key_value)
             .map_err(|_| Auth0ClientError::InvalidApiKeyHeader)?;
         api_key_value.set_sensitive(true);

@@ -224,7 +224,7 @@ impl Mapper {
             pg_sys::JSONBOID => match src_type {
                 Type::Struct(_) | Type::List(_) | Type::Map(_) => {
                     if let Some(json) = self.get_batch_json(batch)?.borrow().deref() {
-                        let ptr = format!("/{}/{}", rec_offset, col_name);
+                        let ptr = format!("/{rec_offset}/{col_name}");
                         let val = json.pointer(&ptr).cloned().unwrap_or_default();
                         cell = Some(Cell::Json(JsonB(val)));
                     }

@@ -73,7 +73,7 @@ impl DuckdbFdw {
                 .join(" and ");
 
             if !cond.is_empty() {
-                sql.push_str(&format!(" where {}", cond));
+                sql.push_str(&format!(" where {cond}"));
             }
         }
 
@@ -92,7 +92,7 @@ impl DuckdbFdw {
                 })
                 .collect::<Vec<String>>()
                 .join(", ");
-            sql.push_str(&format!(" order by {}", order_by));
+            sql.push_str(&format!(" order by {order_by}"));
         }
 
         // push down limits
@@ -101,7 +101,7 @@ impl DuckdbFdw {
         // pushing down offset.
         if let Some(limit) = limit {
             let real_limit = limit.offset + limit.count;
-            sql.push_str(&format!(" limit {}", real_limit));
+            sql.push_str(&format!(" limit {real_limit}"));
         }
 
         Ok(sql)
@@ -132,7 +132,7 @@ impl DuckdbFdw {
 
             if let Some(pg_type) = mapper::map_column_type(tbl_pg, &col_name, &col_type, is_strict)?
             {
-                fields.push(format!("{} {} {}", col_name, pg_type, is_null));
+                fields.push(format!("{col_name} {pg_type} {is_null}"));
             }
         }
 

@@ -58,12 +58,12 @@ impl HubspotFdw {
             "id" => "id",
             "created_at" => "createdAt",
             "updated_at" => "updatedAt",
-            _ => &format!("properties/{}", tgt_col_name),
+            _ => &format!("properties/{tgt_col_name}"),
         };
 
         let src = src_row
-            .pointer(&format!("/{}", prop_path))
-            .ok_or(format!("source column '{}' not found", prop_path))?;
+            .pointer(&format!("/{prop_path}"))
+            .ok_or(format!("source column '{prop_path}' not found"))?;
 
         // column type mapping
         let cell = match tgt_col.type_oid() {
@@ -99,8 +99,7 @@ impl HubspotFdw {
             TypeOid::Json => src.as_object().map(|_| Cell::Json(src.to_string())),
             _ => {
                 return Err(format!(
-                    "target column '{}' type is not supported",
-                    tgt_col_name
+                    "target column '{tgt_col_name}' type is not supported"
                 ));
             }
         };
@@ -132,7 +131,7 @@ impl HubspotFdw {
         } else {
             // otherwise, the request is to get object list
             if let Some(ref sc) = self.src_cursor {
-                qs.push(format!("after={}", sc));
+                qs.push(format!("after={sc}"));
             }
 
             // push down limits
@@ -141,7 +140,7 @@ impl HubspotFdw {
             // pushing down offset.
             self.src_limit = ctx.get_limit().map(|v| v.offset() + v.count());
 
-            qs.push(format!("limit={}", BATCH_SIZE));
+            qs.push(format!("limit={BATCH_SIZE}"));
             format!("{}/{}?{}", self.base_url, self.object, qs.join("&"))
         };
 
@@ -237,7 +236,7 @@ impl Guest for HubspotFdw {
         this.headers
             .push(("content-type".to_owned(), "application/json".to_string()));
         this.headers
-            .push(("authorization".to_owned(), format!("Bearer {}", api_key)));
+            .push(("authorization".to_owned(), format!("Bearer {api_key}")));
 
         stats::inc_stats(FDW_NAME, stats::Metric::CreateTimes, 1);
 

@@ -61,7 +61,7 @@ impl LocationGenerator {
         let base_path = if let Some(data_location) = data_location {
             data_location.clone()
         } else {
-            format!("{}/data", table_location)
+            format!("{table_location}/data")
         };
 
         // compute partition value first
@@ -73,7 +73,7 @@ impl LocationGenerator {
         let dir_path = if partition_path.is_empty() {
             base_path
         } else {
-            format!("{}/{}", base_path, partition_path)
+            format!("{base_path}/{partition_path}")
         };
 
         Ok(Self {
@@ -124,7 +124,7 @@ impl LocationGenerator {
                             Transform::Year => {
                                 // year value is years since epoch (1970)
                                 let year = 1970 + *value;
-                                path_parts.push(format!("{}={}", field_name, year));
+                                path_parts.push(format!("{field_name}={year}"));
                             }
                             Transform::Month => {
                                 // month value is months since epoch (1970-01)
@@ -133,7 +133,7 @@ impl LocationGenerator {
                                 let months = months_since_epoch % 12;
                                 let year = 1970 + years;
                                 let month = 1 + months; // Months are 1-indexed
-                                path_parts.push(format!("{}={:04}-{:02}", field_name, year, month));
+                                path_parts.push(format!("{field_name}={year:04}-{month:02}"));
                             }
                             Transform::Hour => {
                                 // hour value is hours since epoch (1970-01-01 00:00)
@@ -156,63 +156,57 @@ impl LocationGenerator {
                             }
                             Transform::Identity => {
                                 // for identity transform, use the value directly
-                                path_parts.push(format!("{}={}", field_name, value));
+                                path_parts.push(format!("{field_name}={value}"));
                             }
                             _ => {
                                 return Err(IcebergFdwError::UnsupportedType(format!(
-                                    "unsupported partition transform: {:?}",
-                                    transform
+                                    "unsupported partition transform: {transform:?}",
                                 )));
                             }
                         }
                     }
                     Literal::Primitive(PrimitiveLiteral::Boolean(value)) => {
                         if matches!(transform, Transform::Identity) {
-                            path_parts.push(format!("{}={}", field_name, value));
+                            path_parts.push(format!("{field_name}={value}"));
                         } else {
                             return Err(IcebergFdwError::UnsupportedType(format!(
-                                "boolean values only supported with Identity transform, got: {:?}",
-                                transform
+                                "boolean values only supported with Identity transform, got: {transform:?}"
                             )));
                         }
                     }
                     Literal::Primitive(PrimitiveLiteral::Long(value)) => {
                         if matches!(transform, Transform::Identity) {
-                            path_parts.push(format!("{}={}", field_name, value));
+                            path_parts.push(format!("{field_name}={value}"));
                         } else {
                             return Err(IcebergFdwError::UnsupportedType(format!(
-                                "long values only supported with Identity transform, got: {:?}",
-                                transform
+                                "long values only supported with Identity transform, got: {transform:?}"
                             )));
                         }
                     }
                     Literal::Primitive(PrimitiveLiteral::Float(value)) => {
                         if matches!(transform, Transform::Identity) {
-                            path_parts.push(format!("{}={}", field_name, value));
+                            path_parts.push(format!("{field_name}={value}"));
                         } else {
                             return Err(IcebergFdwError::UnsupportedType(format!(
-                                "float values only supported with Identity transform, got: {:?}",
-                                transform
+                                "float values only supported with Identity transform, got: {transform:?}"
                             )));
                         }
                     }
                     Literal::Primitive(PrimitiveLiteral::Double(value)) => {
                         if matches!(transform, Transform::Identity) {
-                            path_parts.push(format!("{}={}", field_name, value));
+                            path_parts.push(format!("{field_name}={value}"));
                         } else {
                             return Err(IcebergFdwError::UnsupportedType(format!(
-                                "double values only supported with Identity transform, got: {:?}",
-                                transform
+                                "double values only supported with Identity transform, got: {transform:?}"
                             )));
                         }
                     }
                     Literal::Primitive(PrimitiveLiteral::String(value)) => {
                         if matches!(transform, Transform::Identity) {
-                            path_parts.push(format!("{}={}", field_name, value));
+                            path_parts.push(format!("{field_name}={value}"));
                         } else {
                             return Err(IcebergFdwError::UnsupportedType(format!(
-                                "string values only supported with Identity transform, got: {:?}",
-                                transform
+                                "string values only supported with Identity transform, got: {transform:?}"
                             )));
                         }
                     }

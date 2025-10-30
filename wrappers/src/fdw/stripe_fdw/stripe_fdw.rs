@@ -421,7 +421,7 @@ fn create_client(
     api_version: Option<&str>,
 ) -> StripeFdwResult<ClientWithMiddleware> {
     let mut headers = header::HeaderMap::new();
-    let value = format!("Bearer {}", api_key);
+    let value = format!("Bearer {api_key}");
     let mut auth_value = header::HeaderValue::from_str(&value)?;
     auth_value.set_sensitive(true);
     headers.insert(header::AUTHORIZATION, auth_value);
@@ -572,8 +572,7 @@ fn row_to_body(row: &Row) -> StripeFdwResult<JsonValue> {
                 }
                 _ => {
                     return Err(StripeFdwError::UnsupportedColumnType(format!(
-                        "{:?}",
-                        col_name
+                        "{col_name:?}"
                     )));
                 }
             }
@@ -627,7 +626,7 @@ fn pushdown_quals(
     // add pagination parameters except for 'balance' object
     if obj != "balance" {
         url.query_pairs_mut()
-            .append_pair("limit", &format!("{}", page_size));
+            .append_pair("limit", &format!("{page_size}"));
         if let Some(ref cursor) = cursor {
             url.query_pairs_mut().append_pair("starting_after", cursor);
         }
@@ -725,13 +724,7 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
             .map(|t| t.to_owned())
             // Ensure trailing slash is always present, otherwise /v1 will get obliterated when
             // joined with object
-            .map(|s| {
-                if s.ends_with('/') {
-                    s
-                } else {
-                    format!("{}/", s)
-                }
-            })
+            .map(|s| if s.ends_with('/') { s } else { format!("{s}/") })
             .unwrap_or_else(|| "https://api.stripe.com/v1/".to_string());
         let api_version = server.options.get("api_version").map(|t| t.as_str());
         let client = match server.options.get("api_key") {

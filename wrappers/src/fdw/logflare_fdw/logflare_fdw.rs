@@ -198,13 +198,7 @@ impl ForeignDataWrapper<LogflareFdwError> for LogflareFdw {
             .options
             .get("api_url")
             .map(|t| t.to_owned())
-            .map(|s| {
-                if s.ends_with('/') {
-                    s
-                } else {
-                    format!("{}/", s)
-                }
-            })
+            .map(|s| if s.ends_with('/') { s } else { format!("{s}/") })
             .unwrap_or_else(|| LogflareFdw::BASE_URL.to_string());
         let client = match server.options.get("api_key") {
             Some(api_key) => Some(create_client(api_key)),

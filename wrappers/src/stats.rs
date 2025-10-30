@@ -40,10 +40,9 @@ impl fmt::Display for Metric {
 /// Returns the fully qualified name of the statistics table
 fn get_stats_table() -> Result<String, &'static str> {
     let sql = format!(
-        "select b.nspname || '.{}'
+        "select b.nspname || '.{WRAPPERS_STATS_TABLE_NAME}'
          from pg_catalog.pg_extension a join pg_namespace b on a.extnamespace = b.oid
-         where a.extname = 'wrappers'",
-        WRAPPERS_STATS_TABLE_NAME
+         where a.extname = 'wrappers'"
     );
 
     Spi::get_one(&sql)
@@ -74,22 +73,21 @@ pub(crate) fn inc_stats(fdw_name: &str, metric: Metric, inc: i64) {
     let stats_table = match get_stats_table() {
         Ok(table) => table,
         Err(e) => {
-            report_warning(&format!("Failed to get stats table: {}", e));
+            report_warning(&format!("Failed to get stats table: {e}"));
             return;
         }
     };
 
     let sql = format!(
-        "insert into {} as s (fdw_name, {}) values($1, $2)
+        "insert into {stats_table} as s (fdw_name, {metric}) values($1, $2)
          on conflict(fdw_name)
          do update set
-            {} = coalesce(s.{}, 0) + excluded.{},
-            updated_at = timezone('utc'::text, now())",
-        stats_table, metric, metric, metric, metric
+            {metric} = coalesce(s.{metric}, 0) + excluded.{metric},
+            updated_at = timezone('utc'::text, now())"
     );
 
     if let Err(e) = Spi::run_with_args(&sql, &[fdw_name.into(), inc.into()]) {
-        report_warning(&format!("Failed to increment stats: {}", e));
+        report_warning(&format!("Failed to increment stats: {e}"));
     }
 }
 
@@ -105,17 +103,17 @@ pub(crate) fn get_metadata(fdw_name: &str) -> Option<JsonB> {
     let stats_table = match get_stats_table() {
         Ok(table) => table,
         Err(e) => {
-            report_warning(&format!("Failed to get stats table: {}", e));
+            report_warning(&format!("Failed to get stats table: {e}"));
             return None;
         }
     };
 
-    let sql = format!("select metadata from {} where fdw_name = $1", stats_table);
+    let sql = format!("select metadata from {stats_table} where fdw_name = $1");
 
     match Spi::get_one_with_args(&sql, &[fdw_name.into()]) {
         Ok(metadata) => metadata,
         Err(e) => {
-            report_warning(&format!("Failed to get metadata: {}", e));
+            report_warning(&format!("Failed to get metadata: {e}"));
             None
         }
     }
@@ -138,21 +136,20 @@ pub(crate) fn set_metadata(fdw_name: &str, metadata: Option<JsonB>) {
     let stats_table = match get_stats_table() {
         Ok(table) => table,
         Err(e) => {
-            report_warning(&format!("Failed to get stats table: {}", e));
+            report_warning(&format!("Failed to get stats table: {e}"));
             return;
         }
     };
 
     let sql = format!(
-        "insert into {} as s (fdw_name, metadata) values($1, $2)
+        "insert into {stats_table} as s (fdw_name, metadata) values($1, $2)
          on conflict(fdw_name)
          do update set
             metadata = $2,
-            updated_at = timezone('utc'::text, now())",
-        stats_table
+            updated_at = timezone('utc'::text, now())"
     );
 
     if let Err(err) = Spi::run_with_args(&sql, &[fdw_name.into(), metadata.into()]) {
-        report_warning(&format!("Failed to set metadata: {}", err));
+        report_warning(&format!("Failed to set metadata: {err}"));
     }
 }

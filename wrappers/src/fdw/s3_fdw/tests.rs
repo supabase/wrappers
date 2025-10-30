@@ -179,7 +179,7 @@ mod tests {
             .unwrap();
 
             let check_test_table = |table| {
-                let sql = format!("SELECT * FROM {} ORDER BY name LIMIT 1", table);
+                let sql = format!("SELECT * FROM {table} ORDER BY name LIMIT 1");
                 let results = c
                     .select(&sql, None, &[])
                     .unwrap()
@@ -199,7 +199,7 @@ mod tests {
             check_test_table("s3_test_table_jsonl_bz");
 
             let check_parquet_table = |table| {
-                let sql = format!("SELECT * FROM {} ORDER BY id LIMIT 1", table);
+                let sql = format!("SELECT * FROM {table} ORDER BY id LIMIT 1");
                 let results = c
                     .select(&sql, None, &[])
                     .unwrap()

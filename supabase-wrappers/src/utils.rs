@@ -172,7 +172,7 @@ pub fn get_vault_secret(secret_id: &str) -> Option<String> {
                 Err(err) => {
                     report_error(
                         PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                        &format!("query vault failed \"{}\": {}", secret_id, err),
+                        &format!("query vault failed \"{secret_id}\": {err}"),
                     );
                     None
                 }
@@ -181,7 +181,7 @@ pub fn get_vault_secret(secret_id: &str) -> Option<String> {
         Err(err) => {
             report_error(
                 PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                &format!("invalid secret id \"{}\": {}", secret_id, err),
+                &format!("invalid secret id \"{secret_id}\": {err}"),
             );
             None
         }
@@ -201,7 +201,7 @@ pub fn get_vault_secret_by_name(secret_name: &str) -> Option<String> {
         Err(err) => {
             report_error(
                 PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                &format!("query vault failed \"{}\": {}", secret_name, err),
+                &format!("query vault failed \"{secret_name}\": {err}"),
             );
             None
         }

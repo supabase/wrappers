@@ -167,7 +167,7 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
             if endpoint_url.ends_with('/') {
                 config_loader = config_loader.endpoint_url(endpoint_url);
             } else {
-                config_loader = config_loader.endpoint_url(format!("{}/", endpoint_url));
+                config_loader = config_loader.endpoint_url(format!("{endpoint_url}/"));
             };
         }
 
@@ -351,10 +351,10 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
                                                 Some(Cell::String(v.to_owned()))
                                             }
                                             JsonValue::Array(v) => {
-                                                Some(Cell::String(format!("{:?}", v)))
+                                                Some(Cell::String(format!("{v:?}")))
                                             }
                                             JsonValue::Object(v) => {
-                                                Some(Cell::String(format!("{:?}", v)))
+                                                Some(Cell::String(format!("{v:?}")))
                                             }
                                         })
                                         .unwrap_or(None);

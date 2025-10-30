@@ -51,15 +51,14 @@ impl CalFdw {
         // 'attrs' JSON column
         if !matches!(tgt_col_name.as_str(), "id" | "username" | "email" | "name") {
             return Err(format!(
-                "target column name {} is not supported",
-                tgt_col_name
+                "target column name {tgt_col_name} is not supported"
             ));
         }
 
         let src = src_row
             .as_object()
             .and_then(|v| v.get(&tgt_col_name))
-            .ok_or(format!("source column '{}' not found", tgt_col_name))?;
+            .ok_or(format!("source column '{tgt_col_name}' not found"))?;
 
         // column type mapping
         let cell = match tgt_col.type_oid() {
@@ -86,8 +85,7 @@ impl CalFdw {
             TypeOid::Json => src.as_object().map(|_| Cell::Json(src.to_string())),
             _ => {
                 return Err(format!(
-                    "target column '{}' type is not supported",
-                    tgt_col_name
+                    "target column '{tgt_col_name}' type is not supported"
                 ));
             }
         };
@@ -216,7 +214,7 @@ impl Guest for CalFdw {
         this.headers
             .push(("content-type".to_owned(), "application/json".to_string()));
         this.headers
-            .push(("authorization".to_owned(), format!("Bearer {}", api_key)));
+            .push(("authorization".to_owned(), format!("Bearer {api_key}")));
 
         stats::inc_stats(FDW_NAME, stats::Metric::CreateTimes, 1);
 

@@ -84,7 +84,7 @@ pub fn require_option_or<'a>(
 
 /// Check if the option list contains a specific option, used in [validator](crate::interface::ForeignDataWrapper::validator)
 pub fn check_options_contain(opt_list: &[Option<String>], tgt: &str) -> Result<(), OptionsError> {
-    let search_key = format!("{}=", tgt);
+    let search_key = format!("{tgt}=");
     let valid = opt_list
         .iter()
         .flatten()

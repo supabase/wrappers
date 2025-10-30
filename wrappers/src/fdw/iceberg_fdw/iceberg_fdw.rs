@@ -223,8 +223,7 @@ impl IcebergFdw {
             }
             let column_index = source_column_index.ok_or_else(|| {
                 IcebergFdwError::ColumnNotFound(format!(
-                    "cannot find source column with ID {} for partition field",
-                    source_field_id
+                    "cannot find source column with ID {source_field_id} for partition field",
                 ))
             })?;
 
@@ -232,9 +231,9 @@ impl IcebergFdw {
             if let Some(Some(cell)) = row.cells.get(column_index) {
                 // for now, just use string representation
                 // in a full implementation, you'd handle different transforms
-                key_parts.push(format!("{}={}", field_name, cell));
+                key_parts.push(format!("{field_name}={cell}"));
             } else {
-                key_parts.push(format!("{}=null", field_name));
+                key_parts.push(format!("{field_name}=null"));
             }
         }
 
@@ -567,7 +566,7 @@ impl ForeignDataWrapper<IcebergFdwError> for IcebergFdw {
                             PrimitiveType::Float => "real",
                             PrimitiveType::Double => "double precision",
                             PrimitiveType::Decimal { precision, scale } => {
-                                &format!("numeric({}, {})", precision, scale)
+                                &format!("numeric({precision}, {scale})")
                             }
                             PrimitiveType::String => "text",
                             PrimitiveType::Date => "date",
@@ -586,10 +585,10 @@ impl ForeignDataWrapper<IcebergFdwError> for IcebergFdw {
                                 continue;
                             }
                         };
-                        fields.push(format!("{} {} {}", field_name, pg_type, not_null));
+                        fields.push(format!("{field_name} {pg_type} {not_null}"));
                     }
                     Type::Struct(_) | Type::List(_) | Type::Map(_) => {
-                        fields.push(format!("{} jsonb {}", field_name, not_null));
+                        fields.push(format!("{field_name} jsonb {not_null}"));
                     }
                 }
             }

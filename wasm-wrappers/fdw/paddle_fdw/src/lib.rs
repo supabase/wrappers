@@ -156,7 +156,7 @@ impl PaddleFdw {
         let src = src_row
             .as_object()
             .and_then(|v| v.get(&tgt_col_name))
-            .ok_or(format!("source column '{}' not found", tgt_col_name))?;
+            .ok_or(format!("source column '{tgt_col_name}' not found"))?;
 
         // column type mapping
         let cell = match tgt_col.type_oid() {
@@ -196,8 +196,7 @@ impl PaddleFdw {
             TypeOid::Json => src.as_object().map(|_| Cell::Json(src.to_string())),
             _ => {
                 return Err(format!(
-                    "target column '{}' type is not supported",
-                    tgt_col_name
+                    "target column '{tgt_col_name}' type is not supported"
                 ));
             }
         };
@@ -222,7 +221,7 @@ impl PaddleFdw {
                         serde_json::from_str::<JsonValue>(v).map_err(|e| e.to_string())?
                     }
                     _ => {
-                        return Err(format!("column '{}' type is not supported", col_name));
+                        return Err(format!("column '{col_name}' type is not supported"));
                     }
                 };
                 map.insert(col_name.to_owned(), value);
@@ -260,7 +259,7 @@ impl Guest for PaddleFdw {
         this.headers
             .push(("content-type".to_owned(), "application/json".to_string()));
         this.headers
-            .push(("authorization".to_owned(), format!("Bearer {}", api_key)));
+            .push(("authorization".to_owned(), format!("Bearer {api_key}")));
         this.headers
             .push(("paddle-version".to_owned(), "1".to_owned()));
 

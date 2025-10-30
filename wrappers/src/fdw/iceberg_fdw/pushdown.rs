@@ -189,7 +189,7 @@ pub(super) fn try_pushdown(table: &Table, quals: &[Qual]) -> IcebergFdwResult<Op
     let ret = preds.into_iter().reduce(|ret, p| ret.and(p));
 
     if cfg!(debug_assertions) {
-        log_debug1(&format!("pushdown predicate: {:?}", ret));
+        log_debug1(&format!("pushdown predicate: {ret:?}",));
     }
 
     Ok(ret)

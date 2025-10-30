@@ -62,15 +62,14 @@ impl NotionFdw {
                 | "page_id"
         ) {
             return Err(format!(
-                "target column name {} is not supported",
-                tgt_col_name
+                "target column name {tgt_col_name} is not supported"
             ));
         }
 
         let src = src_row
             .as_object()
             .and_then(|v| v.get(&tgt_col_name))
-            .ok_or(format!("source column '{}' not found", tgt_col_name))?;
+            .ok_or(format!("source column '{tgt_col_name}' not found"))?;
 
         // column type mapping
         let cell = match tgt_col.type_oid() {
@@ -95,8 +94,7 @@ impl NotionFdw {
             TypeOid::Json => src.as_object().map(|_| Cell::Json(src.to_string())),
             _ => {
                 return Err(format!(
-                    "target column '{}' type is not supported",
-                    tgt_col_name
+                    "target column '{tgt_col_name}' type is not supported"
                 ));
             }
         };
@@ -135,7 +133,7 @@ impl NotionFdw {
                     )
                 } else {
                     let start_cursor_str = if let Some(sc) = start_cursor {
-                        format!(r#""start_cursor": "{}","#, sc)
+                        format!(r#""start_cursor": "{sc}","#)
                     } else {
                         String::default()
                     };
@@ -143,17 +141,16 @@ impl NotionFdw {
                         r#"{{
                         "query": "",
                         "filter": {{
-                            "value": "{}",
+                            "value": "{object}",
                             "property": "object"
                         }},
                         "sort": {{
                           "direction": "ascending",
                           "timestamp": "last_edited_time"
                         }},
-                        {}
+                        {start_cursor_str}
                         "page_size": 100
-                    }}"#,
-                        object, start_cursor_str,
+                    }}"#
                     );
 
                     (
@@ -174,7 +171,7 @@ impl NotionFdw {
                     )
                 } else {
                     let start_cursor = if let Some(sc) = start_cursor {
-                        format!("&start_cursor={}", sc)
+                        format!("&start_cursor={sc}")
                     } else {
                         String::default()
                     };
@@ -194,7 +191,7 @@ impl NotionFdw {
                     )
                 } else if let Some(block_id) = block_id {
                     let start_cursor = if let Some(sc) = start_cursor {
-                        format!("&start_cursor={}", sc)
+                        format!("&start_cursor={sc}")
                     } else {
                         String::default()
                     };
@@ -208,7 +205,7 @@ impl NotionFdw {
                 }
             }
 
-            _ => return Err(format!("object {} is not supported", object)),
+            _ => return Err(format!("object {object} is not supported")),
         };
 
         Ok(http::Request {
@@ -425,7 +422,7 @@ impl Guest for NotionFdw {
         this.headers
             .push(("content-type".to_owned(), "application/json".to_string()));
         this.headers
-            .push(("authorization".to_owned(), format!("Bearer {}", api_key)));
+            .push(("authorization".to_owned(), format!("Bearer {api_key}")));
         this.headers
             .push(("notion-version".to_owned(), api_version));
 
