@@ -118,26 +118,26 @@ fn write_array<T: std::fmt::Display>(
     let res = array
         .iter()
         .map(|e| match e {
-            Some(val) => format!("{}", val),
+            Some(val) => format!("{val}",),
             None => "null".to_owned(),
         })
         .collect::<Vec<String>>()
         .join(",");
-    write!(f, "[{}]", res)
+    write!(f, "[{res}]",)
 }
 
 impl fmt::Display for Cell {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Cell::Bool(v) => write!(f, "{}", v),
-            Cell::I8(v) => write!(f, "{}", v),
-            Cell::I16(v) => write!(f, "{}", v),
-            Cell::F32(v) => write!(f, "{}", v),
-            Cell::I32(v) => write!(f, "{}", v),
-            Cell::F64(v) => write!(f, "{}", v),
-            Cell::I64(v) => write!(f, "{}", v),
-            Cell::Numeric(v) => write!(f, "{}", v),
-            Cell::String(v) => write!(f, "'{}'", v),
+            Cell::Bool(v) => write!(f, "{v}"),
+            Cell::I8(v) => write!(f, "{v}"),
+            Cell::I16(v) => write!(f, "{v}"),
+            Cell::F32(v) => write!(f, "{v}"),
+            Cell::I32(v) => write!(f, "{v}"),
+            Cell::F64(v) => write!(f, "{v}"),
+            Cell::I64(v) => write!(f, "{v}"),
+            Cell::Numeric(v) => write!(f, "{v}"),
+            Cell::String(v) => write!(f, "'{v}'"),
             Cell::Date(v) => unsafe {
                 let dt =
                     fcinfo::direct_function_call_as_datum(pg_sys::date_out, &[(*v).into_datum()])
@@ -190,22 +190,22 @@ impl fmt::Display for Cell {
                         .expect("timestamptz should be a valid string")
                 )
             },
-            Cell::Interval(v) => write!(f, "{}", v),
-            Cell::Json(v) => write!(f, "{:?}", v),
+            Cell::Interval(v) => write!(f, "{v}"),
+            Cell::Json(v) => write!(f, "{v:?}"),
             Cell::Bytea(v) => {
                 let byte_u8 = unsafe { pgrx::varlena::varlena_to_byte_slice(*v) };
                 let hex = byte_u8
                     .iter()
-                    .map(|b| format!("{:02X}", b))
+                    .map(|b| format!("{b:02X}"))
                     .collect::<Vec<String>>()
                     .join("");
                 if hex.is_empty() {
                     write!(f, "''")
                 } else {
-                    write!(f, r#"'\x{}'"#, hex)
+                    write!(f, r#"'\x{hex}'"#,)
                 }
             }
-            Cell::Uuid(v) => write!(f, "'{}'", v),
+            Cell::Uuid(v) => write!(f, "'{v}'",),
             Cell::BoolArray(v) => write_array(v, f),
             Cell::I16Array(v) => write_array(v, f),
             Cell::I32Array(v) => write_array(v, f),
@@ -387,7 +387,7 @@ impl DefaultFormatter {
 
 impl CellFormatter for DefaultFormatter {
     fn fmt_cell(&mut self, cell: &Cell) -> String {
-        format!("{}", cell)
+        format!("{cell}",)
     }
 }
 
@@ -646,7 +646,7 @@ impl Sort {
         let mut sql = self.deparse();
 
         if let Some(collate) = &self.collate {
-            sql.push_str(&format!(" collate {}", collate));
+            sql.push_str(&format!(" collate {collate}"));
         }
 
         sql

@@ -29,7 +29,7 @@ jobs:
       - name: Set up Rust
         run: |
           # install Rust
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile minimal --default-toolchain 1.87.0 && \
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile minimal --default-toolchain 1.88.0 && \
             rustup --version && \
             rustc --version && \
             cargo --version

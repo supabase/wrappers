@@ -39,11 +39,7 @@ fn check_version_requirement(ver_req: &str) -> WasmFdwResult<()> {
     let host_ver = meta.get("version").expect("version should be defined");
     let version = Version::parse(host_ver)?;
     if !req.matches(&version) {
-        return Err(format!(
-            "host version {} not match requirement {}",
-            host_ver, ver_req
-        )
-        .into());
+        return Err(format!("host version {host_ver} not match requirement {ver_req}").into());
     }
     Ok(())
 }
@@ -101,14 +97,14 @@ fn download_from_warg(
     ))?;
 
     let pkg_name = warg_protocol::registry::PackageName::new(name)
-        .map_err(|e| format!("invalid package name '{}': {}", name, e))?;
+        .map_err(|e| format!("invalid package name '{name}': {e}"))?;
 
     let ver = semver::VersionReq::parse(version)
-        .map_err(|e| format!("invalid version requirement '{}': {}", version, e))?;
+        .map_err(|e| format!("invalid version requirement '{version}': {e}"))?;
 
     let pkg = rt
         .block_on(client.download(&pkg_name, &ver))?
-        .ok_or_else(|| format!("{}@{} not found on {}", name, version, url))?;
+        .ok_or_else(|| format!("{name}@{version} not found on {url}"))?;
 
     load_component_from_file(engine, pkg.path)
 }
@@ -124,7 +120,7 @@ fn download_from_url(
     // validate URL
     let url = url
         .parse::<reqwest::Url>()
-        .map_err(|e| format!("invalid URL '{}': {}", url, e))?;
+        .map_err(|e| format!("invalid URL '{url}': {e}"))?;
 
     // calculate cache path
     let cache_path = get_cache_path(url.as_str(), name, version)?;

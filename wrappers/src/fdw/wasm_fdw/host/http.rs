@@ -53,7 +53,7 @@ fn create_client(headers: &GuestHeaders) -> Result<ClientWithMiddleware, GuestHt
 fn error_for_status(status_code: u16, url: &str) -> Result<(), GuestHttpError> {
     let status = StatusCode::from_u16(status_code).map_err(|e| e.to_string())?;
     if status.is_client_error() || status.is_server_error() {
-        Err(format!("HTTP status error ({}) for url ({})", status, url))
+        Err(format!("HTTP status error ({status}) for url ({url})"))
     } else {
         Ok(())
     }

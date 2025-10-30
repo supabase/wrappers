@@ -54,7 +54,7 @@ enum S3FdwError {
     UriParseError(#[from] http::uri::InvalidUri),
 
     #[error("request failed: {0}")]
-    RequestError(#[from] SdkError<GetObjectError, HttpResponse>),
+    RequestError(#[from] Box<SdkError<GetObjectError, HttpResponse>>),
 
     #[error("parse JSON response failed: {0}")]
     JsonParseError(#[from] serde_json::Error),
@@ -66,6 +66,12 @@ enum S3FdwError {
 impl From<S3FdwError> for ErrorReport {
     fn from(value: S3FdwError) -> Self {
         ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, format!("{value}"), "")
+    }
+}
+
+impl From<SdkError<GetObjectError, HttpResponse>> for S3FdwError {
+    fn from(value: SdkError<GetObjectError, HttpResponse>) -> Self {
+        Self::RequestError(value.into())
     }
 }
 

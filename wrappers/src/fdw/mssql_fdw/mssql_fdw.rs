@@ -88,7 +88,7 @@ impl CellFormatter for MssqlCellFormatter {
         match cell {
             // format boolean type to 0 or 1
             Cell::Bool(v) => format!("{}", *v as u8),
-            _ => format!("{}", cell),
+            _ => format!("{cell}"),
         }
     }
 }
@@ -152,7 +152,7 @@ impl MssqlFdw {
                 .join(" and ");
 
             if !cond.is_empty() {
-                sql.push_str(&format!(" where {}", cond));
+                sql.push_str(&format!(" where {cond}"));
             }
         }
 
@@ -171,7 +171,7 @@ impl MssqlFdw {
                 })
                 .collect::<Vec<String>>()
                 .join(", ");
-            sql.push_str(&format!(" order by {}", order_by));
+            sql.push_str(&format!(" order by {order_by}"));
         }
 
         // push down limits
@@ -186,10 +186,7 @@ impl MssqlFdw {
             }
 
             let real_limit = limit.offset + limit.count;
-            sql.push_str(&format!(
-                " offset 0 rows fetch next {} rows only",
-                real_limit
-            ));
+            sql.push_str(&format!(" offset 0 rows fetch next {real_limit} rows only",));
         }
 
         Ok(sql)

@@ -234,7 +234,7 @@ impl ForeignDataWrapper<S3VectorsFdwError> for S3VectorsFdw {
             let endpoint_url = if endpoint_url.ends_with('/') {
                 endpoint_url.clone()
             } else {
-                format!("{}/", endpoint_url)
+                format!("{endpoint_url}/")
             };
             env::set_var("AWS_ENDPOINT_URL", endpoint_url);
         }
@@ -352,8 +352,7 @@ impl ForeignDataWrapper<S3VectorsFdwError> for S3VectorsFdw {
                         builder = builder.set_key(key.clone().into());
                     } else {
                         return Err(S3VectorsFdwError::InvalidInsertValue(format!(
-                            "key: {:?}",
-                            cell
+                            "key: {cell:?}",
                         )));
                     }
                 }
@@ -364,8 +363,7 @@ impl ForeignDataWrapper<S3VectorsFdwError> for S3VectorsFdw {
                         builder = builder.set_data(vector_data.into());
                     } else {
                         return Err(S3VectorsFdwError::InvalidInsertValue(format!(
-                            "data: {:?}",
-                            cell
+                            "data: {cell:?}"
                         )));
                     }
                 }
@@ -376,8 +374,7 @@ impl ForeignDataWrapper<S3VectorsFdwError> for S3VectorsFdw {
                             builder = builder.set_metadata(document.into());
                         } else {
                             return Err(S3VectorsFdwError::InvalidInsertValue(format!(
-                                "metadata: {:?}",
-                                cell
+                                "metadata: {cell:?}"
                             )));
                         }
                     } else {
@@ -407,7 +404,7 @@ impl ForeignDataWrapper<S3VectorsFdwError> for S3VectorsFdw {
                         .send(),
                 )?;
             }
-            _ => return Err(S3VectorsFdwError::InvalidRowId(format!("{:?}", rowid))),
+            _ => return Err(S3VectorsFdwError::InvalidRowId(format!("{rowid:?}"))),
         };
 
         Ok(())

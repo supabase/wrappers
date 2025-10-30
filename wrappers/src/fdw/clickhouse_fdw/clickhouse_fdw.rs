@@ -416,8 +416,7 @@ impl ClickHouseFdw {
                             Value::Cell(cell) => return Ok(cell.to_string()),
                             Value::Array(arr) => {
                                 return Err(ClickHouseFdwError::NoArrayParameter(format!(
-                                    "{:?}",
-                                    arr
+                                    "{arr:?}"
                                 )))
                             }
                         }
@@ -461,7 +460,7 @@ impl ClickHouseFdw {
                 .join(" and ");
 
             if !cond.is_empty() {
-                sql.push_str(&format!(" where {}", cond));
+                sql.push_str(&format!(" where {cond}"));
             }
         }
 
@@ -472,7 +471,7 @@ impl ClickHouseFdw {
                 .map(|sort| sort.deparse())
                 .collect::<Vec<String>>()
                 .join(", ");
-            sql.push_str(&format!(" order by {}", order_by));
+            sql.push_str(&format!(" order by {order_by}"));
         }
 
         // push down limits
@@ -481,7 +480,7 @@ impl ClickHouseFdw {
         // pushing down offset.
         if let Some(limit) = limit {
             let real_limit = limit.offset + limit.count;
-            sql.push_str(&format!(" limit {}", real_limit));
+            sql.push_str(&format!(" limit {real_limit}"));
         }
 
         Ok(sql)
@@ -903,9 +902,9 @@ impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
                 continue;
             }
             if let Some(cell) = cell {
-                sets.push(format!("{} = {}", col, cell));
+                sets.push(format!("{col} = {cell}"));
             } else {
-                sets.push(format!("{} = null", col));
+                sets.push(format!("{col} = null"));
             }
         }
         let sql = format!(

@@ -73,8 +73,7 @@ fn body_to_rows(
                     "json" => Some(Cell::Json(JsonB(v.clone()))),
                     _ => {
                         return Err(FirebaseFdwError::UnsupportedColumnType(format!(
-                            "{}({})",
-                            col_name, col_type
+                            "{col_name}({col_type})"
                         )))
                     }
                 };
@@ -176,7 +175,7 @@ impl FirebaseFdw {
                     Self::PAGE_SIZE,
                 );
                 if let Some(next_page_token) = next_page {
-                    ret.push_str(&format!("&nextPageToken={}", next_page_token));
+                    ret.push_str(&format!("&nextPageToken={next_page_token}"));
                 }
                 ret
             }
@@ -199,7 +198,7 @@ impl FirebaseFdw {
                         Self::PAGE_SIZE,
                     );
                     if let Some(next_page_token) = next_page {
-                        ret.push_str(&format!("&pageToken={}", next_page_token));
+                        ret.push_str(&format!("&pageToken={next_page_token}"));
                     }
                     return ret;
                 }
@@ -243,7 +242,7 @@ impl ForeignDataWrapper<FirebaseFdwError> for FirebaseFdw {
 
         // create client
         let mut headers = header::HeaderMap::new();
-        let value = format!("Bearer {}", token);
+        let value = format!("Bearer {token}");
         let mut auth_value = header::HeaderValue::from_str(&value)
             .map_err(|_| FirebaseFdwError::InvalidApiKeyHeader)?;
         auth_value.set_sensitive(true);

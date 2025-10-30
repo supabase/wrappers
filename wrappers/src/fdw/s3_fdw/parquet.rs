@@ -11,7 +11,7 @@ use pgrx::datum::datetime_support::to_timestamp;
 use pgrx::pg_sys;
 use pgrx::prelude::Date;
 use std::cmp::min;
-use std::io::{Cursor, Error as IoError, ErrorKind, Result as IoResult, SeekFrom};
+use std::io::{Cursor, Error as IoError, Result as IoResult, SeekFrom};
 use std::pin::Pin;
 use std::task::{Context, Poll};
 use tokio::io::{AsyncRead, AsyncSeek, ReadBuf};
@@ -24,7 +24,7 @@ use super::{S3FdwError, S3FdwResult};
 // convert an error to IO error
 #[inline]
 fn to_io_error(err: impl std::error::Error) -> IoError {
-    IoError::new(ErrorKind::Other, err.to_string())
+    IoError::other(err.to_string())
 }
 
 // async reader for a single S3 parquet file
@@ -63,10 +63,10 @@ impl S3ParquetReader {
         )
         .map_err(to_io_error)
         .and_then(|output| {
-            let object_size = output.object_size().ok_or::<IoError>(IoError::new(
-                ErrorKind::Other,
-                "object has no size attribute",
-            ))? as u64;
+            let object_size = output
+                .object_size()
+                .ok_or::<IoError>(IoError::other("object has no size attribute"))?
+                as u64;
             self.object_size = Some(object_size);
             Ok(object_size)
         })

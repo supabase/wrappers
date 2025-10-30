@@ -111,8 +111,7 @@ pub(super) fn compute_partition_info(
         }
         let column_index = source_column_index.ok_or_else(|| {
             IcebergFdwError::ColumnNotFound(format!(
-                "cannot find source column with ID {} for partition field",
-                source_field_id
+                "cannot find source column with ID {source_field_id} for partition field",
             ))
         })?;
 
@@ -148,11 +147,11 @@ pub(super) fn compute_partition_info(
                 }
 
                 if let Some(days) = days_since_epoch {
-                    key_parts.push(format!("{}={}", field_name, days));
+                    key_parts.push(format!("{field_name}={days}"));
                     partition_values
                         .push(Some(Literal::Primitive(PrimitiveLiteral::Int(days as i32))));
                 } else {
-                    key_parts.push(format!("{}=null", field_name));
+                    key_parts.push(format!("{field_name}=null",));
                     partition_values.push(None);
                 }
             }
@@ -186,12 +185,12 @@ pub(super) fn compute_partition_info(
                 }
 
                 if let Some(years) = years_since_epoch {
-                    key_parts.push(format!("{}={}", field_name, years));
+                    key_parts.push(format!("{field_name}={years}"));
                     partition_values.push(Some(Literal::Primitive(PrimitiveLiteral::Int(
                         years as i32,
                     ))));
                 } else {
-                    key_parts.push(format!("{}=null", field_name));
+                    key_parts.push(format!("{field_name}=null",));
                     partition_values.push(None);
                 }
             }
@@ -225,12 +224,12 @@ pub(super) fn compute_partition_info(
                 }
 
                 if let Some(months) = months_since_epoch {
-                    key_parts.push(format!("{}={}", field_name, months));
+                    key_parts.push(format!("{field_name}={months}"));
                     partition_values.push(Some(Literal::Primitive(PrimitiveLiteral::Int(
                         months as i32,
                     ))));
                 } else {
-                    key_parts.push(format!("{}=null", field_name));
+                    key_parts.push(format!("{field_name}=null",));
                     partition_values.push(None);
                 }
             }
@@ -261,12 +260,12 @@ pub(super) fn compute_partition_info(
                 }
 
                 if let Some(hours) = hours_since_epoch {
-                    key_parts.push(format!("{}={}", field_name, hours));
+                    key_parts.push(format!("{field_name}={hours}"));
                     partition_values.push(Some(Literal::Primitive(PrimitiveLiteral::Int(
                         hours as i32,
                     ))));
                 } else {
-                    key_parts.push(format!("{}=null", field_name));
+                    key_parts.push(format!("{field_name}=null",));
                     partition_values.push(None);
                 }
             }
@@ -275,64 +274,64 @@ pub(super) fn compute_partition_info(
                 if let Some(boolean_array) = column.as_any().downcast_ref::<BooleanArray>() {
                     if !boolean_array.is_null(row_idx) {
                         let value = boolean_array.value(row_idx);
-                        key_parts.push(format!("{}={}", field_name, value));
+                        key_parts.push(format!("{field_name}={value}"));
                         partition_values
                             .push(Some(Literal::Primitive(PrimitiveLiteral::Boolean(value))));
                     } else {
-                        key_parts.push(format!("{}=null", field_name));
+                        key_parts.push(format!("{field_name}=null",));
                         partition_values.push(None);
                     }
                 } else if let Some(int32_array) = column.as_any().downcast_ref::<Int32Array>() {
                     if !int32_array.is_null(row_idx) {
                         let value = int32_array.value(row_idx);
-                        key_parts.push(format!("{}={}", field_name, value));
+                        key_parts.push(format!("{field_name}={value}"));
                         partition_values
                             .push(Some(Literal::Primitive(PrimitiveLiteral::Int(value))));
                     } else {
-                        key_parts.push(format!("{}=null", field_name));
+                        key_parts.push(format!("{field_name}=null",));
                         partition_values.push(None);
                     }
                 } else if let Some(int64_array) = column.as_any().downcast_ref::<Int64Array>() {
                     if !int64_array.is_null(row_idx) {
                         let value = int64_array.value(row_idx);
-                        key_parts.push(format!("{}={}", field_name, value));
+                        key_parts.push(format!("{field_name}={value}"));
                         partition_values
                             .push(Some(Literal::Primitive(PrimitiveLiteral::Long(value))));
                     } else {
-                        key_parts.push(format!("{}=null", field_name));
+                        key_parts.push(format!("{field_name}=null",));
                         partition_values.push(None);
                     }
                 } else if let Some(float32_array) = column.as_any().downcast_ref::<Float32Array>() {
                     if !float32_array.is_null(row_idx) {
                         let value = float32_array.value(row_idx);
-                        key_parts.push(format!("{}={}", field_name, value));
+                        key_parts.push(format!("{field_name}={value}"));
                         partition_values.push(Some(Literal::Primitive(PrimitiveLiteral::Float(
                             value.into(),
                         ))));
                     } else {
-                        key_parts.push(format!("{}=null", field_name));
+                        key_parts.push(format!("{field_name}=null",));
                         partition_values.push(None);
                     }
                 } else if let Some(float64_array) = column.as_any().downcast_ref::<Float64Array>() {
                     if !float64_array.is_null(row_idx) {
                         let value = float64_array.value(row_idx);
-                        key_parts.push(format!("{}={}", field_name, value));
+                        key_parts.push(format!("{field_name}={value}"));
                         partition_values.push(Some(Literal::Primitive(PrimitiveLiteral::Double(
                             value.into(),
                         ))));
                     } else {
-                        key_parts.push(format!("{}=null", field_name));
+                        key_parts.push(format!("{field_name}=null"));
                         partition_values.push(None);
                     }
                 } else if let Some(string_array) = column.as_any().downcast_ref::<StringArray>() {
                     if !string_array.is_null(row_idx) {
                         let value = string_array.value(row_idx);
-                        key_parts.push(format!("{}={}", field_name, value));
+                        key_parts.push(format!("{field_name}={value}"));
                         partition_values.push(Some(Literal::Primitive(PrimitiveLiteral::String(
                             value.to_string(),
                         ))));
                     } else {
-                        key_parts.push(format!("{}=null", field_name));
+                        key_parts.push(format!("{field_name}=null",));
                         partition_values.push(None);
                     }
                 } else {
@@ -343,8 +342,7 @@ pub(super) fn compute_partition_info(
             }
             _ => {
                 return Err(IcebergFdwError::UnsupportedType(format!(
-                    "unsupported partition transform: {:?}",
-                    transform
+                    "unsupported partition transform: {transform:?}",
                 )));
             }
         }

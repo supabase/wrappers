@@ -22,13 +22,13 @@ const _: () = {
                     "sub" => {
                         claims = claims.with_subject(value);
                     }
-                    _ => return Err(format!("claim {} not implemented", claim)),
+                    _ => return Err(format!("claim {claim} not implemented")),
                 }
             }
 
             match algo.as_str() {
                 "RS256" => RS256KeyPair::from_pem(&key),
-                _ => return Err(format!("algorithm {} not implemented", algo)),
+                _ => return Err(format!("algorithm {algo} not implemented")),
             }
             .and_then(|keypair| keypair.sign(claims))
             .map_err(|e| e.to_string())

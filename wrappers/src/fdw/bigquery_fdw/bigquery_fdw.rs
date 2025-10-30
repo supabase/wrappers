@@ -64,14 +64,14 @@ impl BigQueryFdw {
         };
 
         let mut sql = if quals.is_empty() {
-            format!("select {} from {}", tgts, table)
+            format!("select {tgts} from {table}")
         } else {
             let cond = quals
                 .iter()
                 .map(|q| q.deparse())
                 .collect::<Vec<String>>()
                 .join(" and ");
-            format!("select {} from {} where {}", tgts, table, cond)
+            format!("select {tgts} from {table} where {cond}")
         };
 
         // push down sorts
@@ -81,7 +81,7 @@ impl BigQueryFdw {
                 .map(|sort| sort.deparse())
                 .collect::<Vec<String>>()
                 .join(", ");
-            sql.push_str(&format!(" order by {}", order_by));
+            sql.push_str(&format!(" order by {order_by}"));
         }
 
         // push down limits
@@ -90,7 +90,7 @@ impl BigQueryFdw {
         // pushing down offset.
         if let Some(limit) = limit {
             let real_limit = limit.offset + limit.count;
-            sql.push_str(&format!(" limit {}", real_limit));
+            sql.push_str(&format!(" limit {real_limit}"));
         }
 
         sql
@@ -219,7 +219,7 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
             Err(err) => {
                 report_error(
                     PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                    &format!("parse service account key JSON failed: {}", err),
+                    &format!("parse service account key JSON failed: {err}"),
                 );
                 return Ok(ret);
             }
@@ -234,7 +234,7 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
             Err(err) => {
                 report_error(
                     PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                    &format!("create client failed: {}", err),
+                    &format!("create client failed: {err}"),
                 );
                 None
             }
@@ -278,7 +278,7 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
                 Ok(t) => timeout = t,
                 Err(_) => report_error(
                     PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                    &format!("invalid timeout value: {}", timeout_str),
+                    &format!("invalid timeout value: {timeout_str}"),
                 ),
             }
         }
@@ -295,7 +295,7 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
                     if resp.job_complete == Some(false) {
                         report_error(
                             PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                            &format!("query timeout {}ms expired", timeout),
+                            &format!("query timeout {timeout}ms expired"),
                         );
                     } else {
                         stats::inc_stats(
@@ -332,7 +332,7 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
                     self.scan_result = None;
                     report_error(
                         PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                        &format!("query failed: {}", err),
+                        &format!("query failed: {err}"),
                     );
                 }
             }
@@ -378,7 +378,7 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
                                 self.scan_result = None;
                                 report_error(
                                     PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                                    &format!("fetch query result failed: {}", err),
+                                    &format!("fetch query result failed: {err}"),
                                 );
                             }
                         }
@@ -443,7 +443,7 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
             if let Some(errors) = resp.insert_errors {
                 report_error(
                     PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                    &format!("insert failed: {:?}", errors),
+                    &format!("insert failed: {errors:?}"),
                 );
             }
         }
@@ -461,10 +461,10 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
                 if let Some(cell) = cell {
                     match cell {
                         Cell::Json(v) => sets.push(format!("{} = parse_json('{}')", col, v.0)),
-                        _ => sets.push(format!("{} = {}", col, cell)),
+                        _ => sets.push(format!("{col} = {cell}")),
                     }
                 } else {
-                    sets.push(format!("{} = null", col));
+                    sets.push(format!("{col} = null"));
                 }
             }
             let sql = format!(
@@ -483,7 +483,7 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
             if let Err(err) = self.rt.block_on(query_job) {
                 report_error(
                     PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                    &format!("update failed: {}", err),
+                    &format!("update failed: {err}"),
                 );
             }
         }
@@ -503,7 +503,7 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
             if let Err(err) = self.rt.block_on(query_job) {
                 report_error(
                     PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                    &format!("update failed: {}", err),
+                    &format!("update failed: {err}"),
                 );
             }
         }
@@ -577,7 +577,7 @@ mod auth_mock {
 }
 
 pub fn dummy_configuration(oauth_server: &str) -> serde_json::Value {
-    let oauth_endpoint = format!("{}/:o/oauth2", oauth_server);
+    let oauth_endpoint = format!("{oauth_server}/:o/oauth2");
     serde_json::json!({
       "type": "service_account",
       "project_id": "dummy",
