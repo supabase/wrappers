@@ -12,13 +12,13 @@
         <meta name="author" content="supabase">
       
       
-        <link rel="canonical" href="https://supabase.github.io/wrappers/catalog/s3/">
+        <link rel="canonical" href="https://supabase.github.io/wrappers/catalog/s3vectors/">
       
       
-        <link rel="prev" href="../redis/">
+        <link rel="prev" href="../s3/">
       
       
-        <link rel="next" href="../s3vectors/">
+        <link rel="next" href="../stripe/">
       
       
       <link rel="icon" href="../../assets/favicon.ico">
@@ -26,7 +26,7 @@
     
     
       
-        <title>S3 (CSV, JSON, Parquet) - Wrappers</title>
+        <title>S3 Vectors - Wrappers</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#aws-s3" class="md-skip">
+        <a href="#s3-vectors" class="md-skip">
           Skip to content
         </a>
       
@@ -113,7 +113,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              S3 (CSV, JSON, Parquet)
+              S3 Vectors
             
           </span>
         </div>
@@ -692,6 +692,27 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../s3/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    S3 (CSV, JSON, Parquet)
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -708,7 +729,7 @@
           
   
   <span class="md-ellipsis">
-    S3 (CSV, JSON, Parquet)
+    S3 Vectors
   </span>
   
 
@@ -719,7 +740,7 @@
         
   
   <span class="md-ellipsis">
-    S3 (CSV, JSON, Parquet)
+    S3 Vectors
   </span>
   
 
@@ -760,9 +781,9 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#enable-the-s3-wrapper" class="md-nav__link">
+  <a href="#enable-the-s3-vectors-wrapper" class="md-nav__link">
     <span class="md-ellipsis">
-      Enable the S3 Wrapper
+      Enable the S3 Vectors Wrapper
     </span>
   </a>
   
@@ -778,42 +799,9 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#connecting-to-s3" class="md-nav__link">
+  <a href="#connecting-to-s3-vectors" class="md-nav__link">
     <span class="md-ellipsis">
-      Connecting to S3
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Connecting to S3">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#required-s3-permissions" class="md-nav__link">
-    <span class="md-ellipsis">
-      Required S3 permissions
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#connecting-to-s3-compliant-providers-supabase-storage" class="md-nav__link">
-    <span class="md-ellipsis">
-      Connecting to S3-compliant Providers - Supabase Storage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#connecting-to-s3-compliant-providers-wasabi" class="md-nav__link">
-    <span class="md-ellipsis">
-      Connecting to S3-compliant Providers - Wasabi
+      Connecting to S3 Vectors
     </span>
   </a>
   
@@ -853,13 +841,13 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#csv-files" class="md-nav__link">
+  <a href="#s3-vector-tables" class="md-nav__link">
     <span class="md-ellipsis">
-      CSV Files
+      S3 Vector Tables
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="CSV Files">
+    <nav class="md-nav" aria-label="S3 Vector Tables">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -880,10 +868,25 @@
   
 </li>
         
+      </ul>
+    </nav>
+  
+</li>
+        
           <li class="md-nav__item">
-  <a href="#notes" class="md-nav__link">
+  <a href="#custom-data-types" class="md-nav__link">
     <span class="md-ellipsis">
-      Notes
+      Custom Data Types
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Custom Data Types">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#embd" class="md-nav__link">
+    <span class="md-ellipsis">
+      embd
     </span>
   </a>
   
@@ -895,79 +898,19 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#json-lines-files" class="md-nav__link">
+  <a href="#functions" class="md-nav__link">
     <span class="md-ellipsis">
-      JSON Lines Files
+      Functions
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="JSON Lines Files">
+    <nav class="md-nav" aria-label="Functions">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#operations_1" class="md-nav__link">
+  <a href="#embd_distanceembd" class="md-nav__link">
     <span class="md-ellipsis">
-      Operations
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#parquet-files" class="md-nav__link">
-    <span class="md-ellipsis">
-      Parquet Files
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Parquet Files">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      Operations
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
+      embd_distance(embd)
     </span>
   </a>
   
@@ -990,12 +933,45 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Query Pushdown Support">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#vector-similarity-search-ann" class="md-nav__link">
+    <span class="md-ellipsis">
+      Vector Similarity Search (ANN)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-based-queries" class="md-nav__link">
+    <span class="md-ellipsis">
+      Key-based Queries
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#supported-query-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      Supported Query Patterns
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
-  <a href="#supported-data-types-for-parquet-file" class="md-nav__link">
+  <a href="#supported-data-types" class="md-nav__link">
     <span class="md-ellipsis">
-      Supported Data Types For Parquet File
+      Supported Data Types
     </span>
   </a>
   
@@ -1021,18 +997,54 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#basic-example" class="md-nav__link">
+  <a href="#basic-setup" class="md-nav__link">
     <span class="md-ellipsis">
-      Basic Example
+      Basic Setup
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#read-from-supabase-storage" class="md-nav__link">
+  <a href="#querying-vectors" class="md-nav__link">
     <span class="md-ellipsis">
-      Read from Supabase Storage
+      Querying Vectors
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#inserting-vectors" class="md-nav__link">
+    <span class="md-ellipsis">
+      Inserting Vectors
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#deleting-vectors" class="md-nav__link">
+    <span class="md-ellipsis">
+      Deleting Vectors
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#vector-similarity-search-with-filtering" class="md-nav__link">
+    <span class="md-ellipsis">
+      Vector Similarity Search with Filtering
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#advanced-example-semantic-search" class="md-nav__link">
+    <span class="md-ellipsis">
+      Advanced Example: Semantic Search
     </span>
   </a>
   
@@ -1047,27 +1059,6 @@
   
 </nav>
       
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../s3vectors/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    S3 Vectors
-  </span>
-  
-
-      </a>
     </li>
   
 
@@ -2053,9 +2044,9 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#enable-the-s3-wrapper" class="md-nav__link">
+  <a href="#enable-the-s3-vectors-wrapper" class="md-nav__link">
     <span class="md-ellipsis">
-      Enable the S3 Wrapper
+      Enable the S3 Vectors Wrapper
     </span>
   </a>
   
@@ -2071,42 +2062,9 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#connecting-to-s3" class="md-nav__link">
+  <a href="#connecting-to-s3-vectors" class="md-nav__link">
     <span class="md-ellipsis">
-      Connecting to S3
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Connecting to S3">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#required-s3-permissions" class="md-nav__link">
-    <span class="md-ellipsis">
-      Required S3 permissions
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#connecting-to-s3-compliant-providers-supabase-storage" class="md-nav__link">
-    <span class="md-ellipsis">
-      Connecting to S3-compliant Providers - Supabase Storage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#connecting-to-s3-compliant-providers-wasabi" class="md-nav__link">
-    <span class="md-ellipsis">
-      Connecting to S3-compliant Providers - Wasabi
+      Connecting to S3 Vectors
     </span>
   </a>
   
@@ -2146,13 +2104,13 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#csv-files" class="md-nav__link">
+  <a href="#s3-vector-tables" class="md-nav__link">
     <span class="md-ellipsis">
-      CSV Files
+      S3 Vector Tables
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="CSV Files">
+    <nav class="md-nav" aria-label="S3 Vector Tables">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2173,10 +2131,25 @@
   
 </li>
         
+      </ul>
+    </nav>
+  
+</li>
+        
           <li class="md-nav__item">
-  <a href="#notes" class="md-nav__link">
+  <a href="#custom-data-types" class="md-nav__link">
     <span class="md-ellipsis">
-      Notes
+      Custom Data Types
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Custom Data Types">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#embd" class="md-nav__link">
+    <span class="md-ellipsis">
+      embd
     </span>
   </a>
   
@@ -2188,79 +2161,19 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#json-lines-files" class="md-nav__link">
+  <a href="#functions" class="md-nav__link">
     <span class="md-ellipsis">
-      JSON Lines Files
+      Functions
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="JSON Lines Files">
+    <nav class="md-nav" aria-label="Functions">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#operations_1" class="md-nav__link">
+  <a href="#embd_distanceembd" class="md-nav__link">
     <span class="md-ellipsis">
-      Operations
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#parquet-files" class="md-nav__link">
-    <span class="md-ellipsis">
-      Parquet Files
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Parquet Files">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      Operations
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      Notes
+      embd_distance(embd)
     </span>
   </a>
   
@@ -2283,12 +2196,45 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Query Pushdown Support">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#vector-similarity-search-ann" class="md-nav__link">
+    <span class="md-ellipsis">
+      Vector Similarity Search (ANN)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-based-queries" class="md-nav__link">
+    <span class="md-ellipsis">
+      Key-based Queries
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#supported-query-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      Supported Query Patterns
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
-  <a href="#supported-data-types-for-parquet-file" class="md-nav__link">
+  <a href="#supported-data-types" class="md-nav__link">
     <span class="md-ellipsis">
-      Supported Data Types For Parquet File
+      Supported Data Types
     </span>
   </a>
   
@@ -2314,18 +2260,54 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#basic-example" class="md-nav__link">
+  <a href="#basic-setup" class="md-nav__link">
     <span class="md-ellipsis">
-      Basic Example
+      Basic Setup
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#read-from-supabase-storage" class="md-nav__link">
+  <a href="#querying-vectors" class="md-nav__link">
     <span class="md-ellipsis">
-      Read from Supabase Storage
+      Querying Vectors
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#inserting-vectors" class="md-nav__link">
+    <span class="md-ellipsis">
+      Inserting Vectors
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#deleting-vectors" class="md-nav__link">
+    <span class="md-ellipsis">
+      Deleting Vectors
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#vector-similarity-search-with-filtering" class="md-nav__link">
+    <span class="md-ellipsis">
+      Vector Similarity Search with Filtering
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#advanced-example-semantic-search" class="md-nav__link">
+    <span class="md-ellipsis">
+      Advanced Example: Semantic Search
     </span>
   </a>
   
@@ -2371,36 +2353,22 @@
   
 
 
-<h1 id="aws-s3">AWS S3</h1>
-<p><a href="https://aws.amazon.com/s3/">AWS S3</a> is an object storage service offering industry-leading scalability, data availability, security, and performance. It is read-only and supports below file formats:</p>
-<p>The S3 Wrapper allows you to read data of below formats from S3 within your Postgres database.</p>
-<ol>
-<li>CSV - with or without header line</li>
-<li><a href="https://jsonlines.org/">JSON Lines</a></li>
-<li><a href="https://parquet.apache.org/">Parquet</a></li>
-</ol>
-<p>The S3 Wrapper also supports below compression algorithms:</p>
-<ol>
-<li>gzip</li>
-<li>bzip2</li>
-<li>xz</li>
-<li>zlib</li>
-</ol>
-<p><strong>Note for CSV and JSONL files: currently all columns in S3 files must be defined in the foreign table and their types must be <code>text</code> type</strong>.</p>
-<p><strong>Note for Parquet files: the whole Parquet file will be loaded into local memory if it is compressed, so keep the file size as small as possible</strong>.</p>
+<h1 id="s3-vectors">S3 Vectors</h1>
+<p><a href="https://aws.amazon.com/s3/features/vectors/">AWS S3 Vectors</a> is a managed service that stores and queries high-dimensional vectors at scale, optimized for machine learning and artificial intelligence applications.</p>
+<p>The S3 Vectors Wrapper allows you to read, write, and perform vector similarity search operations on S3 Vectors within your Postgres database.</p>
 <h2 id="preparation">Preparation</h2>
-<p>Before you can query S3, you need to enable the Wrappers extension and store your credentials in Postgres.</p>
+<p>Before you can query S3 Vectors, you need to enable the Wrappers extension and store your credentials in Postgres.</p>
 <h3 id="enable-wrappers">Enable Wrappers</h3>
 <p>Make sure the <code>wrappers</code> extension is installed on your database:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">extension</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">wrappers</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">extensions</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
-<h3 id="enable-the-s3-wrapper">Enable the S3 Wrapper</h3>
-<p>Enable the <code>s3_wrapper</code> FDW:</p>
+<h3 id="enable-the-s3-vectors-wrapper">Enable the S3 Vectors Wrapper</h3>
+<p>Enable the <code>s3_vectors_wrapper</code> FDW:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
-<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">s3_wrapper</span>
-<span class="w">  </span><span class="k">handler</span><span class="w"> </span><span class="n">s3_fdw_handler</span>
-<span class="w">  </span><span class="k">validator</span><span class="w"> </span><span class="n">s3_fdw_validator</span><span class="p">;</span>
+<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">s3_vectors_wrapper</span>
+<span class="w">  </span><span class="k">handler</span><span class="w"> </span><span class="n">s3_vectors_fdw_handler</span>
+<span class="w">  </span><span class="k">validator</span><span class="w"> </span><span class="n">s3_vectors_fdw_validator</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 <h3 id="store-your-credentials-optional">Store your credentials (optional)</h3>
 <p>By default, Postgres stores FDW credentials inside <code>pg_catalog.pg_foreign_server</code> in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with <a href="https://supabase.com/docs/guides/database/vault">Vault</a>, which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.</p>
@@ -2414,127 +2382,119 @@
 <span class="normal"> 8</span>
 <span class="normal"> 9</span>
 <span class="normal">10</span>
-<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Save your AWS credentials in Vault and retrieve the created `s3_access_key_id` and `s3_secret_access_key`</span>
+<span class="normal">11</span>
+<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Save your AWS credentials in Vault and retrieve the created</span>
+<span class="c1">-- `vault_access_key_id` and `vault_secret_access_key`</span>
 <span class="k">select</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">create_secret</span><span class="p">(</span>
-<span class="w">  </span><span class="s1">&#39;&lt;access key id&gt;&#39;</span><span class="p">,</span>
-<span class="w">  </span><span class="s1">&#39;s3_access_key_id&#39;</span><span class="p">,</span>
-<span class="w">  </span><span class="s1">&#39;AWS access key for Wrappers&#39;</span>
+<span class="w">  </span><span class="s1">&#39;&lt;access key id&gt;&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- secret to be encrypted</span>
+<span class="w">  </span><span class="s1">&#39;vault_access_key_id&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- secret name</span>
+<span class="w">  </span><span class="s1">&#39;AWS access key for Wrappers&#39;</span><span class="w">  </span><span class="c1">-- secret description</span>
 <span class="p">);</span>
 <span class="k">select</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">create_secret</span><span class="p">(</span>
-<span class="w">  </span><span class="s1">&#39;&lt;secret access key&gt;&#39;</span>
-<span class="w">  </span><span class="s1">&#39;s3_secret_access_key&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="s1">&#39;&lt;secret access key&gt;&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="s1">&#39;vault_secret_access_key&#39;</span><span class="p">,</span>
 <span class="w">  </span><span class="s1">&#39;AWS secret access key for Wrappers&#39;</span>
 <span class="p">);</span>
 </code></pre></div></td></tr></table></div>
-<h3 id="connecting-to-s3">Connecting to S3</h3>
-<p>We need to provide Postgres with the credentials to connect to S3, and any additional options. We can do this using the <code>create server</code> command:</p>
+<h3 id="connecting-to-s3-vectors">Connecting to S3 Vectors</h3>
+<p>We need to provide Postgres with the credentials to connect to S3 Vectors. We can do this using the <code>create server</code> command.</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">With Vault</label><label for="__tabbed_1_2">Without Vault</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span>
-<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">s3_server</span>
-<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">s3_wrapper</span>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">s3_vectors_server</span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">s3_vectors_wrapper</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">vault_access_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;your s3_access_key_id from above&gt;&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">vault_secret_access_key</span><span class="w"> </span><span class="s1">&#39;&lt;your s3_secret_access_key from above&gt;&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">aws_region</span><span class="w"> </span><span class="s1">&#39;us-east-1&#39;</span>
+<span class="w">    </span><span class="c1">-- The key id saved in Vault from above</span>
+<span class="w">    </span><span class="n">vault_access_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;key_ID&gt;&#39;</span><span class="p">,</span>
+
+<span class="w">    </span><span class="c1">-- The secret id saved in Vault from above</span>
+<span class="w">    </span><span class="n">vault_secret_access_key</span><span class="w"> </span><span class="s1">&#39;&lt;secret_key&gt;&#39;</span><span class="p">,</span>
+
+<span class="w">    </span><span class="c1">-- AWS region</span>
+<span class="w">    </span><span class="n">aws_region</span><span class="w"> </span><span class="s1">&#39;us-east-1&#39;</span><span class="p">,</span>
+
+<span class="w">    </span><span class="c1">-- Optional: Custom endpoint URL for alternative S3 services</span>
+<span class="w">    </span><span class="n">endpoint_url</span><span class="w"> </span><span class="s1">&#39;http://localhost:8080&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span>
-<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">s3_server</span>
-<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">s3_wrapper</span>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">s3_vectors_server</span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">s3_vectors_wrapper</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">aws_access_key_id</span><span class="w"> </span><span class="s1">&#39;your_aws_access_key_id&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">aws_secret_access_key</span><span class="w"> </span><span class="s1">&#39;your_aws_secret_access_key&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">aws_region</span><span class="w"> </span><span class="s1">&#39;us-east-1&#39;</span>
+<span class="w">    </span><span class="c1">-- The AWS access key ID</span>
+<span class="w">    </span><span class="n">aws_access_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;key_ID&gt;&#39;</span><span class="p">,</span>
+
+<span class="w">    </span><span class="c1">-- The AWS secret access key</span>
+<span class="w">    </span><span class="n">aws_secret_access_key</span><span class="w"> </span><span class="s1">&#39;&lt;secret_key&gt;&#39;</span><span class="p">,</span>
+
+<span class="w">    </span><span class="c1">-- AWS region</span>
+<span class="w">    </span><span class="n">aws_region</span><span class="w"> </span><span class="s1">&#39;us-east-1&#39;</span><span class="p">,</span>
+
+<span class="w">    </span><span class="c1">-- Optional: Custom endpoint URL for alternative S3 services</span>
+<span class="w">    </span><span class="n">endpoint_url</span><span class="w"> </span><span class="s1">&#39;http://localhost:8080&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 </div>
 </div>
 </div>
-<p>The full list of options are below:</p>
-<ul>
-<li><code>aws_access_key_id</code> (required) - Your access key</li>
-<li><code>aws_secret_access_key</code> (required) - Your secret key</li>
-<li><code>aws_region</code> (required) - The region of your bucket (if providing an endpoint URL with a region in it, make sure that they are the same)</li>
-<li><code>endpoint_url</code> (optional) - An optional URL to allow connection to S3-compliant providers (i.e. Wasabi, Cloudflare R2, Backblaze B2, DigitalOcean Spaces)</li>
-<li><code>path_style_url</code> (optional) - Whether to use <a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/VirtualHosting.html#path-style-access">path-style URL</a> access. This is required by some S3-compliant providers. <code>true</code> or <code>false</code>, default is <code>false</code>.</li>
-</ul>
-<h4 id="required-s3-permissions">Required S3 permissions</h4>
-<p>Below S3 permissions are needed:</p>
-<ul>
-<li>s3:GetObject</li>
-<li>s3:GetObjectAttributes</li>
-</ul>
-<p>If the bucket is versioned, we also need:</p>
-<ul>
-<li>s3:GetObjectVersion</li>
-<li>s3:GetObjectVersionAttributes</li>
-</ul>
-<h3 id="connecting-to-s3-compliant-providers-supabase-storage">Connecting to S3-compliant Providers - Supabase Storage</h3>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span>
-<span class="normal">7</span>
-<span class="normal">8</span>
-<span class="normal">9</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">s3_server</span>
-<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">s3_wrapper</span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">aws_access_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;supabase_storage_access_key&gt;&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">aws_secret_access_key</span><span class="w"> </span><span class="s1">&#39;&lt;supabase_storage_secret_key&gt;&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">aws_region</span><span class="w"> </span><span class="s1">&#39;eu-central-1&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">endpoint_url</span><span class="w"> </span><span class="s1">&#39;https://&lt;project_ref&gt;.supabase.co/storage/v1/s3&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">path_style_url</span><span class="w"> </span><span class="s1">&#39;true&#39;</span>
-<span class="w">  </span><span class="p">);</span>
-</code></pre></div></td></tr></table></div>
-<h3 id="connecting-to-s3-compliant-providers-wasabi">Connecting to S3-compliant Providers - Wasabi</h3>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span>
-<span class="normal">7</span>
-<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">s3_server</span>
-<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">s3_wrapper</span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">aws_access_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;your_wasabi_access_key&gt;&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">aws_secret_access_key</span><span class="w"> </span><span class="s1">&#39;&lt;your_wasabi_secret_key&gt;&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">aws_region</span><span class="w"> </span><span class="s1">&#39;eu-central-1&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">endpoint_url</span><span class="w"> </span><span class="s1">&#39;https://s3.eu-central-1.wasabisys.com&#39;</span>
-<span class="w">  </span><span class="p">);</span>
-</code></pre></div></td></tr></table></div>
 <h3 id="create-a-schema">Create a schema</h3>
 <p>We recommend creating a schema to hold all the foreign tables:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">s3</span><span class="p">;</span>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 <h2 id="options">Options</h2>
-<p>The following options are available when creating S3 foreign tables:</p>
+<p>The full list of foreign table options are below:</p>
 <ul>
-<li><code>uri</code> - S3 URI, required. For example, <code>s3://bucket/s3_table.csv</code></li>
-<li><code>format</code> - File format, required. <code>csv</code>, <code>jsonl</code>, or <code>parquet</code></li>
-<li><code>has_header</code> - If the CSV file has header, optional. <code>true</code> or <code>false</code>, default is <code>false</code></li>
-<li><code>compress</code> - Compression algorithm, optional. One of <code>gzip</code>, <code>bzip2</code>, <code>xz</code>, <code>zlib</code>, default is no compression</li>
+<li><code>bucket_name</code> - The name of the S3 Vector bucket, required.</li>
+<li><code>index_name</code> - The name of the S3 Vector index, required.</li>
+<li><code>rowid_column</code> - The column to use as the row identifier for INSERT/DELETE operations, required.</li>
 </ul>
 <h2 id="entities">Entities</h2>
-<h3 id="csv-files">CSV Files</h3>
-<p>This is an object representing CSV files in S3.</p>
-<p>Ref: <a href="https://aws.amazon.com/s3/">AWS S3 docs</a></p>
+<p>We can use SQL <a href="https://www.postgresql.org/docs/current/sql-importforeignschema.html">import foreign schema</a> to import foreign table definitions from S3 Vectors.</p>
+<p>For example, using below SQL can automatically create foreign tables in the <code>s3_vectors</code> schema.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- create foreign table for each index from S3 Vector bucket</span>
+<span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">s3_vectors</span>
+<span class="w">  </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">s3_vectors_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">s3_vectors</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">bucket_name</span><span class="w"> </span><span class="s1">&#39;my-vector-bucket&#39;</span>
+<span class="w">  </span><span class="p">);</span>
+</code></pre></div></td></tr></table></div>
+<h3 id="s3-vector-tables">S3 Vector Tables</h3>
+<p>This is an object representing S3 Vector index.</p>
+<p>Ref: <a href="https://docs.aws.amazon.com/AmazonS3/latest/API/API_Operations_Amazon_S3_Vectors.html">S3 Vectors API Reference</a></p>
 <h4 id="operations">Operations</h4>
 <table>
 <thead>
@@ -2549,16 +2509,17 @@
 </thead>
 <tbody>
 <tr>
-<td>CSV</td>
+<td>table</td>
+<td style="text-align: center;">✅</td>
 <td style="text-align: center;">✅</td>
 <td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
+<td style="text-align: center;">✅</td>
 <td style="text-align: center;">❌</td>
 </tr>
 </tbody>
 </table>
 <h4 id="usage">Usage</h4>
+<p>You can also manually create the foreign table like below if you did not use <code>import foreign schema</code>.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -2569,376 +2530,266 @@
 <span class="normal"> 8</span>
 <span class="normal"> 9</span>
 <span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span>
-<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">s3</span><span class="p">.</span><span class="n">table_csv</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">sex</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">age</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">height</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">weight</span><span class="w"> </span><span class="nb">text</span>
+<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="k">key</span><span class="w"> </span><span class="nb">text</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">null</span><span class="p">,</span>
+<span class="w">  </span><span class="k">data</span><span class="w"> </span><span class="n">embd</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">null</span><span class="p">,</span>
+<span class="w">  </span><span class="n">metadata</span><span class="w"> </span><span class="n">jsonb</span>
 <span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">s3_server</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">s3_vectors_server</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">uri</span><span class="w"> </span><span class="s1">&#39;s3://bucket/s3_table.csv&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">format</span><span class="w"> </span><span class="s1">&#39;csv&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">has_header</span><span class="w"> </span><span class="s1">&#39;true&#39;</span>
+<span class="w">    </span><span class="n">bucket_name</span><span class="w"> </span><span class="s1">&#39;my-vector-bucket&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">index_name</span><span class="w"> </span><span class="s1">&#39;my-vector-index&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">rowid_column</span><span class="w"> </span><span class="s1">&#39;key&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
-<h4 id="notes">Notes</h4>
+<h3 id="custom-data-types">Custom Data Types</h3>
+<h4 id="embd">embd</h4>
+<p>The <code>embd</code> type is a custom PostgreSQL data type designed to store and work with high-dimensional vectors for machine learning and AI applications.</p>
+<p><strong>Structure:</strong></p>
+<p>The <code>embd</code> type internally contains:</p>
 <ul>
-<li>All columns must be defined in the foreign table</li>
-<li>All column types must be <code>text</code></li>
-<li>Optional header support via <code>has_header</code> option</li>
-<li>Supports compression (gzip, bzip2, xz, zlib)</li>
+<li>Vector data as an array of 32-bit floating point numbers (Float32)</li>
+<li>Additional metadata fields for internal use</li>
 </ul>
-<h3 id="json-lines-files">JSON Lines Files</h3>
-<p>This is an object representing JSONL files in S3.</p>
-<p>Ref: <a href="https://jsonlines.org/">JSONL docs</a></p>
-<h4 id="operations_1">Operations</h4>
-<table>
-<thead>
-<tr>
-<th>Object</th>
-<th style="text-align: center;">Select</th>
-<th style="text-align: center;">Insert</th>
-<th style="text-align: center;">Update</th>
-<th style="text-align: center;">Delete</th>
-<th style="text-align: center;">Truncate</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>JSONL</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-</tr>
-</tbody>
-</table>
-<h4 id="usage_1">Usage</h4>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">s3</span><span class="p">.</span><span class="n">table_jsonl</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">sex</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">age</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">height</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">weight</span><span class="w"> </span><span class="nb">text</span>
-<span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">s3_server</span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">uri</span><span class="w"> </span><span class="s1">&#39;s3://bucket/s3_table.jsonl&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">format</span><span class="w"> </span><span class="s1">&#39;jsonl&#39;</span>
-<span class="w">  </span><span class="p">);</span>
+<p><strong>Input Formats:</strong></p>
+<p>The <code>embd</code> type accepts input in JSON array format:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Simple array format (most common)</span>
+<span class="s1">&#39;[0.1, 0.2, 0.3, 0.4, 0.5]&#39;</span><span class="p">::</span><span class="n">embd</span>
+
+<span class="c1">-- Full JSON object format (advanced)</span>
+<span class="s1">&#39;{&quot;data&quot;: [0.1, 0.2, 0.3], &quot;key&quot;: &quot;vector_001&quot;}&#39;</span><span class="p">::</span><span class="n">embd</span>
 </code></pre></div></td></tr></table></div>
-<h4 id="notes_1">Notes</h4>
+<p><strong>Output Format:</strong></p>
+<p>When displayed, the <code>embd</code> type shows a summary format:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code>embd:5  -- indicates an embedding with 5 dimensions
+</code></pre></div></td></tr></table></div>
+<p><strong>Usage Examples:</strong></p>
+<p>See the following sections for complete examples:</p>
 <ul>
-<li>All columns must be defined in the foreign table</li>
-<li>All column types must be <code>text</code></li>
-<li>Each line must be a valid JSON object</li>
-<li>Supports compression (gzip, bzip2, xz, zlib)</li>
+<li><a href="#inserting-vectors">Inserting Vectors</a> - Examples of inserting data with <code>embd</code> type</li>
+<li><a href="#querying-vectors">Querying Vectors</a> - Basic queries and vector similarity search</li>
+<li><a href="#vector-similarity-search-with-filtering">Vector Similarity Search with Filtering</a> - Advanced search with metadata filtering</li>
+<li><a href="#advanced-example-semantic-search">Advanced Example: Semantic Search</a> - Complete semantic search implementation</li>
 </ul>
-<h3 id="parquet-files">Parquet Files</h3>
-<p>This is an object representing Parquet files in S3.</p>
-<p>Ref: <a href="https://parquet.apache.org/">Parquet docs</a></p>
-<h4 id="operations_2">Operations</h4>
-<table>
-<thead>
-<tr>
-<th>Object</th>
-<th style="text-align: center;">Select</th>
-<th style="text-align: center;">Insert</th>
-<th style="text-align: center;">Update</th>
-<th style="text-align: center;">Delete</th>
-<th style="text-align: center;">Truncate</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Parquet</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-</tr>
-</tbody>
-</table>
-<h4 id="usage_2">Usage</h4>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span>
-<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">s3</span><span class="p">.</span><span class="n">table_parquet</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">integer</span><span class="p">,</span>
-<span class="w">  </span><span class="n">bool_col</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span>
-<span class="w">  </span><span class="n">bigint_col</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
-<span class="w">  </span><span class="n">float_col</span><span class="w"> </span><span class="nb">real</span><span class="p">,</span>
-<span class="w">  </span><span class="n">date_string_col</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">timestamp_col</span><span class="w"> </span><span class="k">timestamp</span>
-<span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">s3_server</span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">uri</span><span class="w"> </span><span class="s1">&#39;s3://bucket/s3_table.parquet&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">format</span><span class="w"> </span><span class="s1">&#39;parquet&#39;</span>
-<span class="w">  </span><span class="p">);</span>
-</code></pre></div></td></tr></table></div>
-<h4 id="notes_2">Notes</h4>
+<p><strong>Operations:</strong></p>
 <ul>
-<li>Not all columns need to be defined in foreign table</li>
-<li>Column names must match between Parquet file and foreign table</li>
-<li>Supports various Postgres data types (see Data Types section)</li>
-<li>Compressed files are loaded entirely into memory</li>
-<li>Supports compression (gzip, bzip2, xz, zlib)</li>
+<li><strong>Vector similarity search</strong>: Use the <code>&lt;==&gt;</code> operator for approximate nearest neighbor search</li>
+<li><strong>Distance calculation</strong>: Use <code>embd_distance()</code> function to get similarity scores</li>
+<li><strong>Type casting</strong>: Convert JSON arrays to <code>embd</code> type using <code>::embd</code> cast</li>
+</ul>
+<p><strong>Constraints:</strong></p>
+<ul>
+<li>Only supports 32-bit floating point vectors (Float32)</li>
+<li>Vector dimensions should be consistent within the same index</li>
+<li>Cannot be null when used as vector data in S3 Vectors tables</li>
+</ul>
+<h3 id="functions">Functions</h3>
+<h4 id="embd_distanceembd">embd_distance(embd)</h4>
+<p>Returns the distance score from the most recent vector similarity search operation.</p>
+<p><strong>Syntax:</strong></p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="n">embd_distance</span><span class="p">(</span><span class="n">vector_data</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="nb">real</span>
+</code></pre></div></td></tr></table></div>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>vector_data</code> - An <code>embd</code> type column containing vector data</li>
+</ul>
+<p><strong>Returns:</strong></p>
+<ul>
+<li><code>real</code> - The distance score from the vector similarity search. This value is only meaningful when used in queries with the <code>&lt;==&gt;</code> operator for vector similarity search.</li>
+</ul>
+<p><strong>Usage:</strong></p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Get similarity search results with distance scores</span>
+<span class="k">select</span><span class="w"> </span><span class="n">embd_distance</span><span class="p">(</span><span class="k">data</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">distance</span><span class="p">,</span><span class="w"> </span><span class="k">key</span><span class="p">,</span><span class="w"> </span><span class="n">metadata</span>
+<span class="k">from</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span>
+<span class="k">where</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="s1">&#39;[0.1, 0.2, 0.3, 0.4, 0.5]&#39;</span><span class="p">::</span><span class="n">embd</span>
+<span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="mi">1</span>
+<span class="k">limit</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<p><strong>Notes:</strong></p>
+<ul>
+<li>The distance value is only populated during vector similarity search operations using the <code>&lt;==&gt;</code> operator</li>
+<li>For other query types (key-based lookups, list all), the distance will be 0.0</li>
+<li>Lower distance values indicate higher similarity</li>
 </ul>
 <h2 id="query-pushdown-support">Query Pushdown Support</h2>
-<p>This FDW doesn't support query pushdown.</p>
-<h2 id="supported-data-types-for-parquet-file">Supported Data Types For Parquet File</h2>
-<p>The S3 Wrapper uses Parquet file data types from <a href="https://docs.rs/arrow-array/41.0.0/arrow_array/types/index.html">arrow_array::types</a>, below are their mappings to Postgres data types.</p>
+<p>This FDW supports limited query pushdown with specific operators based on the type of operation:</p>
+<h3 id="vector-similarity-search-ann">Vector Similarity Search (ANN)</h3>
+<p>For approximate nearest neighbor search using the <code>&lt;==&gt;</code> operator:</p>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>data &lt;==&gt; vector_value</code></td>
+<td>Vector similarity search with embeddings</td>
+</tr>
+<tr>
+<td><code>metadata &lt;==&gt; json_filter</code></td>
+<td>Metadata filtering using S3 Vectors filter expressions</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Metadata Filtering Syntax:</strong></p>
+<p>The <code>json_filter</code> uses S3 Vectors metadata filtering expressions with the following operators:</p>
+<ul>
+<li><strong>Equality</strong>: <code>$eq</code>, <code>$ne</code> - Exact match or not equal</li>
+<li><strong>Numeric Comparisons</strong>: <code>$gt</code>, <code>$gte</code>, <code>$lt</code>, <code>$lte</code> - Greater than, less than comparisons</li>
+<li><strong>Array Operations</strong>: <code>$in</code>, <code>$nin</code> - Match any/none of the values in array</li>
+<li><strong>Existence Check</strong>: <code>$exists</code> - Check if field exists</li>
+<li><strong>Logical Operations</strong>: <code>$and</code>, <code>$or</code> - Combine multiple conditions</li>
+</ul>
+<p><strong>Examples:</strong>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Simple equality</span>
+<span class="n">metadata</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="s1">&#39;{&quot;category&quot;: &quot;electronics&quot;}&#39;</span><span class="p">::</span><span class="n">jsonb</span>
+
+<span class="c1">-- Numeric range</span>
+<span class="n">metadata</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="s1">&#39;{&quot;price&quot;: {&quot;$gte&quot;: 100, &quot;$lte&quot;: 500}}&#39;</span><span class="p">::</span><span class="n">jsonb</span>
+
+<span class="c1">-- Array matching</span>
+<span class="n">metadata</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="s1">&#39;{&quot;tags&quot;: {&quot;$in&quot;: [&quot;popular&quot;, &quot;trending&quot;]}}&#39;</span><span class="p">::</span><span class="n">jsonb</span>
+
+<span class="c1">-- Complex logical conditions</span>
+<span class="n">metadata</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="s1">&#39;{&quot;$and&quot;: [{&quot;category&quot;: &quot;books&quot;}, {&quot;year&quot;: {&quot;$gte&quot;: 2020}}]}&#39;</span><span class="p">::</span><span class="n">jsonb</span>
+</code></pre></div></td></tr></table></div></p>
+<p>For more details on metadata filtering syntax, see the <a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-vectors-metadata-filtering.html">AWS S3 Vectors metadata filtering documentation</a>.</p>
+<h3 id="key-based-queries">Key-based Queries</h3>
+<p>For exact key lookups:</p>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>key = 'value'</code></td>
+<td>Exact key match</td>
+</tr>
+<tr>
+<td><code>key in ('val1', 'val2')</code></td>
+<td>Multiple key lookup</td>
+</tr>
+</tbody>
+</table>
+<h3 id="supported-query-patterns">Supported Query Patterns</h3>
+<ol>
+<li>
+<p><strong>List all vectors</strong> (no WHERE clause):
+   <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div></p>
+</li>
+<li>
+<p><strong>Get a specific vector by key</strong>:
+   <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="k">key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;vector_001&#39;</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div></p>
+</li>
+<li>
+<p><strong>Vector similarity search</strong>:
+   <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="n">embd_distance</span><span class="p">(</span><span class="k">data</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">distance</span><span class="p">,</span><span class="w"> </span><span class="o">*</span>
+<span class="k">from</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span>
+<span class="k">where</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="s1">&#39;[0.1, 0.2, 0.3, ...]&#39;</span><span class="p">::</span><span class="n">embd</span>
+<span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="mi">1</span>
+<span class="k">limit</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div></p>
+</li>
+<li>
+<p><strong>Vector search with metadata filtering</strong>:
+   <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="n">embd_distance</span><span class="p">(</span><span class="k">data</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">distance</span><span class="p">,</span><span class="w"> </span><span class="o">*</span>
+<span class="k">from</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span>
+<span class="k">where</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="s1">&#39;[0.1, 0.2, 0.3, ...]&#39;</span><span class="p">::</span><span class="n">embd</span>
+<span class="k">and</span><span class="w"> </span><span class="n">metadata</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="s1">&#39;{&quot;category&quot;: &quot;product&quot;}&#39;</span><span class="p">::</span><span class="n">jsonb</span>
+<span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="mi">1</span>
+<span class="k">limit</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div></p>
+</li>
+</ol>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Only above specific query patterns are supported. Complex queries with unsupported operators or combinations may result in errors.</p>
+</div>
+<h2 id="supported-data-types">Supported Data Types</h2>
 <table>
 <thead>
 <tr>
 <th>Postgres Type</th>
-<th>Parquet Type</th>
+<th>S3 Vectors Type</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>boolean</td>
-<td>BooleanType</td>
-</tr>
-<tr>
-<td>char</td>
-<td>Int8Type</td>
-</tr>
-<tr>
-<td>smallint</td>
-<td>Int16Type</td>
-</tr>
-<tr>
-<td>real</td>
-<td>Float32Type</td>
-</tr>
-<tr>
-<td>integer</td>
-<td>Int32Type</td>
-</tr>
-<tr>
-<td>double precision</td>
-<td>Float64Type</td>
-</tr>
-<tr>
-<td>bigint</td>
-<td>Int64Type</td>
-</tr>
-<tr>
-<td>numeric</td>
-<td>Float64Type</td>
-</tr>
-<tr>
 <td>text</td>
-<td>ByteArrayType</td>
+<td>String (for vector key)</td>
 </tr>
 <tr>
-<td>date</td>
-<td>Date64Type</td>
+<td>embd</td>
+<td>Float32 vector data</td>
 </tr>
 <tr>
-<td>timestamp</td>
-<td>TimestampNanosecondType</td>
-</tr>
-<tr>
-<td>timestamptz</td>
-<td>TimestampNanosecondType</td>
+<td>jsonb</td>
+<td>Document metadata</td>
 </tr>
 </tbody>
 </table>
 <h2 id="limitations">Limitations</h2>
 <p>This section describes important limitations and considerations when using this FDW:</p>
 <ul>
-<li>Large result sets experience slower performance due to full data transfer requirement</li>
-<li>Compressed files are loaded entirely into memory and have additional processing overhead</li>
-<li>CSV and JSONL columns must be defined as <code>text</code> type only</li>
-<li>All columns must be defined in foreign tables for CSV and JSONL</li>
-<li>Column names must match exactly for Parquet files</li>
-<li>No support for S3 Select or other S3-side filtering</li>
+<li>Only supports specific query patterns as described in the Query Pushdown section</li>
+<li>Vector similarity search is limited to Float32 vectors</li>
+<li>UPDATE operations are not supported (use DELETE + INSERT instead)</li>
+<li>Complex WHERE clauses with AND/OR combinations are not supported except for specific vector search patterns</li>
 <li>Materialized views using these foreign tables may fail during logical backups</li>
 </ul>
 <h2 id="examples">Examples</h2>
-<h3 id="basic-example">Basic Example</h3>
-<p>This will create some "foreign table" inside your Postgres database can read data from S3:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span>
-<span class="normal">13</span>
-<span class="normal">14</span>
-<span class="normal">15</span>
-<span class="normal">16</span>
-<span class="normal">17</span>
-<span class="normal">18</span>
-<span class="normal">19</span>
-<span class="normal">20</span>
-<span class="normal">21</span>
-<span class="normal">22</span>
-<span class="normal">23</span>
-<span class="normal">24</span>
-<span class="normal">25</span>
-<span class="normal">26</span>
-<span class="normal">27</span>
-<span class="normal">28</span>
-<span class="normal">29</span>
-<span class="normal">30</span>
-<span class="normal">31</span>
-<span class="normal">32</span>
-<span class="normal">33</span>
-<span class="normal">34</span>
-<span class="normal">35</span>
-<span class="normal">36</span>
-<span class="normal">37</span>
-<span class="normal">38</span>
-<span class="normal">39</span>
-<span class="normal">40</span>
-<span class="normal">41</span>
-<span class="normal">42</span>
-<span class="normal">43</span>
-<span class="normal">44</span>
-<span class="normal">45</span>
-<span class="normal">46</span>
-<span class="normal">47</span>
-<span class="normal">48</span>
-<span class="normal">49</span>
-<span class="normal">50</span>
-<span class="normal">51</span>
-<span class="normal">52</span>
-<span class="normal">53</span>
-<span class="normal">54</span>
-<span class="normal">55</span>
-<span class="normal">56</span>
-<span class="normal">57</span>
-<span class="normal">58</span>
-<span class="normal">59</span>
-<span class="normal">60</span>
-<span class="normal">61</span>
-<span class="normal">62</span>
-<span class="normal">63</span>
-<span class="normal">64</span>
-<span class="normal">65</span>
-<span class="normal">66</span>
-<span class="normal">67</span>
-<span class="normal">68</span>
-<span class="normal">69</span>
-<span class="normal">70</span>
-<span class="normal">71</span>
-<span class="normal">72</span>
-<span class="normal">73</span>
-<span class="normal">74</span>
-<span class="normal">75</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- CSV file, no compression</span>
-<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">s3</span><span class="p">.</span><span class="n">table_csv</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">sex</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">age</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">height</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">weight</span><span class="w"> </span><span class="nb">text</span>
-<span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">s3_server</span>
+<h3 id="basic-setup">Basic Setup</h3>
+<p>First, create a server for S3 Vectors:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span>
+<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">s3_vectors_server</span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">s3_vectors_wrapper</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">uri</span><span class="w"> </span><span class="s1">&#39;s3://bucket/s3_table.csv&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">format</span><span class="w"> </span><span class="s1">&#39;csv&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">has_header</span><span class="w"> </span><span class="s1">&#39;true&#39;</span>
-<span class="w">  </span><span class="p">);</span>
-
-<span class="c1">-- JSON line file, no compression</span>
-<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">s3</span><span class="p">.</span><span class="n">table_jsonl</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">sex</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">age</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">height</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">weight</span><span class="w"> </span><span class="nb">text</span>
-<span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">s3_server</span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">uri</span><span class="w"> </span><span class="s1">&#39;s3://bucket/s3_table.jsonl&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">format</span><span class="w"> </span><span class="s1">&#39;jsonl&#39;</span>
-<span class="w">  </span><span class="p">);</span>
-
-<span class="c1">-- GZIP compressed CSV file</span>
-<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">s3</span><span class="p">.</span><span class="n">table_csv_gzip</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">sex</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">age</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">height</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">weight</span><span class="w"> </span><span class="nb">text</span>
-<span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">s3_server</span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">uri</span><span class="w"> </span><span class="s1">&#39;s3://bucket/s3_table.csv.gz&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">format</span><span class="w"> </span><span class="s1">&#39;csv&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">has_header</span><span class="w"> </span><span class="s1">&#39;true&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">compress</span><span class="w"> </span><span class="s1">&#39;gzip&#39;</span>
-<span class="w">  </span><span class="p">);</span>
-
-<span class="c1">-- Parquet file, no compression</span>
-<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">s3</span><span class="p">.</span><span class="n">table_parquet</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">integer</span><span class="p">,</span>
-<span class="w">  </span><span class="n">bool_col</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span>
-<span class="w">  </span><span class="n">bigint_col</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
-<span class="w">  </span><span class="n">float_col</span><span class="w"> </span><span class="nb">real</span><span class="p">,</span>
-<span class="w">  </span><span class="n">date_string_col</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">timestamp_col</span><span class="w"> </span><span class="k">timestamp</span>
-<span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">s3_server</span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">uri</span><span class="w"> </span><span class="s1">&#39;s3://bucket/s3_table.parquet&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">format</span><span class="w"> </span><span class="s1">&#39;parquet&#39;</span>
-<span class="w">  </span><span class="p">);</span>
-
-<span class="c1">-- GZIP compressed Parquet file</span>
-<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">s3</span><span class="p">.</span><span class="n">table_parquet_gz</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">integer</span><span class="p">,</span>
-<span class="w">  </span><span class="n">bool_col</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span>
-<span class="w">  </span><span class="n">bigint_col</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
-<span class="w">  </span><span class="n">float_col</span><span class="w"> </span><span class="nb">real</span><span class="p">,</span>
-<span class="w">  </span><span class="n">date_string_col</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">timestamp_col</span><span class="w"> </span><span class="k">timestamp</span>
-<span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">s3_server</span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">uri</span><span class="w"> </span><span class="s1">&#39;s3://bucket/s3_table.parquet.gz&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">format</span><span class="w"> </span><span class="s1">&#39;parquet&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">compress</span><span class="w"> </span><span class="s1">&#39;gzip&#39;</span>
+<span class="w">    </span><span class="n">aws_access_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;AWS_access_key_ID&gt;&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">aws_secret_access_key</span><span class="w"> </span><span class="s1">&#39;&lt;AWS_secret_access_key&gt;&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">aws_region</span><span class="w"> </span><span class="s1">&#39;us-east-1&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
-<h3 id="read-from-supabase-storage">Read from Supabase Storage</h3>
-<p>This example will read a CSV file stored on Supabase Storage. The access information can be found on <a href="https://supabase.com/dashboard/project/_/settings/storage">Supabase Storage settings page</a>.</p>
+<p>Import the foreign table:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -2957,27 +2808,138 @@
 <span class="normal">16</span>
 <span class="normal">17</span>
 <span class="normal">18</span>
-<span class="normal">19</span>
-<span class="normal">20</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">s3_server</span>
-<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">s3_wrapper</span>
+<span class="normal">19</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Import all indexes from a vector bucket</span>
+<span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">s3_vectors</span>
+<span class="w">  </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">s3_vectors_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">s3_vectors</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">aws_access_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;access key ID&gt;&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">aws_secret_access_key</span><span class="w"> </span><span class="s1">&#39;&lt;secret access key&gt;&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">aws_region</span><span class="w"> </span><span class="s1">&#39;&lt;region&gt;&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">endpoint_url</span><span class="w"> </span><span class="s1">&#39;https://&lt;project_ref&gt;.supabase.co/storage/v1/s3&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">path_style_url</span><span class="w"> </span><span class="s1">&#39;true&#39;</span>
+<span class="w">    </span><span class="n">bucket_name</span><span class="w"> </span><span class="s1">&#39;my-vector-bucket&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 
-<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">s3</span><span class="p">.</span><span class="n">supabase_table_csv</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span>
+<span class="c1">-- or, create the foreign table manually</span>
+<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="k">key</span><span class="w"> </span><span class="nb">text</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">null</span><span class="p">,</span>
+<span class="w">  </span><span class="k">data</span><span class="w"> </span><span class="n">embd</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">null</span><span class="p">,</span>
+<span class="w">  </span><span class="n">metadata</span><span class="w"> </span><span class="n">jsonb</span>
 <span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">s3_server</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">s3_vectors_server</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">uri</span><span class="w"> </span><span class="s1">&#39;s3://mybucket/myfile.csv&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">format</span><span class="w"> </span><span class="s1">&#39;csv&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">has_header</span><span class="w"> </span><span class="s1">&#39;true&#39;</span>
+<span class="w">    </span><span class="n">bucket_name</span><span class="w"> </span><span class="s1">&#39;my-vector-bucket&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">index_name</span><span class="w"> </span><span class="s1">&#39;my-vector-index&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">rowid_column</span><span class="w"> </span><span class="s1">&#39;key&#39;</span>
 <span class="w">  </span><span class="p">);</span>
+</code></pre></div></td></tr></table></div>
+<h3 id="querying-vectors">Querying Vectors</h3>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- List all vectors in an index</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span><span class="p">;</span>
+
+<span class="c1">-- Get specific vector by key</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="k">key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;product_001&#39;</span><span class="p">;</span>
+
+<span class="c1">-- Vector similarity search (top 5 similar vectors)</span>
+<span class="k">select</span><span class="w"> </span><span class="n">embd_distance</span><span class="p">(</span><span class="k">data</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">distance</span><span class="p">,</span><span class="w"> </span><span class="k">key</span><span class="p">,</span><span class="w"> </span><span class="n">metadata</span>
+<span class="k">from</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span>
+<span class="k">where</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="s1">&#39;[0.1, 0.2, 0.3, 0.4, 0.5]&#39;</span><span class="p">::</span><span class="n">embd</span>
+<span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="mi">1</span>
+<span class="k">limit</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<h3 id="inserting-vectors">Inserting Vectors</h3>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Insert a single vector</span>
+<span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span><span class="w"> </span><span class="p">(</span><span class="k">key</span><span class="p">,</span><span class="w"> </span><span class="k">data</span><span class="p">,</span><span class="w"> </span><span class="n">metadata</span><span class="p">)</span>
+<span class="k">values</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="s1">&#39;product_001&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="s1">&#39;[0.1, 0.2, 0.3, 0.4, 0.5]&#39;</span><span class="p">::</span><span class="n">embd</span><span class="p">,</span>
+<span class="w">  </span><span class="s1">&#39;{&quot;category&quot;: &quot;electronics&quot;, &quot;price&quot;: 299.99}&#39;</span><span class="p">::</span><span class="n">jsonb</span>
+<span class="p">);</span>
+
+<span class="c1">-- Insert multiple vectors</span>
+<span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span><span class="w"> </span><span class="p">(</span><span class="k">key</span><span class="p">,</span><span class="w"> </span><span class="k">data</span><span class="p">,</span><span class="w"> </span><span class="n">metadata</span><span class="p">)</span>
+<span class="k">values</span>
+<span class="w">  </span><span class="p">(</span><span class="s1">&#39;product_002&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;[0.2, 0.3, 0.4, 0.5, 0.6]&#39;</span><span class="p">::</span><span class="n">embd</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;{&quot;category&quot;: &quot;books&quot;}&#39;</span><span class="p">::</span><span class="n">jsonb</span><span class="p">),</span>
+<span class="w">  </span><span class="p">(</span><span class="s1">&#39;product_003&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;[0.3, 0.4, 0.5, 0.6, 0.7]&#39;</span><span class="p">::</span><span class="n">embd</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;{&quot;category&quot;: &quot;clothing&quot;}&#39;</span><span class="p">::</span><span class="n">jsonb</span><span class="p">);</span>
+</code></pre></div></td></tr></table></div>
+<h3 id="deleting-vectors">Deleting Vectors</h3>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Delete a specific vector by key</span>
+<span class="k">delete</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="k">key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;product_001&#39;</span><span class="p">;</span>
+
+<span class="c1">-- Delete all vectors</span>
+<span class="k">delete</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<h3 id="vector-similarity-search-with-filtering">Vector Similarity Search with Filtering</h3>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span>
+<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Find similar vectors with metadata filtering</span>
+<span class="k">select</span><span class="w"> </span><span class="n">embd_distance</span><span class="p">(</span><span class="k">data</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">distance</span><span class="p">,</span><span class="w"> </span><span class="k">key</span><span class="p">,</span><span class="w"> </span><span class="n">metadata</span>
+<span class="k">from</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span>
+<span class="k">where</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="s1">&#39;[0.1, 0.2, 0.3, 0.4, 0.5]&#39;</span><span class="p">::</span><span class="n">embd</span>
+<span class="k">and</span><span class="w"> </span><span class="n">metadata</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="s1">&#39;{&quot;category&quot;: &quot;electronics&quot;}&#39;</span><span class="p">::</span><span class="n">jsonb</span>
+<span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="mi">1</span>
+<span class="k">limit</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<h3 id="advanced-example-semantic-search">Advanced Example: Semantic Search</h3>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Create a function to convert text to embeddings (pseudo-code)</span>
+<span class="c1">-- This would typically use an external embedding service</span>
+<span class="k">create</span><span class="w"> </span><span class="k">or</span><span class="w"> </span><span class="k">replace</span><span class="w"> </span><span class="k">function</span><span class="w"> </span><span class="n">text_to_embedding</span><span class="p">(</span><span class="n">input_text</span><span class="w"> </span><span class="nb">text</span><span class="p">)</span>
+<span class="k">returns</span><span class="w"> </span><span class="n">embd</span>
+<span class="k">language</span><span class="w"> </span><span class="k">sql</span>
+<span class="k">as</span><span class="w"> </span><span class="err">$$</span>
+<span class="w">  </span><span class="c1">-- This is a placeholder - you would implement actual text embedding logic</span>
+<span class="w">  </span><span class="k">select</span><span class="w"> </span><span class="s1">&#39;[0.1, 0.2, 0.3, 0.4, 0.5]&#39;</span><span class="p">::</span><span class="n">embd</span><span class="p">;</span>
+<span class="err">$$</span><span class="p">;</span>
+
+<span class="c1">-- Semantic search example</span>
+<span class="k">select</span><span class="w"> </span><span class="n">embd_distance</span><span class="p">(</span><span class="k">data</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">distance</span><span class="p">,</span><span class="w"> </span><span class="k">key</span><span class="p">,</span><span class="w"> </span><span class="n">metadata</span>
+<span class="k">from</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span>
+<span class="k">where</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="n">text_to_embedding</span><span class="p">(</span><span class="s1">&#39;Find similar products&#39;</span><span class="p">)</span>
+<span class="k">and</span><span class="w"> </span><span class="n">metadata</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="s1">&#39;{&quot;status&quot;: &quot;active&quot;}&#39;</span><span class="p">::</span><span class="n">jsonb</span>
+<span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="mi">1</span>
+<span class="k">limit</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 
 
@@ -3011,7 +2973,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../redis/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Redis">
+          <a href="../s3/" class="md-footer__link md-footer__link--prev" aria-label="Previous: S3 (CSV, JSON, Parquet)">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
@@ -3021,20 +2983,20 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                Redis
+                S3 (CSV, JSON, Parquet)
               </div>
             </div>
           </a>
         
         
           
-          <a href="../s3vectors/" class="md-footer__link md-footer__link--next" aria-label="Next: S3 Vectors">
+          <a href="../stripe/" class="md-footer__link md-footer__link--next" aria-label="Next: Stripe">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                S3 Vectors
+                Stripe
               </div>
             </div>
             <div class="md-footer__button md-icon">
