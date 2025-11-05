@@ -506,12 +506,59 @@ A `create server` statement example used to access local Iceberg service:
       );
     ```
 
+#### MotherDuck
+
+This is to access [MotherDuck](https://motherduck.com/), a cloud-hosted DuckDB service.
+
+| Server Option | Description | Required | Default |
+| ------------- | ----------- | :------: | ------- |
+| type | Server type, must be `md` | Y | |
+| database | The MotherDuck database name to use | Y | |
+| motherduck_token | The MotherDuck access token | Y | |
+
+!!! info
+    To obtain a MotherDuck access token, visit [https://app.motherduck.com/settings/tokens](https://app.motherduck.com/settings/tokens) in your browser and create a new token.
+
+A `create server` statement example:
+
+=== "With Vault"
+
+    ```sql
+    create server duckdb_server
+      foreign data wrapper duckdb_wrapper
+      options (
+        type 'md',
+
+        -- The database name
+        database 'my_db',
+
+        -- The MotherDuck token saved in Vault
+        vault_motherduck_token '<token>'
+      );
+    ```
+
+=== "Without Vault"
+
+    ```sql
+    create server duckdb_server
+      foreign data wrapper duckdb_wrapper
+      options (
+        type 'md',
+
+        -- The database name
+        database 'my_db',
+
+        -- The MotherDuck access token
+        motherduck_token '<token>'
+      );
+    ```
+
 ### Create a schema
 
 We recommend creating a schema to hold all the foreign tables:
 
 ```sql
-create schema if not exists iceberg;
+create schema if not exists duckdb;
 ```
 
 ## Options
@@ -558,11 +605,16 @@ import foreign schema "docs_example"
   from server duckdb_server into duckdb;
 ```
 
-Currently only Iceberg-like servers, such as S3 Tables, R2 Data Catalog and etc., support `import foreign schema` without specifying source tables. For other types of servers, source tables must be explicitly specified in options. For example,
+Currently only MotherDuck and Iceberg-like servers, such as S3 Tables, R2 Data Catalog and etc., support `import foreign schema` without specifying source tables. For other types of servers, source tables must be explicitly specified in options. For example,
 
 ```sql
--- 'duckdb_server_s3_tables' server type is 's3_tables', so all tables
--- under 'docs_example' namespace can be imported automatically
+-- 'duckdb_server_md' server type is 'md', all tables under 'main' schema
+-- will be imported from MotherDuck automatically
+import foreign schema "main"
+  from server duckdb_server_md into duckdb;
+
+-- 'duckdb_server_s3_tables' server type is 's3_tables', all tables
+-- under 'docs_example' namespace will be imported automatically
 import foreign schema "docs_example"
   from server duckdb_server_s3_tables into duckdb;
 
