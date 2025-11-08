@@ -97,11 +97,14 @@ The following options are available when creating ClickHouse foreign tables:
 
 - `table` - Source table name in ClickHouse, required
 
-This can also be a subquery enclosed in parentheses, for example,
+    This can also be a subquery enclosed in parentheses, for example,
 
-```sql
-table '(select * from my_table)'
-```
+    ```sql
+    table '(select * from my_table)'
+    ```
+
+- `rowid_column` - Primary key column name, optional for data scan, required for data modify
+- `stream_buffer_size` - Size of the internal buffer used for streaming data from ClickHouse, defaults to 1024 rows. Must be between 1 and 100000.
 
 ### Parametrized views
 
@@ -122,8 +125,6 @@ table '(select * from my_table)'
 
   select * from test_vw where _param1='aaa' and _param2=32;
 ```
-
-- `rowid_column` - Primary key column name, optional for data scan, required for data modify
 
 ## Entities
 

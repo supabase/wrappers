@@ -85,7 +85,8 @@ mod tests {
                   SERVER my_clickhouse_server
                   OPTIONS (
                     table 'test_table',
-                    rowid_column 'id'
+                    rowid_column 'id',
+                    stream_buffer_size '512'
                   )
              "#,
                 None,
