@@ -587,11 +587,9 @@ impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
         // get stream buffer size from options, with validation
         let stream_buffer_size = options
             .get("stream_buffer_size")
-            .map(|s| {
-                s.parse::<usize>()
-                    .map(|size| size.clamp(1, 100_000))
-                    .unwrap_or(1024)
-            })
+            .map(|s| s.parse::<usize>().map(|size| size.clamp(1, 100_000)))
+            .transpose()
+            .map_err(ClickHouseFdwError::ParseIntError)?
             .unwrap_or(1024);
 
         // create bounded channel
