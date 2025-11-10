@@ -353,7 +353,7 @@ where
 }
 
 #[wrappers_fdw(
-    version = "0.1.8",
+    version = "0.1.9",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/clickhouse_fdw",
     error_type = "ClickHouseFdwError"
@@ -584,8 +584,17 @@ impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
         self.is_scan_complete = false;
         self.current_row_data = None;
 
+        // get stream buffer size from options, with validation
+        let stream_buffer_size = options
+            .get("stream_buffer_size")
+            .map(|s| s.parse::<usize>().map(|size| size.clamp(1, 100_000)))
+            .transpose()
+            .map_err(ClickHouseFdwError::ParseIntError)?
+            .unwrap_or(1024);
+
         // create bounded channel
-        let (tx, rx) = channel::bounded::<ClickHouseFdwResult<Option<ConvertedRow>>>(1024);
+        let (tx, rx) =
+            channel::bounded::<ClickHouseFdwResult<Option<ConvertedRow>>>(stream_buffer_size);
         self.row_receiver = Some(rx);
 
         // clone data needed by the async task
