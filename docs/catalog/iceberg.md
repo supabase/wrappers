@@ -160,7 +160,7 @@ For any server options need to be stored in Vault, you can add a prefix `vault_`
 
     For other optional S3 options, please refer to [PyIceberg S3 Configuration](https://py.iceberg.apache.org/configuration/#s3).
 
-Additional server options include:
+#### Additional Server Options
 
 - `batch_size` - Controls the batch size of records read from Iceberg (default: 4096)
 
