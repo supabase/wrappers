@@ -299,7 +299,7 @@ num-traits = { version = "0.2.17", optional = true }
 redis = { version = "0.27.5", features = ["streams", "tls-rustls", "tls-rustls-insecure"], optional = true }
 
 # for wasm_fdw
-wasmtime = { version = "32.0.0", features = [
+wasmtime = { version = "36.0.3", features = [
     "runtime",
     "cranelift",
     "component-model",
