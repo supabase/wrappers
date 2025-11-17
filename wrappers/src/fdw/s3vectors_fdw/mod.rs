@@ -1,6 +1,6 @@
 #![allow(clippy::module_inception)]
 mod conv;
-mod embd;
+mod s3vec;
 mod s3vectors_fdw;
 mod tests;
 
@@ -22,6 +22,9 @@ use supabase_wrappers::prelude::{CreateRuntimeError, OptionsError};
 enum S3VectorsFdwError {
     #[error("query filter is not supported, check S3 Vectors wrapper documents for more details")]
     QueryNotSupported,
+
+    #[error("invalid s3vec value: {0}")]
+    InvalidS3Vec(String),
 
     #[error("invalid insert value {0}")]
     InvalidInsertValue(String),

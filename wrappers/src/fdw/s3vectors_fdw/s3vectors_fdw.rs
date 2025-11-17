@@ -15,11 +15,11 @@ use std::env;
 use supabase_wrappers::prelude::*;
 
 use super::conv::json_value_to_document;
-use super::embd::Embd;
+use super::s3vec::S3Vec;
 use super::{S3VectorsFdwError, S3VectorsFdwResult};
 
 #[wrappers_fdw(
-    version = "0.1.0",
+    version = "0.1.1",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/s3vectors_fdw",
     error_type = "S3VectorsFdwError"
@@ -35,7 +35,7 @@ pub(crate) struct S3VectorsFdw {
 
     // for vectors selection
     vectors_stream: Option<PaginationStream<Result<ListVectorsOutput, SdkError<ListVectorsError>>>>,
-    curr_vectors: Vec<Embd>,
+    curr_vectors: Vec<S3Vec>,
     scan_initialised: bool,
     has_next_page: bool,
     row_cnt: i64,
@@ -54,7 +54,7 @@ impl S3VectorsFdw {
         if let Some(stream) = self.vectors_stream.as_mut() {
             if let Some(next_batch) = self.rt.block_on(stream.try_next())? {
                 self.has_next_page = next_batch.next_token.is_some();
-                self.curr_vectors = next_batch.vectors.iter().map(Embd::from).collect();
+                self.curr_vectors = next_batch.vectors.iter().map(S3Vec::from).collect();
             }
         }
 
@@ -111,7 +111,7 @@ impl S3VectorsFdw {
                 .send(),
         )?;
 
-        self.curr_vectors = result.vectors.iter().map(Embd::from).collect();
+        self.curr_vectors = result.vectors.iter().map(S3Vec::from).collect();
 
         Ok(())
     }
@@ -119,27 +119,31 @@ impl S3VectorsFdw {
     // get vectors by approximate nearest neighbor search query
     // ref: https://docs.aws.amazon.com/AmazonS3/latest/API/API_S3VectorBuckets_QueryVectors.html
     fn query_vectors(&mut self) -> S3VectorsFdwResult<()> {
-        let query_vector = self.quals.iter().find_map(|q| {
-            if q.field == "data" {
+        let query_vector = {
+            let qual = self.quals.iter().find(|q| q.field == "data");
+            if let Some(q) = qual {
                 if let Value::Cell(Cell::Bytea(bytea)) = &q.value {
-                    let embd = if let Some(param) = &q.param {
+                    let s3vec = if let Some(param) = &q.param {
                         if let Some(Value::Cell(Cell::Bytea(b))) = *param
                             .eval_value
                             .lock()
                             .expect("parameter eval value should be locked")
                         {
-                            Embd::from(b)
+                            S3Vec::try_from(b)?
                         } else {
-                            Embd::from(*bytea)
+                            S3Vec::try_from(*bytea)?
                         }
                     } else {
-                        Embd::from(*bytea)
+                        S3Vec::try_from(*bytea)?
                     };
-                    return Some(VectorData::Float32(embd.data.clone()));
+                    Some(VectorData::Float32(s3vec.data.clone()))
+                } else {
+                    None
                 }
+            } else {
+                None
             }
-            None
-        });
+        };
         let metadata_filter = self.quals.iter().find_map(|q| {
             if q.field == "metadata" {
                 if let Value::Cell(Cell::Json(json)) = &q.value {
@@ -165,7 +169,7 @@ impl S3VectorsFdw {
                 .send(),
         )?;
 
-        self.curr_vectors = result.vectors.iter().map(Embd::from).collect();
+        self.curr_vectors = result.vectors.iter().map(S3Vec::from).collect();
 
         Ok(())
     }
@@ -358,8 +362,8 @@ impl ForeignDataWrapper<S3VectorsFdwError> for S3VectorsFdw {
                 }
                 "data" => {
                     if let Some(Cell::Bytea(vector)) = cell {
-                        let vector = Embd::from(*vector);
-                        let vector_data = VectorData::Float32(vector.data.clone());
+                        let s3vec = S3Vec::try_from(*vector)?;
+                        let vector_data = VectorData::Float32(s3vec.data.clone());
                         builder = builder.set_data(vector_data.into());
                     } else {
                         return Err(S3VectorsFdwError::InvalidInsertValue(format!(
@@ -457,7 +461,7 @@ impl ForeignDataWrapper<S3VectorsFdwError> for S3VectorsFdw {
                 let table_sql = format!(
                     r#"create foreign table if not exists {} (
                         key text not null,
-                        data embd not null,
+                        data s3vec not null,
                         metadata jsonb
                     )
                     server {} options (
