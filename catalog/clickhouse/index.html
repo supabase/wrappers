@@ -2227,11 +2227,17 @@
 <h2 id="options">Options</h2>
 <p>The following options are available when creating ClickHouse foreign tables:</p>
 <ul>
-<li><code>table</code> - Source table name in ClickHouse, required</li>
-</ul>
+<li>
+<p><code>table</code> - Source table name in ClickHouse, required</p>
 <p>This can also be a subquery enclosed in parentheses, for example,</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">table</span><span class="w"> </span><span class="s1">&#39;(select * from my_table)&#39;</span>
 </code></pre></div></td></tr></table></div>
+</li>
+<li>
+<p><code>rowid_column</code> - Primary key column name, optional for data scan, required for data modify</p>
+</li>
+<li><code>stream_buffer_size</code> - Size of the internal buffer used for streaming data from ClickHouse, defaults to 1024 rows. Must be between 1 and 100000.</li>
+</ul>
 <h3 id="parametrized-views">Parametrized views</h3>
 <p><a href="https://clickhouse.com/docs/en/sql-reference/statements/create/view#parameterized-view">Parametrized view</a> is also supported in the subquery. In this case, you need to define a column for each parameter and use <code>where</code> to pass values to them. For example,</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
@@ -2260,9 +2266,6 @@
 
 <span class="w">  </span><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">test_vw</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">_param1</span><span class="o">=</span><span class="s1">&#39;aaa&#39;</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">_param2</span><span class="o">=</span><span class="mi">32</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
-<ul>
-<li><code>rowid_column</code> - Primary key column name, optional for data scan, required for data modify</li>
-</ul>
 <h2 id="entities">Entities</h2>
 <h3 id="tables">Tables</h3>
 <p>The ClickHouse Wrapper supports data reads and writes from ClickHouse tables.</p>

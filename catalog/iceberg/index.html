@@ -742,6 +742,15 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#additional-server-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      Additional Server Options
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2074,6 +2083,15 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#additional-server-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      Additional Server Options
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2535,6 +2553,10 @@
 <p class="admonition-title">Info</p>
 <p>For other optional S3 options, please refer to <a href="https://py.iceberg.apache.org/configuration/#s3">PyIceberg S3 Configuration</a>.</p>
 </div>
+<h4 id="additional-server-options">Additional Server Options</h4>
+<ul>
+<li><code>batch_size</code> - Controls the batch size of records read from Iceberg (default: 4096)</li>
+</ul>
 <h3 id="create-a-schema">Create a schema</h3>
 <p>We recommend creating a schema to hold all the foreign tables:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">iceberg</span><span class="p">;</span>
