@@ -51,7 +51,7 @@ mod tests {
 
             let results = c
                 .select(
-                    r#"SELECT embd_distance(data) as distance, *
+                    r#"SELECT s3vec_distance(data) as distance, *
                     FROM s3_vectors.my_vector_index
                     WHERE data <==> '[1.2, -0.8, 2.9]'
                       AND metadata <==> '{"model": {"$eq": "test"}}'

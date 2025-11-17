@@ -148,7 +148,7 @@ You can also manually create the foreign table like below if you did not use `im
 ```sql
 create foreign table s3_vectors.embeddings (
   key text not null,
-  data embd not null,
+  data s3vec not null,
   metadata jsonb
 )
   server s3_vectors_server
@@ -160,42 +160,42 @@ create foreign table s3_vectors.embeddings (
 ```
 ### Custom Data Types
 
-#### embd
+#### s3vec
 
-The `embd` type is a custom PostgreSQL data type designed to store and work with high-dimensional vectors for machine learning and AI applications.
+The `s3vec` type is a custom PostgreSQL data type designed to store and work with high-dimensional vectors for machine learning and AI applications.
 
 **Structure:**
 
-The `embd` type internally contains:
+The `s3vec` type internally contains:
 
 - Vector data as an array of 32-bit floating point numbers (Float32)
 - Additional metadata fields for internal use
 
 **Input Formats:**
 
-The `embd` type accepts input in JSON array format:
+The `s3vec` type accepts input in JSON array format:
 
 ```sql
 -- Simple array format (most common)
-'[0.1, 0.2, 0.3, 0.4, 0.5]'::embd
+'[0.1, 0.2, 0.3, 0.4, 0.5]'::s3vec
 
 -- Full JSON object format (advanced)
-'{"data": [0.1, 0.2, 0.3], "key": "vector_001"}'::embd
+'{"data": [0.1, 0.2, 0.3], "key": "vector_001"}'::s3vec
 ```
 
 **Output Format:**
 
-When displayed, the `embd` type shows a summary format:
+When displayed, the `s3vec` type shows a summary format:
 
 ```
-embd:5  -- indicates an embedding with 5 dimensions
+s3vec:5  -- indicates an embedding with 5 dimensions
 ```
 
 **Usage Examples:**
 
 See the following sections for complete examples:
 
-- [Inserting Vectors](#inserting-vectors) - Examples of inserting data with `embd` type
+- [Inserting Vectors](#inserting-vectors) - Examples of inserting data with `s3vec` type
 - [Querying Vectors](#querying-vectors) - Basic queries and vector similarity search
 - [Vector Similarity Search with Filtering](#vector-similarity-search-with-filtering) - Advanced search with metadata filtering
 - [Advanced Example: Semantic Search](#advanced-example-semantic-search) - Complete semantic search implementation
@@ -203,8 +203,8 @@ See the following sections for complete examples:
 **Operations:**
 
 - **Vector similarity search**: Use the `<==>` operator for approximate nearest neighbor search
-- **Distance calculation**: Use `embd_distance()` function to get similarity scores
-- **Type casting**: Convert JSON arrays to `embd` type using `::embd` cast
+- **Distance calculation**: Use `s3vec_distance()` function to get similarity scores
+- **Type casting**: Convert JSON arrays to `s3vec` type using `::s3vec` cast
 
 **Constraints:**
 
@@ -214,19 +214,19 @@ See the following sections for complete examples:
 
 ### Functions
 
-#### embd_distance(embd)
+#### s3vec_distance(s3vec)
 
 Returns the distance score from the most recent vector similarity search operation.
 
 **Syntax:**
 
 ```sql
-embd_distance(vector_data) -> real
+s3vec_distance(vector_data) -> real
 ```
 
 **Parameters:**
 
-- `vector_data` - An `embd` type column containing vector data
+- `vector_data` - An `s3vec` type column containing vector data
 
 **Returns:**
 
@@ -236,9 +236,9 @@ embd_distance(vector_data) -> real
 
 ```sql
 -- Get similarity search results with distance scores
-select embd_distance(data) as distance, key, metadata
+select s3vec_distance(data) as distance, key, metadata
 from s3_vectors.embeddings
-where data <==> '[0.1, 0.2, 0.3, 0.4, 0.5]'::embd
+where data <==> '[0.1, 0.2, 0.3, 0.4, 0.5]'::s3vec
 order by 1
 limit 5;
 ```
@@ -312,18 +312,18 @@ For exact key lookups:
 
 3. **Vector similarity search**:
    ```sql
-   select embd_distance(data) as distance, *
+   select s3vec_distance(data) as distance, *
    from s3_vectors.embeddings
-   where data <==> '[0.1, 0.2, 0.3, ...]'::embd
+   where data <==> '[0.1, 0.2, 0.3, ...]'::s3vec
    order by 1
    limit 10;
    ```
 
 4. **Vector search with metadata filtering**:
    ```sql
-   select embd_distance(data) as distance, *
+   select s3vec_distance(data) as distance, *
    from s3_vectors.embeddings
-   where data <==> '[0.1, 0.2, 0.3, ...]'::embd
+   where data <==> '[0.1, 0.2, 0.3, ...]'::s3vec
    and metadata <==> '{"category": "product"}'::jsonb
    order by 1
    limit 5;
@@ -338,7 +338,7 @@ For exact key lookups:
 | Postgres Type    | S3 Vectors Type                        |
 | ---------------- | -------------------------------------- |
 | text             | String (for vector key)                |
-| embd             | Float32 vector data                    |
+| s3vec             | Float32 vector data                    |
 | jsonb            | Document metadata                      |
 
 ## Limitations
@@ -380,7 +380,7 @@ import foreign schema s3_vectors
 -- or, create the foreign table manually
 create foreign table if not exists s3_vectors.embeddings (
   key text not null,
-  data embd not null,
+  data s3vec not null,
   metadata jsonb
 )
   server s3_vectors_server
@@ -401,9 +401,9 @@ select * from s3_vectors.embeddings;
 select * from s3_vectors.embeddings where key = 'product_001';
 
 -- Vector similarity search (top 5 similar vectors)
-select embd_distance(data) as distance, key, metadata
+select s3vec_distance(data) as distance, key, metadata
 from s3_vectors.embeddings
-where data <==> '[0.1, 0.2, 0.3, 0.4, 0.5]'::embd
+where data <==> '[0.1, 0.2, 0.3, 0.4, 0.5]'::s3vec
 order by 1
 limit 5;
 ```
@@ -415,15 +415,15 @@ limit 5;
 insert into s3_vectors.embeddings (key, data, metadata)
 values (
   'product_001',
-  '[0.1, 0.2, 0.3, 0.4, 0.5]'::embd,
+  '[0.1, 0.2, 0.3, 0.4, 0.5]'::s3vec,
   '{"category": "electronics", "price": 299.99}'::jsonb
 );
 
 -- Insert multiple vectors
 insert into s3_vectors.embeddings (key, data, metadata)
 values
-  ('product_002', '[0.2, 0.3, 0.4, 0.5, 0.6]'::embd, '{"category": "books"}'::jsonb),
-  ('product_003', '[0.3, 0.4, 0.5, 0.6, 0.7]'::embd, '{"category": "clothing"}'::jsonb);
+  ('product_002', '[0.2, 0.3, 0.4, 0.5, 0.6]'::s3vec, '{"category": "books"}'::jsonb),
+  ('product_003', '[0.3, 0.4, 0.5, 0.6, 0.7]'::s3vec, '{"category": "clothing"}'::jsonb);
 ```
 
 ### Deleting Vectors
@@ -440,9 +440,9 @@ delete from s3_vectors.embeddings;
 
 ```sql
 -- Find similar vectors with metadata filtering
-select embd_distance(data) as distance, key, metadata
+select s3vec_distance(data) as distance, key, metadata
 from s3_vectors.embeddings
-where data <==> '[0.1, 0.2, 0.3, 0.4, 0.5]'::embd
+where data <==> '[0.1, 0.2, 0.3, 0.4, 0.5]'::s3vec
 and metadata <==> '{"category": "electronics"}'::jsonb
 order by 1
 limit 3;
@@ -454,15 +454,15 @@ limit 3;
 -- Create a function to convert text to embeddings (pseudo-code)
 -- This would typically use an external embedding service
 create or replace function text_to_embedding(input_text text)
-returns embd
+returns s3vec
 language sql
 as $$
   -- This is a placeholder - you would implement actual text embedding logic
-  select '[0.1, 0.2, 0.3, 0.4, 0.5]'::embd;
+  select '[0.1, 0.2, 0.3, 0.4, 0.5]'::s3vec;
 $$;
 
 -- Semantic search example
-select embd_distance(data) as distance, key, metadata
+select s3vec_distance(data) as distance, key, metadata
 from s3_vectors.embeddings
 where data <==> text_to_embedding('Find similar products')
 and metadata <==> '{"status": "active"}'::jsonb

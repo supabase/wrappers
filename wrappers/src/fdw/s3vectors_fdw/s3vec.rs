@@ -1,4 +1,5 @@
 use super::conv::document_to_json_value;
+use super::S3VectorsFdwError;
 use aws_sdk_s3vectors::types::{GetOutputVector, ListOutputVector, QueryOutputVector, VectorData};
 use pgrx::{pg_sys::bytea, prelude::*, stringinfo::StringInfo, JsonB};
 use serde::{Deserialize, Serialize};
@@ -7,38 +8,38 @@ use std::ffi::CStr;
 
 #[derive(Debug, Default, PostgresType, Serialize, Deserialize)]
 #[inoutfuncs]
-pub(super) struct Embd {
+pub(super) struct S3Vec {
     pub key: String,
     pub data: Vec<f32>,
     pub metadata: Option<JsonValue>,
     pub distance: f32,
 }
 
-impl InOutFuncs for Embd {
-    const NULL_ERROR_MESSAGE: Option<&'static str> = Some("cannot insert NULL to embd column");
+impl InOutFuncs for S3Vec {
+    const NULL_ERROR_MESSAGE: Option<&'static str> = Some("cannot insert NULL to s3vec column");
 
     fn input(input: &CStr) -> Self {
         let value: JsonValue = serde_json::from_str(input.to_str().unwrap_or_default())
-            .expect("embd input should be a valid JSON string");
+            .expect("s3vec input should be a valid JSON string");
 
         if value.is_array() {
             Self {
-                data: serde_json::from_value(value).expect("embd data should be a float32 array"),
+                data: serde_json::from_value(value).expect("s3vec data should be a float32 array"),
                 ..Default::default()
             }
         } else {
             let ret: Self =
-                serde_json::from_value(value).expect("embd should be in valid JSON format");
+                serde_json::from_value(value).expect("s3vec should be in valid JSON format");
             ret
         }
     }
 
     fn output(&self, buffer: &mut StringInfo) {
-        buffer.push_str(&format!("embd:{}", self.data.len()));
+        buffer.push_str(&format!("s3vec:{}", self.data.len()));
     }
 }
 
-impl From<&ListOutputVector> for Embd {
+impl From<&ListOutputVector> for S3Vec {
     fn from(v: &ListOutputVector) -> Self {
         let data = if let Some(VectorData::Float32(vector_data)) = &v.data {
             vector_data.clone()
@@ -56,7 +57,7 @@ impl From<&ListOutputVector> for Embd {
     }
 }
 
-impl From<&GetOutputVector> for Embd {
+impl From<&GetOutputVector> for S3Vec {
     fn from(v: &GetOutputVector) -> Self {
         let data = if let Some(VectorData::Float32(vector_data)) = &v.data {
             vector_data.clone()
@@ -74,7 +75,7 @@ impl From<&GetOutputVector> for Embd {
     }
 }
 
-impl From<&QueryOutputVector> for Embd {
+impl From<&QueryOutputVector> for S3Vec {
     fn from(v: &QueryOutputVector) -> Self {
         let data = if let Some(VectorData::Float32(vector_data)) = &v.data {
             vector_data.clone()
@@ -92,16 +93,23 @@ impl From<&QueryOutputVector> for Embd {
     }
 }
 
-impl From<*mut bytea> for Embd {
-    fn from(v: *mut bytea) -> Self {
+impl TryFrom<*mut bytea> for S3Vec {
+    type Error = S3VectorsFdwError;
+
+    fn try_from(v: *mut bytea) -> Result<Self, Self::Error> {
+        if v.is_null() {
+            return Err(S3VectorsFdwError::InvalidS3Vec(
+                "input bytea pointer is null".to_string(),
+            ));
+        }
         let ret: Self = unsafe { pgrx::datum::cbor_decode(v) };
-        ret
+        Ok(ret)
     }
 }
 
 #[pg_operator(immutable, parallel_safe)]
 #[opname(<==>)]
-fn embd_knn(_left: Embd, _right: Embd) -> bool {
+fn s3vec_knn(_left: S3Vec, _right: S3Vec) -> bool {
     // always return true here, actual calculation will be done in the wrapper
     true
 }
@@ -114,6 +122,6 @@ fn metadata_filter(_left: JsonB, _right: JsonB) -> bool {
 }
 
 #[pg_extern]
-fn embd_distance(embd: Embd) -> f32 {
-    embd.distance
+fn s3vec_distance(s3vec: S3Vec) -> f32 {
+    s3vec.distance
 }
