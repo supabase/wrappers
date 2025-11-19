@@ -122,11 +122,8 @@ For example, using below SQL can automatically create foreign tables in the `s3_
 
 ```sql
 -- create foreign table for each index from S3 Vector bucket
-import foreign schema s3_vectors
-  from server s3_vectors_server into s3_vectors
-  options (
-    bucket_name 'my-vector-bucket'
-  );
+import foreign schema "my-vector-bucket"
+  from server s3_vectors_server into s3_vectors;
 ```
 
 ### S3 Vector Tables
@@ -371,11 +368,8 @@ Import the foreign table:
 
 ```sql
 -- Import all indexes from a vector bucket
-import foreign schema s3_vectors
-  from server s3_vectors_server into s3_vectors
-  options (
-    bucket_name 'my-vector-bucket'
-  );
+import foreign schema "my-vector-bucket"
+  from server s3_vectors_server into s3_vectors;
 
 -- or, create the foreign table manually
 create foreign table if not exists s3_vectors.embeddings (

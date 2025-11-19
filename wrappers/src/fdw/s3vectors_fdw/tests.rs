@@ -28,11 +28,7 @@ mod tests {
             c.update(r#"CREATE SCHEMA IF NOT EXISTS s3_vectors"#, None, &[])
                 .unwrap();
             c.update(
-                r#"IMPORT FOREIGN SCHEMA "s3_vectors" FROM SERVER s3_vectors_server INTO s3_vectors
-                   OPTIONS (
-                     bucket_name 'my-vector-bucket'
-                   )
-                "#,
+                r#"IMPORT FOREIGN SCHEMA "my-vector-bucket" FROM SERVER s3_vectors_server INTO s3_vectors"#,
                 None,
                 &[],
             )
