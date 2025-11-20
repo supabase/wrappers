@@ -517,6 +517,10 @@ impl ForeignDataWrapper<IcebergFdwError> for IcebergFdw {
             cells: src.cells.clone(),
         });
 
+        // Direct insert optimization: when the table has no partitioning and no sorting,
+        // rows can be written in batches to avoid buffering the entire dataset in memory.
+        // Each batch is written to a separate parquet file, so larger batch sizes are
+        // recommended for better performance when inserting large datasets.
         if self.is_direct_insert && self.input_rows.len() >= self.batch_size {
             self.write_rows_to_iceberg()?;
             self.input_rows.clear();
@@ -526,7 +530,9 @@ impl ForeignDataWrapper<IcebergFdwError> for IcebergFdw {
     }
 
     fn end_modify(&mut self) -> IcebergFdwResult<()> {
-        self.write_rows_to_iceberg()
+        self.write_rows_to_iceberg()?;
+        self.input_rows.clear();
+        Ok(())
     }
 
     fn import_foreign_schema(
