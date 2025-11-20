@@ -100,7 +100,7 @@ We need to provide Postgres with the credentials to connect to S3 Vectors. We ca
 
 #### Additional Server Options
 
-- `batch_size` - Controls the batch size of vectors read from or write to remote. Minimum value of 1, maximum value of 500, default value of 300.
+- `batch_size` - Controls the batch size of vectors read from or written to remote. Minimum value of 1, maximum value of 500, default value of 300.
 
 ### Create a schema
 
