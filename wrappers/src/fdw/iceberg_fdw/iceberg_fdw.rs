@@ -47,7 +47,7 @@ pub(crate) struct IcebergFdw {
     catalog: Box<dyn Catalog>,
     table: Option<Table>,
     predicate: Option<Predicate>,
-    batch_size: Option<usize>,
+    batch_size: usize,
 
     // copy of target columns
     tgt_cols: Vec<Column>,
@@ -64,6 +64,9 @@ pub(crate) struct IcebergFdw {
     // for stats: total number of records and bytes read
     num_rows: usize,
     bytes_in: usize,
+
+    // for insertion: if it is a direct insertion, i.e. no partitioning and no sorting
+    is_direct_insert: bool,
 
     // for insertion: buffer for accumulating input rows before sorting
     input_rows: Vec<InputRow>,
@@ -139,7 +142,7 @@ impl IcebergFdw {
             let mut scan_builder = table
                 .scan()
                 .select(self.tgt_cols.iter().map(|c| c.name.clone()))
-                .with_batch_size(self.batch_size);
+                .with_batch_size(Some(self.batch_size));
             if let Some(predicate) = &self.predicate {
                 scan_builder = scan_builder.with_filter(predicate.clone());
             }
@@ -278,163 +281,8 @@ impl IcebergFdw {
 
         Ok(record_batch)
     }
-}
 
-impl ForeignDataWrapper<IcebergFdwError> for IcebergFdw {
-    fn new(server: ForeignServer) -> IcebergFdwResult<Self> {
-        // transform server options into properties for catalog creation
-        let mut props: HashMap<String, String> = server
-            .options
-            .iter()
-            .map(|(k, v)| -> IcebergFdwResult<_> {
-                // get decrypted text from options with 'vault_' prefix
-                let value = if k.starts_with("vault_") {
-                    if let Some(val) = get_vault_secret(v) {
-                        val
-                    } else {
-                        return Err(IcebergFdwError::VaultError(format!(
-                            "cannot decrypt for '{k}' from Vault"
-                        )));
-                    }
-                } else {
-                    v.clone()
-                };
-                let key = k.strip_prefix("vault_").unwrap_or(k).to_string();
-                Ok((key, value))
-            })
-            .collect::<IcebergFdwResult<Vec<_>>>()?
-            .into_iter()
-            .collect();
-
-        // copy AWS credentials if they're not set by user
-        utils::copy_option(&mut props, "aws_access_key_id", "s3.access-key-id");
-        utils::copy_option(&mut props, "aws_secret_access_key", "s3.secret-access-key");
-        utils::copy_option(&mut props, "region_name", "s3.region");
-
-        let batch_size = require_option_or("batch_size", &server.options, "4096")
-            .parse::<usize>()
-            .unwrap_or(4096);
-
-        let rt = create_async_runtime()?;
-
-        // create catalog
-        // note: only below services are supported now:
-        //   1. S3 tables
-        //   2. REST catalog with S3 (or compatible) as backend storage
-        let catalog: Box<dyn Catalog> =
-            if let Some(aws_s3table_arn) = props.get("aws_s3table_bucket_arn") {
-                let catalog_config = S3TablesCatalogConfig::builder()
-                    .table_bucket_arn(aws_s3table_arn.into())
-                    .properties(props)
-                    .build();
-                Box::new(rt.block_on(S3TablesCatalog::new(catalog_config))?)
-            } else {
-                let catalog_uri = require_option("catalog_uri", &props)?;
-                let warehouse = require_option_or("warehouse", &props, "warehouse");
-                let catalog_config = RestCatalogConfig::builder()
-                    .warehouse(warehouse.into())
-                    .uri(catalog_uri.into())
-                    .props(props)
-                    .build();
-                Box::new(RestCatalog::new(catalog_config))
-            };
-
-        stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
-
-        Ok(IcebergFdw {
-            rt,
-            catalog,
-            table: None,
-            predicate: None,
-            batch_size: batch_size.into(),
-            tgt_cols: Vec::new(),
-            stream: None,
-            row_data: VecDeque::new(),
-            src_fields: Vec::new(),
-            mapper: Mapper::default(),
-            num_rows: 0,
-            bytes_in: 0,
-            input_rows: Vec::new(),
-        })
-    }
-
-    fn begin_scan(
-        &mut self,
-        quals: &[Qual],
-        columns: &[Column],
-        _sorts: &[Sort],
-        _limit: &Option<Limit>,
-        options: &HashMap<String, String>,
-    ) -> IcebergFdwResult<()> {
-        let tbl_ident = TableIdent::from_strs(require_option("table", options)?.split("."))?;
-        let table = self.rt.block_on(self.catalog.load_table(&tbl_ident))?;
-
-        let schema = table.metadata().current_schema();
-        for tgt_col in columns {
-            let col_name = &tgt_col.name;
-            let field = schema
-                .field_by_name_case_insensitive(col_name)
-                .ok_or_else(|| IcebergFdwError::ColumnNotFound(col_name.into()))?;
-            self.src_fields.push(field.clone());
-        }
-
-        self.predicate = try_pushdown(&table, quals)?;
-        self.table = table.into();
-        self.tgt_cols = columns.to_vec();
-
-        self.do_iceberg_scan()
-    }
-
-    fn iter_scan(&mut self, row: &mut Row) -> IcebergFdwResult<Option<()>> {
-        if self.row_data.is_empty() {
-            self.next_batch()?;
-        }
-
-        if let Some(cells) = self.row_data.pop_front() {
-            let src_row = Row {
-                cols: self.tgt_cols.iter().map(|c| c.name.clone()).collect(),
-                cells,
-            };
-            row.replace_with(src_row);
-            return Ok(Some(()));
-        }
-
-        stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsIn, self.num_rows as _);
-        stats::inc_stats(Self::FDW_NAME, stats::Metric::BytesIn, self.bytes_in as _);
-
-        Ok(None)
-    }
-
-    fn re_scan(&mut self) -> IcebergFdwResult<()> {
-        self.do_iceberg_scan()
-    }
-
-    fn end_scan(&mut self) -> IcebergFdwResult<()> {
-        self.reset();
-        Ok(())
-    }
-
-    fn begin_modify(&mut self, options: &HashMap<String, String>) -> IcebergFdwResult<()> {
-        let tbl_ident = TableIdent::from_strs(require_option("table", options)?.split("."))?;
-        self.table = self
-            .rt
-            .block_on(self.catalog.load_table(&tbl_ident))?
-            .into();
-        self.input_rows.clear();
-
-        Ok(())
-    }
-
-    fn insert(&mut self, src: &Row) -> IcebergFdwResult<()> {
-        // save the row in the input row buffer
-        self.input_rows.push(InputRow {
-            cells: src.cells.clone(),
-        });
-
-        Ok(())
-    }
-
-    fn end_modify(&mut self) -> IcebergFdwResult<()> {
+    fn write_rows_to_iceberg(&mut self) -> IcebergFdwResult<()> {
         // only write if we have rows
         if self.input_rows.is_empty() {
             return Ok(());
@@ -512,6 +360,173 @@ impl ForeignDataWrapper<IcebergFdwError> for IcebergFdw {
         }
 
         Ok(())
+    }
+}
+
+impl ForeignDataWrapper<IcebergFdwError> for IcebergFdw {
+    fn new(server: ForeignServer) -> IcebergFdwResult<Self> {
+        // transform server options into properties for catalog creation
+        let mut props: HashMap<String, String> = server
+            .options
+            .iter()
+            .map(|(k, v)| -> IcebergFdwResult<_> {
+                // get decrypted text from options with 'vault_' prefix
+                let value = if k.starts_with("vault_") {
+                    if let Some(val) = get_vault_secret(v) {
+                        val
+                    } else {
+                        return Err(IcebergFdwError::VaultError(format!(
+                            "cannot decrypt for '{k}' from Vault"
+                        )));
+                    }
+                } else {
+                    v.clone()
+                };
+                let key = k.strip_prefix("vault_").unwrap_or(k).to_string();
+                Ok((key, value))
+            })
+            .collect::<IcebergFdwResult<Vec<_>>>()?
+            .into_iter()
+            .collect();
+
+        // copy AWS credentials if they're not set by user
+        utils::copy_option(&mut props, "aws_access_key_id", "s3.access-key-id");
+        utils::copy_option(&mut props, "aws_secret_access_key", "s3.secret-access-key");
+        utils::copy_option(&mut props, "region_name", "s3.region");
+
+        let batch_size = require_option_or("batch_size", &server.options, "4096")
+            .parse::<usize>()
+            .unwrap_or(4096);
+
+        let rt = create_async_runtime()?;
+
+        // create catalog
+        // note: only below services are supported now:
+        //   1. S3 tables
+        //   2. REST catalog with S3 (or compatible) as backend storage
+        let catalog: Box<dyn Catalog> =
+            if let Some(aws_s3table_arn) = props.get("aws_s3table_bucket_arn") {
+                let catalog_config = S3TablesCatalogConfig::builder()
+                    .table_bucket_arn(aws_s3table_arn.into())
+                    .properties(props)
+                    .build();
+                Box::new(rt.block_on(S3TablesCatalog::new(catalog_config))?)
+            } else {
+                let catalog_uri = require_option("catalog_uri", &props)?;
+                let warehouse = require_option_or("warehouse", &props, "warehouse");
+                let catalog_config = RestCatalogConfig::builder()
+                    .warehouse(warehouse.into())
+                    .uri(catalog_uri.into())
+                    .props(props)
+                    .build();
+                Box::new(RestCatalog::new(catalog_config))
+            };
+
+        stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
+
+        Ok(IcebergFdw {
+            rt,
+            catalog,
+            table: None,
+            predicate: None,
+            batch_size,
+            tgt_cols: Vec::new(),
+            stream: None,
+            row_data: VecDeque::new(),
+            src_fields: Vec::new(),
+            mapper: Mapper::default(),
+            num_rows: 0,
+            bytes_in: 0,
+            is_direct_insert: false,
+            input_rows: Vec::new(),
+        })
+    }
+
+    fn begin_scan(
+        &mut self,
+        quals: &[Qual],
+        columns: &[Column],
+        _sorts: &[Sort],
+        _limit: &Option<Limit>,
+        options: &HashMap<String, String>,
+    ) -> IcebergFdwResult<()> {
+        let tbl_ident = TableIdent::from_strs(require_option("table", options)?.split("."))?;
+        let table = self.rt.block_on(self.catalog.load_table(&tbl_ident))?;
+
+        let schema = table.metadata().current_schema();
+        for tgt_col in columns {
+            let col_name = &tgt_col.name;
+            let field = schema
+                .field_by_name_case_insensitive(col_name)
+                .ok_or_else(|| IcebergFdwError::ColumnNotFound(col_name.into()))?;
+            self.src_fields.push(field.clone());
+        }
+
+        self.predicate = try_pushdown(&table, quals)?;
+        self.table = table.into();
+        self.tgt_cols = columns.to_vec();
+
+        self.do_iceberg_scan()
+    }
+
+    fn iter_scan(&mut self, row: &mut Row) -> IcebergFdwResult<Option<()>> {
+        if self.row_data.is_empty() {
+            self.next_batch()?;
+        }
+
+        if let Some(cells) = self.row_data.pop_front() {
+            let src_row = Row {
+                cols: self.tgt_cols.iter().map(|c| c.name.clone()).collect(),
+                cells,
+            };
+            row.replace_with(src_row);
+            return Ok(Some(()));
+        }
+
+        stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsIn, self.num_rows as _);
+        stats::inc_stats(Self::FDW_NAME, stats::Metric::BytesIn, self.bytes_in as _);
+
+        Ok(None)
+    }
+
+    fn re_scan(&mut self) -> IcebergFdwResult<()> {
+        self.do_iceberg_scan()
+    }
+
+    fn end_scan(&mut self) -> IcebergFdwResult<()> {
+        self.reset();
+        Ok(())
+    }
+
+    fn begin_modify(&mut self, options: &HashMap<String, String>) -> IcebergFdwResult<()> {
+        let tbl_ident = TableIdent::from_strs(require_option("table", options)?.split("."))?;
+        let table = self.rt.block_on(self.catalog.load_table(&tbl_ident))?;
+        let metadata = table.metadata();
+
+        self.is_direct_insert = metadata.default_partition_spec().is_unpartitioned()
+            && metadata.default_sort_order().is_unsorted();
+        self.table = table.into();
+        self.input_rows.clear();
+
+        Ok(())
+    }
+
+    fn insert(&mut self, src: &Row) -> IcebergFdwResult<()> {
+        // save the row in the input row buffer
+        self.input_rows.push(InputRow {
+            cells: src.cells.clone(),
+        });
+
+        if self.is_direct_insert && self.input_rows.len() >= self.batch_size {
+            self.write_rows_to_iceberg()?;
+            self.input_rows.clear();
+        }
+
+        Ok(())
+    }
+
+    fn end_modify(&mut self) -> IcebergFdwResult<()> {
+        self.write_rows_to_iceberg()
     }
 
     fn import_foreign_schema(
