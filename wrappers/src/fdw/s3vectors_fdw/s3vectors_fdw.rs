@@ -32,6 +32,7 @@ pub(crate) struct S3VectorsFdw {
     tgt_cols: Vec<Column>,
     quals: Vec<Qual>,
     row_limit: Option<i64>,
+    batch_size: usize,
 
     // for vectors selection
     vectors_stream: Option<PaginationStream<Result<ListVectorsOutput, SdkError<ListVectorsError>>>>,
@@ -69,7 +70,7 @@ impl S3VectorsFdw {
             .list_vectors()
             .set_vector_bucket_name(self.bucket_name.clone())
             .set_index_name(self.index_name.clone())
-            .set_max_results(Some(500))
+            .set_max_results(Some(self.batch_size as _))
             .set_return_data(Some(true))
             .set_return_metadata(Some(true))
             .into_paginator()
@@ -197,11 +198,35 @@ impl S3VectorsFdw {
 
         Err(S3VectorsFdwError::QueryNotSupported)
     }
+
+    fn flush_vectors(&mut self) -> S3VectorsFdwResult<()> {
+        if self.insert_vectors.is_empty() {
+            return Ok(());
+        }
+
+        let _ = self.rt.block_on(
+            self.client
+                .put_vectors()
+                .set_vector_bucket_name(self.bucket_name.clone())
+                .set_index_name(self.index_name.clone())
+                .set_vectors(Some(self.insert_vectors.clone()))
+                .send(),
+        )?;
+
+        self.insert_vectors.clear();
+
+        Ok(())
+    }
 }
 
 impl ForeignDataWrapper<S3VectorsFdwError> for S3VectorsFdw {
     fn new(server: ForeignServer) -> S3VectorsFdwResult<Self> {
         let rt = create_async_runtime()?;
+
+        let batch_size = require_option_or("batch_size", &server.options, "300")
+            .parse::<usize>()
+            .unwrap_or(300)
+            .clamp(1, 500);
 
         // get AWS credentials from server options
         let creds = {
@@ -258,6 +283,7 @@ impl ForeignDataWrapper<S3VectorsFdwError> for S3VectorsFdw {
             tgt_cols: Vec::new(),
             quals: Vec::new(),
             row_limit: None,
+            batch_size,
             vectors_stream: None,
             curr_vectors: Vec::new(),
             scan_initialised: false,
@@ -392,6 +418,10 @@ impl ForeignDataWrapper<S3VectorsFdwError> for S3VectorsFdw {
         let vector = builder.build()?;
         self.insert_vectors.push(vector);
 
+        if self.insert_vectors.len() >= self.batch_size {
+            self.flush_vectors()?;
+        }
+
         Ok(())
     }
 
@@ -415,21 +445,7 @@ impl ForeignDataWrapper<S3VectorsFdwError> for S3VectorsFdw {
     }
 
     fn end_modify(&mut self) -> S3VectorsFdwResult<()> {
-        if self.insert_vectors.is_empty() {
-            return Ok(());
-        }
-
-        let _ = self.rt.block_on(
-            self.client
-                .put_vectors()
-                .set_vector_bucket_name(self.bucket_name.clone())
-                .set_index_name(self.index_name.clone())
-                .set_vectors(Some(self.insert_vectors.clone()))
-                .send(),
-        )?;
-
-        self.insert_vectors.clear();
-
+        self.flush_vectors()?;
         Ok(())
     }
 
@@ -446,7 +462,7 @@ impl ForeignDataWrapper<S3VectorsFdwError> for S3VectorsFdw {
                 .client
                 .list_indexes()
                 .set_vector_bucket_name(Some(bucket_name.to_owned()))
-                .set_max_results(Some(500));
+                .set_max_results(Some(self.batch_size as _));
 
             if let Some(token) = next_token {
                 request = request.set_next_token(Some(token));
