@@ -8,7 +8,8 @@ This is a foreign data wrapper for [AWS S3 Vectors](https://aws.amazon.com/s3/fe
 
 ## Changelog
 
-| Version | Date       | Notes                                                |
-| ------- | ---------- | ---------------------------------------------------- |
-| 0.1.1   | 2025-11-17 | Changed 'embd' type name to 's3vec'                  |
-| 0.1.0   | 2025-09-14 | Initial version                                      |
+| Version | Date       | Notes                                                      |
+| ------- | ---------- | ---------------------------------------------------------- |
+| 0.1.2   | 2025-11-19 | Removed 'bucket_name' option from 'import foreign schema'  |
+| 0.1.1   | 2025-11-17 | Changed 'embd' type name to 's3vec'                        |
+| 0.1.0   | 2025-09-14 | Initial version                                            |
