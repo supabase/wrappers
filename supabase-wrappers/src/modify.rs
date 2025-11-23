@@ -232,9 +232,20 @@ pub(super) extern "C-unwind" fn plan_foreign_modify<
         // use NoLock here.
         let rel = PgRelation::with_lock((*rte).relid, pg_sys::NoLock as _);
 
-        // get rowid column name from table options
         let ftable = pg_sys::GetForeignTable(rel.oid());
-        let opts = options_to_hashmap((*ftable).options).report_unwrap();
+        let mut opts = options_to_hashmap((*ftable).options).report_unwrap();
+
+        // add additional metadata to the options
+        opts.insert(
+            "wrappers.fserver_oid".into(),
+            (*ftable).serverid.to_u32().to_string(),
+        );
+        opts.insert(
+            "wrappers.ftable_oid".into(),
+            (*ftable).relid.to_u32().to_string(),
+        );
+
+        // check if the rowid column name is specified in table options
         let rowid_name = opts.get("rowid_column");
         if rowid_name.is_none() {
             report_error(

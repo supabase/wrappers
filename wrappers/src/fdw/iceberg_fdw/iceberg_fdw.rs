@@ -10,7 +10,7 @@ use iceberg::{
         base_writer::data_file_writer::DataFileWriterBuilder, file_writer::ParquetWriterBuilder,
         IcebergWriter, IcebergWriterBuilder,
     },
-    Catalog, NamespaceIdent, TableIdent,
+    Catalog, NamespaceIdent, TableCreation, TableIdent,
 };
 use iceberg_catalog_rest::{RestCatalog, RestCatalogConfig};
 use iceberg_catalog_s3tables::{S3TablesCatalog, S3TablesCatalogConfig};
@@ -171,6 +171,23 @@ impl IcebergFdw {
         self.stream = None;
         self.row_data.clear();
         self.mapper.reset();
+    }
+
+    fn create_iceberg_table(
+        &mut self,
+        tbl_ident: &TableIdent,
+        ftable_oid: u32,
+    ) -> IcebergFdwResult<()> {
+        let schema = self.mapper.map_table_schema(ftable_oid)?;
+        let table_creation = TableCreation::builder()
+            .name(tbl_ident.name().to_string())
+            .schema(schema)
+            .build();
+        let _ = self.rt.block_on(
+            self.catalog
+                .create_table(tbl_ident.namespace(), table_creation),
+        )?;
+        Ok(())
     }
 
     // sort input rows by partition column values
@@ -500,6 +517,16 @@ impl ForeignDataWrapper<IcebergFdwError> for IcebergFdw {
 
     fn begin_modify(&mut self, options: &HashMap<String, String>) -> IcebergFdwResult<()> {
         let tbl_ident = TableIdent::from_strs(require_option("table", options)?.split("."))?;
+        let create_table = require_option_or("create_table_if_not_exists", options, "false")
+            .eq_ignore_ascii_case("true");
+
+        // create target table in Iceberg if needed
+        if create_table && !self.rt.block_on(self.catalog.table_exists(&tbl_ident))? {
+            let ftable_oid = require_option("wrappers.ftable_oid", options)?.parse::<u32>()?;
+            self.create_iceberg_table(&tbl_ident, ftable_oid)?;
+        }
+
+        // load Iceberg table
         let table = self.rt.block_on(self.catalog.load_table(&tbl_ident))?;
         let metadata = table.metadata();
 
