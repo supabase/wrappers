@@ -2,6 +2,7 @@
 mod iceberg_fdw;
 mod mapper;
 mod pushdown;
+mod sorter;
 mod tests;
 mod utils;
 mod writer;

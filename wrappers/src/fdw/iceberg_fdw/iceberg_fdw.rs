@@ -24,6 +24,7 @@ use supabase_wrappers::prelude::*;
 use super::{
     mapper::Mapper,
     pushdown::try_pushdown,
+    sorter::Sorter,
     utils,
     writer::{FileNameGenerator, LocationGenerator},
     IcebergFdwError, IcebergFdwResult, InputRow,
@@ -66,6 +67,9 @@ pub(crate) struct IcebergFdw {
     // for insertion: partition buffers
     partition_buffer_size: usize,
     partition_buffers: HashMap<String, Vec<InputRow>>, // partition_key -> rows
+
+    // partition rows sorter
+    sorter: Sorter,
 }
 
 impl IcebergFdw {
@@ -305,9 +309,10 @@ impl IcebergFdw {
     }
 
     // sort rows in each partitioned buffer
-    fn sort_partition_rows(&self, rows: &mut Vec<InputRow>) -> IcebergFdwResult<()> {
-        // TODO: implement sorting logic
-        for row in rows {}
+    fn sort_partition_rows(&self, rows: &mut [InputRow]) -> IcebergFdwResult<()> {
+        if let Some(table) = &self.table {
+            self.sorter.sort_partition_rows(table, rows)?;
+        }
 
         Ok(())
     }
@@ -331,15 +336,8 @@ impl IcebergFdw {
         }
 
         // sort in each partition if needed
-        let need_sort = if let Some(table) = &self.table {
-            !table.metadata().default_sort_order().is_unsorted()
-        } else {
-            false
-        };
-        if need_sort {
-            for partition in partitions.iter_mut() {
-                self.sort_partition_rows(partition)?;
-            }
+        for partition in partitions.iter_mut() {
+            self.sort_partition_rows(partition)?;
         }
 
         // build arrow record batches from partitions
@@ -457,6 +455,7 @@ impl ForeignDataWrapper<IcebergFdwError> for IcebergFdw {
             input_rows: Vec::new(),
             partition_buffer_size: 0,
             partition_buffers: HashMap::new(),
+            sorter: Sorter,
         })
     }
 
