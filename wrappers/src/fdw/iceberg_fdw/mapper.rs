@@ -1101,7 +1101,7 @@ impl Mapper {
                 "double precision" | "float8" => Type::Primitive(PrimitiveType::Double),
                 "numeric" | "decimal" => {
                     let precision = precision.unwrap_or(38) as u32;
-                    let scale = scale.unwrap_or(3) as u32;
+                    let scale = scale.unwrap_or(0) as u32;
                     Type::Primitive(PrimitiveType::Decimal { precision, scale })
                 }
                 "text" => Type::Primitive(PrimitiveType::String),
