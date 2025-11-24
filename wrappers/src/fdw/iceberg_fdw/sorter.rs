@@ -54,7 +54,7 @@ impl SortKeyValue {
             }
             (SortKeyValue::String(a), SortKeyValue::String(b)) => a.cmp(b),
             (SortKeyValue::Bytes(a), SortKeyValue::Bytes(b)) => a.cmp(b),
-            _ => unreachable!("Cannot compare different SortKeyValue types"),
+            _ => std::cmp::Ordering::Equal,
         };
 
         if ascending {
@@ -93,8 +93,7 @@ impl Sorter {
             .map(|(idx, field)| (field.id, idx))
             .collect();
 
-        // Sort rows in-place without cloning the rows.
-        // Precompute sort keys for all rows, propagating errors
+        // Sort rows in-place, precompute sort keys for all rows, propagating errors
         let mut keyed_rows: Vec<(Vec<SortKeyValue>, usize)> = Vec::with_capacity(rows.len());
         for (idx, row) in rows.iter().enumerate() {
             let keys = self.extract_sort_keys_for_row(row, sort_order, &field_map)?;
@@ -111,7 +110,7 @@ impl Sorter {
         for &(_, idx) in &keyed_rows {
             new_rows.push(rows[idx].clone());
         }
-        rows.copy_from_slice(&new_rows);
+        rows.clone_from_slice(&new_rows);
         Ok(())
     }
 
