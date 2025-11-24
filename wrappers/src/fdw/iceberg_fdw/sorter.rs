@@ -94,16 +94,24 @@ impl Sorter {
             .collect();
 
         // Sort rows in-place without cloning the rows.
-        rows.sort_unstable_by(|row_a, row_b| {
-            let a_keys = self
-                .extract_sort_keys_for_row(row_a, sort_order, &field_map)
-                .unwrap_or_default();
-            let b_keys = self
-                .extract_sort_keys_for_row(row_b, sort_order, &field_map)
-                .unwrap_or_default();
-            self.compare_sort_keys(&a_keys, &b_keys, sort_order)
+        // Precompute sort keys for all rows, propagating errors
+        let mut keyed_rows: Vec<(Vec<SortKeyValue>, usize)> = Vec::with_capacity(rows.len());
+        for (idx, row) in rows.iter().enumerate() {
+            let keys = self.extract_sort_keys_for_row(row, sort_order, &field_map)?;
+            keyed_rows.push((keys, idx));
+        }
+
+        // Sort the indices based on the sort keys
+        keyed_rows.sort_unstable_by(|(a_keys, _), (b_keys, _)| {
+            self.compare_sort_keys(a_keys, b_keys, sort_order)
         });
 
+        // Reorder the rows in place according to the sorted order
+        let mut new_rows = Vec::with_capacity(rows.len());
+        for &(_, idx) in &keyed_rows {
+            new_rows.push(rows[idx].clone());
+        }
+        rows.copy_from_slice(&new_rows);
         Ok(())
     }
 
