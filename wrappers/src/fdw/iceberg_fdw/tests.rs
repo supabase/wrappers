@@ -294,12 +294,13 @@ mod tests {
                 })]
             );
 
-            // test data insertion without partitioning
+            // test data insertion partitioning and sorting
             c.update(
                 r#"INSERT INTO iceberg.asks(
                       datetime, symbol, ask
                    ) VALUES
-                   ('2025-09-15 11:22:33', 'APL', 123.45)
+                   ('2025-09-15 11:22:33', 'GOOG', 123.45),
+                   ('2025-09-15 10:20:30', 'AMPL', 111.22)
                 "#,
                 None,
                 &[],

@@ -162,7 +162,7 @@ For any server options need to be stored in Vault, you can add a prefix `vault_`
 
 #### Additional Server Options
 
-- `batch_size` - Controls the batch size of records read from Iceberg (default: 4096)
+- `batch_size` - Controls the batch size of records read from Iceberg (value range: 1 - 65536, default: 8192)
 
 ### Create a schema
 
@@ -179,6 +179,7 @@ The full list of foreign table options are below:
 - `table` - Fully qualified source table name with all namespaces in Iceberg, required.
 - `rowid_column` - The column to use as the row identifier for INSERT operations, required for data insertion.
 - `create_table_if_not_exists` - Boolean option (true/false) to automatically create the Iceberg table if it doesn't exist when inserting data, optional (default: false).
+- `partition_buffer_size` - Controls the buffer size for partitioned data during insertion operations, determining how many rows are batched together before being written to Iceberg (value range: 1 - 65536, default: 8192).
 
 ## Entities
 

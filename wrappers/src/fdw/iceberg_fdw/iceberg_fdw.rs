@@ -308,36 +308,46 @@ impl IcebergFdw {
         Ok(())
     }
 
-    // sort rows in each partitioned buffer
-    fn sort_partition_rows(&self, rows: &mut [InputRow]) -> IcebergFdwResult<()> {
-        if let Some(table) = &self.table {
-            self.sorter.sort_partition_rows(table, rows)?;
-        }
-
-        Ok(())
-    }
-
     // process partition buffers
     fn process_partitions(&mut self, is_flush: bool) -> IcebergFdwResult<()> {
         let mut partitions = Vec::new();
 
-        for (_, part_buf) in self.partition_buffers.iter_mut() {
-            while part_buf.len() >= self.partition_buffer_size || (is_flush && !part_buf.is_empty())
-            {
-                // process partition buffer if it is full or need flush
-                let take_size = if is_flush {
-                    part_buf.len() // take all remaining if flushing
-                } else {
-                    std::cmp::min(part_buf.len(), self.partition_buffer_size)
-                };
-                let partition: Vec<_> = part_buf.drain(..take_size).collect();
-                partitions.push(partition);
+        // process each partition buffer and collect partitions to write
+        let partition_keys_to_process: Vec<String> =
+            self.partition_buffers.keys().cloned().collect();
+
+        for partition_key in partition_keys_to_process {
+            if let Some(part_buf) = self.partition_buffers.get_mut(&partition_key) {
+                while part_buf.len() >= self.partition_buffer_size
+                    || (is_flush && !part_buf.is_empty())
+                {
+                    // process partition buffer if it is full or need flush
+                    let take_size = if is_flush {
+                        part_buf.len() // take all remaining if flushing
+                    } else {
+                        std::cmp::min(part_buf.len(), self.partition_buffer_size)
+                    };
+                    let partition: Vec<_> = part_buf.drain(..take_size).collect();
+                    partitions.push(partition);
+                }
+
+                // remove empty partition buffer if it is empty
+                if part_buf.is_empty() {
+                    self.partition_buffers.remove(&partition_key);
+                }
             }
         }
 
+        // if no partition to process
+        if partitions.is_empty() {
+            return Ok(());
+        }
+
         // sort in each partition if needed
-        for partition in partitions.iter_mut() {
-            self.sort_partition_rows(partition)?;
+        if let Some(table) = &self.table {
+            for partition in partitions.iter_mut() {
+                self.sorter.sort_partition_rows(table, partition)?;
+            }
         }
 
         // build arrow record batches from partitions
@@ -370,8 +380,10 @@ impl IcebergFdw {
             }
         }
 
-        // process partitions
-        self.process_partitions(is_flush)?;
+        // process partitions, also regularlly flush the partition buffers to
+        // prevent it from accumulating too many small partitions
+        let regular_flush = self.partition_buffers.len() >= 8;
+        self.process_partitions(is_flush || regular_flush)?;
 
         Ok(())
     }
@@ -556,8 +568,8 @@ impl ForeignDataWrapper<IcebergFdwError> for IcebergFdw {
     }
 
     fn end_modify(&mut self) -> IcebergFdwResult<()> {
-        // process any remaining rows in staging buffer
-        if !self.input_rows.is_empty() {
+        // process any remaining rows
+        if !self.input_rows.is_empty() || !self.partition_buffers.is_empty() {
             self.process_current_batch(true)?;
             self.input_rows.clear();
         }

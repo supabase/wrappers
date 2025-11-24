@@ -5,7 +5,7 @@ use arrow_array::{
 use iceberg::spec::{Literal, PrimitiveLiteral, Struct, TableMetadata, Transform};
 use std::collections::HashMap;
 
-use super::{IcebergFdwResult, InputRow};
+use super::{Cell, IcebergFdwResult, InputRow};
 use crate::fdw::iceberg_fdw::IcebergFdwError;
 
 // copy an option to another in an option HashMap, if the target option
@@ -40,11 +40,18 @@ pub(super) fn compute_partition_key(
     row: &InputRow,
 ) -> IcebergFdwResult<String> {
     let partition_spec = metadata.default_partition_spec();
+
+    // if no partition spec, return empty string
+    if partition_spec.fields().is_empty() {
+        return Ok("".to_string());
+    }
+
     let mut key_parts = Vec::new();
 
     for partition_field in partition_spec.fields() {
         let source_field_id = partition_field.source_id;
         let field_name = &partition_field.name;
+        let transform = &partition_field.transform;
 
         // find the column index for this field ID in the schema
         let mut source_column_index = None;
@@ -61,12 +68,131 @@ pub(super) fn compute_partition_key(
         })?;
 
         // get the cell value for this column
-        if let Some(Some(cell)) = row.cells.get(column_index) {
-            // for now, we just use string representation
-            key_parts.push(format!("{field_name}={cell}"));
-        } else {
-            key_parts.push(format!("{field_name}=null"));
-        }
+        let partition_value_str = match row.cells.get(column_index) {
+            Some(Some(cell)) => {
+                // Apply transform based on the partition field's transform type
+                match transform {
+                    Transform::Identity => {
+                        // For identity transform, use the raw value
+                        cell.to_string()
+                    }
+                    Transform::Day => {
+                        // Convert timestamp/date to days since epoch
+                        match cell {
+                            Cell::Date(date) => {
+                                let days = date.to_unix_epoch_days() as i64;
+                                days.to_string()
+                            }
+                            Cell::Timestamp(ts) => {
+                                // Convert microsecond timestamp to days since epoch
+                                let timestamp_us = i64::from(*ts);
+                                let days = timestamp_us / (24 * 60 * 60 * 1_000_000);
+                                days.to_string()
+                            }
+                            Cell::Timestamptz(tstz) => {
+                                let timestamp_us = i64::from(*tstz);
+                                let days = timestamp_us / (24 * 60 * 60 * 1_000_000);
+                                days.to_string()
+                            }
+                            _ => {
+                                return Err(IcebergFdwError::UnsupportedType(
+                                    "expected date or timestamp type for day partition".to_string(),
+                                ));
+                            }
+                        }
+                    }
+                    Transform::Month => {
+                        // Convert timestamp/date to months since epoch
+                        match cell {
+                            Cell::Date(date) => {
+                                let days = date.to_unix_epoch_days() as i64;
+                                let seconds_since_epoch = days * 24 * 60 * 60;
+                                seconds_to_months(seconds_since_epoch).to_string()
+                            }
+                            Cell::Timestamp(ts) => {
+                                // Convert microsecond timestamp to months since epoch
+                                let timestamp_us = i64::from(*ts);
+                                let seconds_since_epoch = timestamp_us / 1_000_000;
+                                seconds_to_months(seconds_since_epoch).to_string()
+                            }
+                            Cell::Timestamptz(tstz) => {
+                                let timestamp_us = i64::from(*tstz);
+                                let seconds_since_epoch = timestamp_us / 1_000_000;
+                                seconds_to_months(seconds_since_epoch).to_string()
+                            }
+                            _ => {
+                                return Err(IcebergFdwError::UnsupportedType(
+                                    "expected date or timestamp type for month partition"
+                                        .to_string(),
+                                ));
+                            }
+                        }
+                    }
+                    Transform::Year => {
+                        // Convert timestamp/date to years since epoch
+                        match cell {
+                            Cell::Date(date) => {
+                                let days = date.to_unix_epoch_days() as i64;
+                                let seconds_since_epoch = days * 24 * 60 * 60;
+                                seconds_to_years(seconds_since_epoch).to_string()
+                            }
+                            Cell::Timestamp(ts) => {
+                                // Convert microsecond timestamp to years since epoch
+                                let timestamp_us = i64::from(*ts);
+                                let seconds_since_epoch = timestamp_us / 1_000_000;
+                                seconds_to_years(seconds_since_epoch).to_string()
+                            }
+                            Cell::Timestamptz(tstz) => {
+                                let timestamp_us = i64::from(*tstz);
+                                let seconds_since_epoch = timestamp_us / 1_000_000;
+                                seconds_to_years(seconds_since_epoch).to_string()
+                            }
+                            _ => {
+                                return Err(IcebergFdwError::UnsupportedType(
+                                    "expected date or timestamp type for year partition"
+                                        .to_string(),
+                                ));
+                            }
+                        }
+                    }
+                    Transform::Hour => {
+                        // Convert timestamp/date to hours since epoch
+                        match cell {
+                            Cell::Date(date) => {
+                                let days = date.to_unix_epoch_days() as i64;
+                                let hours = days * 24;
+                                hours.to_string()
+                            }
+                            Cell::Timestamp(ts) => {
+                                // Convert microsecond timestamp to hours since epoch
+                                let timestamp_us = i64::from(*ts);
+                                let hours = timestamp_us / (60 * 60 * 1_000_000);
+                                hours.to_string()
+                            }
+                            Cell::Timestamptz(tstz) => {
+                                let timestamp_us = i64::from(*tstz);
+                                let hours = timestamp_us / (60 * 60 * 1_000_000);
+                                hours.to_string()
+                            }
+                            _ => {
+                                return Err(IcebergFdwError::UnsupportedType(
+                                    "expected date or timestamp type for hour partition"
+                                        .to_string(),
+                                ));
+                            }
+                        }
+                    }
+                    _ => {
+                        return Err(IcebergFdwError::UnsupportedType(format!(
+                            "unsupported partition transform: {transform:?}",
+                        )));
+                    }
+                }
+            }
+            _ => "null".to_string(), // Handle null values
+        };
+
+        key_parts.push(format!("{field_name}={partition_value_str}"));
     }
 
     Ok(key_parts.join("/"))
