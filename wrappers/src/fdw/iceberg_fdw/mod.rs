@@ -10,7 +10,7 @@ use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::PgSqlErrorCode;
 use thiserror::Error;
 
-use supabase_wrappers::prelude::{CreateRuntimeError, OptionsError};
+use supabase_wrappers::prelude::{Cell, CreateRuntimeError, OptionsError};
 
 #[derive(Error, Debug)]
 enum IcebergFdwError {
@@ -79,3 +79,8 @@ impl From<IcebergFdwError> for ErrorReport {
 }
 
 type IcebergFdwResult<T> = Result<T, IcebergFdwError>;
+
+#[derive(Debug, Clone)]
+struct InputRow {
+    cells: Vec<Option<Cell>>,
+}

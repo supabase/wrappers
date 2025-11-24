@@ -5,7 +5,7 @@ use arrow_array::{
 use iceberg::spec::{Literal, PrimitiveLiteral, Struct, TableMetadata, Transform};
 use std::collections::HashMap;
 
-use super::IcebergFdwResult;
+use super::{IcebergFdwResult, InputRow};
 use crate::fdw::iceberg_fdw::IcebergFdwError;
 
 // copy an option to another in an option HashMap, if the target option
@@ -15,52 +15,6 @@ pub(super) fn copy_option(map: &mut HashMap<String, String>, from_key: &str, to_
         let value = map.get(from_key).cloned().unwrap_or_default();
         map.insert(to_key.to_string(), value);
     }
-}
-
-/// Split a record batch into multiple batches by partition values
-/// Assumes the input record batch is already sorted by partition key
-pub(super) fn split_record_batch_by_partition(
-    metadata: &TableMetadata,
-    record_batch: RecordBatch,
-) -> IcebergFdwResult<Vec<RecordBatch>> {
-    let partition_spec = metadata.default_partition_spec();
-
-    // if no partition spec, return the original batch
-    if partition_spec.fields().is_empty() {
-        return Ok(vec![record_batch]);
-    }
-
-    // since data is pre-sorted by partition key, we can efficiently detect boundaries
-    let mut result_batches = Vec::new();
-    let mut partition_start = 0;
-    let mut current_partition_key: Option<String> = None;
-
-    for row_idx in 0..record_batch.num_rows() {
-        let (partition_key, _) = compute_partition_info(metadata, &record_batch, row_idx)?;
-
-        // check if we've hit a partition boundary
-        if current_partition_key.as_ref() != Some(&partition_key) {
-            // create batch for previous partition (if any)
-            if row_idx > 0 {
-                let batch_length = row_idx - partition_start;
-                let partition_batch = record_batch.slice(partition_start, batch_length);
-                result_batches.push(partition_batch);
-            }
-
-            // start new partition
-            partition_start = row_idx;
-            current_partition_key = Some(partition_key);
-        }
-    }
-
-    // handle the last partition
-    if partition_start < record_batch.num_rows() {
-        let batch_length = record_batch.num_rows() - partition_start;
-        let partition_batch = record_batch.slice(partition_start, batch_length);
-        result_batches.push(partition_batch);
-    }
-
-    Ok(result_batches)
 }
 
 /// Convert seconds since Unix epoch to years since Unix epoch
@@ -77,6 +31,45 @@ fn seconds_to_months(seconds: i64) -> i64 {
     // this is a simplified calculation that treats each month as 30.44 days (365.25/12)
     // more precise implementations would account for varying month lengths
     seconds / (30.44 * 24.0 * 60.0 * 60.0) as i64
+}
+
+/// Compute partition key for an input row
+pub(super) fn compute_partition_key(
+    metadata: &iceberg::spec::TableMetadata,
+    schema: &iceberg::spec::Schema,
+    row: &InputRow,
+) -> IcebergFdwResult<String> {
+    let partition_spec = metadata.default_partition_spec();
+    let mut key_parts = Vec::new();
+
+    for partition_field in partition_spec.fields() {
+        let source_field_id = partition_field.source_id;
+        let field_name = &partition_field.name;
+
+        // find the column index for this field ID in the schema
+        let mut source_column_index = None;
+        for (idx, field) in schema.as_struct().fields().iter().enumerate() {
+            if field.id == source_field_id {
+                source_column_index = Some(idx);
+                break;
+            }
+        }
+        let column_index = source_column_index.ok_or_else(|| {
+            IcebergFdwError::ColumnNotFound(format!(
+                "cannot find source column with ID {source_field_id} for partition field",
+            ))
+        })?;
+
+        // get the cell value for this column
+        if let Some(Some(cell)) = row.cells.get(column_index) {
+            // for now, we just use string representation
+            key_parts.push(format!("{field_name}={cell}"));
+        } else {
+            key_parts.push(format!("{field_name}=null"));
+        }
+    }
+
+    Ok(key_parts.join("/"))
 }
 
 /// Compute partition information for a specific row, returning both the string key and struct value
