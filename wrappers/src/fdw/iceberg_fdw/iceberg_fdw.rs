@@ -380,7 +380,7 @@ impl IcebergFdw {
             }
         }
 
-        // process partitions, also regularlly flush the partition buffers to
+        // process partitions, also regularly flush the partition buffers to
         // prevent it from accumulating too many small partitions
         let regular_flush = self.partition_buffers.len() >= 8;
         self.process_partitions(is_flush || regular_flush)?;
