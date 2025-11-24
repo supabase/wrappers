@@ -10,7 +10,7 @@ This is a foreign data wrapper for [Apache Iceberg](https://iceberg.apache.org/)
 
 | Version | Date       | Notes                                                                  |
 | ------- | ---------- | ---------------------------------------------------------------------- |
-| 0.1.4   | 2025-11-21 | Add create_table_if_not_exist option and improve insertion performance |
+| 0.1.4   | 2025-11-21 | Add create_table_if_not_exists option and improve insertion performance |
 | 0.1.3   | 2025-09-20 | Add data insertion support                                             |
 | 0.1.2   | 2025-07-30 | Large data set query performance improvement                           |
 | 0.1.1   | 2025-05-15 | Refactor server options passdown                                       |
