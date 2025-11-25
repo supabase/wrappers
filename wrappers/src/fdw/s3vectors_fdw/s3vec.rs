@@ -107,21 +107,21 @@ impl TryFrom<*mut bytea> for S3Vec {
     }
 }
 
-#[pg_operator(immutable, parallel_safe)]
+#[pg_operator(create_or_replace, immutable, parallel_safe)]
 #[opname(<==>)]
 fn s3vec_knn(_left: S3Vec, _right: S3Vec) -> bool {
     // always return true here, actual calculation will be done in the wrapper
     true
 }
 
-#[pg_operator(immutable, parallel_safe)]
+#[pg_operator(create_or_replace, immutable, parallel_safe)]
 #[opname(<==>)]
 fn metadata_filter(_left: JsonB, _right: JsonB) -> bool {
     // always return true here, actual calculation will be done in the wrapper
     true
 }
 
-#[pg_extern]
+#[pg_extern(create_or_replace)]
 fn s3vec_distance(s3vec: S3Vec) -> f32 {
     s3vec.distance
 }

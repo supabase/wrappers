@@ -22,3 +22,7 @@ COMMENT ON COLUMN wrappers_fdw_stats.bytes_in IS 'Total bytes input from origin'
 COMMENT ON COLUMN wrappers_fdw_stats.bytes_out IS 'Total bytes output to Postgres';
 COMMENT ON COLUMN wrappers_fdw_stats.metadata IS 'Metadata specific for the FDW';
 
+-- The operator '<==>' is defined in s3vectors_fdw since v0.5.6, drop it here
+-- to avoid conflict when upgrading wrappers extension.
+DROP OPERATOR IF EXISTS <==> (jsonb, jsonb);
+
