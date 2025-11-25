@@ -162,7 +162,7 @@ For any server options need to be stored in Vault, you can add a prefix `vault_`
 
 #### Additional Server Options
 
-- `batch_size` - Controls the batch size of records read from Iceberg (default: 4096)
+- `batch_size` - Controls the batch size of records read from Iceberg (value range: 1 - 65536, default: 8192)
 
 ### Create a schema
 
@@ -178,6 +178,8 @@ The full list of foreign table options are below:
 
 - `table` - Fully qualified source table name with all namespaces in Iceberg, required.
 - `rowid_column` - The column to use as the row identifier for INSERT operations, required for data insertion.
+- `create_table_if_not_exists` - Boolean option (true/false) to automatically create the Iceberg table if it doesn't exist when inserting data, optional (default: false).
+- `partition_buffer_size` - Controls the buffer size for partitioned data during insertion operations, determining how many rows are batched together before being written to Iceberg (value range: 1 - 65536, default: 8192).
 
 ## Entities
 
@@ -332,11 +334,42 @@ values (123, 99.99, '2025-01-15');
 - **Partition Awareness**: When possible, insert data in partition order to optimize file organization
 - **Transaction Size**: Consider breaking very large inserts into smaller transactions
 
-### Limitations for Inserts
+### Automatic Table Creation
+
+When using the `create_table_if_not_exists` option, the Iceberg FDW will automatically create the target table in Iceberg if it doesn't exist when inserting data. This is useful for ad-hoc data insertion scenarios.
+
+```sql
+create foreign table iceberg.new_table (
+  id bigint,
+  name text,
+  created_at timestamp
+)
+  server iceberg_server
+  options (
+    table 'docs_example.new_table',
+    rowid_column 'id',
+    create_table_if_not_exists 'true'
+  );
+
+-- when data is inserted, if the 'docs_example.new_table' doesn't exist in Iceberg,
+-- it will be automatically created with a schema matching the foreign table definition
+insert into iceberg.new_table (id, name, created_at)
+values (1, 'New Record', now());
+```
+
+### Limitations for Insertion
 
 - Schema evolution during insert is not supported
 - Only append operations are supported (no upserts)
 - Complex data types (nested structs, arrays, maps) have limited support
+
+#### Automatic Table Creation Limitations
+
+When using the `create_table_if_not_exists` option, please be aware of the following additional limitations:
+
+- **Type Support**: Only primitive types are supported (such as boolean, integer, text, etc.). Complex types like arrays, structs, and maps are not supported for automatic table creation.
+- **Partitioning**: The automatically created table will use default partitioning settings. You cannot specify custom partition or sort specifications during automatic creation.
+- **Identifier Fields**: The automatically created table will not have any identifier fields specified. If you need identifier fields, you must create the Iceberg table manually beforehand.
 
 ## Limitations
 

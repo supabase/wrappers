@@ -253,6 +253,12 @@ def create_asks_table(catalog, namespace):
         identifier_field_ids=[1],
     )
 
+    partition_spec = PartitionSpec(
+        PartitionField(
+            source_id=1, field_id=1000, transform=DayTransform(), name="datetime_day"
+        ),
+    )
+
     sort_order = SortOrder(SortField(source_id=2, transform=IdentityTransform()))
 
     if catalog.table_exists(tblname):
@@ -261,6 +267,7 @@ def create_asks_table(catalog, namespace):
         identifier=tblname,
         schema=schema,
         #location="s3://iceberg",
+        partition_spec=partition_spec,
         sort_order=sort_order,
     )
     table = catalog.load_table(tblname)

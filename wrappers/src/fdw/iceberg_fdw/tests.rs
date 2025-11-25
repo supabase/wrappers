@@ -294,17 +294,65 @@ mod tests {
                 })]
             );
 
-            // test data insertion without partitioning
+            // test data insertion partitioning and sorting
             c.update(
                 r#"INSERT INTO iceberg.asks(
                       datetime, symbol, ask
                    ) VALUES
-                   ('2025-09-15 11:22:33', 'APL', 123.45)
+                   ('2025-09-15 11:22:33', 'GOOG', 123.45),
+                   ('2025-09-15 10:20:30', 'AMPL', 111.22)
                 "#,
                 None,
                 &[],
             )
             .unwrap();
+
+            // test auto-create Iceberg table
+            c.update(
+                r#"CREATE FOREIGN TABLE test_create_table (
+                     id bigint,
+                     bcol boolean,
+                     icol integer,
+                     rcol real,
+                     dcol double precision,
+                     ncol numeric(32, 16),
+                     tcol text,
+                     dtcol date,
+                     tmcol time,
+                     tscol timestamp,
+                     ucol uuid,
+                     btcol bytea
+                )
+                SERVER iceberg_server
+                OPTIONS (
+                    "table" 'docs_example.test_create_table',
+                    rowid_column 'id',
+                    create_table_if_not_exists 'true'
+                )"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"INSERT INTO test_create_table(
+                     id, bcol, icol, rcol, dcol, ncol, tcol, dtcol,
+                     tmcol, tscol, ucol, btcol
+                   ) VALUES (
+                     1, true, 42, 3.14, 2.71828, 123.45, 'test text', '2023-01-01',
+                     '12:00:00', '2023-01-01 12:00:00',
+                     '550e8400-e29b-41d4-a716-446655440000',
+                     decode('48656c6c6f20576f726c6421', 'hex')
+                   )"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            let results = c
+                .select("SELECT * FROM test_create_table", None, &[])
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("tcol").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(results, vec!["test text"]);
         });
     }
 }

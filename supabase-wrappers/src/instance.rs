@@ -3,10 +3,11 @@ use std::ffi::CStr;
 
 use crate::prelude::*;
 use pgrx::pg_sys::panic::ErrorReport;
-use pgrx::prelude::*;
+use pgrx::{pg_sys::Oid, prelude::*};
 
 #[derive(Debug, Clone, Default)]
 pub struct ForeignServer {
+    pub server_oid: Oid,
     pub server_name: String,
     pub server_type: Option<String>,
     pub server_version: Option<String>,
@@ -38,6 +39,7 @@ pub(super) unsafe fn create_fdw_instance_from_server_id<
     };
     let fserver = pg_sys::GetForeignServer(fserver_id);
     let server = ForeignServer {
+        server_oid: fserver_id,
         server_name: to_string((*fserver).servername).unwrap(),
         server_type: to_string((*fserver).servertype),
         server_version: to_string((*fserver).serverversion),

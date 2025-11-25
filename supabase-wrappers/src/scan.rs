@@ -187,6 +187,16 @@ pub(super) extern "C-unwind" fn get_foreign_rel_size<
             // get foreign table options
             let ftable = pg_sys::GetForeignTable(foreigntableid);
             state.opts = options_to_hashmap((*ftable).options).report_unwrap();
+
+            // add additional metadata to the options
+            state.opts.insert(
+                "wrappers.fserver_oid".into(),
+                (*ftable).serverid.to_u32().to_string(),
+            );
+            state.opts.insert(
+                "wrappers.ftable_oid".into(),
+                (*ftable).relid.to_u32().to_string(),
+            );
         });
 
         // get estimate row count and mean row width

@@ -2,10 +2,12 @@ use arrow_array::{array, builder::*, timezone::Tz, RecordBatch};
 use arrow_json::ArrayWriter;
 use arrow_schema::DataType;
 use chrono::{DateTime, NaiveDateTime, Timelike};
-use iceberg::spec::{PrimitiveType, Type};
+use iceberg::spec::{NestedField, NestedFieldRef, PrimitiveType, Schema, Type};
 use pgrx::{
     datum::{self, datetime_support::DateTimeConversionError, JsonB},
-    pg_sys, varlena,
+    pg_sys,
+    prelude::*,
+    varlena,
 };
 use serde_json::value::Value as JsonValue;
 use std::cell::RefCell;
@@ -260,7 +262,8 @@ impl Mapper {
             }
             _ => {
                 return Err(IcebergFdwError::UnsupportedType(format!(
-                    "unsupported column data type for column: {col_name}"
+                    "column '{col_name}', type oid '{}'",
+                    tgt_col.type_oid
                 )));
             }
         }
@@ -280,9 +283,7 @@ impl Mapper {
         use rust_decimal::Decimal;
         use std::convert::TryInto;
 
-        let unsupported = |ty: &DataType| {
-            IcebergFdwError::UnsupportedType(format!("unsupported column type: {ty:?}"))
-        };
+        let unsupported = |ty: &DataType| IcebergFdwError::UnsupportedType(format!("{ty:?}"));
 
         match field_type {
             DataType::Boolean => {
@@ -1039,5 +1040,86 @@ impl Mapper {
         }
 
         Ok(())
+    }
+
+    // map Postgres table schema to Iceberg table schema
+    pub(super) fn map_table_schema(&self, ftable_oid: u32) -> IcebergFdwResult<Schema> {
+        let schema_info = Spi::connect(|client| {
+            let mut schema_info = Vec::new();
+
+            let rows = client.select(
+                "SELECT
+                   a.attname::text,
+                   t.typname::text,
+                   CASE
+                     WHEN t.typname = 'numeric' AND a.atttypmod > -1
+                     THEN ((a.atttypmod - 4) >> 16) & 65535
+                     ELSE NULL
+                   END AS precision,
+                   CASE
+                     WHEN t.typname = 'numeric' AND a.atttypmod > -1
+                     THEN (a.atttypmod - 4) & 65535
+                     ELSE NULL
+                   END AS scale,
+                   a.attnotnull
+                 FROM pg_attribute a
+                 JOIN pg_type t ON a.atttypid = t.oid
+                 WHERE a.attrelid = $1
+                   AND a.attnum > 0
+                   AND NOT a.attisdropped
+                 ORDER BY a.attnum",
+                None,
+                &[pg_sys::Oid::from_u32(ftable_oid).into()],
+            )?;
+            for row in rows {
+                let col_name = row.get_by_name::<String, _>("attname")?;
+                let col_type_name = row.get_by_name::<String, _>("typname")?;
+                let precision = row.get_by_name::<i32, _>("precision")?;
+                let scale = row.get_by_name::<i32, _>("scale")?;
+                let is_not_null = row.get_by_name::<bool, _>("attnotnull")?;
+                if let (Some(col_name), Some(col_type_name), Some(is_not_null)) =
+                    (col_name, col_type_name, is_not_null)
+                {
+                    schema_info.push((col_name, col_type_name, precision, scale, is_not_null));
+                }
+            }
+
+            Ok::<Vec<_>, pgrx::spi::Error>(schema_info)
+        })?;
+
+        let mut fields: Vec<NestedFieldRef> = Vec::new();
+
+        for (idx, (col_name, col_type_name, precision, scale, is_not_null)) in
+            schema_info.iter().enumerate()
+        {
+            let col_id = idx as i32 + 1;
+            let col_type = match col_type_name.as_str() {
+                "boolean" | "bool" => Type::Primitive(PrimitiveType::Boolean),
+                "integer" | "int4" => Type::Primitive(PrimitiveType::Int),
+                "bigint" | "int8" => Type::Primitive(PrimitiveType::Long),
+                "real" | "float4" => Type::Primitive(PrimitiveType::Float),
+                "double precision" | "float8" => Type::Primitive(PrimitiveType::Double),
+                "numeric" | "decimal" => {
+                    let precision = precision.unwrap_or(38) as u32;
+                    let scale = scale.unwrap_or(0) as u32;
+                    Type::Primitive(PrimitiveType::Decimal { precision, scale })
+                }
+                "text" => Type::Primitive(PrimitiveType::String),
+                "date" => Type::Primitive(PrimitiveType::Date),
+                "time" => Type::Primitive(PrimitiveType::Time),
+                "timestamp" => Type::Primitive(PrimitiveType::Timestamp),
+                "timestamp with time zone" => Type::Primitive(PrimitiveType::Timestamptz),
+                "uuid" => Type::Primitive(PrimitiveType::Uuid),
+                "bytea" => Type::Primitive(PrimitiveType::Binary),
+                _ => return Err(IcebergFdwError::UnsupportedType(col_type_name.clone())),
+            };
+
+            let field = NestedField::new(col_id, col_name, col_type, *is_not_null);
+            fields.push(field.into());
+        }
+
+        let schema = Schema::builder().with_fields(fields).build()?;
+
+        Ok(schema)
     }
 }

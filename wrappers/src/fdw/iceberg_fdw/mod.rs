@@ -2,6 +2,7 @@
 mod iceberg_fdw;
 mod mapper;
 mod pushdown;
+mod sorter;
 mod tests;
 mod utils;
 mod writer;
@@ -10,14 +11,14 @@ use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::PgSqlErrorCode;
 use thiserror::Error;
 
-use supabase_wrappers::prelude::{CreateRuntimeError, OptionsError};
+use supabase_wrappers::prelude::{Cell, CreateRuntimeError, OptionsError};
 
 #[derive(Error, Debug)]
 enum IcebergFdwError {
     #[error("column {0} is not found in source")]
     ColumnNotFound(String),
 
-    #[error("{0}")]
+    #[error("unsupported type: {0}")]
     UnsupportedType(String),
 
     #[error("column '{0}' data type '{1}' is incompatible")]
@@ -31,6 +32,9 @@ enum IcebergFdwError {
 
     #[error("decimal conversion error: {0}")]
     DecimalConversionError(#[from] rust_decimal::Error),
+
+    #[error("parse integer error: {0}")]
+    ParseIntError(#[from] std::num::ParseIntError),
 
     #[error("parse float error: {0}")]
     ParseFloatError(#[from] std::num::ParseFloatError),
@@ -46,6 +50,9 @@ enum IcebergFdwError {
 
     #[error("numeric error: {0}")]
     NumericError(#[from] pgrx::datum::numeric_support::error::Error),
+
+    #[error("spi error: {0}")]
+    SpiError(#[from] pgrx::spi::Error),
 
     #[error("iceberg error: {0}")]
     IcebergError(#[from] iceberg::Error),
@@ -73,3 +80,8 @@ impl From<IcebergFdwError> for ErrorReport {
 }
 
 type IcebergFdwResult<T> = Result<T, IcebergFdwError>;
+
+#[derive(Debug, Clone)]
+struct InputRow {
+    cells: Vec<Option<Cell>>,
+}
