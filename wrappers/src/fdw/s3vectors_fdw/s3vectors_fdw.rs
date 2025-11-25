@@ -19,7 +19,7 @@ use super::s3vec::S3Vec;
 use super::{S3VectorsFdwError, S3VectorsFdwResult};
 
 #[wrappers_fdw(
-    version = "0.1.1",
+    version = "0.1.2",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/s3vectors_fdw",
     error_type = "S3VectorsFdwError"
@@ -453,7 +453,7 @@ impl ForeignDataWrapper<S3VectorsFdwError> for S3VectorsFdw {
         &mut self,
         import_stmt: ImportForeignSchemaStmt,
     ) -> S3VectorsFdwResult<Vec<String>> {
-        let bucket_name = require_option("bucket_name", &import_stmt.options)?;
+        let bucket_name = &import_stmt.remote_schema;
         let mut next_token: Option<String> = None;
         let mut ret: Vec<String> = Vec::new();
 
