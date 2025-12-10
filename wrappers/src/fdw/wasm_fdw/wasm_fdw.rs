@@ -452,8 +452,8 @@ impl ForeignDataWrapper<WasmFdwError> for WasmFdw {
         fdw_host.svr_opts.clone_from(&server.options);
 
         let mut linker = Linker::new(&engine);
-        WrappersV1::add_to_linker(&mut linker, |host: &mut FdwHost| host)?;
-        WrappersV2::add_to_linker(&mut linker, |host: &mut FdwHost| host)?;
+        WrappersV1::add_to_linker::<_, HasSelf<_>>(&mut linker, |host: &mut FdwHost| host)?;
+        WrappersV2::add_to_linker::<_, HasSelf<_>>(&mut linker, |host: &mut FdwHost| host)?;
 
         let mut store = Store::new(&engine, fdw_host);
         let bindings = WrappersV1::instantiate(&mut store, &component, &linker)
