@@ -25,6 +25,7 @@ struct SnowflakeFdw {
     src_rows: Vec<JsonValue>,
     src_idx: usize,
     rowid_col: String,
+    timeout_secs: i32,
 }
 
 static mut INSTANCE: *mut SnowflakeFdw = std::ptr::null_mut::<SnowflakeFdw>();
@@ -204,7 +205,10 @@ impl SnowflakeFdw {
     // make the first SQL query request
     fn make_init_request(&mut self, sql: &str) -> FdwResult {
         let url = format!("{}?async=false", self.base_url);
-        let body = format!(r#"{{ "statement": "{sql}", "timeout": 60 }}"#);
+        let body = format!(
+            r#"{{ "statement": "{sql}", "timeout": {} }}"#,
+            self.timeout_secs
+        );
         let (mut resp, mut resp_json) = self.make_post_request(&url, &body)?;
 
         // polling query result
@@ -292,6 +296,14 @@ impl Guest for SnowflakeFdw {
             }
         };
 
+        // parse query timeout from server option
+        // ref: https://docs.snowflake.com/en/developer-guide/sql-api/reference#label-sql-api-reference-post-statements-request-body
+        let timeout_secs = opts
+            .require_or("timeout_secs", "60")
+            .parse::<i32>()
+            .map_err(|e| format!("invalid timeout_secs value: {e}"))?
+            .clamp(0, 6048);
+
         // Snowflake api authentication ref:
         // https://docs.snowflake.com/en/developer-guide/sql-api/authenticating#using-key-pair-authentication
         let claims = vec![
@@ -321,6 +333,8 @@ impl Guest for SnowflakeFdw {
             "x-snowflake-authorization-token-type".to_owned(),
             "KEYPAIR_JWT".to_owned(),
         ));
+
+        this.timeout_secs = timeout_secs;
 
         stats::inc_stats(FDW_NAME, stats::Metric::CreateTimes, 1);
 
