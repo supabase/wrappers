@@ -296,6 +296,14 @@ impl Guest for SnowflakeFdw {
             }
         };
 
+        // parse query timeout from server option
+        // ref: https://docs.snowflake.com/en/developer-guide/sql-api/reference#label-sql-api-reference-post-statements-request-body
+        let timeout_secs = opts
+            .require_or("timeout_secs", "60")
+            .parse::<i32>()
+            .map_err(|e| format!("invalid timeout_secs value: {e}"))?
+            .clamp(0, 6048);
+
         // Snowflake api authentication ref:
         // https://docs.snowflake.com/en/developer-guide/sql-api/authenticating#using-key-pair-authentication
         let claims = vec![
@@ -326,6 +334,8 @@ impl Guest for SnowflakeFdw {
             "KEYPAIR_JWT".to_owned(),
         ));
 
+        this.timeout_secs = timeout_secs;
+
         stats::inc_stats(FDW_NAME, stats::Metric::CreateTimes, 1);
 
         Ok(())
@@ -335,13 +345,6 @@ impl Guest for SnowflakeFdw {
         let this = Self::this_mut();
         let opts = ctx.get_options(&OptionsType::Table);
         this.table = opts.require("table")?;
-        // query timeout in seconds
-        // ref: https://docs.snowflake.com/en/developer-guide/sql-api/reference#label-sql-api-reference-post-statements-request-body
-        this.timeout_secs = opts
-            .require_or("timeout_secs", "60")
-            .parse::<i32>()
-            .unwrap_or(60)
-            .clamp(0, 6048);
 
         let sql = this.deparse(ctx);
         this.make_init_request(&sql)
@@ -416,11 +419,6 @@ impl Guest for SnowflakeFdw {
         let opts = ctx.get_options(&OptionsType::Table);
         this.table = opts.require("table")?;
         this.rowid_col = opts.require("rowid_column")?;
-        this.timeout_secs = opts
-            .require_or("timeout_secs", "60")
-            .parse::<i32>()
-            .unwrap_or(60)
-            .clamp(0, 6048);
         Ok(())
     }
 
