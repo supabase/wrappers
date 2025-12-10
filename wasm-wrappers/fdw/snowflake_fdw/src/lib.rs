@@ -25,6 +25,7 @@ struct SnowflakeFdw {
     src_rows: Vec<JsonValue>,
     src_idx: usize,
     rowid_col: String,
+    timeout_secs: i32,
 }
 
 static mut INSTANCE: *mut SnowflakeFdw = std::ptr::null_mut::<SnowflakeFdw>();
@@ -204,7 +205,10 @@ impl SnowflakeFdw {
     // make the first SQL query request
     fn make_init_request(&mut self, sql: &str) -> FdwResult {
         let url = format!("{}?async=false", self.base_url);
-        let body = format!(r#"{{ "statement": "{sql}", "timeout": 60 }}"#);
+        let body = format!(
+            r#"{{ "statement": "{sql}", "timeout": {} }}"#,
+            self.timeout_secs
+        );
         let (mut resp, mut resp_json) = self.make_post_request(&url, &body)?;
 
         // polling query result
@@ -331,6 +335,13 @@ impl Guest for SnowflakeFdw {
         let this = Self::this_mut();
         let opts = ctx.get_options(&OptionsType::Table);
         this.table = opts.require("table")?;
+        // query timeout in seconds
+        // ref: https://docs.snowflake.com/en/developer-guide/sql-api/reference#label-sql-api-reference-post-statements-request-body
+        this.timeout_secs = opts
+            .require_or("timeout_secs", "60")
+            .parse::<i32>()
+            .unwrap_or(60)
+            .clamp(0, 6048);
 
         let sql = this.deparse(ctx);
         this.make_init_request(&sql)
@@ -405,6 +416,11 @@ impl Guest for SnowflakeFdw {
         let opts = ctx.get_options(&OptionsType::Table);
         this.table = opts.require("table")?;
         this.rowid_col = opts.require("rowid_column")?;
+        this.timeout_secs = opts
+            .require_or("timeout_secs", "60")
+            .parse::<i32>()
+            .unwrap_or(60)
+            .clamp(0, 6048);
         Ok(())
     }
 
