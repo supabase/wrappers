@@ -28,6 +28,17 @@ use supabase_wrappers::prelude::*;
 
 use super::{ClickHouseFdwError, ClickHouseFdwResult};
 
+struct Formatter;
+
+impl CellFormatter for Formatter {
+    fn fmt_cell(&mut self, cell: &Cell) -> String {
+        match cell {
+            Cell::Timestamptz(tstz) => format!("parseDateTime64BestEffort('{tstz}', 6)"),
+            _ => format!("{cell}"),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 struct ConvertedRow {
     values: Vec<Option<Cell>>,
@@ -138,7 +149,7 @@ fn convert_row_simple(
                     // convert from Unix timestamp (seconds since 1970-01-01) to
                     // PostgreSQL timestamp (microseconds since 2000-01-01)
                     // difference between 1970 and 2000 epoch: 946684800 seconds
-                    let pg_raw_timestamp = (value.timestamp() - 946684800) * 1_000_000;
+                    let pg_raw_timestamp = value.timestamp_micros() - 946684800 * 1_000_000;
                     let pg_timestamp = pgrx::datum::Timestamp::saturating_from_raw(
                         pg_raw_timestamp as pg_sys::Timestamp,
                     );
@@ -445,6 +456,7 @@ impl ClickHouseFdw {
         let mut sql = format!("select {} from {}", tgts, &table);
 
         if !quals.is_empty() {
+            let mut formatter = Formatter {};
             let cond = quals
                 .iter()
                 .filter(|q| {
@@ -455,7 +467,7 @@ impl ClickHouseFdw {
                     };
                     !is_param && !is_array
                 })
-                .map(|q| q.deparse())
+                .map(|q| q.deparse_with_fmt(&mut formatter))
                 .collect::<Vec<String>>()
                 .join(" and ");
 
@@ -850,6 +862,17 @@ impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
                         };
                         Ok(val)
                     }
+                    Cell::Timestamptz(_) => {
+                        let s = c.to_string().replace('\'', "");
+                        let tm = DateTime::parse_from_str(&s, "%Y-%m-%d %H:%M:%S%.6f%#z")?;
+                        let utc_tm = tm.with_timezone(&Utc);
+                        let val = if is_nullable {
+                            ChValue::Nullable(either::Either::Right(Box::new(utc_tm.into())))
+                        } else {
+                            ChValue::from(utc_tm)
+                        };
+                        Ok(val)
+                    }
                     Cell::Uuid(v) => {
                         let uuid = Uuid::try_parse(&v.to_string())?;
                         let val = if is_nullable {
@@ -905,13 +928,15 @@ impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
         let pool = Pool::new(self.conn_str.clone());
         let mut client = self.rt.block_on(pool.get_handle())?;
 
+        let mut formatter = Formatter {};
         let mut sets = Vec::new();
         for (col, cell) in new_row.iter() {
             if col == &self.rowid_col {
                 continue;
             }
             if let Some(cell) = cell {
-                sets.push(format!("{col} = {cell}"));
+                let formatted = formatter.fmt_cell(cell);
+                sets.push(format!("{col} = {formatted}"));
             } else {
                 sets.push(format!("{col} = null"));
             }
