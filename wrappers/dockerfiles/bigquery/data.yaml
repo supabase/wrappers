@@ -56,3 +56,13 @@ projects:
               attrs: '{"aa": 123.45}'
               signup_dt: "2023-10-21"
               created_at: "2023-10-21T00:00:00"
+        - id: test_unsupported_type
+          columns:
+            - name: id
+              type: INTEGER
+              mode: REQUIRED
+            - name: time_col
+              type: TIME
+          data:
+            - id: 1
+              time_col: "12:30:00.45"

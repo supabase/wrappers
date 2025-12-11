@@ -369,15 +369,15 @@ pub(super) extern "C-unwind" fn exec_foreign_insert<
             (*rinfo).ri_FdwState as *mut FdwModifyState<E, W>,
         );
 
-        PgMemoryContexts::For(state.tmp_ctx).switch_to(|_| {
+        let result = PgMemoryContexts::For(state.tmp_ctx).switch_to(|_| {
             let row = utils::tuple_table_slot_to_row(slot);
-            let result = state.insert(&row);
-            if result.is_err() {
-                drop_fdw_modify_state(state.as_ptr());
-                (*rinfo).ri_FdwState = ptr::null::<FdwModifyState<E, W>>() as _;
-                result.report_unwrap();
-            }
+            state.insert(&row)
         });
+        if result.is_err() {
+            drop_fdw_modify_state(state.as_ptr());
+            (*rinfo).ri_FdwState = ptr::null::<FdwModifyState<E, W>>() as _;
+            result.report_unwrap();
+        }
     }
 
     slot
@@ -408,17 +408,19 @@ pub(super) extern "C-unwind" fn exec_foreign_delete<
             (*rinfo).ri_FdwState as *mut FdwModifyState<E, W>,
         );
 
-        PgMemoryContexts::For(state.tmp_ctx).switch_to(|_| {
+        let result = PgMemoryContexts::For(state.tmp_ctx).switch_to(|_| {
             let cell = get_rowid_cell(&state, plan_slot);
             if let Some(rowid) = cell {
-                let result = state.delete(&rowid);
-                if result.is_err() {
-                    drop_fdw_modify_state(state.as_ptr());
-                    (*rinfo).ri_FdwState = ptr::null::<FdwModifyState<E, W>>() as _;
-                    result.report_unwrap();
-                }
+                state.delete(&rowid)
+            } else {
+                Ok(())
             }
         });
+        if result.is_err() {
+            drop_fdw_modify_state(state.as_ptr());
+            (*rinfo).ri_FdwState = ptr::null::<FdwModifyState<E, W>>() as _;
+            result.report_unwrap();
+        }
     }
 
     slot
@@ -440,7 +442,7 @@ pub(super) extern "C-unwind" fn exec_foreign_update<
             (*rinfo).ri_FdwState as *mut FdwModifyState<E, W>,
         );
 
-        PgMemoryContexts::For(state.tmp_ctx).switch_to(|_| {
+        let result = PgMemoryContexts::For(state.tmp_ctx).switch_to(|_| {
             let rowid_cell = get_rowid_cell(&state, plan_slot);
             if let Some(rowid) = rowid_cell {
                 let mut new_row = utils::tuple_table_slot_to_row(plan_slot);
@@ -465,14 +467,16 @@ pub(super) extern "C-unwind" fn exec_foreign_update<
                     }
                 });
 
-                let result = state.update(&rowid, &new_row);
-                if result.is_err() {
-                    drop_fdw_modify_state(state.as_ptr());
-                    (*rinfo).ri_FdwState = ptr::null::<FdwModifyState<E, W>>() as _;
-                    result.report_unwrap();
-                }
+                state.update(&rowid, &new_row)
+            } else {
+                Ok(())
             }
         });
+        if result.is_err() {
+            drop_fdw_modify_state(state.as_ptr());
+            (*rinfo).ri_FdwState = ptr::null::<FdwModifyState<E, W>>() as _;
+            result.report_unwrap();
+        }
     }
 
     slot
