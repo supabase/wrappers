@@ -54,7 +54,6 @@ pub(super) unsafe fn create_wrappers_memctx(name: &str) -> MemoryContext {
 pub(super) unsafe fn delete_wrappers_memctx(ctx: MemoryContext) {
     if !ctx.is_null() {
         pg_sys::pfree((*ctx).name as _);
-        pg_sys::MemoryContextDeleteChildren(ctx);
         pg_sys::MemoryContextDelete(ctx)
     }
 }
