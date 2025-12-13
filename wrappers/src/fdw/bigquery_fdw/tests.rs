@@ -152,4 +152,53 @@ mod tests {
             assert_eq!(results, vec!["foo", "bar"]);
         });
     }
+
+    #[pg_test]
+    #[should_panic]
+    fn bigquery_unsupported_type() {
+        Spi::connect_mut(|c| {
+            c.update(
+                r#"CREATE FOREIGN DATA WRAPPER bigquery_wrapper
+                         HANDLER big_query_fdw_handler VALIDATOR big_query_fdw_validator"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"CREATE SERVER my_bigquery_server
+                         FOREIGN DATA WRAPPER bigquery_wrapper
+                         OPTIONS (
+                           project_id 'test_project',
+                           dataset_id 'test_dataset',
+                           api_endpoint 'http://localhost:9111',
+                           mock_auth 'true'
+                         )"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"
+                  CREATE FOREIGN TABLE test_unsupported_type (
+                    id bigint,
+                    time_col time
+                  )
+                  SERVER my_bigquery_server
+                  OPTIONS (
+                    table 'test_unsupported_type',
+                    rowid_column 'id'
+                  )
+             "#,
+                None,
+                &[],
+            )
+            .unwrap();
+
+            let _results = c.update(
+                "INSERT INTO test_unsupported_type (id, time_col) VALUES (42, '12:30:00.45')",
+                None,
+                &[],
+            );
+        });
+    }
 }
