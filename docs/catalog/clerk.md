@@ -582,8 +582,6 @@ Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/billing#o
 create foreign table clerk.billing_plans (
   id text,
   name text,
-  created_at timestamp,
-  updated_at timestamp,
   attrs jsonb
 )
   server clerk_server
@@ -613,8 +611,6 @@ Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/billing#o
 ```sql
 create foreign table clerk.billing_subscription_items (
   id text,
-  created_at timestamp,
-  updated_at timestamp,
   attrs jsonb
 )
   server clerk_server
@@ -644,8 +640,6 @@ Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/billing#o
 ```sql
 create foreign table clerk.billing_statements (
   id text,
-  created_at timestamp,
-  updated_at timestamp,
   attrs jsonb
 )
   server clerk_server

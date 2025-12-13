@@ -241,25 +241,19 @@ impl ClerkFdw {
         let resp_json = self.make_request(&req)?;
 
         // unify response object to array and save source rows in local batch
-        let resp_data = if resp_json.is_array() {
-            resp_json.as_array().cloned()
-        } else if resp_json.is_object() {
-            // First check if there's a /data field (for paginated responses)
-            if let Some(data) = resp_json.pointer("/data") {
-                if data.is_array() {
-                    data.as_array().cloned()
+        let resp_data = resp_json
+            .pointer("/data")
+            .and_then(|v| v.as_array().cloned())
+            .or_else(|| {
+                if resp_json.is_object() {
+                    Some(vec![resp_json.clone()])
+                } else if resp_json.is_array() {
+                    resp_json.as_array().cloned()
                 } else {
-                    // /data exists but is a single object
-                    Some(vec![data.clone()])
+                    None
                 }
-            } else {
-                // No /data field - this is a single object response (like billing subscriptions)
-                Some(vec![resp_json.clone()])
-            }
-        } else {
-            Some(vec![resp_json.clone()])
-        }
-        .ok_or("cannot get query result data")?;
+            })
+            .ok_or("cannot get query result data")?;
         self.src_rows.extend(resp_data);
 
         Ok(())
@@ -584,8 +578,6 @@ impl Guest for ClerkFdw {
                 r#"create foreign table if not exists billing_plans (
                     id text,
                     name text,
-                    created_at timestamp,
-                    updated_at timestamp,
                     attrs jsonb
                 )
                 server {} options (
@@ -596,8 +588,6 @@ impl Guest for ClerkFdw {
             format!(
                 r#"create foreign table if not exists billing_subscription_items (
                     id text,
-                    created_at timestamp,
-                    updated_at timestamp,
                     attrs jsonb
                 )
                 server {} options (
@@ -608,8 +598,6 @@ impl Guest for ClerkFdw {
             format!(
                 r#"create foreign table if not exists billing_statements (
                     id text,
-                    created_at timestamp,
-                    updated_at timestamp,
                     attrs jsonb
                 )
                 server {} options (
