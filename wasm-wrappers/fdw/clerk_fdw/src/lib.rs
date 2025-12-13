@@ -124,7 +124,7 @@ impl ClerkFdw {
     // create a request instance
     fn create_request(&mut self, ctx: &Context) -> Result<http::Request, FdwError> {
         let quals = ctx.get_quals();
-        let mut url = String::new();
+        let url;
 
         // Handle parameterized billing endpoints
         match self.object.as_str() {
@@ -244,13 +244,18 @@ impl ClerkFdw {
         let resp_data = if resp_json.is_array() {
             resp_json.as_array().cloned()
         } else if resp_json.is_object() {
-            resp_json.pointer("/data").and_then(|v| {
-                if v.is_array() {
-                    v.as_array().cloned()
+            // First check if there's a /data field (for paginated responses)
+            if let Some(data) = resp_json.pointer("/data") {
+                if data.is_array() {
+                    data.as_array().cloned()
                 } else {
-                    Some(vec![v.clone()])
+                    // /data exists but is a single object
+                    Some(vec![data.clone()])
                 }
-            })
+            } else {
+                // No /data field - this is a single object response (like billing subscriptions)
+                Some(vec![resp_json.clone()])
+            }
         } else {
             Some(vec![resp_json.clone()])
         }
