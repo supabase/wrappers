@@ -107,20 +107,26 @@ The full list of foreign table options are below:
 
 Supported objects are listed below:
 
-| Object name              |
-| ------------------------ |
-| allowlist_identifiers    |
-| blocklist_identifiers    |
-| domains                  |
-| invitations              |
-| jwt_templates            |
-| oauth_applications       |
-| organizations            |
-| organization_invitations |
-| organization_memberships |
-| redirect_urls            |
-| saml_connections         |
-| users                    |
+| Object name                        |
+| ---------------------------------- |
+| allowlist_identifiers              |
+| billing_plans                      |
+| billing_statements                 |
+| billing_subscription_items         |
+| billing_payment_attempts           |
+| blocklist_identifiers              |
+| domains                            |
+| invitations                        |
+| jwt_templates                      |
+| oauth_applications                 |
+| organizations                      |
+| organization_billing_subscriptions |
+| organization_invitations           |
+| organization_memberships           |
+| redirect_urls                      |
+| saml_connections                   |
+| user_billing_subscriptions         |
+| users                              |
 
 ## Entities
 
@@ -558,6 +564,190 @@ create foreign table clerk.users (
 
 - The `attrs` column contains additional attributes in JSON format
 
+### Billing Plans
+
+This is a list of all billing plans available in Clerk.
+
+Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/billing#operation/ListBillingPlans)
+
+#### Operations
+
+| Object         | Select | Insert | Update | Delete | Truncate |
+| -------------- | :----: | :----: | :----: | :----: | :------: |
+| billing/plans  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
+
+```sql
+create foreign table clerk.billing_plans (
+  id text,
+  name text,
+  created_at timestamp,
+  updated_at timestamp,
+  attrs jsonb
+)
+  server clerk_server
+  options (
+    object 'billing/plans'
+  );
+```
+
+#### Notes
+
+- The `attrs` column contains additional attributes in JSON format
+
+### Billing Subscription Items
+
+This is a list of all billing subscription items.
+
+Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/billing#operation/ListBillingSubscriptionItems)
+
+#### Operations
+
+| Object                      | Select | Insert | Update | Delete | Truncate |
+| --------------------------- | :----: | :----: | :----: | :----: | :------: |
+| billing/subscription_items  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
+
+```sql
+create foreign table clerk.billing_subscription_items (
+  id text,
+  created_at timestamp,
+  updated_at timestamp,
+  attrs jsonb
+)
+  server clerk_server
+  options (
+    object 'billing/subscription_items'
+  );
+```
+
+#### Notes
+
+- The `attrs` column contains additional attributes in JSON format
+
+### Billing Statements
+
+This is a list of all billing statements.
+
+Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/billing#operation/ListBillingStatements)
+
+#### Operations
+
+| Object            | Select | Insert | Update | Delete | Truncate |
+| ----------------- | :----: | :----: | :----: | :----: | :------: |
+| billing/statements|   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
+
+```sql
+create foreign table clerk.billing_statements (
+  id text,
+  created_at timestamp,
+  updated_at timestamp,
+  attrs jsonb
+)
+  server clerk_server
+  options (
+    object 'billing/statements'
+  );
+```
+
+#### Notes
+
+- The `attrs` column contains additional attributes in JSON format
+
+### User Billing Subscriptions
+
+This retrieves the billing subscription for a specific user.
+
+Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/billing#operation/GetUserBillingSubscription)
+
+#### Operations
+
+| Object                      | Select | Insert | Update | Delete | Truncate |
+| --------------------------- | :----: | :----: | :----: | :----: | :------: |
+| users/billing/subscription  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
+
+```sql
+create foreign table clerk.user_billing_subscriptions (
+  user_id text,
+  attrs jsonb
+)
+  server clerk_server
+  options (
+    object 'users/billing/subscription'
+  );
+```
+
+#### Notes
+
+- The `attrs` column contains all subscription attributes in JSON format
+- The query must specify `user_id` in the WHERE clause
+
+### Organization Billing Subscriptions
+
+This retrieves the billing subscription for a specific organization.
+
+Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/billing#operation/GetOrganizationBillingSubscription)
+
+#### Operations
+
+| Object                            | Select | Insert | Update | Delete | Truncate |
+| --------------------------------- | :----: | :----: | :----: | :----: | :------: |
+| organizations/billing/subscription |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
+
+```sql
+create foreign table clerk.organization_billing_subscriptions (
+  organization_id text,
+  attrs jsonb
+)
+  server clerk_server
+  options (
+    object 'organizations/billing/subscription'
+  );
+```
+
+#### Notes
+
+- The `attrs` column contains all subscription attributes in JSON format
+- The query must specify `organization_id` in the WHERE clause
+
+### Billing Payment Attempts
+
+This retrieves payment attempts for a specific billing statement.
+
+Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/billing#operation/ListBillingStatementPaymentAttempts)
+
+#### Operations
+
+| Object                          | Select | Insert | Update | Delete | Truncate |
+| ------------------------------- | :----: | :----: | :----: | :----: | :------: |
+| billing/statements/payment_attempts|   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
+
+```sql
+create foreign table clerk.billing_payment_attempts (
+  statement_id text,
+  attrs jsonb
+)
+  server clerk_server
+  options (
+    object 'billing/statements/payment_attempts'
+  );
+```
+
+#### Notes
+
+- The `attrs` column contains all payment attempt attributes in JSON format
+- The query must specify `statement_id` in the WHERE clause
+
 ## Query Pushdown Support
 
 This FDW doesn't support query pushdown.
@@ -622,4 +812,31 @@ select
   e->>'email_address' as email
 from clerk.users u
   cross join json_array_elements((attrs->'email_addresses')::json) e;
+```
+
+### Billing examples
+
+```sql
+-- Query all billing plans
+SELECT * FROM clerk.billing_plans;
+
+-- Query all billing statements
+SELECT * FROM clerk.billing_statements;
+
+-- Query subscription for a specific user (requires WHERE clause)
+SELECT * FROM clerk.user_billing_subscriptions WHERE user_id = 'user_xxx';
+
+-- Query subscription for a specific organization (requires WHERE clause)
+SELECT * FROM clerk.organization_billing_subscriptions WHERE organization_id = 'org_xxx';
+
+-- Query payment attempts for a billing statement (requires WHERE clause)
+SELECT * FROM clerk.billing_payment_attempts WHERE statement_id = 'stmt_xxx';
+
+-- Extract subscription status from user subscription
+SELECT 
+  user_id,
+  attrs->>'status' as subscription_status,
+  attrs->>'plan_id' as plan_id
+FROM clerk.user_billing_subscriptions 
+WHERE user_id = 'user_xxx';
 ```
