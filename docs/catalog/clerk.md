@@ -110,10 +110,6 @@ Supported objects are listed below:
 | Object name                        |
 | ---------------------------------- |
 | allowlist_identifiers              |
-| billing_plans                      |
-| billing_statements                 |
-| billing_subscription_items         |
-| billing_payment_attempts           |
 | blocklist_identifiers              |
 | domains                            |
 | invitations                        |
@@ -564,94 +560,6 @@ create foreign table clerk.users (
 
 - The `attrs` column contains additional attributes in JSON format
 
-### Billing Plans
-
-This is a list of all billing plans available in Clerk.
-
-Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/billing#operation/ListBillingPlans)
-
-#### Operations
-
-| Object         | Select | Insert | Update | Delete | Truncate |
-| -------------- | :----: | :----: | :----: | :----: | :------: |
-| billing/plans  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
-
-#### Usage
-
-```sql
-create foreign table clerk.billing_plans (
-  id text,
-  name text,
-  attrs jsonb
-)
-  server clerk_server
-  options (
-    object 'billing/plans'
-  );
-```
-
-#### Notes
-
-- The `attrs` column contains additional attributes in JSON format
-
-### Billing Subscription Items
-
-This is a list of all billing subscription items.
-
-Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/billing#operation/ListBillingSubscriptionItems)
-
-#### Operations
-
-| Object                      | Select | Insert | Update | Delete | Truncate |
-| --------------------------- | :----: | :----: | :----: | :----: | :------: |
-| billing/subscription_items  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
-
-#### Usage
-
-```sql
-create foreign table clerk.billing_subscription_items (
-  id text,
-  attrs jsonb
-)
-  server clerk_server
-  options (
-    object 'billing/subscription_items'
-  );
-```
-
-#### Notes
-
-- The `attrs` column contains additional attributes in JSON format
-
-### Billing Statements
-
-This is a list of all billing statements.
-
-Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/billing#operation/ListBillingStatements)
-
-#### Operations
-
-| Object            | Select | Insert | Update | Delete | Truncate |
-| ----------------- | :----: | :----: | :----: | :----: | :------: |
-| billing/statements|   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
-
-#### Usage
-
-```sql
-create foreign table clerk.billing_statements (
-  id text,
-  attrs jsonb
-)
-  server clerk_server
-  options (
-    object 'billing/statements'
-  );
-```
-
-#### Notes
-
-- The `attrs` column contains additional attributes in JSON format
-
 ### User Billing Subscriptions
 
 This retrieves the billing subscription for a specific user.
@@ -711,8 +619,6 @@ create foreign table clerk.organization_billing_subscriptions (
 
 - The `attrs` column contains all subscription attributes in JSON format
 - The query must specify `organization_id` in the WHERE clause
-
-### Billing Payment Attempts
 
 This retrieves payment attempts for a specific billing statement.
 
@@ -811,20 +717,11 @@ from clerk.users u
 ### Billing examples
 
 ```sql
--- Query all billing plans
-SELECT * FROM clerk.billing_plans;
-
--- Query all billing statements
-SELECT * FROM clerk.billing_statements;
-
 -- Query subscription for a specific user (requires WHERE clause)
 SELECT * FROM clerk.user_billing_subscriptions WHERE user_id = 'user_xxx';
 
 -- Query subscription for a specific organization (requires WHERE clause)
 SELECT * FROM clerk.organization_billing_subscriptions WHERE organization_id = 'org_xxx';
-
--- Query payment attempts for a billing statement (requires WHERE clause)
-SELECT * FROM clerk.billing_payment_attempts WHERE statement_id = 'stmt_xxx';
 
 -- Extract subscription status from user subscription
 SELECT 

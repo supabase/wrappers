@@ -72,14 +72,6 @@ impl ClerkFdw {
                     return Ok(None);
                 }
             }
-            "billing/statements/payment_attempts" => {
-                if tgt_col_name == "statement_id" {
-                    if self.sub_obj == "statement_id" {
-                        return Ok(Some(Cell::String(self.sub_obj_value.clone())));
-                    }
-                    return Ok(None);
-                }
-            }
             _ => {}
         }
 
@@ -156,36 +148,13 @@ impl ClerkFdw {
                     return Err("organizations/billing/subscription requires organization_id filter in WHERE clause".to_string());
                 }
             }
-            "billing/statements/payment_attempts" => {
-                // GET /billing/statements/{statement_id}/payment_attempts
-                if let Some(q) = quals.iter().find(|q| q.field() == "statement_id" && q.operator() == "=") {
-                    if let Value::Cell(Cell::String(statement_id)) = q.value() {
-                        self.sub_obj = "statement_id".to_string();
-                        self.sub_obj_value = statement_id.clone();
-                        url = format!("{}/billing/statements/{}/payment_attempts", self.base_url, statement_id);
-                    } else {
-                        return Err("statement_id must be a string value".to_string());
-                    }
-                } else {
-                    return Err("billing/statements/payment_attempts requires statement_id filter in WHERE clause".to_string());
-                }
-            }
             _ => {
                 // Standard endpoints with pagination
-                // Handle billing endpoints that don't support order_by
-                let is_billing_endpoint = self.object.starts_with("billing/");
-                let qs = if is_billing_endpoint {
-                    vec![
-                        format!("offset={}", self.src_offset),
-                        format!("limit={BATCH_SIZE}"),
-                    ]
-                } else {
-                    vec![
-                        "order_by=-created_at".to_string(),
-                        format!("offset={}", self.src_offset),
-                        format!("limit={BATCH_SIZE}"),
-                    ]
-                };
+                let qs = vec![
+                    "order_by=-created_at".to_string(),
+                    format!("offset={}", self.src_offset),
+                    format!("limit={BATCH_SIZE}"),
+                ];
                 url = format!("{}/{}?{}", self.base_url, self.object, qs.join("&"));
             }
         }
@@ -319,7 +288,7 @@ impl Guest for ClerkFdw {
             // For parameterized billing endpoints, don't paginate (they return single objects)
             let is_parameterized = matches!(
                 this.object.as_str(),
-                "users/billing/subscription" | "organizations/billing/subscription" | "billing/statements/payment_attempts"
+                "users/billing/subscription" | "organizations/billing/subscription"
             );
 
             // local batch buffer isn't fully filled, means no more source records on remote,
@@ -575,37 +544,6 @@ impl Guest for ClerkFdw {
                 stmt.server_name,
             ),
             format!(
-                r#"create foreign table if not exists billing_plans (
-                    id text,
-                    name text,
-                    attrs jsonb
-                )
-                server {} options (
-                    object 'billing/plans'
-                )"#,
-                stmt.server_name,
-            ),
-            format!(
-                r#"create foreign table if not exists billing_subscription_items (
-                    id text,
-                    attrs jsonb
-                )
-                server {} options (
-                    object 'billing/subscription_items'
-                )"#,
-                stmt.server_name,
-            ),
-            format!(
-                r#"create foreign table if not exists billing_statements (
-                    id text,
-                    attrs jsonb
-                )
-                server {} options (
-                    object 'billing/statements'
-                )"#,
-                stmt.server_name,
-            ),
-            format!(
                 r#"create foreign table if not exists user_billing_subscriptions (
                     user_id text,
                     attrs jsonb
@@ -622,16 +560,6 @@ impl Guest for ClerkFdw {
                 )
                 server {} options (
                     object 'organizations/billing/subscription'
-                )"#,
-                stmt.server_name,
-            ),
-            format!(
-                r#"create foreign table if not exists billing_payment_attempts (
-                    statement_id text,
-                    attrs jsonb
-                )
-                server {} options (
-                    object 'billing/statements/payment_attempts'
                 )"#,
                 stmt.server_name,
             ),
