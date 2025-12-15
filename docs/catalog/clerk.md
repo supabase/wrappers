@@ -753,6 +753,7 @@ Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/billing#o
 ```sql
 create foreign table clerk.billing_statement (
   statement_id text,
+  id text,
   status text,
   timestamp timestamp,
   attrs jsonb
@@ -785,6 +786,7 @@ Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/billing#o
 ```sql
 create foreign table clerk.billing_payment_attempts (
   statement_id text,
+  id text,
   status text,
   created_at timestamp,
   updated_at timestamp,
