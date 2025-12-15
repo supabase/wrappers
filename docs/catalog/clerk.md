@@ -582,6 +582,11 @@ Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/billing#o
 ```sql
 create foreign table clerk.user_billing_subscriptions (
   user_id text,
+  id text,
+  status text,
+  payer_id text,
+  created_at timestamp,
+  updated_at timestamp,
   attrs jsonb
 )
   server clerk_server
@@ -592,7 +597,7 @@ create foreign table clerk.user_billing_subscriptions (
 
 #### Notes
 
-- The `attrs` column contains all subscription attributes in JSON format
+- The `attrs` column contains additional attributes in JSON format
 - The query must specify `user_id` in the WHERE clause
 
 ### Organization Billing Subscriptions
@@ -612,6 +617,11 @@ Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/billing#o
 ```sql
 create foreign table clerk.organization_billing_subscriptions (
   organization_id text,
+  id text,
+  status text,
+  payer_id text,
+  created_at timestamp,
+  updated_at timestamp,
   attrs jsonb
 )
   server clerk_server
@@ -622,7 +632,7 @@ create foreign table clerk.organization_billing_subscriptions (
 
 #### Notes
 
-- The `attrs` column contains all subscription attributes in JSON format
+- The `attrs` column contains additional attributes in JSON format
 - The query must specify `organization_id` in the WHERE clause
 
 ### Billing Plans
@@ -643,6 +653,10 @@ Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/billing#o
 create foreign table clerk.billing_plans (
   id text,
   name text,
+  description text,
+  slug text,
+  is_default boolean,
+  is_recurring boolean,
   attrs jsonb
 )
   server clerk_server
@@ -672,6 +686,13 @@ Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/billing#o
 ```sql
 create foreign table clerk.billing_subscription_items (
   id text,
+  status text,
+  plan_id text,
+  plan_period text,
+  payer_id text,
+  is_free_trial boolean,
+  created_at timestamp,
+  updated_at timestamp,
   attrs jsonb
 )
   server clerk_server
@@ -701,6 +722,8 @@ Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/billing#o
 ```sql
 create foreign table clerk.billing_statements (
   id text,
+  status text,
+  timestamp timestamp,
   attrs jsonb
 )
   server clerk_server
@@ -730,6 +753,8 @@ Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/billing#o
 ```sql
 create foreign table clerk.billing_statement (
   statement_id text,
+  status text,
+  timestamp timestamp,
   attrs jsonb
 )
   server clerk_server
@@ -740,7 +765,7 @@ create foreign table clerk.billing_statement (
 
 #### Notes
 
-- The `attrs` column contains all statement attributes in JSON format
+- The `attrs` column contains additional attributes in JSON format
 - The query must specify `statement_id` in the WHERE clause
 
 ### Billing Payment Attempts
@@ -760,6 +785,9 @@ Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/billing#o
 ```sql
 create foreign table clerk.billing_payment_attempts (
   statement_id text,
+  status text,
+  created_at timestamp,
+  updated_at timestamp,
   attrs jsonb
 )
   server clerk_server
@@ -770,7 +798,7 @@ create foreign table clerk.billing_payment_attempts (
 
 #### Notes
 
-- The `attrs` column contains all payment attempt attributes in JSON format
+- The `attrs` column contains additional attributes in JSON format
 - The query must specify `statement_id` in the WHERE clause
 
 ## Query Pushdown Support

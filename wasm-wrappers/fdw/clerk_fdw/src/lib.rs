@@ -151,7 +151,11 @@ impl ClerkFdw {
                         self.sub_obj = "user_id".to_string();
                         self.sub_obj_value = user_id.clone();
                         url = format!("{}/users/{}/billing/subscription", self.base_url, user_id);
+                    } else {
+                        return Err("user_id must be a string value".to_string());
                     }
+                } else {
+                    return Err("user_id is required in WHERE clause for users/billing/subscription".to_string());
                 }
             }
             "organizations/billing/subscription" => {
@@ -161,7 +165,11 @@ impl ClerkFdw {
                         self.sub_obj = "organization_id".to_string();
                         self.sub_obj_value = org_id.clone();
                         url = format!("{}/organizations/{}/billing/subscription", self.base_url, org_id);
+                    } else {
+                        return Err("organization_id must be a string value".to_string());
                     }
+                } else {
+                    return Err("organization_id is required in WHERE clause for organizations/billing/subscription".to_string());
                 }
             }
             "billing/statement" => {
@@ -171,7 +179,11 @@ impl ClerkFdw {
                         self.sub_obj = "statement_id".to_string();
                         self.sub_obj_value = statement_id.clone();
                         url = format!("{}/billing/statements/{}", self.base_url, statement_id);
+                    } else {
+                        return Err("statement_id must be a string value".to_string());
                     }
+                } else {
+                    return Err("statement_id is required in WHERE clause for billing/statement".to_string());
                 }
             }
             "billing/payment_attempts" => {
@@ -181,7 +193,11 @@ impl ClerkFdw {
                         self.sub_obj = "statement_id".to_string();
                         self.sub_obj_value = statement_id.clone();
                         url = format!("{}/billing/statements/{}/payment_attempts", self.base_url, statement_id);
+                    } else {
+                        return Err("statement_id must be a string value".to_string());
                     }
+                } else {
+                    return Err("statement_id is required in WHERE clause for billing/payment_attempts".to_string());
                 }
             }
             _ => {}
@@ -577,6 +593,11 @@ impl Guest for ClerkFdw {
             format!(
                 r#"create foreign table if not exists user_billing_subscriptions (
                     user_id text,
+                    id text,
+                    status text,
+                    payer_id text,
+                    created_at timestamp,
+                    updated_at timestamp,
                     attrs jsonb
                 )
                 server {} options (
@@ -587,6 +608,11 @@ impl Guest for ClerkFdw {
             format!(
                 r#"create foreign table if not exists organization_billing_subscriptions (
                     organization_id text,
+                    id text,
+                    status text,
+                    payer_id text,
+                    created_at timestamp,
+                    updated_at timestamp,
                     attrs jsonb
                 )
                 server {} options (
@@ -599,6 +625,10 @@ impl Guest for ClerkFdw {
                 r#"create foreign table if not exists billing_plans (
                     id text,
                     name text,
+                    description text,
+                    slug text,
+                    is_default boolean,
+                    is_recurring boolean,
                     attrs jsonb
                 )
                 server {} options (
@@ -610,6 +640,13 @@ impl Guest for ClerkFdw {
             format!(
                 r#"create foreign table if not exists billing_subscription_items (
                     id text,
+                    status text,
+                    plan_id text,
+                    plan_period text,
+                    payer_id text,
+                    is_free_trial boolean,
+                    created_at timestamp,
+                    updated_at timestamp,
                     attrs jsonb
                 )
                 server {} options (
@@ -621,6 +658,8 @@ impl Guest for ClerkFdw {
             format!(
                 r#"create foreign table if not exists billing_statements (
                     id text,
+                    status text,
+                    timestamp timestamp,
                     attrs jsonb
                 )
                 server {} options (
@@ -632,6 +671,8 @@ impl Guest for ClerkFdw {
             format!(
                 r#"create foreign table if not exists billing_statement (
                     statement_id text,
+                    status text,
+                    timestamp timestamp,
                     attrs jsonb
                 )
                 server {} options (
@@ -643,6 +684,9 @@ impl Guest for ClerkFdw {
             format!(
                 r#"create foreign table if not exists billing_payment_attempts (
                     statement_id text,
+                    status text,
+                    created_at timestamp,
+                    updated_at timestamp,
                     attrs jsonb
                 )
                 server {} options (
