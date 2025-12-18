@@ -5,6 +5,7 @@ use serde_json::json;
 use serde_json::value::Value as JsonValue;
 use std::collections::HashMap;
 
+use crate::setup_rustls_default_crypto_provider;
 use supabase_wrappers::prelude::*;
 
 use super::{RedisFdwError, RedisFdwResult};
@@ -241,6 +242,8 @@ impl RedisFdw {
 
 impl ForeignDataWrapper<RedisFdwError> for RedisFdw {
     fn new(server: ForeignServer) -> RedisFdwResult<Self> {
+        setup_rustls_default_crypto_provider();
+
         let conn_url = match server.options.get("conn_url") {
             Some(url) => url.to_owned(),
             None => {
