@@ -3,7 +3,10 @@
 mod tests {
     use clickhouse_rs as ch;
     use pgrx::prelude::*;
-    use pgrx::{datum::Timestamp, pg_test, Uuid};
+    use pgrx::{
+        datum::{Timestamp, TimestampWithTimeZone},
+        pg_test, Uuid,
+    };
     use supabase_wrappers::prelude::create_async_runtime;
 
     #[pg_test]
@@ -37,7 +40,8 @@ mod tests {
                             u16col Nullable(UInt16),
                             i32col Nullable(Int32),
                             u32col Nullable(UInt32),
-                            created_at DateTime('UTC')
+                            created_at DateTime('UTC'),
+                            updated_at DateTime64(6, 'Asia/Singapore')
                         ) engine = Memory",
                     )
                     .await
@@ -80,7 +84,8 @@ mod tests {
                     u16col integer,
                     i32col integer,
                     u32col bigint,
-                    created_at timestamp
+                    created_at timestamp,
+                    updated_at timestamptz
                   )
                   SERVER my_clickhouse_server
                   OPTIONS (
@@ -112,7 +117,8 @@ mod tests {
                     u16col integer,
                     i32col integer,
                     u32col bigint,
-                    created_at timestamp
+                    created_at timestamp,
+                    updated_at timestamptz
                   )
                   SERVER my_clickhouse_server
                   OPTIONS (
@@ -144,7 +150,8 @@ mod tests {
                     u16col integer,
                     i32col integer,
                     u32col bigint,
-                    created_at timestamp
+                    created_at timestamp,
+                    updated_at timestamptz
                   )
                   SERVER my_clickhouse_server
                   OPTIONS (
@@ -190,9 +197,9 @@ mod tests {
             c.update(
                 "INSERT INTO test_table (id, name, amt, uid, fstr, bignum, dnum,
                     arr_i64, arr_str, is_valid, i8col, u8col, i16col, u16col,
-                    i32col, u32col, created_at)
+                    i32col, u32col, created_at, updated_at)
                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
-                     $14, $15, $16, $17)",
+                     $14, $15, $16, $17, $18)",
                 None,
                 &[
                     42.into(),
@@ -212,6 +219,9 @@ mod tests {
                     46i32.into(),
                     47i64.into(),
                     Timestamp::new(2025, 5, 1, 2, 3, 4.0).into(),
+                    TimestampWithTimeZone::with_timezone(2025, 5, 1, 2, 3, 4.0, "Asia/Singapore")
+                        .unwrap()
+                        .into(),
                 ],
             )
             .unwrap();
@@ -441,6 +451,29 @@ mod tests {
                 .get_one::<Uuid>()
                 .unwrap(),
                 Some(Uuid::from_bytes([43u8; 16])),
+            );
+
+            // test timestamptz data type
+            c.update(
+                "UPDATE test_table
+                 SET updated_at = '2025-05-01 01:02:03.112233+8'::timestamptz
+                 WHERE id = 42
+                ",
+                None,
+                &[],
+            )
+            .unwrap();
+            assert_eq!(
+                c.select(
+                    "SELECT id FROM test_table WHERE updated_at = '2025-05-01 01:02:03.112233+8'::timestamptz",
+                    None,
+                    &[]
+                )
+                .unwrap()
+                .first()
+                .get_one::<i64>()
+                .unwrap(),
+                Some(42),
             );
 
             // test delete data in foreign table
