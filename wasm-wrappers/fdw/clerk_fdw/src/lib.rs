@@ -146,7 +146,10 @@ impl ClerkFdw {
         match self.object.as_str() {
             "users/billing/subscription" => {
                 // GET /users/{user_id}/billing/subscription
-                if let Some(q) = quals.iter().find(|q| q.field() == "user_id" && q.operator() == "=") {
+                if let Some(q) = quals
+                    .iter()
+                    .find(|q| q.field() == "user_id" && q.operator() == "=")
+                {
                     if let Value::Cell(Cell::String(user_id)) = q.value() {
                         self.sub_obj = "user_id".to_string();
                         self.sub_obj_value = user_id.clone();
@@ -155,16 +158,25 @@ impl ClerkFdw {
                         return Err("user_id must be a string value".to_string());
                     }
                 } else {
-                    return Err("user_id is required in WHERE clause for users/billing/subscription".to_string());
+                    return Err(
+                        "user_id is required in WHERE clause for users/billing/subscription"
+                            .to_string(),
+                    );
                 }
             }
             "organizations/billing/subscription" => {
                 // GET /organizations/{organization_id}/billing/subscription
-                if let Some(q) = quals.iter().find(|q| q.field() == "organization_id" && q.operator() == "=") {
+                if let Some(q) = quals
+                    .iter()
+                    .find(|q| q.field() == "organization_id" && q.operator() == "=")
+                {
                     if let Value::Cell(Cell::String(org_id)) = q.value() {
                         self.sub_obj = "organization_id".to_string();
                         self.sub_obj_value = org_id.clone();
-                        url = format!("{}/organizations/{}/billing/subscription", self.base_url, org_id);
+                        url = format!(
+                            "{}/organizations/{}/billing/subscription",
+                            self.base_url, org_id
+                        );
                     } else {
                         return Err("organization_id must be a string value".to_string());
                     }
@@ -174,7 +186,10 @@ impl ClerkFdw {
             }
             "billing/statement" => {
                 // GET /billing/statements/{statement_id}
-                if let Some(q) = quals.iter().find(|q| q.field() == "statement_id" && q.operator() == "=") {
+                if let Some(q) = quals
+                    .iter()
+                    .find(|q| q.field() == "statement_id" && q.operator() == "=")
+                {
                     if let Value::Cell(Cell::String(statement_id)) = q.value() {
                         self.sub_obj = "statement_id".to_string();
                         self.sub_obj_value = statement_id.clone();
@@ -183,21 +198,33 @@ impl ClerkFdw {
                         return Err("statement_id must be a string value".to_string());
                     }
                 } else {
-                    return Err("statement_id is required in WHERE clause for billing/statement".to_string());
+                    return Err(
+                        "statement_id is required in WHERE clause for billing/statement"
+                            .to_string(),
+                    );
                 }
             }
             "billing/payment_attempts" => {
                 // GET /billing/statements/{statement_id}/payment_attempts
-                if let Some(q) = quals.iter().find(|q| q.field() == "statement_id" && q.operator() == "=") {
+                if let Some(q) = quals
+                    .iter()
+                    .find(|q| q.field() == "statement_id" && q.operator() == "=")
+                {
                     if let Value::Cell(Cell::String(statement_id)) = q.value() {
                         self.sub_obj = "statement_id".to_string();
                         self.sub_obj_value = statement_id.clone();
-                        url = format!("{}/billing/statements/{}/payment_attempts", self.base_url, statement_id);
+                        url = format!(
+                            "{}/billing/statements/{}/payment_attempts",
+                            self.base_url, statement_id
+                        );
                     } else {
                         return Err("statement_id must be a string value".to_string());
                     }
                 } else {
-                    return Err("statement_id is required in WHERE clause for billing/payment_attempts".to_string());
+                    return Err(
+                        "statement_id is required in WHERE clause for billing/payment_attempts"
+                            .to_string(),
+                    );
                 }
             }
             _ => {}
