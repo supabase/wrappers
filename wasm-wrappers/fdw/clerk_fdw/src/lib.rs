@@ -258,6 +258,11 @@ impl ClerkFdw {
                 }
             }
 
+            // if encounter the 404 error, we should take it as empty result rather than an error
+            if resp.status_code == 404 {
+                return Ok(serde_json::json!([]));
+            }
+
             // check for errors
             http::error_for_status(&resp).map_err(|err| format!("{}: {}", err, resp.body))?;
 
