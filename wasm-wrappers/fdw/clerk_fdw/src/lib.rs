@@ -8,7 +8,7 @@ use bindings::{
         http, stats, time,
         types::{
             Cell, Column, Context, FdwError, FdwResult, ImportForeignSchemaStmt, OptionsType, Row,
-            TypeOid,
+            TypeOid, Value,
         },
         utils,
     },
@@ -22,6 +22,9 @@ struct ClerkFdw {
     src_rows: Vec<JsonValue>,
     src_idx: usize,
     src_offset: usize,
+    // For parameterized billing endpoints
+    sub_obj: String,
+    sub_obj_value: String,
 }
 
 static mut INSTANCE: *mut ClerkFdw = std::ptr::null_mut::<ClerkFdw>();
@@ -49,6 +52,35 @@ impl ClerkFdw {
         // put all properties into 'attrs' JSON column
         if &tgt_col_name == "attrs" {
             return Ok(Some(Cell::Json(src_row.to_string())));
+        }
+
+        // Handle parameterized endpoint ID columns
+        match self.object.as_str() {
+            "users/billing/subscription" => {
+                if tgt_col_name == "user_id" {
+                    if self.sub_obj == "user_id" {
+                        return Ok(Some(Cell::String(self.sub_obj_value.clone())));
+                    }
+                    return Ok(None);
+                }
+            }
+            "organizations/billing/subscription" => {
+                if tgt_col_name == "organization_id" {
+                    if self.sub_obj == "organization_id" {
+                        return Ok(Some(Cell::String(self.sub_obj_value.clone())));
+                    }
+                    return Ok(None);
+                }
+            }
+            "billing/statement" | "billing/payment_attempts" => {
+                if tgt_col_name == "statement_id" {
+                    if self.sub_obj == "statement_id" {
+                        return Ok(Some(Cell::String(self.sub_obj_value.clone())));
+                    }
+                    return Ok(None);
+                }
+            }
+            _ => {}
         }
 
         let src = src_row
@@ -90,13 +122,114 @@ impl ClerkFdw {
     }
 
     // create a request instance
-    fn create_request(&self) -> Result<http::Request, FdwError> {
-        let qs = [
-            "order_by=-created_at".to_string(),
-            format!("offset={}", self.src_offset),
-            format!("limit={BATCH_SIZE}"),
-        ];
-        let url = format!("{}/{}?{}", self.base_url, self.object, qs.join("&"));
+    fn create_request(&mut self, ctx: &Context) -> Result<http::Request, FdwError> {
+        let quals = ctx.get_quals();
+
+        // Standard endpoints with pagination
+        // Billing endpoints don't support order_by
+        let is_billing = self.object.starts_with("billing/");
+        let qs = if is_billing {
+            vec![
+                format!("offset={}", self.src_offset),
+                format!("limit={BATCH_SIZE}"),
+            ]
+        } else {
+            vec![
+                "order_by=-created_at".to_string(),
+                format!("offset={}", self.src_offset),
+                format!("limit={BATCH_SIZE}"),
+            ]
+        };
+        let mut url = format!("{}/{}?{}", self.base_url, self.object, qs.join("&"));
+
+        // Handle parameterized endpoints
+        match self.object.as_str() {
+            "users/billing/subscription" => {
+                // GET /users/{user_id}/billing/subscription
+                if let Some(q) = quals
+                    .iter()
+                    .find(|q| q.field() == "user_id" && q.operator() == "=")
+                {
+                    if let Value::Cell(Cell::String(user_id)) = q.value() {
+                        self.sub_obj = "user_id".to_string();
+                        self.sub_obj_value = user_id.clone();
+                        url = format!("{}/users/{}/billing/subscription", self.base_url, user_id);
+                    } else {
+                        return Err("user_id must be a string value".to_string());
+                    }
+                } else {
+                    return Err(
+                        "user_id is required in WHERE clause for users/billing/subscription"
+                            .to_string(),
+                    );
+                }
+            }
+            "organizations/billing/subscription" => {
+                // GET /organizations/{organization_id}/billing/subscription
+                if let Some(q) = quals
+                    .iter()
+                    .find(|q| q.field() == "organization_id" && q.operator() == "=")
+                {
+                    if let Value::Cell(Cell::String(org_id)) = q.value() {
+                        self.sub_obj = "organization_id".to_string();
+                        self.sub_obj_value = org_id.clone();
+                        url = format!(
+                            "{}/organizations/{}/billing/subscription",
+                            self.base_url, org_id
+                        );
+                    } else {
+                        return Err("organization_id must be a string value".to_string());
+                    }
+                } else {
+                    return Err("organization_id is required in WHERE clause for organizations/billing/subscription".to_string());
+                }
+            }
+            "billing/statement" => {
+                // GET /billing/statements/{statement_id}
+                if let Some(q) = quals
+                    .iter()
+                    .find(|q| q.field() == "statement_id" && q.operator() == "=")
+                {
+                    if let Value::Cell(Cell::String(statement_id)) = q.value() {
+                        self.sub_obj = "statement_id".to_string();
+                        self.sub_obj_value = statement_id.clone();
+                        url = format!("{}/billing/statements/{}", self.base_url, statement_id);
+                    } else {
+                        return Err("statement_id must be a string value".to_string());
+                    }
+                } else {
+                    return Err(
+                        "statement_id is required in WHERE clause for billing/statement"
+                            .to_string(),
+                    );
+                }
+            }
+            "billing/payment_attempts" => {
+                // GET /billing/statements/{statement_id}/payment_attempts
+                if let Some(q) = quals
+                    .iter()
+                    .find(|q| q.field() == "statement_id" && q.operator() == "=")
+                {
+                    if let Value::Cell(Cell::String(statement_id)) = q.value() {
+                        self.sub_obj = "statement_id".to_string();
+                        self.sub_obj_value = statement_id.clone();
+                        url = format!(
+                            "{}/billing/statements/{}/payment_attempts",
+                            self.base_url, statement_id
+                        );
+                    } else {
+                        return Err("statement_id must be a string value".to_string());
+                    }
+                } else {
+                    return Err(
+                        "statement_id is required in WHERE clause for billing/payment_attempts"
+                            .to_string(),
+                    );
+                }
+            }
+            _ => {}
+        }
+
         let headers = self.headers.clone();
 
         Ok(http::Request {
@@ -125,6 +258,11 @@ impl ClerkFdw {
                 }
             }
 
+            // if encounter the 404 error, we should take it as empty result rather than an error
+            if resp.status_code == 404 {
+                return Ok(serde_json::json!([]));
+            }
+
             // check for errors
             http::error_for_status(&resp).map_err(|err| format!("{}: {}", err, resp.body))?;
 
@@ -139,29 +277,28 @@ impl ClerkFdw {
     }
 
     // fetch source data rows from Clerk API
-    fn fetch_source_data(&mut self) -> FdwResult {
+    fn fetch_source_data(&mut self, ctx: &Context) -> FdwResult {
         self.src_rows.clear();
         self.src_idx = 0;
 
         // create a request and send it
-        let req = self.create_request()?;
+        let req = self.create_request(ctx)?;
         let resp_json = self.make_request(&req)?;
 
         // unify response object to array and save source rows in local batch
-        let resp_data = if resp_json.is_array() {
-            resp_json.as_array().cloned()
-        } else if resp_json.is_object() {
-            resp_json.pointer("/data").and_then(|v| {
-                if v.is_array() {
-                    v.as_array().cloned()
+        let resp_data = resp_json
+            .pointer("/data")
+            .and_then(|v| v.as_array().cloned())
+            .or_else(|| {
+                if resp_json.is_object() {
+                    Some(vec![resp_json.clone()])
+                } else if resp_json.is_array() {
+                    resp_json.as_array().cloned()
                 } else {
-                    Some(vec![v.clone()])
+                    None
                 }
             })
-        } else {
-            Some(vec![resp_json.clone()])
-        }
-        .ok_or("cannot get query result data")?;
+            .ok_or("cannot get query result data")?;
         self.src_rows.extend(resp_data);
 
         Ok(())
@@ -210,7 +347,11 @@ impl Guest for ClerkFdw {
         let this = Self::this_mut();
         let opts = ctx.get_options(&OptionsType::Table);
         this.object = opts.require("object")?;
-        this.fetch_source_data()
+        this.src_offset = 0;
+        // Reset parameterized endpoint IDs
+        this.sub_obj = String::default();
+        this.sub_obj_value = String::default();
+        this.fetch_source_data(ctx)
     }
 
     fn iter_scan(ctx: &Context, row: &Row) -> Result<Option<u32>, FdwError> {
@@ -220,15 +361,24 @@ impl Guest for ClerkFdw {
         while this.src_idx >= this.src_rows.len() {
             let consumed_cnt = this.src_rows.len();
 
+            // For parameterized billing endpoints, don't paginate (scoped to specific resource)
+            let is_parameterized = matches!(
+                this.object.as_str(),
+                "users/billing/subscription"
+                    | "organizations/billing/subscription"
+                    | "billing/statement"
+                    | "billing/payment_attempts"
+            );
+
             // local batch buffer isn't fully filled, means no more source records on remote,
             // stop the iteration scan
-            if consumed_cnt < BATCH_SIZE {
+            if consumed_cnt < BATCH_SIZE || is_parameterized {
                 return Ok(None);
             }
 
             // otherwise, make a new request for the next batch
             this.src_offset += consumed_cnt;
-            this.fetch_source_data()?;
+            this.fetch_source_data(ctx)?;
 
             stats::inc_stats(FDW_NAME, stats::Metric::RowsIn, consumed_cnt as i64);
             stats::inc_stats(FDW_NAME, stats::Metric::RowsOut, consumed_cnt as i64);
@@ -245,10 +395,13 @@ impl Guest for ClerkFdw {
         Ok(Some(0))
     }
 
-    fn re_scan(_ctx: &Context) -> FdwResult {
+    fn re_scan(ctx: &Context) -> FdwResult {
         let this = Self::this_mut();
         this.src_offset = 0;
-        this.fetch_source_data()
+        // Reset parameterized endpoint IDs
+        this.sub_obj = String::default();
+        this.sub_obj_value = String::default();
+        this.fetch_source_data(ctx)
     }
 
     fn end_scan(_ctx: &Context) -> FdwResult {
@@ -466,6 +619,112 @@ impl Guest for ClerkFdw {
                 )
                 server {} options (
                     object 'users'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists user_billing_subscriptions (
+                    user_id text,
+                    id text,
+                    status text,
+                    payer_id text,
+                    created_at timestamp,
+                    updated_at timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'users/billing/subscription'
+                )"#,
+                stmt.server_name,
+            ),
+            format!(
+                r#"create foreign table if not exists organization_billing_subscriptions (
+                    organization_id text,
+                    id text,
+                    status text,
+                    payer_id text,
+                    created_at timestamp,
+                    updated_at timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'organizations/billing/subscription'
+                )"#,
+                stmt.server_name,
+            ),
+            // GET /billing/plans
+            format!(
+                r#"create foreign table if not exists billing_plans (
+                    id text,
+                    name text,
+                    description text,
+                    slug text,
+                    is_default boolean,
+                    is_recurring boolean,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'billing/plans'
+                )"#,
+                stmt.server_name,
+            ),
+            // GET /billing/subscription_items
+            format!(
+                r#"create foreign table if not exists billing_subscription_items (
+                    id text,
+                    status text,
+                    plan_id text,
+                    plan_period text,
+                    payer_id text,
+                    is_free_trial boolean,
+                    created_at timestamp,
+                    updated_at timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'billing/subscription_items'
+                )"#,
+                stmt.server_name,
+            ),
+            // GET /billing/statements
+            format!(
+                r#"create foreign table if not exists billing_statements (
+                    id text,
+                    status text,
+                    timestamp timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'billing/statements'
+                )"#,
+                stmt.server_name,
+            ),
+            // GET /billing/statements/{statement_id}
+            format!(
+                r#"create foreign table if not exists billing_statement (
+                    statement_id text,
+                    id text,
+                    status text,
+                    timestamp timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'billing/statement'
+                )"#,
+                stmt.server_name,
+            ),
+            // GET /billing/statements/{statement_id}/payment_attempts
+            format!(
+                r#"create foreign table if not exists billing_payment_attempts (
+                    statement_id text,
+                    id text,
+                    status text,
+                    created_at timestamp,
+                    updated_at timestamp,
+                    attrs jsonb
+                )
+                server {} options (
+                    object 'billing/payment_attempts'
                 )"#,
                 stmt.server_name,
             ),
