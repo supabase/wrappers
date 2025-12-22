@@ -805,6 +805,21 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Connecting to S3 Vectors">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#additional-server-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      Additional Server Options
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
           <li class="md-nav__item">
@@ -884,9 +899,9 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#embd" class="md-nav__link">
+  <a href="#s3vec" class="md-nav__link">
     <span class="md-ellipsis">
-      embd
+      s3vec
     </span>
   </a>
   
@@ -908,9 +923,9 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#embd_distanceembd" class="md-nav__link">
+  <a href="#s3vec_distances3vec" class="md-nav__link">
     <span class="md-ellipsis">
-      embd_distance(embd)
+      s3vec_distance(s3vec)
     </span>
   </a>
   
@@ -2068,6 +2083,21 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Connecting to S3 Vectors">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#additional-server-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      Additional Server Options
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
           <li class="md-nav__item">
@@ -2147,9 +2177,9 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#embd" class="md-nav__link">
+  <a href="#s3vec" class="md-nav__link">
     <span class="md-ellipsis">
-      embd
+      s3vec
     </span>
   </a>
   
@@ -2171,9 +2201,9 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#embd_distanceembd" class="md-nav__link">
+  <a href="#s3vec_distances3vec" class="md-nav__link">
     <span class="md-ellipsis">
-      embd_distance(embd)
+      s3vec_distance(s3vec)
     </span>
   </a>
   
@@ -2466,6 +2496,10 @@
 </div>
 </div>
 </div>
+<h4 id="additional-server-options">Additional Server Options</h4>
+<ul>
+<li><code>batch_size</code> - Controls the batch size of vectors read from or written to remote. Minimum value of 1, maximum value of 500, default value of 300.</li>
+</ul>
 <h3 id="create-a-schema">Create a schema</h3>
 <p>We recommend creating a schema to hold all the foreign tables:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">;</span>
@@ -2482,15 +2516,9 @@
 <p>For example, using below SQL can automatically create foreign tables in the <code>s3_vectors</code> schema.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- create foreign table for each index from S3 Vector bucket</span>
-<span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">s3_vectors</span>
-<span class="w">  </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">s3_vectors_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">s3_vectors</span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">bucket_name</span><span class="w"> </span><span class="s1">&#39;my-vector-bucket&#39;</span>
-<span class="w">  </span><span class="p">);</span>
+<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- create foreign table for each index from S3 Vector bucket</span>
+<span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="ss">&quot;my-vector-bucket&quot;</span>
+<span class="w">  </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">s3_vectors_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 <h3 id="s3-vector-tables">S3 Vector Tables</h3>
 <p>This is an object representing S3 Vector index.</p>
@@ -2532,7 +2560,7 @@
 <span class="normal">10</span>
 <span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span><span class="w"> </span><span class="p">(</span>
 <span class="w">  </span><span class="k">key</span><span class="w"> </span><span class="nb">text</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">null</span><span class="p">,</span>
-<span class="w">  </span><span class="k">data</span><span class="w"> </span><span class="n">embd</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">null</span><span class="p">,</span>
+<span class="w">  </span><span class="k">data</span><span class="w"> </span><span class="n">s3vec</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">null</span><span class="p">,</span>
 <span class="w">  </span><span class="n">metadata</span><span class="w"> </span><span class="n">jsonb</span>
 <span class="p">)</span>
 <span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">s3_vectors_server</span>
@@ -2543,34 +2571,34 @@
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 <h3 id="custom-data-types">Custom Data Types</h3>
-<h4 id="embd">embd</h4>
-<p>The <code>embd</code> type is a custom PostgreSQL data type designed to store and work with high-dimensional vectors for machine learning and AI applications.</p>
+<h4 id="s3vec">s3vec</h4>
+<p>The <code>s3vec</code> type is a custom PostgreSQL data type designed to store and work with high-dimensional vectors for machine learning and AI applications.</p>
 <p><strong>Structure:</strong></p>
-<p>The <code>embd</code> type internally contains:</p>
+<p>The <code>s3vec</code> type internally contains:</p>
 <ul>
 <li>Vector data as an array of 32-bit floating point numbers (Float32)</li>
 <li>Additional metadata fields for internal use</li>
 </ul>
 <p><strong>Input Formats:</strong></p>
-<p>The <code>embd</code> type accepts input in JSON array format:</p>
+<p>The <code>s3vec</code> type accepts input in JSON array format:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
 <span class="normal">4</span>
 <span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Simple array format (most common)</span>
-<span class="s1">&#39;[0.1, 0.2, 0.3, 0.4, 0.5]&#39;</span><span class="p">::</span><span class="n">embd</span>
+<span class="s1">&#39;[0.1, 0.2, 0.3, 0.4, 0.5]&#39;</span><span class="p">::</span><span class="n">s3vec</span>
 
 <span class="c1">-- Full JSON object format (advanced)</span>
-<span class="s1">&#39;{&quot;data&quot;: [0.1, 0.2, 0.3], &quot;key&quot;: &quot;vector_001&quot;}&#39;</span><span class="p">::</span><span class="n">embd</span>
+<span class="s1">&#39;{&quot;data&quot;: [0.1, 0.2, 0.3], &quot;key&quot;: &quot;vector_001&quot;}&#39;</span><span class="p">::</span><span class="n">s3vec</span>
 </code></pre></div></td></tr></table></div>
 <p><strong>Output Format:</strong></p>
-<p>When displayed, the <code>embd</code> type shows a summary format:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code>embd:5  -- indicates an embedding with 5 dimensions
+<p>When displayed, the <code>s3vec</code> type shows a summary format:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code>s3vec:5  -- indicates an embedding with 5 dimensions
 </code></pre></div></td></tr></table></div>
 <p><strong>Usage Examples:</strong></p>
 <p>See the following sections for complete examples:</p>
 <ul>
-<li><a href="#inserting-vectors">Inserting Vectors</a> - Examples of inserting data with <code>embd</code> type</li>
+<li><a href="#inserting-vectors">Inserting Vectors</a> - Examples of inserting data with <code>s3vec</code> type</li>
 <li><a href="#querying-vectors">Querying Vectors</a> - Basic queries and vector similarity search</li>
 <li><a href="#vector-similarity-search-with-filtering">Vector Similarity Search with Filtering</a> - Advanced search with metadata filtering</li>
 <li><a href="#advanced-example-semantic-search">Advanced Example: Semantic Search</a> - Complete semantic search implementation</li>
@@ -2578,8 +2606,8 @@
 <p><strong>Operations:</strong></p>
 <ul>
 <li><strong>Vector similarity search</strong>: Use the <code>&lt;==&gt;</code> operator for approximate nearest neighbor search</li>
-<li><strong>Distance calculation</strong>: Use <code>embd_distance()</code> function to get similarity scores</li>
-<li><strong>Type casting</strong>: Convert JSON arrays to <code>embd</code> type using <code>::embd</code> cast</li>
+<li><strong>Distance calculation</strong>: Use <code>s3vec_distance()</code> function to get similarity scores</li>
+<li><strong>Type casting</strong>: Convert JSON arrays to <code>s3vec</code> type using <code>::s3vec</code> cast</li>
 </ul>
 <p><strong>Constraints:</strong></p>
 <ul>
@@ -2588,14 +2616,14 @@
 <li>Cannot be null when used as vector data in S3 Vectors tables</li>
 </ul>
 <h3 id="functions">Functions</h3>
-<h4 id="embd_distanceembd">embd_distance(embd)</h4>
+<h4 id="s3vec_distances3vec">s3vec_distance(s3vec)</h4>
 <p>Returns the distance score from the most recent vector similarity search operation.</p>
 <p><strong>Syntax:</strong></p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="n">embd_distance</span><span class="p">(</span><span class="n">vector_data</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="nb">real</span>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="n">s3vec_distance</span><span class="p">(</span><span class="n">vector_data</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="nb">real</span>
 </code></pre></div></td></tr></table></div>
 <p><strong>Parameters:</strong></p>
 <ul>
-<li><code>vector_data</code> - An <code>embd</code> type column containing vector data</li>
+<li><code>vector_data</code> - An <code>s3vec</code> type column containing vector data</li>
 </ul>
 <p><strong>Returns:</strong></p>
 <ul>
@@ -2608,9 +2636,9 @@
 <span class="normal">4</span>
 <span class="normal">5</span>
 <span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Get similarity search results with distance scores</span>
-<span class="k">select</span><span class="w"> </span><span class="n">embd_distance</span><span class="p">(</span><span class="k">data</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">distance</span><span class="p">,</span><span class="w"> </span><span class="k">key</span><span class="p">,</span><span class="w"> </span><span class="n">metadata</span>
+<span class="k">select</span><span class="w"> </span><span class="n">s3vec_distance</span><span class="p">(</span><span class="k">data</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">distance</span><span class="p">,</span><span class="w"> </span><span class="k">key</span><span class="p">,</span><span class="w"> </span><span class="n">metadata</span>
 <span class="k">from</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span>
-<span class="k">where</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="s1">&#39;[0.1, 0.2, 0.3, 0.4, 0.5]&#39;</span><span class="p">::</span><span class="n">embd</span>
+<span class="k">where</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="s1">&#39;[0.1, 0.2, 0.3, 0.4, 0.5]&#39;</span><span class="p">::</span><span class="n">s3vec</span>
 <span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="mi">1</span>
 <span class="k">limit</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
@@ -2713,9 +2741,9 @@
 <span class="normal">2</span>
 <span class="normal">3</span>
 <span class="normal">4</span>
-<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="n">embd_distance</span><span class="p">(</span><span class="k">data</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">distance</span><span class="p">,</span><span class="w"> </span><span class="o">*</span>
+<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="n">s3vec_distance</span><span class="p">(</span><span class="k">data</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">distance</span><span class="p">,</span><span class="w"> </span><span class="o">*</span>
 <span class="k">from</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span>
-<span class="k">where</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="s1">&#39;[0.1, 0.2, 0.3, ...]&#39;</span><span class="p">::</span><span class="n">embd</span>
+<span class="k">where</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="s1">&#39;[0.1, 0.2, 0.3, ...]&#39;</span><span class="p">::</span><span class="n">s3vec</span>
 <span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="mi">1</span>
 <span class="k">limit</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div></p>
@@ -2727,9 +2755,9 @@
 <span class="normal">3</span>
 <span class="normal">4</span>
 <span class="normal">5</span>
-<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="n">embd_distance</span><span class="p">(</span><span class="k">data</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">distance</span><span class="p">,</span><span class="w"> </span><span class="o">*</span>
+<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="n">s3vec_distance</span><span class="p">(</span><span class="k">data</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">distance</span><span class="p">,</span><span class="w"> </span><span class="o">*</span>
 <span class="k">from</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span>
-<span class="k">where</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="s1">&#39;[0.1, 0.2, 0.3, ...]&#39;</span><span class="p">::</span><span class="n">embd</span>
+<span class="k">where</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="s1">&#39;[0.1, 0.2, 0.3, ...]&#39;</span><span class="p">::</span><span class="n">s3vec</span>
 <span class="k">and</span><span class="w"> </span><span class="n">metadata</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="s1">&#39;{&quot;category&quot;: &quot;product&quot;}&#39;</span><span class="p">::</span><span class="n">jsonb</span>
 <span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="mi">1</span>
 <span class="k">limit</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span>
@@ -2754,7 +2782,7 @@
 <td>String (for vector key)</td>
 </tr>
 <tr>
-<td>embd</td>
+<td>s3vec</td>
 <td>Float32 vector data</td>
 </tr>
 <tr>
@@ -2805,20 +2833,14 @@
 <span class="normal">13</span>
 <span class="normal">14</span>
 <span class="normal">15</span>
-<span class="normal">16</span>
-<span class="normal">17</span>
-<span class="normal">18</span>
-<span class="normal">19</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Import all indexes from a vector bucket</span>
-<span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">s3_vectors</span>
-<span class="w">  </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">s3_vectors_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">s3_vectors</span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">bucket_name</span><span class="w"> </span><span class="s1">&#39;my-vector-bucket&#39;</span>
-<span class="w">  </span><span class="p">);</span>
+<span class="normal">16</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Import all indexes from a vector bucket</span>
+<span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="ss">&quot;my-vector-bucket&quot;</span>
+<span class="w">  </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">s3_vectors_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">;</span>
 
 <span class="c1">-- or, create the foreign table manually</span>
 <span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span><span class="w"> </span><span class="p">(</span>
 <span class="w">  </span><span class="k">key</span><span class="w"> </span><span class="nb">text</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">null</span><span class="p">,</span>
-<span class="w">  </span><span class="k">data</span><span class="w"> </span><span class="n">embd</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">null</span><span class="p">,</span>
+<span class="w">  </span><span class="k">data</span><span class="w"> </span><span class="n">s3vec</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">null</span><span class="p">,</span>
 <span class="w">  </span><span class="n">metadata</span><span class="w"> </span><span class="n">jsonb</span>
 <span class="p">)</span>
 <span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">s3_vectors_server</span>
@@ -2847,9 +2869,9 @@
 <span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="k">key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;product_001&#39;</span><span class="p">;</span>
 
 <span class="c1">-- Vector similarity search (top 5 similar vectors)</span>
-<span class="k">select</span><span class="w"> </span><span class="n">embd_distance</span><span class="p">(</span><span class="k">data</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">distance</span><span class="p">,</span><span class="w"> </span><span class="k">key</span><span class="p">,</span><span class="w"> </span><span class="n">metadata</span>
+<span class="k">select</span><span class="w"> </span><span class="n">s3vec_distance</span><span class="p">(</span><span class="k">data</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">distance</span><span class="p">,</span><span class="w"> </span><span class="k">key</span><span class="p">,</span><span class="w"> </span><span class="n">metadata</span>
 <span class="k">from</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span>
-<span class="k">where</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="s1">&#39;[0.1, 0.2, 0.3, 0.4, 0.5]&#39;</span><span class="p">::</span><span class="n">embd</span>
+<span class="k">where</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="s1">&#39;[0.1, 0.2, 0.3, 0.4, 0.5]&#39;</span><span class="p">::</span><span class="n">s3vec</span>
 <span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="mi">1</span>
 <span class="k">limit</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
@@ -2870,15 +2892,15 @@
 <span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span><span class="w"> </span><span class="p">(</span><span class="k">key</span><span class="p">,</span><span class="w"> </span><span class="k">data</span><span class="p">,</span><span class="w"> </span><span class="n">metadata</span><span class="p">)</span>
 <span class="k">values</span><span class="w"> </span><span class="p">(</span>
 <span class="w">  </span><span class="s1">&#39;product_001&#39;</span><span class="p">,</span>
-<span class="w">  </span><span class="s1">&#39;[0.1, 0.2, 0.3, 0.4, 0.5]&#39;</span><span class="p">::</span><span class="n">embd</span><span class="p">,</span>
+<span class="w">  </span><span class="s1">&#39;[0.1, 0.2, 0.3, 0.4, 0.5]&#39;</span><span class="p">::</span><span class="n">s3vec</span><span class="p">,</span>
 <span class="w">  </span><span class="s1">&#39;{&quot;category&quot;: &quot;electronics&quot;, &quot;price&quot;: 299.99}&#39;</span><span class="p">::</span><span class="n">jsonb</span>
 <span class="p">);</span>
 
 <span class="c1">-- Insert multiple vectors</span>
 <span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span><span class="w"> </span><span class="p">(</span><span class="k">key</span><span class="p">,</span><span class="w"> </span><span class="k">data</span><span class="p">,</span><span class="w"> </span><span class="n">metadata</span><span class="p">)</span>
 <span class="k">values</span>
-<span class="w">  </span><span class="p">(</span><span class="s1">&#39;product_002&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;[0.2, 0.3, 0.4, 0.5, 0.6]&#39;</span><span class="p">::</span><span class="n">embd</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;{&quot;category&quot;: &quot;books&quot;}&#39;</span><span class="p">::</span><span class="n">jsonb</span><span class="p">),</span>
-<span class="w">  </span><span class="p">(</span><span class="s1">&#39;product_003&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;[0.3, 0.4, 0.5, 0.6, 0.7]&#39;</span><span class="p">::</span><span class="n">embd</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;{&quot;category&quot;: &quot;clothing&quot;}&#39;</span><span class="p">::</span><span class="n">jsonb</span><span class="p">);</span>
+<span class="w">  </span><span class="p">(</span><span class="s1">&#39;product_002&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;[0.2, 0.3, 0.4, 0.5, 0.6]&#39;</span><span class="p">::</span><span class="n">s3vec</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;{&quot;category&quot;: &quot;books&quot;}&#39;</span><span class="p">::</span><span class="n">jsonb</span><span class="p">),</span>
+<span class="w">  </span><span class="p">(</span><span class="s1">&#39;product_003&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;[0.3, 0.4, 0.5, 0.6, 0.7]&#39;</span><span class="p">::</span><span class="n">s3vec</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;{&quot;category&quot;: &quot;clothing&quot;}&#39;</span><span class="p">::</span><span class="n">jsonb</span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 <h3 id="deleting-vectors">Deleting Vectors</h3>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
@@ -2899,9 +2921,9 @@
 <span class="normal">5</span>
 <span class="normal">6</span>
 <span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Find similar vectors with metadata filtering</span>
-<span class="k">select</span><span class="w"> </span><span class="n">embd_distance</span><span class="p">(</span><span class="k">data</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">distance</span><span class="p">,</span><span class="w"> </span><span class="k">key</span><span class="p">,</span><span class="w"> </span><span class="n">metadata</span>
+<span class="k">select</span><span class="w"> </span><span class="n">s3vec_distance</span><span class="p">(</span><span class="k">data</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">distance</span><span class="p">,</span><span class="w"> </span><span class="k">key</span><span class="p">,</span><span class="w"> </span><span class="n">metadata</span>
 <span class="k">from</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span>
-<span class="k">where</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="s1">&#39;[0.1, 0.2, 0.3, 0.4, 0.5]&#39;</span><span class="p">::</span><span class="n">embd</span>
+<span class="k">where</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="s1">&#39;[0.1, 0.2, 0.3, 0.4, 0.5]&#39;</span><span class="p">::</span><span class="n">s3vec</span>
 <span class="k">and</span><span class="w"> </span><span class="n">metadata</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="s1">&#39;{&quot;category&quot;: &quot;electronics&quot;}&#39;</span><span class="p">::</span><span class="n">jsonb</span>
 <span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="mi">1</span>
 <span class="k">limit</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span>
@@ -2926,15 +2948,15 @@
 <span class="normal">17</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Create a function to convert text to embeddings (pseudo-code)</span>
 <span class="c1">-- This would typically use an external embedding service</span>
 <span class="k">create</span><span class="w"> </span><span class="k">or</span><span class="w"> </span><span class="k">replace</span><span class="w"> </span><span class="k">function</span><span class="w"> </span><span class="n">text_to_embedding</span><span class="p">(</span><span class="n">input_text</span><span class="w"> </span><span class="nb">text</span><span class="p">)</span>
-<span class="k">returns</span><span class="w"> </span><span class="n">embd</span>
+<span class="k">returns</span><span class="w"> </span><span class="n">s3vec</span>
 <span class="k">language</span><span class="w"> </span><span class="k">sql</span>
 <span class="k">as</span><span class="w"> </span><span class="err">$$</span>
 <span class="w">  </span><span class="c1">-- This is a placeholder - you would implement actual text embedding logic</span>
-<span class="w">  </span><span class="k">select</span><span class="w"> </span><span class="s1">&#39;[0.1, 0.2, 0.3, 0.4, 0.5]&#39;</span><span class="p">::</span><span class="n">embd</span><span class="p">;</span>
+<span class="w">  </span><span class="k">select</span><span class="w"> </span><span class="s1">&#39;[0.1, 0.2, 0.3, 0.4, 0.5]&#39;</span><span class="p">::</span><span class="n">s3vec</span><span class="p">;</span>
 <span class="err">$$</span><span class="p">;</span>
 
 <span class="c1">-- Semantic search example</span>
-<span class="k">select</span><span class="w"> </span><span class="n">embd_distance</span><span class="p">(</span><span class="k">data</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">distance</span><span class="p">,</span><span class="w"> </span><span class="k">key</span><span class="p">,</span><span class="w"> </span><span class="n">metadata</span>
+<span class="k">select</span><span class="w"> </span><span class="n">s3vec_distance</span><span class="p">(</span><span class="k">data</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">distance</span><span class="p">,</span><span class="w"> </span><span class="k">key</span><span class="p">,</span><span class="w"> </span><span class="n">metadata</span>
 <span class="k">from</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span>
 <span class="k">where</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="n">text_to_embedding</span><span class="p">(</span><span class="s1">&#39;Find similar products&#39;</span><span class="p">)</span>
 <span class="k">and</span><span class="w"> </span><span class="n">metadata</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="s1">&#39;{&quot;status&quot;: &quot;active&quot;}&#39;</span><span class="p">::</span><span class="n">jsonb</span>

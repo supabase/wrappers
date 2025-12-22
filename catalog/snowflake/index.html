@@ -2170,6 +2170,12 @@
 </thead>
 <tbody>
 <tr>
+<td>0.2.1</td>
+<td><code>https://github.com/supabase/wrappers/releases/download/wasm_snowflake_fdw_v0.2.1/snowflake_fdw.wasm</code></td>
+<td><code>tbd</code></td>
+<td>&gt;=0.5.0</td>
+</tr>
+<tr>
 <td>0.2.0</td>
 <td><code>https://github.com/supabase/wrappers/releases/download/wasm_snowflake_fdw_v0.2.0/snowflake_fdw.wasm</code></td>
 <td><code>921b18a1e9c20c4ef5a09af17b5d76fd6ebe56d41bcfa565b74a530420532437</code></td>
@@ -2234,7 +2240,8 @@
 <span class="normal"> 9</span>
 <span class="normal">10</span>
 <span class="normal">11</span>
-<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">snowflake_server</span>
+<span class="normal">12</span>
+<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">snowflake_server</span>
 <span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_snowflake_fdw_v0.1.1/snowflake_fdw.wasm&#39;</span><span class="p">,</span>
@@ -2244,7 +2251,8 @@
 <span class="w">    </span><span class="n">account_identifier</span><span class="w"> </span><span class="s1">&#39;MYORGANIZATION-MYACCOUNT&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="k">user</span><span class="w"> </span><span class="s1">&#39;MYUSER&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">public_key_fingerprint</span><span class="w"> </span><span class="s1">&#39;SizgPofeFX0jwC8IhbOfGFyOggFgo8oTOS1uPLZhzUQ=&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">private_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;key_ID&gt;&#39;</span><span class="w"> </span><span class="c1">-- The Key ID from above.</span>
+<span class="w">    </span><span class="n">private_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;key_ID&gt;&#39;</span><span class="p">,</span><span class="w"> </span><span class="c1">-- The Key ID from above.</span>
+<span class="w">    </span><span class="n">timeout_secs</span><span class="w"> </span><span class="s1">&#39;60&#39;</span><span class="w">  </span><span class="c1">-- Timeout in seconds for Snowflake statement execution, default is 60, value range is [0, 6048]</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 </div>
@@ -2260,7 +2268,8 @@
 <span class="normal"> 9</span>
 <span class="normal">10</span>
 <span class="normal">11</span>
-<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">snowflake_server</span>
+<span class="normal">12</span>
+<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">snowflake_server</span>
 <span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_snowflake_fdw_v0.1.1/snowflake_fdw.wasm&#39;</span><span class="p">,</span>
@@ -2270,7 +2279,8 @@
 <span class="w">    </span><span class="n">account_identifier</span><span class="w"> </span><span class="s1">&#39;MYORGANIZATION-MYACCOUNT&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="k">user</span><span class="w"> </span><span class="s1">&#39;MYUSER&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">public_key_fingerprint</span><span class="w"> </span><span class="s1">&#39;SizgPofeFX0jwC8IhbOfGFyOggFgo8oTOS1uPLZhzUQ=&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">private_key</span><span class="w"> </span><span class="n">E</span><span class="s1">&#39;-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----&#39;</span>
+<span class="w">    </span><span class="n">private_key</span><span class="w"> </span><span class="n">E</span><span class="s1">&#39;-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">timeout_secs</span><span class="w"> </span><span class="s1">&#39;60&#39;</span><span class="w">  </span><span class="c1">-- Timeout in seconds for Snowflake statement execution, default is 60, value range is [0, 6048]</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 </div>

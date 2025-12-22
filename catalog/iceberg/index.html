@@ -892,11 +892,35 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#limitations-for-inserts" class="md-nav__link">
+  <a href="#automatic-table-creation" class="md-nav__link">
     <span class="md-ellipsis">
-      Limitations for Inserts
+      Automatic Table Creation
     </span>
   </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#limitations-for-insertion" class="md-nav__link">
+    <span class="md-ellipsis">
+      Limitations for Insertion
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Limitations for Insertion">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#automatic-table-creation-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Automatic Table Creation Limitations
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
         
@@ -2233,11 +2257,35 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#limitations-for-inserts" class="md-nav__link">
+  <a href="#automatic-table-creation" class="md-nav__link">
     <span class="md-ellipsis">
-      Limitations for Inserts
+      Automatic Table Creation
     </span>
   </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#limitations-for-insertion" class="md-nav__link">
+    <span class="md-ellipsis">
+      Limitations for Insertion
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Limitations for Insertion">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#automatic-table-creation-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Automatic Table Creation Limitations
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
         
@@ -2555,7 +2603,7 @@
 </div>
 <h4 id="additional-server-options">Additional Server Options</h4>
 <ul>
-<li><code>batch_size</code> - Controls the batch size of records read from Iceberg (default: 4096)</li>
+<li><code>batch_size</code> - Controls the batch size of records read from Iceberg (value range: 1 - 65536, default: 8192)</li>
 </ul>
 <h3 id="create-a-schema">Create a schema</h3>
 <p>We recommend creating a schema to hold all the foreign tables:</p>
@@ -2566,6 +2614,8 @@
 <ul>
 <li><code>table</code> - Fully qualified source table name with all namespaces in Iceberg, required.</li>
 <li><code>rowid_column</code> - The column to use as the row identifier for INSERT operations, required for data insertion.</li>
+<li><code>create_table_if_not_exists</code> - Boolean option (true/false) to automatically create the Iceberg table if it doesn't exist when inserting data, optional (default: false).</li>
+<li><code>partition_buffer_size</code> - Controls the buffer size for partitioned data during insertion operations, determining how many rows are batched together before being written to Iceberg (value range: 1 - 65536, default: 8192).</li>
 </ul>
 <h2 id="entities">Entities</h2>
 <p>We can use SQL <a href="https://www.postgresql.org/docs/current/sql-importforeignschema.html">import foreign schema</a> to import foreign table definitions from Iceberg.</p>
@@ -2825,11 +2875,52 @@
 <li><strong>Partition Awareness</strong>: When possible, insert data in partition order to optimize file organization</li>
 <li><strong>Transaction Size</strong>: Consider breaking very large inserts into smaller transactions</li>
 </ul>
-<h3 id="limitations-for-inserts">Limitations for Inserts</h3>
+<h3 id="automatic-table-creation">Automatic Table Creation</h3>
+<p>When using the <code>create_table_if_not_exists</code> option, the Iceberg FDW will automatically create the target table in Iceberg if it doesn't exist when inserting data. This is useful for ad-hoc data insertion scenarios.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">iceberg</span><span class="p">.</span><span class="n">new_table</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
+<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span>
+<span class="p">)</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">iceberg_server</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">table</span><span class="w"> </span><span class="s1">&#39;docs_example.new_table&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">rowid_column</span><span class="w"> </span><span class="s1">&#39;id&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">create_table_if_not_exists</span><span class="w"> </span><span class="s1">&#39;true&#39;</span>
+<span class="w">  </span><span class="p">);</span>
+
+<span class="c1">-- when data is inserted, if the &#39;docs_example.new_table&#39; doesn&#39;t exist in Iceberg,</span>
+<span class="c1">-- it will be automatically created with a schema matching the foreign table definition</span>
+<span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">iceberg</span><span class="p">.</span><span class="n">new_table</span><span class="w"> </span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">created_at</span><span class="p">)</span>
+<span class="k">values</span><span class="w"> </span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;New Record&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">now</span><span class="p">());</span>
+</code></pre></div></td></tr></table></div>
+<h3 id="limitations-for-insertion">Limitations for Insertion</h3>
 <ul>
 <li>Schema evolution during insert is not supported</li>
 <li>Only append operations are supported (no upserts)</li>
 <li>Complex data types (nested structs, arrays, maps) have limited support</li>
+</ul>
+<h4 id="automatic-table-creation-limitations">Automatic Table Creation Limitations</h4>
+<p>When using the <code>create_table_if_not_exists</code> option, please be aware of the following additional limitations:</p>
+<ul>
+<li><strong>Type Support</strong>: Only primitive types are supported (such as boolean, integer, text, etc.). Complex types like arrays, structs, and maps are not supported for automatic table creation.</li>
+<li><strong>Partitioning</strong>: The automatically created table will use default partitioning settings. You cannot specify custom partition or sort specifications during automatic creation.</li>
+<li><strong>Identifier Fields</strong>: The automatically created table will not have any identifier fields specified. If you need identifier fields, you must create the Iceberg table manually beforehand.</li>
 </ul>
 <h2 id="limitations">Limitations</h2>
 <p>This section describes important limitations and considerations when using this FDW:</p>
