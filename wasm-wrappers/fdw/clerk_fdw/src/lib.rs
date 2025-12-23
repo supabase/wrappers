@@ -410,20 +410,75 @@ impl Guest for ClerkFdw {
         Ok(())
     }
 
-    fn begin_modify(_ctx: &Context) -> FdwResult {
-        Err("modify on foreign table is not supported".to_owned())
-    }
-
-    fn insert(_ctx: &Context, _row: &Row) -> FdwResult {
+    fn begin_modify(ctx: &Context) -> FdwResult {
+        let this = Self::this_mut();
+        let opts = ctx.get_options(&OptionsType::Table);
+        this.object = opts.require("object")?;
         Ok(())
     }
 
-    fn update(_ctx: &Context, _rowid: Cell, _row: &Row) -> FdwResult {
-        Ok(())
+    fn insert(_ctx: &Context, row: &Row) -> FdwResult {
+        let this = Self::this_mut();
+        // we assume 'attrs' is defined as the last column
+        if let Some(Some(Cell::Json(body))) = row.cells().last() {
+            let url = format!("{}/{}", this.base_url, this.object);
+            let headers = this.headers.clone();
+            let req = http::Request {
+                method: http::Method::Post,
+                url,
+                headers,
+                body: body.to_owned(),
+            };
+            let resp = http::post(&req)?;
+            http::error_for_status(&resp).map_err(|err| format!("{}: {}", err, resp.body))?;
+            stats::inc_stats(FDW_NAME, stats::Metric::RowsOut, 1);
+            return Ok(());
+        }
+        Err("cannot find 'attrs' JSONB column to insert".to_owned())
     }
 
-    fn delete(_ctx: &Context, _rowid: Cell) -> FdwResult {
-        Ok(())
+    fn update(_ctx: &Context, rowid: Cell, row: &Row) -> FdwResult {
+        let this = Self::this_mut();
+        if let Cell::String(rowid) = rowid {
+            // we assume 'attrs' is defined as the last column
+            if let Some(Some(Cell::Json(body))) = row.cells().last() {
+                let url = format!("{}/{}/{}", this.base_url, this.object, rowid);
+                let headers = this.headers.clone();
+                let req = http::Request {
+                    method: http::Method::Patch,
+                    url,
+                    headers,
+                    body: body.to_owned(),
+                };
+                let resp = http::patch(&req)?;
+                http::error_for_status(&resp).map_err(|err| format!("{}: {}", err, resp.body))?;
+                stats::inc_stats(FDW_NAME, stats::Metric::RowsOut, 1);
+                Ok(())
+            } else {
+                Err("cannot find 'attrs' JSONB column to update".to_owned())
+            }
+        } else {
+            Err("no rowid column specified for update".to_owned())
+        }
+    }
+
+    fn delete(_ctx: &Context, rowid: Cell) -> FdwResult {
+        let this = Self::this_mut();
+        if let Cell::String(rowid) = rowid {
+            let url = format!("{}/{}/{}", this.base_url, this.object, rowid);
+            let headers = this.headers.clone();
+            let req = http::Request {
+                method: http::Method::Delete,
+                url,
+                headers,
+                body: String::default(),
+            };
+            let resp = http::delete(&req)?;
+            http::error_for_status(&resp).map_err(|err| format!("{}: {}", err, resp.body))?;
+            Ok(())
+        } else {
+            Err("no rowid column specified for delete".to_owned())
+        }
     }
 
     fn end_modify(_ctx: &Context) -> FdwResult {
@@ -447,7 +502,8 @@ impl Guest for ClerkFdw {
                     attrs jsonb
                 )
                 server {} options (
-                    object 'allowlist_identifiers'
+                    object 'allowlist_identifiers',
+                    rowid_column 'id'
                 )"#,
                 stmt.server_name,
             ),
@@ -462,7 +518,8 @@ impl Guest for ClerkFdw {
                     attrs jsonb
                 )
                 server {} options (
-                    object 'blocklist_identifiers'
+                    object 'blocklist_identifiers',
+                    rowid_column 'id'
                 )"#,
                 stmt.server_name,
             ),
@@ -476,7 +533,8 @@ impl Guest for ClerkFdw {
                     attrs jsonb
                 )
                 server {} options (
-                    object 'domains'
+                    object 'domains',
+                    rowid_column 'id'
                 )"#,
                 stmt.server_name,
             ),
@@ -493,7 +551,8 @@ impl Guest for ClerkFdw {
                     attrs jsonb
                 )
                 server {} options (
-                    object 'invitations'
+                    object 'invitations',
+                    rowid_column 'id'
                 )"#,
                 stmt.server_name,
             ),
@@ -510,7 +569,8 @@ impl Guest for ClerkFdw {
                     attrs jsonb
                 )
                 server {} options (
-                    object 'jwt_templates'
+                    object 'jwt_templates',
+                    rowid_column 'id'
                 )"#,
                 stmt.server_name,
             ),
@@ -527,7 +587,8 @@ impl Guest for ClerkFdw {
                     attrs jsonb
                 )
                 server {} options (
-                    object 'oauth_applications'
+                    object 'oauth_applications',
+                    rowid_column 'id'
                 )"#,
                 stmt.server_name,
             ),
@@ -541,7 +602,8 @@ impl Guest for ClerkFdw {
                     attrs jsonb
                 )
                 server {} options (
-                    object 'organizations'
+                    object 'organizations',
+                    rowid_column 'id'
                 )"#,
                 stmt.server_name,
             ),
@@ -585,7 +647,8 @@ impl Guest for ClerkFdw {
                     attrs jsonb
                 )
                 server {} options (
-                    object 'redirect_urls'
+                    object 'redirect_urls',
+                    rowid_column 'id'
                 )"#,
                 stmt.server_name,
             ),
@@ -602,7 +665,8 @@ impl Guest for ClerkFdw {
                     attrs jsonb
                 )
                 server {} options (
-                    object 'saml_connections'
+                    object 'saml_connections',
+                    rowid_column 'id'
                 )"#,
                 stmt.server_name,
             ),
@@ -618,7 +682,8 @@ impl Guest for ClerkFdw {
                     attrs jsonb
                 )
                 server {} options (
-                    object 'users'
+                    object 'users',
+                    rowid_column 'id'
                 )"#,
                 stmt.server_name,
             ),

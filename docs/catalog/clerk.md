@@ -161,7 +161,7 @@ Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/Allow-lis
 
 | Object                | Select | Insert | Update | Delete | Truncate |
 | --------------------- | :----: | :----: | :----: | :----: | :------: |
-| allowlist_identifiers |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| allowlist_identifiers |   ✅   |   ✅   |   ❌   |   ✅   |    ❌    |
 
 #### Usage
 
@@ -178,7 +178,8 @@ create foreign table clerk.allowlist_identifiers (
 )
   server clerk_server
   options (
-    object 'allowlist_identifiers'
+    object 'allowlist_identifiers',
+    rowid_column 'id'
   );
 ```
 
@@ -196,7 +197,7 @@ Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/Allow-lis
 
 | Object                | Select | Insert | Update | Delete | Truncate |
 | --------------------- | :----: | :----: | :----: | :----: | :------: |
-| blocklist_identifiers |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| blocklist_identifiers |   ✅   |   ✅   |   ❌   |   ✅   |    ❌    |
 
 #### Usage
 
@@ -212,7 +213,8 @@ create foreign table clerk.blocklist_identifiers (
 )
   server clerk_server
   options (
-    object 'blocklist_identifiers'
+    object 'blocklist_identifiers',
+    rowid_column 'id'
   );
 ```
 
@@ -230,7 +232,7 @@ Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/Domains#o
 
 | Object  | Select | Insert | Update | Delete | Truncate |
 | ------- | :----: | :----: | :----: | :----: | :------: |
-| domains |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| domains |   ✅   |   ❌   |   ✅   |   ✅   |    ❌    |
 
 #### Usage
 
@@ -245,7 +247,8 @@ create foreign table clerk.domains (
 )
   server clerk_server
   options (
-    object 'domains'
+    object 'domains',
+    rowid_column 'id'
   );
 ```
 
@@ -263,7 +266,7 @@ Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/Invitatio
 
 | Object      | Select | Insert | Update | Delete | Truncate |
 | ----------- | :----: | :----: | :----: | :----: | :------: |
-| invitations |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| invitations |   ✅   |   ✅   |   ❌   |   ❌   |    ❌    |
 
 #### Usage
 
@@ -281,7 +284,8 @@ create foreign table clerk.invitations (
 )
   server clerk_server
   options (
-    object 'invitations'
+    object 'invitations',
+    rowid_column 'id'
   );
 ```
 
@@ -299,7 +303,7 @@ Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/JWT-Templ
 
 | Object        | Select | Insert | Update | Delete | Truncate |
 | ------------- | :----: | :----: | :----: | :----: | :------: |
-| jwt_templates |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| jwt_templates |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
 
 #### Usage
 
@@ -317,7 +321,8 @@ create foreign table clerk.jwt_templates (
 )
   server clerk_server
   options (
-    object 'jwt_templates'
+    object 'jwt_templates',
+    rowid_column 'id'
   );
 ```
 
@@ -335,7 +340,7 @@ Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/OAuth-App
 
 | Object             | Select | Insert | Update | Delete | Truncate |
 | ------------------ | :----: | :----: | :----: | :----: | :------: |
-| oauth_applications |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| oauth_applications |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
 
 #### Usage
 
@@ -353,7 +358,8 @@ create foreign table clerk.oauth_applications (
 )
   server clerk_server
   options (
-    object 'oauth_applications'
+    object 'oauth_applications',
+    rowid_column 'id'
   );
 ```
 
@@ -371,7 +377,7 @@ Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/Organizat
 
 | Object        | Select | Insert | Update | Delete | Truncate |
 | ------------- | :----: | :----: | :----: | :----: | :------: |
-| organizations |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| organizations |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
 
 #### Usage
 
@@ -386,7 +392,8 @@ create foreign table clerk.organizations (
 )
   server clerk_server
   options (
-    object 'organizations'
+    object 'organizations',
+    rowid_column 'id'
   );
 ```
 
@@ -473,7 +480,7 @@ Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/Redirect-
 
 | Object        | Select | Insert | Update | Delete | Truncate |
 | ------------- | :----: | :----: | :----: | :----: | :------: |
-| redirect_urls |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| redirect_urls |   ✅   |   ✅   |   ❌   |   ✅   |    ❌    |
 
 #### Usage
 
@@ -487,7 +494,8 @@ create foreign table clerk.redirect_urls (
 )
   server clerk_server
   options (
-    object 'redirect_urls'
+    object 'redirect_urls',
+    rowid_column 'id'
   );
 ```
 
@@ -505,7 +513,7 @@ Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/SAML-Conn
 
 | Object           | Select | Insert | Update | Delete | Truncate |
 | ---------------- | :----: | :----: | :----: | :----: | :------: |
-| saml_connections |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| saml_connections |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
 
 #### Usage
 
@@ -523,7 +531,8 @@ create foreign table clerk.saml_connections (
 )
   server clerk_server
   options (
-    object 'saml_connections'
+    object 'saml_connections',
+    rowid_column 'id'
   );
 ```
 
@@ -541,7 +550,7 @@ Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/Users#ope
 
 | Object | Select | Insert | Update | Delete | Truncate |
 | ------ | :----: | :----: | :----: | :----: | :------: |
-| users  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| users  |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
 
 #### Usage
 
@@ -558,7 +567,8 @@ create foreign table clerk.users (
 )
   server clerk_server
   options (
-    object 'users'
+    object 'users',
+    rowid_column 'id'
   );
 ```
 
@@ -850,7 +860,8 @@ create foreign table clerk.users (
 )
   server clerk_server
   options (
-    object 'users'
+    object 'users',
+    rowid_column 'id'
   );
 
 -- query all users
@@ -868,6 +879,30 @@ select
   e->>'email_address' as email
 from clerk.users u
   cross join json_array_elements((attrs->'email_addresses')::json) e;
+```
+
+### Data Modify Examples
+
+Some tables support INSERT, UPDATE, and DELETE operations. Use the `attrs` JSONB column to provide the request body:
+
+```sql
+-- Create a new user
+INSERT INTO clerk.users (attrs) VALUES ('{"email_address": "user@example.com", "password": "secure123"}');
+
+-- Update a user (requires rowid_column 'id')
+UPDATE clerk.users SET attrs = '{"first_name": "John", "last_name": "Doe"}' WHERE id = 'user_xxx';
+
+-- Delete a user (requires rowid_column 'id')
+DELETE FROM clerk.users WHERE id = 'user_xxx';
+
+-- Create a new organization
+INSERT INTO clerk.organizations (attrs) VALUES ('{"name": "My Organization", "slug": "my-org"}');
+
+-- Update an organization
+UPDATE clerk.organizations SET attrs = '{"name": "Updated Name"}' WHERE id = 'org_xxx';
+
+-- Delete an organization
+DELETE FROM clerk.organizations WHERE id = 'org_xxx';
 ```
 
 ### Billing examples
