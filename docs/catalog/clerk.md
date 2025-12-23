@@ -329,6 +329,7 @@ create foreign table clerk.jwt_templates (
 #### Notes
 
 - The `attrs` column contains additional attributes in JSON format
+- Single-item retrieval is supported via `WHERE id = 'xxx'` clause, which fetches from `GET /jwt_templates/{template_id}` endpoint
 
 ### OAuth Applications
 
@@ -366,6 +367,7 @@ create foreign table clerk.oauth_applications (
 #### Notes
 
 - The `attrs` column contains additional attributes in JSON format
+- Single-item retrieval is supported via `WHERE id = 'xxx'` clause, which fetches from `GET /oauth_applications/{oauth_application_id}` endpoint
 
 ### Organizations
 
@@ -400,6 +402,7 @@ create foreign table clerk.organizations (
 #### Notes
 
 - The `attrs` column contains additional attributes in JSON format
+- Single-item retrieval is supported via `WHERE id = 'xxx'` clause, which fetches from `GET /organizations/{organization_id}` endpoint
 
 ### Organization Invitations
 
@@ -469,6 +472,7 @@ create foreign table clerk.organization_memberships (
 #### Notes
 
 - The `attrs` column contains additional attributes in JSON format
+- Single-item retrieval is supported via `WHERE id = 'xxx'` clause, which fetches from `GET /oauth_applications/{oauth_application_id}` endpoint
 
 ### Redirect URLs
 
@@ -502,6 +506,7 @@ create foreign table clerk.redirect_urls (
 #### Notes
 
 - The `attrs` column contains additional attributes in JSON format
+- Single-item retrieval is supported via `WHERE id = 'xxx'` clause, which fetches from `GET /redirect_urls/{id}` endpoint
 
 ### SAML Connections
 
@@ -539,6 +544,7 @@ create foreign table clerk.saml_connections (
 #### Notes
 
 - The `attrs` column contains additional attributes in JSON format
+- Single-item retrieval is supported via `WHERE id = 'xxx'` clause, which fetches from `GET /saml_connections/{saml_connection_id}` endpoint
 
 ### Users
 
@@ -575,6 +581,7 @@ create foreign table clerk.users (
 #### Notes
 
 - The `attrs` column contains additional attributes in JSON format
+- Single-item retrieval is supported via `WHERE id = 'xxx'` clause, which fetches from `GET /users/{user_id}` endpoint
 
 ### User Billing Subscriptions
 
@@ -864,8 +871,11 @@ create foreign table clerk.users (
     rowid_column 'id'
   );
 
--- query all users
+-- query all users (fetches from GET /users)
 select * from clerk.users;
+
+-- retrieve a specific user by ID (fetches from GET /users/{user_id})
+select * from clerk.users where id = 'user_xxx';
 ```
 
 `attrs` is a special column which stores all the object attributes in JSON format, you can extract any attributes needed from it. See more examples below.
@@ -928,4 +938,22 @@ SELECT * FROM clerk.user_billing_subscriptions WHERE user_id = 'user_xxx';
 
 -- Query subscription for a specific organization (requires WHERE clause)
 SELECT * FROM clerk.organization_billing_subscriptions WHERE organization_id = 'org_xxx';
+
+-- Retrieve a single user by ID (fetches from GET /users/{user_id})
+SELECT * FROM clerk.users WHERE id = 'user_xxx';
+
+-- Retrieve a single organization by ID (fetches from GET /organizations/{organization_id})
+SELECT * FROM clerk.organizations WHERE id = 'org_xxx';
+
+-- Retrieve a single JWT template by ID (fetches from GET /jwt_templates/{template_id})
+SELECT * FROM clerk.jwt_templates WHERE id = 'tmpl_xxx';
+
+-- Retrieve a single OAuth application by ID (fetches from GET /oauth_applications/{oauth_application_id})
+SELECT * FROM clerk.oauth_applications WHERE id = 'oauth_xxx';
+
+-- Retrieve a single SAML connection by ID (fetches from GET /saml_connections/{saml_connection_id})
+SELECT * FROM clerk.saml_connections WHERE id = 'samlconn_xxx';
+
+-- Retrieve a single redirect URL by ID (fetches from GET /redirect_urls/{id})
+SELECT * FROM clerk.redirect_urls WHERE id = 'redir_xxx';
 ```

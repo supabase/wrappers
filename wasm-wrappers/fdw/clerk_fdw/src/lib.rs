@@ -125,24 +125,68 @@ impl ClerkFdw {
     fn create_request(&mut self, ctx: &Context) -> Result<http::Request, FdwError> {
         let quals = ctx.get_quals();
 
-        // Standard endpoints with pagination
-        // Billing endpoints don't support order_by
-        let is_billing = self.object.starts_with("billing/");
-        let qs = if is_billing {
-            vec![
-                format!("offset={}", self.src_offset),
-                format!("limit={BATCH_SIZE}"),
-            ]
-        } else {
-            vec![
-                "order_by=-created_at".to_string(),
-                format!("offset={}", self.src_offset),
-                format!("limit={BATCH_SIZE}"),
-            ]
-        };
-        let mut url = format!("{}/{}?{}", self.base_url, self.object, qs.join("&"));
+        // Check if id = <string> qualifier is specified (for single-item retrieval)
+        // This should be checked before parameterized endpoints, but skip for parameterized endpoints
+        let is_parameterized = matches!(
+            self.object.as_str(),
+            "users/billing/subscription"
+                | "organizations/billing/subscription"
+                | "billing/statement"
+                | "billing/payment_attempts"
+        );
 
-        // Handle parameterized endpoints
+        // For standard endpoints, check if we should fetch a single item by ID
+        let mut url = if !is_parameterized {
+            if let Some(q) = quals.iter().find(|q| {
+                if (q.field() == "id") && (q.operator() == "=") {
+                    if let Value::Cell(Cell::String(_)) = q.value() {
+                        return true;
+                    }
+                }
+                false
+            }) {
+                match q.value() {
+                    Value::Cell(Cell::String(id)) => {
+                        format!("{}/{}/{}", self.base_url, self.object, id)
+                    }
+                    _ => unreachable!(),
+                }
+            } else {
+                // List endpoint with pagination
+                let is_billing = self.object.starts_with("billing/");
+                let qs = if is_billing {
+                    vec![
+                        format!("offset={}", self.src_offset),
+                        format!("limit={BATCH_SIZE}"),
+                    ]
+                } else {
+                    vec![
+                        "order_by=-created_at".to_string(),
+                        format!("offset={}", self.src_offset),
+                        format!("limit={BATCH_SIZE}"),
+                    ]
+                };
+                format!("{}/{}?{}", self.base_url, self.object, qs.join("&"))
+            }
+        } else {
+            // For parameterized endpoints, build default URL first (will be overridden in match)
+            let is_billing = self.object.starts_with("billing/");
+            let qs = if is_billing {
+                vec![
+                    format!("offset={}", self.src_offset),
+                    format!("limit={BATCH_SIZE}"),
+                ]
+            } else {
+                vec![
+                    "order_by=-created_at".to_string(),
+                    format!("offset={}", self.src_offset),
+                    format!("limit={BATCH_SIZE}"),
+                ]
+            };
+            format!("{}/{}?{}", self.base_url, self.object, qs.join("&"))
+        };
+
+        // Handle parameterized endpoints (these override the URL)
         match self.object.as_str() {
             "users/billing/subscription" => {
                 // GET /users/{user_id}/billing/subscription
