@@ -125,24 +125,68 @@ impl ClerkFdw {
     fn create_request(&mut self, ctx: &Context) -> Result<http::Request, FdwError> {
         let quals = ctx.get_quals();
 
-        // Standard endpoints with pagination
-        // Billing endpoints don't support order_by
-        let is_billing = self.object.starts_with("billing/");
-        let qs = if is_billing {
-            vec![
-                format!("offset={}", self.src_offset),
-                format!("limit={BATCH_SIZE}"),
-            ]
-        } else {
-            vec![
-                "order_by=-created_at".to_string(),
-                format!("offset={}", self.src_offset),
-                format!("limit={BATCH_SIZE}"),
-            ]
-        };
-        let mut url = format!("{}/{}?{}", self.base_url, self.object, qs.join("&"));
+        // Check if id = <string> qualifier is specified (for single-item retrieval)
+        // This should be checked before parameterized endpoints, but skip for parameterized endpoints
+        let is_parameterized = matches!(
+            self.object.as_str(),
+            "users/billing/subscription"
+                | "organizations/billing/subscription"
+                | "billing/statement"
+                | "billing/payment_attempts"
+        );
 
-        // Handle parameterized endpoints
+        // For standard endpoints, check if we should fetch a single item by ID
+        let mut url = if !is_parameterized {
+            if let Some(q) = quals.iter().find(|q| {
+                if (q.field() == "id") && (q.operator() == "=") {
+                    if let Value::Cell(Cell::String(_)) = q.value() {
+                        return true;
+                    }
+                }
+                false
+            }) {
+                match q.value() {
+                    Value::Cell(Cell::String(id)) => {
+                        format!("{}/{}/{}", self.base_url, self.object, id)
+                    }
+                    _ => unreachable!(),
+                }
+            } else {
+                // List endpoint with pagination
+                let is_billing = self.object.starts_with("billing/");
+                let qs = if is_billing {
+                    vec![
+                        format!("offset={}", self.src_offset),
+                        format!("limit={BATCH_SIZE}"),
+                    ]
+                } else {
+                    vec![
+                        "order_by=-created_at".to_string(),
+                        format!("offset={}", self.src_offset),
+                        format!("limit={BATCH_SIZE}"),
+                    ]
+                };
+                format!("{}/{}?{}", self.base_url, self.object, qs.join("&"))
+            }
+        } else {
+            // For parameterized endpoints, build default URL first (will be overridden in match)
+            let is_billing = self.object.starts_with("billing/");
+            let qs = if is_billing {
+                vec![
+                    format!("offset={}", self.src_offset),
+                    format!("limit={BATCH_SIZE}"),
+                ]
+            } else {
+                vec![
+                    "order_by=-created_at".to_string(),
+                    format!("offset={}", self.src_offset),
+                    format!("limit={BATCH_SIZE}"),
+                ]
+            };
+            format!("{}/{}?{}", self.base_url, self.object, qs.join("&"))
+        };
+
+        // Handle parameterized endpoints (these override the URL)
         match self.object.as_str() {
             "users/billing/subscription" => {
                 // GET /users/{user_id}/billing/subscription
@@ -410,20 +454,75 @@ impl Guest for ClerkFdw {
         Ok(())
     }
 
-    fn begin_modify(_ctx: &Context) -> FdwResult {
-        Err("modify on foreign table is not supported".to_owned())
-    }
-
-    fn insert(_ctx: &Context, _row: &Row) -> FdwResult {
+    fn begin_modify(ctx: &Context) -> FdwResult {
+        let this = Self::this_mut();
+        let opts = ctx.get_options(&OptionsType::Table);
+        this.object = opts.require("object")?;
         Ok(())
     }
 
-    fn update(_ctx: &Context, _rowid: Cell, _row: &Row) -> FdwResult {
-        Ok(())
+    fn insert(_ctx: &Context, row: &Row) -> FdwResult {
+        let this = Self::this_mut();
+        // we assume 'attrs' is defined as the last column
+        if let Some(Some(Cell::Json(body))) = row.cells().last() {
+            let url = format!("{}/{}", this.base_url, this.object);
+            let headers = this.headers.clone();
+            let req = http::Request {
+                method: http::Method::Post,
+                url,
+                headers,
+                body: body.to_owned(),
+            };
+            let resp = http::post(&req)?;
+            http::error_for_status(&resp).map_err(|err| format!("{}: {}", err, resp.body))?;
+            stats::inc_stats(FDW_NAME, stats::Metric::RowsOut, 1);
+            return Ok(());
+        }
+        Err("cannot find 'attrs' JSONB column to insert".to_owned())
     }
 
-    fn delete(_ctx: &Context, _rowid: Cell) -> FdwResult {
-        Ok(())
+    fn update(_ctx: &Context, rowid: Cell, row: &Row) -> FdwResult {
+        let this = Self::this_mut();
+        if let Cell::String(rowid) = rowid {
+            // we assume 'attrs' is defined as the last column
+            if let Some(Some(Cell::Json(body))) = row.cells().last() {
+                let url = format!("{}/{}/{}", this.base_url, this.object, rowid);
+                let headers = this.headers.clone();
+                let req = http::Request {
+                    method: http::Method::Patch,
+                    url,
+                    headers,
+                    body: body.to_owned(),
+                };
+                let resp = http::patch(&req)?;
+                http::error_for_status(&resp).map_err(|err| format!("{}: {}", err, resp.body))?;
+                stats::inc_stats(FDW_NAME, stats::Metric::RowsOut, 1);
+                Ok(())
+            } else {
+                Err("cannot find 'attrs' JSONB column to update".to_owned())
+            }
+        } else {
+            Err("no rowid column specified for update".to_owned())
+        }
+    }
+
+    fn delete(_ctx: &Context, rowid: Cell) -> FdwResult {
+        let this = Self::this_mut();
+        if let Cell::String(rowid) = rowid {
+            let url = format!("{}/{}/{}", this.base_url, this.object, rowid);
+            let headers = this.headers.clone();
+            let req = http::Request {
+                method: http::Method::Delete,
+                url,
+                headers,
+                body: String::default(),
+            };
+            let resp = http::delete(&req)?;
+            http::error_for_status(&resp).map_err(|err| format!("{}: {}", err, resp.body))?;
+            Ok(())
+        } else {
+            Err("no rowid column specified for delete".to_owned())
+        }
     }
 
     fn end_modify(_ctx: &Context) -> FdwResult {
@@ -447,7 +546,8 @@ impl Guest for ClerkFdw {
                     attrs jsonb
                 )
                 server {} options (
-                    object 'allowlist_identifiers'
+                    object 'allowlist_identifiers',
+                    rowid_column 'id'
                 )"#,
                 stmt.server_name,
             ),
@@ -462,7 +562,8 @@ impl Guest for ClerkFdw {
                     attrs jsonb
                 )
                 server {} options (
-                    object 'blocklist_identifiers'
+                    object 'blocklist_identifiers',
+                    rowid_column 'id'
                 )"#,
                 stmt.server_name,
             ),
@@ -476,7 +577,8 @@ impl Guest for ClerkFdw {
                     attrs jsonb
                 )
                 server {} options (
-                    object 'domains'
+                    object 'domains',
+                    rowid_column 'id'
                 )"#,
                 stmt.server_name,
             ),
@@ -493,7 +595,8 @@ impl Guest for ClerkFdw {
                     attrs jsonb
                 )
                 server {} options (
-                    object 'invitations'
+                    object 'invitations',
+                    rowid_column 'id'
                 )"#,
                 stmt.server_name,
             ),
@@ -510,7 +613,8 @@ impl Guest for ClerkFdw {
                     attrs jsonb
                 )
                 server {} options (
-                    object 'jwt_templates'
+                    object 'jwt_templates',
+                    rowid_column 'id'
                 )"#,
                 stmt.server_name,
             ),
@@ -527,7 +631,8 @@ impl Guest for ClerkFdw {
                     attrs jsonb
                 )
                 server {} options (
-                    object 'oauth_applications'
+                    object 'oauth_applications',
+                    rowid_column 'id'
                 )"#,
                 stmt.server_name,
             ),
@@ -541,7 +646,8 @@ impl Guest for ClerkFdw {
                     attrs jsonb
                 )
                 server {} options (
-                    object 'organizations'
+                    object 'organizations',
+                    rowid_column 'id'
                 )"#,
                 stmt.server_name,
             ),
@@ -585,7 +691,8 @@ impl Guest for ClerkFdw {
                     attrs jsonb
                 )
                 server {} options (
-                    object 'redirect_urls'
+                    object 'redirect_urls',
+                    rowid_column 'id'
                 )"#,
                 stmt.server_name,
             ),
@@ -602,7 +709,8 @@ impl Guest for ClerkFdw {
                     attrs jsonb
                 )
                 server {} options (
-                    object 'saml_connections'
+                    object 'saml_connections',
+                    rowid_column 'id'
                 )"#,
                 stmt.server_name,
             ),
@@ -618,7 +726,8 @@ impl Guest for ClerkFdw {
                     attrs jsonb
                 )
                 server {} options (
-                    object 'users'
+                    object 'users',
+                    rowid_column 'id'
                 )"#,
                 stmt.server_name,
             ),
