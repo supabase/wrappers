@@ -823,7 +823,41 @@ create foreign table clerk.billing_payment_attempts (
 
 ## Query Pushdown Support
 
-This FDW doesn't support query pushdown.
+### `where` clause pushdown
+
+This FDW supports `where id = 'xxx'` clause pushdown for the following objects:
+
+- users
+- organizations
+- jwt_templates
+- oauth_applications
+- saml_connections
+- redirect_urls
+
+For example:
+
+```sql
+-- Fetches from GET /users/user_xxx (single API call)
+select * from clerk.users where id = 'user_xxx';
+```
+
+### Parameterized endpoints
+
+Some endpoints require specific qualifiers in the WHERE clause:
+
+| Object | Required qualifier |
+|--------|-------------------|
+| user_billing_subscriptions | `user_id` |
+| organization_billing_subscriptions | `organization_id` |
+| billing_statement | `statement_id` |
+| billing_payment_attempts | `statement_id` |
+
+For example:
+
+```sql
+-- Fetches from GET /users/{user_id}/billing/subscription
+select * from clerk.user_billing_subscriptions where user_id = 'user_xxx';
+```
 
 ## Supported Data Types
 
@@ -843,7 +877,6 @@ The Clerk API uses JSON formatted data, please refer to [Clerk Backend API docs]
 This section describes important limitations and considerations when using this FDW:
 
 - Large result sets may experience slower performance due to full data transfer requirement
-- Query pushdown is not supported
 - Materialized views using these foreign tables may fail during logical backups
 
 ## Examples
