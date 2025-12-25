@@ -8,4 +8,5 @@ interface utils {
 
     cell-to-string: func(cell: option<cell>) -> string;
     get-vault-secret: func(secret-id: string) -> option<string>;
+    get-vault-secret-by-name: func(secret-name: string) -> option<string>;
 }
