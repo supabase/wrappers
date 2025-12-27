@@ -1,3 +1,12 @@
+---
+source:
+documentation:
+author: supabase
+tags:
+  - native
+  - official
+---
+
 # Airtable
 
 [Airtable](https://www.airtable.com) is an easy-to-use online platform for creating and sharing relational databases.
