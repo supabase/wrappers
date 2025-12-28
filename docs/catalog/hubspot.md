@@ -50,16 +50,18 @@ By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server
 -- Save your HubSpot private apps access token in Vault and retrieve the created `key_id`
 select vault.create_secret(
   '<HubSpot access token>', -- HubSpot private apps access token
-  'hubspot',
+  'hubspot',  -- secret name for api_key_name lookup
   'HubSpot private apps access token for Wrappers'
 );
 ```
+
+The secret name (e.g., `'hubspot'`) can be used with `api_key_name` for environment-agnostic configuration.
 
 ### Connecting to HubSpot
 
 We need to provide Postgres with the credentials to access HubSpot and any additional options. We can do this using the `create server` command:
 
-=== "With Vault"
+=== "With Vault (by ID)"
 
     ```sql
     create server hubspot_server
@@ -73,6 +75,23 @@ We need to provide Postgres with the credentials to access HubSpot and any addit
         api_key_id '<key_ID>' -- The Key ID from above.
       );
     ```
+
+=== "With Vault (by Name)"
+
+    ```sql
+    create server hubspot_server
+      foreign data wrapper wasm_wrapper
+      options (
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_hubspot_fdw_v0.1.0/hubspot_fdw.wasm',
+        fdw_package_name 'supabase:hubspot-fdw',
+        fdw_package_version '0.1.0',
+        fdw_package_checksum '2cbf39e9e28aa732a225db09b2186a2342c44697d4fa047652d358e292ba5521',
+        api_url 'https://api.hubapi.com/crm/v3',  -- optional
+        api_key_name 'hubspot' -- The secret name from above.
+      );
+    ```
+
+    Using `api_key_name` enables environment-agnostic configuration - the same SQL works across dev, staging, and production as long as each environment has a Vault secret with the same name.
 
 === "Without Vault"
 
