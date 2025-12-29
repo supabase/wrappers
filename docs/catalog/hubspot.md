@@ -42,6 +42,9 @@ create foreign data wrapper wasm_wrapper
   validator wasm_fdw_validator;
 ```
 
+!!! note "About Authentication"
+    HubSpot deprecated their legacy API Keys in November 2022. The `api_key` option in this wrapper accepts a **Private App Access Token**, which is HubSpot's recommended authentication method. See [HubSpot Private Apps](https://developers.hubspot.com/docs/guides/apps/private-apps/overview) for setup instructions.
+
 ### Store your credentials (optional)
 
 By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
