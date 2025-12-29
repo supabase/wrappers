@@ -1,0 +1,485 @@
+---
+source:
+documentation:
+author: supabase
+tags:
+  - wasm
+  - official
+---
+
+# Infura
+
+[Infura](https://www.infura.io/) provides reliable, scalable blockchain infrastructure for Ethereum, Polygon, and other EVM-compatible networks via JSON-RPC APIs.
+
+The Infura Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you to read blockchain data (blocks, transactions, balances, logs) directly from your Postgres database.
+
+## Available Versions
+
+| Version | Wasm Package URL                                                                                  | Checksum | Required Wrappers Version |
+| ------- | ------------------------------------------------------------------------------------------------- | -------- | ------------------------- |
+| 0.2.0   | `https://github.com/supabase/wrappers/releases/download/wasm_infura_fdw_v0.2.0/infura_fdw.wasm`   | TBD      | >=0.5.0                   |
+
+## Preparation
+
+Before you can query Infura, you need to enable the Wrappers extension and store your credentials in Postgres.
+
+### Enable Wrappers
+
+Make sure the `wrappers` extension is installed on your database:
+
+```sql
+create extension if not exists wrappers with schema extensions;
+```
+
+### Enable the Infura Wrapper
+
+Enable the Wasm foreign data wrapper:
+
+```sql
+create foreign data wrapper wasm_wrapper
+  handler wasm_fdw_handler
+  validator wasm_fdw_validator;
+```
+
+### Store your credentials (optional)
+
+By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
+
+```sql
+-- Save your Infura API key in Vault and retrieve the created `key_id`
+select vault.create_secret(
+  '<Infura API Key>',
+  'infura',  -- secret name for api_key_name lookup
+  'Infura API key for blockchain data access'
+);
+```
+
+The secret name (e.g., `'infura'`) can be used with `api_key_name` for environment-agnostic configuration.
+
+### Connecting to Infura
+
+We need to provide Postgres with the credentials to access Infura and any additional options. We can do this using the `create server` command:
+
+=== "With Vault (by ID)"
+
+    ```sql
+    create server infura_server
+      foreign data wrapper wasm_wrapper
+      options (
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_infura_fdw_v0.2.0/infura_fdw.wasm',
+        fdw_package_name 'supabase:infura-fdw',
+        fdw_package_version '0.2.0',
+        api_key_id '<key_ID>', -- The Key ID from above.
+        network 'mainnet'  -- optional, defaults to mainnet
+      );
+    ```
+
+=== "With Vault (by Name)"
+
+    ```sql
+    create server infura_server
+      foreign data wrapper wasm_wrapper
+      options (
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_infura_fdw_v0.2.0/infura_fdw.wasm',
+        fdw_package_name 'supabase:infura-fdw',
+        fdw_package_version '0.2.0',
+        api_key_name 'infura', -- The secret name from above.
+        network 'mainnet'  -- optional, defaults to mainnet
+      );
+    ```
+
+    Using `api_key_name` enables environment-agnostic configuration - the same SQL works across dev, staging, and production as long as each environment has a Vault secret with the same name.
+
+=== "Without Vault"
+
+    ```sql
+    create server infura_server
+      foreign data wrapper wasm_wrapper
+      options (
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_infura_fdw_v0.2.0/infura_fdw.wasm',
+        fdw_package_name 'supabase:infura-fdw',
+        fdw_package_version '0.2.0',
+        api_key '<your-infura-api-key>',
+        network 'mainnet'  -- optional, defaults to mainnet
+      );
+    ```
+
+Note the `fdw_package_*` options are required, which specify the Wasm package metadata. You can get the available package version list from [above](#available-versions).
+
+### Supported Networks
+
+The `network` option supports the following values:
+
+| Network | Value | Chain ID |
+| ------- | ----- | -------- |
+| Ethereum Mainnet | `mainnet` | 1 |
+| Ethereum Sepolia | `sepolia` | 11155111 |
+| Polygon PoS | `polygon-mainnet` | 137 |
+| Polygon Amoy | `polygon-amoy` | 80002 |
+| Arbitrum One | `arbitrum-mainnet` | 42161 |
+| Optimism | `optimism-mainnet` | 10 |
+| Base | `base-mainnet` | 8453 |
+| Linea | `linea-mainnet` | 59144 |
+
+### Create a schema
+
+We recommend creating a schema to hold all the foreign tables:
+
+```sql
+create schema if not exists blockchain;
+```
+
+## Options
+
+The full list of foreign table options are below:
+
+- `resource` - Resource type to query, required. One of: `blocks`, `transactions`, `balances`, `logs`, `chain_info`
+
+## Entities
+
+Below are all the entities supported by this FDW. Each entity maps to a specific JSON-RPC method on the Infura API.
+
+### Blocks
+
+Query Ethereum block data using `eth_getBlockByNumber`.
+
+Ref: [Infura API docs](https://docs.infura.io/api/networks/ethereum/json-rpc-methods/eth_getblockbynumber)
+
+#### Operations
+
+| Object | Select | Insert | Update | Delete | Truncate |
+| ------ | :----: | :----: | :----: | :----: | :------: |
+| blocks |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
+
+```sql
+create foreign table blockchain.eth_blocks (
+  number numeric,
+  hash text,
+  parent_hash text,
+  timestamp timestamp,
+  miner text,
+  gas_used numeric,
+  gas_limit numeric,
+  transaction_count bigint,
+  base_fee_per_gas numeric,
+  attrs jsonb
+)
+  server infura_server
+  options (
+    resource 'blocks'
+  );
+```
+
+#### Query Pushdown
+
+- `number` - Filter by block number: `WHERE number = 19000000`
+
+### Transactions
+
+Query transaction data using `eth_getTransactionByHash`.
+
+Ref: [Infura API docs](https://docs.infura.io/api/networks/ethereum/json-rpc-methods/eth_gettransactionbyhash)
+
+#### Operations
+
+| Object       | Select | Insert | Update | Delete | Truncate |
+| ------------ | :----: | :----: | :----: | :----: | :------: |
+| transactions |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
+
+```sql
+create foreign table blockchain.eth_transactions (
+  hash text,
+  block_number numeric,
+  block_hash text,
+  from_address text,
+  to_address text,
+  value numeric,
+  gas numeric,
+  gas_price numeric,
+  nonce numeric,
+  input text,
+  transaction_index numeric,
+  attrs jsonb
+)
+  server infura_server
+  options (
+    resource 'transactions'
+  );
+```
+
+#### Query Pushdown
+
+- `hash` - **Required**. Filter by transaction hash: `WHERE hash = '0x...'`
+
+!!! note
+    Transaction queries require a `hash` filter in the WHERE clause.
+
+### Balances
+
+Query account balances using `eth_getBalance`.
+
+Ref: [Infura API docs](https://docs.infura.io/api/networks/ethereum/json-rpc-methods/eth_getbalance)
+
+#### Operations
+
+| Object   | Select | Insert | Update | Delete | Truncate |
+| -------- | :----: | :----: | :----: | :----: | :------: |
+| balances |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
+
+```sql
+create foreign table blockchain.eth_balances (
+  address text,
+  balance numeric,
+  block text
+)
+  server infura_server
+  options (
+    resource 'balances'
+  );
+```
+
+#### Query Pushdown
+
+- `address` - **Required**. Filter by account address: `WHERE address = '0x...'`
+- `number` - Optional block number (defaults to `latest`)
+
+!!! note
+    Balance queries require an `address` filter in the WHERE clause. The balance is returned in Wei (1 ETH = 10^18 Wei).
+
+### Logs
+
+Query event logs using `eth_getLogs`.
+
+Ref: [Infura API docs](https://docs.infura.io/api/networks/ethereum/json-rpc-methods/eth_getlogs)
+
+#### Operations
+
+| Object | Select | Insert | Update | Delete | Truncate |
+| ------ | :----: | :----: | :----: | :----: | :------: |
+| logs   |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
+
+```sql
+create foreign table blockchain.eth_logs (
+  address text,
+  block_number numeric,
+  block_hash text,
+  transaction_hash text,
+  transaction_index numeric,
+  log_index numeric,
+  data text,
+  topics jsonb,
+  removed boolean,
+  attrs jsonb
+)
+  server infura_server
+  options (
+    resource 'logs'
+  );
+```
+
+#### Query Pushdown
+
+- `address` - Filter by contract address
+- `from_block` - Starting block number
+- `to_block` - Ending block number
+
+### Chain Info
+
+Query chain metadata using `eth_chainId`, `eth_blockNumber`, and `eth_gasPrice`.
+
+#### Operations
+
+| Object     | Select | Insert | Update | Delete | Truncate |
+| ---------- | :----: | :----: | :----: | :----: | :------: |
+| chain_info |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+
+#### Usage
+
+```sql
+create foreign table blockchain.eth_chain_info (
+  network text,
+  chain_id numeric,
+  block_number numeric,
+  gas_price numeric
+)
+  server infura_server
+  options (
+    resource 'chain_info'
+  );
+```
+
+## Supported Data Types
+
+| Postgres Data Type | Blockchain Data Type |
+| ------------------ | -------------------- |
+| numeric            | Hex uint256 (parsed) |
+| text               | Hex address/hash     |
+| bigint             | Integer              |
+| boolean            | Boolean              |
+| timestamp          | Unix timestamp       |
+| jsonb              | JSON object          |
+
+!!! note
+    Ethereum uses 256-bit integers for many values. These are converted from hex strings to PostgreSQL `numeric` type to preserve precision.
+
+## Limitations
+
+This section describes important limitations and considerations when using this FDW:
+
+- **Read-only**: Blockchain data is immutable. This FDW only supports SELECT operations.
+- **Rate limiting**: Infura API has rate limits. Consider using materialized views for frequently accessed data.
+- **Transaction/Balance queries require filters**: You must provide a `hash` for transactions or `address` for balances.
+- **Large numeric values**: Ethereum values (like Wei balances) can be extremely large. Use `numeric` type for these columns.
+- **Block range limits**: For `eth_getLogs`, Infura may limit the block range you can query at once.
+
+## Examples
+
+Below are some examples on how to use Infura foreign tables.
+
+### Query latest block
+
+```sql
+create foreign table blockchain.eth_blocks (
+  number numeric,
+  hash text,
+  timestamp timestamp,
+  transaction_count bigint,
+  attrs jsonb
+)
+  server infura_server
+  options (
+    resource 'blocks'
+  );
+
+-- Query the latest block
+select * from blockchain.eth_blocks;
+
+-- Query a specific block
+select * from blockchain.eth_blocks where number = 19000000;
+```
+
+### Query account balance
+
+```sql
+create foreign table blockchain.eth_balances (
+  address text,
+  balance numeric,
+  block text
+)
+  server infura_server
+  options (
+    resource 'balances'
+  );
+
+-- Query Vitalik's wallet balance (in Wei)
+select
+  address,
+  balance / 1e18 as balance_eth
+from blockchain.eth_balances
+where address = '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045';
+```
+
+### Query transaction details
+
+```sql
+create foreign table blockchain.eth_transactions (
+  hash text,
+  from_address text,
+  to_address text,
+  value numeric,
+  gas_price numeric,
+  attrs jsonb
+)
+  server infura_server
+  options (
+    resource 'transactions'
+  );
+
+-- Query a specific transaction
+select
+  from_address,
+  to_address,
+  value / 1e18 as value_eth
+from blockchain.eth_transactions
+where hash = '0x5c504ed432cb51138bcf09aa5e8a410dd4a1e204ef84bfed1be16dfba1b22060';
+```
+
+### Query event logs
+
+```sql
+create foreign table blockchain.eth_logs (
+  address text,
+  block_number numeric,
+  transaction_hash text,
+  topics jsonb,
+  data text,
+  attrs jsonb
+)
+  server infura_server
+  options (
+    resource 'logs'
+  );
+
+-- Query logs from a specific contract
+select * from blockchain.eth_logs
+where address = '0xdAC17F958D2ee523a2206206994597C13D831ec7';  -- USDT contract
+```
+
+### Query chain information
+
+```sql
+create foreign table blockchain.eth_chain_info (
+  network text,
+  chain_id numeric,
+  block_number numeric,
+  gas_price numeric
+)
+  server infura_server
+  options (
+    resource 'chain_info'
+  );
+
+-- Get current chain status
+select
+  network,
+  chain_id,
+  block_number,
+  gas_price / 1e9 as gas_price_gwei
+from blockchain.eth_chain_info;
+```
+
+### Query Polygon network
+
+```sql
+-- Create a separate server for Polygon
+create server polygon_server
+  foreign data wrapper wasm_wrapper
+  options (
+    fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_infura_fdw_v0.2.0/infura_fdw.wasm',
+    fdw_package_name 'supabase:infura-fdw',
+    fdw_package_version '0.2.0',
+    api_key_name 'infura',
+    network 'polygon-mainnet'
+  );
+
+create foreign table blockchain.polygon_blocks (
+  number numeric,
+  hash text,
+  timestamp timestamp,
+  attrs jsonb
+)
+  server polygon_server
+  options (
+    resource 'blocks'
+  );
+
+select * from blockchain.polygon_blocks;
+```

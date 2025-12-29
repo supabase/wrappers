@@ -85,6 +85,18 @@ Foreign data wrappers built with Wasm which can be used on Supabase platform.
     :octicons-code-24: [source](https://github.com/supabase/wrappers/tree/wasm_hubspot_fdw_v0.1.1/wasm-wrappers/fdw/hubspot_fdw) &nbsp;
     :material-file-document: [docs](../hubspot.md)
 
+- :simple-webassembly: &nbsp; **[Infura](../infura.md)**
+
+    ----
+
+    Foreign data wrapper for [Infura](https://www.infura.io/) blockchain data.
+
+    Supported by [Supabase](https://www.supabase.com)
+
+    :octicons-tag-24: [v0.2.0](https://github.com/supabase/wrappers/releases/tag/wasm_infura_fdw_v0.2.0) &nbsp;
+    :octicons-code-24: [source](https://github.com/supabase/wrappers/tree/wasm_infura_fdw_v0.2.0/wasm-wrappers/fdw/infura_fdw) &nbsp;
+    :material-file-document: [docs](../infura.md)
+
 - :simple-webassembly: &nbsp; **[Notion](../notion.md)**
 
     ----

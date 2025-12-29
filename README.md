@@ -20,6 +20,7 @@
 | [Firebase](./wrappers/src/fdw/firebase_fdw)     | A FDW for Google [Firebase](https://firebase.google.com/)                     | ✅   | ❌     |
 | [HelloWorld](./wrappers/src/fdw/helloworld_fdw) | A demo FDW to show how to develop a basic FDW.                                |      |        |
 | [HubSpot](./wasm-wrappers/fdw/hubspot_fdw)      | A Wasm FDW for [HubSpot](https://www.hubspot.com/)                            | ✅   | ❌     |
+| [Infura](./wasm-wrappers/fdw/infura_fdw)        | A Wasm FDW for [Infura](https://www.infura.io/) blockchain data               | ✅   | ❌     |
 | [Logflare](./wrappers/src/fdw/logflare_fdw)     | A FDW for [Logflare](https://logflare.app/)                                   | ✅   | ❌     |
 | [Notion](./wasm-wrappers/fdw/notion_fdw)        | A Wasm FDW for [Notion](https://www.notion.so/)                               | ✅   | ❌     |
 | [Orb](./wasm-wrappers/fdw/orb_fdw)              | A Wasm FDW for [Orb](https://www.withorb.com/)                                | ✅   | ❌     |
