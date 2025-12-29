@@ -472,6 +472,53 @@ mod tests {
                     "gid://shopify/Product/9975063904570"
                 ]
             );
+
+            // Infura FDW test
+            c.update(
+                r#"CREATE SERVER infura_server
+                     FOREIGN DATA WRAPPER wasm_wrapper
+                     OPTIONS (
+                       fdw_package_url 'file://../../../wasm-wrappers/fdw/target/wasm32-unknown-unknown/release/infura_fdw.wasm',
+                       fdw_package_name 'supabase:infura-fdw',
+                       fdw_package_version '>=0.1.0',
+                       api_url 'http://localhost:8096/infura',
+                       api_key 'test_api_key',
+                       network 'mainnet'
+                     )"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"
+                  CREATE FOREIGN TABLE infura_blocks (
+                    number numeric,
+                    hash text,
+                    parent_hash text,
+                    miner text,
+                    gas_used numeric,
+                    transaction_count bigint,
+                    attrs jsonb
+                  )
+                  SERVER infura_server
+                  OPTIONS (
+                    resource 'blocks'
+                  )
+             "#,
+                None,
+                &[],
+            )
+            .unwrap();
+
+            let results = c
+                .select("SELECT hash FROM infura_blocks", None, &[])
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("hash").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(
+                results,
+                vec!["0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3"]
+            );
         });
     }
 }
