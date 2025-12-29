@@ -6,6 +6,7 @@ members = [
     "clerk_fdw",
     "helloworld_fdw",
     "hubspot_fdw",
+    "infura_fdw",
     "notion_fdw",
     "orb_fdw",
     "paddle_fdw",
