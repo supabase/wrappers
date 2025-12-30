@@ -485,4 +485,91 @@ mod tests {
                 .is_empty());
         });
     }
+
+    // Test for issue #482: PostgreSQL server crash with prepared statements
+    // PostgreSQL caches query plans after ~5-6 executions. Before fix, this
+    // would crash because plan_foreign_modify stored a pointer that became
+    // invalid after end_foreign_modify freed the state.
+    #[pg_test]
+    fn clickhouse_prepared_statement_stress() {
+        Spi::connect_mut(|c| {
+            let clickhouse_pool = ch::Pool::new("tcp://default:default@localhost:9000/default");
+
+            let rt = create_async_runtime().expect("failed to create runtime");
+            let mut handle = rt
+                .block_on(async { clickhouse_pool.get_handle().await })
+                .expect("handle");
+
+            rt.block_on(async {
+                handle.execute("DROP TABLE IF EXISTS stress_test").await?;
+                handle
+                    .execute(
+                        "CREATE TABLE stress_test (
+                            id Int64,
+                            name String
+                        ) engine = Memory",
+                    )
+                    .await
+            })
+            .expect("stress_test in ClickHouse");
+
+            c.update(
+                r#"CREATE FOREIGN DATA WRAPPER clickhouse_wrapper_stress
+                         HANDLER click_house_fdw_handler VALIDATOR click_house_fdw_validator"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"CREATE SERVER stress_server
+                         FOREIGN DATA WRAPPER clickhouse_wrapper_stress
+                         OPTIONS (
+                           conn_string 'tcp://default:default@localhost:9000/default'
+                         )"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"
+                  CREATE FOREIGN TABLE stress_test (
+                    id bigint,
+                    name text
+                  )
+                  SERVER stress_server
+                  OPTIONS (
+                    table 'stress_test',
+                    rowid_column 'id'
+                  )
+             "#,
+                None,
+                &[],
+            )
+            .unwrap();
+
+            // Execute 15 parameterized INSERTs - enough to trigger plan caching
+            // (PostgreSQL switches to generic plan after ~5-6 executions)
+            // Before fix: crashes around iteration 7
+            // After fix: all 15 succeed
+            for i in 0..15i64 {
+                c.update(
+                    "INSERT INTO stress_test (id, name) VALUES ($1, $2)",
+                    None,
+                    &[i.into(), format!("stress_{}", i).into()],
+                )
+                .unwrap();
+            }
+
+            // Verify all inserts succeeded
+            assert_eq!(
+                c.select("SELECT COUNT(*) FROM stress_test", None, &[])
+                    .unwrap()
+                    .first()
+                    .get_one::<i64>()
+                    .unwrap()
+                    .unwrap(),
+                15
+            );
+        });
+    }
 }
