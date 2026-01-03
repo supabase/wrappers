@@ -64,6 +64,7 @@ unsafe fn extract_aggregates(
     let group_extra = extra as *mut pg_sys::GroupPathExtraData;
     if (*group_extra).havingQual != ptr::null_mut() {
         // HAVING clause not supported for pushdown
+        debug2!("HAVING clause present, skipping aggregate pushdown");
         return None;
     }
 
@@ -99,7 +100,17 @@ unsafe fn extract_aggregates(
 
             let kind = match oid_to_aggregate_kind((*aggref).aggfnoid) {
                 Some(k) => k,
-                None => return None, // Unsupported aggregate, abort pushdown
+                None => {
+                    // Get function name for debug message
+                    let func_name = pg_sys::get_func_name((*aggref).aggfnoid);
+                    if !func_name.is_null() {
+                        let name = std::ffi::CStr::from_ptr(func_name).to_string_lossy();
+                        debug2!("Unsupported aggregate function '{}', skipping pushdown", name);
+                    } else {
+                        debug2!("Unknown aggregate function, skipping pushdown");
+                    }
+                    return None;
+                }
             };
 
             // Check for DISTINCT - only supported for COUNT
@@ -107,8 +118,12 @@ unsafe fn extract_aggregates(
                 match kind {
                     AggregateKind::CountColumn => {
                         // COUNT(DISTINCT col) is supported
+                        debug2!("COUNT(DISTINCT) detected, pushdown supported");
                     }
-                    _ => return None, // DISTINCT not supported for other aggregates
+                    _ => {
+                        debug2!("DISTINCT modifier on {:?} not supported, skipping pushdown", kind);
+                        return None;
+                    }
                 }
             }
 
@@ -170,6 +185,12 @@ unsafe fn extract_aggregates(
     if aggregates.is_empty() {
         return None;
     }
+
+    debug2!(
+        "Extracted {} aggregates for pushdown: {:?}",
+        aggregates.len(),
+        aggregates.iter().map(|a| a.kind).collect::<Vec<_>>()
+    );
 
     Some(aggregates)
 }
@@ -311,6 +332,12 @@ pub(super) extern "C-unwind" fn get_foreign_upper_paths<
 
             // Extract GROUP BY columns
             let group_by = extract_group_by_columns(root, input_rel);
+            if !group_by.is_empty() {
+                debug2!(
+                    "Extracted GROUP BY columns: {:?}",
+                    group_by.iter().map(|c| c.name.as_str()).collect::<Vec<_>>()
+                );
+            }
 
             // Check if GROUP BY is supported (if present)
             if !group_by.is_empty() && !instance.supports_group_by() {
@@ -338,6 +365,11 @@ pub(super) extern "C-unwind" fn get_foreign_upper_paths<
                 .unwrap_or(0.0);
 
             let total_cost = startup_cost + rows as f64;
+
+            debug2!(
+                "Aggregate pushdown cost estimate: rows={}, width={}, startup={}, total={}",
+                rows, width, startup_cost, total_cost
+            );
 
             // Create the foreign upper path
             // Note: We need to store aggregate info for later use in begin_scan
