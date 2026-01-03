@@ -319,6 +319,7 @@ mod polyfill;
 mod qual;
 mod scan;
 mod sort;
+mod upper;
 
 /// PgBox'ed `FdwRoutine`, used in [`fdw_routine`](interface::ForeignDataWrapper::fdw_routine)
 pub type FdwRoutine<A = AllocatedByPostgres> = PgBox<pg_sys::FdwRoutine, A>;
