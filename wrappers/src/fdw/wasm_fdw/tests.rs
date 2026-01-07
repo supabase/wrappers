@@ -495,9 +495,12 @@ mod tests {
                     number numeric,
                     hash text,
                     parent_hash text,
+                    timestamp timestamp,
                     miner text,
                     gas_used numeric,
+                    gas_limit numeric,
                     transaction_count bigint,
+                    base_fee_per_gas numeric,
                     attrs jsonb
                   )
                   SERVER infura_server
