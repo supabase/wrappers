@@ -533,6 +533,110 @@ class MockServer(BaseHTTPRequestHandler):
   }
 }
             '''
+        elif fdw == "infura":
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            req_body = json.loads(post_data.decode('utf-8'))
+            method = req_body.get('method', '')
+
+            if method == 'eth_getBlockByNumber':
+                body = '''
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "number": "0x1234567",
+    "hash": "0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3",
+    "parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "timestamp": "0x55ba4224",
+    "miner": "0x0000000000000000000000000000000000000000",
+    "gasUsed": "0x0",
+    "gasLimit": "0x1c9c380",
+    "baseFeePerGas": "0x3b9aca00",
+    "transactions": ["0x1", "0x2", "0x3"]
+  }
+}
+                '''
+            elif method == 'eth_getTransactionByHash':
+                body = '''
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "hash": "0x5c504ed432cb51138bcf09aa5e8a410dd4a1e204ef84bfed1be16dfba1b22060",
+    "blockNumber": "0x1234567",
+    "blockHash": "0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3",
+    "from": "0xd8da6bf26964af9d7eed9e03e53415d37aa96045",
+    "to": "0x742d35cc6634c0532925a3b844bc454e4438f44e",
+    "value": "0xde0b6b3a7640000",
+    "gas": "0x5208",
+    "gasPrice": "0x3b9aca00",
+    "nonce": "0x0",
+    "input": "0x",
+    "transactionIndex": "0x0"
+  }
+}
+                '''
+            elif method == 'eth_getBalance':
+                body = '''
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": "0x1bc16d674ec80000"
+}
+                '''
+            elif method == 'eth_getLogs':
+                body = '''
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": [
+    {
+      "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "blockNumber": "0x1234567",
+      "blockHash": "0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3",
+      "transactionHash": "0x5c504ed432cb51138bcf09aa5e8a410dd4a1e204ef84bfed1be16dfba1b22060",
+      "transactionIndex": "0x0",
+      "logIndex": "0x0",
+      "data": "0x000000000000000000000000000000000000000000000000000000000000002a",
+      "topics": ["0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"],
+      "removed": false
+    }
+  ]
+}
+                '''
+            elif method == 'eth_chainId':
+                body = '''
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": "0x1"
+}
+                '''
+            elif method == 'eth_blockNumber':
+                body = '''
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": "0x1234567"
+}
+                '''
+            elif method == 'eth_gasPrice':
+                body = '''
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "result": "0x3b9aca00"
+}
+                '''
+            else:
+                body = '''
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "error": {"code": -32601, "message": "Method not found"}
+}
+                '''
         else:
             self.send_response(404)
             return
