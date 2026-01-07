@@ -54,8 +54,7 @@ struct InfuraFdw {
     block_number: Option<String>,
     tx_hash: Option<String>,
     address: Option<String>,
-    from_block: Option<String>,
-    to_block: Option<String>,
+    block_hash: Option<String>,
 }
 
 static mut INSTANCE: *mut InfuraFdw = std::ptr::null_mut::<InfuraFdw>();
@@ -77,7 +76,11 @@ impl InfuraFdw {
         format!("https://{}.infura.io/v3/{}", self.network, self.api_key)
     }
 
-    fn make_json_rpc_request(&self, method: &str, params: JsonValue) -> Result<JsonValue, FdwError> {
+    fn make_json_rpc_request(
+        &self,
+        method: &str,
+        params: JsonValue,
+    ) -> Result<JsonValue, FdwError> {
         let body = serde_json::json!({
             "jsonrpc": "2.0",
             "method": method,
@@ -121,10 +124,10 @@ impl InfuraFdw {
             stats::inc_stats(FDW_NAME, stats::Metric::BytesIn, resp.body.len() as i64);
 
             let json: JsonValue = serde_json::from_str(&resp.body)
-                .map_err(|e| format!("Failed to parse response: {}", e))?;
+                .map_err(|e| format!("Failed to parse response: {e}"))?;
 
             if let Some(error) = json.get("error") {
-                return Err(format!("JSON-RPC error: {}", error));
+                return Err(format!("JSON-RPC error: {error}"));
             }
 
             return Ok(json);
@@ -132,7 +135,10 @@ impl InfuraFdw {
     }
 
     fn fetch_blocks(&mut self) -> FdwResult {
-        let block_param = self.block_number.clone().unwrap_or_else(|| "latest".to_string());
+        let block_param = self
+            .block_number
+            .clone()
+            .unwrap_or_else(|| "latest".to_string());
         let params = serde_json::json!([block_param, true]);
 
         let json = self.make_json_rpc_request("eth_getBlockByNumber", params)?;
@@ -148,9 +154,10 @@ impl InfuraFdw {
     }
 
     fn fetch_transactions(&mut self) -> FdwResult {
-        let tx_hash = self.tx_hash.clone().ok_or(
-            "Transaction hash required. Use WHERE hash = '0x...' to query transactions"
-        )?;
+        let tx_hash = self
+            .tx_hash
+            .clone()
+            .ok_or("Transaction hash required. Use WHERE hash = '0x...' to query transactions")?;
 
         let params = serde_json::json!([tx_hash]);
         let json = self.make_json_rpc_request("eth_getTransactionByHash", params)?;
@@ -166,11 +173,15 @@ impl InfuraFdw {
     }
 
     fn fetch_balances(&mut self) -> FdwResult {
-        let address = self.address.clone().ok_or(
-            "Address required. Use WHERE address = '0x...' to query balances"
-        )?;
+        let address = self
+            .address
+            .clone()
+            .ok_or("Address required. Use WHERE address = '0x...' to query balances")?;
 
-        let block_param = self.block_number.clone().unwrap_or_else(|| "latest".to_string());
+        let block_param = self
+            .block_number
+            .clone()
+            .unwrap_or_else(|| "latest".to_string());
         let params = serde_json::json!([address, block_param]);
 
         let json = self.make_json_rpc_request("eth_getBalance", params)?;
@@ -195,15 +206,9 @@ impl InfuraFdw {
             filter.insert("address".to_string(), serde_json::json!(addr));
         }
 
-        filter.insert(
-            "fromBlock".to_string(),
-            serde_json::json!(self.from_block.clone().unwrap_or_else(|| "latest".to_string()))
-        );
-
-        filter.insert(
-            "toBlock".to_string(),
-            serde_json::json!(self.to_block.clone().unwrap_or_else(|| "latest".to_string()))
-        );
+        if let Some(block_hash) = &self.block_hash {
+            filter.insert("blockHash".to_string(), serde_json::json!(block_hash));
+        }
 
         let params = serde_json::json!([filter]);
         let json = self.make_json_rpc_request("eth_getLogs", params)?;
@@ -245,25 +250,53 @@ impl InfuraFdw {
         Ok(())
     }
 
-    /// Parse hex string to numeric string (for PostgreSQL numeric type)
-    fn hex_to_numeric(hex: &str) -> Option<String> {
+    /// Parse hex string to f64 (for PostgreSQL numeric type)
+    fn hex_to_numeric(hex: &str) -> Option<f64> {
+        let hex = hex.strip_prefix("0x").unwrap_or(hex);
+        if hex.is_empty() {
+            return Some(0.0);
+        }
+        u64::from_str_radix(hex, 16).map(|n| n as f64).ok()
+    }
+
+    /// Convert hex balance string to ETH string representation
+    fn hex_balance_to_eth_string(hex: &str) -> Option<String> {
         let hex = hex.strip_prefix("0x").unwrap_or(hex);
         if hex.is_empty() {
             return Some("0".to_string());
         }
-        u128::from_str_radix(hex, 16)
-            .map(|n| n.to_string())
-            .ok()
+
+        // Parse hex string to u128 (Wei amount)
+        let wei = match u128::from_str_radix(hex, 16) {
+            Ok(val) => val,
+            Err(_) => return None,
+        };
+
+        // 1 ETH = 10^18 Wei
+        const WEI_PER_ETH: u128 = 1_000_000_000_000_000_000;
+
+        // Calculate integer and fractional parts
+        let eth_whole = wei / WEI_PER_ETH;
+        let wei_remainder = wei % WEI_PER_ETH;
+
+        // Format fractional part with 18 decimal places, removing trailing zeros
+        let fractional = format!("{wei_remainder:018}");
+        let fractional_trimmed = fractional.trim_end_matches('0');
+
+        // Build result string
+        let result = if fractional_trimmed.is_empty() {
+            format!("{eth_whole}")
+        } else {
+            format!("{eth_whole}.{fractional_trimmed}")
+        };
+
+        Some(result)
     }
 
-    /// Parse hex timestamp to PostgreSQL timestamp (microseconds since 2000-01-01)
+    /// Parse hex timestamp to timestamp (unix timestamp in microseconds)
     fn hex_to_timestamp(hex: &str) -> Option<i64> {
         let hex = hex.strip_prefix("0x").unwrap_or(hex);
-        let unix_ts = i64::from_str_radix(hex, 16).ok()?;
-        // PostgreSQL epoch is 2000-01-01, Unix epoch is 1970-01-01
-        // Offset: 946684800 seconds (30 years)
-        const PG_EPOCH_OFFSET: i64 = 946684800;
-        Some((unix_ts - PG_EPOCH_OFFSET) * 1_000_000)
+        i64::from_str_radix(hex, 16).map(|n| n * 1_000_000).ok()
     }
 
     fn src_to_cell(&self, src_row: &JsonValue, tgt_col: &Column) -> Result<Option<Cell>, FdwError> {
@@ -276,240 +309,231 @@ impl InfuraFdw {
 
         match self.resource {
             Resource::Blocks => self.block_to_cell(src_row, &tgt_col_name, tgt_col.type_oid()),
-            Resource::Transactions => self.transaction_to_cell(src_row, &tgt_col_name, tgt_col.type_oid()),
+            Resource::Transactions => {
+                self.transaction_to_cell(src_row, &tgt_col_name, tgt_col.type_oid())
+            }
             Resource::Balances => self.balance_to_cell(src_row, &tgt_col_name, tgt_col.type_oid()),
             Resource::Logs => self.log_to_cell(src_row, &tgt_col_name, tgt_col.type_oid()),
-            Resource::ChainInfo => self.chain_info_to_cell(src_row, &tgt_col_name, tgt_col.type_oid()),
+            Resource::ChainInfo => {
+                self.chain_info_to_cell(src_row, &tgt_col_name, tgt_col.type_oid())
+            }
         }
     }
 
-    fn block_to_cell(&self, src_row: &JsonValue, col_name: &str, _type_oid: TypeOid) -> Result<Option<Cell>, FdwError> {
+    fn block_to_cell(
+        &self,
+        src_row: &JsonValue,
+        col_name: &str,
+        _type_oid: TypeOid,
+    ) -> Result<Option<Cell>, FdwError> {
         let cell = match col_name {
-            "number" => {
-                src_row.get("number")
-                    .and_then(|v| v.as_str())
-                    .and_then(Self::hex_to_numeric)
-                    .map(Cell::String)
-            }
-            "hash" => {
-                src_row.get("hash")
-                    .and_then(|v| v.as_str())
-                    .map(|s| Cell::String(s.to_string()))
-            }
-            "parent_hash" => {
-                src_row.get("parentHash")
-                    .and_then(|v| v.as_str())
-                    .map(|s| Cell::String(s.to_string()))
-            }
-            "timestamp" => {
-                src_row.get("timestamp")
-                    .and_then(|v| v.as_str())
-                    .and_then(Self::hex_to_timestamp)
-                    .map(Cell::Timestamp)
-            }
-            "miner" => {
-                src_row.get("miner")
-                    .and_then(|v| v.as_str())
-                    .map(|s| Cell::String(s.to_string()))
-            }
-            "gas_used" => {
-                src_row.get("gasUsed")
-                    .and_then(|v| v.as_str())
-                    .and_then(Self::hex_to_numeric)
-                    .map(Cell::String)
-            }
-            "gas_limit" => {
-                src_row.get("gasLimit")
-                    .and_then(|v| v.as_str())
-                    .and_then(Self::hex_to_numeric)
-                    .map(Cell::String)
-            }
-            "transaction_count" => {
-                src_row.get("transactions")
-                    .and_then(|v| v.as_array())
-                    .map(|arr| Cell::I64(arr.len() as i64))
-            }
-            "base_fee_per_gas" => {
-                src_row.get("baseFeePerGas")
-                    .and_then(|v| v.as_str())
-                    .and_then(Self::hex_to_numeric)
-                    .map(Cell::String)
-            }
+            "number" => src_row
+                .get("number")
+                .and_then(|v| v.as_str())
+                .and_then(Self::hex_to_numeric)
+                .map(Cell::Numeric),
+            "hash" => src_row
+                .get("hash")
+                .and_then(|v| v.as_str())
+                .map(|s| Cell::String(s.to_string())),
+            "parent_hash" => src_row
+                .get("parentHash")
+                .and_then(|v| v.as_str())
+                .map(|s| Cell::String(s.to_string())),
+            "timestamp" => src_row
+                .get("timestamp")
+                .and_then(|v| v.as_str())
+                .and_then(Self::hex_to_timestamp)
+                .map(Cell::Timestamp),
+            "miner" => src_row
+                .get("miner")
+                .and_then(|v| v.as_str())
+                .map(|s| Cell::String(s.to_string())),
+            "gas_used" => src_row
+                .get("gasUsed")
+                .and_then(|v| v.as_str())
+                .and_then(Self::hex_to_numeric)
+                .map(Cell::Numeric),
+            "gas_limit" => src_row
+                .get("gasLimit")
+                .and_then(|v| v.as_str())
+                .and_then(Self::hex_to_numeric)
+                .map(Cell::Numeric),
+            "transaction_count" => src_row
+                .get("transactions")
+                .and_then(|v| v.as_array())
+                .map(|arr| Cell::I64(arr.len() as i64)),
+            "base_fee_per_gas" => src_row
+                .get("baseFeePerGas")
+                .and_then(|v| v.as_str())
+                .and_then(Self::hex_to_numeric)
+                .map(Cell::Numeric),
             _ => None,
         };
         Ok(cell)
     }
 
-    fn transaction_to_cell(&self, src_row: &JsonValue, col_name: &str, _type_oid: TypeOid) -> Result<Option<Cell>, FdwError> {
+    fn transaction_to_cell(
+        &self,
+        src_row: &JsonValue,
+        col_name: &str,
+        _type_oid: TypeOid,
+    ) -> Result<Option<Cell>, FdwError> {
         let cell = match col_name {
-            "hash" => {
-                src_row.get("hash")
-                    .and_then(|v| v.as_str())
-                    .map(|s| Cell::String(s.to_string()))
-            }
-            "block_number" => {
-                src_row.get("blockNumber")
-                    .and_then(|v| v.as_str())
-                    .and_then(Self::hex_to_numeric)
-                    .map(Cell::String)
-            }
-            "block_hash" => {
-                src_row.get("blockHash")
-                    .and_then(|v| v.as_str())
-                    .map(|s| Cell::String(s.to_string()))
-            }
-            "from" | "from_address" => {
-                src_row.get("from")
-                    .and_then(|v| v.as_str())
-                    .map(|s| Cell::String(s.to_string()))
-            }
-            "to" | "to_address" => {
-                src_row.get("to")
-                    .and_then(|v| v.as_str())
-                    .map(|s| Cell::String(s.to_string()))
-            }
-            "value" => {
-                src_row.get("value")
-                    .and_then(|v| v.as_str())
-                    .and_then(Self::hex_to_numeric)
-                    .map(Cell::String)
-            }
-            "gas" => {
-                src_row.get("gas")
-                    .and_then(|v| v.as_str())
-                    .and_then(Self::hex_to_numeric)
-                    .map(Cell::String)
-            }
-            "gas_price" => {
-                src_row.get("gasPrice")
-                    .and_then(|v| v.as_str())
-                    .and_then(Self::hex_to_numeric)
-                    .map(Cell::String)
-            }
-            "nonce" => {
-                src_row.get("nonce")
-                    .and_then(|v| v.as_str())
-                    .and_then(Self::hex_to_numeric)
-                    .map(Cell::String)
-            }
-            "input" | "data" => {
-                src_row.get("input")
-                    .and_then(|v| v.as_str())
-                    .map(|s| Cell::String(s.to_string()))
-            }
-            "transaction_index" => {
-                src_row.get("transactionIndex")
-                    .and_then(|v| v.as_str())
-                    .and_then(Self::hex_to_numeric)
-                    .map(Cell::String)
-            }
+            "hash" => src_row
+                .get("hash")
+                .and_then(|v| v.as_str())
+                .map(|s| Cell::String(s.to_string())),
+            "block_number" => src_row
+                .get("blockNumber")
+                .and_then(|v| v.as_str())
+                .and_then(Self::hex_to_numeric)
+                .map(Cell::Numeric),
+            "block_hash" => src_row
+                .get("blockHash")
+                .and_then(|v| v.as_str())
+                .map(|s| Cell::String(s.to_string())),
+            "from" | "from_address" => src_row
+                .get("from")
+                .and_then(|v| v.as_str())
+                .map(|s| Cell::String(s.to_string())),
+            "to" | "to_address" => src_row
+                .get("to")
+                .and_then(|v| v.as_str())
+                .map(|s| Cell::String(s.to_string())),
+            "value" => src_row
+                .get("value")
+                .and_then(|v| v.as_str())
+                .and_then(Self::hex_to_numeric)
+                .map(Cell::Numeric),
+            "gas" => src_row
+                .get("gas")
+                .and_then(|v| v.as_str())
+                .and_then(Self::hex_to_numeric)
+                .map(Cell::Numeric),
+            "gas_price" => src_row
+                .get("gasPrice")
+                .and_then(|v| v.as_str())
+                .and_then(Self::hex_to_numeric)
+                .map(Cell::Numeric),
+            "nonce" => src_row
+                .get("nonce")
+                .and_then(|v| v.as_str())
+                .and_then(Self::hex_to_numeric)
+                .map(Cell::Numeric),
+            "input" | "data" => src_row
+                .get("input")
+                .and_then(|v| v.as_str())
+                .map(|s| Cell::String(s.to_string())),
+            "transaction_index" => src_row
+                .get("transactionIndex")
+                .and_then(|v| v.as_str())
+                .and_then(Self::hex_to_numeric)
+                .map(Cell::Numeric),
             _ => None,
         };
         Ok(cell)
     }
 
-    fn balance_to_cell(&self, src_row: &JsonValue, col_name: &str, _type_oid: TypeOid) -> Result<Option<Cell>, FdwError> {
+    fn balance_to_cell(
+        &self,
+        src_row: &JsonValue,
+        col_name: &str,
+        _type_oid: TypeOid,
+    ) -> Result<Option<Cell>, FdwError> {
         let cell = match col_name {
-            "address" => {
-                src_row.get("address")
-                    .and_then(|v| v.as_str())
-                    .map(|s| Cell::String(s.to_string()))
-            }
-            "balance" => {
-                src_row.get("balance")
-                    .and_then(|v| v.as_str())
-                    .and_then(Self::hex_to_numeric)
-                    .map(Cell::String)
-            }
-            "block" => {
-                src_row.get("block")
-                    .and_then(|v| v.as_str())
-                    .map(|s| Cell::String(s.to_string()))
-            }
+            "address" => src_row
+                .get("address")
+                .and_then(|v| v.as_str())
+                .map(|s| Cell::String(s.to_string())),
+            "balance" => src_row
+                .get("balance")
+                .and_then(|v| v.as_str())
+                .and_then(Self::hex_balance_to_eth_string)
+                .map(Cell::String),
+            "block" => src_row
+                .get("block")
+                .and_then(|v| v.as_str())
+                .map(|s| Cell::String(s.to_string())),
             _ => None,
         };
         Ok(cell)
     }
 
-    fn log_to_cell(&self, src_row: &JsonValue, col_name: &str, _type_oid: TypeOid) -> Result<Option<Cell>, FdwError> {
+    fn log_to_cell(
+        &self,
+        src_row: &JsonValue,
+        col_name: &str,
+        _type_oid: TypeOid,
+    ) -> Result<Option<Cell>, FdwError> {
         let cell = match col_name {
-            "address" => {
-                src_row.get("address")
-                    .and_then(|v| v.as_str())
-                    .map(|s| Cell::String(s.to_string()))
-            }
-            "block_number" => {
-                src_row.get("blockNumber")
-                    .and_then(|v| v.as_str())
-                    .and_then(Self::hex_to_numeric)
-                    .map(Cell::String)
-            }
-            "block_hash" => {
-                src_row.get("blockHash")
-                    .and_then(|v| v.as_str())
-                    .map(|s| Cell::String(s.to_string()))
-            }
-            "transaction_hash" => {
-                src_row.get("transactionHash")
-                    .and_then(|v| v.as_str())
-                    .map(|s| Cell::String(s.to_string()))
-            }
-            "transaction_index" => {
-                src_row.get("transactionIndex")
-                    .and_then(|v| v.as_str())
-                    .and_then(Self::hex_to_numeric)
-                    .map(Cell::String)
-            }
-            "log_index" => {
-                src_row.get("logIndex")
-                    .and_then(|v| v.as_str())
-                    .and_then(Self::hex_to_numeric)
-                    .map(Cell::String)
-            }
-            "data" => {
-                src_row.get("data")
-                    .and_then(|v| v.as_str())
-                    .map(|s| Cell::String(s.to_string()))
-            }
-            "topics" => {
-                src_row.get("topics")
-                    .map(|v| Cell::Json(v.to_string()))
-            }
-            "removed" => {
-                src_row.get("removed")
-                    .and_then(|v| v.as_bool())
-                    .map(Cell::Bool)
-            }
+            "address" => src_row
+                .get("address")
+                .and_then(|v| v.as_str())
+                .map(|s| Cell::String(s.to_string())),
+            "block_number" => src_row
+                .get("blockNumber")
+                .and_then(|v| v.as_str())
+                .and_then(Self::hex_to_numeric)
+                .map(Cell::Numeric),
+            "block_hash" => src_row
+                .get("blockHash")
+                .and_then(|v| v.as_str())
+                .map(|s| Cell::String(s.to_string())),
+            "transaction_hash" => src_row
+                .get("transactionHash")
+                .and_then(|v| v.as_str())
+                .map(|s| Cell::String(s.to_string())),
+            "transaction_index" => src_row
+                .get("transactionIndex")
+                .and_then(|v| v.as_str())
+                .and_then(Self::hex_to_numeric)
+                .map(Cell::Numeric),
+            "log_index" => src_row
+                .get("logIndex")
+                .and_then(|v| v.as_str())
+                .and_then(Self::hex_to_numeric)
+                .map(Cell::Numeric),
+            "data" => src_row
+                .get("data")
+                .and_then(|v| v.as_str())
+                .map(|s| Cell::String(s.to_string())),
+            "topics" => src_row.get("topics").map(|v| Cell::Json(v.to_string())),
+            "removed" => src_row
+                .get("removed")
+                .and_then(|v| v.as_bool())
+                .map(Cell::Bool),
             _ => None,
         };
         Ok(cell)
     }
 
-    fn chain_info_to_cell(&self, src_row: &JsonValue, col_name: &str, _type_oid: TypeOid) -> Result<Option<Cell>, FdwError> {
+    fn chain_info_to_cell(
+        &self,
+        src_row: &JsonValue,
+        col_name: &str,
+        _type_oid: TypeOid,
+    ) -> Result<Option<Cell>, FdwError> {
         let cell = match col_name {
-            "network" => {
-                src_row.get("network")
-                    .and_then(|v| v.as_str())
-                    .map(|s| Cell::String(s.to_string()))
-            }
-            "chain_id" => {
-                src_row.get("chain_id")
-                    .and_then(|v| v.as_str())
-                    .and_then(Self::hex_to_numeric)
-                    .map(Cell::String)
-            }
-            "block_number" => {
-                src_row.get("block_number")
-                    .and_then(|v| v.as_str())
-                    .and_then(Self::hex_to_numeric)
-                    .map(Cell::String)
-            }
-            "gas_price" => {
-                src_row.get("gas_price")
-                    .and_then(|v| v.as_str())
-                    .and_then(Self::hex_to_numeric)
-                    .map(Cell::String)
-            }
+            "network" => src_row
+                .get("network")
+                .and_then(|v| v.as_str())
+                .map(|s| Cell::String(s.to_string())),
+            "chain_id" => src_row
+                .get("chain_id")
+                .and_then(|v| v.as_str())
+                .and_then(Self::hex_to_numeric)
+                .map(Cell::Numeric),
+            "block_number" => src_row
+                .get("block_number")
+                .and_then(|v| v.as_str())
+                .and_then(Self::hex_to_numeric)
+                .map(Cell::Numeric),
+            "gas_price" => src_row
+                .get("gas_price")
+                .and_then(|v| v.as_str())
+                .and_then(Self::hex_to_numeric)
+                .map(Cell::Numeric),
             _ => None,
         };
         Ok(cell)
@@ -569,8 +593,7 @@ impl Guest for InfuraFdw {
         this.block_number = None;
         this.tx_hash = None;
         this.address = None;
-        this.from_block = None;
-        this.to_block = None;
+        this.block_hash = None;
 
         // Get resource type from table options
         let opts = ctx.get_options(&OptionsType::Table);
@@ -582,7 +605,8 @@ impl Guest for InfuraFdw {
             let field = qual.field().to_lowercase();
             let value = match qual.value() {
                 Value::Cell(Cell::String(s)) => s.clone(),
-                Value::Cell(Cell::I64(n)) => format!("0x{:x}", n),
+                Value::Cell(Cell::I64(n)) => format!("0x{n:x}"),
+                Value::Cell(Cell::Numeric(n)) => format!("0x{:x}", n as u64),
                 _ => continue,
             };
 
@@ -596,11 +620,8 @@ impl Guest for InfuraFdw {
                 "address" => {
                     this.address = Some(value);
                 }
-                "from_block" => {
-                    this.from_block = Some(value);
-                }
-                "to_block" => {
-                    this.to_block = Some(value);
+                "block_hash" => {
+                    this.block_hash = Some(value);
                 }
                 _ => {}
             }
@@ -715,7 +736,7 @@ impl Guest for InfuraFdw {
             format!(
                 r#"create foreign table if not exists eth_balances (
                     address text,
-                    balance numeric,
+                    balance text,
                     block text
                 )
                 server {} options (
