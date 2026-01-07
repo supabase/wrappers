@@ -195,26 +195,26 @@ PostgreSQL identifiers are **case-insensitive by default** and are folded to low
 | `firstname`       | `FirstName`    | ❌ No - Case mismatch |
 | `first_name`      | `First Name`   | ❌ No - Space in Airtable name |
 
-### Using the column_name Option
+### Using Quoted Column Name
 
-When your Airtable field name doesn't match PostgreSQL's lowercase convention, use the `column_name` option to explicitly map columns:
+When your Airtable field name doesn't match PostgreSQL's lowercase convention, use double-quotes `"` to enclose the column name to explicitly map columns:
 
 ```sql
 create foreign table airtable.customers (
-  -- Simple lowercase match - no option needed
+  -- Simple lowercase match
   id text,
 
   -- Airtable field has a space: "First Name"
-  first_name text options (column_name 'First Name'),
+  "First Name" text,
 
   -- Airtable field is mixed case: "LastName"
-  last_name text options (column_name 'LastName'),
+  "LastName" text,
 
   -- Airtable field has special characters: "Price ($)"
-  price_usd numeric options (column_name 'Price ($)'),
+  "Price ($)" numeric,
 
   -- Airtable field is all caps: "SKU"
-  sku text options (column_name 'SKU')
+  "SKU" text
 )
 server airtable_server
 options (
@@ -226,9 +226,8 @@ options (
 ### Best Practices
 
 1. **Always check your Airtable field names** - Open your Airtable base and note the exact spelling and capitalization
-2. **Use `column_name` liberally** - When in doubt, explicitly map the column to avoid silent NULL values
+2. **Use quoted column name liberally** - When in doubt, explicitly quote the column name to avoid silent NULL values
 3. **Matching is by name, not position** - You can define columns in any order and omit columns you don't need
-4. **Use snake_case for PostgreSQL** - Map Airtable's "First Name" to PostgreSQL's `first_name` for SQL convenience
 
 ## Working with Array and JSON Fields
 
@@ -243,7 +242,7 @@ Multiple select fields are returned as JSON arrays of strings.
 create foreign table airtable.products (
   id text,
   name text,
-  tags jsonb options (column_name 'Tags')
+  "Tags" jsonb
 )
 server airtable_server
 options (
@@ -254,17 +253,17 @@ options (
 -- Example data in tags: ["Electronics", "Sale", "Featured"]
 
 -- Query: Find products with a specific tag
-select name, tags
+select name, "Tags"
 from airtable.products
-where tags ? 'Sale';
+where "Tags" ? 'Sale';
 
 -- Query: Find products with any of several tags
-select name, tags
+select name, "Tags"
 from airtable.products
-where tags ?| array['Electronics', 'Furniture'];
+where "Tags" ?| array['Electronics', 'Furniture'];
 
 -- Query: Extract tags as text array for processing
-select name, jsonb_array_elements_text(tags) as tag
+select name, jsonb_array_elements_text("Tags") as tag
 from airtable.products;
 ```
 
@@ -276,8 +275,8 @@ Linked record fields return JSON arrays of record IDs.
 -- Create foreign table with linked records
 create foreign table airtable.orders (
   id text,
-  order_number text options (column_name 'Order Number'),
-  customer_ids jsonb options (column_name 'Customer')
+  "Order Number" text,
+  "Customer" jsonb
 )
 server airtable_server
 options (
@@ -285,15 +284,15 @@ options (
   table_id 'tblXXXX'
 );
 
--- Example data in customer_ids: ["recABC123", "recDEF456"]
+-- Example data in customer ids: ["recABC123", "recDEF456"]
 
 -- Query: Find orders linked to a specific customer
-select order_number, customer_ids
+select order_number, "Customer"
 from airtable.orders
-where customer_ids ? 'recABC123';
+where "Customer" ? 'recABC123';
 
 -- Query: Count linked records
-select order_number, jsonb_array_length(customer_ids) as customer_count
+select order_number, jsonb_array_length("Customer") as customer_count
 from airtable.orders;
 ```
 
@@ -306,7 +305,7 @@ Attachment fields return JSON arrays containing file metadata.
 create foreign table airtable.documents (
   id text,
   title text,
-  files jsonb options (column_name 'Attachments')
+  "Attachments" jsonb
 )
 server airtable_server
 options (
@@ -314,22 +313,22 @@ options (
   table_id 'tblXXXX'
 );
 
--- Example data in files:
+-- Example data in attachments:
 -- [{"id": "attXXX", "url": "https://...", "filename": "doc.pdf", "size": 12345, "type": "application/pdf"}]
 
 -- Query: Get first attachment URL
-select title, files->0->>'url' as first_file_url
+select title, "Attachments"->0->>'url' as first_file_url
 from airtable.documents;
 
 -- Query: Get all attachment filenames
-select title, jsonb_path_query(files, '$[*].filename') as filename
+select title, jsonb_path_query("Attachments", '$[*].filename') as filename
 from airtable.documents;
 
 -- Query: Find documents with PDF attachments
 select title
 from airtable.documents
 where exists (
-  select 1 from jsonb_array_elements(files) as f
+  select 1 from jsonb_array_elements("Attachments") as f
   where f->>'type' = 'application/pdf'
 );
 ```
@@ -342,9 +341,9 @@ User fields return JSON objects with user details.
 -- Create foreign table with user fields
 create foreign table airtable.tasks (
   id text,
-  task_name text options (column_name 'Task Name'),
-  assigned_to jsonb options (column_name 'Assigned To'),
-  created_by jsonb options (column_name 'Created By')
+  "Task Name" text,
+  "Assigned To" jsonb,
+  "Created By" jsonb
 )
 server airtable_server
 options (
@@ -355,13 +354,13 @@ options (
 -- Example data in assigned_to: {"id": "usrXXX", "email": "user@example.com", "name": "John Doe"}
 
 -- Query: Get assignee email
-select task_name, assigned_to->>'email' as assignee_email
+select "Task Name", "Assigned To"->>'email' as assignee_email
 from airtable.tasks;
 
 -- Query: Find tasks assigned to specific user
-select task_name
+select "Task Name"
 from airtable.tasks
-where assigned_to->>'email' = 'john@example.com';
+where "Assigned To"->>'email' = 'john@example.com';
 ```
 
 ## Query Pushdown Support
@@ -406,15 +405,17 @@ To modify Airtable data, use the [Airtable API](https://airtable.com/developers/
 **Cause**: Column name mismatch between PostgreSQL and Airtable.
 
 **Solution**:
+
 1. Check the exact field names in Airtable (including capitalization and spaces)
-2. Use the `column_name` option to map columns correctly:
+
+2. Use quoted column name to map columns correctly:
 
 ```sql
 -- Before (returns NULL because Airtable field is "Full Name"):
 full_name text
 
 -- After (correctly maps to Airtable field):
-full_name text options (column_name 'Full Name')
+"Full Name" text
 ```
 
 ### "Column Does Not Exist" Error
@@ -423,11 +424,11 @@ full_name text options (column_name 'Full Name')
 
 **Cause**: Case sensitivity mismatch or typo in field name.
 
-**Solution**: Verify the Airtable field name and use `column_name` option:
+**Solution**: Verify the Airtable field name and use quoted column name:
 
 ```sql
 -- Airtable field is "ProductID" not "productid"
-product_id text options (column_name 'ProductID')
+"ProductID" text
 ```
 
 ### Type Conversion Errors
@@ -466,7 +467,9 @@ select tags from airtable.products limit 1;
 **Cause**: No query pushdown means all data is fetched before filtering.
 
 **Solution**:
+
 1. Create an Airtable View with the filters you need
+
 2. Use `view_id` in your foreign table options:
 
 ```sql
@@ -490,11 +493,11 @@ This example creates a foreign table for a simple product catalog:
 ```sql
 create foreign table airtable.products (
   id text,
-  name text options (column_name 'Product Name'),
-  description text options (column_name 'Description'),
-  price numeric options (column_name 'Price'),
-  in_stock boolean options (column_name 'In Stock'),
-  created_at timestamp options (column_name 'Created')
+  name text,
+  description text,
+  price numeric,
+  in_stock boolean,
+  created_at timestamp
 )
 server airtable_server
 options (
@@ -519,8 +522,8 @@ Create a foreign table from an Airtable View for pre-filtered data:
 
 ```sql
 create foreign table airtable.active_products (
-  name text options (column_name 'Product Name'),
-  price numeric options (column_name 'Price')
+  name text,
+  price numeric
 )
 server airtable_server
 options (
@@ -539,9 +542,9 @@ Query products by their tags:
 ```sql
 create foreign table airtable.tagged_products (
   id text,
-  name text options (column_name 'Product Name'),
-  tags jsonb options (column_name 'Tags'),
-  category text options (column_name 'Category')
+  name text,
+  "Tags" jsonb,
+  category text
 )
 server airtable_server
 options (
@@ -550,14 +553,14 @@ options (
 );
 
 -- Find all products tagged as "Featured"
-select name, tags
+select name, "Tags"
 from airtable.tagged_products
-where tags ? 'Featured';
+where "Tags" ? 'Featured';
 
 -- Find products with both "Sale" and "Electronics" tags
-select name, tags
+select name, "Tags"
 from airtable.tagged_products
-where tags ?& array['Sale', 'Electronics'];
+where "Tags" ?& array['Sale', 'Electronics'];
 ```
 
 ### Complex Query with User Data
@@ -567,14 +570,14 @@ Combine multiple field types in a practical example:
 ```sql
 create foreign table airtable.project_tasks (
   id text,
-  task_name text options (column_name 'Task Name'),
-  status text options (column_name 'Status'),
-  priority text options (column_name 'Priority'),
-  due_date date options (column_name 'Due Date'),
-  assigned_to jsonb options (column_name 'Assigned To'),
-  attachments jsonb options (column_name 'Attachments'),
-  tags jsonb options (column_name 'Tags'),
-  created_at timestamp options (column_name 'Created')
+  task_name text,
+  status text,
+  priority text,
+  due_date date,
+  assigned_to jsonb,
+  attachments jsonb,
+  tags jsonb,
+  created_at timestamp
 )
 server airtable_server
 options (
