@@ -105,7 +105,10 @@ unsafe fn extract_aggregates(
                     let func_name = pg_sys::get_func_name((*aggref).aggfnoid);
                     if !func_name.is_null() {
                         let name = std::ffi::CStr::from_ptr(func_name).to_string_lossy();
-                        debug2!("Unsupported aggregate function '{}', skipping pushdown", name);
+                        debug2!(
+                            "Unsupported aggregate function '{}', skipping pushdown",
+                            name
+                        );
                     } else {
                         debug2!("Unknown aggregate function, skipping pushdown");
                     }
@@ -121,7 +124,10 @@ unsafe fn extract_aggregates(
                         debug2!("COUNT(DISTINCT) detected, pushdown supported");
                     }
                     _ => {
-                        debug2!("DISTINCT modifier on {:?} not supported, skipping pushdown", kind);
+                        debug2!(
+                            "DISTINCT modifier on {:?} not supported, skipping pushdown",
+                            kind
+                        );
                         return None;
                     }
                 }
@@ -368,7 +374,10 @@ pub(super) extern "C-unwind" fn get_foreign_upper_paths<
 
             debug2!(
                 "Aggregate pushdown cost estimate: rows={}, width={}, startup={}, total={}",
-                rows, width, startup_cost, total_cost
+                rows,
+                width,
+                startup_cost,
+                total_cost
             );
 
             // Create the foreign upper path
@@ -379,7 +388,7 @@ pub(super) extern "C-unwind" fn get_foreign_upper_paths<
                 (*output_rel).reltarget, // pathtarget
                 rows as f64,             // rows
                 #[cfg(feature = "pg18")]
-                0,                       // disabled_nodes
+                0, // disabled_nodes
                 startup_cost,            // startup_cost
                 total_cost,              // total_cost
                 ptr::null_mut(),         // pathkeys

@@ -809,11 +809,7 @@ impl Aggregate {
         match self.kind {
             AggregateKind::Count => format!("{func_name}(*)"),
             _ => {
-                let col_name = self
-                    .column
-                    .as_ref()
-                    .map(|c| c.name.as_str())
-                    .unwrap_or("*");
+                let col_name = self.column.as_ref().map(|c| c.name.as_str()).unwrap_or("*");
                 if self.distinct {
                     format!("{func_name}(DISTINCT {col_name})")
                 } else {
@@ -1195,8 +1191,7 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
             fdw_routine.ExplainForeignScan = Some(scan::explain_foreign_scan::<E, Self>);
 
             // upper path planning (aggregate pushdown)
-            fdw_routine.GetForeignUpperPaths =
-                Some(upper::get_foreign_upper_paths::<E, Self>);
+            fdw_routine.GetForeignUpperPaths = Some(upper::get_foreign_upper_paths::<E, Self>);
 
             // scan phase
             fdw_routine.BeginForeignScan = Some(scan::begin_foreign_scan::<E, Self>);
