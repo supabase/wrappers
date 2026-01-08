@@ -62,7 +62,7 @@ unsafe fn extract_aggregates(
     }
 
     let group_extra = extra as *mut pg_sys::GroupPathExtraData;
-    if (*group_extra).havingQual != ptr::null_mut() {
+    if !(*group_extra).havingQual.is_null() {
         // HAVING clause not supported for pushdown
         debug2!("HAVING clause present, skipping aggregate pushdown");
         return None;
@@ -109,7 +109,7 @@ unsafe fn extract_aggregates(
             };
 
             // Check for DISTINCT - only supported for COUNT
-            if (*aggref).aggdistinct != ptr::null_mut() {
+            if !(*aggref).aggdistinct.is_null() {
                 match kind {
                     AggregateKind::CountColumn => {
                         // COUNT(DISTINCT col) is supported
@@ -126,7 +126,7 @@ unsafe fn extract_aggregates(
             }
 
             // Get the column being aggregated (if any)
-            let column = if (*aggref).args != ptr::null_mut() && (*(*aggref).args).length > 0 {
+            let column = if !(*aggref).args.is_null() && (*(*aggref).args).length > 0 {
                 let args_list: PgList<pg_sys::TargetEntry> = PgList::from_pg((*aggref).args);
                 // Store the first entry before the if-let to avoid lifetime issues
                 let first_entry = args_list.iter_ptr().next();
@@ -175,8 +175,8 @@ unsafe fn extract_aggregates(
             let aggregate = Aggregate {
                 kind,
                 column,
-                distinct: (*aggref).aggdistinct != ptr::null_mut(),
-                alias: format!("agg_{}", resno),
+                distinct: !(*aggref).aggdistinct.is_null(),
+                alias: format!("agg_{resno}"),
             };
 
             aggregates.push(aggregate);
