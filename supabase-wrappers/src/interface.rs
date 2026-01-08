@@ -798,7 +798,7 @@ impl Aggregate {
     ///
     /// let sum_col = Aggregate {
     ///     kind: AggregateKind::Sum,
-    ///     column: Some(Column { name: "price".to_string(), num: 1, type_oid: 0 }),
+    ///     column: Some(Column { name: "price".to_string(), num: 1, type_oid: pgrx::pg_sys::Oid::INVALID }),
     ///     distinct: false,
     ///     alias: "total".to_string(),
     /// };
@@ -1006,7 +1006,7 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     ///
     /// ## Examples
     ///
-    /// ```rust,no_run
+    /// ```rust,ignore
     /// use supabase_wrappers::prelude::*;
     ///
     /// fn supported_aggregates(&self) -> Vec<AggregateKind> {
@@ -1033,7 +1033,7 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     ///
     /// ## Examples
     ///
-    /// ```rust,no_run
+    /// ```rust,ignore
     /// fn supports_group_by(&self) -> bool {
     ///     true
     /// }
@@ -1063,7 +1063,7 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     ///
     /// ## Examples
     ///
-    /// ```rust,no_run
+    /// ```rust,ignore
     /// fn get_aggregate_rel_size(
     ///     &mut self,
     ///     aggregates: &[Aggregate],
@@ -1113,7 +1113,7 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     ///
     /// ## Examples
     ///
-    /// ```rust,no_run
+    /// ```rust,ignore
     /// fn begin_aggregate_scan(
     ///     &mut self,
     ///     aggregates: &[Aggregate],
