@@ -366,13 +366,13 @@ pub(super) extern "C-unwind" fn get_foreign_upper_paths<
                 rows as f64,             // rows
                 #[cfg(feature = "pg18")]
                 0, // disabled_nodes (pg18 only)
-                startup_cost,    // startup_cost
-                total_cost,      // total_cost
-                ptr::null_mut(), // pathkeys
-                ptr::null_mut(), // fdw_outerpath
+                startup_cost,            // startup_cost
+                total_cost,              // total_cost
+                ptr::null_mut(),         // pathkeys
+                ptr::null_mut(),         // fdw_outerpath
                 #[cfg(any(feature = "pg17", feature = "pg18"))]
                 ptr::null_mut(), // fdw_restrictinfo (pg17+ only)
-                ptr::null_mut(), // fdw_private
+                ptr::null_mut(),         // fdw_private
             );
 
             // Add the path to the output relation
