@@ -17,7 +17,7 @@ The Infura Wrapper is a WebAssembly (Wasm) foreign data wrapper which allows you
 
 | Version | Wasm Package URL                                                                                  | Checksum | Required Wrappers Version |
 | ------- | ------------------------------------------------------------------------------------------------- | -------- | ------------------------- |
-| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_infura_fdw_v0.1.0/infura_fdw.wasm`   | TBD      | >=0.5.0                   |
+| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_infura_fdw_v0.1.0/infura_fdw.wasm`   | 6cb829b851ea8cbd70cb893958826824388a4d9477305a16f2f489bcd569b35e | >=0.5.0                   |
 
 ## Preparation
 
@@ -67,7 +67,7 @@ We need to provide Postgres with the credentials to access Infura and any additi
         fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_infura_fdw_v0.1.0/infura_fdw.wasm',
         fdw_package_name 'supabase:infura-fdw',
         fdw_package_version '0.1.0',
-        fdw_package_checksum 'TBD',
+        fdw_package_checksum '6cb829b851ea8cbd70cb893958826824388a4d9477305a16f2f489bcd569b35e',
         api_key_id '<key_ID>', -- The Key ID from above.
         network 'mainnet'  -- optional, defaults to mainnet
       );
@@ -82,7 +82,7 @@ We need to provide Postgres with the credentials to access Infura and any additi
         fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_infura_fdw_v0.1.0/infura_fdw.wasm',
         fdw_package_name 'supabase:infura-fdw',
         fdw_package_version '0.1.0',
-        fdw_package_checksum 'TBD',
+        fdw_package_checksum '6cb829b851ea8cbd70cb893958826824388a4d9477305a16f2f489bcd569b35e',
         api_key '<your-infura-api-key>',
         network 'mainnet'  -- optional, defaults to mainnet
       );
@@ -480,7 +480,7 @@ create server polygon_server
     fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_infura_fdw_v0.1.0/infura_fdw.wasm',
     fdw_package_name 'supabase:infura-fdw',
     fdw_package_version '0.1.0',
-    fdw_package_checksum 'TBD',
+    fdw_package_checksum '6cb829b851ea8cbd70cb893958826824388a4d9477305a16f2f489bcd569b35e',
     api_key '<your-infura-api-key>',
     network 'polygon-mainnet'
   );
