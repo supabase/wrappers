@@ -4,6 +4,13 @@ on:
   push:
     tags:
       - 'wasm_*_fdw_v[0-9]+.[0-9]+.[0-9]+' # Push events to matching wasm fdw tag, i.e. wasm_snowflake_fdw_v1.0.2
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Git tag for Wasm FDW to deploy (e.g., wasm_infura_fdw_v0.1.0)'
+        required: true
+        type: string
+        default: 'wasm_infura_fdw_v0.1.0'
 
 permissions:
   contents: write
@@ -63,14 +70,20 @@ jobs:
         id: metadata
         run: |
           cd wasm-wrappers/fdw/${{ steps.extract_info.outputs.PROJECT }}
-          METADATA_JSON=`cargo metadata --format-version 1 --no-deps --offline`
+          METADATA_JSON=$(cargo metadata --format-version 1 --no-deps --offline | jq -r '.packages[] | select(.name == "${{ steps.extract_info.outputs.PROJECT }}") | .')
+
+          if [ "$METADATA_JSON" = "" ]; then
+            echo "Error: Project '${{ steps.extract_info.outputs.PROJECT }}' not found in workspace."
+            exit 1
+          fi
+
           echo "METADATA_JSON=$METADATA_JSON" >> "$GITHUB_OUTPUT"
 
       - name: Extract package info
         id: extract
         run: |
           cd wasm-wrappers/fdw/${{ steps.extract_info.outputs.PROJECT }}
-          PACKAGE="${{ fromJson(steps.metadata.outputs.METADATA_JSON).packages[0].metadata.component.package }}"
+          PACKAGE="${{ fromJson(steps.metadata.outputs.METADATA_JSON).metadata.component.package }}"
           CHECKSUM=`head -1 checksum.txt | sed -E 's/^(.*) .*/\1/'`
           echo "PACKAGE=$PACKAGE" >> "$GITHUB_OUTPUT"
           echo "CHECKSUM=$CHECKSUM" >> "$GITHUB_OUTPUT"
