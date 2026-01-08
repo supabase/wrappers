@@ -1,7 +1,6 @@
 name: Wasm FDW Release
 
 on:
-  pull_request:
   push:
     tags:
       - 'wasm_*_fdw_v[0-9]+.[0-9]+.[0-9]+' # Push events to matching wasm fdw tag, i.e. wasm_snowflake_fdw_v1.0.2
@@ -20,7 +19,7 @@ jobs:
       - name: Extract project and version from tag
         id: extract_info
         env:
-          TAG: wasm_infura_fdw_v0.1.0
+          TAG: ${{ github.ref_name }}
         run: |
           PROJECT=`echo "${TAG}" | sed -E 's/wasm_(.*_fdw)_v.*/\1/'`
           VERSION=`echo "${TAG}" | sed -E 's/wasm_.*_fdw_v(.*)/\1/'`
@@ -79,7 +78,7 @@ jobs:
 
       - name: Create README.txt
         env:
-          TAG: wasm_infura_fdw_v0.1.0
+          TAG: ${{ github.ref_name }}
           PROJECT: ${{ steps.extract_info.outputs.PROJECT }}
           VERSION: ${{ steps.extract_info.outputs.VERSION }}
           PACKAGE: ${{ steps.extract.outputs.PACKAGE }}
