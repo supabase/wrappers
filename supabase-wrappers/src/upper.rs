@@ -128,7 +128,9 @@ unsafe fn extract_aggregates(
             // Get the column being aggregated (if any)
             let column = if (*aggref).args != ptr::null_mut() && (*(*aggref).args).length > 0 {
                 let args_list: PgList<pg_sys::TargetEntry> = PgList::from_pg((*aggref).args);
-                if let Some(target_entry) = args_list.iter_ptr().next() {
+                // Store the first entry before the if-let to avoid lifetime issues
+                let first_entry = args_list.iter_ptr().next();
+                if let Some(target_entry) = first_entry {
                     let arg_expr = (*target_entry).expr as *mut pg_sys::Node;
 
                     if (*arg_expr).type_ == pg_sys::NodeTag::T_Var {
