@@ -11,6 +11,21 @@ use crate::interface::{Aggregate, AggregateKind, Column};
 use crate::prelude::ForeignDataWrapper;
 use crate::scan::FdwState;
 
+/// Helper to iterate over a pg_sys::List using raw pointer access
+/// Returns an iterator over pointers to the list elements
+unsafe fn list_iter<T>(list: *mut pg_sys::List) -> impl Iterator<Item = *mut T> {
+    let len = if list.is_null() {
+        0
+    } else {
+        (*list).length as usize
+    };
+
+    (0..len).map(move |i| {
+        let cell = (*list).elements.add(i);
+        (*cell).ptr_value as *mut T
+    })
+}
+
 /// Check if a given PostgreSQL aggregate OID is supported by the FDW
 fn oid_to_aggregate_kind(aggfnoid: pg_sys::Oid) -> Option<AggregateKind> {
     // PostgreSQL built-in aggregate function OIDs
@@ -77,15 +92,13 @@ unsafe fn extract_aggregates(
     let mut aggregates = Vec::new();
     let mut resno = 1;
 
-    // Iterate through the target expressions using PgList
+    // Iterate through the target expressions
     let exprs = (*reltarget).exprs;
     if exprs.is_null() {
         return None;
     }
 
-    let exprs_list: pgrx::PgList<pg_sys::Node> = pgrx::PgList::from_pg(exprs);
-
-    for expr in exprs_list.iter_ptr() {
+    for expr in list_iter::<pg_sys::Node>(exprs) {
         // Check if this is an Aggref (aggregate reference)
         if (*expr).type_ == pg_sys::NodeTag::T_Aggref {
             let aggref = expr as *mut pg_sys::Aggref;
@@ -127,11 +140,11 @@ unsafe fn extract_aggregates(
 
             // Get the column being aggregated (if any)
             let column = if !(*aggref).args.is_null() && (*(*aggref).args).length > 0 {
-                let args_list: pgrx::PgList<pg_sys::TargetEntry> =
-                    pgrx::PgList::from_pg((*aggref).args);
-                // Store the first entry before the if-let to avoid lifetime issues
-                let first_entry = args_list.iter_ptr().next();
-                if let Some(target_entry) = first_entry {
+                // Get first argument from the args list
+                let first_cell = (*(*aggref).args).elements;
+                let target_entry = (*first_cell).ptr_value as *mut pg_sys::TargetEntry;
+
+                if !target_entry.is_null() {
                     let arg_expr = (*target_entry).expr as *mut pg_sys::Node;
 
                     if (*arg_expr).type_ == pg_sys::NodeTag::T_Var {
@@ -222,16 +235,13 @@ unsafe fn extract_group_by_columns(
         return group_by;
     }
 
-    // Iterate through group clause items using PgList
-    let group_list: pgrx::PgList<pg_sys::SortGroupClause> = pgrx::PgList::from_pg(group_clause);
-    let target_entries: pgrx::PgList<pg_sys::TargetEntry> = pgrx::PgList::from_pg(target_list);
-
-    for sort_group_clause in group_list.iter_ptr() {
+    // Iterate through group clause items
+    for sort_group_clause in list_iter::<pg_sys::SortGroupClause>(group_clause) {
         // Find the target entry for this group clause
         let tle_resno = (*sort_group_clause).tleSortGroupRef;
 
         // Search target list for matching resno
-        for tle in target_entries.iter_ptr() {
+        for tle in list_iter::<pg_sys::TargetEntry>(target_list) {
             if (*tle).ressortgroupref == tle_resno {
                 let expr = (*tle).expr as *mut pg_sys::Node;
 
