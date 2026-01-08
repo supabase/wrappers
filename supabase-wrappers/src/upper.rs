@@ -4,7 +4,7 @@
 //! aggregate pushdown to foreign data sources.
 
 use pgrx::pg_sys::panic::ErrorReport;
-use pgrx::{debug2, pg_guard, pg_sys, PgBox};
+use pgrx::{debug2, pg_guard, pg_sys, PgBox, PgList};
 use std::ptr;
 
 use crate::interface::{Aggregate, AggregateKind, Column};
@@ -77,23 +77,15 @@ unsafe fn extract_aggregates(
     let mut aggregates = Vec::new();
     let mut resno = 1;
 
-    // Iterate through the target expressions
+    // Iterate through the target expressions using PgList
     let exprs = (*reltarget).exprs;
     if exprs.is_null() {
         return None;
     }
 
-    let len = (*exprs).length;
-    let mut cell = (*exprs).head.elements;
+    let exprs_list: PgList<pg_sys::Node> = PgList::from_pg(exprs);
 
-    for _ in 0..len {
-        if cell.is_null() {
-            break;
-        }
-
-        let expr = (*cell).ptr_value as *mut pg_sys::Node;
-        cell = cell.offset(1);
-
+    for expr in exprs_list.iter_ptr() {
         // Check if this is an Aggref (aggregate reference)
         if (*expr).type_ == pg_sys::NodeTag::T_Aggref {
             let aggref = expr as *mut pg_sys::Aggref;
@@ -135,29 +127,32 @@ unsafe fn extract_aggregates(
 
             // Get the column being aggregated (if any)
             let column = if (*aggref).args != ptr::null_mut() && (*(*aggref).args).length > 0 {
-                let arg_cell = (*(*aggref).args).head.elements;
-                let target_entry = (*arg_cell).ptr_value as *mut pg_sys::TargetEntry;
-                let arg_expr = (*target_entry).expr as *mut pg_sys::Node;
+                let args_list: PgList<pg_sys::TargetEntry> = PgList::from_pg((*aggref).args);
+                if let Some(target_entry) = args_list.iter_ptr().next() {
+                    let arg_expr = (*target_entry).expr as *mut pg_sys::Node;
 
-                if (*arg_expr).type_ == pg_sys::NodeTag::T_Var {
-                    let var = arg_expr as *mut pg_sys::Var;
-                    // Get column name from the var
-                    let relid = (*var).varno as pg_sys::Index;
-                    let attno = (*var).varattno;
+                    if (*arg_expr).type_ == pg_sys::NodeTag::T_Var {
+                        let var = arg_expr as *mut pg_sys::Var;
+                        // Get column name from the var
+                        let relid = (*var).varno as pg_sys::Index;
+                        let attno = (*var).varattno;
 
-                    // Try to get the column name
-                    let rte = pg_sys::planner_rt_fetch(relid, root);
-                    if !rte.is_null() {
-                        let rel_oid = (*rte).relid;
-                        let att_name = pg_sys::get_attname(rel_oid, attno, false);
-                        if !att_name.is_null() {
-                            let name_cstr = std::ffi::CStr::from_ptr(att_name);
-                            if let Ok(name) = name_cstr.to_str() {
-                                Some(Column {
-                                    name: name.to_string(),
-                                    num: attno as usize,
-                                    type_oid: (*var).vartype,
-                                })
+                        // Try to get the column name
+                        let rte = pg_sys::planner_rt_fetch(relid, root);
+                        if !rte.is_null() {
+                            let rel_oid = (*rte).relid;
+                            let att_name = pg_sys::get_attname(rel_oid, attno, false);
+                            if !att_name.is_null() {
+                                let name_cstr = std::ffi::CStr::from_ptr(att_name);
+                                if let Ok(name) = name_cstr.to_str() {
+                                    Some(Column {
+                                        name: name.to_string(),
+                                        num: attno as usize,
+                                        type_oid: (*var).vartype,
+                                    })
+                                } else {
+                                    None
+                                }
                             } else {
                                 None
                             }
@@ -165,10 +160,10 @@ unsafe fn extract_aggregates(
                             None
                         }
                     } else {
+                        // Complex expression, not a simple column reference
                         None
                     }
                 } else {
-                    // Complex expression, not a simple column reference
                     None
                 }
             } else {
@@ -204,7 +199,7 @@ unsafe fn extract_aggregates(
 /// Extract GROUP BY columns from the query
 unsafe fn extract_group_by_columns(
     root: *mut pg_sys::PlannerInfo,
-    input_rel: *mut pg_sys::RelOptInfo,
+    _input_rel: *mut pg_sys::RelOptInfo,
 ) -> Vec<Column> {
     let mut group_by = Vec::new();
 
@@ -224,33 +219,16 @@ unsafe fn extract_group_by_columns(
         return group_by;
     }
 
-    // Iterate through group clause items
-    let len = (*group_clause).length;
-    let mut cell = (*group_clause).head.elements;
+    // Iterate through group clause items using PgList
+    let group_list: PgList<pg_sys::SortGroupClause> = PgList::from_pg(group_clause);
+    let target_entries: PgList<pg_sys::TargetEntry> = PgList::from_pg(target_list);
 
-    for _ in 0..len {
-        if cell.is_null() {
-            break;
-        }
-
-        let sort_group_clause = (*cell).ptr_value as *mut pg_sys::SortGroupClause;
-        cell = cell.offset(1);
-
+    for sort_group_clause in group_list.iter_ptr() {
         // Find the target entry for this group clause
         let tle_resno = (*sort_group_clause).tleSortGroupRef;
 
         // Search target list for matching resno
-        let tl_len = (*target_list).length;
-        let mut tl_cell = (*target_list).head.elements;
-
-        for _ in 0..tl_len {
-            if tl_cell.is_null() {
-                break;
-            }
-
-            let tle = (*tl_cell).ptr_value as *mut pg_sys::TargetEntry;
-            tl_cell = tl_cell.offset(1);
-
+        for tle in target_entries.iter_ptr() {
             if (*tle).ressortgroupref == tle_resno {
                 let expr = (*tle).expr as *mut pg_sys::Node;
 
@@ -352,15 +330,12 @@ pub(super) extern "C-unwind" fn get_foreign_upper_paths<
             }
 
             // Get cost estimates
-            let (rows, width) = match state.instance.as_ref() {
-                Some(inst) => {
-                    // We need a mutable reference, but we're in a const context
-                    // For now, use default estimates
-                    let rows = if group_by.is_empty() { 1 } else { 100 };
-                    let width = 8 * aggregates.len() as i32;
-                    (rows, width)
-                }
-                None => return,
+            let (rows, _width) = {
+                // We need a mutable reference, but we're in a const context
+                // For now, use default estimates
+                let rows = if group_by.is_empty() { 1 } else { 100 };
+                let width = 8 * aggregates.len() as i32;
+                (rows, width)
             };
 
             // Get startup cost from options
@@ -373,28 +348,31 @@ pub(super) extern "C-unwind" fn get_foreign_upper_paths<
             let total_cost = startup_cost + rows as f64;
 
             debug2!(
-                "Aggregate pushdown cost estimate: rows={}, width={}, startup={}, total={}",
+                "Aggregate pushdown cost estimate: rows={}, startup={}, total={}",
                 rows,
-                width,
                 startup_cost,
                 total_cost
             );
 
             // Create the foreign upper path
-            // Note: We need to store aggregate info for later use in begin_scan
+            // Note: The function signature differs across PostgreSQL versions:
+            // - PG13-16: 9 parameters (no disabled_nodes, no fdw_restrictinfo)
+            // - PG17: 10 parameters (added fdw_restrictinfo)
+            // - PG18: 11 parameters (added disabled_nodes)
             let path = pg_sys::create_foreign_upper_path(
                 root,
                 output_rel,
                 (*output_rel).reltarget, // pathtarget
                 rows as f64,             // rows
                 #[cfg(feature = "pg18")]
-                0, // disabled_nodes
-                startup_cost,            // startup_cost
-                total_cost,              // total_cost
-                ptr::null_mut(),         // pathkeys
-                ptr::null_mut(),         // fdw_outerpath
-                ptr::null_mut(),         // fdw_restrictinfo
-                ptr::null_mut(),         // fdw_private
+                0, // disabled_nodes (pg18 only)
+                startup_cost,    // startup_cost
+                total_cost,      // total_cost
+                ptr::null_mut(), // pathkeys
+                ptr::null_mut(), // fdw_outerpath
+                #[cfg(any(feature = "pg17", feature = "pg18"))]
+                ptr::null_mut(), // fdw_restrictinfo (pg17+ only)
+                ptr::null_mut(), // fdw_private
             );
 
             // Add the path to the output relation
