@@ -4,7 +4,7 @@
 //! aggregate pushdown to foreign data sources.
 
 use pgrx::pg_sys::panic::ErrorReport;
-use pgrx::{debug2, pg_guard, pg_sys, PgBox, PgList};
+use pgrx::{debug2, pg_guard, pg_sys, PgBox};
 use std::ptr;
 
 use crate::interface::{Aggregate, AggregateKind, Column};
@@ -83,7 +83,7 @@ unsafe fn extract_aggregates(
         return None;
     }
 
-    let exprs_list: PgList<pg_sys::Node> = PgList::from_pg(exprs);
+    let exprs_list: pgrx::PgList<pg_sys::Node> = pgrx::PgList::from_pg(exprs);
 
     for expr in exprs_list.iter_ptr() {
         // Check if this is an Aggref (aggregate reference)
@@ -127,7 +127,8 @@ unsafe fn extract_aggregates(
 
             // Get the column being aggregated (if any)
             let column = if !(*aggref).args.is_null() && (*(*aggref).args).length > 0 {
-                let args_list: PgList<pg_sys::TargetEntry> = PgList::from_pg((*aggref).args);
+                let args_list: pgrx::PgList<pg_sys::TargetEntry> =
+                    pgrx::PgList::from_pg((*aggref).args);
                 // Store the first entry before the if-let to avoid lifetime issues
                 let first_entry = args_list.iter_ptr().next();
                 if let Some(target_entry) = first_entry {
@@ -222,8 +223,8 @@ unsafe fn extract_group_by_columns(
     }
 
     // Iterate through group clause items using PgList
-    let group_list: PgList<pg_sys::SortGroupClause> = PgList::from_pg(group_clause);
-    let target_entries: PgList<pg_sys::TargetEntry> = PgList::from_pg(target_list);
+    let group_list: pgrx::PgList<pg_sys::SortGroupClause> = pgrx::PgList::from_pg(group_clause);
+    let target_entries: pgrx::PgList<pg_sys::TargetEntry> = pgrx::PgList::from_pg(target_list);
 
     for sort_group_clause in group_list.iter_ptr() {
         // Find the target entry for this group clause
