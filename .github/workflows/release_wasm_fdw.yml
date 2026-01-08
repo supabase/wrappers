@@ -1,16 +1,10 @@
 name: Wasm FDW Release
 
 on:
+  pull_request:
   push:
     tags:
       - 'wasm_*_fdw_v[0-9]+.[0-9]+.[0-9]+' # Push events to matching wasm fdw tag, i.e. wasm_snowflake_fdw_v1.0.2
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: 'Git tag for Wasm FDW to deploy (e.g., wasm_infura_fdw_v0.1.0)'
-        required: true
-        type: string
-        default: 'wasm_infura_fdw_v0.1.0'
 
 permissions:
   contents: write
@@ -26,7 +20,7 @@ jobs:
       - name: Extract project and version from tag
         id: extract_info
         env:
-          TAG: ${{ github.ref_name }}
+          TAG: wasm_infura_fdw_v0.1.0
         run: |
           PROJECT=`echo "${TAG}" | sed -E 's/wasm_(.*_fdw)_v.*/\1/'`
           VERSION=`echo "${TAG}" | sed -E 's/wasm_.*_fdw_v(.*)/\1/'`
@@ -72,7 +66,7 @@ jobs:
           cd wasm-wrappers/fdw/${{ steps.extract_info.outputs.PROJECT }}
           METADATA_JSON=$(cargo metadata --format-version 1 --no-deps --offline | jq -r '.packages[] | select(.name == "${{ steps.extract_info.outputs.PROJECT }}") | .')
 
-          if [ "$METADATA_JSON" = "" ]; then
+          if [ -z "$METADATA_JSON" ]; then
             echo "Error: Project '${{ steps.extract_info.outputs.PROJECT }}' not found in workspace."
             exit 1
           fi
@@ -90,7 +84,7 @@ jobs:
 
       - name: Create README.txt
         env:
-          TAG: ${{ github.ref_name }}
+          TAG: wasm_infura_fdw_v0.1.0
           PROJECT: ${{ steps.extract_info.outputs.PROJECT }}
           VERSION: ${{ steps.extract_info.outputs.VERSION }}
           PACKAGE: ${{ steps.extract.outputs.PACKAGE }}
