@@ -555,7 +555,7 @@ mod tests {
                 c.update(
                     "INSERT INTO stress_test (id, name) VALUES ($1, $2)",
                     None,
-                    &[i.into(), format!("stress_{}", i).into()],
+                    &[i.into(), format!("stress_{i}").into()],
                 )
                 .unwrap();
             }
