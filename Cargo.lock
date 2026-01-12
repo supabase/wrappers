@@ -899,9 +899,9 @@ dependencies = [
 
 [[package]]
 name = "aws-sdk-s3vectors"
-version = "1.12.0"
+version = "1.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5def4b02bacee7ee2a147ea2e904e820d530172fbaaf0b4f277f1a50b0f440f8"
+checksum = "4e7659a21db753f7dcdef124ff2f28e9bc74c2c61566ca5e42382c4fa01be0c8"
 dependencies = [
  "aws-credential-types",
  "aws-runtime",
