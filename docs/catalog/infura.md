@@ -17,7 +17,7 @@ The Infura Wrapper is a WebAssembly (Wasm) foreign data wrapper which allows you
 
 | Version | Wasm Package URL                                                                                  | Checksum | Required Wrappers Version |
 | ------- | ------------------------------------------------------------------------------------------------- | -------- | ------------------------- |
-| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_infura_fdw_v0.1.0/infura_fdw.wasm`   | 6cb829b851ea8cbd70cb893958826824388a4d9477305a16f2f489bcd569b35e | >=0.5.0                   |
+| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_infura_fdw_v0.1.0/infura_fdw.wasm`   | `6cb829b851ea8cbd70cb893958826824388a4d9477305a16f2f489bcd569b35e` | >=0.5.0                   |
 
 ## Preparation
 
