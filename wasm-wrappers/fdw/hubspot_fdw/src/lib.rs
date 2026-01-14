@@ -223,14 +223,13 @@ impl Guest for HubspotFdw {
         this.base_url = opts.require_or("api_url", "https://api.hubapi.com/crm/v3");
         let api_key = opts
             .get("api_key")
-            .cloned()
             .or_else(|| {
                 opts.get("api_key_id")
-                    .and_then(|key_id| utils::get_vault_secret(key_id))
+                    .and_then(|key_id| utils::get_vault_secret(&key_id))
             })
             .or_else(|| {
                 opts.get("api_key_name")
-                    .and_then(|key_name| utils::get_vault_secret_by_name(key_name))
+                    .and_then(|key_name| utils::get_vault_secret_by_name(&key_name))
             })
             .ok_or("missing required option: 'api_key', 'api_key_id', or 'api_key_name'")?;
 
