@@ -42,6 +42,9 @@ create foreign data wrapper wasm_wrapper
   validator wasm_fdw_validator;
 ```
 
+!!! note "About Authentication"
+    HubSpot deprecated their legacy API Keys in November 2022. The `api_key` option in this wrapper accepts a **Private App Access Token**, which is HubSpot's recommended authentication method. See [HubSpot Private Apps](https://developers.hubspot.com/docs/guides/apps/private-apps/overview) for setup instructions.
+
 ### Store your credentials (optional)
 
 By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
@@ -50,16 +53,18 @@ By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server
 -- Save your HubSpot private apps access token in Vault and retrieve the created `key_id`
 select vault.create_secret(
   '<HubSpot access token>', -- HubSpot private apps access token
-  'hubspot',
+  'hubspot',  -- secret name for api_key_name lookup
   'HubSpot private apps access token for Wrappers'
 );
 ```
+
+The secret name (e.g., `'hubspot'`) can be used with `api_key_name` for environment-agnostic configuration.
 
 ### Connecting to HubSpot
 
 We need to provide Postgres with the credentials to access HubSpot and any additional options. We can do this using the `create server` command:
 
-=== "With Vault"
+=== "With Vault (by ID)"
 
     ```sql
     create server hubspot_server
@@ -73,6 +78,23 @@ We need to provide Postgres with the credentials to access HubSpot and any addit
         api_key_id '<key_ID>' -- The Key ID from above.
       );
     ```
+
+=== "With Vault (by Name)"
+
+    ```sql
+    create server hubspot_server
+      foreign data wrapper wasm_wrapper
+      options (
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_hubspot_fdw_v0.1.0/hubspot_fdw.wasm',
+        fdw_package_name 'supabase:hubspot-fdw',
+        fdw_package_version '0.1.0',
+        fdw_package_checksum '2cbf39e9e28aa732a225db09b2186a2342c44697d4fa047652d358e292ba5521',
+        api_url 'https://api.hubapi.com/crm/v3',  -- optional
+        api_key_name 'hubspot' -- The secret name from above.
+      );
+    ```
+
+    Using `api_key_name` enables environment-agnostic configuration - the same SQL works across dev, staging, and production as long as each environment has a Vault secret with the same name.
 
 === "Without Vault"
 
