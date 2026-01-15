@@ -1,4 +1,4 @@
-package supabase:snowflake-fdw@0.2.0;
+package supabase:snowflake-fdw@0.2.1;
 
 world snowflake {
     import supabase:wrappers/http@0.2.0;
