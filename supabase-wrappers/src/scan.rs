@@ -25,24 +25,24 @@ use crate::sort::*;
 use crate::utils::{self, report_error, ReportableError, SerdeList};
 
 // Fdw private state for scan
-struct FdwState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
+pub(crate) struct FdwState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
     // foreign data wrapper instance
-    instance: Option<W>,
+    pub(crate) instance: Option<W>,
 
     // query conditions
-    quals: Vec<Qual>,
+    pub(crate) quals: Vec<Qual>,
 
     // query target column list
-    tgts: Vec<Column>,
+    pub(crate) tgts: Vec<Column>,
 
     // sort list
-    sorts: Vec<Sort>,
+    pub(crate) sorts: Vec<Sort>,
 
     // limit
-    limit: Option<Limit>,
+    pub(crate) limit: Option<Limit>,
 
     // foreign table options
-    opts: HashMap<String, String>,
+    pub(crate) opts: HashMap<String, String>,
 
     // temporary memory context per foreign table, created under Wrappers root
     // memory context
