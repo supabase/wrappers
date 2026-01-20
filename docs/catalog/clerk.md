@@ -930,7 +930,7 @@ Some tables support INSERT, UPDATE, and DELETE operations. Use the `attrs` JSONB
 
 ```sql
 -- Create a new user
-INSERT INTO clerk.users (attrs) VALUES ('{"email_address": "user@example.com", "password": "secure123"}');
+INSERT INTO clerk.users (attrs) VALUES ('{"email_address": ["user@example.com"], "password": "secure123"}');
 
 -- Update a user (requires rowid_column 'id')
 UPDATE clerk.users SET attrs = '{"first_name": "John", "last_name": "Doe"}' WHERE id = 'user_xxx';
