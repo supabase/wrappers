@@ -88,7 +88,7 @@ impl From<MyFdwError> for ErrorReport {
 ## 3. Response Size Limits
 
 ### Protection
-HTTP-based FDWs enforce configurable response size limits to prevent denial-of-service attacks via maliciously large responses. Responses exceeding the limit are rejected before being fully loaded into memory.
+HTTP-based FDWs enforce configurable response size limits to prevent denial-of-service attacks via maliciously large responses. Responses exceeding the limit are rejected before JSON parsing.
 
 ### Configuration
 Set `max_response_size` (in bytes) as a server option:
@@ -128,6 +128,14 @@ ERROR: response too large (15728640 bytes). Maximum allowed: 10485760 bytes
 - Each FDW has a `ResponseTooLarge` error variant
 - Response body is read as text and size-checked before JSON parsing
 - Example in `wrappers/src/fdw/stripe_fdw/stripe_fdw.rs`
+
+### Known Limitations
+The size check occurs **after** the response body is read into memory. This means:
+- An extremely large response could temporarily consume memory before being rejected
+- This protects against storing/parsing oversized data, but not against memory exhaustion during the HTTP read phase
+- For stronger protection, consider network-level controls (e.g., reverse proxy response size limits)
+
+Future improvement: Implement streaming reads with size checking during the read phase.
 
 ---
 
