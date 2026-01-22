@@ -140,15 +140,26 @@ BEGIN
 EXCEPTION
   WHEN OTHERS THEN
     error_msg := SQLERRM;
-    -- Check that credentials are masked (should show only first 4 chars + ***)
+
+    -- Check for unmasked credentials (more than first 4 chars visible)
+    -- This is the critical security check - any of these patterns indicate a leak
     IF error_msg LIKE '%SuperSecretKey12345%' THEN
       RAISE EXCEPTION 'CRED-001 FAILED: Full secret key leaked in error: %', error_msg;
-    ELSIF error_msg LIKE '%Supe***%' THEN
-      RAISE NOTICE 'CRED-001 PASSED: Secret key properly masked in error message';
     ELSIF error_msg LIKE '%SuperSecret%' THEN
       RAISE EXCEPTION 'CRED-001 FAILED: Partial secret key leaked (>4 chars): %', error_msg;
+    ELSIF error_msg LIKE '%Super%' AND error_msg NOT LIKE '%Supe***%' THEN
+      RAISE EXCEPTION 'CRED-001 FAILED: Secret key prefix leaked without masking: %', error_msg;
+    END IF;
+
+    -- If we reach here, no unmasked credential was found
+    -- Now determine if masking was applied or credential wasn't in error path
+    IF error_msg LIKE '%Supe***%' THEN
+      RAISE NOTICE 'CRED-001 PASSED: Secret key properly masked in error message';
     ELSE
-      RAISE NOTICE 'CRED-001 PASSED: Credentials not in error message';
+      -- Credential not in error message at all - this is acceptable but worth noting
+      -- The error path may not have included the credential
+      RAISE NOTICE 'CRED-001 PASSED: No credential leak detected (credential not in error path)';
+      RAISE NOTICE 'CRED-001 INFO: Error was: %', error_msg;
     END IF;
 END $$;
 
