@@ -551,6 +551,8 @@ impl ForeignDataWrapper<WasmFdwError> for WasmFdw {
                 check_options_contain(&options, "fdw_package_url")?;
                 check_options_contain(&options, "fdw_package_name")?;
                 check_options_contain(&options, "fdw_package_version")?;
+                // Require checksum to prevent supply chain attacks via malicious WASM packages
+                check_options_contain(&options, "fdw_package_checksum")?;
             }
         }
 
