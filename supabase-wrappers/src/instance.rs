@@ -28,10 +28,8 @@ pub(super) unsafe fn create_fdw_instance_from_server_id<
         let c_str = CStr::from_ptr(raw);
         let value = c_str
             .to_str()
-            .map_err(|_| {
-                OptionsError::OptionValueIsInvalidUtf8(
-                    String::from_utf8_lossy(c_str.to_bytes()).to_string(),
-                )
+            .map_err(|_| OptionsError::OptionValueIsInvalidUtf8 {
+                option_name: String::from_utf8_lossy(c_str.to_bytes()).to_string(),
             })
             .report_unwrap()
             .to_string();
