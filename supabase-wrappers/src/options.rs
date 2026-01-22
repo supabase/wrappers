@@ -119,11 +119,11 @@ pub(super) unsafe fn options_to_hashmap(
                 })?;
                 // SECURITY: Don't include the actual value in error messages
                 // to prevent leaking credentials for sensitive options
-                let value = value.to_str().map_err(|_| {
-                    OptionsError::OptionValueIsInvalidUtf8 {
+                let value = value
+                    .to_str()
+                    .map_err(|_| OptionsError::OptionValueIsInvalidUtf8 {
                         option_name: name_str.to_string(),
-                    }
-                })?;
+                    })?;
                 let name = name_str;
                 ret.insert(name.to_string(), value.to_string());
             }
