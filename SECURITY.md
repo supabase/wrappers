@@ -85,7 +85,53 @@ impl From<MyFdwError> for ErrorReport {
 
 ---
 
-## 3. Option Value Security
+## 3. Response Size Limits
+
+### Protection
+HTTP-based FDWs enforce configurable response size limits to prevent denial-of-service attacks via maliciously large responses. Responses exceeding the limit are rejected before being fully loaded into memory.
+
+### Configuration
+Set `max_response_size` (in bytes) as a server option:
+
+```sql
+CREATE SERVER stripe_server
+  FOREIGN DATA WRAPPER stripe_wrapper
+  OPTIONS (
+    api_key_id 'your-vault-secret-id',
+    max_response_size '5242880'  -- 5 MB limit
+  );
+```
+
+### Default Value
+All supported FDWs default to **10 MB** (10,485,760 bytes) if not specified.
+
+### Supported FDWs
+
+| FDW | Support | Notes |
+|-----|---------|-------|
+| Stripe | ✅ | Full implementation |
+| Airtable | ✅ | Full implementation |
+| Firebase | ✅ | Full implementation |
+| Logflare | ✅ | Full implementation |
+| Auth0 | ❌ | Uses SDK architecture |
+| Cognito | ❌ | Uses AWS SDK |
+| DuckDB | ❌ | Not HTTP-based |
+| WASM FDWs | Per-FDW | Implemented individually |
+
+### Error Behavior
+When a response exceeds the limit:
+```
+ERROR: response too large (15728640 bytes). Maximum allowed: 10485760 bytes
+```
+
+### Implementation
+- Each FDW has a `ResponseTooLarge` error variant
+- Response body is read as text and size-checked before JSON parsing
+- Example in `wrappers/src/fdw/stripe_fdw/stripe_fdw.rs`
+
+---
+
+## 4. Option Value Security
 
 ### Protection
 Option values that fail UTF-8 validation do not include the raw bytes in error messages, preventing binary credential leakage.
@@ -101,6 +147,7 @@ Option values that fail UTF-8 validation do not include the raw bytes in error m
 |------------|--------|----------|
 | WASM checksum required | ✓ Implemented | `wasm_fdw.rs` validator |
 | Credential masking | ✓ Implemented | `utils.rs`, all FDW error handlers |
+| Response size limits | ✓ Implemented | Stripe, Airtable, Firebase, Logflare FDWs |
 | Option value protection | ✓ Implemented | `options.rs` |
 
 ---
