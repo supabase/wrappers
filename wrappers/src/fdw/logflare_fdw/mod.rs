@@ -46,6 +46,9 @@ enum LogflareFdwError {
 
     #[error("parse JSON response failed: {0}")]
     JsonParseError(#[from] serde_json::Error),
+
+    #[error("response too large ({0} bytes). Maximum allowed: {1} bytes")]
+    ResponseTooLarge(usize, usize),
 }
 
 impl From<LogflareFdwError> for ErrorReport {

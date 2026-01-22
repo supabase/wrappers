@@ -46,6 +46,9 @@ enum CognitoFdwError {
 
     #[error("exactly one of `aws_secret_access_key` or `api_key_id` options must be set")]
     SetOneOfSecretKeyAndApiKeyIdSet,
+
+    #[error("response too large ({0} bytes). Maximum allowed: {1} bytes")]
+    ResponseTooLarge(usize, usize),
 }
 
 impl From<CognitoFdwError> for ErrorReport {

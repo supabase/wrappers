@@ -40,6 +40,9 @@ enum AirtableFdwError {
 
     #[error("{0}")]
     NumericConversionError(#[from] pgrx::numeric::Error),
+
+    #[error("response too large ({0} bytes). Maximum allowed: {1} bytes")]
+    ResponseTooLarge(usize, usize),
 }
 
 impl From<AirtableFdwError> for ErrorReport {

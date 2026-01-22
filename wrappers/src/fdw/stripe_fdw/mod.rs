@@ -43,6 +43,9 @@ enum StripeFdwError {
 
     #[error("invalid stats: {0}")]
     InvalidStats(String),
+
+    #[error("response too large ({0} bytes). Maximum allowed: {1} bytes")]
+    ResponseTooLarge(usize, usize),
 }
 
 impl From<StripeFdwError> for ErrorReport {

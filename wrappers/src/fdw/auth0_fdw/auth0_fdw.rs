@@ -58,6 +58,9 @@ enum Auth0FdwError {
 
     #[error("exactly one of `api_key` or `api_key_id` options must be set")]
     SetOneOfApiKeyAndApiKeyIdSet,
+
+    #[error("response too large ({0} bytes). Maximum allowed: {1} bytes")]
+    ResponseTooLarge(usize, usize),
 }
 
 impl From<Auth0FdwError> for ErrorReport {
