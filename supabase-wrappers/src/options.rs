@@ -12,8 +12,12 @@ pub enum OptionsError {
     OptionNameNotFound(String),
     #[error("option name `{0}` is not a valid UTF-8 string")]
     OptionNameIsInvalidUtf8(String),
-    #[error("option value `{0}` is not a valid UTF-8 string")]
-    OptionValueIsInvalidUtf8(String),
+    #[error("option value for `{option_name}` is not a valid UTF-8 string")]
+    OptionValueIsInvalidUtf8 {
+        option_name: String,
+        // NOTE: We intentionally don't include the actual value here
+        // to prevent credential leakage in error messages
+    },
 }
 
 impl From<OptionsError> for ErrorReport {
@@ -26,7 +30,7 @@ impl From<OptionsError> for ErrorReport {
                 "",
             ),
             OptionsError::OptionNameIsInvalidUtf8(_)
-            | OptionsError::OptionValueIsInvalidUtf8(_) => ErrorReport::new(
+            | OptionsError::OptionValueIsInvalidUtf8 { .. } => ErrorReport::new(
                 PgSqlErrorCode::ERRCODE_FDW_INVALID_STRING_FORMAT,
                 error_message,
                 "",
@@ -108,16 +112,19 @@ pub(super) unsafe fn options_to_hashmap(
                 let option = *option as *mut pg_sys::DefElem;
                 let name = CStr::from_ptr((*option).defname);
                 let value = CStr::from_ptr(pg_sys::defGetString(option));
-                let name = name.to_str().map_err(|_| {
+                let name_str = name.to_str().map_err(|_| {
                     OptionsError::OptionNameIsInvalidUtf8(
                         String::from_utf8_lossy(name.to_bytes()).to_string(),
                     )
                 })?;
+                // SECURITY: Don't include the actual value in error messages
+                // to prevent leaking credentials for sensitive options
                 let value = value.to_str().map_err(|_| {
-                    OptionsError::OptionValueIsInvalidUtf8(
-                        String::from_utf8_lossy(value.to_bytes()).to_string(),
-                    )
+                    OptionsError::OptionValueIsInvalidUtf8 {
+                        option_name: name_str.to_string(),
+                    }
                 })?;
+                let name = name_str;
                 ret.insert(name.to_string(), value.to_string());
             }
         }

@@ -16,6 +16,180 @@ use thiserror::Error;
 use tokio::runtime::{Builder, Runtime};
 use uuid::Uuid;
 
+// ============================================================================
+// Credential Masking - Security utility to prevent credential leakage
+// ============================================================================
+
+/// List of option names that are considered sensitive and should be masked in error messages.
+/// This list covers common credential patterns across various cloud providers and services.
+const SENSITIVE_OPTION_NAMES: &[&str] = &[
+    // Generic credential patterns
+    "password",
+    "secret",
+    "token",
+    "api_key",
+    "apikey",
+    "api-key",
+    "auth_token",
+    "access_token",
+    "refresh_token",
+    "private_key",
+    "privatekey",
+    "credentials",
+    "credential",
+    // AWS-specific
+    "aws_secret_access_key",
+    "secret_access_key",
+    "aws_session_token",
+    "session_token",
+    // GCP-specific
+    "service_account_key",
+    "sa_key",
+    // Azure-specific
+    "client_secret",
+    "storage_key",
+    "connection_string",
+    // Database-specific
+    "conn_string",
+    "connection_str",
+    "db_password",
+    // Service-specific
+    "stripe_api_key",
+    "firebase_credentials",
+    "motherduck_token",
+    "jwt_secret",
+    "encryption_key",
+    "signing_key",
+];
+
+/// Masks a credential value for safe display in error messages.
+/// Shows only the first 4 characters followed by asterisks if the value is long enough,
+/// otherwise masks the entire value.
+///
+/// # Examples
+/// ```
+/// # use supabase_wrappers::utils::mask_credential_value;
+/// assert_eq!(mask_credential_value("wJalrXUtnFEMI/EXAMPLEKEY"), "wJal***");
+/// assert_eq!(mask_credential_value("abc"), "***");
+/// assert_eq!(mask_credential_value(""), "***");
+/// ```
+#[inline]
+pub fn mask_credential_value(value: &str) -> String {
+    if value.len() > 4 {
+        format!("{}***", &value[..4])
+    } else {
+        "***".to_string()
+    }
+}
+
+/// Checks if an option name is considered sensitive (contains credentials).
+///
+/// # Examples
+/// ```
+/// # use supabase_wrappers::utils::is_sensitive_option;
+/// assert!(is_sensitive_option("aws_secret_access_key"));
+/// assert!(is_sensitive_option("API_KEY"));  // Case insensitive
+/// assert!(!is_sensitive_option("region"));
+/// ```
+#[inline]
+pub fn is_sensitive_option(option_name: &str) -> bool {
+    let lower = option_name.to_lowercase();
+    SENSITIVE_OPTION_NAMES.iter().any(|&s| lower.contains(s))
+}
+
+/// Masks credential values in an error message string.
+/// Scans for patterns like `key = 'value'` or `key: value` and masks sensitive values.
+///
+/// This function handles multiple common formats:
+/// - SQL-style: `secret = 'value'`
+/// - JSON-style: `"secret": "value"`
+/// - URL parameters: `secret=value`
+///
+/// # Examples
+/// ```
+/// # use supabase_wrappers::utils::mask_credentials_in_message;
+/// let msg = "Error: aws_secret_access_key = 'wJalrXUtnFEMI/EXAMPLEKEY' is invalid";
+/// let masked = mask_credentials_in_message(msg);
+/// assert!(!masked.contains("wJalrXUtnFEMI"));
+/// assert!(masked.contains("wJal***"));
+/// ```
+pub fn mask_credentials_in_message(message: &str) -> String {
+    let mut result = message.to_string();
+
+    for sensitive_name in SENSITIVE_OPTION_NAMES {
+        // Pattern 1: SQL-style with single quotes: key = 'value' or key='value'
+        let patterns = [
+            format!(r"{}(\s*)=(\s*)'([^']*)'", sensitive_name),
+            format!(r"{}(\s*)=(\s*)\"([^\"]*)\"", sensitive_name),
+            // Pattern 2: Without quotes (URL params, etc): key=value (word boundary)
+            format!(r"{}(\s*)=(\s*)([^\s,;'\"]+)", sensitive_name),
+            // Pattern 3: JSON-style: "key": "value"
+            format!(r"\"{}\"(\s*):(\s*)\"([^\"]*)\"", sensitive_name),
+        ];
+
+        for pattern_str in &patterns {
+            // Simple pattern matching without full regex to avoid dependencies
+            // Look for the sensitive name and mask what follows
+            let lower_result = result.to_lowercase();
+            let lower_name = sensitive_name.to_lowercase();
+
+            if let Some(start) = lower_result.find(&lower_name) {
+                let after_name = &result[start + sensitive_name.len()..];
+
+                // Find the value after = or :
+                if let Some(eq_pos) = after_name.find('=').or_else(|| after_name.find(':')) {
+                    let after_eq = &after_name[eq_pos + 1..].trim_start();
+
+                    // Extract the value (handle quoted or unquoted)
+                    let (value, end_offset) = if after_eq.starts_with('\'') {
+                        // Single-quoted value
+                        if let Some(end) = after_eq[1..].find('\'') {
+                            (&after_eq[1..end + 1], end + 2)
+                        } else {
+                            continue;
+                        }
+                    } else if after_eq.starts_with('"') {
+                        // Double-quoted value
+                        if let Some(end) = after_eq[1..].find('"') {
+                            (&after_eq[1..end + 1], end + 2)
+                        } else {
+                            continue;
+                        }
+                    } else {
+                        // Unquoted value - take until whitespace or delimiter
+                        let end = after_eq
+                            .find(|c: char| c.is_whitespace() || ",;)".contains(c))
+                            .unwrap_or(after_eq.len());
+                        (&after_eq[..end], end)
+                    };
+
+                    if !value.is_empty() {
+                        let masked = mask_credential_value(value);
+                        result = result.replacen(value, &masked, 1);
+                    }
+                }
+            }
+        }
+    }
+
+    result
+}
+
+/// Creates a sanitized error message by masking any credential values.
+/// Use this function when creating error messages that might contain server options.
+///
+/// # Examples
+/// ```
+/// # use supabase_wrappers::utils::sanitize_error_message;
+/// let error = "Connection failed with password='secret123' for user 'admin'";
+/// let safe_error = sanitize_error_message(error);
+/// assert!(!safe_error.contains("secret123"));
+/// ```
+#[inline]
+pub fn sanitize_error_message(message: &str) -> String {
+    mask_credentials_in_message(message)
+}
+
 /// Log debug message to Postgres log.
 ///
 /// A helper function to emit `DEBUG1` level message to Postgres's log.

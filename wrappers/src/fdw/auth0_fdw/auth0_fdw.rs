@@ -9,6 +9,7 @@ use supabase_wrappers::prelude::*;
 use crate::fdw::auth0_fdw::auth0_client::Auth0ClientError;
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::PgSqlErrorCode;
+use supabase_wrappers::utils::sanitize_error_message;
 use thiserror::Error;
 
 #[wrappers_fdw(
@@ -65,10 +66,12 @@ impl From<Auth0FdwError> for ErrorReport {
             Auth0FdwError::CreateRuntimeError(e) => e.into(),
             Auth0FdwError::OptionsError(e) => e.into(),
             Auth0FdwError::Auth0ClientError(e) => e.into(),
-            Auth0FdwError::SecretNotFound(_) => {
-                ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, format!("{value}"), "")
+            // SECURITY: Sanitize error messages to prevent credential leakage
+            // Auth0 errors may contain API keys or tokens
+            _ => {
+                let error_message = sanitize_error_message(&format!("{value}"));
+                ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, error_message, "")
             }
-            _ => ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, format!("{value}"), ""),
         }
     }
 }
