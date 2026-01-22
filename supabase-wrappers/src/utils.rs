@@ -118,20 +118,28 @@ pub fn mask_credentials_in_message(message: &str) -> String {
 
     for sensitive_name in SENSITIVE_OPTION_NAMES {
         let lower_name = sensitive_name.to_lowercase();
+        let name_len = lower_name.len();
+
+        // Track search position to avoid infinite loops
+        let mut search_start = 0;
 
         // Use a while loop to find and mask ALL occurrences of this sensitive name
         loop {
-            let lower_result = result.to_lowercase();
+            let search_slice = &result[search_start..];
+            let lower_slice = search_slice.to_lowercase();
 
-            let Some(start) = lower_result.find(&lower_name) else {
+            let Some(relative_pos) = lower_slice.find(&lower_name) else {
                 break;
             };
 
-            let after_name = &result[start + sensitive_name.len()..];
+            let abs_pos = search_start + relative_pos;
+            let after_name = &result[abs_pos + name_len..];
 
             // Find the value after = or :
             let Some(eq_pos) = after_name.find('=').or_else(|| after_name.find(':')) else {
-                break;
+                // No '=' or ':' found - skip past this occurrence to avoid infinite loop
+                search_start = abs_pos + name_len;
+                continue;
             };
 
             let after_eq = after_name[eq_pos + 1..].trim_start();
@@ -141,13 +149,21 @@ pub fn mask_credentials_in_message(message: &str) -> String {
                 // Single-quoted value
                 match after_eq[1..].find('\'') {
                     Some(end) => &after_eq[1..end + 1],
-                    None => break,
+                    None => {
+                        // Unclosed quote - skip past this occurrence
+                        search_start = abs_pos + name_len;
+                        continue;
+                    }
                 }
             } else if after_eq.starts_with('"') {
                 // Double-quoted value
                 match after_eq[1..].find('"') {
                     Some(end) => &after_eq[1..end + 1],
-                    None => break,
+                    None => {
+                        // Unclosed quote - skip past this occurrence
+                        search_start = abs_pos + name_len;
+                        continue;
+                    }
                 }
             } else {
                 // Unquoted value - take until whitespace or delimiter
@@ -158,11 +174,17 @@ pub fn mask_credentials_in_message(message: &str) -> String {
             };
 
             if value.is_empty() {
-                break;
+                // Empty value - skip past this occurrence
+                search_start = abs_pos + name_len;
+                continue;
             }
 
             let masked = mask_credential_value(value);
             result = result.replacen(value, &masked, 1);
+
+            // Continue searching from after where we made the replacement
+            // The masked value is shorter, so we need to account for that
+            search_start = abs_pos + name_len;
         }
     }
 
