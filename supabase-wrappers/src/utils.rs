@@ -145,20 +145,20 @@ pub fn mask_credentials_in_message(message: &str) -> String {
             let after_eq = after_name[eq_pos + 1..].trim_start();
 
             // Extract the value (handle quoted or unquoted)
-            let value = if after_eq.starts_with('\'') {
+            let value = if let Some(stripped) = after_eq.strip_prefix('\'') {
                 // Single-quoted value
-                match after_eq[1..].find('\'') {
-                    Some(end) => &after_eq[1..end + 1],
+                match stripped.find('\'') {
+                    Some(end) => &stripped[..end],
                     None => {
                         // Unclosed quote - skip past this occurrence
                         search_start = abs_pos + name_len;
                         continue;
                     }
                 }
-            } else if after_eq.starts_with('"') {
+            } else if let Some(stripped) = after_eq.strip_prefix('"') {
                 // Double-quoted value
-                match after_eq[1..].find('"') {
-                    Some(end) => &after_eq[1..end + 1],
+                match stripped.find('"') {
+                    Some(end) => &stripped[..end],
                     None => {
                         // Unclosed quote - skip past this occurrence
                         search_start = abs_pos + name_len;
