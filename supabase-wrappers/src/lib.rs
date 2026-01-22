@@ -303,11 +303,6 @@ pub mod prelude {
     pub use crate::interface::*;
     pub use crate::options::*;
     pub use crate::utils::*;
-    // Re-export credential masking utilities for convenience
-    pub use crate::utils::{
-        is_sensitive_option, mask_credential_value, mask_credentials_in_message,
-        sanitize_error_message,
-    };
     pub use crate::wrappers_fdw;
     pub use tokio::runtime::Runtime;
 }
