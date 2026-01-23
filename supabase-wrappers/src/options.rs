@@ -1,9 +1,9 @@
 use pgrx::list::List;
 use pgrx::pg_sys::panic::ErrorReport;
-use pgrx::{pg_sys, PgSqlErrorCode};
+use pgrx::{PgSqlErrorCode, pg_sys};
 use std::collections::HashMap;
-use std::ffi::c_void;
 use std::ffi::CStr;
+use std::ffi::c_void;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -99,29 +99,31 @@ pub fn check_options_contain(opt_list: &[Option<String>], tgt: &str) -> Result<(
 // convert options definition to hashmap
 pub(super) unsafe fn options_to_hashmap(
     options: *mut pg_sys::List,
-) -> Result<HashMap<String, String>, OptionsError> { unsafe {
-    pgrx::memcx::current_context(|mcx| {
-        let mut ret = HashMap::new();
+) -> Result<HashMap<String, String>, OptionsError> {
+    unsafe {
+        pgrx::memcx::current_context(|mcx| {
+            let mut ret = HashMap::new();
 
-        if let Some(options) = List::<*mut c_void>::downcast_ptr_in_memcx(options, mcx) {
-            for option in options.iter() {
-                let option = *option as *mut pg_sys::DefElem;
-                let name = CStr::from_ptr((*option).defname);
-                let value = CStr::from_ptr(pg_sys::defGetString(option));
-                let name = name.to_str().map_err(|_| {
-                    OptionsError::OptionNameIsInvalidUtf8(
-                        String::from_utf8_lossy(name.to_bytes()).to_string(),
-                    )
-                })?;
-                let value = value.to_str().map_err(|_| {
-                    OptionsError::OptionValueIsInvalidUtf8(
-                        String::from_utf8_lossy(value.to_bytes()).to_string(),
-                    )
-                })?;
-                ret.insert(name.to_string(), value.to_string());
+            if let Some(options) = List::<*mut c_void>::downcast_ptr_in_memcx(options, mcx) {
+                for option in options.iter() {
+                    let option = *option as *mut pg_sys::DefElem;
+                    let name = CStr::from_ptr((*option).defname);
+                    let value = CStr::from_ptr(pg_sys::defGetString(option));
+                    let name = name.to_str().map_err(|_| {
+                        OptionsError::OptionNameIsInvalidUtf8(
+                            String::from_utf8_lossy(name.to_bytes()).to_string(),
+                        )
+                    })?;
+                    let value = value.to_str().map_err(|_| {
+                        OptionsError::OptionValueIsInvalidUtf8(
+                            String::from_utf8_lossy(value.to_bytes()).to_string(),
+                        )
+                    })?;
+                    ret.insert(name.to_string(), value.to_string());
+                }
             }
-        }
 
-        Ok(ret)
-    })
-}}
+            Ok(ret)
+        })
+    }
+}

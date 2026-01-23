@@ -1,12 +1,12 @@
 use crate::stats;
-use arrow_array::{array, Array, RecordBatch};
+use arrow_array::{Array, RecordBatch, array};
 use aws_sdk_s3 as s3;
 use chrono::NaiveDate;
 use futures::TryStreamExt;
+use parquet::arrow::ProjectionMask;
 use parquet::arrow::async_reader::{
     AsyncFileReader, ParquetRecordBatchStream, ParquetRecordBatchStreamBuilder,
 };
-use parquet::arrow::ProjectionMask;
 use pgrx::datum::datetime_support::to_timestamp;
 use pgrx::pg_sys;
 use pgrx::prelude::Date;

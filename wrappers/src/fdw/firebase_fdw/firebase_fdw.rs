@@ -1,9 +1,9 @@
 use crate::stats;
-use pgrx::{pg_sys, prelude::*, JsonB};
+use pgrx::{JsonB, pg_sys, prelude::*};
 use regex::Regex;
 use reqwest::{self, header};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
-use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
+use reqwest_retry::{RetryTransientMiddleware, policies::ExponentialBackoff};
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -74,7 +74,7 @@ fn body_to_rows(
                     _ => {
                         return Err(FirebaseFdwError::UnsupportedColumnType(format!(
                             "{col_name}({col_type})"
-                        )))
+                        )));
                     }
                 };
                 row.push(col_name, cell);

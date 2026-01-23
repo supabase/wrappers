@@ -1,11 +1,11 @@
 use crate::fdw::auth0_fdw::auth0_client::row::ResultPayload;
 use http::{HeaderMap, HeaderName, HeaderValue};
-use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::PgSqlErrorCode;
+use pgrx::pg_sys::panic::ErrorReport;
 use reqwest::Url;
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
-use reqwest_retry::policies::ExponentialBackoff;
 use reqwest_retry::RetryTransientMiddleware;
+use reqwest_retry::policies::ExponentialBackoff;
 use supabase_wrappers::prelude::*;
 use thiserror::Error;
 use url::ParseError;
@@ -30,7 +30,7 @@ impl Auth0Client {
     fn create_client(api_key: &str) -> Result<ClientWithMiddleware, Auth0ClientError> {
         let mut headers = HeaderMap::new();
         let header_name = HeaderName::from_static("authorization"); // Use 'authorization' instead of 'api-key'
-                                                                    // Format the API key as a Bearer token
+        // Format the API key as a Bearer token
         let api_key_value = format!("Bearer {api_key}");
         let mut api_key_value = HeaderValue::from_str(&api_key_value)
             .map_err(|_| Auth0ClientError::InvalidApiKeyHeader)?;

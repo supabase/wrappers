@@ -2,7 +2,7 @@ use crate::stats;
 use pgrx::pg_sys;
 use reqwest::{self, header};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
-use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
+use reqwest_retry::{RetryTransientMiddleware, policies::ExponentialBackoff};
 use std::collections::HashMap;
 use url::Url;
 

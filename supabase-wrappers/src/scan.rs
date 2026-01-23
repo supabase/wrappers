@@ -1,10 +1,9 @@
 use pgrx::FromDatum;
 use pgrx::{
-    debug2,
+    IntoDatum, PgSqlErrorCode, debug2,
     memcxt::PgMemoryContexts,
     pg_sys::{Datum, MemoryContext, MemoryContextData, Oid, ParamKind},
     prelude::*,
-    IntoDatum, PgSqlErrorCode,
 };
 use std::collections::HashMap;
 use std::marker::PhantomData;
@@ -22,7 +21,7 @@ use crate::polyfill;
 use crate::prelude::ForeignDataWrapper;
 use crate::qual::*;
 use crate::sort::*;
-use crate::utils::{self, report_error, ReportableError, SerdeList};
+use crate::utils::{self, ReportableError, SerdeList, report_error};
 
 // Fdw private state for scan
 struct FdwState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
@@ -56,21 +55,23 @@ struct FdwState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
 }
 
 impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwState<E, W> {
-    unsafe fn new(foreigntableid: Oid, tmp_ctx: MemoryContext) -> Self { unsafe {
-        Self {
-            instance: Some(instance::create_fdw_instance_from_table_id(foreigntableid)),
-            quals: Vec::new(),
-            tgts: Vec::new(),
-            sorts: Vec::new(),
-            limit: None,
-            opts: HashMap::new(),
-            tmp_ctx,
-            values: Vec::new(),
-            nulls: Vec::new(),
-            row: Row::new(),
-            _phantom: PhantomData,
+    unsafe fn new(foreigntableid: Oid, tmp_ctx: MemoryContext) -> Self {
+        unsafe {
+            Self {
+                instance: Some(instance::create_fdw_instance_from_table_id(foreigntableid)),
+                quals: Vec::new(),
+                tgts: Vec::new(),
+                sorts: Vec::new(),
+                limit: None,
+                opts: HashMap::new(),
+                tmp_ctx,
+                values: Vec::new(),
+                nulls: Vec::new(),
+                row: Row::new(),
+                _phantom: PhantomData,
+            }
         }
-    }}
+    }
 
     #[inline]
     fn get_rel_size(&mut self) -> Result<(i64, i32), E> {
@@ -148,10 +149,12 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> Drop for FdwState<E, W> {
 // drop the scan state, so the inner fdw instance can be dropped too
 unsafe fn drop_fdw_state<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     fdw_state: *mut FdwState<E, W>,
-) { unsafe {
-    let boxed_fdw_state = Box::from_raw(fdw_state);
-    drop(boxed_fdw_state);
-}}
+) {
+    unsafe {
+        let boxed_fdw_state = Box::from_raw(fdw_state);
+        drop(boxed_fdw_state);
+    }
+}
 
 #[pg_guard]
 pub(super) extern "C-unwind" fn get_foreign_rel_size<
@@ -334,35 +337,41 @@ pub(super) extern "C-unwind" fn explain_foreign_scan<
 unsafe fn assign_paramenter_value<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     node: *mut pg_sys::ForeignScanState,
     state: &mut FdwState<E, W>,
-) { unsafe {
-    let estate = (*node).ss.ps.state;
-    let econtext = (*node).ss.ps.ps_ExprContext;
+) {
+    unsafe {
+        let estate = (*node).ss.ps.state;
+        let econtext = (*node).ss.ps.ps_ExprContext;
 
-    // assign parameter value to qual
-    for qual in &mut state.quals.iter_mut() {
-        if let Some(param) = &mut qual.param {
-            match param.kind {
-                ParamKind::PARAM_EXTERN => {
-                    // get parameter list in execution state
-                    let plist_info = (*estate).es_param_list_info;
-                    if plist_info.is_null() {
-                        continue;
+        // assign parameter value to qual
+        for qual in &mut state.quals.iter_mut() {
+            if let Some(param) = &mut qual.param {
+                match param.kind {
+                    ParamKind::PARAM_EXTERN => {
+                        // get parameter list in execution state
+                        let plist_info = (*estate).es_param_list_info;
+                        if plist_info.is_null() {
+                            continue;
+                        }
+                        let params_cnt = (*plist_info).numParams as usize;
+                        let plist = (*plist_info).params.as_slice(params_cnt);
+                        let p: pg_sys::ParamExternData = plist[param.id - 1];
+                        if let Some(cell) = Cell::from_polymorphic_datum(p.value, p.isnull, p.ptype)
+                        {
+                            qual.value = Value::Cell(cell);
+                        }
                     }
-                    let params_cnt = (*plist_info).numParams as usize;
-                    let plist = (*plist_info).params.as_slice(params_cnt);
-                    let p: pg_sys::ParamExternData = plist[param.id - 1];
-                    if let Some(cell) = Cell::from_polymorphic_datum(p.value, p.isnull, p.ptype) {
-                        qual.value = Value::Cell(cell);
-                    }
-                }
-                ParamKind::PARAM_EXEC => {
-                    // evaluate parameter value
-                    param.expr_eval.expr_state =
-                        pg_sys::ExecInitExpr(param.expr_eval.expr, node as *mut pg_sys::PlanState);
-                    let mut isnull = false;
-                    if let Some(datum) =
-                        polyfill::exec_eval_expr(param.expr_eval.expr_state, econtext, &mut isnull)
-                        && let Some(cell) =
+                    ParamKind::PARAM_EXEC => {
+                        // evaluate parameter value
+                        param.expr_eval.expr_state = pg_sys::ExecInitExpr(
+                            param.expr_eval.expr,
+                            node as *mut pg_sys::PlanState,
+                        );
+                        let mut isnull = false;
+                        if let Some(datum) = polyfill::exec_eval_expr(
+                            param.expr_eval.expr_state,
+                            econtext,
+                            &mut isnull,
+                        ) && let Some(cell) =
                             Cell::from_polymorphic_datum(datum, isnull, param.type_oid)
                         {
                             let mut eval_value = param
@@ -372,12 +381,13 @@ unsafe fn assign_paramenter_value<E: Into<ErrorReport>, W: ForeignDataWrapper<E>
                             *eval_value = Some(Value::Cell(cell.clone()));
                             qual.value = Value::Cell(cell);
                         }
+                    }
+                    _ => {}
                 }
-                _ => {}
             }
         }
     }
-}}
+}
 
 #[pg_guard]
 pub(super) extern "C-unwind" fn begin_foreign_scan<

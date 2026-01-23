@@ -1,16 +1,16 @@
-use arrow_array::{array::ArrayRef, builder::ArrayBuilder, Array, RecordBatch};
+use arrow_array::{Array, RecordBatch, array::ArrayRef, builder::ArrayBuilder};
 use futures::StreamExt;
 use iceberg::{
+    Catalog, NamespaceIdent, TableCreation, TableIdent,
     expr::Predicate,
     scan::ArrowRecordBatchStream,
     spec::{DataFileFormat, NestedFieldRef, PrimitiveType, Type},
     table::Table,
     transaction::{ApplyTransactionAction, Transaction},
     writer::{
-        base_writer::data_file_writer::DataFileWriterBuilder, file_writer::ParquetWriterBuilder,
-        IcebergWriter, IcebergWriterBuilder,
+        IcebergWriter, IcebergWriterBuilder, base_writer::data_file_writer::DataFileWriterBuilder,
+        file_writer::ParquetWriterBuilder,
     },
-    Catalog, NamespaceIdent, TableCreation, TableIdent,
 };
 use iceberg_catalog_rest::{RestCatalog, RestCatalogConfig};
 use iceberg_catalog_s3tables::{S3TablesCatalog, S3TablesCatalogConfig};
@@ -22,12 +22,12 @@ use std::sync::Arc;
 use supabase_wrappers::prelude::*;
 
 use super::{
+    IcebergFdwError, IcebergFdwResult, InputRow,
     mapper::Mapper,
     pushdown::try_pushdown,
     sorter::Sorter,
     utils,
     writer::{FileNameGenerator, LocationGenerator},
-    IcebergFdwError, IcebergFdwResult, InputRow,
 };
 use crate::stats;
 
