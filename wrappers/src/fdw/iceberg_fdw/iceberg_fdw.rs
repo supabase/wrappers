@@ -687,11 +687,11 @@ impl ForeignDataWrapper<IcebergFdwError> for IcebergFdw {
         options: Vec<Option<String>>,
         catalog: Option<pg_sys::Oid>,
     ) -> IcebergFdwResult<()> {
-        if let Some(oid) = catalog {
-            if oid == FOREIGN_TABLE_RELATION_ID {
-                // check required option
-                check_options_contain(&options, "table")?;
-            }
+        if let Some(oid) = catalog
+            && oid == FOREIGN_TABLE_RELATION_ID
+        {
+            // check required option
+            check_options_contain(&options, "table")?;
         }
 
         Ok(())

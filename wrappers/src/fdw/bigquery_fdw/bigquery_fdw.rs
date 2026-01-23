@@ -342,46 +342,46 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
     }
 
     fn iter_scan(&mut self, row: &mut Row) -> Result<Option<()>, BigQueryFdwError> {
-        if let Some(client) = &self.client {
-            if let Some(ref mut rs) = self.scan_result {
-                if Self::extract_row(&self.tgt_cols, row, rs)? {
-                    return Ok(Some(()));
-                }
+        if let Some(client) = &self.client
+            && let Some(ref mut rs) = self.scan_result
+        {
+            if Self::extract_row(&self.tgt_cols, row, rs)? {
+                return Ok(Some(()));
+            }
 
-                // no more source data to read
-                if self.page_token.is_none() {
-                    return Ok(None);
-                }
+            // no more source data to read
+            if self.page_token.is_none() {
+                return Ok(None);
+            }
 
-                // otherwise, dealing with pagination
-                if let Some(job_ref) = &self.job_ref {
-                    if let Some(job_id) = &job_ref.job_id {
-                        match self.rt.block_on(client.job().get_query_results(
-                            &self.project_id,
-                            job_id,
-                            GetQueryResultsParameters {
-                                location: job_ref.location.clone(),
-                                page_token: self.page_token.clone(),
-                                ..Default::default()
-                            },
-                        )) {
-                            Ok(resp) => {
-                                // replace result set with data from the new page
-                                self.job_ref = resp.job_reference.clone();
-                                self.page_token = resp.page_token.clone();
-                                *rs = ResultSet::new_from_get_query_results_response(resp);
-                                if Self::extract_row(&self.tgt_cols, row, rs)? {
-                                    return Ok(Some(()));
-                                }
-                            }
-                            Err(err) => {
-                                self.scan_result = None;
-                                report_error(
-                                    PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                                    &format!("fetch query result failed: {err}"),
-                                );
-                            }
+            // otherwise, dealing with pagination
+            if let Some(job_ref) = &self.job_ref
+                && let Some(job_id) = &job_ref.job_id
+            {
+                match self.rt.block_on(client.job().get_query_results(
+                    &self.project_id,
+                    job_id,
+                    GetQueryResultsParameters {
+                        location: job_ref.location.clone(),
+                        page_token: self.page_token.clone(),
+                        ..Default::default()
+                    },
+                )) {
+                    Ok(resp) => {
+                        // replace result set with data from the new page
+                        self.job_ref = resp.job_reference.clone();
+                        self.page_token = resp.page_token.clone();
+                        *rs = ResultSet::new_from_get_query_results_response(resp);
+                        if Self::extract_row(&self.tgt_cols, row, rs)? {
+                            return Ok(Some(()));
                         }
+                    }
+                    Err(err) => {
+                        self.scan_result = None;
+                        report_error(
+                            PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                            &format!("fetch query result failed: {err}"),
+                        );
                     }
                 }
             }

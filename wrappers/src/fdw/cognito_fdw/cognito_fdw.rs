@@ -57,10 +57,10 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
             let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
 
             let mut builder = config.to_builder();
-            if let Some(endpoint_url) = server.options.get("endpoint_url") {
-                if !endpoint_url.is_empty() {
-                    builder.set_endpoint_url(Some(endpoint_url.clone()));
-                }
+            if let Some(endpoint_url) = server.options.get("endpoint_url")
+                && !endpoint_url.is_empty()
+            {
+                builder.set_endpoint_url(Some(endpoint_url.clone()));
             }
             let final_config = builder.build();
 
