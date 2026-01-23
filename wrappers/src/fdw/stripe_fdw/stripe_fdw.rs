@@ -627,7 +627,7 @@ fn pushdown_quals(
     if obj != "balance" {
         url.query_pairs_mut()
             .append_pair("limit", &format!("{page_size}"));
-        if let Some(ref cursor) = cursor {
+        if let Some(cursor) = cursor {
             url.query_pairs_mut().append_pair("starting_after", cursor);
         }
     }

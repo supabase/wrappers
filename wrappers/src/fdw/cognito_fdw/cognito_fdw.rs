@@ -49,9 +49,11 @@ impl ForeignDataWrapper<CognitoFdwError> for CognitoFdw {
 
         let rt = create_async_runtime()?;
         let client = rt.block_on(async {
-            env::set_var("AWS_ACCESS_KEY_ID", aws_access_key_id);
-            env::set_var("AWS_SECRET_ACCESS_KEY", aws_secret_access_key);
-            env::set_var("AWS_REGION", aws_region);
+            unsafe {
+                env::set_var("AWS_ACCESS_KEY_ID", aws_access_key_id);
+                env::set_var("AWS_SECRET_ACCESS_KEY", aws_secret_access_key);
+                env::set_var("AWS_REGION", aws_region);
+            }
             let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
 
             let mut builder = config.to_builder();
