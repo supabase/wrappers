@@ -2,17 +2,16 @@ use crate::stats;
 #[allow(deprecated)]
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
 use clickhouse_rs::{
-    types,
+    Pool, types,
     types::Block,
     types::SqlType,
     types::Value as ChValue,
     types::{i256, u256},
-    Pool,
 };
 use crossbeam::channel;
 use futures_util::stream::StreamExt;
 use pgrx::pg_sys;
-use pgrx::{datum::numeric::AnyNumeric, PgBuiltInOids};
+use pgrx::{PgBuiltInOids, datum::numeric::AnyNumeric};
 
 use regex::{Captures, Regex};
 use std::collections::HashMap;
@@ -319,13 +318,13 @@ fn convert_row_simple(
                     _ => {
                         return Err(ClickHouseFdwError::UnsupportedColumnType(
                             sql_type.to_string().into(),
-                        ))
+                        ));
                     }
                 },
                 _ => {
                     return Err(ClickHouseFdwError::UnsupportedColumnType(
                         sql_type.to_string().into(),
-                    ))
+                    ));
                 }
             };
             cell
@@ -428,7 +427,7 @@ impl ClickHouseFdw {
                             Value::Array(arr) => {
                                 return Err(ClickHouseFdwError::NoArrayParameter(format!(
                                     "{arr:?}"
-                                )))
+                                )));
                             }
                         }
                     }

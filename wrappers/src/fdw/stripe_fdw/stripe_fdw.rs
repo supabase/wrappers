@@ -1,9 +1,9 @@
 use crate::stats;
-use pgrx::{datum::datetime_support::to_timestamp, pg_sys, JsonB};
-use reqwest::{self, header, StatusCode, Url};
+use pgrx::{JsonB, datum::datetime_support::to_timestamp, pg_sys};
+use reqwest::{self, StatusCode, Url, header};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
-use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
-use serde_json::{json, Map as JsonMap, Number, Value as JsonValue};
+use reqwest_retry::{RetryTransientMiddleware, policies::ExponentialBackoff};
+use serde_json::{Map as JsonMap, Number, Value as JsonValue, json};
 use std::collections::{HashMap, HashSet};
 
 use supabase_wrappers::prelude::*;

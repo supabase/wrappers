@@ -1,10 +1,10 @@
-use arrow_array::{array, builder::*, timezone::Tz, RecordBatch};
+use arrow_array::{RecordBatch, array, builder::*, timezone::Tz};
 use arrow_json::ArrayWriter;
 use arrow_schema::DataType;
 use chrono::{DateTime, NaiveDateTime, Timelike};
 use iceberg::spec::{NestedField, NestedFieldRef, PrimitiveType, Schema, Type};
 use pgrx::{
-    datum::{self, datetime_support::DateTimeConversionError, JsonB},
+    datum::{self, JsonB, datetime_support::DateTimeConversionError},
     pg_sys,
     prelude::*,
     varlena,
@@ -279,8 +279,8 @@ impl Mapper {
         field_type: &DataType,
         cell: Option<&Cell>,
     ) -> IcebergFdwResult<()> {
-        use rust_decimal::prelude::ToPrimitive;
         use rust_decimal::Decimal;
+        use rust_decimal::prelude::ToPrimitive;
         use std::convert::TryInto;
 
         let unsupported = |ty: &DataType| IcebergFdwError::UnsupportedType(format!("{ty:?}"));

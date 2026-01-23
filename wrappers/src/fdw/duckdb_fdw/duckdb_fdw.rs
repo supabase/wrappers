@@ -6,7 +6,7 @@ use std::path::Path;
 
 use supabase_wrappers::prelude::*;
 
-use super::{mapper, server_type::ServerType, DuckdbFdwError, DuckdbFdwResult};
+use super::{DuckdbFdwError, DuckdbFdwResult, mapper, server_type::ServerType};
 
 #[wrappers_fdw(
     version = "0.1.2",

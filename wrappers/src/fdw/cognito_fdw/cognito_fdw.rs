@@ -1,7 +1,7 @@
 use std::env;
 use std::sync::Arc;
 
-use aws_sdk_cognitoidentityprovider::{config::BehaviorVersion, Client};
+use aws_sdk_cognitoidentityprovider::{Client, config::BehaviorVersion};
 
 use crate::stats;
 use pgrx::pg_sys;
