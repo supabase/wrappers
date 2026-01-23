@@ -26,6 +26,24 @@ cd wasm-wrappers/fdw/<name>
 cargo component build --release
 ```
 
+## Before Committing
+
+Always run these checks before committing to avoid CI failures:
+
+```bash
+# Format check (required by CI)
+cargo fmt --check
+cargo fmt  # to auto-fix
+
+# Compile check (catches type errors, missing variants, etc.)
+cargo check
+
+# Clippy (CI runs with -D warnings, so all warnings are errors)
+cargo clippy -- -D warnings
+```
+
+If the local Rust version is too old for `cargo check`, at minimum run `cargo fmt` before pushing.
+
 ## Testing
 
 - Native FDW tests: `cargo pgrx test`
