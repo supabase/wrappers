@@ -56,20 +56,18 @@ struct FdwState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
 
 impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwState<E, W> {
     unsafe fn new(foreigntableid: Oid, tmp_ctx: MemoryContext) -> Self {
-        unsafe {
-            Self {
-                instance: Some(instance::create_fdw_instance_from_table_id(foreigntableid)),
-                quals: Vec::new(),
-                tgts: Vec::new(),
-                sorts: Vec::new(),
-                limit: None,
-                opts: HashMap::new(),
-                tmp_ctx,
-                values: Vec::new(),
-                nulls: Vec::new(),
-                row: Row::new(),
-                _phantom: PhantomData,
-            }
+        Self {
+            instance: Some(unsafe { instance::create_fdw_instance_from_table_id(foreigntableid) }),
+            quals: Vec::new(),
+            tgts: Vec::new(),
+            sorts: Vec::new(),
+            limit: None,
+            opts: HashMap::new(),
+            tmp_ctx,
+            values: Vec::new(),
+            nulls: Vec::new(),
+            row: Row::new(),
+            _phantom: PhantomData,
         }
     }
 
@@ -150,10 +148,8 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> Drop for FdwState<E, W> {
 unsafe fn drop_fdw_state<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     fdw_state: *mut FdwState<E, W>,
 ) {
-    unsafe {
-        let boxed_fdw_state = Box::from_raw(fdw_state);
-        drop(boxed_fdw_state);
-    }
+    let boxed_fdw_state = unsafe { Box::from_raw(fdw_state) };
+    drop(boxed_fdw_state);
 }
 
 #[pg_guard]

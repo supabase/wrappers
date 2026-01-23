@@ -43,18 +43,16 @@ struct FdwModifyState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
 
 impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwModifyState<E, W> {
     unsafe fn new(foreigntableid: Oid, tmp_ctx: MemoryContext) -> Self {
-        unsafe {
-            Self {
-                instance: Some(instance::create_fdw_instance_from_table_id(foreigntableid)),
-                rowid_name: String::default(),
-                rowid_attno: 0,
-                rowid_typid: Oid::INVALID,
-                opts: HashMap::new(),
-                tmp_ctx,
-                _phantom: PhantomData,
-                #[cfg(feature = "pg13")]
-                update_cols: Vec::new(),
-            }
+        Self {
+            instance: Some(unsafe { instance::create_fdw_instance_from_table_id(foreigntableid) }),
+            rowid_name: String::default(),
+            rowid_attno: 0,
+            rowid_typid: Oid::INVALID,
+            opts: HashMap::new(),
+            tmp_ctx,
+            _phantom: PhantomData,
+            #[cfg(feature = "pg13")]
+            update_cols: Vec::new(),
         }
     }
 
@@ -118,37 +116,33 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> Drop for FdwModifyState<E, 
 unsafe fn drop_fdw_modify_state<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     fdw_state: *mut FdwModifyState<E, W>,
 ) {
-    unsafe {
-        let boxed_fdw_state = Box::from_raw(fdw_state);
-        drop(boxed_fdw_state);
-    }
+    let boxed_fdw_state = unsafe { Box::from_raw(fdw_state) };
+    drop(boxed_fdw_state);
 }
 
 // find rowid column in relation description
 unsafe fn find_rowid_column(
     target_relation: pg_sys::Relation,
 ) -> Option<pg_sys::FormData_pg_attribute> {
-    unsafe {
-        // get rowid column name from table options
-        let ftable = pg_sys::GetForeignTable((*target_relation).rd_id);
-        let opts = options_to_hashmap((*ftable).options).report_unwrap();
-        let rowid_name = require_option("rowid_column", &opts).report_unwrap();
+    // get rowid column name from table options
+    let ftable = unsafe { pg_sys::GetForeignTable((*target_relation).rd_id) };
+    let opts = unsafe { options_to_hashmap((*ftable).options).report_unwrap() };
+    let rowid_name = require_option("rowid_column", &opts).report_unwrap();
 
-        // find rowid attribute
-        let tup_desc = PgTupleDesc::from_pg_copy((*target_relation).rd_att);
-        for attr in tup_desc.iter().filter(|a| !a.is_dropped()) {
-            if pgrx::name_data_to_str(&attr.attname) == rowid_name {
-                return Some(*attr);
-            }
+    // find rowid attribute
+    let tup_desc = unsafe { PgTupleDesc::from_pg_copy((*target_relation).rd_att) };
+    for attr in tup_desc.iter().filter(|a| !a.is_dropped()) {
+        if pgrx::name_data_to_str(&attr.attname) == rowid_name {
+            return Some(*attr);
         }
-
-        report_error(
-            PgSqlErrorCode::ERRCODE_FDW_UNABLE_TO_CREATE_EXECUTION,
-            "cannot find rowid_column attribute in the foreign table",
-        );
-
-        None
     }
+
+    report_error(
+        PgSqlErrorCode::ERRCODE_FDW_UNABLE_TO_CREATE_EXECUTION,
+        "cannot find rowid_column attribute in the foreign table",
+    );
+
+    None
 }
 
 #[cfg(feature = "pg13")]
@@ -392,8 +386,8 @@ unsafe fn get_rowid_cell<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     state: &FdwModifyState<E, W>,
     plan_slot: *mut pg_sys::TupleTableSlot,
 ) -> Option<Cell> {
+    let mut is_null: bool = true;
     unsafe {
-        let mut is_null: bool = true;
         let datum = polyfill::slot_getattr(plan_slot, state.rowid_attno.into(), &mut is_null);
         Cell::from_polymorphic_datum(datum, is_null, state.rowid_typid)
     }

@@ -19,11 +19,9 @@ struct FdwState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
 
 impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwState<E, W> {
     unsafe fn new(foreignserverid: Oid) -> Self {
-        unsafe {
-            Self {
-                instance: instance::create_fdw_instance_from_server_id(foreignserverid),
-                _phantom: PhantomData,
-            }
+        Self {
+            instance: unsafe { instance::create_fdw_instance_from_server_id(foreignserverid) },
+            _phantom: PhantomData,
         }
     }
 }

@@ -210,23 +210,21 @@ pub fn get_vault_secret_by_name(secret_name: &str) -> Option<String> {
 }
 
 pub(super) unsafe fn tuple_table_slot_to_row(slot: *mut pg_sys::TupleTableSlot) -> Row {
-    unsafe {
-        let tup_desc = PgTupleDesc::from_pg_copy((*slot).tts_tupleDescriptor);
+    let tup_desc = unsafe { PgTupleDesc::from_pg_copy((*slot).tts_tupleDescriptor) };
 
-        let mut should_free = false;
-        let htup = pg_sys::ExecFetchSlotHeapTuple(slot, false, &mut should_free);
-        let htup = PgBox::from_pg(htup);
-        let mut row = Row::new();
+    let mut should_free = false;
+    let htup = unsafe { pg_sys::ExecFetchSlotHeapTuple(slot, false, &mut should_free) };
+    let htup = unsafe { PgBox::from_pg(htup) };
+    let mut row = Row::new();
 
-        for (att_idx, attr) in tup_desc.iter().filter(|a| !a.attisdropped).enumerate() {
-            let col = pgrx::name_data_to_str(&attr.attname);
-            let attno = NonZeroUsize::new(att_idx + 1).unwrap();
-            let cell: Option<Cell> = pgrx::htup::heap_getattr(&htup, attno, &tup_desc);
-            row.push(col, cell);
-        }
-
-        row
+    for (att_idx, attr) in tup_desc.iter().filter(|a| !a.attisdropped).enumerate() {
+        let col = pgrx::name_data_to_str(&attr.attname);
+        let attno = NonZeroUsize::new(att_idx + 1).unwrap();
+        let cell: Option<Cell> = pgrx::htup::heap_getattr(&htup, attno, &tup_desc);
+        row.push(col, cell);
     }
+
+    row
 }
 
 // extract target column name and attribute no list
