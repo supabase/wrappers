@@ -9,7 +9,7 @@ This document covers security measures implemented across the entire Wrappers pl
 ## 1. Supply Chain Security - WASM Package Verification
 
 ### Protection
-All WASM FDW servers **require** the `fdw_package_checksum` option to prevent supply chain attacks.
+WASM FDW servers with remote package URLs **require** the `fdw_package_checksum` option to prevent supply chain attacks. Local `file://` URLs are exempt since they reference locally-built packages.
 
 ```sql
 -- This will FAIL - checksum is required
