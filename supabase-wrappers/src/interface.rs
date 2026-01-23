@@ -284,7 +284,7 @@ impl FromDatum for Cell {
     unsafe fn from_polymorphic_datum(datum: Datum, is_null: bool, typoid: Oid) -> Option<Self>
     where
         Self: Sized,
-    {
+    { unsafe {
         let oid = PgOid::from(typoid);
         match oid {
             PgOid::BuiltIn(PgBuiltInOids::BOOLOID) => {
@@ -370,7 +370,7 @@ impl FromDatum for Cell {
             }
             _ => None,
         }
-    }
+    }}
 }
 
 pub trait CellFormatter {

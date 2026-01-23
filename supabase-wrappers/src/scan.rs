@@ -56,7 +56,7 @@ struct FdwState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
 }
 
 impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwState<E, W> {
-    unsafe fn new(foreigntableid: Oid, tmp_ctx: MemoryContext) -> Self {
+    unsafe fn new(foreigntableid: Oid, tmp_ctx: MemoryContext) -> Self { unsafe {
         Self {
             instance: Some(instance::create_fdw_instance_from_table_id(foreigntableid)),
             quals: Vec::new(),
@@ -70,7 +70,7 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwState<E, W> {
             row: Row::new(),
             _phantom: PhantomData,
         }
-    }
+    }}
 
     #[inline]
     fn get_rel_size(&mut self) -> Result<(i64, i32), E> {
@@ -148,10 +148,10 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> Drop for FdwState<E, W> {
 // drop the scan state, so the inner fdw instance can be dropped too
 unsafe fn drop_fdw_state<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     fdw_state: *mut FdwState<E, W>,
-) {
+) { unsafe {
     let boxed_fdw_state = Box::from_raw(fdw_state);
     drop(boxed_fdw_state);
-}
+}}
 
 #[pg_guard]
 pub(super) extern "C-unwind" fn get_foreign_rel_size<
@@ -334,7 +334,7 @@ pub(super) extern "C-unwind" fn explain_foreign_scan<
 unsafe fn assign_paramenter_value<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     node: *mut pg_sys::ForeignScanState,
     state: &mut FdwState<E, W>,
-) {
+) { unsafe {
     let estate = (*node).ss.ps.state;
     let econtext = (*node).ss.ps.ps_ExprContext;
 
@@ -362,8 +362,7 @@ unsafe fn assign_paramenter_value<E: Into<ErrorReport>, W: ForeignDataWrapper<E>
                     let mut isnull = false;
                     if let Some(datum) =
                         polyfill::exec_eval_expr(param.expr_eval.expr_state, econtext, &mut isnull)
-                    {
-                        if let Some(cell) =
+                        && let Some(cell) =
                             Cell::from_polymorphic_datum(datum, isnull, param.type_oid)
                         {
                             let mut eval_value = param
@@ -373,13 +372,12 @@ unsafe fn assign_paramenter_value<E: Into<ErrorReport>, W: ForeignDataWrapper<E>
                             *eval_value = Some(Value::Cell(cell.clone()));
                             qual.value = Value::Cell(cell);
                         }
-                    }
                 }
                 _ => {}
             }
         }
     }
-}
+}}
 
 #[pg_guard]
 pub(super) extern "C-unwind" fn begin_foreign_scan<

@@ -208,7 +208,7 @@ pub fn get_vault_secret_by_name(secret_name: &str) -> Option<String> {
     }
 }
 
-pub(super) unsafe fn tuple_table_slot_to_row(slot: *mut pg_sys::TupleTableSlot) -> Row {
+pub(super) unsafe fn tuple_table_slot_to_row(slot: *mut pg_sys::TupleTableSlot) -> Row { unsafe {
     let tup_desc = PgTupleDesc::from_pg_copy((*slot).tts_tupleDescriptor);
 
     let mut should_free = false;
@@ -224,13 +224,13 @@ pub(super) unsafe fn tuple_table_slot_to_row(slot: *mut pg_sys::TupleTableSlot) 
     }
 
     row
-}
+}}
 
 // extract target column name and attribute no list
 pub(super) unsafe fn extract_target_columns(
     root: *mut pg_sys::PlannerInfo,
     baserel: *mut pg_sys::RelOptInfo,
-) -> Vec<Column> {
+) -> Vec<Column> { unsafe {
     let mut ret = Vec::new();
     let mut col_vars: *mut pg_sys::List = ptr::null_mut();
 
@@ -292,7 +292,7 @@ pub(super) unsafe fn extract_target_columns(
     });
 
     ret
-}
+}}
 
 // trait for "serialize" and "deserialize" state from specified memory context,
 // so that it is safe to be carried between the planning and the execution
@@ -300,8 +300,10 @@ pub(super) trait SerdeList {
     unsafe fn serialize_to_list(state: PgBox<Self>) -> *mut pg_sys::List
     where
         Self: Sized,
-    {
-        let ret = memcx::current_context(|mcx| {
+    { unsafe {
+        
+
+        memcx::current_context(|mcx| {
             let mut ret = List::<*mut c_void>::Nil;
             let val = state.into_pg() as i64;
             let cst: *mut pg_sys::Const = pg_sys::makeConst(
@@ -315,26 +317,23 @@ pub(super) trait SerdeList {
             );
             ret.unstable_push_in_context(cst as _, mcx);
             ret.into_ptr()
-        });
-
-        ret
-    }
+        })
+    }}
 
     unsafe fn deserialize_from_list(list: *mut pg_sys::List) -> PgBox<Self>
     where
         Self: Sized,
-    {
+    { unsafe {
         memcx::current_context(|mcx| {
-            if let Some(list) = List::<*mut c_void>::downcast_ptr_in_memcx(list, mcx) {
-                if let Some(cst) = list.get(0) {
+            if let Some(list) = List::<*mut c_void>::downcast_ptr_in_memcx(list, mcx)
+                && let Some(cst) = list.get(0) {
                     let cst = *(*cst as *mut pg_sys::Const);
                     let ptr = i64::from_datum(cst.constvalue, cst.constisnull).unwrap();
                     return PgBox::<Self>::from_pg(ptr as _);
                 }
-            }
             PgBox::<Self>::null()
         })
-    }
+    }}
 }
 
 pub(crate) trait ReportableError {

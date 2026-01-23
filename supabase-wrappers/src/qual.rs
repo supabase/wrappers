@@ -21,7 +21,7 @@ pub(crate) unsafe fn form_array_from_datum(
     datum: Datum,
     is_null: bool,
     typoid: pg_sys::Oid,
-) -> Option<Vec<Cell>> {
+) -> Option<Vec<Cell>> { unsafe {
     let oid = PgOid::from(typoid);
     match oid {
         PgOid::BuiltIn(PgBuiltInOids::BOOLARRAYOID) => {
@@ -116,9 +116,9 @@ pub(crate) unsafe fn form_array_from_datum(
         }
         _ => None,
     }
-}
+}}
 
-pub(crate) unsafe fn get_operator(opno: pg_sys::Oid) -> pg_sys::Form_pg_operator {
+pub(crate) unsafe fn get_operator(opno: pg_sys::Oid) -> pg_sys::Form_pg_operator { unsafe {
     let htup = pg_sys::SearchSysCache1(
         pg_sys::SysCacheIdentifier::OPEROID.try_into().unwrap(),
         opno.into(),
@@ -130,9 +130,9 @@ pub(crate) unsafe fn get_operator(opno: pg_sys::Oid) -> pg_sys::Form_pg_operator
     let op = pg_sys::GETSTRUCT(htup) as pg_sys::Form_pg_operator;
     pg_sys::ReleaseSysCache(htup);
     op
-}
+}}
 
-pub(crate) unsafe fn unnest_clause(node: *mut pg_sys::Node) -> *mut pg_sys::Node {
+pub(crate) unsafe fn unnest_clause(node: *mut pg_sys::Node) -> *mut pg_sys::Node { unsafe {
     if is_a(node, pg_sys::NodeTag::T_RelabelType) {
         (*(node as *mut pg_sys::RelabelType)).arg as _
     } else if is_a(node, pg_sys::NodeTag::T_ArrayCoerceExpr) {
@@ -140,14 +140,14 @@ pub(crate) unsafe fn unnest_clause(node: *mut pg_sys::Node) -> *mut pg_sys::Node
     } else {
         node
     }
-}
+}}
 
 pub(crate) unsafe fn extract_from_op_expr(
     _root: *mut pg_sys::PlannerInfo,
     baserel_id: pg_sys::Oid,
     baserel_ids: pg_sys::Relids,
     expr: *mut pg_sys::OpExpr,
-) -> Option<Qual> {
+) -> Option<Qual> { unsafe {
     pgrx::memcx::current_context(|mcx| {
         if let Some(args) = List::<*mut c_void>::downcast_ptr_in_memcx((*expr).args, mcx) {
             // only deal with binary operator
@@ -236,12 +236,12 @@ pub(crate) unsafe fn extract_from_op_expr(
 
         None
     })
-}
+}}
 
 pub(crate) unsafe fn extract_from_null_test(
     baserel_id: pg_sys::Oid,
     expr: *mut pg_sys::NullTest,
-) -> Option<Qual> {
+) -> Option<Qual> { unsafe {
     let var = (*expr).arg as *mut pg_sys::Var;
     if !is_a(var as _, pg_sys::NodeTag::T_Var) || (*var).varattno < 1 {
         return None;
@@ -264,14 +264,14 @@ pub(crate) unsafe fn extract_from_null_test(
     };
 
     Some(qual)
-}
+}}
 
 pub(crate) unsafe fn extract_from_scalar_array_op_expr(
     _root: *mut pg_sys::PlannerInfo,
     baserel_id: pg_sys::Oid,
     baserel_ids: pg_sys::Relids,
     expr: *mut pg_sys::ScalarArrayOpExpr,
-) -> Option<Qual> {
+) -> Option<Qual> { unsafe {
     pgrx::memcx::current_context(|mcx| {
         if let Some(args) = List::<*mut c_void>::downcast_ptr_in_memcx((*expr).args, mcx) {
             // only deal with binary operator
@@ -323,14 +323,14 @@ pub(crate) unsafe fn extract_from_scalar_array_op_expr(
 
         None
     })
-}
+}}
 
 pub(crate) unsafe fn extract_from_var(
     _root: *mut pg_sys::PlannerInfo,
     baserel_id: pg_sys::Oid,
     baserel_ids: pg_sys::Relids,
     var: *mut pg_sys::Var,
-) -> Option<Qual> {
+) -> Option<Qual> { unsafe {
     if (*var).varattno < 1
         || (*var).vartype != pg_sys::BOOLOID
         || !pg_sys::bms_is_member((*var).varno as c_int, baserel_ids)
@@ -349,14 +349,14 @@ pub(crate) unsafe fn extract_from_var(
     };
 
     Some(qual)
-}
+}}
 
 pub(crate) unsafe fn extract_from_bool_expr(
     _root: *mut pg_sys::PlannerInfo,
     baserel_id: pg_sys::Oid,
     baserel_ids: pg_sys::Relids,
     expr: *mut pg_sys::BoolExpr,
-) -> Option<Qual> {
+) -> Option<Qual> { unsafe {
     pgrx::memcx::current_context(|mcx| {
         if let Some(args) = List::<*mut c_void>::downcast_ptr_in_memcx((*expr).args, mcx) {
             if (*expr).boolop != pg_sys::BoolExprType::NOT_EXPR || args.len() != 1 {
@@ -386,12 +386,12 @@ pub(crate) unsafe fn extract_from_bool_expr(
 
         None
     })
-}
+}}
 
 pub(crate) unsafe fn extract_from_boolean_test(
     baserel_id: pg_sys::Oid,
     expr: *mut pg_sys::BooleanTest,
-) -> Option<Qual> {
+) -> Option<Qual> { unsafe {
     let var = (*expr).arg as *mut pg_sys::Var;
     if !is_a(var as _, pg_sys::NodeTag::T_Var) || (*var).varattno < 1 {
         return None;
@@ -416,13 +416,13 @@ pub(crate) unsafe fn extract_from_boolean_test(
     };
 
     Some(qual)
-}
+}}
 
 pub(crate) unsafe fn extract_quals(
     root: *mut pg_sys::PlannerInfo,
     baserel: *mut pg_sys::RelOptInfo,
     baserel_id: pg_sys::Oid,
-) -> Vec<Qual> {
+) -> Vec<Qual> { unsafe {
     pgrx::memcx::current_context(|mcx| {
         let mut quals = Vec::new();
 
@@ -463,4 +463,4 @@ pub(crate) unsafe fn extract_quals(
 
         quals
     })
-}
+}}

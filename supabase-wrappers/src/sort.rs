@@ -8,7 +8,7 @@ pub(crate) unsafe fn create_sort(
     pathkey: *mut pg_sys::PathKey,
     var: *mut pg_sys::Var,
     baserel_id: pg_sys::Oid,
-) -> Option<Sort> {
+) -> Option<Sort> { unsafe {
     let attno = (*var).varattno;
     let attname = pg_sys::get_attname(baserel_id, attno, true);
     if !attname.is_null() {
@@ -25,14 +25,14 @@ pub(crate) unsafe fn create_sort(
         return Some(sort);
     }
     None
-}
+}}
 
 // extract sorts
 pub(crate) unsafe fn extract_sorts(
     root: *mut pg_sys::PlannerInfo,
     baserel: *mut pg_sys::RelOptInfo,
     baserel_id: pg_sys::Oid,
-) -> Vec<Sort> {
+) -> Vec<Sort> { unsafe {
     pgrx::memcx::current_context(|mcx| {
         let mut ret = Vec::new();
 
@@ -92,4 +92,4 @@ pub(crate) unsafe fn extract_sorts(
 
         ret
     })
-}
+}}

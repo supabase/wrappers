@@ -20,7 +20,7 @@ pub(super) unsafe fn create_fdw_instance_from_server_id<
     W: ForeignDataWrapper<E>,
 >(
     fserver_id: pg_sys::Oid,
-) -> W {
+) -> W { unsafe {
     let to_string = |raw: *mut std::ffi::c_char| -> Option<String> {
         if raw.is_null() {
             return None;
@@ -47,7 +47,7 @@ pub(super) unsafe fn create_fdw_instance_from_server_id<
     };
     let wrapper = W::new(server);
     wrapper.report_unwrap()
-}
+}}
 
 // create a fdw instance from a foreign table id
 pub(super) unsafe fn create_fdw_instance_from_table_id<
@@ -55,7 +55,7 @@ pub(super) unsafe fn create_fdw_instance_from_table_id<
     W: ForeignDataWrapper<E>,
 >(
     ftable_id: pg_sys::Oid,
-) -> W {
+) -> W { unsafe {
     let ftable = pg_sys::GetForeignTable(ftable_id);
     create_fdw_instance_from_server_id((*ftable).serverid)
-}
+}}
