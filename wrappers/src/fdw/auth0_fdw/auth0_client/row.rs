@@ -13,12 +13,12 @@ pub struct ResultPayload {
     total: Option<u64>,
 }
 
-#[derive(Debug, Deserialize, PartialEq)]
-pub(crate) struct Success {
-    status: String,
-    result: ResultPayload,
-    time: f64,
-}
+// #[derive(Debug, Deserialize, PartialEq)]
+// pub(crate) struct Success {
+//     status: String,
+//     result: ResultPayload,
+//     time: f64,
+// }
 
 // {
 //     "picture": "https://data.nccr-catalysis.ch/api/avatar?sub=auth0|66437a7f85eb3d0c0ac1bec5",

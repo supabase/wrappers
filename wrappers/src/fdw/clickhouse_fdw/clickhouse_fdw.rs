@@ -62,7 +62,8 @@ fn convert_row_simple(
 
         let cell = if let Some(idx) = src_idx {
             let sql_type = src_row.sql_type(idx)?;
-            let cell = match sql_type {
+
+            match sql_type {
                 types::SqlType::Bool => {
                     let value = src_row.get::<bool, usize>(idx)?;
                     Some(Cell::Bool(value))
@@ -326,8 +327,7 @@ fn convert_row_simple(
                         sql_type.to_string().into(),
                     ));
                 }
-            };
-            cell
+            }
         } else {
             None
         };

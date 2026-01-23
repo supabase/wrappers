@@ -52,11 +52,11 @@ impl S3VectorsFdw {
         self.curr_vectors.clear();
         self.has_next_page = false;
 
-        if let Some(stream) = self.vectors_stream.as_mut() {
-            if let Some(next_batch) = self.rt.block_on(stream.try_next())? {
-                self.has_next_page = next_batch.next_token.is_some();
-                self.curr_vectors = next_batch.vectors.iter().map(S3Vec::from).collect();
-            }
+        if let Some(stream) = self.vectors_stream.as_mut()
+            && let Some(next_batch) = self.rt.block_on(stream.try_next())?
+        {
+            self.has_next_page = next_batch.next_token.is_some();
+            self.curr_vectors = next_batch.vectors.iter().map(S3Vec::from).collect();
         }
 
         Ok(())
@@ -146,11 +146,11 @@ impl S3VectorsFdw {
             }
         };
         let metadata_filter = self.quals.iter().find_map(|q| {
-            if q.field == "metadata" {
-                if let Value::Cell(Cell::Json(json)) = &q.value {
-                    let document = json_value_to_document(&json.0);
-                    return Some(document);
-                }
+            if q.field == "metadata"
+                && let Value::Cell(Cell::Json(json)) = &q.value
+            {
+                let document = json_value_to_document(&json.0);
+                return Some(document);
             }
             None
         });
@@ -319,10 +319,10 @@ impl ForeignDataWrapper<S3VectorsFdwError> for S3VectorsFdw {
 
         loop {
             // end iter scan if the row limit is reached
-            if let Some(limit) = self.row_limit {
-                if self.row_cnt >= limit {
-                    break;
-                }
+            if let Some(limit) = self.row_limit
+                && self.row_cnt >= limit
+            {
+                break;
             }
 
             // convert a vector to a row
@@ -507,11 +507,11 @@ impl ForeignDataWrapper<S3VectorsFdwError> for S3VectorsFdw {
         options: Vec<Option<String>>,
         catalog: Option<pg_sys::Oid>,
     ) -> S3VectorsFdwResult<()> {
-        if let Some(oid) = catalog {
-            if oid == FOREIGN_TABLE_RELATION_ID {
-                check_options_contain(&options, "bucket_name")?;
-                check_options_contain(&options, "index_name")?;
-            }
+        if let Some(oid) = catalog
+            && oid == FOREIGN_TABLE_RELATION_ID
+        {
+            check_options_contain(&options, "bucket_name")?;
+            check_options_contain(&options, "index_name")?;
         }
 
         Ok(())

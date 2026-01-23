@@ -546,12 +546,12 @@ impl ForeignDataWrapper<WasmFdwError> for WasmFdw {
     }
 
     fn validator(options: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) -> WasmFdwResult<()> {
-        if let Some(oid) = catalog {
-            if oid == FOREIGN_SERVER_RELATION_ID {
-                check_options_contain(&options, "fdw_package_url")?;
-                check_options_contain(&options, "fdw_package_name")?;
-                check_options_contain(&options, "fdw_package_version")?;
-            }
+        if let Some(oid) = catalog
+            && oid == FOREIGN_SERVER_RELATION_ID
+        {
+            check_options_contain(&options, "fdw_package_url")?;
+            check_options_contain(&options, "fdw_package_name")?;
+            check_options_contain(&options, "fdw_package_version")?;
         }
 
         Ok(())

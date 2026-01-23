@@ -284,11 +284,11 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
             let mut rdr: BufReader<Pin<Box<dyn AsyncRead>>> = BufReader::new(boxed_stream);
 
             // skip csv header line if needed
-            if let Parser::Csv(_) = self.parser {
-                if has_header {
-                    let mut header = String::new();
-                    self.rt.block_on(rdr.read_line(&mut header))?;
-                }
+            if let Parser::Csv(_) = self.parser
+                && has_header
+            {
+                let mut header = String::new();
+                self.rt.block_on(rdr.read_line(&mut header))?;
             }
 
             self.rdr = Some(rdr);
@@ -388,11 +388,11 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
     }
 
     fn validator(options: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) -> S3FdwResult<()> {
-        if let Some(oid) = catalog {
-            if oid == FOREIGN_TABLE_RELATION_ID {
-                check_options_contain(&options, "uri")?;
-                check_options_contain(&options, "format")?;
-            }
+        if let Some(oid) = catalog
+            && oid == FOREIGN_TABLE_RELATION_ID
+        {
+            check_options_contain(&options, "uri")?;
+            check_options_contain(&options, "format")?;
         }
 
         Ok(())

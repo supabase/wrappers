@@ -144,12 +144,11 @@ impl Mapper {
                     precision: _,
                     scale: _,
                 }) = src_type
+                    && let Some(arr) = array.downcast_ref::<array::Decimal128Array>()
                 {
-                    if let Some(arr) = array.downcast_ref::<array::Decimal128Array>() {
-                        let val_str = arr.value_as_string(rec_offset);
-                        let val = pgrx::AnyNumeric::from_str(&val_str)?;
-                        cell = Some(Cell::Numeric(val));
-                    }
+                    let val_str = arr.value_as_string(rec_offset);
+                    let val = pgrx::AnyNumeric::from_str(&val_str)?;
+                    cell = Some(Cell::Numeric(val));
                 }
             }
             pg_sys::TEXTOID => {
@@ -160,8 +159,8 @@ impl Mapper {
                 }
             }
             pg_sys::DATEOID => {
-                if let Type::Primitive(PrimitiveType::Date) = src_type {
-                    if let Some(dt) = array
+                if let Type::Primitive(PrimitiveType::Date) = src_type
+                    && let Some(dt) = array
                         .downcast_ref::<array::Date64Array>()
                         .and_then(|a| a.value_as_datetime(rec_offset))
                         .or_else(|| {
@@ -169,15 +168,14 @@ impl Mapper {
                                 .downcast_ref::<array::Date32Array>()
                                 .and_then(|a| a.value_as_datetime(rec_offset))
                         })
-                    {
-                        let ts = naive_datetime_to_ts(dt)?;
-                        cell = Some(Cell::Date(datum::Date::from(ts)));
-                    }
+                {
+                    let ts = naive_datetime_to_ts(dt)?;
+                    cell = Some(Cell::Date(datum::Date::from(ts)));
                 }
             }
             pg_sys::TIMEOID => {
-                if let Type::Primitive(PrimitiveType::Time) = src_type {
-                    if let Some(t) = array
+                if let Type::Primitive(PrimitiveType::Time) = src_type
+                    && let Some(t) = array
                         .downcast_ref::<array::Time64MicrosecondArray>()
                         .and_then(|a| a.value_as_time(rec_offset))
                         .or_else(|| {
@@ -190,37 +188,33 @@ impl Mapper {
                                 .downcast_ref::<array::Time32SecondArray>()
                                 .and_then(|a| a.value_as_time(rec_offset))
                         })
-                    {
-                        let time =
-                            datum::Time::new(t.hour() as _, t.minute() as _, t.second() as _)?;
-                        cell = Some(Cell::Time(time));
-                    }
+                {
+                    let time = datum::Time::new(t.hour() as _, t.minute() as _, t.second() as _)?;
+                    cell = Some(Cell::Time(time));
                 }
             }
             pg_sys::TIMESTAMPOID => {
-                if let Type::Primitive(PrimitiveType::Timestamp) = src_type {
-                    if let Some(dt) = array
+                if let Type::Primitive(PrimitiveType::Timestamp) = src_type
+                    && let Some(dt) = array
                         .downcast_ref::<array::TimestampMicrosecondArray>()
                         .and_then(|a| a.value_as_datetime(rec_offset))
-                    {
-                        let ts = naive_datetime_to_ts(dt)?;
-                        cell = Some(Cell::Timestamp(ts));
-                    }
+                {
+                    let ts = naive_datetime_to_ts(dt)?;
+                    cell = Some(Cell::Timestamp(ts));
                 }
             }
             pg_sys::TIMESTAMPTZOID => {
-                if let Type::Primitive(PrimitiveType::Timestamptz) = src_type {
-                    if let Some(dt) = array
+                if let Type::Primitive(PrimitiveType::Timestamptz) = src_type
+                    && let Some(dt) = array
                         .downcast_ref::<array::TimestampMicrosecondArray>()
                         .and_then(|a| {
                             parse_tz(a.timezone())
                                 .map(|tz| a.value_as_datetime_with_tz(rec_offset, tz))
                                 .transpose()
                         })
-                    {
-                        let ts = datetime_to_tstz(dt?)?;
-                        cell = Some(Cell::Timestamptz(ts));
-                    }
+                {
+                    let ts = datetime_to_tstz(dt?)?;
+                    cell = Some(Cell::Timestamptz(ts));
                 }
             }
             pg_sys::JSONBOID => match src_type {
@@ -349,13 +343,13 @@ impl Mapper {
                     if let Some(Cell::Numeric(val)) = cell {
                         let decimal_str = val.to_string();
                         let mut appended = false;
-                        if let Ok(mut decimal) = Decimal::from_str_exact(&decimal_str) {
-                            if let Ok(scale_u32) = (*scale).try_into() {
-                                decimal.rescale(scale_u32);
-                                if let Some(mantissa) = decimal.mantissa().to_i128() {
-                                    dec_builder.append_value(mantissa);
-                                    appended = true;
-                                }
+                        if let Ok(mut decimal) = Decimal::from_str_exact(&decimal_str)
+                            && let Ok(scale_u32) = (*scale).try_into()
+                        {
+                            decimal.rescale(scale_u32);
+                            if let Some(mantissa) = decimal.mantissa().to_i128() {
+                                dec_builder.append_value(mantissa);
+                                appended = true;
                             }
                         }
                         if !appended {

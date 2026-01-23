@@ -328,7 +328,7 @@ impl ForeignDataWrapper<DuckdbFdwError> for DuckdbFdw {
                 .map(|t| (format!("{db_name}.{schema}.{t}"), t.clone()))
                 .collect()
         } else {
-            let tables = require_option_or("tables", &import_stmt.options, "")
+            require_option_or("tables", &import_stmt.options, "")
                 .split(",")
                 .map(|t| t.trim())
                 .filter(|t| !t.is_empty())
@@ -344,8 +344,7 @@ impl ForeignDataWrapper<DuckdbFdwError> for DuckdbFdw {
                     }
                     (format!("'{table}'"), prefix.to_string())
                 })
-                .collect();
-            tables
+                .collect()
         };
 
         // get each table DDL

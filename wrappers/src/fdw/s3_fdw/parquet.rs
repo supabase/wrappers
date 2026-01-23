@@ -232,10 +232,10 @@ impl S3Parquet {
     // refill record batch
     pub(super) async fn refill(&mut self) -> S3FdwResult<Option<()>> {
         // if there are still records in the batch
-        if let Some(batch) = &self.batch {
-            if self.batch_idx < batch.num_rows() {
-                return Ok(Some(()));
-            }
+        if let Some(batch) = &self.batch
+            && self.batch_idx < batch.num_rows()
+        {
+            return Ok(Some(()));
         }
 
         // otherwise, read one moe batch
