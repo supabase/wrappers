@@ -40,11 +40,9 @@ impl From<OptionsError> for ErrorReport {
                 error_message,
                 "",
             ),
-            OptionsError::OptionParsingError { .. } => ErrorReport::new(
-                PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                error_message,
-                "",
-            ),
+            OptionsError::OptionParsingError { .. } => {
+                ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, error_message, "")
+            }
         }
     }
 }
