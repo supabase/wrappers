@@ -159,10 +159,11 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
         let region = require_option_or("aws_region", &server.options, "us-east-1");
 
         // set AWS environment variables and create shared config from them
-        env::set_var("AWS_ACCESS_KEY_ID", creds.0);
-        env::set_var("AWS_SECRET_ACCESS_KEY", creds.1);
-        env::set_var("AWS_REGION", region);
-
+        unsafe {
+            env::set_var("AWS_ACCESS_KEY_ID", creds.0);
+            env::set_var("AWS_SECRET_ACCESS_KEY", creds.1);
+            env::set_var("AWS_REGION", region);
+        }
         let mut config_loader = aws_config::defaults(BehaviorVersion::latest());
 
         // endpoint_url not supported as env var in rust https://github.com/awslabs/aws-sdk-rust/issues/932
@@ -271,7 +272,7 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
 
             // deal with parquet file, read all its content to local buffer if it is
             // compressed, otherwise open async read stream for it
-            if let Parser::Parquet(ref mut s3parquet) = &mut self.parser {
+            if let Parser::Parquet(s3parquet) = &mut self.parser {
                 if options.get("compress").is_some() {
                     // read all contents to local
                     let mut buf = Vec::new();
@@ -309,7 +310,7 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
 
     fn iter_scan(&mut self, row: &mut Row) -> S3FdwResult<Option<()>> {
         // read parquet record
-        if let Parser::Parquet(ref mut s3parquet) = &mut self.parser {
+        if let Parser::Parquet(s3parquet) = &mut self.parser {
             if self.rt.block_on(s3parquet.refill())?.is_none() {
                 return Ok(None);
             }

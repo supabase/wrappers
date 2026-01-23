@@ -254,10 +254,11 @@ impl ForeignDataWrapper<S3VectorsFdwError> for S3VectorsFdw {
         let region = require_option_or("aws_region", &server.options, "us-east-1");
 
         // set AWS environment variables and create shared config from them
-        env::set_var("AWS_ACCESS_KEY_ID", creds.0);
-        env::set_var("AWS_SECRET_ACCESS_KEY", creds.1);
-        env::set_var("AWS_REGION", region);
-
+        unsafe {
+            env::set_var("AWS_ACCESS_KEY_ID", creds.0);
+            env::set_var("AWS_SECRET_ACCESS_KEY", creds.1);
+            env::set_var("AWS_REGION", region);
+        }
         // set endpoint URL if needed
         if let Some(endpoint_url) = server.options.get("endpoint_url") {
             let endpoint_url = if endpoint_url.ends_with('/') {
@@ -265,7 +266,9 @@ impl ForeignDataWrapper<S3VectorsFdwError> for S3VectorsFdw {
             } else {
                 format!("{endpoint_url}/")
             };
-            env::set_var("AWS_ENDPOINT_URL", endpoint_url);
+            unsafe {
+                env::set_var("AWS_ENDPOINT_URL", endpoint_url);
+            }
         }
 
         // load AWS config and create client

@@ -239,7 +239,7 @@ impl S3Parquet {
         }
 
         // otherwise, read one moe batch
-        if let Some(ref mut stream) = &mut self.stream {
+        if let Some(stream) = &mut self.stream {
             let result = stream.try_next().await?;
             return Ok(result.map(|batch| {
                 stats::inc_stats(

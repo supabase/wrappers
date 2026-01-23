@@ -84,7 +84,7 @@ impl RedisFdw {
 
     // fetch a target row for list and zset
     fn fetch_row_list(&mut self) -> RedisFdwResult<Option<Row>> {
-        if let Some(ref mut conn) = &mut self.conn {
+        if let Some(conn) = &mut self.conn {
             if self.scan_result.is_empty() {
                 let start = self.iter_idx;
                 let stop = self.iter_idx + Self::BUF_SIZE - 1;
@@ -151,7 +151,7 @@ impl RedisFdw {
 
     // fetch a target row for stream
     fn fetch_row_stream(&mut self) -> RedisFdwResult<Option<Row>> {
-        if let Some(ref mut conn) = &mut self.conn {
+        if let Some(conn) = &mut self.conn {
             if self.iter_idx as usize >= self.scan_result_stream.len() {
                 self.scan_result_stream =
                     conn.xrange_count(&self.src_key, &self.iter_idx_stream, "+", Self::BUF_SIZE)?;
@@ -195,7 +195,7 @@ impl RedisFdw {
 
     // fetch a target row for multi_list, multi_set, multi_zset and multi_hash
     fn fetch_row_multi(&mut self) -> RedisFdwResult<Option<Row>> {
-        if let Some(ref mut conn) = &mut self.conn {
+        if let Some(conn) = &mut self.conn {
             if self.iter_idx >= self.scan_result.len() as isize {
                 return Ok(None);
             }
