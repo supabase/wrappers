@@ -43,7 +43,7 @@ struct FdwModifyState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
 }
 
 impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwModifyState<E, W> {
-    unsafe fn new(foreigntableid: Oid, tmp_ctx: MemoryContext) -> Self {
+    unsafe fn new(foreigntableid: Oid, tmp_ctx: MemoryContext) -> Self { unsafe {
         Self {
             instance: Some(instance::create_fdw_instance_from_table_id(foreigntableid)),
             rowid_name: String::default(),
@@ -55,7 +55,7 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwModifyState<E, W> {
             #[cfg(feature = "pg13")]
             update_cols: Vec::new(),
         }
-    }
+    }}
 
     fn begin_modify(&mut self) -> Result<(), E> {
         if let Some(ref mut instance) = self.instance {
@@ -116,15 +116,15 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> Drop for FdwModifyState<E, 
 // drop the modify state, so the inner fdw instance can be dropped too
 unsafe fn drop_fdw_modify_state<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     fdw_state: *mut FdwModifyState<E, W>,
-) {
+) { unsafe {
     let boxed_fdw_state = Box::from_raw(fdw_state);
     drop(boxed_fdw_state);
-}
+}}
 
 // find rowid column in relation description
 unsafe fn find_rowid_column(
     target_relation: pg_sys::Relation,
-) -> Option<pg_sys::FormData_pg_attribute> {
+) -> Option<pg_sys::FormData_pg_attribute> { unsafe {
     // get rowid column name from table options
     let ftable = pg_sys::GetForeignTable((*target_relation).rd_id);
     let opts = options_to_hashmap((*ftable).options).report_unwrap();
@@ -144,7 +144,7 @@ unsafe fn find_rowid_column(
     );
 
     None
-}
+}}
 
 #[cfg(feature = "pg13")]
 #[pg_guard]
@@ -386,11 +386,11 @@ pub(super) extern "C-unwind" fn exec_foreign_insert<
 unsafe fn get_rowid_cell<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     state: &FdwModifyState<E, W>,
     plan_slot: *mut pg_sys::TupleTableSlot,
-) -> Option<Cell> {
+) -> Option<Cell> { unsafe {
     let mut is_null: bool = true;
     let datum = polyfill::slot_getattr(plan_slot, state.rowid_attno.into(), &mut is_null);
     Cell::from_polymorphic_datum(datum, is_null, state.rowid_typid)
-}
+}}
 
 #[pg_guard]
 pub(super) extern "C-unwind" fn exec_foreign_delete<

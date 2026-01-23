@@ -99,7 +99,7 @@ pub fn check_options_contain(opt_list: &[Option<String>], tgt: &str) -> Result<(
 // convert options definition to hashmap
 pub(super) unsafe fn options_to_hashmap(
     options: *mut pg_sys::List,
-) -> Result<HashMap<String, String>, OptionsError> {
+) -> Result<HashMap<String, String>, OptionsError> { unsafe {
     pgrx::memcx::current_context(|mcx| {
         let mut ret = HashMap::new();
 
@@ -124,4 +124,4 @@ pub(super) unsafe fn options_to_hashmap(
 
         Ok(ret)
     })
-}
+}}

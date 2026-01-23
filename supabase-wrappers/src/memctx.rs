@@ -11,21 +11,20 @@ use pgrx::{
 const ROOT_MEMCTX_NAME: &str = "WrappersRootMemCtx";
 
 // search memory context by name under specified MemoryContext
-unsafe fn find_memctx_under(name: &str, under: PgMemoryContexts) -> Option<PgMemoryContexts> {
+unsafe fn find_memctx_under(name: &str, under: PgMemoryContexts) -> Option<PgMemoryContexts> { unsafe {
     let mut ctx = (*under.value()).firstchild;
     while !ctx.is_null() {
-        if let Ok(ctx_name) = std::ffi::CStr::from_ptr((*ctx).name).to_str() {
-            if ctx_name == name {
+        if let Ok(ctx_name) = std::ffi::CStr::from_ptr((*ctx).name).to_str()
+            && ctx_name == name {
                 return Some(PgMemoryContexts::For(ctx));
             }
-        }
         ctx = (*ctx).nextchild;
     }
     None
-}
+}}
 
 // search for root memory context under CacheMemoryContext, create a new one if not exists
-unsafe fn ensure_root_wrappers_memctx() -> PgMemoryContexts {
+unsafe fn ensure_root_wrappers_memctx() -> PgMemoryContexts { unsafe {
     find_memctx_under(ROOT_MEMCTX_NAME, PgMemoryContexts::CacheMemoryContext).unwrap_or_else(|| {
         let name = PgMemoryContexts::CacheMemoryContext.pstrdup(ROOT_MEMCTX_NAME);
         let ctx = pg_sys::AllocSetContextCreateExtended(
@@ -37,9 +36,9 @@ unsafe fn ensure_root_wrappers_memctx() -> PgMemoryContexts {
         );
         PgMemoryContexts::For(ctx)
     })
-}
+}}
 
-pub(super) unsafe fn create_wrappers_memctx(name: &str) -> MemoryContext {
+pub(super) unsafe fn create_wrappers_memctx(name: &str) -> MemoryContext { unsafe {
     let mut root = ensure_root_wrappers_memctx();
     let name = root.switch_to(|_| name.as_pg_cstr());
     pg_sys::AllocSetContextCreateExtended(
@@ -49,11 +48,11 @@ pub(super) unsafe fn create_wrappers_memctx(name: &str) -> MemoryContext {
         pg_sys::ALLOCSET_DEFAULT_INITSIZE as usize,
         pg_sys::ALLOCSET_DEFAULT_MAXSIZE as usize,
     )
-}
+}}
 
-pub(super) unsafe fn delete_wrappers_memctx(ctx: MemoryContext) {
+pub(super) unsafe fn delete_wrappers_memctx(ctx: MemoryContext) { unsafe {
     if !ctx.is_null() {
         pg_sys::pfree((*ctx).name as _);
         pg_sys::MemoryContextDelete(ctx)
     }
-}
+}}
