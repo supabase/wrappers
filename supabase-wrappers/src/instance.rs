@@ -21,23 +21,23 @@ pub(super) unsafe fn create_fdw_instance_from_server_id<
 >(
     fserver_id: pg_sys::Oid,
 ) -> W {
+    let to_string = |raw: *mut std::ffi::c_char| -> Option<String> {
+        if raw.is_null() {
+            return None;
+        }
+        let c_str = unsafe { CStr::from_ptr(raw) };
+        let value = c_str
+            .to_str()
+            .map_err(|_| {
+                OptionsError::OptionValueIsInvalidUtf8(
+                    String::from_utf8_lossy(c_str.to_bytes()).to_string(),
+                )
+            })
+            .report_unwrap()
+            .to_string();
+        Some(value)
+    };
     unsafe {
-        let to_string = |raw: *mut std::ffi::c_char| -> Option<String> {
-            if raw.is_null() {
-                return None;
-            }
-            let c_str = CStr::from_ptr(raw);
-            let value = c_str
-                .to_str()
-                .map_err(|_| {
-                    OptionsError::OptionValueIsInvalidUtf8(
-                        String::from_utf8_lossy(c_str.to_bytes()).to_string(),
-                    )
-                })
-                .report_unwrap()
-                .to_string();
-            Some(value)
-        };
         let fserver = pg_sys::GetForeignServer(fserver_id);
         let server = ForeignServer {
             server_oid: fserver_id,

@@ -12,18 +12,16 @@ const ROOT_MEMCTX_NAME: &str = "WrappersRootMemCtx";
 
 // search memory context by name under specified MemoryContext
 unsafe fn find_memctx_under(name: &str, under: PgMemoryContexts) -> Option<PgMemoryContexts> {
-    unsafe {
-        let mut ctx = (*under.value()).firstchild;
-        while !ctx.is_null() {
-            if let Ok(ctx_name) = std::ffi::CStr::from_ptr((*ctx).name).to_str()
-                && ctx_name == name
-            {
-                return Some(PgMemoryContexts::For(ctx));
-            }
-            ctx = (*ctx).nextchild;
+    let mut ctx = unsafe { (*under.value()).firstchild };
+    while !ctx.is_null() {
+        if let Ok(ctx_name) = unsafe { std::ffi::CStr::from_ptr((*ctx).name).to_str() }
+            && ctx_name == name
+        {
+            return Some(PgMemoryContexts::For(ctx));
         }
-        None
+        ctx = unsafe { (*ctx).nextchild };
     }
+    None
 }
 
 // search for root memory context under CacheMemoryContext, create a new one if not exists
@@ -60,8 +58,8 @@ pub(super) unsafe fn create_wrappers_memctx(name: &str) -> MemoryContext {
 }
 
 pub(super) unsafe fn delete_wrappers_memctx(ctx: MemoryContext) {
-    unsafe {
-        if !ctx.is_null() {
+    if !ctx.is_null() {
+        unsafe {
             pg_sys::pfree((*ctx).name as _);
             pg_sys::MemoryContextDelete(ctx)
         }
