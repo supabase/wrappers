@@ -18,6 +18,11 @@ pub enum OptionsError {
         // NOTE: We intentionally don't include the actual value here
         // to prevent credential leakage in error messages
     },
+    #[error("option `{option_name}` cannot be parsed as {type_name}")]
+    OptionParsingError {
+        option_name: String,
+        type_name: &'static str,
+    },
 }
 
 impl From<OptionsError> for ErrorReport {
@@ -32,6 +37,11 @@ impl From<OptionsError> for ErrorReport {
             OptionsError::OptionNameIsInvalidUtf8(_)
             | OptionsError::OptionValueIsInvalidUtf8 { .. } => ErrorReport::new(
                 PgSqlErrorCode::ERRCODE_FDW_INVALID_STRING_FORMAT,
+                error_message,
+                "",
+            ),
+            OptionsError::OptionParsingError { .. } => ErrorReport::new(
+                PgSqlErrorCode::ERRCODE_FDW_ERROR,
                 error_message,
                 "",
             ),
