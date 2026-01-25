@@ -1,0 +1,10 @@
+package supabase:openapi-fdw@0.1.0;
+
+world openapi {
+    import supabase:wrappers/http@0.2.0;
+    import supabase:wrappers/jwt@0.2.0;
+    import supabase:wrappers/stats@0.2.0;
+    import supabase:wrappers/time@0.2.0;
+    import supabase:wrappers/utils@0.2.0;
+    export supabase:wrappers/routines@0.2.0;
+}
