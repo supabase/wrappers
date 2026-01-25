@@ -26,7 +26,7 @@ jobs:
           override: true
 
       - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@cargo-llvm-cov
+        uses: taiki-e/install-action@v2
 
       - run: |
           sudo apt remove -y postgres*
