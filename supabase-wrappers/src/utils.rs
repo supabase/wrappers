@@ -540,3 +540,185 @@ impl<T, E: Into<ErrorReport>> ReportableError for Result<T, E> {
         self.map_err(|e| e.into()).unwrap_or_report()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ==========================================================================
+    // Tests for mask_credential_value
+    // ==========================================================================
+
+    #[test]
+    fn test_mask_credential_value_long_value() {
+        assert_eq!(mask_credential_value("wJalrXUtnFEMI/EXAMPLEKEY"), "wJal***");
+        assert_eq!(mask_credential_value("12345678"), "1234***");
+        assert_eq!(mask_credential_value("abcde"), "abcd***");
+    }
+
+    #[test]
+    fn test_mask_credential_value_short_value() {
+        assert_eq!(mask_credential_value("abc"), "***");
+        assert_eq!(mask_credential_value("abcd"), "***");
+        assert_eq!(mask_credential_value("a"), "***");
+        assert_eq!(mask_credential_value(""), "***");
+    }
+
+    // ==========================================================================
+    // Tests for is_sensitive_option
+    // ==========================================================================
+
+    #[test]
+    fn test_is_sensitive_option_generic_patterns() {
+        assert!(is_sensitive_option("password"));
+        assert!(is_sensitive_option("secret"));
+        assert!(is_sensitive_option("token"));
+        assert!(is_sensitive_option("api_key"));
+        assert!(is_sensitive_option("credentials"));
+    }
+
+    #[test]
+    fn test_is_sensitive_option_aws_patterns() {
+        assert!(is_sensitive_option("aws_secret_access_key"));
+        assert!(is_sensitive_option("secret_access_key"));
+        assert!(is_sensitive_option("aws_session_token"));
+    }
+
+    #[test]
+    fn test_is_sensitive_option_case_insensitive() {
+        assert!(is_sensitive_option("PASSWORD"));
+        assert!(is_sensitive_option("API_KEY"));
+        assert!(is_sensitive_option("AWS_SECRET_ACCESS_KEY"));
+        assert!(is_sensitive_option("Token"));
+    }
+
+    #[test]
+    fn test_is_sensitive_option_non_sensitive() {
+        assert!(!is_sensitive_option("region"));
+        assert!(!is_sensitive_option("bucket"));
+        assert!(!is_sensitive_option("endpoint_url"));
+        assert!(!is_sensitive_option("table_name"));
+    }
+
+    #[test]
+    fn test_is_sensitive_option_partial_match() {
+        // Should match if the option name contains a sensitive pattern
+        assert!(is_sensitive_option("my_api_key_here"));
+        assert!(is_sensitive_option("stripe_api_key"));
+    }
+
+    // ==========================================================================
+    // Tests for mask_credentials_in_message
+    // ==========================================================================
+
+    #[test]
+    fn test_mask_credentials_sql_style_single_quotes() {
+        let msg = "Error: aws_secret_access_key = 'wJalrXUtnFEMI/EXAMPLEKEY' is invalid";
+        let masked = mask_credentials_in_message(msg);
+        assert!(!masked.contains("wJalrXUtnFEMI"));
+        assert!(masked.contains("wJal***"));
+    }
+
+    #[test]
+    fn test_mask_credentials_sql_style_double_quotes() {
+        let msg = r#"Error: password = "mysecretpassword" for user"#;
+        let masked = mask_credentials_in_message(msg);
+        assert!(!masked.contains("mysecretpassword"));
+        assert!(masked.contains("myse***"));
+    }
+
+    #[test]
+    fn test_mask_credentials_json_style() {
+        let msg = r#"{"api_key": "sk_live_12345678abcd"}"#;
+        let masked = mask_credentials_in_message(msg);
+        assert!(!masked.contains("sk_live_12345678abcd"));
+        assert!(masked.contains("sk_l***"));
+    }
+
+    #[test]
+    fn test_mask_credentials_unquoted() {
+        let msg = "Error: token=abc123xyz is expired";
+        let masked = mask_credentials_in_message(msg);
+        assert!(!masked.contains("abc123xyz"));
+        assert!(masked.contains("abc1***"));
+    }
+
+    #[test]
+    fn test_mask_credentials_multiple_occurrences() {
+        let msg = "password='first123' and api_key='second456'";
+        let masked = mask_credentials_in_message(msg);
+        assert!(!masked.contains("first123"));
+        assert!(!masked.contains("second456"));
+        assert!(masked.contains("firs***"));
+        assert!(masked.contains("seco***"));
+    }
+
+    #[test]
+    fn test_mask_credentials_no_sensitive_data() {
+        let msg = "Error: region = 'us-west-2' is not available";
+        let masked = mask_credentials_in_message(msg);
+        assert_eq!(masked, msg);
+    }
+
+    #[test]
+    fn test_mask_credentials_case_insensitive() {
+        let msg = "Error: PASSWORD = 'secret123' failed";
+        let masked = mask_credentials_in_message(msg);
+        assert!(!masked.contains("secret123"));
+        assert!(masked.contains("secr***"));
+    }
+
+    #[test]
+    fn test_mask_credentials_empty_value() {
+        let msg = "Error: password = '' is empty";
+        let masked = mask_credentials_in_message(msg);
+        // Empty value should not be replaced
+        assert!(masked.contains("''"));
+    }
+
+    #[test]
+    fn test_mask_credentials_no_value_after_key() {
+        let msg = "password option is missing";
+        let masked = mask_credentials_in_message(msg);
+        // No '=' or ':' after sensitive name, should not change
+        assert_eq!(masked, msg);
+    }
+
+    #[test]
+    fn test_mask_credentials_unclosed_quote() {
+        let msg = "Error: password = 'unclosed";
+        let masked = mask_credentials_in_message(msg);
+        // Should not panic, should handle gracefully
+        assert!(masked.contains("password"));
+    }
+
+    #[test]
+    fn test_mask_credentials_service_specific() {
+        let msg = "stripe_api_key = 'sk_test_1234567890abcdef'";
+        let masked = mask_credentials_in_message(msg);
+        assert!(!masked.contains("sk_test_1234567890abcdef"));
+        assert!(masked.contains("sk_t***"));
+    }
+
+    // ==========================================================================
+    // Tests for sanitize_error_message
+    // ==========================================================================
+
+    #[test]
+    fn test_sanitize_error_message() {
+        let error = "Connection failed with password='secret123' for user 'admin'";
+        let safe_error = sanitize_error_message(error);
+        assert!(!safe_error.contains("secret123"));
+        assert!(safe_error.contains("secr***"));
+        assert!(safe_error.contains("admin")); // non-sensitive data preserved
+    }
+
+    #[test]
+    fn test_sanitize_error_message_complex() {
+        let error =
+            "Failed: aws_secret_access_key='AKIAIOSFODNN7EXAMPLE', api_key=\"test_key_123\"";
+        let safe_error = sanitize_error_message(error);
+        assert!(!safe_error.contains("AKIAIOSFODNN7EXAMPLE"));
+        assert!(!safe_error.contains("test_key_123"));
+    }
+}

@@ -140,3 +140,152 @@ pub(super) unsafe fn options_to_hashmap(
         Ok(ret)
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ==========================================================================
+    // Tests for OptionsError
+    // ==========================================================================
+
+    #[test]
+    fn test_option_name_not_found_error_message() {
+        let err = OptionsError::OptionNameNotFound("test_option".to_string());
+        assert_eq!(
+            format!("{err}"),
+            "required option `test_option` is not specified"
+        );
+    }
+
+    #[test]
+    fn test_option_name_invalid_utf8_error_message() {
+        let err = OptionsError::OptionNameIsInvalidUtf8("bad_name".to_string());
+        assert_eq!(
+            format!("{err}"),
+            "option name `bad_name` is not a valid UTF-8 string"
+        );
+    }
+
+    #[test]
+    fn test_option_value_invalid_utf8_error_message() {
+        let err = OptionsError::OptionValueIsInvalidUtf8 {
+            option_name: "password".to_string(),
+        };
+        assert_eq!(
+            format!("{err}"),
+            "option value for `password` is not a valid UTF-8 string"
+        );
+    }
+
+    #[test]
+    fn test_option_parsing_error_message() {
+        let err = OptionsError::OptionParsingError {
+            option_name: "max_size".to_string(),
+            type_name: "usize",
+        };
+        assert_eq!(
+            format!("{err}"),
+            "option `max_size` cannot be parsed as usize"
+        );
+    }
+
+    // ==========================================================================
+    // Tests for require_option
+    // ==========================================================================
+
+    #[test]
+    fn test_require_option_found() {
+        let mut options = HashMap::new();
+        options.insert("api_key".to_string(), "my_key".to_string());
+
+        let result = require_option("api_key", &options);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "my_key");
+    }
+
+    #[test]
+    fn test_require_option_not_found() {
+        let options = HashMap::new();
+
+        let result = require_option("api_key", &options);
+        assert!(result.is_err());
+        match result {
+            Err(OptionsError::OptionNameNotFound(name)) => {
+                assert_eq!(name, "api_key");
+            }
+            _ => panic!("Expected OptionNameNotFound error"),
+        }
+    }
+
+    // ==========================================================================
+    // Tests for require_option_or
+    // ==========================================================================
+
+    #[test]
+    fn test_require_option_or_found() {
+        let mut options = HashMap::new();
+        options.insert("region".to_string(), "us-west-2".to_string());
+
+        let result = require_option_or("region", &options, "us-east-1");
+        assert_eq!(result, "us-west-2");
+    }
+
+    #[test]
+    fn test_require_option_or_not_found_uses_default() {
+        let options = HashMap::new();
+
+        let result = require_option_or("region", &options, "us-east-1");
+        assert_eq!(result, "us-east-1");
+    }
+
+    // ==========================================================================
+    // Tests for check_options_contain
+    // ==========================================================================
+
+    #[test]
+    fn test_check_options_contain_found() {
+        let opt_list = vec![
+            Some("api_key=abc123".to_string()),
+            Some("region=us-west-2".to_string()),
+        ];
+
+        let result = check_options_contain(&opt_list, "api_key");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_check_options_contain_not_found() {
+        let opt_list = vec![
+            Some("region=us-west-2".to_string()),
+            Some("bucket=mybucket".to_string()),
+        ];
+
+        let result = check_options_contain(&opt_list, "api_key");
+        assert!(result.is_err());
+        match result {
+            Err(OptionsError::OptionNameNotFound(name)) => {
+                assert_eq!(name, "api_key");
+            }
+            _ => panic!("Expected OptionNameNotFound error"),
+        }
+    }
+
+    #[test]
+    fn test_check_options_contain_with_none() {
+        let opt_list: Vec<Option<String>> = vec![None, Some("api_key=abc123".to_string()), None];
+
+        let result = check_options_contain(&opt_list, "api_key");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_check_options_contain_partial_match_fails() {
+        // "api_key_secondary" should not match "api_key"
+        let opt_list = vec![Some("api_key_secondary=abc123".to_string())];
+
+        // This will actually pass because starts_with("api_key=") won't match "api_key_secondary=abc123"
+        let result = check_options_contain(&opt_list, "api_key");
+        assert!(result.is_err());
+    }
+}
