@@ -10,8 +10,8 @@ use std::collections::HashMap;
 /// Represents an `OpenAPI` 3.0+ specification
 #[derive(Debug, Deserialize)]
 pub struct OpenApiSpec {
-    #[allow(dead_code)] // Required by OpenAPI spec format, validated by serde
-    openapi: String,
+    /// OpenAPI version (must be 3.x)
+    pub openapi: String,
     #[allow(dead_code)] // Required by OpenAPI spec format
     info: Info,
     #[serde(default)]
@@ -102,13 +102,33 @@ pub struct Components {
 impl OpenApiSpec {
     /// Parse an `OpenAPI` spec from a JSON value
     pub fn from_json(json: &JsonValue) -> Result<Self, String> {
-        serde_json::from_value(json.clone()).map_err(|e| format!("Failed to parse OpenAPI spec: {e}"))
+        let spec: Self =
+            serde_json::from_value(json.clone()).map_err(|e| format!("Failed to parse OpenAPI spec: {e}"))?;
+
+        if !spec.openapi.starts_with("3.") {
+            return Err(format!(
+                "Unsupported OpenAPI version '{}'. Only OpenAPI 3.x specifications are supported (not Swagger 2.0).",
+                spec.openapi
+            ));
+        }
+
+        Ok(spec)
     }
 
     /// Parse an `OpenAPI` spec from a JSON string (used in tests)
     #[cfg(test)]
     pub fn from_str(s: &str) -> Result<Self, String> {
-        serde_json::from_str(s).map_err(|e| format!("Failed to parse OpenAPI spec: {e}"))
+        let spec: Self =
+            serde_json::from_str(s).map_err(|e| format!("Failed to parse OpenAPI spec: {e}"))?;
+
+        if !spec.openapi.starts_with("3.") {
+            return Err(format!(
+                "Unsupported OpenAPI version '{}'. Only OpenAPI 3.x specifications are supported (not Swagger 2.0).",
+                spec.openapi
+            ));
+        }
+
+        Ok(spec)
     }
 
     /// Get the base URL from the spec (first server URL)

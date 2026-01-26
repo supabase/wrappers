@@ -329,9 +329,18 @@ options (endpoint '/users');
 
 - **Read-only**: This FDW only supports SELECT operations. INSERT, UPDATE, and DELETE are not supported at this time.
 - **No transactions**: Each SQL statement results in immediate HTTP requests; there is no transactional grouping.
-- **Rate limiting**: The FDW does not automatically handle rate limiting. Consider using PostgreSQL connection pooling or materialized views for frequently accessed data.
 - **Authentication**: Currently supports API Key and Bearer Token authentication. OAuth flows are not supported.
 - **OpenAPI version**: Only OpenAPI 3.0+ specifications are supported (not Swagger 2.0).
+
+## Rate Limiting
+
+The FDW automatically handles rate limiting:
+
+- **HTTP 429 responses**: Automatically retries up to 3 times
+- **Retry-After header**: Respects server-specified delay when provided
+- **Exponential backoff**: Falls back to 1s, 2s, 4s delays when no Retry-After header is present
+
+For APIs with very strict rate limits, consider using materialized views to cache results.
 
 ## Examples
 

@@ -115,6 +115,12 @@ fn sanitize_column_name(name: &str) -> String {
     result
 }
 
+/// Quote a PostgreSQL identifier (table name, column name, etc.)
+/// Doubles any internal double quotes and wraps in double quotes.
+fn quote_identifier(name: &str) -> String {
+    format!("\"{}\"", name.replace('"', "\"\""))
+}
+
 /// Generate a CREATE FOREIGN TABLE statement for an endpoint
 pub fn generate_foreign_table(
     endpoint: &EndpointInfo,
@@ -146,7 +152,12 @@ pub fn generate_foreign_table(
         .iter()
         .map(|col| {
             let not_null = if col.nullable { "" } else { " NOT NULL" };
-            format!("    {} {}{}", col.name, col.pg_type, not_null)
+            format!(
+                "    {} {}{}",
+                quote_identifier(&col.name),
+                col.pg_type,
+                not_null
+            )
         })
         .collect();
 
@@ -156,6 +167,10 @@ pub fn generate_foreign_table(
         .find(|c| c.name == "id")
         .map_or("attrs", |c| c.name.as_str());
 
+    // Escape single quotes in option values for SQL
+    let escaped_endpoint = endpoint.path.replace('\'', "''");
+    let escaped_rowid = rowid_col.replace('\'', "''");
+
     format!(
         r"CREATE FOREIGN TABLE IF NOT EXISTS {} (
 {}
@@ -164,11 +179,11 @@ SERVER {} OPTIONS (
     endpoint '{}',
     rowid_column '{}'
 )",
-        table_name,
+        quote_identifier(&table_name),
         column_defs.join(",\n"),
-        server_name,
-        endpoint.path,
-        rowid_col
+        quote_identifier(server_name),
+        escaped_endpoint,
+        escaped_rowid
     )
 }
 
@@ -209,11 +224,14 @@ mod tests {
 
     #[test]
     fn test_openapi_to_pg_type() {
-        let spec = OpenApiSpec::from_str(r#"{
+        let spec = OpenApiSpec::from_str(
+            r#"{
             "openapi": "3.0.0",
             "info": {"title": "Test"},
             "paths": {}
-        }"#).unwrap();
+        }"#,
+        )
+        .unwrap();
 
         let string_schema = Schema {
             schema_type: Some("string".to_string()),

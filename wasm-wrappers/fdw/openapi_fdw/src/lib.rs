@@ -77,7 +77,7 @@ static mut INSTANCE: *mut OpenApiFdw = std::ptr::null_mut::<OpenApiFdw>();
 static FDW_NAME: &str = "OpenApiFdw";
 
 impl OpenApiFdw {
-    fn init_instance() {
+    fn init() {
         let instance = Self::default();
         // SAFETY: Wasm is single-threaded, no concurrent access possible.
         // Box::leak intentionally leaks memory to create a stable 'static pointer
@@ -166,7 +166,13 @@ impl OpenApiFdw {
     ) -> Result<(String, std::collections::HashMap<String, String>), String> {
         // Use next_url for pagination if available
         if let Some(ref next_url) = self.next_url {
-            return Ok((next_url.clone(), self.path_params.clone()));
+            // Handle relative URLs by prepending base_url
+            let url = if next_url.starts_with("http://") || next_url.starts_with("https://") {
+                next_url.clone()
+            } else {
+                format!("{}{}", self.base_url, next_url)
+            };
+            return Ok((url, self.path_params.clone()));
         }
 
         let quals = ctx.get_quals();
@@ -203,12 +209,12 @@ impl OpenApiFdw {
 
                 if let Some(val) = value {
                     path_params_used.push(param_lower.clone());
-                    // Store the path param for injection into rows
+                    // Store the path param for injection into rows (unencoded for PostgreSQL filter)
                     extracted_params.insert(param_lower.clone(), val.clone());
                     endpoint = format!(
                         "{}{}{}",
                         &endpoint[..start],
-                        val,
+                        urlencoding::encode(val),
                         &endpoint[start + end + 1..]
                     );
                 } else {
@@ -257,7 +263,11 @@ impl OpenApiFdw {
 
         // Add pagination cursor if we have one
         if let Some(ref cursor) = self.next_cursor {
-            params.push(format!("{}={}", self.cursor_param, cursor));
+            params.push(format!(
+                "{}={}",
+                self.cursor_param,
+                urlencoding::encode(cursor)
+            ));
         }
 
         // Add page size if configured
@@ -280,7 +290,11 @@ impl OpenApiFdw {
             }
 
             if let Some(value) = Self::qual_value_to_string(qual) {
-                params.push(format!("{}={}", qual.field(), value));
+                params.push(format!(
+                    "{}={}",
+                    urlencoding::encode(&qual.field()),
+                    urlencoding::encode(&value)
+                ));
             }
         }
 
@@ -607,7 +621,7 @@ impl Guest for OpenApiFdw {
     }
 
     fn init(ctx: &Context) -> FdwResult {
-        Self::init_instance();
+        Self::init();
         let this = Self::this_mut();
 
         let opts = ctx.get_options(&OptionsType::Server);
@@ -732,7 +746,13 @@ impl Guest for OpenApiFdw {
             this.page_size_param = param;
         }
         if let Some(size) = opts.get("page_size") {
-            this.page_size = size.parse().unwrap_or(this.page_size);
+            match size.parse() {
+                Ok(parsed) => this.page_size = parsed,
+                Err(e) => utils::report_warning(&format!(
+                    "Invalid page_size '{}': {}. Using default value {}.",
+                    size, e, this.page_size
+                )),
+            }
         }
 
         // Reset pagination state
