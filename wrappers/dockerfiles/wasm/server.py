@@ -375,6 +375,218 @@ class MockServer(BaseHTTPRequestHandler):
   }
 }
             '''
+        elif fdw == "openapi":
+            # Generic OpenAPI FDW test endpoints covering all features
+
+            # Pattern 1: Simple list endpoint
+            if req_path == "/users" or req_path.startswith("/users?"):
+                body = '''
+{
+  "data": [
+    {
+      "id": "user-123",
+      "name": "John Doe",
+      "email": "john@example.com",
+      "created_at": "2024-01-15T10:30:00Z",
+      "active": true
+    },
+    {
+      "id": "user-456",
+      "name": "Jane Smith",
+      "email": "jane@example.com",
+      "created_at": "2024-02-20T14:45:00Z",
+      "active": false
+    }
+  ],
+  "meta": {
+    "pagination": {
+      "has_more": false,
+      "next_cursor": null
+    }
+  }
+}
+                '''
+            # Pattern 2: Nested resource with path param (/users/{id}/posts)
+            # Must check before single user pattern
+            elif "/posts" in req_path and req_path.startswith("/users/"):
+                user_id = req_path.split("/")[2]
+                body = f'''
+{{
+  "data": [
+    {{
+      "id": "post-001",
+      "user_id": "{user_id}",
+      "title": "First Post",
+      "content": "Hello world!",
+      "created_at": "2024-03-01T09:00:00Z"
+    }},
+    {{
+      "id": "post-002",
+      "user_id": "{user_id}",
+      "title": "Second Post",
+      "content": "Another post",
+      "created_at": "2024-03-02T10:00:00Z"
+    }}
+  ]
+}}
+                '''
+            # Pattern 3: Single resource by ID (rowid pushdown)
+            elif req_path.startswith("/users/user-"):
+                user_id = req_path.split("/")[2]
+                body = f'''
+{{
+  "id": "{user_id}",
+  "name": "John Doe",
+  "email": "john@example.com",
+  "created_at": "2024-01-15T10:30:00Z",
+  "active": true
+}}
+                '''
+            # Pattern 4: Multiple path parameters (e.g., /projects/{org}/{repo}/issues)
+            elif req_path.startswith("/projects/"):
+                parts = req_path.split("/")
+                if len(parts) >= 5 and parts[4] == "issues":
+                    org = parts[2]
+                    repo = parts[3]
+                    body = f'''
+{{
+  "items": [
+    {{
+      "id": 1,
+      "org": "{org}",
+      "repo": "{repo}",
+      "title": "Bug: Something broken",
+      "state": "open",
+      "created_at": "2024-01-10T08:00:00Z"
+    }},
+    {{
+      "id": 2,
+      "org": "{org}",
+      "repo": "{repo}",
+      "title": "Feature: Add new thing",
+      "state": "closed",
+      "created_at": "2024-01-11T09:00:00Z"
+    }}
+  ]
+}}
+                    '''
+                else:
+                    self.send_response(404)
+                    return
+            # Pattern 5: GeoJSON FeatureCollection response
+            elif req_path == "/locations" or req_path.startswith("/locations?"):
+                body = '''
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "loc-001",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-97.7431, 30.2672]
+      },
+      "properties": {
+        "id": "loc-001",
+        "name": "Austin",
+        "category": "city",
+        "population": 964254
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "loc-002",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-96.7970, 32.7767]
+      },
+      "properties": {
+        "id": "loc-002",
+        "name": "Dallas",
+        "category": "city",
+        "population": 1304379
+      }
+    }
+  ]
+}
+                '''
+            # Pattern 6: Single GeoJSON Feature with path param
+            elif req_path.startswith("/locations/loc-"):
+                loc_id = req_path.split("/")[2]
+                body = f'''
+{{
+  "type": "Feature",
+  "id": "{loc_id}",
+  "geometry": {{
+    "type": "Point",
+    "coordinates": [-97.7431, 30.2672]
+  }},
+  "properties": {{
+    "id": "{loc_id}",
+    "name": "Austin",
+    "category": "city",
+    "population": 964254
+  }}
+}}
+                '''
+            # Pattern 7: Nested path with multiple params (e.g., /resources/{type}/{id})
+            elif req_path.startswith("/resources/"):
+                parts = req_path.split("/")
+                if len(parts) >= 4:
+                    res_type = parts[2]
+                    res_id = parts[3].split("?")[0]
+                    body = f'''
+{{
+  "type": "{res_type}",
+  "id": "{res_id}",
+  "name": "Resource {res_id}",
+  "description": "A {res_type} resource",
+  "created_at": "2024-01-01T00:00:00Z"
+}}
+                    '''
+                else:
+                    self.send_response(404)
+                    return
+            # Pattern 8: Link-based pagination (next_url)
+            elif req_path == "/paginated" or req_path.startswith("/paginated?"):
+                if "page=2" in req_path:
+                    body = '''
+{
+  "results": [
+    {"id": 3, "name": "Item Three"},
+    {"id": 4, "name": "Item Four"}
+  ],
+  "pagination": {
+    "next_url": null,
+    "has_more": false
+  }
+}
+                    '''
+                else:
+                    body = '''
+{
+  "results": [
+    {"id": 1, "name": "Item One"},
+    {"id": 2, "name": "Item Two"}
+  ],
+  "pagination": {
+    "next_url": "http://localhost:8096/openapi/paginated?page=2",
+    "has_more": true
+  }
+}
+                    '''
+            # Pattern 9: Direct array response
+            elif req_path == "/tags" or req_path.startswith("/tags?"):
+                body = '''
+[
+  {"id": 1, "name": "rust", "count": 150},
+  {"id": 2, "name": "postgres", "count": 89},
+  {"id": 3, "name": "wasm", "count": 42}
+]
+                '''
+            else:
+                self.send_response(404)
+                return
         else:
             self.send_response(404)
             return

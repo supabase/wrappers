@@ -8,6 +8,7 @@ members = [
     "hubspot_fdw",
     "infura_fdw",
     "notion_fdw",
+    "openapi_fdw",
     "orb_fdw",
     "paddle_fdw",
     "shopify_fdw",
