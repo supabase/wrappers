@@ -17,7 +17,7 @@ Each FDW documentation includes a detailed "Limitations" section that describes 
 | BigQuery      |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |    ✅     |
 | Cal.com       |   ✅   |   ✅   |   ❌   |   ❌   |    ❌    |    ❌     |
 | Calendly      |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
-| Clerk         |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
+| Clerk         |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |    ✅     |
 | ClickHouse    |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |    ✅     |
 | Cloudflare D1 |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |    ✅     |
 | DuckDB        |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
