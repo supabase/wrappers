@@ -25,7 +25,7 @@ enum Parser {
 }
 
 #[wrappers_fdw(
-    version = "0.1.5",
+    version = "0.1.6",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/s3_fdw",
     error_type = "S3FdwError"
@@ -37,6 +37,7 @@ pub(crate) struct S3Fdw {
     parser: Parser,
     tgt_cols: Vec<Column>,
     rows_out: i64,
+    csv_delimiter: u8,
 
     // local string buffer for CSV and JSONL
     buf: String,
@@ -86,6 +87,7 @@ impl S3Fdw {
                 buf.extend(self.buf.as_bytes());
                 *rdr = csv::ReaderBuilder::new()
                     .has_headers(false)
+                    .delimiter(self.csv_delimiter)
                     .from_reader(Cursor::new(buf));
             }
             Parser::JsonLine(records) => {
@@ -124,6 +126,7 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
             parser: Parser::JsonLine(VecDeque::new()),
             tgt_cols: Vec::new(),
             rows_out: 0,
+            csv_delimiter: b',',
             buf: String::new(),
         };
 
@@ -224,6 +227,14 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
         };
 
         let has_header: bool = options.get("has_header") == Some(&"true".to_string());
+
+        if let Some(delimiter) = options.get("delimiter") {
+            if delimiter.len() == 1 {
+                self.csv_delimiter = delimiter.as_bytes()[0];
+            } else {
+                return Err(S3FdwError::InvalidDelimiterOption(delimiter.to_string()));
+            }
+        }
 
         self.tgt_cols = columns.to_vec();
 
