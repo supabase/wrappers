@@ -25,7 +25,7 @@ enum Parser {
 }
 
 #[wrappers_fdw(
-    version = "0.1.5",
+    version = "0.1.6",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/s3_fdw",
     error_type = "S3FdwError"
@@ -231,6 +231,8 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
         if let Some(delimiter) = options.get("delimiter") {
             if delimiter.len() == 1 {
                 self.csv_delimiter = delimiter.as_bytes()[0];
+            } else {
+                return Err(S3FdwError::InvalidDelimiterOption(delimiter.to_string()));
             }
         }
 

@@ -41,7 +41,8 @@ mod tests {
                 OPTIONS (
                     uri 's3://warehouse/test_data.csv',
                     format 'csv',
-                    has_header 'true'
+                    has_header 'true',
+                    delimiter ','
                   )
              "#,
                 None,
@@ -178,6 +179,28 @@ mod tests {
             )
             .unwrap();
 
+            c.update(
+                r#"
+                CREATE FOREIGN TABLE s3_test_table_tsv (
+                  name text,
+                  sex text,
+                  age text,
+                  height text,
+                  weight text
+                )
+                SERVER s3_server
+                OPTIONS (
+                    uri 's3://warehouse/test_data.tsv',
+                    format 'csv',
+                    has_header 'true',
+                    delimiter E'\t'
+                  )
+             "#,
+                None,
+                &[],
+            )
+            .unwrap();
+
             let check_test_table = |table| {
                 let sql = format!("SELECT * FROM {table} ORDER BY name LIMIT 1");
                 let results = c
@@ -197,6 +220,7 @@ mod tests {
             check_test_table("s3_test_table_csv_gz");
             check_test_table("s3_test_table_jsonl");
             check_test_table("s3_test_table_jsonl_bz");
+            check_test_table("s3_test_table_tsv");
 
             let check_parquet_table = |table| {
                 let sql = format!("SELECT * FROM {table} ORDER BY id LIMIT 1");
