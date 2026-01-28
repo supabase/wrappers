@@ -6,8 +6,8 @@ mod utils;
 
 use pgrx::pg_sys;
 use std::collections::HashMap;
-use wasmtime::component::*;
 use wasmtime::Result as WasmResult;
+use wasmtime::component::*;
 
 use supabase_wrappers::prelude::*;
 

@@ -1,12 +1,11 @@
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::{
-    debug2,
+    FromDatum, PgSqlErrorCode, debug2,
     memcxt::PgMemoryContexts,
     pg_sys::{MemoryContext, MemoryContextData, Oid},
     prelude::*,
     rel::PgRelation,
     tupdesc::PgTupleDesc,
-    FromDatum, PgSqlErrorCode,
 };
 use std::collections::HashMap;
 use std::marker::PhantomData;
@@ -45,7 +44,7 @@ struct FdwModifyState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
 impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwModifyState<E, W> {
     unsafe fn new(foreigntableid: Oid, tmp_ctx: MemoryContext) -> Self {
         Self {
-            instance: Some(instance::create_fdw_instance_from_table_id(foreigntableid)),
+            instance: Some(unsafe { instance::create_fdw_instance_from_table_id(foreigntableid) }),
             rowid_name: String::default(),
             rowid_attno: 0,
             rowid_typid: Oid::INVALID,
@@ -117,7 +116,7 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> Drop for FdwModifyState<E, 
 unsafe fn drop_fdw_modify_state<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     fdw_state: *mut FdwModifyState<E, W>,
 ) {
-    let boxed_fdw_state = Box::from_raw(fdw_state);
+    let boxed_fdw_state = unsafe { Box::from_raw(fdw_state) };
     drop(boxed_fdw_state);
 }
 
@@ -126,12 +125,12 @@ unsafe fn find_rowid_column(
     target_relation: pg_sys::Relation,
 ) -> Option<pg_sys::FormData_pg_attribute> {
     // get rowid column name from table options
-    let ftable = pg_sys::GetForeignTable((*target_relation).rd_id);
-    let opts = options_to_hashmap((*ftable).options).report_unwrap();
+    let ftable = unsafe { pg_sys::GetForeignTable((*target_relation).rd_id) };
+    let opts = unsafe { options_to_hashmap((*ftable).options).report_unwrap() };
     let rowid_name = require_option("rowid_column", &opts).report_unwrap();
 
     // find rowid attribute
-    let tup_desc = PgTupleDesc::from_pg_copy((*target_relation).rd_att);
+    let tup_desc = unsafe { PgTupleDesc::from_pg_copy((*target_relation).rd_att) };
     for attr in tup_desc.iter().filter(|a| !a.is_dropped()) {
         if pgrx::name_data_to_str(&attr.attname) == rowid_name {
             return Some(*attr);
@@ -388,8 +387,10 @@ unsafe fn get_rowid_cell<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     plan_slot: *mut pg_sys::TupleTableSlot,
 ) -> Option<Cell> {
     let mut is_null: bool = true;
-    let datum = polyfill::slot_getattr(plan_slot, state.rowid_attno.into(), &mut is_null);
-    Cell::from_polymorphic_datum(datum, is_null, state.rowid_typid)
+    unsafe {
+        let datum = polyfill::slot_getattr(plan_slot, state.rowid_attno.into(), &mut is_null);
+        Cell::from_polymorphic_datum(datum, is_null, state.rowid_typid)
+    }
 }
 
 #[pg_guard]

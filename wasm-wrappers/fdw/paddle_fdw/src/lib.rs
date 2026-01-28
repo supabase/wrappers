@@ -1,6 +1,6 @@
 #[allow(warnings)]
 mod bindings;
-use serde_json::{json, Map as JsonMap, Value as JsonValue};
+use serde_json::{Map as JsonMap, Value as JsonValue, json};
 
 use bindings::{
     exports::supabase::wrappers::routines::Guest,

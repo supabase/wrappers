@@ -25,7 +25,7 @@ pub(super) unsafe fn create_fdw_instance_from_server_id<
         if raw.is_null() {
             return None;
         }
-        let c_str = CStr::from_ptr(raw);
+        let c_str = unsafe { CStr::from_ptr(raw) };
         let value = c_str
             .to_str()
             .map_err(|_| {
@@ -37,16 +37,18 @@ pub(super) unsafe fn create_fdw_instance_from_server_id<
             .to_string();
         Some(value)
     };
-    let fserver = pg_sys::GetForeignServer(fserver_id);
-    let server = ForeignServer {
-        server_oid: fserver_id,
-        server_name: to_string((*fserver).servername).unwrap(),
-        server_type: to_string((*fserver).servertype),
-        server_version: to_string((*fserver).serverversion),
-        options: options_to_hashmap((*fserver).options).report_unwrap(),
-    };
-    let wrapper = W::new(server);
-    wrapper.report_unwrap()
+    unsafe {
+        let fserver = pg_sys::GetForeignServer(fserver_id);
+        let server = ForeignServer {
+            server_oid: fserver_id,
+            server_name: to_string((*fserver).servername).unwrap(),
+            server_type: to_string((*fserver).servertype),
+            server_version: to_string((*fserver).serverversion),
+            options: options_to_hashmap((*fserver).options).report_unwrap(),
+        };
+        let wrapper = W::new(server);
+        wrapper.report_unwrap()
+    }
 }
 
 // create a fdw instance from a foreign table id
@@ -56,6 +58,8 @@ pub(super) unsafe fn create_fdw_instance_from_table_id<
 >(
     ftable_id: pg_sys::Oid,
 ) -> W {
-    let ftable = pg_sys::GetForeignTable(ftable_id);
-    create_fdw_instance_from_server_id((*ftable).serverid)
+    unsafe {
+        let ftable = pg_sys::GetForeignTable(ftable_id);
+        create_fdw_instance_from_server_id((*ftable).serverid)
+    }
 }

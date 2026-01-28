@@ -5,11 +5,11 @@ use iceberg::{
     writer::file_writer::location_generator,
 };
 
-use super::utils::compute_partition_info;
 use super::IcebergFdwResult;
+use super::utils::compute_partition_info;
 use crate::fdw::iceberg_fdw::IcebergFdwError;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use uuid::Uuid;
 
 #[derive(Clone, Debug)]

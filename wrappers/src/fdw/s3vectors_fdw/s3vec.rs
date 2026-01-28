@@ -1,7 +1,7 @@
-use super::conv::document_to_json_value;
 use super::S3VectorsFdwError;
+use super::conv::document_to_json_value;
 use aws_sdk_s3vectors::types::{GetOutputVector, ListOutputVector, QueryOutputVector, VectorData};
-use pgrx::{pg_sys::bytea, prelude::*, stringinfo::StringInfo, JsonB};
+use pgrx::{JsonB, pg_sys::bytea, prelude::*, stringinfo::StringInfo};
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use std::ffi::CStr;

@@ -1,9 +1,9 @@
 use pgrx::list::List;
 use pgrx::pg_sys::panic::ErrorReport;
-use pgrx::{pg_sys, PgSqlErrorCode};
+use pgrx::{PgSqlErrorCode, pg_sys};
 use std::collections::HashMap;
-use std::ffi::c_void;
 use std::ffi::CStr;
+use std::ffi::c_void;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -103,11 +103,11 @@ pub(super) unsafe fn options_to_hashmap(
     pgrx::memcx::current_context(|mcx| {
         let mut ret = HashMap::new();
 
-        if let Some(options) = List::<*mut c_void>::downcast_ptr_in_memcx(options, mcx) {
+        if let Some(options) = unsafe { List::<*mut c_void>::downcast_ptr_in_memcx(options, mcx) } {
             for option in options.iter() {
                 let option = *option as *mut pg_sys::DefElem;
-                let name = CStr::from_ptr((*option).defname);
-                let value = CStr::from_ptr(pg_sys::defGetString(option));
+                let name = unsafe { CStr::from_ptr((*option).defname) };
+                let value = unsafe { CStr::from_ptr(pg_sys::defGetString(option)) };
                 let name = name.to_str().map_err(|_| {
                     OptionsError::OptionNameIsInvalidUtf8(
                         String::from_utf8_lossy(name.to_bytes()).to_string(),

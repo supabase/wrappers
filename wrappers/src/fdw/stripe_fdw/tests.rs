@@ -239,13 +239,13 @@ mod tests {
                 .collect::<Vec<_>>();
             assert_eq!(
                 results,
-                vec![((
-                            "link_1Pgc76B7WZ01zgkWPhd77i13",
-                            "file_1Pgag2B7WZ01zgkWITx3dIQc"
-                        ),
-                        "https://sangeekp-15t6ai--upload-mydev.dev.stripe.me/links/MDB8YWNjdF8xUGdhZlRCN1daMDF6Z2tXfGZsX3Rlc3Rfb0Jkam9sNHdEZUpXRHUzSGhXNTRkZDI500qGiHOxxv"
-                    )
-                ]
+                vec![(
+                    (
+                        "link_1Pgc76B7WZ01zgkWPhd77i13",
+                        "file_1Pgag2B7WZ01zgkWITx3dIQc"
+                    ),
+                    "https://sangeekp-15t6ai--upload-mydev.dev.stripe.me/links/MDB8YWNjdF8xUGdhZlRCN1daMDF6Z2tXfGZsX3Rlc3Rfb0Jkam9sNHdEZUpXRHUzSGhXNTRkZDI500qGiHOxxv"
+                )]
             );
 
             let results = c

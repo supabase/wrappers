@@ -1,8 +1,8 @@
 #[cfg(any(test, feature = "pg_test"))]
 #[pgrx::pg_schema]
 mod tests {
-    use pgrx::prelude::*;
     use pgrx::JsonB;
+    use pgrx::prelude::*;
 
     #[pg_test]
     fn firebase_smoketest() {
@@ -95,12 +95,13 @@ mod tests {
 
             assert_eq!(
                 results,
-                vec![
-                ("projects/supa/databases/(default)/documents/my-collection/bSMScXpZHMJe9ilE9Yqs",
-                 serde_json::json!({
-                     "id": { "integerValue": "1" },
-                     "name": { "stringValue": "hello" }
-                 }))]
+                vec![(
+                    "projects/supa/databases/(default)/documents/my-collection/bSMScXpZHMJe9ilE9Yqs",
+                    serde_json::json!({
+                        "id": { "integerValue": "1" },
+                        "name": { "stringValue": "hello" }
+                    })
+                )]
             );
 
             c.update(
@@ -136,9 +137,11 @@ mod tests {
 
             assert_eq!(
                 results,
-                vec![
-                ("projects/supa/databases/(default)/documents/my-collection/bSMScXpZHMJe9ilE9Yqs/my-collection2/fkSWL4hNJ3lRc1ZIorPm",
-                 serde_json::json!({ "foo": { "stringValue": "bar" } }))]);
+                vec![(
+                    "projects/supa/databases/(default)/documents/my-collection/bSMScXpZHMJe9ilE9Yqs/my-collection2/fkSWL4hNJ3lRc1ZIorPm",
+                    serde_json::json!({ "foo": { "stringValue": "bar" } })
+                )]
+            );
         });
     }
 }

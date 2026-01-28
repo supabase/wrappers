@@ -1,11 +1,11 @@
-use arrow_array::{array::ArrayRef, Array, RecordBatch};
+use arrow_array::{Array, RecordBatch, array::ArrayRef};
 use arrow_json::ArrayWriter;
 use duckdb::{
     self,
     types::{EnumType, ListType, ValueRef},
 };
 use pgrx::{
-    datum::{datetime_support::DateTimeConversionError, JsonB, Time},
+    datum::{JsonB, Time, datetime_support::DateTimeConversionError},
     pg_sys,
     prelude::to_timestamp,
     varlena,

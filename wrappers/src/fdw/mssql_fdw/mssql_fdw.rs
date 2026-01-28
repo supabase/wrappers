@@ -1,11 +1,11 @@
 use crate::stats;
 use num_traits::cast::ToPrimitive;
-use pgrx::{prelude::to_timestamp, PgBuiltInOids, PgOid};
+use pgrx::{PgBuiltInOids, PgOid, prelude::to_timestamp};
 use std::collections::HashMap;
 use tiberius::{
+    Client, Config,
     numeric::Decimal,
     time::chrono::{NaiveDate, NaiveDateTime},
-    Client, Config,
 };
 use tokio::net::TcpStream;
 use tokio_util::compat::TokioAsyncWriteCompatExt;

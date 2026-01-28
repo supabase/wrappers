@@ -1,9 +1,9 @@
 use reqwest::{
-    header::{HeaderMap, HeaderName, HeaderValue},
     StatusCode,
+    header::{HeaderMap, HeaderName, HeaderValue},
 };
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
-use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
+use reqwest_retry::{RetryTransientMiddleware, policies::ExponentialBackoff};
 
 use super::super::bindings::v1::supabase::wrappers::http::{
     Headers as GuestHeaders, HttpError as GuestHttpError,

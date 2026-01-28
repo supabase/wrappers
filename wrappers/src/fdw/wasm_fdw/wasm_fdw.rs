@@ -12,17 +12,17 @@ use wasmtime::{Config, Engine, Store};
 use supabase_wrappers::prelude::*;
 
 use super::bindings::v1::{
+    Wrappers as WrappersV1,
     supabase::wrappers::types::{
         Cell as GuestCellV1, HostContext as HostContextV1, HostRow as HostRowV1,
     },
-    Wrappers as WrappersV1,
 };
 use super::bindings::v2::{
+    Wrappers as WrappersV2,
     supabase::wrappers::types::{
         Cell as GuestCellV2, HostContext as HostContextV2, HostRow as HostRowV2,
         ImportForeignSchemaStmt as GuestImportForeignSchemaStmt,
     },
-    Wrappers as WrappersV2,
 };
 use super::host::FdwHost;
 use super::{WasmFdwError, WasmFdwResult};
@@ -546,12 +546,12 @@ impl ForeignDataWrapper<WasmFdwError> for WasmFdw {
     }
 
     fn validator(options: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) -> WasmFdwResult<()> {
-        if let Some(oid) = catalog {
-            if oid == FOREIGN_SERVER_RELATION_ID {
-                check_options_contain(&options, "fdw_package_url")?;
-                check_options_contain(&options, "fdw_package_name")?;
-                check_options_contain(&options, "fdw_package_version")?;
-            }
+        if let Some(oid) = catalog
+            && oid == FOREIGN_SERVER_RELATION_ID
+        {
+            check_options_contain(&options, "fdw_package_url")?;
+            check_options_contain(&options, "fdw_package_name")?;
+            check_options_contain(&options, "fdw_package_version")?;
         }
 
         Ok(())

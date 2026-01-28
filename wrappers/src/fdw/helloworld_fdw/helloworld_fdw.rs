@@ -1,5 +1,5 @@
-use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::PgSqlErrorCode;
+use pgrx::pg_sys::panic::ErrorReport;
 use std::collections::HashMap;
 use supabase_wrappers::prelude::*;
 

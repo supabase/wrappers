@@ -2,7 +2,7 @@
 //! This module provides functionality to track and report various metrics
 //! about FDW usage and performance.
 
-use pgrx::{prelude::*, JsonB};
+use pgrx::{JsonB, prelude::*};
 use std::fmt;
 use supabase_wrappers::prelude::report_warning;
 
