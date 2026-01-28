@@ -3144,6 +3144,10 @@
 <span class="w">  </span><span class="k">handler</span><span class="w"> </span><span class="n">wasm_fdw_handler</span>
 <span class="w">  </span><span class="k">validator</span><span class="w"> </span><span class="n">wasm_fdw_validator</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
+<div class="admonition note">
+<p class="admonition-title">About Authentication</p>
+<p>HubSpot deprecated their legacy API Keys in November 2022. The <code>api_key</code> option in this wrapper accepts a <strong>Private App Access Token</strong>, which is HubSpot's recommended authentication method. See <a href="https://developers.hubspot.com/docs/guides/apps/private-apps/overview">HubSpot Private Apps</a> for setup instructions.</p>
+</div>
 <h3 id="store-your-credentials-optional">Store your credentials (optional)</h3>
 <p>By default, Postgres stores FDW credentials inside <code>pg_catalog.pg_foreign_server</code> in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with <a href="https://supabase.com/docs/guides/database/vault">Vault</a>, which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
@@ -3154,13 +3158,14 @@
 <span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Save your HubSpot private apps access token in Vault and retrieve the created `key_id`</span>
 <span class="k">select</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">create_secret</span><span class="p">(</span>
 <span class="w">  </span><span class="s1">&#39;&lt;HubSpot access token&gt;&#39;</span><span class="p">,</span><span class="w"> </span><span class="c1">-- HubSpot private apps access token</span>
-<span class="w">  </span><span class="s1">&#39;hubspot&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="s1">&#39;hubspot&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- secret name for api_key_name lookup</span>
 <span class="w">  </span><span class="s1">&#39;HubSpot private apps access token for Wrappers&#39;</span>
 <span class="p">);</span>
 </code></pre></div></td></tr></table></div>
+<p>The secret name (e.g., <code>'hubspot'</code>) can be used with <code>api_key_name</code> for environment-agnostic configuration.</p>
 <h3 id="connecting-to-hubspot">Connecting to HubSpot</h3>
 <p>We need to provide Postgres with the credentials to access HubSpot and any additional options. We can do this using the <code>create server</code> command:</p>
-<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">With Vault</label><label for="__tabbed_1_2">Without Vault</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:3"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">With Vault (by ID)</label><label for="__tabbed_1_2">With Vault (by Name)</label><label for="__tabbed_1_3">Without Vault</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
@@ -3183,6 +3188,29 @@
 <span class="w">    </span><span class="n">api_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;key_ID&gt;&#39;</span><span class="w"> </span><span class="c1">-- The Key ID from above.</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">hubspot_server</span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_hubspot_fdw_v0.1.0/hubspot_fdw.wasm&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;supabase:hubspot-fdw&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.1.0&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;2cbf39e9e28aa732a225db09b2186a2342c44697d4fa047652d358e292ba5521&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">api_url</span><span class="w"> </span><span class="s1">&#39;https://api.hubapi.com/crm/v3&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- optional</span>
+<span class="w">    </span><span class="n">api_key_name</span><span class="w"> </span><span class="s1">&#39;hubspot&#39;</span><span class="w"> </span><span class="c1">-- The secret name from above.</span>
+<span class="w">  </span><span class="p">);</span>
+</code></pre></div></td></tr></table></div>
+<p>Using <code>api_key_name</code> enables environment-agnostic configuration - the same SQL works across dev, staging, and production as long as each environment has a Vault secret with the same name.</p>
 </div>
 <div class="tabbed-block">
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
