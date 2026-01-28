@@ -14,6 +14,9 @@ use supabase_wrappers::prelude::*;
 
 use super::{FirebaseFdwError, FirebaseFdwResult};
 
+/// Default maximum response size in bytes (10 MB) to prevent DoS via large responses
+const DEFAULT_MAX_RESPONSE_SIZE: usize = 10 * 1024 * 1024;
+
 fn get_oauth2_token(sa_key: &str, rt: &Runtime) -> FirebaseFdwResult<AccessToken> {
     let creds = yup_oauth2::parse_service_account_key(sa_key.as_bytes())?;
     let sa = rt.block_on(ServiceAccountAuthenticator::builder(creds).build())?;
@@ -138,6 +141,7 @@ pub(crate) struct FirebaseFdw {
     project_id: String,
     client: Option<ClientWithMiddleware>,
     scan_result: Vec<Row>,
+    max_response_size: usize,
 }
 
 impl FirebaseFdw {
@@ -211,11 +215,27 @@ impl FirebaseFdw {
 
 impl ForeignDataWrapper<FirebaseFdwError> for FirebaseFdw {
     fn new(server: ForeignServer) -> FirebaseFdwResult<Self> {
+        // Security: Configure max response size (default 10 MB)
+        let max_response_size = server
+            .options
+            .get("max_response_size")
+            .map(|s| {
+                s.parse::<usize>().map_err(|_| {
+                    FirebaseFdwError::OptionsError(OptionsError::OptionParsingError {
+                        option_name: "max_response_size".to_string(),
+                        type_name: "usize",
+                    })
+                })
+            })
+            .transpose()?
+            .unwrap_or(DEFAULT_MAX_RESPONSE_SIZE);
+
         let mut ret = Self {
             rt: create_async_runtime()?,
             project_id: require_option("project_id", &server.options)?.to_string(),
             client: None,
             scan_result: Vec::default(),
+            max_response_size,
         };
 
         // get oauth2 access token if it is directly defined in options
@@ -296,6 +316,14 @@ impl ForeignDataWrapper<FirebaseFdwError> for FirebaseFdw {
                         .and_then(|resp| self.rt.block_on(resp.text()))
                         .map_err(reqwest_middleware::Error::from)
                 })?;
+
+                // Security: Check response size to prevent DoS
+                if body.len() > self.max_response_size {
+                    return Err(FirebaseFdwError::ResponseTooLarge(
+                        body.len(),
+                        self.max_response_size,
+                    ));
+                }
 
                 let json: JsonValue = serde_json::from_str(&body)?;
                 let mut rows = resp_to_rows(obj, &json, columns)?;
