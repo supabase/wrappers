@@ -575,8 +575,7 @@ mod tests {
                 .unwrap();
             assert_eq!(
                 inner_join_count, 3,
-                "Inner join should return 3 rows, got {}",
-                inner_join_count
+                "Inner join should return 3 rows, got {inner_join_count}",
             );
 
             // Verify inner join values are correct
@@ -614,8 +613,7 @@ mod tests {
                 .unwrap();
             assert_eq!(
                 left_join_count, 3,
-                "Left join should return 3 rows, got {}",
-                left_join_count
+                "Left join should return 3 rows, got {left_join_count}",
             );
 
             // Test right join - should return 3 rows with correct values
@@ -632,8 +630,7 @@ mod tests {
                 .unwrap();
             assert_eq!(
                 right_join_count, 3,
-                "Right join should return 3 rows, got {}",
-                right_join_count
+                "Right join should return 3 rows, got {right_join_count}",
             );
 
             // Cleanup

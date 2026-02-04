@@ -364,7 +364,7 @@ where
 }
 
 #[wrappers_fdw(
-    version = "0.1.9",
+    version = "0.1.10",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/clickhouse_fdw",
     error_type = "ClickHouseFdwError"
@@ -548,6 +548,33 @@ impl ClickHouseFdw {
             Ok(())
         }
     }
+
+    // Helper method to set up the streaming mechanism
+    fn setup_streaming(&mut self) -> ClickHouseFdwResult<()> {
+        // Create bounded channel
+        let (tx, rx) =
+            channel::bounded::<ClickHouseFdwResult<Option<ConvertedRow>>>(self.stream_buffer_size);
+        self.row_receiver = Some(rx);
+
+        // Clone data needed by the async task
+        let conn_str = self.conn_str.clone();
+        let sql = self.sql_query.clone();
+        let tgt_cols = self.tgt_cols.clone();
+        let params = self.params.clone();
+        let tx_clone = tx.clone();
+
+        // Spawn the async streaming task
+        let streaming_task = self.rt.spawn(async move {
+            stream_data_to_channel(conn_str, sql, tgt_cols, params, tx_clone).await;
+        });
+
+        self.streaming_task = Some(streaming_task);
+
+        // Fetch the first row to initialize the scan
+        self.fetch_next_row()?;
+
+        Ok(())
+    }
 }
 
 impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
@@ -606,27 +633,7 @@ impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
             .map_err(ClickHouseFdwError::ParseIntError)?
             .unwrap_or(1024);
 
-        // create bounded channel
-        let (tx, rx) =
-            channel::bounded::<ClickHouseFdwResult<Option<ConvertedRow>>>(self.stream_buffer_size);
-        self.row_receiver = Some(rx);
-
-        // clone data needed by the async task
-        let conn_str = self.conn_str.clone();
-        let sql = self.sql_query.clone();
-        let tgt_cols = self.tgt_cols.clone();
-        let params = self.params.clone();
-        let tx_clone = tx.clone();
-
-        // spawn the async streaming task
-        let streaming_task = self.rt.spawn(async move {
-            stream_data_to_channel(conn_str, sql, tgt_cols, params, tx_clone).await;
-        });
-
-        self.streaming_task = Some(streaming_task);
-
-        // fetch the first row to initialize the scan
-        self.fetch_next_row()?;
+        self.setup_streaming()?;
 
         Ok(())
     }
@@ -684,25 +691,7 @@ impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
         self.is_scan_complete = false;
         self.current_row_data = None;
 
-        // Create new bounded channel
-        let (tx, rx) =
-            channel::bounded::<ClickHouseFdwResult<Option<ConvertedRow>>>(self.stream_buffer_size);
-        self.row_receiver = Some(rx);
-
-        // Clone data needed by the async task
-        let conn_str = self.conn_str.clone();
-        let sql = self.sql_query.clone();
-        let tgt_cols = self.tgt_cols.clone();
-        let params = self.params.clone();
-
-        // Spawn new streaming task with same SQL query
-        let streaming_task = self.rt.spawn(async move {
-            stream_data_to_channel(conn_str, sql, tgt_cols, params, tx).await;
-        });
-        self.streaming_task = Some(streaming_task);
-
-        // Fetch first row to initialize the rescan
-        self.fetch_next_row()?;
+        self.setup_streaming()?;
 
         Ok(())
     }
