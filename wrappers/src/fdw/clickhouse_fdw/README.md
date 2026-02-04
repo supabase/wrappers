@@ -11,6 +11,7 @@ This is a foreign data wrapper for [ClickHouse](https://clickhouse.com/). It is 
 
 | Version | Date       | Notes                                                |
 | ------- | ---------- | ---------------------------------------------------- |
+| 0.1.10  | 2026-02-04 | Implement re_scan() for nested loop joins            |
 | 0.1.9   | 2025-11-08 | Added stream_buffer_size foreign table option        |
 | 0.1.8   | 2025-10-27 | Refactor to read rows with async streaming           |
 | 0.1.7   | 2025-05-22 | Added more data types support                        |

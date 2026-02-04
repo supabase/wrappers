@@ -138,6 +138,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "infura_fdw"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
+ "wit-bindgen-rt",
+]
+
+[[package]]
 name = "itoa"
 version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"

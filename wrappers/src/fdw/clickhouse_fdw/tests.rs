@@ -486,6 +486,159 @@ mod tests {
         });
     }
 
+    #[pg_test]
+    fn clickhouse_join_test() {
+        Spi::connect_mut(|c| {
+            let clickhouse_pool = ch::Pool::new("tcp://default:default@localhost:9000/default");
+
+            let rt = create_async_runtime().expect("failed to create runtime");
+            let mut handle = rt
+                .block_on(async { clickhouse_pool.get_handle().await })
+                .expect("handle");
+
+            // Create two tables in ClickHouse for join testing
+            rt.block_on(async {
+                handle.execute("DROP TABLE IF EXISTS join_t1").await?;
+                handle.execute("DROP TABLE IF EXISTS join_t2").await?;
+                handle
+                    .execute("CREATE TABLE join_t1 (k Int16) engine = Memory")
+                    .await?;
+                handle
+                    .execute("CREATE TABLE join_t2 (k Int16) engine = Memory")
+                    .await?;
+                // Insert values (1, 2, 3) into each table
+                handle
+                    .execute("INSERT INTO join_t1 VALUES (1), (2), (3)")
+                    .await?;
+                handle
+                    .execute("INSERT INTO join_t2 VALUES (1), (2), (3)")
+                    .await
+            })
+            .expect("join tables in ClickHouse");
+
+            // Set up FDW and server
+            c.update(
+                r#"CREATE FOREIGN DATA WRAPPER clickhouse_wrapper
+                         HANDLER click_house_fdw_handler VALIDATOR click_house_fdw_validator"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"CREATE SERVER my_clickhouse_server
+                         FOREIGN DATA WRAPPER clickhouse_wrapper
+                         OPTIONS (
+                           conn_string 'tcp://default:default@localhost:9000/default'
+                         )"#,
+                None,
+                &[],
+            )
+            .unwrap();
+
+            // Create foreign tables for join testing
+            c.update(
+                r#"
+                  CREATE FOREIGN TABLE join_t1 (
+                    k smallint
+                  )
+                  SERVER my_clickhouse_server
+                  OPTIONS (table 'join_t1')
+                "#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"
+                  CREATE FOREIGN TABLE join_t2 (
+                    k smallint
+                  )
+                  SERVER my_clickhouse_server
+                  OPTIONS (table 'join_t2')
+                "#,
+                None,
+                &[],
+            )
+            .unwrap();
+
+            // Test inner join - should return 3 rows, not 1
+            let inner_join_count: i64 = c
+                .select(
+                    "SELECT COUNT(*) FROM join_t1 JOIN join_t2 ON join_t1.k = join_t2.k",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .first()
+                .get_one::<i64>()
+                .unwrap()
+                .unwrap();
+            assert_eq!(
+                inner_join_count, 3,
+                "Inner join should return 3 rows, got {inner_join_count}",
+            );
+
+            // Verify inner join values are correct
+            let result = c
+                .select(
+                    "SELECT join_t1.k as k1, join_t2.k as k2 FROM join_t1 JOIN join_t2 ON join_t1.k = join_t2.k ORDER BY join_t1.k",
+                    None,
+                    &[],
+                )
+                .unwrap();
+            assert_eq!(result.len(), 3, "Inner join should return 3 rows");
+            let mut values: Vec<(i16, i16)> = Vec::new();
+            for row in result {
+                let k1: i16 = row.get_by_name("k1").unwrap().unwrap();
+                let k2: i16 = row.get_by_name("k2").unwrap().unwrap();
+                values.push((k1, k2));
+            }
+            assert_eq!(
+                values,
+                vec![(1, 1), (2, 2), (3, 3)],
+                "Inner join values incorrect"
+            );
+
+            // Test left join - should return 3 rows with correct values
+            let left_join_count: i64 = c
+                .select(
+                    "SELECT COUNT(*) FROM join_t1 LEFT JOIN join_t2 ON join_t1.k = join_t2.k",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .first()
+                .get_one::<i64>()
+                .unwrap()
+                .unwrap();
+            assert_eq!(
+                left_join_count, 3,
+                "Left join should return 3 rows, got {left_join_count}",
+            );
+
+            // Test right join - should return 3 rows with correct values
+            let right_join_count: i64 = c
+                .select(
+                    "SELECT COUNT(*) FROM join_t1 RIGHT JOIN join_t2 ON join_t1.k = join_t2.k",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .first()
+                .get_one::<i64>()
+                .unwrap()
+                .unwrap();
+            assert_eq!(
+                right_join_count, 3,
+                "Right join should return 3 rows, got {right_join_count}",
+            );
+
+            // Cleanup
+            c.update("DROP FOREIGN TABLE join_t1", None, &[]).unwrap();
+            c.update("DROP FOREIGN TABLE join_t2", None, &[]).unwrap();
+        });
+    }
+
     // Test for issue #482: PostgreSQL server crash with prepared statements
     // PostgreSQL caches query plans after ~5-6 executions. Before fix, this
     // would crash because plan_foreign_modify stored a pointer that became

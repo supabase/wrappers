@@ -1,8 +1,7 @@
-package supabase:clerk-fdw@0.2.2;
+package supabase:infura-fdw@0.1.0;
 
-world clerk {
+world infura {
     import supabase:wrappers/http@0.2.0;
-    import supabase:wrappers/jwt@0.2.0;
     import supabase:wrappers/stats@0.2.0;
     import supabase:wrappers/time@0.2.0;
     import supabase:wrappers/utils@0.2.0;

@@ -37,6 +37,7 @@ nav:
           - Cloudflare D1: "catalog/cfd1.md"
           - Gravatar: "catalog/gravatar.md"
           - HubSpot: "catalog/hubspot.md"
+          - Infura: "catalog/infura.md"
           - Notion: "catalog/notion.md"
           - Orb: "catalog/orb.md"
           - Paddle: "catalog/paddle.md"

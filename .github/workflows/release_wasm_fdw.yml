@@ -59,19 +59,20 @@ jobs:
           patterns: |
             ./wasm-wrappers/fdw/target/wasm32-unknown-unknown/release/${{ steps.extract_info.outputs.PROJECT }}.wasm
 
-      - name: Get project metadata JSON
-        id: metadata
-        run: |
-          cd wasm-wrappers/fdw/${{ steps.extract_info.outputs.PROJECT }}
-          METADATA_JSON=`cargo metadata --format-version 1 --no-deps --offline`
-          echo "METADATA_JSON=$METADATA_JSON" >> "$GITHUB_OUTPUT"
-
       - name: Extract package info
         id: extract
         run: |
           cd wasm-wrappers/fdw/${{ steps.extract_info.outputs.PROJECT }}
-          PACKAGE="${{ fromJson(steps.metadata.outputs.METADATA_JSON).packages[0].metadata.component.package }}"
+
+          PACKAGE=$(cargo metadata --format-version 1 --no-deps --offline | jq -r '.packages[] | select(.name == "${{ steps.extract_info.outputs.PROJECT }}") | .metadata.component.package')
+
+          if [ -z "$PACKAGE" ]; then
+            echo "Error: Package '${{ steps.extract_info.outputs.PROJECT }}' not found in workspace."
+            exit 1
+          fi
+
           CHECKSUM=`head -1 checksum.txt | sed -E 's/^(.*) .*/\1/'`
+
           echo "PACKAGE=$PACKAGE" >> "$GITHUB_OUTPUT"
           echo "CHECKSUM=$CHECKSUM" >> "$GITHUB_OUTPUT"
 
