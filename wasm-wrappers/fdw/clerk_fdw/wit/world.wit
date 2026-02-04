@@ -1,4 +1,4 @@
-package supabase:clerk-fdw@0.2.0;
+package supabase:clerk-fdw@0.2.2;
 
 world clerk {
     import supabase:wrappers/http@0.2.0;
