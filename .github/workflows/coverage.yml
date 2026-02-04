@@ -52,6 +52,7 @@ jobs:
         run: |
           source <(cargo llvm-cov show-env --export-prefix --no-cfg-coverage)
           cargo llvm-cov clean --workspace
+          cargo test -p supabase-wrappers --lib
           cargo pgrx test --features "native_fdws" --manifest-path wrappers/Cargo.toml pg15
           cargo llvm-cov report --lcov --output-path lcov.info
 
