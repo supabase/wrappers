@@ -485,7 +485,6 @@ mod tests {
                     .unwrap()
                     .is_empty()
             );
-<<<<<<< HEAD
         });
     }
 
