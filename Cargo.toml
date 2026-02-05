@@ -10,7 +10,7 @@ exclude = [
 resolver = "2"
 
 [workspace.package]
-edition = "2021"
+edition = "2024"
 rust-version = "1.88.0"
 homepage = "https://github.com/supabase/wrappers"
 repository = "https://github.com/supabase/wrappers"

@@ -1,12 +1,12 @@
 use crate::stats;
-use arrow_array::{array, Array, RecordBatch};
+use arrow_array::{Array, RecordBatch, array};
 use aws_sdk_s3 as s3;
 use chrono::NaiveDate;
 use futures::TryStreamExt;
+use parquet::arrow::ProjectionMask;
 use parquet::arrow::async_reader::{
     AsyncFileReader, ParquetRecordBatchStream, ParquetRecordBatchStreamBuilder,
 };
-use parquet::arrow::ProjectionMask;
 use pgrx::datum::datetime_support::to_timestamp;
 use pgrx::pg_sys;
 use pgrx::prelude::Date;
@@ -232,14 +232,14 @@ impl S3Parquet {
     // refill record batch
     pub(super) async fn refill(&mut self) -> S3FdwResult<Option<()>> {
         // if there are still records in the batch
-        if let Some(batch) = &self.batch {
-            if self.batch_idx < batch.num_rows() {
-                return Ok(Some(()));
-            }
+        if let Some(batch) = &self.batch
+            && self.batch_idx < batch.num_rows()
+        {
+            return Ok(Some(()));
         }
 
         // otherwise, read one moe batch
-        if let Some(ref mut stream) = &mut self.stream {
+        if let Some(stream) = &mut self.stream {
             let result = stream.try_next().await?;
             return Ok(result.map(|batch| {
                 stats::inc_stats(

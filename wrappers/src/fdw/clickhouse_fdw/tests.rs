@@ -4,8 +4,9 @@ mod tests {
     use clickhouse_rs as ch;
     use pgrx::prelude::*;
     use pgrx::{
+        Uuid,
         datum::{Timestamp, TimestampWithTimeZone},
-        pg_test, Uuid,
+        pg_test,
     };
     use supabase_wrappers::prelude::create_async_runtime;
 
@@ -479,10 +480,11 @@ mod tests {
             // test delete data in foreign table
             c.update("DELETE FROM test_table WHERE id = 42", None, &[])
                 .unwrap();
-            assert!(c
-                .select("SELECT * FROM test_table WHERE id = 42", None, &[])
-                .unwrap()
-                .is_empty());
+            assert!(
+                c.select("SELECT * FROM test_table WHERE id = 42", None, &[])
+                    .unwrap()
+                    .is_empty()
+            );
         });
     }
 

@@ -1,15 +1,15 @@
 //! Provides interface types and trait to develop Postgres foreign data wrapper
 //!
 
-use crate::instance::ForeignServer;
 use crate::FdwRoutine;
+use crate::instance::ForeignServer;
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::{Date, Interval, Time, Timestamp, TimestampWithTimeZone};
 use pgrx::{
+    AllocatedByRust, AnyNumeric, FromDatum, IntoDatum, JsonB, PgBuiltInOids, PgOid,
     datum::Uuid,
     fcinfo,
-    pg_sys::{self, bytea, BuiltinOid, Datum, Expr, ExprState, Oid},
-    AllocatedByRust, AnyNumeric, FromDatum, IntoDatum, JsonB, PgBuiltInOids, PgOid,
+    pg_sys::{self, BuiltinOid, Datum, Expr, ExprState, Oid, bytea},
 };
 use std::collections::HashMap;
 use std::ffi::CStr;
@@ -285,90 +285,94 @@ impl FromDatum for Cell {
     where
         Self: Sized,
     {
-        let oid = PgOid::from(typoid);
-        match oid {
-            PgOid::BuiltIn(PgBuiltInOids::BOOLOID) => {
-                bool::from_datum(datum, is_null).map(Cell::Bool)
-            }
-            PgOid::BuiltIn(PgBuiltInOids::CHAROID) => i8::from_datum(datum, is_null).map(Cell::I8),
-            PgOid::BuiltIn(PgBuiltInOids::INT2OID) => {
-                i16::from_datum(datum, is_null).map(Cell::I16)
-            }
-            PgOid::BuiltIn(PgBuiltInOids::FLOAT4OID) => {
-                f32::from_datum(datum, is_null).map(Cell::F32)
-            }
-            PgOid::BuiltIn(PgBuiltInOids::INT4OID) => {
-                i32::from_datum(datum, is_null).map(Cell::I32)
-            }
-            PgOid::BuiltIn(PgBuiltInOids::FLOAT8OID) => {
-                f64::from_datum(datum, is_null).map(Cell::F64)
-            }
-            PgOid::BuiltIn(PgBuiltInOids::INT8OID) => {
-                i64::from_datum(datum, is_null).map(Cell::I64)
-            }
-            PgOid::BuiltIn(PgBuiltInOids::NUMERICOID) => {
-                AnyNumeric::from_datum(datum, is_null).map(Cell::Numeric)
-            }
-            PgOid::BuiltIn(PgBuiltInOids::TEXTOID) => {
-                String::from_datum(datum, is_null).map(Cell::String)
-            }
-            PgOid::BuiltIn(PgBuiltInOids::DATEOID) => {
-                Date::from_datum(datum, is_null).map(Cell::Date)
-            }
-            PgOid::BuiltIn(PgBuiltInOids::TIMEOID) => {
-                Time::from_datum(datum, is_null).map(Cell::Time)
-            }
-            PgOid::BuiltIn(PgBuiltInOids::TIMESTAMPOID) => {
-                Timestamp::from_datum(datum, is_null).map(Cell::Timestamp)
-            }
-            PgOid::BuiltIn(PgBuiltInOids::TIMESTAMPTZOID) => {
-                TimestampWithTimeZone::from_datum(datum, is_null).map(Cell::Timestamptz)
-            }
-            PgOid::BuiltIn(PgBuiltInOids::INTERVALOID) => {
-                Interval::from_datum(datum, is_null).map(Cell::Interval)
-            }
-            PgOid::BuiltIn(PgBuiltInOids::JSONBOID) => {
-                JsonB::from_datum(datum, is_null).map(Cell::Json)
-            }
-            PgOid::BuiltIn(PgBuiltInOids::BYTEAOID) => {
-                if is_null {
-                    None
-                } else {
-                    Some(Cell::Bytea(datum.cast_mut_ptr::<bytea>()))
+        unsafe {
+            let oid = PgOid::from(typoid);
+            match oid {
+                PgOid::BuiltIn(PgBuiltInOids::BOOLOID) => {
+                    bool::from_datum(datum, is_null).map(Cell::Bool)
                 }
-            }
-            PgOid::BuiltIn(PgBuiltInOids::UUIDOID) => {
-                Uuid::from_datum(datum, is_null).map(Cell::Uuid)
-            }
-            PgOid::BuiltIn(PgBuiltInOids::BOOLARRAYOID) => {
-                Vec::<Option<bool>>::from_datum(datum, false).map(Cell::BoolArray)
-            }
-            PgOid::BuiltIn(PgBuiltInOids::INT2ARRAYOID) => {
-                Vec::<Option<i16>>::from_datum(datum, false).map(Cell::I16Array)
-            }
-            PgOid::BuiltIn(PgBuiltInOids::INT4ARRAYOID) => {
-                Vec::<Option<i32>>::from_datum(datum, false).map(Cell::I32Array)
-            }
-            PgOid::BuiltIn(PgBuiltInOids::INT8ARRAYOID) => {
-                Vec::<Option<i64>>::from_datum(datum, false).map(Cell::I64Array)
-            }
-            PgOid::BuiltIn(PgBuiltInOids::FLOAT4ARRAYOID) => {
-                Vec::<Option<f32>>::from_datum(datum, false).map(Cell::F32Array)
-            }
-            PgOid::BuiltIn(PgBuiltInOids::FLOAT8ARRAYOID) => {
-                Vec::<Option<f64>>::from_datum(datum, false).map(Cell::F64Array)
-            }
-            PgOid::BuiltIn(PgBuiltInOids::TEXTARRAYOID) => {
-                Vec::<Option<String>>::from_datum(datum, false).map(Cell::StringArray)
-            }
-            PgOid::Custom(_) => {
-                if is_null {
-                    None
-                } else {
-                    Some(Cell::Bytea(datum.cast_mut_ptr::<bytea>()))
+                PgOid::BuiltIn(PgBuiltInOids::CHAROID) => {
+                    i8::from_datum(datum, is_null).map(Cell::I8)
                 }
+                PgOid::BuiltIn(PgBuiltInOids::INT2OID) => {
+                    i16::from_datum(datum, is_null).map(Cell::I16)
+                }
+                PgOid::BuiltIn(PgBuiltInOids::FLOAT4OID) => {
+                    f32::from_datum(datum, is_null).map(Cell::F32)
+                }
+                PgOid::BuiltIn(PgBuiltInOids::INT4OID) => {
+                    i32::from_datum(datum, is_null).map(Cell::I32)
+                }
+                PgOid::BuiltIn(PgBuiltInOids::FLOAT8OID) => {
+                    f64::from_datum(datum, is_null).map(Cell::F64)
+                }
+                PgOid::BuiltIn(PgBuiltInOids::INT8OID) => {
+                    i64::from_datum(datum, is_null).map(Cell::I64)
+                }
+                PgOid::BuiltIn(PgBuiltInOids::NUMERICOID) => {
+                    AnyNumeric::from_datum(datum, is_null).map(Cell::Numeric)
+                }
+                PgOid::BuiltIn(PgBuiltInOids::TEXTOID) => {
+                    String::from_datum(datum, is_null).map(Cell::String)
+                }
+                PgOid::BuiltIn(PgBuiltInOids::DATEOID) => {
+                    Date::from_datum(datum, is_null).map(Cell::Date)
+                }
+                PgOid::BuiltIn(PgBuiltInOids::TIMEOID) => {
+                    Time::from_datum(datum, is_null).map(Cell::Time)
+                }
+                PgOid::BuiltIn(PgBuiltInOids::TIMESTAMPOID) => {
+                    Timestamp::from_datum(datum, is_null).map(Cell::Timestamp)
+                }
+                PgOid::BuiltIn(PgBuiltInOids::TIMESTAMPTZOID) => {
+                    TimestampWithTimeZone::from_datum(datum, is_null).map(Cell::Timestamptz)
+                }
+                PgOid::BuiltIn(PgBuiltInOids::INTERVALOID) => {
+                    Interval::from_datum(datum, is_null).map(Cell::Interval)
+                }
+                PgOid::BuiltIn(PgBuiltInOids::JSONBOID) => {
+                    JsonB::from_datum(datum, is_null).map(Cell::Json)
+                }
+                PgOid::BuiltIn(PgBuiltInOids::BYTEAOID) => {
+                    if is_null {
+                        None
+                    } else {
+                        Some(Cell::Bytea(datum.cast_mut_ptr::<bytea>()))
+                    }
+                }
+                PgOid::BuiltIn(PgBuiltInOids::UUIDOID) => {
+                    Uuid::from_datum(datum, is_null).map(Cell::Uuid)
+                }
+                PgOid::BuiltIn(PgBuiltInOids::BOOLARRAYOID) => {
+                    Vec::<Option<bool>>::from_datum(datum, false).map(Cell::BoolArray)
+                }
+                PgOid::BuiltIn(PgBuiltInOids::INT2ARRAYOID) => {
+                    Vec::<Option<i16>>::from_datum(datum, false).map(Cell::I16Array)
+                }
+                PgOid::BuiltIn(PgBuiltInOids::INT4ARRAYOID) => {
+                    Vec::<Option<i32>>::from_datum(datum, false).map(Cell::I32Array)
+                }
+                PgOid::BuiltIn(PgBuiltInOids::INT8ARRAYOID) => {
+                    Vec::<Option<i64>>::from_datum(datum, false).map(Cell::I64Array)
+                }
+                PgOid::BuiltIn(PgBuiltInOids::FLOAT4ARRAYOID) => {
+                    Vec::<Option<f32>>::from_datum(datum, false).map(Cell::F32Array)
+                }
+                PgOid::BuiltIn(PgBuiltInOids::FLOAT8ARRAYOID) => {
+                    Vec::<Option<f64>>::from_datum(datum, false).map(Cell::F64Array)
+                }
+                PgOid::BuiltIn(PgBuiltInOids::TEXTARRAYOID) => {
+                    Vec::<Option<String>>::from_datum(datum, false).map(Cell::StringArray)
+                }
+                PgOid::Custom(_) => {
+                    if is_null {
+                        None
+                    } else {
+                        Some(Cell::Bytea(datum.cast_mut_ptr::<bytea>()))
+                    }
+                }
+                _ => None,
             }
-            _ => None,
         }
     }
 }

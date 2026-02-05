@@ -1,9 +1,9 @@
 use crate::stats;
-use pgrx::{datum::datetime_support::to_timestamp, pg_sys, JsonB};
-use reqwest::{self, header, StatusCode, Url};
+use pgrx::{JsonB, datum::datetime_support::to_timestamp, pg_sys};
+use reqwest::{self, StatusCode, Url, header};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
-use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
-use serde_json::{json, Map as JsonMap, Number, Value as JsonValue};
+use reqwest_retry::{RetryTransientMiddleware, policies::ExponentialBackoff};
+use serde_json::{Map as JsonMap, Number, Value as JsonValue, json};
 use std::collections::{HashMap, HashSet};
 
 use supabase_wrappers::prelude::*;
@@ -564,10 +564,10 @@ fn row_to_body(row: &Row) -> StripeFdwResult<JsonValue> {
                     map.insert(col_name, JsonValue::String(v.to_string()));
                 }
                 Cell::Json(v) => {
-                    if col_name == "attrs" {
-                        if let Some(m) = v.0.clone().as_object_mut() {
-                            map.append(m)
-                        }
+                    if col_name == "attrs"
+                        && let Some(m) = v.0.clone().as_object_mut()
+                    {
+                        map.append(m)
                     }
                 }
                 _ => {
@@ -593,31 +593,35 @@ fn pushdown_quals(
     // for scan with a single id query param, optimized to single object GET request
     if quals.len() == 1 {
         let qual = &quals[0];
-        if qual.field == "id" && qual.operator == "=" && !qual.use_or {
-            if let Value::Cell(Cell::String(id)) = &qual.value {
-                let new_path = format!("{}/{}", url.path(), id);
-                url.set_path(&new_path);
-                url.set_query(None);
-                return;
-            }
+        if qual.field == "id"
+            && qual.operator == "="
+            && !qual.use_or
+            && let Value::Cell(Cell::String(id)) = &qual.value
+        {
+            let new_path = format!("{}/{}", url.path(), id);
+            url.set_path(&new_path);
+            url.set_query(None);
+            return;
         }
     }
 
     // pushdown quals
     for qual in quals {
         for field in &fields {
-            if qual.field == *field && qual.operator == "=" && !qual.use_or {
-                if let Value::Cell(cell) = &qual.value {
-                    match cell {
-                        Cell::Bool(b) => {
-                            url.query_pairs_mut()
-                                .append_pair(field, b.to_string().as_str());
-                        }
-                        Cell::String(s) => {
-                            url.query_pairs_mut().append_pair(field, s);
-                        }
-                        _ => {}
+            if qual.field == *field
+                && qual.operator == "="
+                && !qual.use_or
+                && let Value::Cell(cell) = &qual.value
+            {
+                match cell {
+                    Cell::Bool(b) => {
+                        url.query_pairs_mut()
+                            .append_pair(field, b.to_string().as_str());
                     }
+                    Cell::String(s) => {
+                        url.query_pairs_mut().append_pair(field, s);
+                    }
+                    _ => {}
                 }
             }
         }
@@ -627,7 +631,7 @@ fn pushdown_quals(
     if obj != "balance" {
         url.query_pairs_mut()
             .append_pair("limit", &format!("{page_size}"));
-        if let Some(ref cursor) = cursor {
+        if let Some(cursor) = cursor {
             url.query_pairs_mut().append_pair("starting_after", cursor);
         }
     }
@@ -854,12 +858,12 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
     }
 
     fn iter_scan(&mut self, row: &mut Row) -> StripeFdwResult<Option<()>> {
-        if let Some(ref mut result) = self.scan_result {
-            if self.iter_idx < result.len() {
-                row.replace_with(result[self.iter_idx].clone());
-                self.iter_idx += 1;
-                return Ok(Some(()));
-            }
+        if let Some(ref mut result) = self.scan_result
+            && self.iter_idx < result.len()
+        {
+            row.replace_with(result[self.iter_idx].clone());
+            self.iter_idx += 1;
+            return Ok(Some(()));
         }
         Ok(None)
     }
@@ -1051,10 +1055,10 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
         options: Vec<Option<String>>,
         catalog: Option<pg_sys::Oid>,
     ) -> StripeFdwResult<()> {
-        if let Some(oid) = catalog {
-            if oid == FOREIGN_TABLE_RELATION_ID {
-                check_options_contain(&options, "object")?;
-            }
+        if let Some(oid) = catalog
+            && oid == FOREIGN_TABLE_RELATION_ID
+        {
+            check_options_contain(&options, "object")?;
         }
 
         Ok(())

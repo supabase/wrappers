@@ -1,5 +1,5 @@
-use crate::fdw::auth0_fdw::auth0_client::rows_iterator::RowsIterator;
 use crate::fdw::auth0_fdw::auth0_client::Auth0Client;
+use crate::fdw::auth0_fdw::auth0_client::rows_iterator::RowsIterator;
 
 use crate::stats;
 use pgrx::pg_sys;
@@ -7,8 +7,8 @@ use std::collections::HashMap;
 use supabase_wrappers::prelude::*;
 
 use crate::fdw::auth0_fdw::auth0_client::Auth0ClientError;
-use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::PgSqlErrorCode;
+use pgrx::pg_sys::panic::ErrorReport;
 use thiserror::Error;
 
 #[wrappers_fdw(

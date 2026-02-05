@@ -1,7 +1,7 @@
 #![allow(clippy::result_large_err)]
 use aws_sdk_cognitoidentityprovider::primitives::DateTime;
 use aws_sdk_cognitoidentityprovider::types::{AttributeType, UserType};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use supabase_wrappers::prelude::{Cell, Column, Row};
 
 use super::super::CognitoFdwError;

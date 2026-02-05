@@ -5,8 +5,10 @@ use std::slice;
 
 // ExecClearTuple
 pub(super) unsafe fn exec_clear_tuple(slot: *mut pg_sys::TupleTableSlot) {
-    if let Some(clear) = (*(*slot).tts_ops).clear {
-        clear(slot);
+    unsafe {
+        if let Some(clear) = (*(*slot).tts_ops).clear {
+            clear(slot);
+        }
     }
 }
 
@@ -16,18 +18,20 @@ pub(super) unsafe fn slot_getattr(
     attnum: c_int,
     isnull: *mut bool,
 ) -> Datum {
-    assert!(attnum > 0);
+    unsafe {
+        assert!(attnum > 0);
 
-    if attnum > (*slot).tts_nvalid.into() {
-        pg_sys::slot_getsomeattrs_int(slot, attnum);
+        if attnum > (*slot).tts_nvalid.into() {
+            pg_sys::slot_getsomeattrs_int(slot, attnum);
+        }
+
+        let attnum = attnum as usize;
+        let values = slice::from_raw_parts((*slot).tts_values, attnum);
+        let nulls = slice::from_raw_parts((*slot).tts_isnull, attnum);
+
+        *isnull = nulls[attnum - 1];
+        values[attnum - 1]
     }
-
-    let attnum = attnum as usize;
-    let values = slice::from_raw_parts((*slot).tts_values, attnum);
-    let nulls = slice::from_raw_parts((*slot).tts_isnull, attnum);
-
-    *isnull = nulls[attnum - 1];
-    values[attnum - 1]
 }
 
 // evaluate expression identified by "state" in the execution context given by "econtext"
@@ -36,13 +40,15 @@ pub(super) unsafe fn exec_eval_expr(
     econtext: *mut pg_sys::ExprContext,
     isnull: *mut bool,
 ) -> Option<Datum> {
-    (*state)
-        .evalfunc
-        .map(|evalfunc| evalfunc(state, econtext, isnull))
+    unsafe {
+        (*state)
+            .evalfunc
+            .map(|evalfunc| evalfunc(state, econtext, isnull))
+    }
 }
 
 #[cfg(not(feature = "pg13"))]
 #[inline]
 pub(super) unsafe fn outer_plan_state(node: *mut pg_sys::PlanState) -> *mut pg_sys::PlanState {
-    (*node).lefttree
+    unsafe { (*node).lefttree }
 }

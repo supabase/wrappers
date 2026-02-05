@@ -2,17 +2,16 @@ use crate::stats;
 #[allow(deprecated)]
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
 use clickhouse_rs::{
-    types,
+    Pool, types,
     types::Block,
     types::SqlType,
     types::Value as ChValue,
     types::{i256, u256},
-    Pool,
 };
 use crossbeam::channel;
 use futures_util::stream::StreamExt;
 use pgrx::pg_sys;
-use pgrx::{datum::numeric::AnyNumeric, PgBuiltInOids};
+use pgrx::{PgBuiltInOids, datum::numeric::AnyNumeric};
 
 use regex::{Captures, Regex};
 use std::collections::HashMap;
@@ -63,7 +62,8 @@ fn convert_row_simple(
 
         let cell = if let Some(idx) = src_idx {
             let sql_type = src_row.sql_type(idx)?;
-            let cell = match sql_type {
+
+            match sql_type {
                 types::SqlType::Bool => {
                     let value = src_row.get::<bool, usize>(idx)?;
                     Some(Cell::Bool(value))
@@ -319,16 +319,15 @@ fn convert_row_simple(
                     _ => {
                         return Err(ClickHouseFdwError::UnsupportedColumnType(
                             sql_type.to_string().into(),
-                        ))
+                        ));
                     }
                 },
                 _ => {
                     return Err(ClickHouseFdwError::UnsupportedColumnType(
                         sql_type.to_string().into(),
-                    ))
+                    ));
                 }
-            };
-            cell
+            }
         } else {
             None
         };
@@ -429,7 +428,7 @@ impl ClickHouseFdw {
                             Value::Array(arr) => {
                                 return Err(ClickHouseFdwError::NoArrayParameter(format!(
                                     "{arr:?}"
-                                )))
+                                )));
                             }
                         }
                     }
