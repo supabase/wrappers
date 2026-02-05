@@ -1,6 +1,7 @@
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::{
-    FromDatum, IntoDatum, PgSqlErrorCode, debug2, list::List,
+    FromDatum, IntoDatum, PgSqlErrorCode, debug2,
+    list::List,
     memcxt::PgMemoryContexts,
     pg_sys::{MemoryContext, MemoryContextData, Oid},
     prelude::*,
@@ -45,7 +46,7 @@ impl FdwModifyPrivate {
     /// - [3] INT4: update_cols_count (pg13 only)
     /// - [4..N] TEXT: update_cols entries (pg13 only)
     unsafe fn serialize_to_list(&self) -> *mut pg_sys::List {
-        pgrx::memcx::current_context(|mcx| {
+        pgrx::memcx::current_context(|mcx| unsafe {
             let mut ret = List::<*mut c_void>::Nil;
 
             // [0] foreigntableid as i32
@@ -119,7 +120,7 @@ impl FdwModifyPrivate {
 
     /// Deserialize FdwModifyPrivate from a PostgreSQL List of Const nodes.
     unsafe fn deserialize_from_list(list: *mut pg_sys::List) -> Option<Self> {
-        pgrx::memcx::current_context(|mcx| {
+        pgrx::memcx::current_context(|mcx| unsafe {
             let list = List::<*mut c_void>::downcast_ptr_in_memcx(list, mcx)?;
 
             // [0] foreigntableid
