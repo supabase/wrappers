@@ -1,11 +1,11 @@
 use pgrx::{
+    AnyNumeric, JsonB,
     datum::datetime_support::to_timestamp,
     prelude::{Date, Timestamp, TimestampWithTimeZone},
-    AnyNumeric, JsonB,
 };
 use uuid::Uuid;
-use wasmtime::component::bindgen;
 use wasmtime::Error as WasmError;
+use wasmtime::component::bindgen;
 
 use super::{PG_EPOCH_MS, PG_EPOCH_SEC};
 use crate::stats::Metric as HostMetric;

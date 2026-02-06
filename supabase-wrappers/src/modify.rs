@@ -1,14 +1,15 @@
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::{
-    debug2,
+    FromDatum, IntoDatum, PgSqlErrorCode, debug2,
+    list::List,
     memcxt::PgMemoryContexts,
     pg_sys::{MemoryContext, MemoryContextData, Oid},
     prelude::*,
     rel::PgRelation,
     tupdesc::PgTupleDesc,
-    FromDatum, PgSqlErrorCode,
 };
 use std::collections::HashMap;
+use std::ffi::c_void;
 use std::marker::PhantomData;
 use std::os::raw::c_int;
 use std::ptr;
@@ -19,6 +20,154 @@ use super::instance;
 use super::memctx;
 use super::polyfill;
 use super::utils;
+
+/// Serializable data for fdw_private in modify operations.
+/// This struct contains only data that can be safely serialized to a PostgreSQL List
+/// and survives query plan caching. The FdwModifyState is reconstructed from this
+/// data in begin_foreign_modify for each execution.
+struct FdwModifyPrivate {
+    /// Foreign table OID - used to create FDW instance and fetch options
+    foreigntableid: Oid,
+    /// Row identifier column name
+    rowid_name: String,
+    /// Row identifier type OID
+    rowid_typid: Oid,
+    /// Update columns (pg13 only)
+    #[cfg(feature = "pg13")]
+    update_cols: Vec<String>,
+}
+
+impl FdwModifyPrivate {
+    /// Serialize FdwModifyPrivate to a PostgreSQL List of Const nodes.
+    /// Format:
+    /// - [0] INT4: foreigntableid as i32
+    /// - [1] TEXT: rowid_name
+    /// - [2] INT4: rowid_typid as i32
+    /// - [3] INT4: update_cols_count (pg13 only)
+    /// - [4..N] TEXT: update_cols entries (pg13 only)
+    unsafe fn serialize_to_list(&self) -> *mut pg_sys::List {
+        pgrx::memcx::current_context(|mcx| unsafe {
+            let mut ret = List::<*mut c_void>::Nil;
+
+            // [0] foreigntableid as i32
+            let cst = pg_sys::makeConst(
+                pg_sys::INT4OID,
+                -1,
+                pg_sys::InvalidOid,
+                4,
+                (self.foreigntableid.to_u32() as i32).into_datum().unwrap(),
+                false,
+                true,
+            );
+            ret.unstable_push_in_context(cst as _, mcx);
+
+            // [1] rowid_name as TEXT
+            let cst = pg_sys::makeConst(
+                pg_sys::TEXTOID,
+                -1,
+                pg_sys::InvalidOid,
+                -1,
+                self.rowid_name.clone().into_datum().unwrap(),
+                false,
+                false,
+            );
+            ret.unstable_push_in_context(cst as _, mcx);
+
+            // [2] rowid_typid as i32
+            let cst = pg_sys::makeConst(
+                pg_sys::INT4OID,
+                -1,
+                pg_sys::InvalidOid,
+                4,
+                (self.rowid_typid.to_u32() as i32).into_datum().unwrap(),
+                false,
+                true,
+            );
+            ret.unstable_push_in_context(cst as _, mcx);
+
+            #[cfg(feature = "pg13")]
+            {
+                // [3] update_cols_count as i32
+                let cst = pg_sys::makeConst(
+                    pg_sys::INT4OID,
+                    -1,
+                    pg_sys::InvalidOid,
+                    4,
+                    (self.update_cols.len() as i32).into_datum().unwrap(),
+                    false,
+                    true,
+                );
+                ret.unstable_push_in_context(cst as _, mcx);
+
+                // [4..N] update_cols as TEXT
+                for col in &self.update_cols {
+                    let cst = pg_sys::makeConst(
+                        pg_sys::TEXTOID,
+                        -1,
+                        pg_sys::InvalidOid,
+                        -1,
+                        col.clone().into_datum().unwrap(),
+                        false,
+                        false,
+                    );
+                    ret.unstable_push_in_context(cst as _, mcx);
+                }
+            }
+
+            ret.into_ptr()
+        })
+    }
+
+    /// Deserialize FdwModifyPrivate from a PostgreSQL List of Const nodes.
+    unsafe fn deserialize_from_list(list: *mut pg_sys::List) -> Option<Self> {
+        pgrx::memcx::current_context(|mcx| unsafe {
+            let list = List::<*mut c_void>::downcast_ptr_in_memcx(list, mcx)?;
+
+            // [0] foreigntableid
+            let cst_ptr = *list.get(0)? as *mut pg_sys::Const;
+            let cst = *cst_ptr;
+            let foreigntableid_i32 = i32::from_datum(cst.constvalue, cst.constisnull)?;
+            let foreigntableid = Oid::from(foreigntableid_i32 as u32);
+
+            // [1] rowid_name
+            let cst_ptr = *list.get(1)? as *mut pg_sys::Const;
+            let cst = *cst_ptr;
+            let rowid_name = String::from_datum(cst.constvalue, cst.constisnull)?;
+
+            // [2] rowid_typid
+            let cst_ptr = *list.get(2)? as *mut pg_sys::Const;
+            let cst = *cst_ptr;
+            let rowid_typid_i32 = i32::from_datum(cst.constvalue, cst.constisnull)?;
+            let rowid_typid = Oid::from(rowid_typid_i32 as u32);
+
+            #[cfg(feature = "pg13")]
+            let update_cols = {
+                // [3] update_cols_count
+                let cst_ptr = *list.get(3)? as *mut pg_sys::Const;
+                let cst = *cst_ptr;
+                let count = i32::from_datum(cst.constvalue, cst.constisnull)? as usize;
+
+                // [4..N] update_cols
+                let mut cols = Vec::with_capacity(count);
+                for i in 0..count {
+                    let cst_ptr = *list.get(4 + i)? as *mut pg_sys::Const;
+                    let cst = *cst_ptr;
+                    let col = String::from_datum(cst.constvalue, cst.constisnull)?;
+                    cols.push(col);
+                }
+                cols
+            };
+
+            Some(FdwModifyPrivate {
+                foreigntableid,
+                rowid_name,
+                rowid_typid,
+                #[cfg(feature = "pg13")]
+                update_cols,
+            })
+        })
+    }
+}
 
 // Fdw private state for modify
 struct FdwModifyState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
@@ -43,20 +192,6 @@ struct FdwModifyState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
 }
 
 impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwModifyState<E, W> {
-    unsafe fn new(foreigntableid: Oid, tmp_ctx: MemoryContext) -> Self {
-        Self {
-            instance: Some(instance::create_fdw_instance_from_table_id(foreigntableid)),
-            rowid_name: String::default(),
-            rowid_attno: 0,
-            rowid_typid: Oid::INVALID,
-            opts: HashMap::new(),
-            tmp_ctx,
-            _phantom: PhantomData,
-            #[cfg(feature = "pg13")]
-            update_cols: Vec::new(),
-        }
-    }
-
     fn begin_modify(&mut self) -> Result<(), E> {
         if let Some(ref mut instance) = self.instance {
             instance.begin_modify(&self.opts)
@@ -98,8 +233,6 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwModifyState<E, W> {
     }
 }
 
-impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> utils::SerdeList for FdwModifyState<E, W> {}
-
 impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> Drop for FdwModifyState<E, W> {
     fn drop(&mut self) {
         // drop foreign data wrapper instance
@@ -117,7 +250,7 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> Drop for FdwModifyState<E, 
 unsafe fn drop_fdw_modify_state<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     fdw_state: *mut FdwModifyState<E, W>,
 ) {
-    let boxed_fdw_state = Box::from_raw(fdw_state);
+    let boxed_fdw_state = unsafe { Box::from_raw(fdw_state) };
     drop(boxed_fdw_state);
 }
 
@@ -126,12 +259,12 @@ unsafe fn find_rowid_column(
     target_relation: pg_sys::Relation,
 ) -> Option<pg_sys::FormData_pg_attribute> {
     // get rowid column name from table options
-    let ftable = pg_sys::GetForeignTable((*target_relation).rd_id);
-    let opts = options_to_hashmap((*ftable).options).report_unwrap();
+    let ftable = unsafe { pg_sys::GetForeignTable((*target_relation).rd_id) };
+    let opts = unsafe { options_to_hashmap((*ftable).options).report_unwrap() };
     let rowid_name = require_option("rowid_column", &opts).report_unwrap();
 
     // find rowid attribute
-    let tup_desc = PgTupleDesc::from_pg_copy((*target_relation).rd_att);
+    let tup_desc = unsafe { PgTupleDesc::from_pg_copy((*target_relation).rd_att) };
     for attr in tup_desc.iter().filter(|a| !a.is_dropped()) {
         if pgrx::name_data_to_str(&attr.attname) == rowid_name {
             return Some(*attr);
@@ -208,6 +341,7 @@ pub(super) extern "C-unwind" fn add_foreign_update_targets(
 }
 
 #[pg_guard]
+#[allow(clippy::extra_unused_type_parameters)]
 pub(super) extern "C-unwind" fn plan_foreign_modify<
     E: Into<ErrorReport>,
     W: ForeignDataWrapper<E>,
@@ -233,17 +367,7 @@ pub(super) extern "C-unwind" fn plan_foreign_modify<
         let rel = PgRelation::with_lock((*rte).relid, pg_sys::NoLock as _);
 
         let ftable = pg_sys::GetForeignTable(rel.oid());
-        let mut opts = options_to_hashmap((*ftable).options).report_unwrap();
-
-        // add additional metadata to the options
-        opts.insert(
-            "wrappers.fserver_oid".into(),
-            (*ftable).serverid.to_u32().to_string(),
-        );
-        opts.insert(
-            "wrappers.ftable_oid".into(),
-            (*ftable).relid.to_u32().to_string(),
-        );
+        let opts = options_to_hashmap((*ftable).options).report_unwrap();
 
         // check if the rowid column name is specified in table options
         let rowid_name = opts.get("rowid_column");
@@ -256,27 +380,17 @@ pub(super) extern "C-unwind" fn plan_foreign_modify<
         }
         let rowid_name = rowid_name.unwrap();
 
-        // search for rowid attribute in tuple descrition
+        // search for rowid attribute in tuple description
         let tup_desc = PgTupleDesc::from_relation(&rel);
         for attr in tup_desc.iter().filter(|a| !a.attisdropped) {
             let attname = pgrx::name_data_to_str(&attr.attname);
             if attname == rowid_name {
-                let ftable_id = rel.oid();
+                let foreigntableid = rel.oid();
 
-                // create memory context for modify
-                let ctx_name = format!("Wrappers_modify_{}", ftable_id.to_u32());
-                let ctx = memctx::create_wrappers_memctx(&ctx_name);
-
-                // create modify state
-                let mut state = FdwModifyState::<E, W>::new(ftable_id, ctx);
-
-                state.rowid_name = rowid_name.to_string();
-                state.rowid_typid = attr.atttypid;
-                state.opts = opts;
-
+                // Collect update columns for pg13
                 #[cfg(feature = "pg13")]
-                {
-                    // get update column list
+                let update_cols = {
+                    let mut cols = Vec::new();
                     let tgts: pgrx::PgList<pg_sys::TargetEntry> =
                         pgrx::PgList::from_pg((*(*root).parse).targetList);
                     for tgt in tgts.iter_ptr() {
@@ -285,22 +399,28 @@ pub(super) extern "C-unwind" fn plan_foreign_modify<
                             .unwrap()
                             .to_owned();
                         if !(*tgt).resjunk {
-                            state.update_cols.push(col_name);
+                            cols.push(col_name);
                         }
                     }
-                }
+                    cols
+                };
 
-                // box the modify state and 'serialize' state to a list, the state
-                // pointer is stored as an integer constant in the list, so it can be
-                // `deserialized` when executing the plan later.
-                // Note that the state itself is not serialized to any memory contexts,
-                // it just sits in Rust managed Box'ed memory and will be dropped when
-                // end_foreign_modify() is called.
-                return PgMemoryContexts::For(state.tmp_ctx).switch_to(|_| {
-                    let p = Box::leak(Box::new(state)) as *mut FdwModifyState<E, W>;
-                    let state = PgBox::<FdwModifyState<E, W>>::from_pg(p as _);
-                    FdwModifyState::serialize_to_list(state)
-                });
+                // Create FdwModifyPrivate with serializable data only.
+                // This data will survive PostgreSQL's query plan caching because
+                // we serialize actual data values, not pointers.
+                let private = FdwModifyPrivate {
+                    foreigntableid,
+                    rowid_name: rowid_name.to_string(),
+                    rowid_typid: attr.atttypid,
+                    #[cfg(feature = "pg13")]
+                    update_cols,
+                };
+
+                // Serialize the data to a PostgreSQL List.
+                // The actual FdwModifyState will be created in begin_foreign_modify
+                // for each execution, ensuring fresh state even when the query plan
+                // is cached and this planning stage is skipped.
+                return private.serialize_to_list();
             }
         }
 
@@ -331,8 +451,54 @@ pub(super) extern "C-unwind" fn begin_foreign_modify<
     }
 
     unsafe {
-        let mut state = FdwModifyState::<E, W>::deserialize_from_list(fdw_private as _);
-        assert!(!state.is_null());
+        // Deserialize FdwModifyPrivate from the cached fdw_private list.
+        // This contains the data needed to reconstruct the FdwModifyState.
+        let private = FdwModifyPrivate::deserialize_from_list(fdw_private);
+        if private.is_none() {
+            report_error(
+                PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                "invalid fdw_private data in begin_foreign_modify",
+            );
+            return;
+        }
+        let private = private.unwrap();
+
+        // Create a fresh memory context for this execution.
+        // This ensures proper cleanup even when the query plan was cached.
+        let ctx_name = format!("Wrappers_modify_{}", private.foreigntableid.to_u32());
+        let tmp_ctx = memctx::create_wrappers_memctx(&ctx_name);
+
+        // Create a fresh FDW instance from the foreign table ID.
+        // This is done here (not in plan_foreign_modify) so that we always have
+        // a valid instance even when PostgreSQL reuses a cached query plan.
+        let fdw_instance: W = instance::create_fdw_instance_from_table_id(private.foreigntableid);
+
+        // Fetch foreign table options fresh for this execution
+        let ftable = pg_sys::GetForeignTable(private.foreigntableid);
+        let mut opts = options_to_hashmap((*ftable).options).report_unwrap();
+
+        // add additional metadata to the options
+        opts.insert(
+            "wrappers.fserver_oid".into(),
+            (*ftable).serverid.to_u32().to_string(),
+        );
+        opts.insert(
+            "wrappers.ftable_oid".into(),
+            (*ftable).relid.to_u32().to_string(),
+        );
+
+        // Create the FdwModifyState with fresh data
+        let mut state = FdwModifyState::<E, W> {
+            instance: Some(fdw_instance),
+            rowid_name: private.rowid_name,
+            rowid_attno: 0, // Will be set below
+            rowid_typid: private.rowid_typid,
+            opts,
+            tmp_ctx,
+            _phantom: PhantomData,
+            #[cfg(feature = "pg13")]
+            update_cols: private.update_cols,
+        };
 
         // search for rowid attribute number
         #[cfg(feature = "pg13")]
@@ -342,6 +508,10 @@ pub(super) extern "C-unwind" fn begin_foreign_modify<
         let rowid_name_c = PgMemoryContexts::For(state.tmp_ctx).pstrdup(&state.rowid_name);
         state.rowid_attno =
             pg_sys::ExecFindJunkAttributeInTlist((*subplan).targetlist, rowid_name_c);
+
+        // Box the state and call begin_modify
+        let state_ptr = Box::leak(Box::new(state));
+        let mut state = PgBox::<FdwModifyState<E, W>>::from_pg(state_ptr as _);
 
         let result = state.begin_modify();
         if result.is_err() {
@@ -388,8 +558,10 @@ unsafe fn get_rowid_cell<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     plan_slot: *mut pg_sys::TupleTableSlot,
 ) -> Option<Cell> {
     let mut is_null: bool = true;
-    let datum = polyfill::slot_getattr(plan_slot, state.rowid_attno.into(), &mut is_null);
-    Cell::from_polymorphic_datum(datum, is_null, state.rowid_typid)
+    unsafe {
+        let datum = polyfill::slot_getattr(plan_slot, state.rowid_attno.into(), &mut is_null);
+        Cell::from_polymorphic_datum(datum, is_null, state.rowid_typid)
+    }
 }
 
 #[pg_guard]

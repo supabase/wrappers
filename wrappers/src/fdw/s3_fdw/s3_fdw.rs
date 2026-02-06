@@ -25,7 +25,7 @@ enum Parser {
 }
 
 #[wrappers_fdw(
-    version = "0.1.5",
+    version = "0.1.6",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/s3_fdw",
     error_type = "S3FdwError"
@@ -37,6 +37,7 @@ pub(crate) struct S3Fdw {
     parser: Parser,
     tgt_cols: Vec<Column>,
     rows_out: i64,
+    csv_delimiter: u8,
 
     // local string buffer for CSV and JSONL
     buf: String,
@@ -86,6 +87,7 @@ impl S3Fdw {
                 buf.extend(self.buf.as_bytes());
                 *rdr = csv::ReaderBuilder::new()
                     .has_headers(false)
+                    .delimiter(self.csv_delimiter)
                     .from_reader(Cursor::new(buf));
             }
             Parser::JsonLine(records) => {
@@ -124,6 +126,7 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
             parser: Parser::JsonLine(VecDeque::new()),
             tgt_cols: Vec::new(),
             rows_out: 0,
+            csv_delimiter: b',',
             buf: String::new(),
         };
 
@@ -156,10 +159,11 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
         let region = require_option_or("aws_region", &server.options, "us-east-1");
 
         // set AWS environment variables and create shared config from them
-        env::set_var("AWS_ACCESS_KEY_ID", creds.0);
-        env::set_var("AWS_SECRET_ACCESS_KEY", creds.1);
-        env::set_var("AWS_REGION", region);
-
+        unsafe {
+            env::set_var("AWS_ACCESS_KEY_ID", creds.0);
+            env::set_var("AWS_SECRET_ACCESS_KEY", creds.1);
+            env::set_var("AWS_REGION", region);
+        }
         let mut config_loader = aws_config::defaults(BehaviorVersion::latest());
 
         // endpoint_url not supported as env var in rust https://github.com/awslabs/aws-sdk-rust/issues/932
@@ -225,6 +229,14 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
 
         let has_header: bool = options.get("has_header") == Some(&"true".to_string());
 
+        if let Some(delimiter) = options.get("delimiter") {
+            if delimiter.len() == 1 {
+                self.csv_delimiter = delimiter.as_bytes()[0];
+            } else {
+                return Err(S3FdwError::InvalidDelimiterOption(delimiter.to_string()));
+            }
+        }
+
         self.tgt_cols = columns.to_vec();
 
         if let Some(client) = &self.client {
@@ -260,7 +272,7 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
 
             // deal with parquet file, read all its content to local buffer if it is
             // compressed, otherwise open async read stream for it
-            if let Parser::Parquet(ref mut s3parquet) = &mut self.parser {
+            if let Parser::Parquet(s3parquet) = &mut self.parser {
                 if options.get("compress").is_some() {
                     // read all contents to local
                     let mut buf = Vec::new();
@@ -283,11 +295,11 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
             let mut rdr: BufReader<Pin<Box<dyn AsyncRead>>> = BufReader::new(boxed_stream);
 
             // skip csv header line if needed
-            if let Parser::Csv(_) = self.parser {
-                if has_header {
-                    let mut header = String::new();
-                    self.rt.block_on(rdr.read_line(&mut header))?;
-                }
+            if let Parser::Csv(_) = self.parser
+                && has_header
+            {
+                let mut header = String::new();
+                self.rt.block_on(rdr.read_line(&mut header))?;
             }
 
             self.rdr = Some(rdr);
@@ -298,7 +310,7 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
 
     fn iter_scan(&mut self, row: &mut Row) -> S3FdwResult<Option<()>> {
         // read parquet record
-        if let Parser::Parquet(ref mut s3parquet) = &mut self.parser {
+        if let Parser::Parquet(s3parquet) = &mut self.parser {
             if self.rt.block_on(s3parquet.refill())?.is_none() {
                 return Ok(None);
             }
@@ -387,11 +399,11 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
     }
 
     fn validator(options: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) -> S3FdwResult<()> {
-        if let Some(oid) = catalog {
-            if oid == FOREIGN_TABLE_RELATION_ID {
-                check_options_contain(&options, "uri")?;
-                check_options_contain(&options, "format")?;
-            }
+        if let Some(oid) = catalog
+            && oid == FOREIGN_TABLE_RELATION_ID
+        {
+            check_options_contain(&options, "uri")?;
+            check_options_contain(&options, "format")?;
         }
 
         Ok(())

@@ -3,13 +3,14 @@
 
 use crate::interface::{Cell, Column, Row};
 use pgrx::{
+    IntoDatum,
     list::List,
     pg_sys::panic::{ErrorReport, ErrorReportable},
     spi::Spi,
-    IntoDatum, *,
+    *,
 };
-use std::ffi::c_void;
 use std::ffi::CStr;
+use std::ffi::c_void;
 use std::num::NonZeroUsize;
 use std::ptr;
 use thiserror::Error;
@@ -209,11 +210,11 @@ pub fn get_vault_secret_by_name(secret_name: &str) -> Option<String> {
 }
 
 pub(super) unsafe fn tuple_table_slot_to_row(slot: *mut pg_sys::TupleTableSlot) -> Row {
-    let tup_desc = PgTupleDesc::from_pg_copy((*slot).tts_tupleDescriptor);
+    let tup_desc = unsafe { PgTupleDesc::from_pg_copy((*slot).tts_tupleDescriptor) };
 
     let mut should_free = false;
-    let htup = pg_sys::ExecFetchSlotHeapTuple(slot, false, &mut should_free);
-    let htup = PgBox::from_pg(htup);
+    let htup = unsafe { pg_sys::ExecFetchSlotHeapTuple(slot, false, &mut should_free) };
+    let htup = unsafe { PgBox::from_pg(htup) };
     let mut row = Row::new();
 
     for (att_idx, attr) in tup_desc.iter().filter(|a| !a.attisdropped).enumerate() {
@@ -231,67 +232,69 @@ pub(super) unsafe fn extract_target_columns(
     root: *mut pg_sys::PlannerInfo,
     baserel: *mut pg_sys::RelOptInfo,
 ) -> Vec<Column> {
-    let mut ret = Vec::new();
-    let mut col_vars: *mut pg_sys::List = ptr::null_mut();
+    unsafe {
+        let mut ret = Vec::new();
+        let mut col_vars: *mut pg_sys::List = ptr::null_mut();
 
-    memcx::current_context(|mcx| {
-        // gather vars from target column list
-        if let Some(tgt_list) =
-            List::<*mut c_void>::downcast_ptr_in_memcx((*(*baserel).reltarget).exprs, mcx)
-        {
-            for tgt in tgt_list.iter() {
-                let tgt_cols = pg_sys::pull_var_clause(
-                    *tgt as _,
-                    (pg_sys::PVC_RECURSE_AGGREGATES | pg_sys::PVC_RECURSE_PLACEHOLDERS)
-                        .try_into()
-                        .unwrap(),
-                );
-                col_vars = pg_sys::list_union(col_vars, tgt_cols);
-            }
-        }
-
-        // gather vars from restrictions
-        if let Some(conds) =
-            List::<*mut c_void>::downcast_ptr_in_memcx((*baserel).baserestrictinfo, mcx)
-        {
-            for cond in conds.iter() {
-                let expr = (*(*cond as *mut pg_sys::RestrictInfo)).clause;
-                let tgt_cols = pg_sys::pull_var_clause(
-                    expr as _,
-                    (pg_sys::PVC_RECURSE_AGGREGATES | pg_sys::PVC_RECURSE_PLACEHOLDERS)
-                        .try_into()
-                        .unwrap(),
-                );
-                col_vars = pg_sys::list_union(col_vars, tgt_cols);
-            }
-        }
-
-        // get column names from var list
-        if let Some(col_vars) = List::<*mut c_void>::downcast_ptr_in_memcx(col_vars, mcx) {
-            for var in col_vars.iter() {
-                let var: pg_sys::Var = *(*var as *mut pg_sys::Var);
-                let rte = pg_sys::planner_rt_fetch(var.varno as _, root);
-                let attno = var.varattno;
-                let attname = pg_sys::get_attname((*rte).relid, attno, true);
-                if !attname.is_null() {
-                    // generated column is not supported
-                    if pg_sys::get_attgenerated((*rte).relid, attno) > 0 {
-                        report_warning("generated column is not supported");
-                        continue;
-                    }
-
-                    let type_oid = pg_sys::get_atttype((*rte).relid, attno);
-                    ret.push(Column {
-                        name: CStr::from_ptr(attname).to_str().unwrap().to_owned(),
-                        num: attno as usize,
-                        type_oid,
-                    });
+        memcx::current_context(|mcx| {
+            // gather vars from target column list
+            if let Some(tgt_list) =
+                List::<*mut c_void>::downcast_ptr_in_memcx((*(*baserel).reltarget).exprs, mcx)
+            {
+                for tgt in tgt_list.iter() {
+                    let tgt_cols = pg_sys::pull_var_clause(
+                        *tgt as _,
+                        (pg_sys::PVC_RECURSE_AGGREGATES | pg_sys::PVC_RECURSE_PLACEHOLDERS)
+                            .try_into()
+                            .unwrap(),
+                    );
+                    col_vars = pg_sys::list_union(col_vars, tgt_cols);
                 }
             }
-        }
-    });
 
-    ret
+            // gather vars from restrictions
+            if let Some(conds) =
+                List::<*mut c_void>::downcast_ptr_in_memcx((*baserel).baserestrictinfo, mcx)
+            {
+                for cond in conds.iter() {
+                    let expr = (*(*cond as *mut pg_sys::RestrictInfo)).clause;
+                    let tgt_cols = pg_sys::pull_var_clause(
+                        expr as _,
+                        (pg_sys::PVC_RECURSE_AGGREGATES | pg_sys::PVC_RECURSE_PLACEHOLDERS)
+                            .try_into()
+                            .unwrap(),
+                    );
+                    col_vars = pg_sys::list_union(col_vars, tgt_cols);
+                }
+            }
+
+            // get column names from var list
+            if let Some(col_vars) = List::<*mut c_void>::downcast_ptr_in_memcx(col_vars, mcx) {
+                for var in col_vars.iter() {
+                    let var: pg_sys::Var = *(*var as *mut pg_sys::Var);
+                    let rte = pg_sys::planner_rt_fetch(var.varno as _, root);
+                    let attno = var.varattno;
+                    let attname = pg_sys::get_attname((*rte).relid, attno, true);
+                    if !attname.is_null() {
+                        // generated column is not supported
+                        if pg_sys::get_attgenerated((*rte).relid, attno) > 0 {
+                            report_warning("generated column is not supported");
+                            continue;
+                        }
+
+                        let type_oid = pg_sys::get_atttype((*rte).relid, attno);
+                        ret.push(Column {
+                            name: CStr::from_ptr(attname).to_str().unwrap().to_owned(),
+                            num: attno as usize,
+                            type_oid,
+                        });
+                    }
+                }
+            }
+        });
+
+        ret
+    }
 }
 
 // trait for "serialize" and "deserialize" state from specified memory context,
@@ -301,39 +304,41 @@ pub(super) trait SerdeList {
     where
         Self: Sized,
     {
-        let ret = memcx::current_context(|mcx| {
-            let mut ret = List::<*mut c_void>::Nil;
-            let val = state.into_pg() as i64;
-            let cst: *mut pg_sys::Const = pg_sys::makeConst(
-                pg_sys::INT8OID,
-                -1,
-                pg_sys::InvalidOid,
-                8,
-                val.into_datum().unwrap(),
-                false,
-                true,
-            );
-            ret.unstable_push_in_context(cst as _, mcx);
-            ret.into_ptr()
-        });
-
-        ret
+        unsafe {
+            memcx::current_context(|mcx| {
+                let mut ret = List::<*mut c_void>::Nil;
+                let val = state.into_pg() as i64;
+                let cst: *mut pg_sys::Const = pg_sys::makeConst(
+                    pg_sys::INT8OID,
+                    -1,
+                    pg_sys::InvalidOid,
+                    8,
+                    val.into_datum().unwrap(),
+                    false,
+                    true,
+                );
+                ret.unstable_push_in_context(cst as _, mcx);
+                ret.into_ptr()
+            })
+        }
     }
 
     unsafe fn deserialize_from_list(list: *mut pg_sys::List) -> PgBox<Self>
     where
         Self: Sized,
     {
-        memcx::current_context(|mcx| {
-            if let Some(list) = List::<*mut c_void>::downcast_ptr_in_memcx(list, mcx) {
-                if let Some(cst) = list.get(0) {
+        unsafe {
+            memcx::current_context(|mcx| {
+                if let Some(list) = List::<*mut c_void>::downcast_ptr_in_memcx(list, mcx)
+                    && let Some(cst) = list.get(0)
+                {
                     let cst = *(*cst as *mut pg_sys::Const);
                     let ptr = i64::from_datum(cst.constvalue, cst.constisnull).unwrap();
                     return PgBox::<Self>::from_pg(ptr as _);
                 }
-            }
-            PgBox::<Self>::null()
-        })
+                PgBox::<Self>::null()
+            })
+        }
     }
 }
 
