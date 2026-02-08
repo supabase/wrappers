@@ -12,17 +12,17 @@ use wasmtime::{Config, Engine, Store};
 use supabase_wrappers::prelude::*;
 
 use super::bindings::v1::{
+    Wrappers as WrappersV1,
     supabase::wrappers::types::{
         Cell as GuestCellV1, HostContext as HostContextV1, HostRow as HostRowV1,
     },
-    Wrappers as WrappersV1,
 };
 use super::bindings::v2::{
+    Wrappers as WrappersV2,
     supabase::wrappers::types::{
         Cell as GuestCellV2, HostContext as HostContextV2, HostRow as HostRowV2,
         ImportForeignSchemaStmt as GuestImportForeignSchemaStmt,
     },
-    Wrappers as WrappersV2,
 };
 use super::host::FdwHost;
 use super::{WasmFdwError, WasmFdwResult};

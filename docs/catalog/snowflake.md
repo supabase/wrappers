@@ -17,7 +17,7 @@ The Snowflake Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows y
 
 | Version | Wasm Package URL                                                                                      | Checksum                                                           | Required Wrappers Version |
 | ------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------- |
-| 0.2.1   | `https://github.com/supabase/wrappers/releases/download/wasm_snowflake_fdw_v0.2.1/snowflake_fdw.wasm` | `100f3f105e7e6dab92c433b2da6bec98fafeccd0304e6efaf3780d0a8cae30ec` | >=0.5.0                   |
+| 0.2.1   | `https://github.com/supabase/wrappers/releases/download/wasm_snowflake_fdw_v0.2.1/snowflake_fdw.wasm` | `9863b913308f2700090db7f2f8b50751524a39d743b401830cdae98cbace650e` | >=0.5.0                   |
 | 0.2.0   | `https://github.com/supabase/wrappers/releases/download/wasm_snowflake_fdw_v0.2.0/snowflake_fdw.wasm` | `921b18a1e9c20c4ef5a09af17b5d76fd6ebe56d41bcfa565b74a530420532437` | >=0.5.0                   |
 | 0.1.1   | `https://github.com/supabase/wrappers/releases/download/wasm_snowflake_fdw_v0.1.1/snowflake_fdw.wasm` | `7aaafc7edc1726bc93ddc04452d41bda9e1a264a1df2ea9bf1b00b267543b860` | >=0.4.0                   |
 | 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_snowflake_fdw_v0.1.0/snowflake_fdw.wasm` | `2fb46fd8afa63f3975dadf772338106b609b131861849356e0c09dde032d1af8` | >=0.4.0                   |
@@ -72,7 +72,7 @@ We need to provide Postgres with the credentials to connect to Snowflake, and an
         fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_snowflake_fdw_v0.2.1/snowflake_fdw.wasm',
         fdw_package_name 'supabase:snowflake-fdw',
         fdw_package_version '0.2.1',
-        fdw_package_checksum '100f3f105e7e6dab92c433b2da6bec98fafeccd0304e6efaf3780d0a8cae30ec',
+        fdw_package_checksum '9863b913308f2700090db7f2f8b50751524a39d743b401830cdae98cbace650e',
         account_identifier 'MYORGANIZATION-MYACCOUNT',
         user 'MYUSER',
         public_key_fingerprint 'SizgPofeFX0jwC8IhbOfGFyOggFgo8oTOS1uPLZhzUQ=',
@@ -90,7 +90,7 @@ We need to provide Postgres with the credentials to connect to Snowflake, and an
         fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_snowflake_fdw_v0.2.1/snowflake_fdw.wasm',
         fdw_package_name 'supabase:snowflake-fdw',
         fdw_package_version '0.2.1',
-        fdw_package_checksum '100f3f105e7e6dab92c433b2da6bec98fafeccd0304e6efaf3780d0a8cae30ec',
+        fdw_package_checksum '9863b913308f2700090db7f2f8b50751524a39d743b401830cdae98cbace650e',
         account_identifier 'MYORGANIZATION-MYACCOUNT',
         user 'MYUSER',
         public_key_fingerprint 'SizgPofeFX0jwC8IhbOfGFyOggFgo8oTOS1uPLZhzUQ=',

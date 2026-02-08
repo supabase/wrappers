@@ -2,7 +2,7 @@ use crate::stats;
 use pgrx::pg_sys;
 use reqwest::{self, header};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
-use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
+use reqwest_retry::{RetryTransientMiddleware, policies::ExponentialBackoff};
 use std::collections::HashMap;
 use url::Url;
 
@@ -197,13 +197,13 @@ impl ForeignDataWrapper<AirtableFdwError> for AirtableFdw {
     }
 
     fn iter_scan(&mut self, row: &mut Row) -> AirtableFdwResult<Option<()>> {
-        if let Some(ref mut result) = self.scan_result {
-            if !result.is_empty() {
-                return Ok(result
-                    .drain(0..1)
-                    .next_back()
-                    .map(|src_row| row.replace_with(src_row)));
-            }
+        if let Some(ref mut result) = self.scan_result
+            && !result.is_empty()
+        {
+            return Ok(result
+                .drain(0..1)
+                .next_back()
+                .map(|src_row| row.replace_with(src_row)));
         }
         Ok(None)
     }
@@ -217,11 +217,11 @@ impl ForeignDataWrapper<AirtableFdwError> for AirtableFdw {
         options: Vec<Option<String>>,
         catalog: Option<pg_sys::Oid>,
     ) -> AirtableFdwResult<()> {
-        if let Some(oid) = catalog {
-            if oid == FOREIGN_TABLE_RELATION_ID {
-                check_options_contain(&options, "base_id")?;
-                check_options_contain(&options, "table_id")?;
-            }
+        if let Some(oid) = catalog
+            && oid == FOREIGN_TABLE_RELATION_ID
+        {
+            check_options_contain(&options, "base_id")?;
+            check_options_contain(&options, "table_id")?;
         }
 
         Ok(())

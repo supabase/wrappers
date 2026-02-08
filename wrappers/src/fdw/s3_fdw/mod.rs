@@ -20,6 +20,9 @@ enum S3FdwError {
     #[error("invalid format option: '{0}', it can only be 'csv', 'jsonl' or 'parquet'")]
     InvalidFormatOption(String),
 
+    #[error("invalid delimiter option: '{0}', it must be exactly one character")]
+    InvalidDelimiterOption(String),
+
     #[error("invalid compression option: {0}")]
     InvalidCompressOption(String),
 

@@ -17,6 +17,7 @@ The Clerk Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you t
 
 | Version | Wasm Package URL                                                                                    | Checksum                                                           | Required Wrappers Version |
 | ------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------- |
+| 0.2.2   | `https://github.com/supabase/wrappers/releases/download/wasm_clerk_fdw_v0.2.2/clerk_fdw.wasm`       | tbd | >=0.5.0                   |
 | 0.2.1   | `https://github.com/supabase/wrappers/releases/download/wasm_clerk_fdw_v0.2.1/clerk_fdw.wasm`       | `100f3f105e7e6dab92c433b2da6bec98fafeccd0304e6efaf3780d0a8cae30ec` | >=0.5.0                   |
 | 0.2.0   | `https://github.com/supabase/wrappers/releases/download/wasm_clerk_fdw_v0.2.0/clerk_fdw.wasm`       | `89337bb11779d4d654cd3e54391aabd02509d213db6995f7dd58951774bf0e37` | >=0.5.0                   |
 | 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_clerk_fdw_v0.1.0/clerk_fdw.wasm`       | `613be26b59fa4c074e0b93f0db617fcd7b468d4d02edece0b1f85fdb683ebdc4` | >=0.4.0                   |
@@ -66,10 +67,10 @@ We need to provide Postgres with the credentials to access Clerk and any additio
     create server clerk_server
       foreign data wrapper wasm_wrapper
       options (
-        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_clerk_fdw_v0.2.1/clerk_fdw.wasm',
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_clerk_fdw_v0.2.2/clerk_fdw.wasm',
         fdw_package_name 'supabase:clerk-fdw',
-        fdw_package_version '0.2.1',
-        fdw_package_checksum '100f3f105e7e6dab92c433b2da6bec98fafeccd0304e6efaf3780d0a8cae30ec',
+        fdw_package_version '0.2.2',
+        fdw_package_checksum 'tbd',
         api_url 'https://api.clerk.com/v1',  -- optional
         api_key_id '<key_ID>' -- The Key ID from above.
       );
@@ -81,10 +82,10 @@ We need to provide Postgres with the credentials to access Clerk and any additio
     create server clerk_server
       foreign data wrapper wasm_wrapper
       options (
-        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_clerk_fdw_v0.2.1/clerk_fdw.wasm',
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_clerk_fdw_v0.2.2/clerk_fdw.wasm',
         fdw_package_name 'supabase:clerk-fdw',
-        fdw_package_version '0.2.1',
-        fdw_package_checksum '100f3f105e7e6dab92c433b2da6bec98fafeccd0304e6efaf3780d0a8cae30ec',
+        fdw_package_version '0.2.2',
+        fdw_package_checksum 'tbd',
         api_url 'https://api.clerk.com/v1',  -- optional
         api_key 'sk_test_...'  -- Clerk API key
       );
@@ -161,7 +162,7 @@ Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/Allow-lis
 
 | Object                | Select | Insert | Update | Delete | Truncate |
 | --------------------- | :----: | :----: | :----: | :----: | :------: |
-| allowlist_identifiers |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| allowlist_identifiers |   ✅   |   ✅   |   ❌   |   ✅   |    ❌    |
 
 #### Usage
 
@@ -178,7 +179,8 @@ create foreign table clerk.allowlist_identifiers (
 )
   server clerk_server
   options (
-    object 'allowlist_identifiers'
+    object 'allowlist_identifiers',
+    rowid_column 'id'
   );
 ```
 
@@ -196,7 +198,7 @@ Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/Allow-lis
 
 | Object                | Select | Insert | Update | Delete | Truncate |
 | --------------------- | :----: | :----: | :----: | :----: | :------: |
-| blocklist_identifiers |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| blocklist_identifiers |   ✅   |   ✅   |   ❌   |   ✅   |    ❌    |
 
 #### Usage
 
@@ -212,7 +214,8 @@ create foreign table clerk.blocklist_identifiers (
 )
   server clerk_server
   options (
-    object 'blocklist_identifiers'
+    object 'blocklist_identifiers',
+    rowid_column 'id'
   );
 ```
 
@@ -230,7 +233,7 @@ Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/Domains#o
 
 | Object  | Select | Insert | Update | Delete | Truncate |
 | ------- | :----: | :----: | :----: | :----: | :------: |
-| domains |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| domains |   ✅   |   ❌   |   ✅   |   ✅   |    ❌    |
 
 #### Usage
 
@@ -245,7 +248,8 @@ create foreign table clerk.domains (
 )
   server clerk_server
   options (
-    object 'domains'
+    object 'domains',
+    rowid_column 'id'
   );
 ```
 
@@ -263,7 +267,7 @@ Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/Invitatio
 
 | Object      | Select | Insert | Update | Delete | Truncate |
 | ----------- | :----: | :----: | :----: | :----: | :------: |
-| invitations |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| invitations |   ✅   |   ✅   |   ❌   |   ❌   |    ❌    |
 
 #### Usage
 
@@ -281,7 +285,8 @@ create foreign table clerk.invitations (
 )
   server clerk_server
   options (
-    object 'invitations'
+    object 'invitations',
+    rowid_column 'id'
   );
 ```
 
@@ -299,7 +304,7 @@ Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/JWT-Templ
 
 | Object        | Select | Insert | Update | Delete | Truncate |
 | ------------- | :----: | :----: | :----: | :----: | :------: |
-| jwt_templates |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| jwt_templates |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
 
 #### Usage
 
@@ -317,13 +322,15 @@ create foreign table clerk.jwt_templates (
 )
   server clerk_server
   options (
-    object 'jwt_templates'
+    object 'jwt_templates',
+    rowid_column 'id'
   );
 ```
 
 #### Notes
 
 - The `attrs` column contains additional attributes in JSON format
+- Single-item retrieval is supported via `WHERE id = 'xxx'` clause, which fetches from `GET /jwt_templates/{template_id}` endpoint
 
 ### OAuth Applications
 
@@ -335,7 +342,7 @@ Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/OAuth-App
 
 | Object             | Select | Insert | Update | Delete | Truncate |
 | ------------------ | :----: | :----: | :----: | :----: | :------: |
-| oauth_applications |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| oauth_applications |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
 
 #### Usage
 
@@ -353,13 +360,15 @@ create foreign table clerk.oauth_applications (
 )
   server clerk_server
   options (
-    object 'oauth_applications'
+    object 'oauth_applications',
+    rowid_column 'id'
   );
 ```
 
 #### Notes
 
 - The `attrs` column contains additional attributes in JSON format
+- Single-item retrieval is supported via `WHERE id = 'xxx'` clause, which fetches from `GET /oauth_applications/{oauth_application_id}` endpoint
 
 ### Organizations
 
@@ -371,7 +380,7 @@ Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/Organizat
 
 | Object        | Select | Insert | Update | Delete | Truncate |
 | ------------- | :----: | :----: | :----: | :----: | :------: |
-| organizations |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| organizations |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
 
 #### Usage
 
@@ -386,13 +395,15 @@ create foreign table clerk.organizations (
 )
   server clerk_server
   options (
-    object 'organizations'
+    object 'organizations',
+    rowid_column 'id'
   );
 ```
 
 #### Notes
 
 - The `attrs` column contains additional attributes in JSON format
+- Single-item retrieval is supported via `WHERE id = 'xxx'` clause, which fetches from `GET /organizations/{organization_id}` endpoint
 
 ### Organization Invitations
 
@@ -462,6 +473,7 @@ create foreign table clerk.organization_memberships (
 #### Notes
 
 - The `attrs` column contains additional attributes in JSON format
+- Single-item retrieval is supported via `WHERE id = 'xxx'` clause, which fetches from `GET /oauth_applications/{oauth_application_id}` endpoint
 
 ### Redirect URLs
 
@@ -473,7 +485,7 @@ Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/Redirect-
 
 | Object        | Select | Insert | Update | Delete | Truncate |
 | ------------- | :----: | :----: | :----: | :----: | :------: |
-| redirect_urls |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| redirect_urls |   ✅   |   ✅   |   ❌   |   ✅   |    ❌    |
 
 #### Usage
 
@@ -487,13 +499,15 @@ create foreign table clerk.redirect_urls (
 )
   server clerk_server
   options (
-    object 'redirect_urls'
+    object 'redirect_urls',
+    rowid_column 'id'
   );
 ```
 
 #### Notes
 
 - The `attrs` column contains additional attributes in JSON format
+- Single-item retrieval is supported via `WHERE id = 'xxx'` clause, which fetches from `GET /redirect_urls/{id}` endpoint
 
 ### SAML Connections
 
@@ -505,7 +519,7 @@ Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/SAML-Conn
 
 | Object           | Select | Insert | Update | Delete | Truncate |
 | ---------------- | :----: | :----: | :----: | :----: | :------: |
-| saml_connections |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| saml_connections |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
 
 #### Usage
 
@@ -523,13 +537,15 @@ create foreign table clerk.saml_connections (
 )
   server clerk_server
   options (
-    object 'saml_connections'
+    object 'saml_connections',
+    rowid_column 'id'
   );
 ```
 
 #### Notes
 
 - The `attrs` column contains additional attributes in JSON format
+- Single-item retrieval is supported via `WHERE id = 'xxx'` clause, which fetches from `GET /saml_connections/{saml_connection_id}` endpoint
 
 ### Users
 
@@ -541,7 +557,7 @@ Ref: [Clerk API docs](https://clerk.com/docs/reference/backend-api/tag/Users#ope
 
 | Object | Select | Insert | Update | Delete | Truncate |
 | ------ | :----: | :----: | :----: | :----: | :------: |
-| users  |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| users  |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |
 
 #### Usage
 
@@ -558,13 +574,15 @@ create foreign table clerk.users (
 )
   server clerk_server
   options (
-    object 'users'
+    object 'users',
+    rowid_column 'id'
   );
 ```
 
 #### Notes
 
 - The `attrs` column contains additional attributes in JSON format
+- Single-item retrieval is supported via `WHERE id = 'xxx'` clause, which fetches from `GET /users/{user_id}` endpoint
 
 ### User Billing Subscriptions
 
@@ -806,7 +824,41 @@ create foreign table clerk.billing_payment_attempts (
 
 ## Query Pushdown Support
 
-This FDW doesn't support query pushdown.
+### `where` clause pushdown
+
+This FDW supports `where id = 'xxx'` clause pushdown for the following objects:
+
+- users
+- organizations
+- jwt_templates
+- oauth_applications
+- saml_connections
+- redirect_urls
+
+For example:
+
+```sql
+-- Fetches from GET /users/user_xxx (single API call)
+select * from clerk.users where id = 'user_xxx';
+```
+
+### Parameterized endpoints
+
+Some endpoints require specific qualifiers in the WHERE clause:
+
+| Object | Required qualifier |
+|--------|-------------------|
+| user_billing_subscriptions | `user_id` |
+| organization_billing_subscriptions | `organization_id` |
+| billing_statement | `statement_id` |
+| billing_payment_attempts | `statement_id` |
+
+For example:
+
+```sql
+-- Fetches from GET /users/{user_id}/billing/subscription
+select * from clerk.user_billing_subscriptions where user_id = 'user_xxx';
+```
 
 ## Supported Data Types
 
@@ -826,7 +878,6 @@ The Clerk API uses JSON formatted data, please refer to [Clerk Backend API docs]
 This section describes important limitations and considerations when using this FDW:
 
 - Large result sets may experience slower performance due to full data transfer requirement
-- Query pushdown is not supported
 - Materialized views using these foreign tables may fail during logical backups
 
 ## Examples
@@ -850,11 +901,15 @@ create foreign table clerk.users (
 )
   server clerk_server
   options (
-    object 'users'
+    object 'users',
+    rowid_column 'id'
   );
 
--- query all users
+-- query all users (fetches from GET /users)
 select * from clerk.users;
+
+-- retrieve a specific user by ID (fetches from GET /users/{user_id})
+select * from clerk.users where id = 'user_xxx';
 ```
 
 `attrs` is a special column which stores all the object attributes in JSON format, you can extract any attributes needed from it. See more examples below.
@@ -868,6 +923,30 @@ select
   e->>'email_address' as email
 from clerk.users u
   cross join json_array_elements((attrs->'email_addresses')::json) e;
+```
+
+### Data Modify Examples
+
+Some tables support INSERT, UPDATE, and DELETE operations. Use the `attrs` JSONB column to provide the request body:
+
+```sql
+-- Create a new user
+INSERT INTO clerk.users (attrs) VALUES ('{"email_address": ["user@example.com"], "password": "secure123"}');
+
+-- Update a user (requires rowid_column 'id')
+UPDATE clerk.users SET attrs = '{"first_name": "John", "last_name": "Doe"}' WHERE id = 'user_xxx';
+
+-- Delete a user (requires rowid_column 'id')
+DELETE FROM clerk.users WHERE id = 'user_xxx';
+
+-- Create a new organization
+INSERT INTO clerk.organizations (attrs) VALUES ('{"name": "My Organization", "slug": "my-org"}');
+
+-- Update an organization
+UPDATE clerk.organizations SET attrs = '{"name": "Updated Name"}' WHERE id = 'org_xxx';
+
+-- Delete an organization
+DELETE FROM clerk.organizations WHERE id = 'org_xxx';
 ```
 
 ### Billing examples
@@ -893,4 +972,22 @@ SELECT * FROM clerk.user_billing_subscriptions WHERE user_id = 'user_xxx';
 
 -- Query subscription for a specific organization (requires WHERE clause)
 SELECT * FROM clerk.organization_billing_subscriptions WHERE organization_id = 'org_xxx';
+
+-- Retrieve a single user by ID (fetches from GET /users/{user_id})
+SELECT * FROM clerk.users WHERE id = 'user_xxx';
+
+-- Retrieve a single organization by ID (fetches from GET /organizations/{organization_id})
+SELECT * FROM clerk.organizations WHERE id = 'org_xxx';
+
+-- Retrieve a single JWT template by ID (fetches from GET /jwt_templates/{template_id})
+SELECT * FROM clerk.jwt_templates WHERE id = 'tmpl_xxx';
+
+-- Retrieve a single OAuth application by ID (fetches from GET /oauth_applications/{oauth_application_id})
+SELECT * FROM clerk.oauth_applications WHERE id = 'oauth_xxx';
+
+-- Retrieve a single SAML connection by ID (fetches from GET /saml_connections/{saml_connection_id})
+SELECT * FROM clerk.saml_connections WHERE id = 'samlconn_xxx';
+
+-- Retrieve a single redirect URL by ID (fetches from GET /redirect_urls/{id})
+SELECT * FROM clerk.redirect_urls WHERE id = 'redir_xxx';
 ```

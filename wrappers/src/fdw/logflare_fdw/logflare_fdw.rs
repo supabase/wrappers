@@ -4,12 +4,11 @@ use pgrx::{
     prelude::{AnyNumeric, Date, Timestamp, TimestampWithTimeZone},
 };
 use reqwest::{
-    self,
+    self, StatusCode, Url,
     header::{HeaderMap, HeaderName, HeaderValue},
-    StatusCode, Url,
 };
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
-use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
+use reqwest_retry::{RetryTransientMiddleware, policies::ExponentialBackoff};
 use serde_json::value::Value as JsonValue;
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -85,7 +84,7 @@ fn json_value_to_cell(tgt_col: &Column, v: &JsonValue) -> LogflareFdwResult<Cell
         _ => {
             return Err(LogflareFdwError::UnsupportedColumnType(
                 tgt_col.name.clone(),
-            ))
+            ));
         }
     }
     .ok_or(LogflareFdwError::ColumnTypeNotMatch(tgt_col.name.clone()))
@@ -134,7 +133,7 @@ impl LogflareFdw {
                     url.query_pairs_mut().append_pair(param_name, &value);
                 }
                 Value::Array(_) => {
-                    return Err(LogflareFdwError::NoArrayParameter(param_name.to_string()))
+                    return Err(LogflareFdwError::NoArrayParameter(param_name.to_string()));
                 }
             }
         }
@@ -331,10 +330,10 @@ impl ForeignDataWrapper<LogflareFdwError> for LogflareFdw {
         options: Vec<Option<String>>,
         catalog: Option<pg_sys::Oid>,
     ) -> LogflareFdwResult<()> {
-        if let Some(oid) = catalog {
-            if oid == FOREIGN_TABLE_RELATION_ID {
-                check_options_contain(&options, "endpoint")?;
-            }
+        if let Some(oid) = catalog
+            && oid == FOREIGN_TABLE_RELATION_ID
+        {
+            check_options_contain(&options, "endpoint")?;
         }
 
         Ok(())

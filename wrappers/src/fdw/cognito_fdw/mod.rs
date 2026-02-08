@@ -3,8 +3,8 @@ mod cognito_client;
 mod cognito_fdw;
 mod tests;
 
-use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::PgSqlErrorCode;
+use pgrx::pg_sys::panic::ErrorReport;
 use thiserror::Error;
 
 use supabase_wrappers::prelude::{sanitize_error_message, CreateRuntimeError, OptionsError};

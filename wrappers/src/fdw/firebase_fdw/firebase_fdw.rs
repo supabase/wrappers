@@ -1,9 +1,9 @@
 use crate::stats;
-use pgrx::{pg_sys, prelude::*, JsonB};
+use pgrx::{JsonB, pg_sys, prelude::*};
 use regex::Regex;
 use reqwest::{self, header};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
-use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
+use reqwest_retry::{RetryTransientMiddleware, policies::ExponentialBackoff};
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -77,7 +77,7 @@ fn body_to_rows(
                     _ => {
                         return Err(FirebaseFdwError::UnsupportedColumnType(format!(
                             "{col_name}({col_type})"
-                        )))
+                        )));
                     }
                 };
                 row.push(col_name, cell);
@@ -371,10 +371,10 @@ impl ForeignDataWrapper<FirebaseFdwError> for FirebaseFdw {
         options: Vec<Option<String>>,
         catalog: Option<pg_sys::Oid>,
     ) -> FirebaseFdwResult<()> {
-        if let Some(oid) = catalog {
-            if oid == FOREIGN_TABLE_RELATION_ID {
-                check_options_contain(&options, "object")?;
-            }
+        if let Some(oid) = catalog
+            && oid == FOREIGN_TABLE_RELATION_ID
+        {
+            check_options_contain(&options, "object")?;
         }
 
         Ok(())

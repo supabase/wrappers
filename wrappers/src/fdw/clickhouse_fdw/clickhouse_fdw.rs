@@ -2,17 +2,16 @@ use crate::stats;
 #[allow(deprecated)]
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
 use clickhouse_rs::{
-    types,
+    Pool, types,
     types::Block,
     types::SqlType,
     types::Value as ChValue,
     types::{i256, u256},
-    Pool,
 };
 use crossbeam::channel;
 use futures_util::stream::StreamExt;
 use pgrx::pg_sys;
-use pgrx::{datum::numeric::AnyNumeric, PgBuiltInOids};
+use pgrx::{PgBuiltInOids, datum::numeric::AnyNumeric};
 
 use regex::{Captures, Regex};
 use std::collections::HashMap;
@@ -63,7 +62,8 @@ fn convert_row_simple(
 
         let cell = if let Some(idx) = src_idx {
             let sql_type = src_row.sql_type(idx)?;
-            let cell = match sql_type {
+
+            match sql_type {
                 types::SqlType::Bool => {
                     let value = src_row.get::<bool, usize>(idx)?;
                     Some(Cell::Bool(value))
@@ -319,16 +319,15 @@ fn convert_row_simple(
                     _ => {
                         return Err(ClickHouseFdwError::UnsupportedColumnType(
                             sql_type.to_string().into(),
-                        ))
+                        ));
                     }
                 },
                 _ => {
                     return Err(ClickHouseFdwError::UnsupportedColumnType(
                         sql_type.to_string().into(),
-                    ))
+                    ));
                 }
-            };
-            cell
+            }
         } else {
             None
         };
@@ -364,7 +363,7 @@ where
 }
 
 #[wrappers_fdw(
-    version = "0.1.9",
+    version = "0.1.10",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/clickhouse_fdw",
     error_type = "ClickHouseFdwError"
@@ -386,6 +385,7 @@ pub(crate) struct ClickHouseFdw {
     tgt_cols: Vec<Column>,
     sql_query: String,
     params: Vec<Qual>,
+    stream_buffer_size: usize,
 }
 
 impl ClickHouseFdw {
@@ -428,7 +428,7 @@ impl ClickHouseFdw {
                             Value::Array(arr) => {
                                 return Err(ClickHouseFdwError::NoArrayParameter(format!(
                                     "{arr:?}"
-                                )))
+                                )));
                             }
                         }
                     }
@@ -547,6 +547,33 @@ impl ClickHouseFdw {
             Ok(())
         }
     }
+
+    // Helper method to set up the streaming mechanism
+    fn setup_streaming(&mut self) -> ClickHouseFdwResult<()> {
+        // Create bounded channel
+        let (tx, rx) =
+            channel::bounded::<ClickHouseFdwResult<Option<ConvertedRow>>>(self.stream_buffer_size);
+        self.row_receiver = Some(rx);
+
+        // Clone data needed by the async task
+        let conn_str = self.conn_str.clone();
+        let sql = self.sql_query.clone();
+        let tgt_cols = self.tgt_cols.clone();
+        let params = self.params.clone();
+        let tx_clone = tx.clone();
+
+        // Spawn the async streaming task
+        let streaming_task = self.rt.spawn(async move {
+            stream_data_to_channel(conn_str, sql, tgt_cols, params, tx_clone).await;
+        });
+
+        self.streaming_task = Some(streaming_task);
+
+        // Fetch the first row to initialize the scan
+        self.fetch_next_row()?;
+
+        Ok(())
+    }
 }
 
 impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
@@ -578,6 +605,7 @@ impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
             tgt_cols: Vec::new(),
             sql_query: String::new(),
             params: Vec::new(),
+            stream_buffer_size: 1024,
         })
     }
 
@@ -597,34 +625,14 @@ impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
         self.current_row_data = None;
 
         // get stream buffer size from options, with validation
-        let stream_buffer_size = options
+        self.stream_buffer_size = options
             .get("stream_buffer_size")
             .map(|s| s.parse::<usize>().map(|size| size.clamp(1, 100_000)))
             .transpose()
             .map_err(ClickHouseFdwError::ParseIntError)?
             .unwrap_or(1024);
 
-        // create bounded channel
-        let (tx, rx) =
-            channel::bounded::<ClickHouseFdwResult<Option<ConvertedRow>>>(stream_buffer_size);
-        self.row_receiver = Some(rx);
-
-        // clone data needed by the async task
-        let conn_str = self.conn_str.clone();
-        let sql = self.sql_query.clone();
-        let tgt_cols = self.tgt_cols.clone();
-        let params = self.params.clone();
-        let tx_clone = tx.clone();
-
-        // spawn the async streaming task
-        let streaming_task = self.rt.spawn(async move {
-            stream_data_to_channel(conn_str, sql, tgt_cols, params, tx_clone).await;
-        });
-
-        self.streaming_task = Some(streaming_task);
-
-        // fetch the first row to initialize the scan
-        self.fetch_next_row()?;
+        self.setup_streaming()?;
 
         Ok(())
     }
@@ -665,6 +673,24 @@ impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
         self.current_row_data = None;
         self.row_receiver = None;
         self.is_scan_complete = true;
+
+        Ok(())
+    }
+
+    fn re_scan(&mut self) -> ClickHouseFdwResult<()> {
+        // Abort existing streaming task if running
+        if let Some(task) = self.streaming_task.take() {
+            task.abort();
+        }
+
+        // Drop existing channel receiver
+        self.row_receiver = None;
+
+        // Reset state
+        self.is_scan_complete = false;
+        self.current_row_data = None;
+
+        self.setup_streaming()?;
 
         Ok(())
     }

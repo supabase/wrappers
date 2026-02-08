@@ -221,13 +221,17 @@ impl Guest for HubspotFdw {
         // get foreign server options
         let opts = ctx.get_options(&OptionsType::Server);
         this.base_url = opts.require_or("api_url", "https://api.hubapi.com/crm/v3");
-        let api_key = match opts.get("api_key") {
-            Some(key) => key,
-            None => {
-                let key_id = opts.require("api_key_id")?;
-                utils::get_vault_secret(&key_id).unwrap_or_default()
-            }
-        };
+        let api_key = opts
+            .get("api_key")
+            .or_else(|| {
+                opts.get("api_key_id")
+                    .and_then(|key_id| utils::get_vault_secret(&key_id))
+            })
+            .or_else(|| {
+                opts.get("api_key_name")
+                    .and_then(|key_name| utils::get_vault_secret_by_name(&key_name))
+            })
+            .ok_or("missing required option: 'api_key', 'api_key_id', or 'api_key_name'")?;
 
         // HubSpot API authentication
         // ref: https://developers.hubspot.com/docs/guides/apps/authentication/intro-to-auth
