@@ -7,7 +7,7 @@ use pgrx::PgSqlErrorCode;
 use pgrx::pg_sys::panic::ErrorReport;
 use thiserror::Error;
 
-use supabase_wrappers::prelude::{sanitize_error_message, CreateRuntimeError, OptionsError};
+use supabase_wrappers::prelude::{CreateRuntimeError, OptionsError, sanitize_error_message};
 
 #[derive(Error, Debug)]
 enum CognitoFdwError {

@@ -7,7 +7,7 @@ use pgrx::prelude::PgSqlErrorCode;
 use std::num::ParseIntError;
 use thiserror::Error;
 
-use supabase_wrappers::prelude::{sanitize_error_message, CreateRuntimeError, OptionsError};
+use supabase_wrappers::prelude::{CreateRuntimeError, OptionsError, sanitize_error_message};
 
 #[derive(Error, Debug)]
 enum FirebaseFdwError {

@@ -8,8 +8,8 @@ use supabase_wrappers::prelude::*;
 
 use crate::fdw::auth0_fdw::auth0_client::Auth0ClientError;
 use pgrx::PgSqlErrorCode;
-use supabase_wrappers::utils::sanitize_error_message;
 use pgrx::pg_sys::panic::ErrorReport;
+use supabase_wrappers::utils::sanitize_error_message;
 use thiserror::Error;
 
 #[wrappers_fdw(
