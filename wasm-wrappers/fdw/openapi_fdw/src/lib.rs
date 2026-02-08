@@ -365,26 +365,28 @@ impl OpenApiFdw {
 
         http::error_for_status(&resp).map_err(|err| format!("{}: {}", err, resp.body))?;
 
-        let resp_json: JsonValue = serde_json::from_str(&resp.body).map_err(|e| e.to_string())?;
+        let mut resp_json: JsonValue =
+            serde_json::from_str(&resp.body).map_err(|e| e.to_string())?;
 
         stats::inc_stats(FDW_NAME, stats::Metric::BytesIn, resp.body.len() as i64);
 
-        // Extract data from response using response_path or auto-detect
-        self.src_rows = self.extract_data(&resp_json)?;
-        self.src_idx = 0;
-
-        // Handle pagination
+        // Handle pagination before extracting data (borrows resp_json)
         self.handle_pagination(&resp_json);
+
+        // Extract data by taking ownership (avoids cloning the array)
+        self.src_rows = self.extract_data(&mut resp_json)?;
+        self.src_idx = 0;
 
         Ok(())
     }
 
-    /// Extract the data array from the response
-    fn extract_data(&self, resp: &JsonValue) -> Result<Vec<JsonValue>, FdwError> {
+    /// Extract the data array from the response, taking ownership to avoid cloning
+    fn extract_data(&self, resp: &mut JsonValue) -> Result<Vec<JsonValue>, FdwError> {
         // If response_path is specified, use it
         if let Some(ref path) = self.response_path {
             let data = resp
-                .pointer(path)
+                .pointer_mut(path)
+                .map(JsonValue::take)
                 .ok_or_else(|| format!("Response path '{path}' not found in response"))?;
 
             return Self::json_to_rows(data);
@@ -392,34 +394,30 @@ impl OpenApiFdw {
 
         // Direct array response
         if resp.is_array() {
-            return Self::json_to_rows(resp);
+            return Self::json_to_rows(resp.take());
         }
 
         // Try common wrapper patterns
-        if let Some(obj) = resp.as_object() {
-            for key in &["data", "results", "items", "records", "entries", "features"] {
-                if let Some(data) = obj.get(*key) {
-                    if data.is_array() || data.is_object() {
-                        return Self::json_to_rows(data);
-                    }
+        if resp.is_object() {
+            for key in ["data", "results", "items", "records", "entries", "features"] {
+                if resp.get(key).is_some_and(|d| d.is_array() || d.is_object()) {
+                    return Self::json_to_rows(resp[key].take());
                 }
             }
 
             // Single object response
-            return Ok(vec![resp.clone()]);
+            return Ok(vec![resp.take()]);
         }
 
         Err("Unable to extract data from response".to_string())
     }
 
-    /// Convert a JSON value to a vector of row objects
-    fn json_to_rows(data: &JsonValue) -> Result<Vec<JsonValue>, FdwError> {
-        if data.is_array() {
-            Ok(data.as_array().cloned().unwrap_or_default())
-        } else if data.is_object() {
-            Ok(vec![data.clone()])
-        } else {
-            Err("Response data is not an array or object".to_string())
+    /// Convert a JSON value to a vector of row objects (takes ownership, no cloning)
+    fn json_to_rows(data: JsonValue) -> Result<Vec<JsonValue>, FdwError> {
+        match data {
+            JsonValue::Array(arr) => Ok(arr),
+            data if data.is_object() => Ok(vec![data]),
+            _ => Err("Response data is not an array or object".to_string()),
         }
     }
 
@@ -884,3 +882,174 @@ impl Guest for OpenApiFdw {
 }
 
 bindings::export!(OpenApiFdw with_types_in bindings);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // --- json_to_rows tests ---
+
+    #[test]
+    fn test_json_to_rows_array() {
+        let data = serde_json::json!([
+            {"id": 1, "name": "alice"},
+            {"id": 2, "name": "bob"},
+            {"id": 3, "name": "charlie"}
+        ]);
+        let rows = OpenApiFdw::json_to_rows(data).unwrap();
+        assert_eq!(rows.len(), 3);
+        assert_eq!(rows[0]["id"], 1);
+        assert_eq!(rows[2]["name"], "charlie");
+    }
+
+    #[test]
+    fn test_json_to_rows_single_object() {
+        let data = serde_json::json!({"id": 1, "name": "alice"});
+        let rows = OpenApiFdw::json_to_rows(data).unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0]["name"], "alice");
+    }
+
+    #[test]
+    fn test_json_to_rows_empty_array() {
+        let data = serde_json::json!([]);
+        let rows = OpenApiFdw::json_to_rows(data).unwrap();
+        assert!(rows.is_empty());
+    }
+
+    #[test]
+    fn test_json_to_rows_rejects_primitive() {
+        let data = serde_json::json!("just a string");
+        assert!(OpenApiFdw::json_to_rows(data).is_err());
+    }
+
+    // --- extract_data tests ---
+
+    fn fdw_with_response_path(path: Option<&str>) -> OpenApiFdw {
+        OpenApiFdw {
+            response_path: path.map(String::from),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn test_extract_data_with_response_path() {
+        let fdw = fdw_with_response_path(Some("/features"));
+        let mut resp = serde_json::json!({
+            "type": "FeatureCollection",
+            "features": [
+                {"properties": {"id": "a"}},
+                {"properties": {"id": "b"}}
+            ]
+        });
+        let rows = fdw.extract_data(&mut resp).unwrap();
+        assert_eq!(rows.len(), 2);
+        // Original is taken, not cloned
+        assert!(resp["features"].is_null());
+    }
+
+    #[test]
+    fn test_extract_data_with_nested_response_path() {
+        let fdw = fdw_with_response_path(Some("/result/data"));
+        let mut resp = serde_json::json!({
+            "result": {
+                "data": [{"id": 1}, {"id": 2}, {"id": 3}]
+            }
+        });
+        let rows = fdw.extract_data(&mut resp).unwrap();
+        assert_eq!(rows.len(), 3);
+    }
+
+    #[test]
+    fn test_extract_data_invalid_response_path() {
+        let fdw = fdw_with_response_path(Some("/nonexistent"));
+        let mut resp = serde_json::json!({"data": [1, 2, 3]});
+        assert!(fdw.extract_data(&mut resp).is_err());
+    }
+
+    #[test]
+    fn test_extract_data_direct_array() {
+        let fdw = fdw_with_response_path(None);
+        let mut resp = serde_json::json!([{"id": 1}, {"id": 2}]);
+        let rows = fdw.extract_data(&mut resp).unwrap();
+        assert_eq!(rows.len(), 2);
+    }
+
+    #[test]
+    fn test_extract_data_auto_detect_data_key() {
+        let fdw = fdw_with_response_path(None);
+        let mut resp = serde_json::json!({
+            "data": [{"id": 1}, {"id": 2}],
+            "meta": {"total": 2}
+        });
+        let rows = fdw.extract_data(&mut resp).unwrap();
+        assert_eq!(rows.len(), 2);
+        assert!(resp["data"].is_null());
+    }
+
+    #[test]
+    fn test_extract_data_auto_detect_results_key() {
+        let fdw = fdw_with_response_path(None);
+        let mut resp = serde_json::json!({
+            "results": [{"id": "x"}],
+            "count": 1
+        });
+        let rows = fdw.extract_data(&mut resp).unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0]["id"], "x");
+    }
+
+    #[test]
+    fn test_extract_data_auto_detect_features_key() {
+        let fdw = fdw_with_response_path(None);
+        let mut resp = serde_json::json!({
+            "type": "FeatureCollection",
+            "features": [
+                {"type": "Feature", "properties": {"name": "A"}},
+                {"type": "Feature", "properties": {"name": "B"}}
+            ]
+        });
+        let rows = fdw.extract_data(&mut resp).unwrap();
+        assert_eq!(rows.len(), 2);
+    }
+
+    #[test]
+    fn test_extract_data_single_object_fallback() {
+        let fdw = fdw_with_response_path(None);
+        let mut resp = serde_json::json!({
+            "id": "abc",
+            "name": "singleton"
+        });
+        let rows = fdw.extract_data(&mut resp).unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0]["id"], "abc");
+    }
+
+    #[test]
+    fn test_extract_data_ownership_no_clone() {
+        // Verify that extract_data takes ownership rather than cloning:
+        // after extraction, the original data should be replaced with null
+        let fdw = fdw_with_response_path(Some("/items"));
+        let mut resp = serde_json::json!({
+            "items": [
+                {"id": 1, "payload": "x".repeat(1000)},
+                {"id": 2, "payload": "y".repeat(1000)}
+            ]
+        });
+        let rows = fdw.extract_data(&mut resp).unwrap();
+        assert_eq!(rows.len(), 2);
+        assert_eq!(rows[0]["payload"].as_str().unwrap().len(), 1000);
+        // The original value was taken, not cloned
+        assert!(resp.pointer("/items").unwrap().is_null());
+    }
+
+    // --- to_camel_case tests ---
+
+    #[test]
+    fn test_to_camel_case() {
+        assert_eq!(to_camel_case("snake_case"), "snakeCase");
+        assert_eq!(to_camel_case("already"), "already");
+        assert_eq!(to_camel_case("multi_word_name"), "multiWordName");
+        assert_eq!(to_camel_case(""), "");
+    }
+}
