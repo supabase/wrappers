@@ -17,7 +17,7 @@ This wrapper allows you to query any REST API endpoint as a PostgreSQL foreign t
 
 | Version | Wasm Package URL | Checksum | Required Wrappers Version |
 | ------- | ---------------- | -------- | ------------------------- |
-| 0.1.0   | `file:///path/to/openapi_fdw.wasm` | TBD | >=0.5.0 |
+| 0.1.2   | `https://github.com/codybrom/openapi-fdw/releases/download/v0.1.2/openapi_fdw.wasm` | `fcdfff5791eb208b3a2d93985ff67b98891b9748128f02c6cc8ad5e9028d762c` | >=0.5.0 |
 
 ## Preparation
 
@@ -236,6 +236,8 @@ Other WHERE clause filters are passed as query parameters:
 -- Generates GET /users?status=active
 select * from api.users where status = 'active';
 ```
+
+Columns used as query or path parameters always return the value from the WHERE clause, even if the API response contains the same field with different casing. This ensures PostgreSQL's post-filter always passes.
 
 ## Pagination
 

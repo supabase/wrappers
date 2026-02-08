@@ -290,6 +290,9 @@ impl OpenApiFdw {
             }
 
             if let Some(value) = Self::qual_value_to_string(qual) {
+                // Store query param for injection back into rows
+                // (so PostgreSQL's WHERE filter passes even if the API doesn't echo it back)
+                extracted_params.insert(field_lower, value.clone());
                 params.push(format!(
                     "{}={}",
                     urlencoding::encode(&qual.field()),
@@ -505,6 +508,13 @@ impl OpenApiFdw {
             return Ok(Some(Cell::Json(src_row.to_string())));
         }
 
+        // If this column was used as a query/path parameter, inject the WHERE clause
+        // value directly. This ensures PostgreSQL's post-filter passes even when the
+        // API returns a different case (e.g. API accepts "actual" but returns "Actual").
+        if let Some(value) = self.path_params.get(&tgt_col_name.to_lowercase()) {
+            return Ok(Some(Cell::String(value.clone())));
+        }
+
         // Handle column name matching with multiple strategies:
         // 1. Exact match
         // 2. snake_case to camelCase conversion
@@ -526,14 +536,7 @@ impl OpenApiFdw {
 
         let src = match src {
             Some(v) if !v.is_null() => v,
-            _ => {
-                // If not found in JSON, check if this column is a path parameter
-                // (inject value from WHERE clause so PostgreSQL filter passes)
-                if let Some(value) = self.path_params.get(&tgt_col_name.to_lowercase()) {
-                    return Ok(Some(Cell::String(value.clone())));
-                }
-                return Ok(None);
-            }
+            _ => return Ok(None),
         };
 
         // Type conversion based on target column type
