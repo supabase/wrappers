@@ -17,6 +17,204 @@ use thiserror::Error;
 use tokio::runtime::{Builder, Runtime};
 use uuid::Uuid;
 
+// ============================================================================
+// Credential Masking - Security utility to prevent credential leakage
+// ============================================================================
+
+/// List of option names that are considered sensitive and should be masked in error messages.
+/// This list covers common credential patterns across various cloud providers and services.
+const SENSITIVE_OPTION_NAMES: &[&str] = &[
+    // Generic credential patterns
+    "password",
+    "secret",
+    "token",
+    "api_key",
+    "apikey",
+    "api-key",
+    "auth_token",
+    "access_token",
+    "refresh_token",
+    "private_key",
+    "privatekey",
+    "credentials",
+    "credential",
+    // AWS-specific
+    "aws_secret_access_key",
+    "secret_access_key",
+    "aws_session_token",
+    "session_token",
+    // GCP-specific
+    "service_account_key",
+    "sa_key",
+    // Azure-specific
+    "client_secret",
+    "storage_key",
+    "connection_string",
+    // Database-specific
+    "conn_string",
+    "connection_str",
+    "db_password",
+    // Service-specific
+    "stripe_api_key",
+    "firebase_credentials",
+    "motherduck_token",
+    "jwt_secret",
+    "encryption_key",
+    "signing_key",
+];
+
+/// Masks a credential value for safe display in error messages.
+/// Shows only the first 4 characters followed by asterisks if the value is long enough,
+/// otherwise masks the entire value.
+///
+/// # Examples
+/// ```
+/// # use supabase_wrappers::utils::mask_credential_value;
+/// assert_eq!(mask_credential_value("wJalrXUtnFEMI/EXAMPLEKEY"), "wJal***");
+/// assert_eq!(mask_credential_value("abc"), "***");
+/// assert_eq!(mask_credential_value(""), "***");
+/// ```
+#[inline]
+pub fn mask_credential_value(value: &str) -> String {
+    if let Some((byte_idx, _)) = value.char_indices().nth(4) {
+        format!("{}***", &value[..byte_idx])
+    } else {
+        "***".to_string()
+    }
+}
+
+/// Checks if an option name is considered sensitive (contains credentials).
+///
+/// # Examples
+/// ```
+/// # use supabase_wrappers::utils::is_sensitive_option;
+/// assert!(is_sensitive_option("aws_secret_access_key"));
+/// assert!(is_sensitive_option("API_KEY"));  // Case insensitive
+/// assert!(!is_sensitive_option("region"));
+/// ```
+#[inline]
+pub fn is_sensitive_option(option_name: &str) -> bool {
+    let lower = option_name.to_lowercase();
+    SENSITIVE_OPTION_NAMES.iter().any(|&s| lower.contains(s))
+}
+
+/// Masks credential values in an error message string.
+/// Scans for patterns like `key = 'value'` or `key: value` and masks sensitive values.
+///
+/// This function handles multiple common formats:
+/// - SQL-style: `secret = 'value'`
+/// - JSON-style: `"secret": "value"`
+/// - URL parameters: `secret=value`
+///
+/// # Examples
+/// ```
+/// # use supabase_wrappers::utils::mask_credentials_in_message;
+/// let msg = "Error: aws_secret_access_key = 'wJalrXUtnFEMI/EXAMPLEKEY' is invalid";
+/// let masked = mask_credentials_in_message(msg);
+/// assert!(!masked.contains("wJalrXUtnFEMI"));
+/// assert!(masked.contains("wJal***"));
+/// ```
+pub fn mask_credentials_in_message(message: &str) -> String {
+    let mut result = message.to_string();
+
+    for sensitive_name in SENSITIVE_OPTION_NAMES {
+        let lower_name = sensitive_name.to_lowercase();
+        let name_len = lower_name.len();
+
+        // Track search position to avoid infinite loops
+        let mut search_start = 0;
+
+        // Use a while loop to find and mask ALL occurrences of this sensitive name
+        loop {
+            let lower_result = result.to_lowercase();
+            let Some(relative_pos) = lower_result[search_start..].find(&lower_name) else {
+                break;
+            };
+
+            let abs_pos = search_start + relative_pos;
+            let after_name = &result[abs_pos + name_len..];
+
+            // Find the value after = or :
+            let Some(eq_pos) = after_name.find('=').or_else(|| after_name.find(':')) else {
+                // No '=' or ':' found - skip past this occurrence to avoid infinite loop
+                search_start = abs_pos + name_len;
+                continue;
+            };
+
+            let eq_abs = abs_pos + name_len + eq_pos;
+            let after_eq = &result[eq_abs + 1..];
+            let after_eq_trim = after_eq.trim_start();
+            let trim_offset = after_eq.len() - after_eq_trim.len();
+            let value_start = eq_abs + 1 + trim_offset;
+
+            // Extract the value (handle quoted or unquoted)
+            let (value_start, value_end) = if let Some(stripped) = after_eq_trim.strip_prefix('\'')
+            {
+                // Single-quoted value
+                match stripped.find('\'') {
+                    Some(end) => (value_start + 1, value_start + 1 + end),
+                    None => {
+                        // Unclosed quote - skip past this occurrence
+                        search_start = abs_pos + name_len;
+                        continue;
+                    }
+                }
+            } else if let Some(stripped) = after_eq_trim.strip_prefix('"') {
+                // Double-quoted value
+                match stripped.find('"') {
+                    Some(end) => (value_start + 1, value_start + 1 + end),
+                    None => {
+                        // Unclosed quote - skip past this occurrence
+                        search_start = abs_pos + name_len;
+                        continue;
+                    }
+                }
+            } else {
+                // Unquoted value - take until whitespace or delimiter
+                let end = after_eq_trim
+                    .find(|c: char| c.is_whitespace() || ",;)&#".contains(c))
+                    .unwrap_or(after_eq_trim.len());
+                (value_start, value_start + end)
+            };
+
+            if value_end <= value_start {
+                // Empty value - skip past this occurrence
+                search_start = abs_pos + name_len;
+                continue;
+            }
+
+            let masked = mask_credential_value(&result[value_start..value_end]);
+            result = format!(
+                "{}{}{}",
+                &result[..value_start],
+                masked,
+                &result[value_end..]
+            );
+
+            // Continue searching from after where we made the replacement
+            // The masked value is shorter, so we need to account for that
+            search_start = abs_pos + name_len;
+        }
+    }
+
+    result
+}
+
+/// Creates a sanitized error message by masking any credential values.
+/// Use this function when creating error messages that might contain server options.
+///
+/// # Examples
+/// ```
+/// # use supabase_wrappers::utils::sanitize_error_message;
+/// let error = "Connection failed with password='secret123' for user 'admin'";
+/// let safe_error = sanitize_error_message(error);
+/// assert!(!safe_error.contains("secret123"));
+/// ```
+#[inline]
+pub fn sanitize_error_message(message: &str) -> String {
+    mask_credentials_in_message(message)
+}
+
 /// Log debug message to Postgres log.
 ///
 /// A helper function to emit `DEBUG1` level message to Postgres's log.
@@ -353,5 +551,211 @@ impl<T, E: Into<ErrorReport>> ReportableError for Result<T, E> {
 
     fn report_unwrap(self) -> Self::Output {
         self.map_err(|e| e.into()).unwrap_or_report()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ==========================================================================
+    // Tests for mask_credential_value
+    // ==========================================================================
+
+    #[test]
+    fn test_mask_credential_value_long_value() {
+        assert_eq!(mask_credential_value("wJalrXUtnFEMI/EXAMPLEKEY"), "wJal***");
+        assert_eq!(mask_credential_value("12345678"), "1234***");
+        assert_eq!(mask_credential_value("abcde"), "abcd***");
+    }
+
+    #[test]
+    fn test_mask_credential_value_short_value() {
+        assert_eq!(mask_credential_value("abc"), "***");
+        assert_eq!(mask_credential_value("abcd"), "***");
+        assert_eq!(mask_credential_value("a"), "***");
+        assert_eq!(mask_credential_value(""), "***");
+    }
+
+    #[test]
+    fn test_mask_credential_value_utf8() {
+        assert_eq!(mask_credential_value("pässwörd"), "päss***");
+        assert_eq!(mask_credential_value("短い"), "***");
+    }
+
+    // ==========================================================================
+    // Tests for is_sensitive_option
+    // ==========================================================================
+
+    #[test]
+    fn test_is_sensitive_option_generic_patterns() {
+        assert!(is_sensitive_option("password"));
+        assert!(is_sensitive_option("secret"));
+        assert!(is_sensitive_option("token"));
+        assert!(is_sensitive_option("api_key"));
+        assert!(is_sensitive_option("credentials"));
+    }
+
+    #[test]
+    fn test_is_sensitive_option_aws_patterns() {
+        assert!(is_sensitive_option("aws_secret_access_key"));
+        assert!(is_sensitive_option("secret_access_key"));
+        assert!(is_sensitive_option("aws_session_token"));
+    }
+
+    #[test]
+    fn test_is_sensitive_option_case_insensitive() {
+        assert!(is_sensitive_option("PASSWORD"));
+        assert!(is_sensitive_option("API_KEY"));
+        assert!(is_sensitive_option("AWS_SECRET_ACCESS_KEY"));
+        assert!(is_sensitive_option("Token"));
+    }
+
+    #[test]
+    fn test_is_sensitive_option_non_sensitive() {
+        assert!(!is_sensitive_option("region"));
+        assert!(!is_sensitive_option("bucket"));
+        assert!(!is_sensitive_option("endpoint_url"));
+        assert!(!is_sensitive_option("table_name"));
+    }
+
+    #[test]
+    fn test_is_sensitive_option_partial_match() {
+        // Should match if the option name contains a sensitive pattern
+        assert!(is_sensitive_option("my_api_key_here"));
+        assert!(is_sensitive_option("stripe_api_key"));
+    }
+
+    // ==========================================================================
+    // Tests for mask_credentials_in_message
+    // ==========================================================================
+
+    #[test]
+    fn test_mask_credentials_sql_style_single_quotes() {
+        let msg = "Error: aws_secret_access_key = 'wJalrXUtnFEMI/EXAMPLEKEY' is invalid";
+        let masked = mask_credentials_in_message(msg);
+        assert!(!masked.contains("wJalrXUtnFEMI"));
+        assert!(masked.contains("wJal***"));
+    }
+
+    #[test]
+    fn test_mask_credentials_sql_style_double_quotes() {
+        let msg = r#"Error: password = "mysecretpassword" for user"#;
+        let masked = mask_credentials_in_message(msg);
+        assert!(!masked.contains("mysecretpassword"));
+        assert!(masked.contains("myse***"));
+    }
+
+    #[test]
+    fn test_mask_credentials_json_style() {
+        let msg = r#"{"api_key": "sk_live_12345678abcd"}"#;
+        let masked = mask_credentials_in_message(msg);
+        assert!(!masked.contains("sk_live_12345678abcd"));
+        assert!(masked.contains("sk_l***"));
+    }
+
+    #[test]
+    fn test_mask_credentials_unquoted() {
+        let msg = "Error: token=abc123xyz is expired";
+        let masked = mask_credentials_in_message(msg);
+        assert!(!masked.contains("abc123xyz"));
+        assert!(masked.contains("abc1***"));
+    }
+
+    #[test]
+    fn test_mask_credentials_url_params() {
+        let msg = "Error: api_key=sk_live_123&region=us-west-2";
+        let masked = mask_credentials_in_message(msg);
+        assert!(!masked.contains("sk_live_123"));
+        assert!(masked.contains("sk_l***"));
+        assert!(masked.contains("&region=us-west-2"));
+    }
+
+    #[test]
+    fn test_mask_credentials_url_with_fragment() {
+        let msg = "Error: api_key=secret_token_123#section";
+        let masked = mask_credentials_in_message(msg);
+        assert!(!masked.contains("secret_token_123"));
+        assert!(masked.contains("secr***"));
+        assert!(masked.contains("#section"));
+    }
+
+    #[test]
+    fn test_mask_credentials_multiple_occurrences() {
+        let msg = "password='first123' and api_key='second456'";
+        let masked = mask_credentials_in_message(msg);
+        assert!(!masked.contains("first123"));
+        assert!(!masked.contains("second456"));
+        assert!(masked.contains("firs***"));
+        assert!(masked.contains("seco***"));
+    }
+
+    #[test]
+    fn test_mask_credentials_no_sensitive_data() {
+        let msg = "Error: region = 'us-west-2' is not available";
+        let masked = mask_credentials_in_message(msg);
+        assert_eq!(masked, msg);
+    }
+
+    #[test]
+    fn test_mask_credentials_case_insensitive() {
+        let msg = "Error: PASSWORD = 'secret123' failed";
+        let masked = mask_credentials_in_message(msg);
+        assert!(!masked.contains("secret123"));
+        assert!(masked.contains("secr***"));
+    }
+
+    #[test]
+    fn test_mask_credentials_empty_value() {
+        let msg = "Error: password = '' is empty";
+        let masked = mask_credentials_in_message(msg);
+        // Empty value should not be replaced
+        assert!(masked.contains("''"));
+    }
+
+    #[test]
+    fn test_mask_credentials_no_value_after_key() {
+        let msg = "password option is missing";
+        let masked = mask_credentials_in_message(msg);
+        // No '=' or ':' after sensitive name, should not change
+        assert_eq!(masked, msg);
+    }
+
+    #[test]
+    fn test_mask_credentials_unclosed_quote() {
+        let msg = "Error: password = 'unclosed";
+        let masked = mask_credentials_in_message(msg);
+        // Should not panic, should handle gracefully
+        assert!(masked.contains("password"));
+    }
+
+    #[test]
+    fn test_mask_credentials_service_specific() {
+        let msg = "stripe_api_key = 'sk_test_1234567890abcdef'";
+        let masked = mask_credentials_in_message(msg);
+        assert!(!masked.contains("sk_test_1234567890abcdef"));
+        assert!(masked.contains("sk_t***"));
+    }
+
+    // ==========================================================================
+    // Tests for sanitize_error_message
+    // ==========================================================================
+
+    #[test]
+    fn test_sanitize_error_message() {
+        let error = "Connection failed with password='secret123' for user 'admin'";
+        let safe_error = sanitize_error_message(error);
+        assert!(!safe_error.contains("secret123"));
+        assert!(safe_error.contains("secr***"));
+        assert!(safe_error.contains("admin")); // non-sensitive data preserved
+    }
+
+    #[test]
+    fn test_sanitize_error_message_complex() {
+        let error =
+            "Failed: aws_secret_access_key='AKIAIOSFODNN7EXAMPLE', api_key=\"test_key_123\"";
+        let safe_error = sanitize_error_message(error);
+        assert!(!safe_error.contains("AKIAIOSFODNN7EXAMPLE"));
+        assert!(!safe_error.contains("test_key_123"));
     }
 }

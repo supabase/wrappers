@@ -7,7 +7,7 @@ use pgrx::prelude::PgSqlErrorCode;
 use std::num::ParseIntError;
 use thiserror::Error;
 
-use supabase_wrappers::prelude::{CreateRuntimeError, OptionsError};
+use supabase_wrappers::prelude::{CreateRuntimeError, OptionsError, sanitize_error_message};
 
 #[derive(Error, Debug)]
 enum FirebaseFdwError {
@@ -52,11 +52,17 @@ enum FirebaseFdwError {
 
     #[error("parse JSON response failed: {0}")]
     JsonParseError(#[from] serde_json::Error),
+
+    #[error("response too large ({0} bytes). Maximum allowed: {1} bytes")]
+    ResponseTooLarge(usize, usize),
 }
 
 impl From<FirebaseFdwError> for ErrorReport {
     fn from(value: FirebaseFdwError) -> Self {
-        ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, format!("{value}"), "")
+        // SECURITY: Sanitize error messages to prevent credential leakage
+        // Firebase errors may contain service account keys or OAuth tokens
+        let error_message = sanitize_error_message(&format!("{value}"));
+        ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, error_message, "")
     }
 }
 

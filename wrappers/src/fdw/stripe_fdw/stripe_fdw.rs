@@ -10,6 +10,9 @@ use supabase_wrappers::prelude::*;
 
 use super::{StripeFdwError, StripeFdwResult};
 
+/// Default maximum response size in bytes (10 MB) to prevent DoS via large responses
+const DEFAULT_MAX_RESPONSE_SIZE: usize = 10 * 1024 * 1024;
+
 // config list for all the supported foreign tables
 // an example:
 // {
@@ -678,6 +681,7 @@ pub(crate) struct StripeFdw {
     rowid_col: String,
     iter_idx: usize,
     table_config: TableConfig,
+    max_response_size: usize,
 }
 
 impl StripeFdw {
@@ -754,6 +758,21 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
         }
         .transpose()?;
 
+        // Security: Configure max response size (default 10 MB)
+        let max_response_size = server
+            .options
+            .get("max_response_size")
+            .map(|s| {
+                s.parse::<usize>().map_err(|_| {
+                    StripeFdwError::OptionsError(OptionsError::OptionParsingError {
+                        option_name: "max_response_size".to_string(),
+                        type_name: "usize",
+                    })
+                })
+            })
+            .transpose()?
+            .unwrap_or(DEFAULT_MAX_RESPONSE_SIZE);
+
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
 
         Ok(StripeFdw {
@@ -765,6 +784,7 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
             rowid_col: String::default(),
             iter_idx: 0,
             table_config: create_table_config(),
+            max_response_size,
         })
     }
 
@@ -825,6 +845,14 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
                 })?;
                 if body.is_empty() {
                     break;
+                }
+
+                // Security: Check response size to prevent DoS
+                if body.len() > self.max_response_size {
+                    return Err(StripeFdwError::ResponseTooLarge(
+                        body.len(),
+                        self.max_response_size,
+                    ));
                 }
 
                 // convert response body to rows
@@ -913,6 +941,14 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
                         .map_err(reqwest_middleware::Error::from)
                 })?;
 
+            // Security: Check response size to prevent DoS
+            if body.len() > self.max_response_size {
+                return Err(StripeFdwError::ResponseTooLarge(
+                    body.len(),
+                    self.max_response_size,
+                ));
+            }
+
             let json: JsonValue = serde_json::from_str(&body)?;
             if let Some(id) = json.get("id").and_then(|v| v.as_str()) {
                 report_info(&format!("inserted {} {}", self.obj, id));
@@ -954,6 +990,14 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
                                 .map_err(reqwest_middleware::Error::from)
                         })?;
 
+                    // Security: Check response size to prevent DoS
+                    if body.len() > self.max_response_size {
+                        return Err(StripeFdwError::ResponseTooLarge(
+                            body.len(),
+                            self.max_response_size,
+                        ));
+                    }
+
                     let json: JsonValue = serde_json::from_str(&body)?;
                     if let Some(id) = json.get("id").and_then(|v| v.as_str()) {
                         report_info(&format!("updated {} {}", self.obj, id));
@@ -993,6 +1037,14 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
                                 })
                                 .map_err(reqwest_middleware::Error::from)
                         })?;
+
+                    // Security: Check response size to prevent DoS
+                    if body.len() > self.max_response_size {
+                        return Err(StripeFdwError::ResponseTooLarge(
+                            body.len(),
+                            self.max_response_size,
+                        ));
+                    }
 
                     let json: JsonValue = serde_json::from_str(&body)?;
                     if let Some(id) = json.get("id").and_then(|v| v.as_str()) {

@@ -17,6 +17,9 @@ use supabase_wrappers::prelude::*;
 
 use super::{LogflareFdwError, LogflareFdwResult};
 
+/// Default maximum response size in bytes (10 MB) to prevent DoS via large responses
+const DEFAULT_MAX_RESPONSE_SIZE: usize = 10 * 1024 * 1024;
+
 fn create_client(api_key: &str) -> LogflareFdwResult<ClientWithMiddleware> {
     let mut headers = HeaderMap::new();
     let header_name = HeaderName::from_static("x-api-key");
@@ -99,6 +102,7 @@ pub(crate) struct LogflareFdw {
     client: Option<ClientWithMiddleware>,
     scan_result: Vec<Row>,
     params: Vec<Qual>,
+    max_response_size: usize,
 }
 
 impl LogflareFdw {
@@ -208,6 +212,21 @@ impl ForeignDataWrapper<LogflareFdwError> for LogflareFdw {
         }
         .transpose()?;
 
+        // Security: Configure max response size (default 10 MB)
+        let max_response_size = server
+            .options
+            .get("max_response_size")
+            .map(|s| {
+                s.parse::<usize>().map_err(|_| {
+                    LogflareFdwError::OptionsError(OptionsError::OptionParsingError {
+                        option_name: "max_response_size".to_string(),
+                        type_name: "usize",
+                    })
+                })
+            })
+            .transpose()?
+            .unwrap_or(DEFAULT_MAX_RESPONSE_SIZE);
+
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
 
         Ok(LogflareFdw {
@@ -216,6 +235,7 @@ impl ForeignDataWrapper<LogflareFdwError> for LogflareFdw {
             client,
             scan_result: Vec::default(),
             params: Vec::default(),
+            max_response_size,
         })
     }
 
@@ -245,7 +265,7 @@ impl ForeignDataWrapper<LogflareFdwError> for LogflareFdw {
             let url = url.unwrap();
 
             // make api call
-            let body: JsonValue = self.rt.block_on(client.get(url).send()).and_then(|resp| {
+            let body_text = self.rt.block_on(client.get(url).send()).and_then(|resp| {
                 stats::inc_stats(
                     Self::FDW_NAME,
                     stats::Metric::BytesIn,
@@ -255,13 +275,26 @@ impl ForeignDataWrapper<LogflareFdwError> for LogflareFdw {
                 if resp.status() == StatusCode::NOT_FOUND {
                     // if it is 404 error, we should treat it as an empty
                     // result rather than a request error
-                    return Ok(JsonValue::Null);
+                    return Ok(String::new());
                 }
 
                 resp.error_for_status()
-                    .and_then(|resp| self.rt.block_on(resp.json()))
+                    .and_then(|resp| self.rt.block_on(resp.text()))
                     .map_err(reqwest_middleware::Error::from)
             })?;
+            if body_text.is_empty() {
+                return Ok(());
+            }
+
+            // Security: Check response size to prevent DoS
+            if body_text.len() > self.max_response_size {
+                return Err(LogflareFdwError::ResponseTooLarge(
+                    body_text.len(),
+                    self.max_response_size,
+                ));
+            }
+
+            let body: JsonValue = serde_json::from_str(&body_text)?;
             if body.is_null() {
                 return Ok(());
             }

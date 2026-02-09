@@ -7,7 +7,7 @@ use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::PgSqlErrorCode;
 use thiserror::Error;
 
-use supabase_wrappers::prelude::{CreateRuntimeError, OptionsError};
+use supabase_wrappers::prelude::{CreateRuntimeError, OptionsError, sanitize_error_message};
 
 #[derive(Error, Debug)]
 enum LogflareFdwError {
@@ -46,11 +46,17 @@ enum LogflareFdwError {
 
     #[error("parse JSON response failed: {0}")]
     JsonParseError(#[from] serde_json::Error),
+
+    #[error("response too large ({0} bytes). Maximum allowed: {1} bytes")]
+    ResponseTooLarge(usize, usize),
 }
 
 impl From<LogflareFdwError> for ErrorReport {
     fn from(value: LogflareFdwError) -> Self {
-        ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, format!("{value}"), "")
+        // SECURITY: Sanitize error messages to prevent credential leakage
+        // Logflare errors may contain API keys in headers or request details
+        let error_message = sanitize_error_message(&format!("{value}"));
+        ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, error_message, "")
     }
 }
 

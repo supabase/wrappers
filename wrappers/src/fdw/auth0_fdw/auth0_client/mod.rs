@@ -7,6 +7,7 @@ use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::RetryTransientMiddleware;
 use reqwest_retry::policies::ExponentialBackoff;
 use supabase_wrappers::prelude::*;
+use supabase_wrappers::utils::sanitize_error_message;
 use thiserror::Error;
 use url::ParseError;
 
@@ -99,12 +100,15 @@ impl From<Auth0ClientError> for ErrorReport {
     fn from(value: Auth0ClientError) -> Self {
         match value {
             Auth0ClientError::CreateRuntimeError(e) => e.into(),
+            // SECURITY: Sanitize error messages to prevent credential leakage
+            // HTTP errors may contain Authorization headers with Bearer tokens
             Auth0ClientError::UrlParseError(_)
             | Auth0ClientError::InvalidApiKeyHeader
             | Auth0ClientError::ReqwestError(_)
             | Auth0ClientError::ReqwestMiddlewareError(_)
             | Auth0ClientError::SerdeError(_) => {
-                ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, format!("{value}"), "")
+                let error_message = sanitize_error_message(&format!("{value}"));
+                ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, error_message, "")
             }
         }
     }

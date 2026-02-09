@@ -11,6 +11,9 @@ use supabase_wrappers::prelude::*;
 use super::result::AirtableResponse;
 use super::{AirtableFdwError, AirtableFdwResult};
 
+/// Default maximum response size in bytes (10 MB) to prevent DoS via large responses
+const DEFAULT_MAX_RESPONSE_SIZE: usize = 10 * 1024 * 1024;
+
 fn create_client(api_key: &str) -> Result<ClientWithMiddleware, AirtableFdwError> {
     let mut headers = header::HeaderMap::new();
     let value = format!("Bearer {api_key}");
@@ -38,6 +41,7 @@ pub(crate) struct AirtableFdw {
     client: Option<ClientWithMiddleware>,
     base_url: String,
     scan_result: Option<Vec<Row>>,
+    max_response_size: usize,
 }
 
 impl AirtableFdw {
@@ -109,6 +113,21 @@ impl ForeignDataWrapper<AirtableFdwError> for AirtableFdw {
             }
         };
 
+        // Security: Configure max response size (default 10 MB)
+        let max_response_size = server
+            .options
+            .get("max_response_size")
+            .map(|s| {
+                s.parse::<usize>().map_err(|_| {
+                    AirtableFdwError::OptionsError(OptionsError::OptionParsingError {
+                        option_name: "max_response_size".to_string(),
+                        type_name: "usize",
+                    })
+                })
+            })
+            .transpose()?
+            .unwrap_or(DEFAULT_MAX_RESPONSE_SIZE);
+
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
 
         Ok(Self {
@@ -116,6 +135,7 @@ impl ForeignDataWrapper<AirtableFdwError> for AirtableFdw {
             client,
             base_url,
             scan_result: None,
+            max_response_size,
         })
     }
 
@@ -147,6 +167,14 @@ impl ForeignDataWrapper<AirtableFdwError> for AirtableFdw {
                         .and_then(|resp| self.rt.block_on(resp.text()))
                         .map_err(reqwest_middleware::Error::from)
                 })?;
+
+                // Security: Check response size to prevent DoS
+                if body.len() > self.max_response_size {
+                    return Err(AirtableFdwError::ResponseTooLarge(
+                        body.len(),
+                        self.max_response_size,
+                    ));
+                }
 
                 let (new_rows, new_offset) = self.parse_resp(&body, columns)?;
                 rows.extend(new_rows);
