@@ -4,7 +4,8 @@ from urllib.parse import urlparse, parse_qs
 
 hostName = "0.0.0.0"
 serverPort = 8096
-test_table = 'table-foo'
+test_table = "table-foo"
+
 
 # mock API server for WASM FDW testing
 #
@@ -13,9 +14,8 @@ test_table = 'table-foo'
 class MockServer(BaseHTTPRequestHandler):
     def get_fdw_req_path(self):
         fdw = self.path.split("/")[1]
-        req_path = self.path[self.path.find("/", 1):]
+        req_path = self.path[self.path.find("/", 1) :]
         return (fdw, req_path)
-
 
     def response(self, body):
         self.send_response(200)
@@ -23,13 +23,12 @@ class MockServer(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(bytes(body, "utf-8"))
 
-
     def do_GET(self):
         (fdw, req_path) = self.get_fdw_req_path()
         print(fdw, req_path)
 
         if fdw == "paddle":
-            body = '''
+            body = """
 {
     "data": [{
         "id": "ctm_01hytsesv6f8wqzw1eyctqw6qm",
@@ -66,9 +65,9 @@ class MockServer(BaseHTTPRequestHandler):
         }
     }
 }
-            '''
+            """
         elif fdw == "notion":
-            body = '''
+            body = """
 {
   "object": "page",
   "id": "5a67c86f-d0da-4d0a-9dd7-f4cf164e6247",
@@ -119,9 +118,9 @@ class MockServer(BaseHTTPRequestHandler):
   "public_url": null,
   "request_id": "85a75f82-bd22-414e-a3a7-5c00a9451a1c"
 }
-            '''
+            """
         elif fdw == "calendly":
-            body = '''
+            body = """
 {
   "collection": [
     {
@@ -173,9 +172,9 @@ class MockServer(BaseHTTPRequestHandler):
     "previous_page_token": null
   }
 }
-            '''
+            """
         elif fdw == "cal":
-            body = '''
+            body = """
 {
     "status": "success",
     "data": {
@@ -189,9 +188,9 @@ class MockServer(BaseHTTPRequestHandler):
         "organizationId": null
     }
 }
-            '''
+            """
         elif fdw == "clerk":
-            body = '''
+            body = """
 [
   {
     "id": "user_2rvWkk90azWI2o3PH4LDuCMDPPh",
@@ -252,9 +251,9 @@ class MockServer(BaseHTTPRequestHandler):
     "profile_image_url": "https://www.gravatar.com/avatar?d=mp"
   }
 ]
-            '''
+            """
         elif fdw == "orb":
-            body = '''
+            body = """
 {
   "data": [
     {
@@ -296,9 +295,9 @@ class MockServer(BaseHTTPRequestHandler):
     "next_cursor": null
   }
 }
-            '''
+            """
         elif fdw == "hubspot":
-            body = '''
+            body = """
 {
   "results": [
     {
@@ -333,9 +332,9 @@ class MockServer(BaseHTTPRequestHandler):
     }
   }
 }
-            '''
+            """
         elif fdw == "gravatar":
-            body = '''
+            body = """
 {
   "hash": "973dfe463ec85785f5f95af5ba3906eedb2d931c24e69824a89ea65dba4e813b",
   "display_name": "Test",
@@ -374,13 +373,13 @@ class MockServer(BaseHTTPRequestHandler):
     "hidden_verified_accounts": false
   }
 }
-            '''
+            """
         elif fdw == "openapi":
             # Generic OpenAPI FDW test endpoints covering all features
 
             # Pattern 1: Simple list endpoint
             if req_path == "/users" or req_path.startswith("/users?"):
-                body = '''
+                body = """
 {
   "data": [
     {
@@ -405,12 +404,12 @@ class MockServer(BaseHTTPRequestHandler):
     }
   }
 }
-                '''
+                """
             # Pattern 2: Nested resource with path param (/users/{id}/posts)
             # Must check before single user pattern
             elif "/posts" in req_path and req_path.startswith("/users/"):
                 user_id = req_path.split("/")[2]
-                body = f'''
+                body = f"""
 {{
   "data": [
     {{
@@ -429,11 +428,11 @@ class MockServer(BaseHTTPRequestHandler):
     }}
   ]
 }}
-                '''
+                """
             # Pattern 3: Single resource by ID (rowid pushdown)
             elif req_path.startswith("/users/user-"):
                 user_id = req_path.split("/")[2]
-                body = f'''
+                body = f"""
 {{
   "id": "{user_id}",
   "name": "John Doe",
@@ -441,14 +440,14 @@ class MockServer(BaseHTTPRequestHandler):
   "created_at": "2024-01-15T10:30:00Z",
   "active": true
 }}
-                '''
+                """
             # Pattern 4: Multiple path parameters (e.g., /projects/{org}/{repo}/issues)
             elif req_path.startswith("/projects/"):
                 parts = req_path.split("/")
                 if len(parts) >= 5 and parts[4] == "issues":
                     org = parts[2]
                     repo = parts[3]
-                    body = f'''
+                    body = f"""
 {{
   "items": [
     {{
@@ -469,13 +468,13 @@ class MockServer(BaseHTTPRequestHandler):
     }}
   ]
 }}
-                    '''
+                    """
                 else:
                     self.send_response(404)
                     return
             # Pattern 5: GeoJSON FeatureCollection response
             elif req_path == "/locations" or req_path.startswith("/locations?"):
-                body = '''
+                body = """
 {
   "type": "FeatureCollection",
   "features": [
@@ -509,11 +508,11 @@ class MockServer(BaseHTTPRequestHandler):
     }
   ]
 }
-                '''
+                """
             # Pattern 6: Single GeoJSON Feature with path param
             elif req_path.startswith("/locations/loc-"):
                 loc_id = req_path.split("/")[2]
-                body = f'''
+                body = f"""
 {{
   "type": "Feature",
   "id": "{loc_id}",
@@ -528,14 +527,14 @@ class MockServer(BaseHTTPRequestHandler):
     "population": 964254
   }}
 }}
-                '''
+                """
             # Pattern 7: Nested path with multiple params (e.g., /resources/{type}/{id})
             elif req_path.startswith("/resources/"):
                 parts = req_path.split("/")
                 if len(parts) >= 4:
                     res_type = parts[2]
                     res_id = parts[3].split("?")[0]
-                    body = f'''
+                    body = f"""
 {{
   "type": "{res_type}",
   "id": "{res_id}",
@@ -543,14 +542,14 @@ class MockServer(BaseHTTPRequestHandler):
   "description": "A {res_type} resource",
   "created_at": "2024-01-01T00:00:00Z"
 }}
-                    '''
+                    """
                 else:
                     self.send_response(404)
                     return
             # Pattern 8: Link-based pagination (next_url)
             elif req_path == "/paginated" or req_path.startswith("/paginated?"):
                 if "page=2" in req_path:
-                    body = '''
+                    body = """
 {
   "results": [
     {"id": 3, "name": "Item Three"},
@@ -561,29 +560,29 @@ class MockServer(BaseHTTPRequestHandler):
     "has_more": false
   }
 }
-                    '''
+                    """
                 else:
-                    body = '''
+                    body = """
 {
   "results": [
     {"id": 1, "name": "Item One"},
     {"id": 2, "name": "Item Two"}
   ],
   "pagination": {
-    "next_url": "http://localhost:8096/openapi/paginated?page=2",
+    "next_url": "?page=2",
     "has_more": true
   }
 }
-                    '''
+                    """
             # Pattern 9: Direct array response
             elif req_path == "/tags" or req_path.startswith("/tags?"):
-                body = '''
+                body = """
 [
   {"id": 1, "name": "rust", "count": 150},
   {"id": 2, "name": "postgres", "count": 89},
   {"id": 3, "name": "wasm", "count": 42}
 ]
-                '''
+                """
             else:
                 self.send_response(404)
                 return
@@ -595,12 +594,11 @@ class MockServer(BaseHTTPRequestHandler):
 
         return
 
-
     def do_POST(self):
         (fdw, req_path) = self.get_fdw_req_path()
 
         if fdw == "snowflake":
-            body = '''
+            body = """
 {
     "resultSetMetaData": {
         "numRows": 2,
@@ -683,9 +681,9 @@ class MockServer(BaseHTTPRequestHandler):
     "message": "Statement executed successfully.",
     "createdOn": 1718259164549
 }
-            '''
+            """
         elif fdw == "cfd1":
-            body = '''
+            body = """
 {
   "result": [
     {
@@ -716,9 +714,9 @@ class MockServer(BaseHTTPRequestHandler):
   "messages": [],
   "success": true
 }
-            '''
+            """
         elif fdw == "shopify":
-            body = '''
+            body = """
 {
   "data": {
     "products": {
@@ -744,15 +742,15 @@ class MockServer(BaseHTTPRequestHandler):
     }
   }
 }
-            '''
+            """
         elif fdw == "infura":
-            content_length = int(self.headers['Content-Length'])
+            content_length = int(self.headers["Content-Length"])
             post_data = self.rfile.read(content_length)
-            req_body = json.loads(post_data.decode('utf-8'))
-            method = req_body.get('method', '')
+            req_body = json.loads(post_data.decode("utf-8"))
+            method = req_body.get("method", "")
 
-            if method == 'eth_getBlockByNumber':
-                body = '''
+            if method == "eth_getBlockByNumber":
+                body = """
 {
   "jsonrpc": "2.0",
   "id": 1,
@@ -768,9 +766,9 @@ class MockServer(BaseHTTPRequestHandler):
     "transactions": ["0x1", "0x2", "0x3"]
   }
 }
-                '''
-            elif method == 'eth_getTransactionByHash':
-                body = '''
+                """
+            elif method == "eth_getTransactionByHash":
+                body = """
 {
   "jsonrpc": "2.0",
   "id": 1,
@@ -788,17 +786,17 @@ class MockServer(BaseHTTPRequestHandler):
     "transactionIndex": "0x0"
   }
 }
-                '''
-            elif method == 'eth_getBalance':
-                body = '''
+                """
+            elif method == "eth_getBalance":
+                body = """
 {
   "jsonrpc": "2.0",
   "id": 1,
   "result": "0x1bc16d674ec80000"
 }
-                '''
-            elif method == 'eth_getLogs':
-                body = '''
+                """
+            elif method == "eth_getLogs":
+                body = """
 {
   "jsonrpc": "2.0",
   "id": 1,
@@ -816,39 +814,39 @@ class MockServer(BaseHTTPRequestHandler):
     }
   ]
 }
-                '''
-            elif method == 'eth_chainId':
-                body = '''
+                """
+            elif method == "eth_chainId":
+                body = """
 {
   "jsonrpc": "2.0",
   "id": 1,
   "result": "0x1"
 }
-                '''
-            elif method == 'eth_blockNumber':
-                body = '''
+                """
+            elif method == "eth_blockNumber":
+                body = """
 {
   "jsonrpc": "2.0",
   "id": 2,
   "result": "0x1234567"
 }
-                '''
-            elif method == 'eth_gasPrice':
-                body = '''
+                """
+            elif method == "eth_gasPrice":
+                body = """
 {
   "jsonrpc": "2.0",
   "id": 3,
   "result": "0x3b9aca00"
 }
-                '''
+                """
             else:
-                body = '''
+                body = """
 {
   "jsonrpc": "2.0",
   "id": 1,
   "error": {"code": -32601, "message": "Method not found"}
 }
-                '''
+                """
         else:
             self.send_response(404)
             return
@@ -870,4 +868,3 @@ if __name__ == "__main__":
 
     webServer.server_close()
     print("Server stopped.")
-

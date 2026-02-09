@@ -733,6 +733,35 @@ mod tests {
                 .filter_map(|r| r.get_by_name::<&str, _>("type").unwrap())
                 .collect::<Vec<_>>();
             assert_eq!(results, vec!["document"]);
+
+            // Test URL-based pagination with relative next_url (e.g., "?page=2")
+            c.update(
+                r#"
+                  CREATE FOREIGN TABLE openapi_paginated (
+                    id bigint,
+                    name text,
+                    attrs jsonb
+                  )
+                  SERVER openapi_server
+                  OPTIONS (
+                    endpoint '/paginated',
+                    rowid_column 'id'
+                  )
+             "#,
+                None,
+                &[],
+            )
+            .unwrap();
+
+            let results = c
+                .select("SELECT name FROM openapi_paginated", None, &[])
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("name").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(
+                results,
+                vec!["Item One", "Item Two", "Item Three", "Item Four"]
+            );
         });
     }
 }

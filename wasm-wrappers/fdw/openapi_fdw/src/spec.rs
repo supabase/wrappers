@@ -136,13 +136,19 @@ impl OpenApiSpec {
         self.servers.first().map(|s| s.url.as_str())
     }
 
-    /// Get all endpoint paths that support GET operations (for querying)
+    /// Get all endpoint paths that support GET operations (for querying).
+    ///
+    /// Parameterized paths (e.g., `/users/{id}`, `/users/{user_id}/posts`) are
+    /// excluded because they require path parameter values from WHERE clauses at
+    /// query time. Users should create these tables manually with the appropriate
+    /// `endpoint` option containing `{param}` placeholders. See the documentation
+    /// for path parameter examples.
     pub fn get_endpoints(&self) -> Vec<EndpointInfo> {
         let mut endpoints = Vec::new();
 
         for (path, path_item) in &self.paths {
-            // Skip paths with path parameters (like /users/{id}) for list operations
-            // These are handled via pushdown
+            // Skip parameterized paths — they require WHERE clause values at query time
+            // and must be created manually. See docs for path parameter examples.
             if path.contains('{') {
                 continue;
             }
@@ -283,18 +289,19 @@ pub struct EndpointInfo {
 }
 
 impl EndpointInfo {
-    /// Generate a table name from the endpoint path
+    /// Generate a table name from the endpoint path.
+    ///
+    /// Uses the full path to avoid collisions (e.g., `/v1/users` and `/v2/users`
+    /// become `v1_users` and `v2_users` instead of both becoming `users`).
     pub fn table_name(&self) -> String {
-        // Convert /users -> users, /api/v1/customers -> customers
-        let name = self
-            .path
-            .trim_start_matches('/')
-            .split('/')
-            .next_back()
-            .unwrap_or("unknown");
+        let cleaned = self.path.trim_matches('/');
 
-        // Convert kebab-case to snake_case
-        name.replace('-', "_")
+        if cleaned.is_empty() {
+            return "unknown".to_string();
+        }
+
+        // Join path segments with '_' and convert kebab-case to snake_case
+        cleaned.replace(['/', '-'], "_")
     }
 }
 
@@ -321,8 +328,32 @@ mod tests {
             path: "/api/v1/user-accounts".to_string(),
             response_schema: None,
         };
+        assert_eq!(endpoint.table_name(), "api_v1_user_accounts");
 
-        assert_eq!(endpoint.table_name(), "user_accounts");
+        // Single segment
+        let endpoint = EndpointInfo {
+            path: "/users".to_string(),
+            response_schema: None,
+        };
+        assert_eq!(endpoint.table_name(), "users");
+
+        // Collision avoidance: different versions produce different names
+        let v1 = EndpointInfo {
+            path: "/v1/users".to_string(),
+            response_schema: None,
+        };
+        let v2 = EndpointInfo {
+            path: "/v2/users".to_string(),
+            response_schema: None,
+        };
+        assert_ne!(v1.table_name(), v2.table_name());
+
+        // Empty path
+        let endpoint = EndpointInfo {
+            path: "/".to_string(),
+            response_schema: None,
+        };
+        assert_eq!(endpoint.table_name(), "unknown");
     }
 
     #[test]

@@ -53,6 +53,9 @@ struct OpenApiFdw {
     next_cursor: Option<String>,
     next_url: Option<String>,
 
+    // Schema generation options
+    include_attrs: bool,
+
     // Path parameters extracted from WHERE clause (for injecting back into rows)
     path_params: std::collections::HashMap<String, String>,
 
@@ -166,11 +169,20 @@ impl OpenApiFdw {
     ) -> Result<(String, std::collections::HashMap<String, String>), String> {
         // Use next_url for pagination if available
         if let Some(ref next_url) = self.next_url {
-            // Handle relative URLs by prepending base_url
+            // Handle relative URLs:
+            //  - Absolute URLs are used as-is
+            //  - Query-only (e.g., "?page=2") resolves against base_url + endpoint
+            //  - Absolute paths (e.g., "/items?page=2") resolve against base_url
+            //  - Bare relative paths (e.g., "page/2") resolve against base_url/
             let url = if next_url.starts_with("http://") || next_url.starts_with("https://") {
                 next_url.clone()
+            } else if next_url.starts_with('?') {
+                let endpoint_base = self.endpoint.split('?').next().unwrap_or(&self.endpoint);
+                format!("{}{endpoint_base}{next_url}", self.base_url)
+            } else if next_url.starts_with('/') {
+                format!("{}{next_url}", self.base_url)
             } else {
-                format!("{}{}", self.base_url, next_url)
+                format!("{}/{next_url}", self.base_url)
             };
             return Ok((url, self.path_params.clone()));
         }
@@ -442,9 +454,13 @@ impl OpenApiFdw {
         // Check for next URL in common locations
         let next_url_paths = [
             "/meta/pagination/next",
+            "/meta/pagination/next_url",
             "/pagination/next",
+            "/pagination/next_url",
             "/links/next",
+            "/links/next_url",
             "/next",
+            "/next_url",
             "/_links/next/href",
         ];
         for path in &next_url_paths {
@@ -509,8 +525,27 @@ impl OpenApiFdw {
         // If this column was used as a query/path parameter, inject the WHERE clause
         // value directly. This ensures PostgreSQL's post-filter passes even when the
         // API returns a different case (e.g. API accepts "actual" but returns "Actual").
+        // Coerce the string value to the target column type to avoid type mismatches.
         if let Some(value) = self.path_params.get(&tgt_col_name.to_lowercase()) {
-            return Ok(Some(Cell::String(value.clone())));
+            let cell = match tgt_col.type_oid() {
+                TypeOid::Bool => value.parse::<bool>().ok().map(Cell::Bool),
+                TypeOid::I8 => value.parse::<i8>().ok().map(Cell::I8),
+                TypeOid::I16 => value.parse::<i16>().ok().map(Cell::I16),
+                TypeOid::I32 => value.parse::<i32>().ok().map(Cell::I32),
+                TypeOid::I64 => value.parse::<i64>().ok().map(Cell::I64),
+                #[allow(clippy::cast_possible_truncation)]
+                TypeOid::F32 => value.parse::<f64>().ok().map(|v| Cell::F32(v as f32)),
+                TypeOid::F64 => value.parse::<f64>().ok().map(Cell::F64),
+                TypeOid::Numeric => value.parse::<f64>().ok().map(Cell::Numeric),
+                TypeOid::Date => time::parse_from_rfc3339(value)
+                    .ok()
+                    .map(|ts| Cell::Date(ts / 1_000_000)),
+                TypeOid::Timestamp => time::parse_from_rfc3339(value).ok().map(Cell::Timestamp),
+                TypeOid::Timestamptz => time::parse_from_rfc3339(value).ok().map(Cell::Timestamptz),
+                TypeOid::Json => Some(Cell::Json(value.clone())),
+                _ => Some(Cell::String(value.clone())),
+            };
+            return Ok(cell.or_else(|| Some(Cell::String(value.clone()))));
         }
 
         // Handle column name matching with multiple strategies:
@@ -648,6 +683,12 @@ impl Guest for OpenApiFdw {
         // Get spec_url for import_foreign_schema
         this.spec_url = opts.get("spec_url");
 
+        // Whether to include an 'attrs' jsonb column in IMPORT FOREIGN SCHEMA output
+        this.include_attrs = opts
+            .get("include_attrs")
+            .map(|v| v != "false")
+            .unwrap_or(true);
+
         // Validate spec_url format if provided
         if let Some(ref spec_url) = this.spec_url {
             if !spec_url.starts_with("http://") && !spec_url.starts_with("https://") {
@@ -673,11 +714,15 @@ impl Guest for OpenApiFdw {
 
         // Custom headers as JSON object: '{"Feature-Flags": "value", "X-Custom": "value"}'
         if let Some(headers_json) = opts.get("headers") {
-            if let Ok(headers) = serde_json::from_str::<JsonMap<String, JsonValue>>(&headers_json) {
-                for (key, value) in headers {
-                    if let Some(v) = value.as_str() {
-                        this.headers.push((key.to_lowercase(), v.to_string()));
-                    }
+            let headers: JsonMap<String, JsonValue> = serde_json::from_str(&headers_json)
+                .map_err(|e| format!("Invalid JSON for 'headers' option: {e}"))?;
+            for (key, value) in headers {
+                if let Some(v) = value.as_str() {
+                    this.headers.push((key.to_lowercase(), v.to_string()));
+                } else {
+                    return Err(format!(
+                        "Invalid non-string value for header '{key}' in 'headers' option"
+                    ));
                 }
             }
         }
@@ -687,6 +732,21 @@ impl Guest for OpenApiFdw {
             opts.get("api_key_id")
                 .and_then(|key_id| utils::get_vault_secret(&key_id))
         });
+
+        // Bearer token authentication (alternative to api_key)
+        let bearer_token = opts.get("bearer_token").or_else(|| {
+            opts.get("bearer_token_id")
+                .and_then(|token_id| utils::get_vault_secret(&token_id))
+        });
+
+        // Enforce mutual exclusivity — both would emit duplicate auth headers
+        if api_key.is_some() && bearer_token.is_some() {
+            return Err(
+                "Cannot use both api_key/api_key_id and bearer_token/bearer_token_id. \
+                 Choose one authentication method."
+                    .to_string(),
+            );
+        }
 
         if let Some(key) = api_key {
             let header_name = opts.require_or("api_key_header", "Authorization");
@@ -702,22 +762,18 @@ impl Guest for OpenApiFdw {
                 .push((header_name.to_lowercase(), header_value));
         }
 
-        // Bearer token authentication (alternative to api_key)
-        let bearer_token = opts.get("bearer_token").or_else(|| {
-            opts.get("bearer_token_id")
-                .and_then(|token_id| utils::get_vault_secret(&token_id))
-        });
-
         if let Some(token) = bearer_token {
             this.headers
                 .push(("authorization".to_owned(), format!("Bearer {token}")));
         }
 
         // Pagination defaults (page_size=0 means no automatic limit parameter)
-        this.page_size = opts
-            .get("page_size")
-            .and_then(|s| s.parse().ok())
-            .unwrap_or(0);
+        this.page_size = match opts.get("page_size") {
+            Some(s) => s
+                .parse()
+                .map_err(|_| format!("Invalid value for 'page_size': '{s}'"))?,
+            None => 0,
+        };
 
         this.page_size_param = opts.require_or("page_size_param", "limit");
         this.cursor_param = opts.require_or("cursor_param", "after");
@@ -874,7 +930,8 @@ impl Guest for OpenApiFdw {
             ImportSchemaType::Except => (Some(stmt.table_list.as_slice()), true),
         };
 
-        let tables = generate_all_tables(spec, &stmt.server_name, filter, exclude);
+        let tables =
+            generate_all_tables(spec, &stmt.server_name, filter, exclude, this.include_attrs);
 
         Ok(tables)
     }

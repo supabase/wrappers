@@ -46,7 +46,7 @@ pub struct ColumnDef {
 }
 
 /// Extract column definitions from an `OpenAPI` response schema
-pub fn extract_columns(schema: &Schema, spec: &OpenApiSpec) -> Vec<ColumnDef> {
+pub fn extract_columns(schema: &Schema, spec: &OpenApiSpec, include_attrs: bool) -> Vec<ColumnDef> {
     let mut columns = Vec::new();
 
     // Resolve the schema (handles $ref)
@@ -82,12 +82,14 @@ pub fn extract_columns(schema: &Schema, spec: &OpenApiSpec) -> Vec<ColumnDef> {
         _ => a.name.cmp(&b.name),
     });
 
-    // Always add an 'attrs' column for the full JSON response
-    columns.push(ColumnDef {
-        name: "attrs".to_string(),
-        pg_type: "jsonb",
-        nullable: true,
-    });
+    // Add an 'attrs' column for the full JSON response, unless disabled or already exists
+    if include_attrs && !columns.iter().any(|c| c.name == "attrs") {
+        columns.push(ColumnDef {
+            name: "attrs".to_string(),
+            pg_type: "jsonb",
+            nullable: true,
+        });
+    }
 
     columns
 }
@@ -126,26 +128,28 @@ pub fn generate_foreign_table(
     endpoint: &EndpointInfo,
     spec: &OpenApiSpec,
     server_name: &str,
+    include_attrs: bool,
 ) -> String {
     let table_name = endpoint.table_name();
 
     let columns = endpoint.response_schema.as_ref().map_or_else(
         || {
             // Default columns if no schema is available
-            vec![
-                ColumnDef {
-                    name: "id".to_string(),
-                    pg_type: "text",
-                    nullable: false,
-                },
-                ColumnDef {
+            let mut cols = vec![ColumnDef {
+                name: "id".to_string(),
+                pg_type: "text",
+                nullable: false,
+            }];
+            if include_attrs {
+                cols.push(ColumnDef {
                     name: "attrs".to_string(),
                     pg_type: "jsonb",
                     nullable: true,
-                },
-            ]
+                });
+            }
+            cols
         },
-        |schema| extract_columns(schema, spec),
+        |schema| extract_columns(schema, spec, include_attrs),
     );
 
     let column_defs: Vec<String> = columns
@@ -161,29 +165,41 @@ pub fn generate_foreign_table(
         })
         .collect();
 
-    // Determine rowid_column - prefer 'id' if available
-    let rowid_col = columns
+    // Determine rowid_column:
+    //  - Prefer an explicit 'id' column if available
+    //  - Otherwise, prefer the first non-'attrs' column with a non-jsonb type
+    //  - If no suitable column exists, omit rowid_column entirely
+    let rowid_col: Option<&str> = columns
         .iter()
         .find(|c| c.name == "id")
-        .map_or("attrs", |c| c.name.as_str());
+        .or_else(|| {
+            columns
+                .iter()
+                .find(|c| c.name != "attrs" && c.pg_type != "jsonb")
+        })
+        .map(|c| c.name.as_str());
 
     // Escape single quotes in option values for SQL
     let escaped_endpoint = endpoint.path.replace('\'', "''");
-    let escaped_rowid = rowid_col.replace('\'', "''");
+
+    let options = if let Some(rowid) = rowid_col {
+        let escaped_rowid = rowid.replace('\'', "''");
+        format!("    endpoint '{escaped_endpoint}',\n    rowid_column '{escaped_rowid}'")
+    } else {
+        format!("    endpoint '{escaped_endpoint}'")
+    };
 
     format!(
         r"CREATE FOREIGN TABLE IF NOT EXISTS {} (
 {}
 )
 SERVER {} OPTIONS (
-    endpoint '{}',
-    rowid_column '{}'
+{}
 )",
         quote_identifier(&table_name),
         column_defs.join(",\n"),
         quote_identifier(server_name),
-        escaped_endpoint,
-        escaped_rowid
+        options
     )
 }
 
@@ -193,6 +209,7 @@ pub fn generate_all_tables(
     server_name: &str,
     filter: Option<&[String]>,
     exclude: bool,
+    include_attrs: bool,
 ) -> Vec<String> {
     let endpoints = spec.get_endpoints();
 
@@ -206,7 +223,7 @@ pub fn generate_all_tables(
                 Some(list) => list.iter().any(|n| n == &table_name),
             }
         })
-        .map(|e| generate_foreign_table(e, spec, server_name))
+        .map(|e| generate_foreign_table(e, spec, server_name, include_attrs))
         .collect()
 }
 

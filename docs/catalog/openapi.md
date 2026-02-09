@@ -17,7 +17,7 @@ This wrapper allows you to query any REST API endpoint as a PostgreSQL foreign t
 
 | Version | Wasm Package URL | Checksum | Required Wrappers Version |
 | ------- | ---------------- | -------- | ------------------------- |
-| 0.1.3   | `TBD` | `TBD` | >=0.5.0 |
+| 0.1.4   | `TBD` | `TBD` | >=0.5.0 |
 
 ## Preparation
 
@@ -104,6 +104,7 @@ We need to provide Postgres with the credentials to access the API and any addit
 | `user_agent` | No | Custom User-Agent header value. |
 | `accept` | No | Custom Accept header for content negotiation (e.g., `application/geo+json`). |
 | `headers` | No | Custom headers as JSON object (e.g., `'{"X-Custom": "value"}'`). |
+| `include_attrs` | No | Include `attrs` jsonb column in `IMPORT FOREIGN SCHEMA` output (default: `'true'`). Set to `'false'` to omit. |
 | `page_size` | No | Default page size for pagination (0 = no automatic limit). |
 | `page_size_param` | No | Query parameter name for page size (default: `limit`). |
 | `cursor_param` | No | Query parameter name for pagination cursor (default: `after`). |
@@ -172,6 +173,9 @@ import foreign schema openapi
   from server my_api_server
   into api;
 ```
+
+!!! note
+    `IMPORT FOREIGN SCHEMA` only generates tables for non-parameterized GET endpoints (e.g., `/users`, `/orders`). Endpoints with path parameters like `/users/{user_id}/posts` are skipped because they require WHERE clause values at query time. Create these tables manually using the `endpoint` option with `{param}` placeholders — see [Path Parameters](#path-parameters) for examples.
 
 ## Path Parameters
 

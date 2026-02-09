@@ -19,7 +19,7 @@ FOREIGN DATA WRAPPER wasm_wrapper
 OPTIONS (
     fdw_package_url 'https://github.com/supabase/wrappers/releases/download/...',
     fdw_package_name 'supabase:openapi-fdw',
-    fdw_package_version '0.1.0',
+    fdw_package_version '0.1.4',
     fdw_package_checksum '...',
     base_url 'https://api.example.com/v1',
     spec_url 'https://api.example.com/openapi.json',
@@ -65,4 +65,8 @@ cargo pgrx test --features "wasm_fdw pg16"
 
 | Version | Date       | Notes                                                |
 | ------- | ---------- | ---------------------------------------------------- |
+| 0.1.4   | 2026-02-09 | Type coercion, auth validation, table naming, URL fixes |
+| 0.1.3   | 2026-02-06 | Avoid cloning JSON response data                     |
+| 0.1.2   | 2026-02-01 | Fix query param filtering                            |
+| 0.1.1   | 2026-01-26 | URL encoding, identifier quoting, version validation |
 | 0.1.0   | 2026-01-25 | Initial version                                      |
