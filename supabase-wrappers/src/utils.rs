@@ -76,8 +76,8 @@ const SENSITIVE_OPTION_NAMES: &[&str] = &[
 /// ```
 #[inline]
 pub fn mask_credential_value(value: &str) -> String {
-    if value.len() > 4 {
-        format!("{}***", &value[..4])
+    if let Some((byte_idx, _)) = value.char_indices().nth(4) {
+        format!("{}***", &value[..byte_idx])
     } else {
         "***".to_string()
     }
@@ -126,10 +126,8 @@ pub fn mask_credentials_in_message(message: &str) -> String {
 
         // Use a while loop to find and mask ALL occurrences of this sensitive name
         loop {
-            let search_slice = &result[search_start..];
-            let lower_slice = search_slice.to_lowercase();
-
-            let Some(relative_pos) = lower_slice.find(&lower_name) else {
+            let lower_result = result.to_lowercase();
+            let Some(relative_pos) = lower_result[search_start..].find(&lower_name) else {
                 break;
             };
 
@@ -143,23 +141,28 @@ pub fn mask_credentials_in_message(message: &str) -> String {
                 continue;
             };
 
-            let after_eq = after_name[eq_pos + 1..].trim_start();
+            let eq_abs = abs_pos + name_len + eq_pos;
+            let after_eq = &result[eq_abs + 1..];
+            let after_eq_trim = after_eq.trim_start();
+            let trim_offset = after_eq.len() - after_eq_trim.len();
+            let value_start = eq_abs + 1 + trim_offset;
 
             // Extract the value (handle quoted or unquoted)
-            let value = if let Some(stripped) = after_eq.strip_prefix('\'') {
+            let (value_start, value_end) = if let Some(stripped) = after_eq_trim.strip_prefix('\'')
+            {
                 // Single-quoted value
                 match stripped.find('\'') {
-                    Some(end) => &stripped[..end],
+                    Some(end) => (value_start + 1, value_start + 1 + end),
                     None => {
                         // Unclosed quote - skip past this occurrence
                         search_start = abs_pos + name_len;
                         continue;
                     }
                 }
-            } else if let Some(stripped) = after_eq.strip_prefix('"') {
+            } else if let Some(stripped) = after_eq_trim.strip_prefix('"') {
                 // Double-quoted value
                 match stripped.find('"') {
-                    Some(end) => &stripped[..end],
+                    Some(end) => (value_start + 1, value_start + 1 + end),
                     None => {
                         // Unclosed quote - skip past this occurrence
                         search_start = abs_pos + name_len;
@@ -168,20 +171,25 @@ pub fn mask_credentials_in_message(message: &str) -> String {
                 }
             } else {
                 // Unquoted value - take until whitespace or delimiter
-                let end = after_eq
-                    .find(|c: char| c.is_whitespace() || ",;)".contains(c))
-                    .unwrap_or(after_eq.len());
-                &after_eq[..end]
+                let end = after_eq_trim
+                    .find(|c: char| c.is_whitespace() || ",;)&#".contains(c))
+                    .unwrap_or(after_eq_trim.len());
+                (value_start, value_start + end)
             };
 
-            if value.is_empty() {
+            if value_end <= value_start {
                 // Empty value - skip past this occurrence
                 search_start = abs_pos + name_len;
                 continue;
             }
 
-            let masked = mask_credential_value(value);
-            result = result.replacen(value, &masked, 1);
+            let masked = mask_credential_value(&result[value_start..value_end]);
+            result = format!(
+                "{}{}{}",
+                &result[..value_start],
+                masked,
+                &result[value_end..]
+            );
 
             // Continue searching from after where we made the replacement
             // The masked value is shorter, so we need to account for that
@@ -569,6 +577,12 @@ mod tests {
         assert_eq!(mask_credential_value(""), "***");
     }
 
+    #[test]
+    fn test_mask_credential_value_utf8() {
+        assert_eq!(mask_credential_value("pässwörd"), "päss***");
+        assert_eq!(mask_credential_value("短い"), "***");
+    }
+
     // ==========================================================================
     // Tests for is_sensitive_option
     // ==========================================================================
@@ -646,6 +660,24 @@ mod tests {
         let masked = mask_credentials_in_message(msg);
         assert!(!masked.contains("abc123xyz"));
         assert!(masked.contains("abc1***"));
+    }
+
+    #[test]
+    fn test_mask_credentials_url_params() {
+        let msg = "Error: api_key=sk_live_123&region=us-west-2";
+        let masked = mask_credentials_in_message(msg);
+        assert!(!masked.contains("sk_live_123"));
+        assert!(masked.contains("sk_l***"));
+        assert!(masked.contains("&region=us-west-2"));
+    }
+
+    #[test]
+    fn test_mask_credentials_url_with_fragment() {
+        let msg = "Error: api_key=secret_token_123#section";
+        let masked = mask_credentials_in_message(msg);
+        assert!(!masked.contains("secret_token_123"));
+        assert!(masked.contains("secr***"));
+        assert!(masked.contains("#section"));
     }
 
     #[test]
