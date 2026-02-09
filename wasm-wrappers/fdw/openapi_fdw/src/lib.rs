@@ -235,7 +235,7 @@ impl OpenApiFdw {
                 missing_params.join(", "),
                 missing_params
                     .iter()
-                    .map(|p| format!("{} = '<value>'", p))
+                    .map(|p| format!("{p} = '<value>'"))
                     .collect::<Vec<_>>()
                     .join(" AND ")
             ));
@@ -652,8 +652,7 @@ impl Guest for OpenApiFdw {
         if let Some(ref spec_url) = this.spec_url {
             if !spec_url.starts_with("http://") && !spec_url.starts_with("https://") {
                 return Err(format!(
-                    "Invalid spec_url: '{}'. Must start with http:// or https://",
-                    spec_url
+                    "Invalid spec_url: '{spec_url}'. Must start with http:// or https://"
                 ));
             }
         }
