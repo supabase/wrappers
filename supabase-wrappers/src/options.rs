@@ -130,9 +130,8 @@ pub(super) unsafe fn options_to_hashmap(
                 let value = value
                     .to_str()
                     .map_err(|_| OptionsError::OptionValueIsInvalidUtf8 {
-                        option_name: name_str.to_string(),
+                        option_name: name.to_string(),
                     })?;
-                let name = name_str;
                 ret.insert(name.to_string(), value.to_string());
             }
         }
