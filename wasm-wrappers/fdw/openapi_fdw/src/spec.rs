@@ -102,8 +102,8 @@ pub struct Components {
 impl OpenApiSpec {
     /// Parse an `OpenAPI` spec from a JSON value
     pub fn from_json(json: &JsonValue) -> Result<Self, String> {
-        let spec: Self =
-            serde_json::from_value(json.clone()).map_err(|e| format!("Failed to parse OpenAPI spec: {e}"))?;
+        let spec: Self = serde_json::from_value(json.clone())
+            .map_err(|e| format!("Failed to parse OpenAPI spec: {e}"))?;
 
         if !spec.openapi.starts_with("3.") {
             return Err(format!(
@@ -274,7 +274,6 @@ impl OpenApiSpec {
         merged
     }
 }
-
 
 /// Extracted endpoint information for table generation
 #[derive(Debug)]

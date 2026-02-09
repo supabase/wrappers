@@ -669,11 +669,7 @@ mod tests {
             .unwrap();
 
             let results = c
-                .select(
-                    "SELECT name, population FROM openapi_locations",
-                    None,
-                    &[],
-                )
+                .select("SELECT name, population FROM openapi_locations", None, &[])
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("name").unwrap())
                 .collect::<Vec<_>>();
@@ -700,11 +696,7 @@ mod tests {
             .unwrap();
 
             let results = c
-                .select(
-                    "SELECT name FROM openapi_tags",
-                    None,
-                    &[],
-                )
+                .select("SELECT name FROM openapi_tags", None, &[])
                 .unwrap()
                 .filter_map(|r| r.get_by_name::<&str, _>("name").unwrap())
                 .collect::<Vec<_>>();
