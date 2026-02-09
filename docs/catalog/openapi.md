@@ -1,7 +1,7 @@
 ---
 source:
 documentation: https://spec.openapis.org/
-author: supabase
+author: [Cody Bromley](https://github.com/codybrom)
 tags:
   - wasm
   - api
@@ -17,7 +17,7 @@ This wrapper allows you to query any REST API endpoint as a PostgreSQL foreign t
 
 | Version | Wasm Package URL | Checksum | Required Wrappers Version |
 | ------- | ---------------- | -------- | ------------------------- |
-| 0.1.3   | `https://github.com/codybrom/openapi-fdw/releases/download/v0.1.3/openapi_fdw.wasm` | `711002e9d19136320f84ee7e166fddaf3b5abd91d36ec85dc64512027cce00c2` | >=0.5.0 |
+| 0.1.3   | `TBD` | `TBD` | >=0.5.0 |
 
 ## Preparation
 
