@@ -23,6 +23,7 @@
 | [Infura](./wasm-wrappers/fdw/infura_fdw)        | A Wasm FDW for [Infura](https://www.infura.io/) blockchain data               | ✅   | ❌     |
 | [Logflare](./wrappers/src/fdw/logflare_fdw)     | A FDW for [Logflare](https://logflare.app/)                                   | ✅   | ❌     |
 | [Notion](./wasm-wrappers/fdw/notion_fdw)        | A Wasm FDW for [Notion](https://www.notion.so/)                               | ✅   | ❌     |
+| [OpenAPI](./wasm-wrappers/fdw/openapi_fdw)      | A Wasm FDW for any [OpenAPI](https://www.openapis.org/) 3.0+ REST API         | ✅   | ❌     |
 | [Orb](./wasm-wrappers/fdw/orb_fdw)              | A Wasm FDW for [Orb](https://www.withorb.com/)                                | ✅   | ❌     |
 | [Paddle](./wasm-wrappers/fdw/paddle_fdw)        | A Wasm FDW for [Paddle](https://www.paddle.com/)                              | ✅   | ✅     |
 | [Redis](./wrappers/src/fdw/redis_fdw)           | A FDW for [Redis](https://redis.io/)                                          | ✅   | ❌     |

@@ -28,6 +28,7 @@ Each FDW documentation includes a detailed "Limitations" section that describes 
 | Iceberg       |   ✅   |   ✅   |   ❌   |   ❌   |    ❌    |    ❌     |
 | Logflare      |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
 | Notion        |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
+| OpenAPI       |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
 | Orb           |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |    ✅     |
 | Paddle        |   ✅   |   ✅   |   ✅   |   ❌   |    ❌    |    ✅     |
 | Redis         |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
@@ -54,6 +55,7 @@ See [Developing a Wasm Wrapper](../guides/create-wasm-wrapper.md) for instructio
 | HubSpot       | [Supabase](https://supabase.com) | [Link](hubspot.md)   | [Link](https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/hubspot_fdw)   |
 | Infura        | [Supabase](https://supabase.com) | [Link](infura.md)    | [Link](https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/infura_fdw)    |
 | Notion        | [Supabase](https://supabase.com) | [Link](notion.md)    | [Link](https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/notion_fdw)    |
+| OpenAPI       | [Cody Bromley](https://github.com/codybrom) | [Link](openapi.md)       | [Link](https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/openapi_fdw)  |
 | Orb           | [Supabase](https://supabase.com) | [Link](orb.md)       | [Link](https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/orb_fdw)  |
 | Paddle        | [Supabase](https://supabase.com) | [Link](paddle.md)    | [Link](https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/paddle_fdw)    |
 | Shopify       | [Supabase](https://supabase.com) | [Link](shopify.md)   | [Link](https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/shopify_fdw)   |
