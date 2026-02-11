@@ -1,10 +1,11 @@
 ---
 source:
 documentation: https://spec.openapis.org/
-author: [Cody Bromley](https://github.com/codybrom)
+author: Cody Bromley(https://github.com/codybrom)
 tags:
   - wasm
   - api
+  - community
 ---
 
 # OpenAPI
@@ -17,7 +18,7 @@ This wrapper allows you to query any REST API endpoint as a PostgreSQL foreign t
 
 | Version | Wasm Package URL | Checksum | Required Wrappers Version |
 | ------- | ---------------- | -------- | ------------------------- |
-| 0.1.4   | `TBD` | `TBD` | >=0.5.0 |
+| 0.1.4   | `https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.1.4/openapi_fdw.wasm` | `TBD` | >=0.5.0 |
 
 ## Preparation
 
@@ -124,7 +125,7 @@ create schema if not exists api;
 Create foreign tables manually by specifying the endpoint and columns:
 
 ```sql
-create foreign table api.users (
+create foreign table openapi.users (
   id text,
   name text,
   email text,
@@ -183,7 +184,7 @@ The OpenAPI FDW supports path parameter substitution. Define parameters in the e
 
 ```sql
 -- Endpoint template with path parameter
-create foreign table api.user_posts (
+create foreign table openapi.user_posts (
   user_id text,
   id text,
   title text,
@@ -197,13 +198,13 @@ options (
 );
 
 -- Query with path parameter - generates GET /users/123/posts
-select * from api.user_posts where user_id = '123';
+select * from openapi.user_posts where user_id = '123';
 ```
 
 ### Multiple Path Parameters
 
 ```sql
-create foreign table api.project_issues (
+create foreign table openapi.project_issues (
   org text,
   repo text,
   id text,
@@ -218,7 +219,7 @@ options (
 );
 
 -- Generates GET /projects/acme/widgets/issues
-select * from api.project_issues where org = 'acme' and repo = 'widgets';
+select * from openapi.project_issues where org = 'acme' and repo = 'widgets';
 ```
 
 ## Query Pushdown
@@ -229,7 +230,7 @@ When filtering by the `rowid_column`, the FDW automatically requests a single re
 
 ```sql
 -- Generates GET /users/user-123
-select * from api.users where id = 'user-123';
+select * from openapi.users where id = 'user-123';
 ```
 
 ### Query Parameters
@@ -238,7 +239,7 @@ Other WHERE clause filters are passed as query parameters:
 
 ```sql
 -- Generates GET /users?status=active
-select * from api.users where status = 'active';
+select * from openapi.users where status = 'active';
 ```
 
 Columns used as query or path parameters always return the value from the WHERE clause, even if the API response contains the same field with different casing. This ensures PostgreSQL's post-filter always passes.
@@ -260,7 +261,7 @@ create server paginated_api
     fdw_package_url '{See: "Available Versions"}',
     fdw_package_checksum '{See: "Available Versions"}',
     fdw_package_version '{See: "Available Versions"}',
-    base_url 'https://api.example.com',
+    base_url 'https://openapi.example.com',
     page_size '100',
     page_size_param 'limit',
     cursor_param 'cursor'
@@ -268,7 +269,7 @@ create server paginated_api
 ```
 
 ```sql
-create foreign table api.items (
+create foreign table openapi.items (
   id text,
   name text,
   attrs jsonb
@@ -285,7 +286,7 @@ options (
 For APIs that return GeoJSON, use `object_path` to extract properties:
 
 ```sql
-create foreign table api.locations (
+create foreign table openapi.locations (
   id text,
   name text,
   category text,
@@ -322,7 +323,7 @@ options (
 Any foreign table can include an `attrs` column of type `jsonb` to capture the entire raw JSON response for each row:
 
 ```sql
-create foreign table api.users (
+create foreign table openapi.users (
   id text,
   name text,
   attrs jsonb  -- Contains full JSON object
@@ -353,7 +354,7 @@ For APIs with very strict rate limits, consider using materialized views to cach
 ### Basic Query
 
 ```sql
-create foreign table api.users (
+create foreign table openapi.users (
   id text,
   name text,
   email text,
@@ -366,16 +367,16 @@ options (
 );
 
 -- List all users
-select id, name, email from api.users;
+select id, name, email from openapi.users;
 
 -- Get a specific user
-select * from api.users where id = 'user-123';
+select * from openapi.users where id = 'user-123';
 ```
 
 ### Nested Resources
 
 ```sql
-create foreign table api.user_orders (
+create foreign table openapi.user_orders (
   user_id text,
   id text,
   total numeric,
@@ -390,10 +391,10 @@ options (
 );
 
 -- Get orders for a specific user
-select * from api.user_orders where user_id = 'user-123';
+select * from openapi.user_orders where user_id = 'user-123';
 
 -- Get a specific order
-select * from api.user_orders
+select * from openapi.user_orders
 where user_id = 'user-123' and id = 'order-456';
 ```
 
@@ -407,7 +408,7 @@ create server custom_api
     fdw_package_url '{See: "Available Versions"}',
     fdw_package_checksum '{See: "Available Versions"}',
     fdw_package_version '{See: "Available Versions"}',
-    base_url 'https://api.example.com',
+    base_url 'https://openapi.example.com',
     api_key 'your-key',
     user_agent 'MyApp/1.0',
     accept 'application/json',
@@ -421,7 +422,7 @@ For APIs that wrap data in a container object:
 
 ```sql
 -- API returns: {"data": [...], "meta": {...}}
-create foreign table api.items (
+create foreign table openapi.items (
   id text,
   name text,
   attrs jsonb
@@ -439,7 +440,7 @@ For frequently accessed data, use materialized views to reduce API calls:
 
 ```sql
 create materialized view api_users_cache as
-select * from api.users;
+select * from openapi.users;
 
 -- Query the cache
 select * from api_users_cache;

@@ -703,9 +703,8 @@ impl Guest for OpenApiFdw {
             .push(("content-type".to_owned(), "application/json".to_string()));
 
         // Optional User-Agent header (some APIs require this for identification)
-        if let Some(user_agent) = opts.get("user_agent") {
-            this.headers.push(("user-agent".to_owned(), user_agent));
-        }
+        let user_agent = opts.require_or("user_agent", "Wrappers OpenAPI FDW");
+        this.headers.push(("user-agent".to_owned(), user_agent));
 
         // Optional Accept header for content negotiation (JSON, XML, JSON-LD, GeoJSON etc.)
         if let Some(accept) = opts.get("accept") {

@@ -39,6 +39,7 @@ nav:
           - HubSpot: "catalog/hubspot.md"
           - Infura: "catalog/infura.md"
           - Notion: "catalog/notion.md"
+          - OpenAPI: "catalog/openapi.md"
           - Orb: "catalog/orb.md"
           - Paddle: "catalog/paddle.md"
           - Shopify: "catalog/shopify.md"

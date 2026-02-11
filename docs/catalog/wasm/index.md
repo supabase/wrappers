@@ -109,6 +109,18 @@ Foreign data wrappers built with Wasm which can be used on Supabase platform.
     :octicons-code-24: [source](https://github.com/supabase/wrappers/tree/wasm_notion_fdw_v0.1.1/wasm-wrappers/fdw/notion_fdw) &nbsp;
     :material-file-document: [docs](../notion.md)
 
+- :simple-webassembly: &nbsp; **[OpenAPI](../openapi.md)**
+
+    ----
+
+    Foreign data wrapper for [OpenAPI](https://www.openapis.org/).
+
+    Supported by [Supabase](https://www.supabase.com)
+
+    :octicons-tag-24: [v0.1.4](https://github.com/supabase/wrappers/releases/tag/wasm_openapi_fdw_v0.1.4) &nbsp;
+    :octicons-code-24: [source](https://github.com/supabase/wrappers/tree/wasm_openapi_fdw_v0.1.4/wasm-wrappers/fdw/openapi_fdw) &nbsp;
+    :material-file-document: [docs](../openapi.md)
+
 - :simple-webassembly: &nbsp; **[Orb](../orb.md)**
 
     ----
