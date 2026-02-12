@@ -115,7 +115,7 @@ We need to provide Postgres with the credentials to access the API and any addit
 We recommend creating a schema to hold all the foreign tables:
 
 ```sql
-create schema if not exists api;
+create schema if not exists openapi;
 ```
 
 ## Creating Foreign Tables
