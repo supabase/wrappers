@@ -392,7 +392,7 @@ options (
 );
 
 -- Query stations for Alaska zone AKZ317 - generates GET /zones/forecast/AKZ317/stations
-select id,type from openapi.zone_stations where zone_id = 'AKZ317';
+select id, type from openapi.zone_stations where zone_id = 'AKZ317';
 ```
 
 ### Custom Headers
