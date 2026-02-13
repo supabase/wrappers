@@ -18,7 +18,7 @@ This wrapper allows you to query any REST API endpoint as a PostgreSQL foreign t
 
 | Version | Wasm Package URL | Checksum | Required Wrappers Version |
 | ------- | ---------------- | -------- | ------------------------- |
-| 0.1.4   | `https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.1.4/openapi_fdw.wasm` | `TBD` | >=0.5.0 |
+| 0.1.4   | `https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.1.4/openapi_fdw.wasm` | `dd434f8565b060b181d1e69e1e4d5c8b9c3ac5ca444056d3c2fb939038d308fe` | >=0.5.0 |
 
 ## Preparation
 
@@ -115,7 +115,7 @@ We need to provide Postgres with the credentials to access the API and any addit
 We recommend creating a schema to hold all the foreign tables:
 
 ```sql
-create schema if not exists api;
+create schema if not exists openapi;
 ```
 
 ## Creating Foreign Tables
@@ -354,48 +354,45 @@ For APIs with very strict rate limits, consider using materialized views to cach
 ### Basic Query
 
 ```sql
-create foreign table openapi.users (
-  id text,
-  name text,
-  email text,
-  attrs jsonb
-)
-server my_api_server
-options (
-  endpoint '/users',
-  rowid_column 'id'
-);
+-- Create a foreign server connecting to the Weather.gov API
+create server openapi_server
+  foreign data wrapper wasm_wrapper
+  options (
+    fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.1.4/openapi_fdw.wasm',
+    fdw_package_name 'supabase:openapi-fdw',
+    fdw_package_version '0.1.4',
+    fdw_package_checksum 'dd434f8565b060b181d1e69e1e4d5c8b9c3ac5ca444056d3c2fb939038d308fe',
+    base_url 'https://api.weather.gov',
+    spec_url 'https://api.weather.gov/openapi.json'
+  );
 
--- List all users
-select id, name, email from openapi.users;
+-- Create a schema to hold the imported foreign tables
+create schema if not exists openapi;
 
--- Get a specific user
-select * from openapi.users where id = 'user-123';
+-- Auto-import all API endpoints as foreign tables based on the OpenAPI spec
+import foreign schema openapi from server openapi_server into openapi;
+
+-- Query the stations endpoint to get weather station data
+select * from openapi.stations limit 5;
 ```
 
 ### Nested Resources
 
 ```sql
-create foreign table openapi.user_orders (
-  user_id text,
+-- Create a foreign table for a parameterized endpoint with {zone_id} path parameter
+create foreign table openapi.zone_stations (
+  zone_id text,
   id text,
-  total numeric,
-  status text,
-  created_at timestamptz,
+  type text,
   attrs jsonb
-)
-server my_api_server
+) server openapi_server
 options (
-  endpoint '/users/{user_id}/orders',
+  endpoint '/zones/forecast/{zone_id}/stations',
   rowid_column 'id'
 );
 
--- Get orders for a specific user
-select * from openapi.user_orders where user_id = 'user-123';
-
--- Get a specific order
-select * from openapi.user_orders
-where user_id = 'user-123' and id = 'order-456';
+-- Query stations for Alaska zone AKZ317 - generates GET /zones/forecast/AKZ317/stations
+select id, type from openapi.zone_stations where zone_id = 'AKZ317';
 ```
 
 ### Custom Headers

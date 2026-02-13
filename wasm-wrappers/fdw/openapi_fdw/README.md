@@ -17,10 +17,10 @@ Handles pagination, rate limiting (429 backoff), path parameter substitution fro
 CREATE SERVER my_api_server
 FOREIGN DATA WRAPPER wasm_wrapper
 OPTIONS (
-    fdw_package_url 'https://github.com/supabase/wrappers/releases/download/...',
+    fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.1.4/openapi_fdw.wasm',
     fdw_package_name 'supabase:openapi-fdw',
     fdw_package_version '0.1.4',
-    fdw_package_checksum '...',
+    fdw_package_checksum 'dd434f8565b060b181d1e69e1e4d5c8b9c3ac5ca444056d3c2fb939038d308fe',
     base_url 'https://api.example.com/v1',
     spec_url 'https://api.example.com/openapi.json',
     api_key_id '<vault_secret_id>'
@@ -29,10 +29,10 @@ OPTIONS (
 -- Import all endpoints as tables
 IMPORT FOREIGN SCHEMA openapi
 FROM SERVER my_api_server
-INTO api;
+INTO openapi;
 
 -- Query the API
-SELECT * FROM api.users WHERE id = '123';
+SELECT * FROM openapi.users WHERE id = '123';
 ```
 
 ## Development
