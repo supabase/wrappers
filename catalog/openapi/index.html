@@ -9,16 +9,16 @@
         <meta name="description" content="A PostgreSQL extension for connecting to external data sources">
       
       
-        <meta name="author" content="supabase">
+        <meta name="author" content="Cody Bromley(https://github.com/codybrom)">
       
       
-        <link rel="canonical" href="https://supabase.github.io/wrappers/catalog/calendly/">
+        <link rel="canonical" href="https://supabase.github.io/wrappers/catalog/openapi/">
       
       
-        <link rel="prev" href="../cal/">
+        <link rel="prev" href="../notion/">
       
       
-        <link rel="next" href="../clerk/">
+        <link rel="next" href="../orb/">
       
       
         
@@ -29,7 +29,7 @@
     
     
       
-        <title>Calendly - Wrappers</title>
+        <title>OpenAPI - Wrappers</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#calendly" class="md-skip">
+        <a href="#openapi" class="md-skip">
           Skip to content
         </a>
       
@@ -115,7 +115,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Calendly
+              OpenAPI
             
           </span>
         </div>
@@ -1054,37 +1054,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Calendly
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../calendly/" class="md-nav__link">
         
   
   
@@ -1100,459 +1073,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#available-versions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Available Versions
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#preparation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Preparation
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Preparation">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#enable-wrappers" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Enable Wrappers
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#enable-the-calendly-wrapper" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Enable the Calendly Wrapper
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#store-your-credentials-optional" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Store your credentials (optional)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#connecting-to-calendly" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Connecting to Calendly
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#create-a-schema" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Create a schema
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#options" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Options
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#entities" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Entities
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Entities">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#current-user" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Current User
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Current User">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Operations
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Usage
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Notes
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#event-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Event Types
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Event Types">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Operations
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Usage
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Notes
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#groups" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Groups
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Groups">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Operations
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Usage
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Notes
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#organization-memberships" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Organization Memberships
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Organization Memberships">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations_3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Operations
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Usage
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Notes
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#scheduled-events" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Scheduled Events
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Scheduled Events">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations_4" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Operations
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_4" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Usage
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_4" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Notes
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#query-pushdown-support" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Query Pushdown Support
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#supported-data-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Supported Data Types
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#limitations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Limitations
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Examples
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Examples">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#basic-example" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Basic example
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#query-json-attributes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Query JSON attributes
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1730,10 +1250,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../openapi/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OpenAPI
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1749,6 +1296,398 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#available-versions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Available Versions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#preparation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Preparation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Preparation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#enable-wrappers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enable Wrappers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#enable-the-openapi-wrapper" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enable the OpenAPI Wrapper
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#store-credentials-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Store credentials (optional)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#connecting-to-an-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Connecting to an API
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#server-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Server Options
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create-a-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Create a schema
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#creating-foreign-tables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Creating Foreign Tables
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Creating Foreign Tables">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#manual-table-creation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Manual Table Creation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#table-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Table Options
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#automatic-schema-import" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Automatic Schema Import
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#path-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Path Parameters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Path Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#multiple-path-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multiple Path Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#query-pushdown" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Query Pushdown
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Query Pushdown">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#single-resource-access" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Single Resource Access
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#query-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Query Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pagination" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pagination
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Pagination">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#configuring-pagination" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuring Pagination
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#geojson-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GeoJSON Support
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#supported-data-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supported Data Types
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Supported Data Types">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-attrs-column" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The attrs Column
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rate-limiting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rate Limiting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-query" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Basic Query
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nested-resources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Nested Resources
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#custom-headers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom Headers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#response-path-extraction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Response Path Extraction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#combining-with-materialized-views" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Combining with Materialized Views
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -2648,10 +2587,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#enable-the-calendly-wrapper" class="md-nav__link">
+  <a href="#enable-the-openapi-wrapper" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Enable the Calendly Wrapper
+        Enable the OpenAPI Wrapper
       
     </span>
   </a>
@@ -2659,10 +2598,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#store-your-credentials-optional" class="md-nav__link">
+  <a href="#store-credentials-optional" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Store your credentials (optional)
+        Store credentials (optional)
       
     </span>
   </a>
@@ -2670,10 +2609,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#connecting-to-calendly" class="md-nav__link">
+  <a href="#connecting-to-an-api" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Connecting to Calendly
+        Connecting to an API
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#server-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Server Options
       
     </span>
   </a>
@@ -2697,45 +2647,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#options" class="md-nav__link">
+  <a href="#creating-foreign-tables" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Options
+        Creating Foreign Tables
       
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#entities" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Entities
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Entities">
+    <nav class="md-nav" aria-label="Creating Foreign Tables">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#current-user" class="md-nav__link">
+  <a href="#manual-table-creation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Current User
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Current User">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Operations
+        Manual Table Creation
       
     </span>
   </a>
@@ -2743,10 +2670,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#usage" class="md-nav__link">
+  <a href="#table-options" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Usage
+        Table Options
       
     </span>
   </a>
@@ -2754,218 +2681,13 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#notes" class="md-nav__link">
+  <a href="#automatic-schema-import" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Notes
+        Automatic Schema Import
       
     </span>
   </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#event-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Event Types
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Event Types">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Operations
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Usage
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Notes
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#groups" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Groups
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Groups">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Operations
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Usage
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Notes
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#organization-memberships" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Organization Memberships
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Organization Memberships">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations_3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Operations
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Usage
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Notes
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#scheduled-events" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Scheduled Events
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Scheduled Events">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations_4" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Operations
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage_4" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Usage
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes_4" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Notes
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
@@ -2975,10 +2697,105 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#query-pushdown-support" class="md-nav__link">
+  <a href="#path-parameters" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Query Pushdown Support
+        Path Parameters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Path Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#multiple-path-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multiple Path Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#query-pushdown" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Query Pushdown
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Query Pushdown">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#single-resource-access" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Single Resource Access
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#query-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Query Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pagination" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pagination
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Pagination">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#configuring-pagination" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuring Pagination
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#geojson-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GeoJSON Support
       
     </span>
   </a>
@@ -2994,6 +2811,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Supported Data Types">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-attrs-column" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The attrs Column
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -3001,6 +2835,17 @@
     <span class="md-ellipsis">
       
         Limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rate-limiting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rate Limiting
       
     </span>
   </a>
@@ -3020,10 +2865,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#basic-example" class="md-nav__link">
+  <a href="#basic-query" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Basic example
+        Basic Query
       
     </span>
   </a>
@@ -3031,10 +2876,43 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#query-json-attributes" class="md-nav__link">
+  <a href="#nested-resources" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Query JSON attributes
+        Nested Resources
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#custom-headers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom Headers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#response-path-extraction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Response Path Extraction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#combining-with-materialized-views" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Combining with Materialized Views
       
     </span>
   </a>
@@ -3067,7 +2945,14 @@
       
       
       
-        <a href="../../tags/#tag:official" class="md-tag">official</a>
+        <a href="../../tags/#tag:api" class="md-tag">api</a>
+      
+    
+      
+      
+      
+      
+        <a href="../../tags/#tag:community" class="md-tag">community</a>
       
     
       
@@ -3084,9 +2969,9 @@
   
 
 
-<h1 id="calendly">Calendly</h1>
-<p><a href="https://calendly.com/">Calendly</a> is a scheduling platform used for teams to schedule, prepare and follow up on external meetings.</p>
-<p>The Calendly Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you to read data from your Calendly for use within your Postgres database.</p>
+<h1 id="openapi">OpenAPI</h1>
+<p><a href="https://www.openapis.org/">OpenAPI</a> is a specification for describing HTTP APIs. The OpenAPI Wrapper is a generic WebAssembly (Wasm) foreign data wrapper that can connect to any REST API with an OpenAPI 3.0+ specification.</p>
+<p>This wrapper allows you to query any REST API endpoint as a PostgreSQL foreign table, with support for path parameters, pagination, and automatic schema import.</p>
 <h2 id="available-versions">Available Versions</h2>
 <table>
 <thead>
@@ -3099,26 +2984,20 @@
 </thead>
 <tbody>
 <tr>
-<td>0.2.0</td>
-<td><code>https://github.com/supabase/wrappers/releases/download/wasm_calendly_fdw_v0.2.0/calendly_fdw.wasm</code></td>
-<td><code>1d18021cc3618440107b0d37f0a811607fdc863d9841a5da1ff9d56bc9f44df1</code></td>
+<td>0.1.4</td>
+<td><code>https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.1.4/openapi_fdw.wasm</code></td>
+<td><code>dd434f8565b060b181d1e69e1e4d5c8b9c3ac5ca444056d3c2fb939038d308fe</code></td>
 <td>&gt;=0.5.0</td>
-</tr>
-<tr>
-<td>0.1.0</td>
-<td><code>https://github.com/supabase/wrappers/releases/download/wasm_calendly_fdw_v0.1.0/calendly_fdw.wasm</code></td>
-<td><code>51a19fa4b8c40afb5dcf6dc2e009189aceeba65f30eec75d56a951d78fc8893f</code></td>
-<td>&gt;=0.4.0</td>
 </tr>
 </tbody>
 </table>
 <h2 id="preparation">Preparation</h2>
-<p>Before you can query Calendly, you need to enable the Wrappers extension and store your credentials in Postgres.</p>
+<p>Before you can query an API, you need to enable the Wrappers extension and store your credentials in Postgres.</p>
 <h3 id="enable-wrappers">Enable Wrappers</h3>
 <p>Make sure the <code>wrappers</code> extension is installed on your database:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">extension</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">wrappers</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">extensions</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
-<h3 id="enable-the-calendly-wrapper">Enable the Calendly Wrapper</h3>
+<h3 id="enable-the-openapi-wrapper">Enable the OpenAPI Wrapper</h3>
 <p>Enable the Wasm foreign data wrapper:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
@@ -3126,22 +3005,22 @@
 <span class="w">  </span><span class="k">handler</span><span class="w"> </span><span class="n">wasm_fdw_handler</span>
 <span class="w">  </span><span class="k">validator</span><span class="w"> </span><span class="n">wasm_fdw_validator</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
-<h3 id="store-your-credentials-optional">Store your credentials (optional)</h3>
+<h3 id="store-credentials-optional">Store credentials (optional)</h3>
 <p>By default, Postgres stores FDW credentials inside <code>pg_catalog.pg_foreign_server</code> in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with <a href="https://supabase.com/docs/guides/database/vault">Vault</a>, which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
 <span class="normal">4</span>
 <span class="normal">5</span>
-<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Save your Calendly API key in Vault and retrieve the created `key_id`</span>
+<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Save your API key in Vault and retrieve the created `key_id`</span>
 <span class="k">select</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">create_secret</span><span class="p">(</span>
-<span class="w">  </span><span class="s1">&#39;&lt;Calendly API key&gt;&#39;</span><span class="p">,</span><span class="w"> </span><span class="c1">-- Calendly personal access token</span>
-<span class="w">  </span><span class="s1">&#39;calendly&#39;</span><span class="p">,</span>
-<span class="w">  </span><span class="s1">&#39;Calendly API key for Wrappers&#39;</span>
+<span class="w">  </span><span class="s1">&#39;your-api-key&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="s1">&#39;my_api&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="s1">&#39;API key for My API&#39;</span>
 <span class="p">);</span>
 </code></pre></div></td></tr></table></div>
-<h3 id="connecting-to-calendly">Connecting to Calendly</h3>
-<p>We need to provide Postgres with the credentials to access Calendly and any additional options. We can do this using the <code>create server</code> command:</p>
+<h3 id="connecting-to-an-api">Connecting to an API</h3>
+<p>We need to provide Postgres with the credentials to access the API and any additional options. We can do this using the <code>create server</code> command:</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">With Vault</label><label for="__tabbed_1_2">Without Vault</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
@@ -3154,19 +3033,15 @@
 <span class="normal"> 7</span>
 <span class="normal"> 8</span>
 <span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">calendly_server</span>
+<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">my_api_server</span>
 <span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_calendly_fdw_v0.1.0/calendly_fdw.wasm&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;supabase:calendly-fdw&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.1.0&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;51a19fa4b8c40afb5dcf6dc2e009189aceeba65f30eec75d56a951d78fc8893f&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="c1">-- find your organization uri using foreign table &#39;calendly.current_user&#39;, see below example for details</span>
-<span class="w">    </span><span class="n">organization</span><span class="w"> </span><span class="s1">&#39;https://api.calendly.com/organizations/81da9c7f-3e19-434a-c3d2-0325e375cdef&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">api_url</span><span class="w"> </span><span class="s1">&#39;https://api.calendly.com&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- optional</span>
-<span class="w">    </span><span class="n">api_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;key_ID&gt;&#39;</span><span class="w"> </span><span class="c1">-- The Key ID from above.</span>
+<span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;supabase:openapi-fdw&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;{See: &quot;Available Versions&quot;}&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;{See: &quot;Available Versions&quot;}&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;{See: &quot;Available Versions&quot;}&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">base_url</span><span class="w"> </span><span class="s1">&#39;https://api.example.com/v1&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">api_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;key_ID&gt;&#39;</span><span class="w">  </span><span class="c1">-- The Key ID from Vault</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 </div>
@@ -3180,62 +3055,119 @@
 <span class="normal"> 7</span>
 <span class="normal"> 8</span>
 <span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">calendly_server</span>
+<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">my_api_server</span>
 <span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_calendly_fdw_v0.1.0/calendly_fdw.wasm&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;supabase:calendly-fdw&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.1.0&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;51a19fa4b8c40afb5dcf6dc2e009189aceeba65f30eec75d56a951d78fc8893f&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="c1">-- find your organization uri using foreign table &#39;calendly.current_user&#39;, see below example for details</span>
-<span class="w">    </span><span class="n">organization</span><span class="w"> </span><span class="s1">&#39;https://api.calendly.com/organizations/81da9c7f-3e19-434a-c3d2-0325e375cdef&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">api_url</span><span class="w"> </span><span class="s1">&#39;https://api.calendly.com&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- optional</span>
-<span class="w">    </span><span class="n">api_key</span><span class="w"> </span><span class="s1">&#39;eyJraWQiOiIxY2UxZ...&#39;</span><span class="w">  </span><span class="c1">-- Calendly personal access token</span>
+<span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;supabase:openapi-fdw&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;{See: &quot;Available Versions&quot;}&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;{See: &quot;Available Versions&quot;}&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;{See: &quot;Available Versions&quot;}&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">base_url</span><span class="w"> </span><span class="s1">&#39;https://api.example.com/v1&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">api_key</span><span class="w"> </span><span class="s1">&#39;your-api-key&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 </div>
 </div>
 </div>
-<p>Note the <code>fdw_package_*</code> options are required, which specify the Wasm package metadata. You can get the available package version list from <a href="#available-versions">above</a>.</p>
+<h3 id="server-options">Server Options</h3>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th style="text-align: center;">Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>fdw_package_*</code></td>
+<td style="text-align: center;">Yes</td>
+<td>Standard Wasm FDW package metadata. See <a href="#available-versions">Available Versions</a>.</td>
+</tr>
+<tr>
+<td><code>base_url</code></td>
+<td style="text-align: center;">Yes*</td>
+<td>Base URL for the API (e.g., <code>https://api.example.com/v1</code>). *Optional if <code>spec_url</code> provides servers.</td>
+</tr>
+<tr>
+<td><code>spec_url</code></td>
+<td style="text-align: center;">No</td>
+<td>URL to the OpenAPI specification JSON. Required for <code>IMPORT FOREIGN SCHEMA</code>.</td>
+</tr>
+<tr>
+<td><code>api_key</code></td>
+<td style="text-align: center;">No</td>
+<td>API key for authentication.</td>
+</tr>
+<tr>
+<td><code>api_key_id</code></td>
+<td style="text-align: center;">No</td>
+<td>Vault secret key ID storing the API key. Use instead of <code>api_key</code>.</td>
+</tr>
+<tr>
+<td><code>api_key_header</code></td>
+<td style="text-align: center;">No</td>
+<td>Header name for API key (default: <code>Authorization</code>).</td>
+</tr>
+<tr>
+<td><code>api_key_prefix</code></td>
+<td style="text-align: center;">No</td>
+<td>Prefix for API key value (default: <code>Bearer</code> for Authorization header).</td>
+</tr>
+<tr>
+<td><code>bearer_token</code></td>
+<td style="text-align: center;">No</td>
+<td>Bearer token for authentication (alternative to <code>api_key</code>).</td>
+</tr>
+<tr>
+<td><code>bearer_token_id</code></td>
+<td style="text-align: center;">No</td>
+<td>Vault secret key ID storing the bearer token.</td>
+</tr>
+<tr>
+<td><code>user_agent</code></td>
+<td style="text-align: center;">No</td>
+<td>Custom User-Agent header value.</td>
+</tr>
+<tr>
+<td><code>accept</code></td>
+<td style="text-align: center;">No</td>
+<td>Custom Accept header for content negotiation (e.g., <code>application/geo+json</code>).</td>
+</tr>
+<tr>
+<td><code>headers</code></td>
+<td style="text-align: center;">No</td>
+<td>Custom headers as JSON object (e.g., <code>'{"X-Custom": "value"}'</code>).</td>
+</tr>
+<tr>
+<td><code>include_attrs</code></td>
+<td style="text-align: center;">No</td>
+<td>Include <code>attrs</code> jsonb column in <code>IMPORT FOREIGN SCHEMA</code> output (default: <code>'true'</code>). Set to <code>'false'</code> to omit.</td>
+</tr>
+<tr>
+<td><code>page_size</code></td>
+<td style="text-align: center;">No</td>
+<td>Default page size for pagination (0 = no automatic limit).</td>
+</tr>
+<tr>
+<td><code>page_size_param</code></td>
+<td style="text-align: center;">No</td>
+<td>Query parameter name for page size (default: <code>limit</code>).</td>
+</tr>
+<tr>
+<td><code>cursor_param</code></td>
+<td style="text-align: center;">No</td>
+<td>Query parameter name for pagination cursor (default: <code>after</code>).</td>
+</tr>
+</tbody>
+</table>
 <h3 id="create-a-schema">Create a schema</h3>
 <p>We recommend creating a schema to hold all the foreign tables:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">calendly</span><span class="p">;</span>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">openapi</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
-<h2 id="options">Options</h2>
-<p>The full list of foreign table options are below:</p>
-<ul>
-<li><code>object</code> - Object name in Calendly, required.</li>
-</ul>
-<p>Supported objects are listed below:</p>
-<table>
-<thead>
-<tr>
-<th>Object name</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>current_user</td>
-</tr>
-<tr>
-<td>event_types</td>
-</tr>
-<tr>
-<td>groups</td>
-</tr>
-<tr>
-<td>organization_memberships</td>
-</tr>
-<tr>
-<td>scheduled_events</td>
-</tr>
-</tbody>
-</table>
-<h2 id="entities">Entities</h2>
-<p>We can use SQL <a href="https://www.postgresql.org/docs/current/sql-importforeignschema.html">import foreign schema</a> to import foreign table definitions from Calendly.</p>
-<p>For example, using below SQL can automatically create foreign tables in the <code>calendly</code> schema.</p>
+<h2 id="creating-foreign-tables">Creating Foreign Tables</h2>
+<h3 id="manual-table-creation">Manual Table Creation</h3>
+<p>Create foreign tables manually by specifying the endpoint and columns:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -3247,384 +3179,73 @@
 <span class="normal"> 9</span>
 <span class="normal">10</span>
 <span class="normal">11</span>
-<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- create all the foreign tables</span>
-<span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">calendly</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">calendly_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">calendly</span><span class="p">;</span>
-
-<span class="c1">-- or, create selected tables only</span>
-<span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">calendly</span>
-<span class="w">   </span><span class="k">limit</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="p">(</span><span class="ss">&quot;event_types&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;groups&quot;</span><span class="p">)</span>
-<span class="w">   </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">calendly_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">calendly</span><span class="p">;</span>
-
-<span class="c1">-- or, create all foreign tables except selected tables</span>
-<span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">calendly</span>
-<span class="w">   </span><span class="k">except</span><span class="w"> </span><span class="p">(</span><span class="ss">&quot;event_types&quot;</span><span class="p">)</span>
-<span class="w">   </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">calendly_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">calendly</span><span class="p">;</span>
+<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">openapi</span><span class="p">.</span><span class="n">users</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">email</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="n">timestamptz</span><span class="p">,</span>
+<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="p">)</span>
+<span class="n">server</span><span class="w"> </span><span class="n">my_api_server</span>
+<span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">endpoint</span><span class="w"> </span><span class="s1">&#39;/users&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="n">rowid_column</span><span class="w"> </span><span class="s1">&#39;id&#39;</span>
+<span class="p">);</span>
 </code></pre></div></td></tr></table></div>
-<h3 id="current-user">Current User</h3>
-<p>This is an object representing your Calendly user profile.</p>
-<p>Ref: <a href="https://developer.calendly.com/api-docs">Calendly API docs</a></p>
-<h4 id="operations">Operations</h4>
+<h3 id="table-options">Table Options</h3>
 <table>
 <thead>
 <tr>
-<th>Object</th>
-<th style="text-align: center;">Select</th>
-<th style="text-align: center;">Insert</th>
-<th style="text-align: center;">Update</th>
-<th style="text-align: center;">Delete</th>
-<th style="text-align: center;">Truncate</th>
+<th>Option</th>
+<th style="text-align: center;">Required</th>
+<th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Current User</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
+<td><code>endpoint</code></td>
+<td style="text-align: center;">Yes</td>
+<td>API endpoint path (e.g., <code>/users</code>, <code>/users/{user_id}/posts</code>).</td>
+</tr>
+<tr>
+<td><code>rowid_column</code></td>
+<td style="text-align: center;">No</td>
+<td>Column used as row identifier for single-resource access and modifications (default: <code>id</code>).</td>
+</tr>
+<tr>
+<td><code>response_path</code></td>
+<td style="text-align: center;">No</td>
+<td>JSON pointer to extract data array from response (e.g., <code>/data</code>, <code>/results</code>).</td>
+</tr>
+<tr>
+<td><code>object_path</code></td>
+<td style="text-align: center;">No</td>
+<td>JSON pointer to extract nested object from each row (e.g., <code>/properties</code> for GeoJSON).</td>
+</tr>
+<tr>
+<td><code>cursor_path</code></td>
+<td style="text-align: center;">No</td>
+<td>JSON pointer to pagination cursor in response.</td>
+</tr>
+<tr>
+<td><code>cursor_param</code></td>
+<td style="text-align: center;">No</td>
+<td>Override server-level cursor parameter name.</td>
+</tr>
+<tr>
+<td><code>page_size_param</code></td>
+<td style="text-align: center;">No</td>
+<td>Override server-level page size parameter name.</td>
+</tr>
+<tr>
+<td><code>page_size</code></td>
+<td style="text-align: center;">No</td>
+<td>Override server-level page size.</td>
 </tr>
 </tbody>
 </table>
-<h4 id="usage">Usage</h4>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">calendly</span><span class="p">.</span><span class="k">current_user</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">uri</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">slug</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
-<span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">calendly_server</span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;current_user&#39;</span>
-<span class="w">  </span><span class="p">);</span>
-</code></pre></div></td></tr></table></div>
-<h4 id="notes">Notes</h4>
-<ul>
-<li>The <code>attrs</code> column contains additional user attributes in JSON format</li>
-<li>Use this table to retrieve the organization URI for server configuration, for example:
-  <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="n">attrs</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;current_organization&#39;</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">org_uri</span>
-<span class="k">from</span><span class="w"> </span><span class="n">calendly</span><span class="p">.</span><span class="k">current_user</span><span class="p">;</span>
-</code></pre></div></td></tr></table></div></li>
-</ul>
-<h3 id="event-types">Event Types</h3>
-<p>This is an object representing Calendly event types.</p>
-<p>Ref: <a href="https://developer.calendly.com/api-docs">Calendly API docs</a></p>
-<h4 id="operations_1">Operations</h4>
-<table>
-<thead>
-<tr>
-<th>Object</th>
-<th style="text-align: center;">Select</th>
-<th style="text-align: center;">Insert</th>
-<th style="text-align: center;">Update</th>
-<th style="text-align: center;">Delete</th>
-<th style="text-align: center;">Truncate</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Event Types</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-</tr>
-</tbody>
-</table>
-<h4 id="usage_1">Usage</h4>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">calendly</span><span class="p">.</span><span class="n">event_types</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">uri</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
-<span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">calendly_server</span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;event_types&#39;</span>
-<span class="w">  </span><span class="p">);</span>
-</code></pre></div></td></tr></table></div>
-<h4 id="notes_1">Notes</h4>
-<ul>
-<li>The <code>attrs</code> column contains all event type attributes in JSON format</li>
-<li>Access profile and custom questions through JSON attributes:
-  <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="n">attrs</span><span class="o">-&gt;</span><span class="s1">&#39;profile&#39;</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;name&#39;</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">profile_name</span><span class="p">,</span>
-<span class="w">       </span><span class="n">attrs</span><span class="o">-&gt;</span><span class="s1">&#39;custom_questions&#39;</span><span class="o">-&gt;</span><span class="mi">0</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;name&#39;</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">first_question_name</span>
-<span class="k">from</span><span class="w"> </span><span class="n">calendly</span><span class="p">.</span><span class="n">event_types</span><span class="p">;</span>
-</code></pre></div></td></tr></table></div></li>
-</ul>
-<h3 id="groups">Groups</h3>
-<p>This is an object representing Calendly groups.</p>
-<p>Ref: <a href="https://developer.calendly.com/api-docs">Calendly API docs</a></p>
-<h4 id="operations_2">Operations</h4>
-<table>
-<thead>
-<tr>
-<th>Object</th>
-<th style="text-align: center;">Select</th>
-<th style="text-align: center;">Insert</th>
-<th style="text-align: center;">Update</th>
-<th style="text-align: center;">Delete</th>
-<th style="text-align: center;">Truncate</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Groups</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-</tr>
-</tbody>
-</table>
-<h4 id="usage_2">Usage</h4>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">calendly</span><span class="p">.</span><span class="n">groups</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">uri</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
-<span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">calendly_server</span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;groups&#39;</span>
-<span class="w">  </span><span class="p">);</span>
-</code></pre></div></td></tr></table></div>
-<h4 id="notes_2">Notes</h4>
-<ul>
-<li>The <code>attrs</code> column contains all group attributes in JSON format</li>
-</ul>
-<h3 id="organization-memberships">Organization Memberships</h3>
-<p>This is an object representing Calendly organization memberships.</p>
-<p>Ref: <a href="https://developer.calendly.com/api-docs">Calendly API docs</a></p>
-<h4 id="operations_3">Operations</h4>
-<table>
-<thead>
-<tr>
-<th>Object</th>
-<th style="text-align: center;">Select</th>
-<th style="text-align: center;">Insert</th>
-<th style="text-align: center;">Update</th>
-<th style="text-align: center;">Delete</th>
-<th style="text-align: center;">Truncate</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Organization Membership</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-</tr>
-</tbody>
-</table>
-<h4 id="usage_3">Usage</h4>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">calendly</span><span class="p">.</span><span class="n">organization_memberships</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">uri</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
-<span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">calendly_server</span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;organization_memberships&#39;</span>
-<span class="w">  </span><span class="p">);</span>
-</code></pre></div></td></tr></table></div>
-<h4 id="notes_3">Notes</h4>
-<ul>
-<li>The <code>attrs</code> column contains all membership attributes in JSON format</li>
-</ul>
-<h3 id="scheduled-events">Scheduled Events</h3>
-<p>This is an object representing Calendly scheduled events.</p>
-<p>Ref: <a href="https://developer.calendly.com/api-docs">Calendly API docs</a></p>
-<h4 id="operations_4">Operations</h4>
-<table>
-<thead>
-<tr>
-<th>Object</th>
-<th style="text-align: center;">Select</th>
-<th style="text-align: center;">Insert</th>
-<th style="text-align: center;">Update</th>
-<th style="text-align: center;">Delete</th>
-<th style="text-align: center;">Truncate</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Scheduled Events</td>
-<td style="text-align: center;">✅</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-<td style="text-align: center;">❌</td>
-</tr>
-</tbody>
-</table>
-<h4 id="usage_4">Usage</h4>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">calendly</span><span class="p">.</span><span class="n">scheduled_events</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">uri</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
-<span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">calendly_server</span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;scheduled_events&#39;</span>
-<span class="w">  </span><span class="p">);</span>
-</code></pre></div></td></tr></table></div>
-<h4 id="notes_4">Notes</h4>
-<ul>
-<li>The <code>attrs</code> column contains all event attributes in JSON format</li>
-</ul>
-<h2 id="query-pushdown-support">Query Pushdown Support</h2>
-<p>This FDW doesn't support query pushdown.</p>
-<h2 id="supported-data-types">Supported Data Types</h2>
-<table>
-<thead>
-<tr>
-<th>Postgres Data Type</th>
-<th>Calendly Data Type</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>boolean</td>
-<td>Boolean</td>
-</tr>
-<tr>
-<td>bigint</td>
-<td>Number</td>
-</tr>
-<tr>
-<td>double precision</td>
-<td>Number</td>
-</tr>
-<tr>
-<td>text</td>
-<td>String</td>
-</tr>
-<tr>
-<td>timestamp</td>
-<td>Time</td>
-</tr>
-<tr>
-<td>timestamptz</td>
-<td>Time</td>
-</tr>
-<tr>
-<td>jsonb</td>
-<td>Json</td>
-</tr>
-</tbody>
-</table>
-<p>The Calendly API uses JSON formatted data, please refer to <a href="https://developer.calendly.com/api-docs">Calendly API docs</a> for more details.</p>
-<h2 id="limitations">Limitations</h2>
-<p>This section describes important limitations and considerations when using this FDW:</p>
-<ul>
-<li>Large result sets may experience slower performance due to full data transfer requirement</li>
-<li>Organization URI must be manually configured after initial setup</li>
-<li>Materialized views using these foreign tables may fail during logical backups</li>
-</ul>
-<h2 id="examples">Examples</h2>
-<p>Below are some examples on how to use Calendly foreign tables.</p>
-<h3 id="basic-example">Basic example</h3>
-<p>This example will create a "foreign table" inside your Postgres database and query its data.</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span>
-<span class="normal">13</span>
-<span class="normal">14</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">calendly</span><span class="p">.</span><span class="k">current_user</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">uri</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">slug</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
-<span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">calendly_server</span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;current_user&#39;</span>
-<span class="w">  </span><span class="p">);</span>
-
-<span class="c1">-- query current user used for the Calendly API request</span>
-<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">calendly</span><span class="p">.</span><span class="k">current_user</span><span class="p">;</span>
-</code></pre></div></td></tr></table></div>
-<p><code>attrs</code> is a special column which stores all the object attributes in JSON format, you can extract any attributes needed from it. See more examples below.</p>
-<h3 id="query-json-attributes">Query JSON attributes</h3>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- extract organization uri from current user</span>
-<span class="k">select</span><span class="w"> </span><span class="n">attrs</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;current_organization&#39;</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">org_uri</span>
-<span class="k">from</span><span class="w"> </span><span class="n">calendly</span><span class="p">.</span><span class="k">current_user</span><span class="p">;</span>
-
-<span class="c1">-- then update foreign server option using the organization uri</span>
-<span class="k">alter</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">calendly_server</span><span class="w"> </span><span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="k">set</span><span class="w"> </span><span class="n">organization</span><span class="w"> </span><span class="s1">&#39;&lt;org_uri&gt;&#39;</span><span class="p">);</span>
-</code></pre></div></td></tr></table></div>
-<p>Some other examples,</p>
+<h3 id="automatic-schema-import">Automatic Schema Import</h3>
+<p>If you provide a <code>spec_url</code> in the server options, you can automatically import table definitions:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -3640,22 +3261,418 @@
 <span class="normal">13</span>
 <span class="normal">14</span>
 <span class="normal">15</span>
-<span class="normal">16</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">calendly</span><span class="p">.</span><span class="n">event_types</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">uri</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
-<span class="w">  </span><span class="n">updated_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
+<span class="normal">16</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Import all endpoints</span>
+<span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">openapi</span>
+<span class="w">  </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">my_api_server</span>
+<span class="w">  </span><span class="k">into</span><span class="w"> </span><span class="n">api</span><span class="p">;</span>
+
+<span class="c1">-- Import specific endpoints only</span>
+<span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">openapi</span>
+<span class="w">  </span><span class="k">limit</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="p">(</span><span class="ss">&quot;users&quot;</span><span class="p">,</span><span class="w"> </span><span class="ss">&quot;orders&quot;</span><span class="p">)</span>
+<span class="w">  </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">my_api_server</span>
+<span class="w">  </span><span class="k">into</span><span class="w"> </span><span class="n">api</span><span class="p">;</span>
+
+<span class="c1">-- Import all except specific endpoints</span>
+<span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">openapi</span>
+<span class="w">  </span><span class="k">except</span><span class="w"> </span><span class="p">(</span><span class="ss">&quot;internal_endpoint&quot;</span><span class="p">)</span>
+<span class="w">  </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">my_api_server</span>
+<span class="w">  </span><span class="k">into</span><span class="w"> </span><span class="n">api</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><code>IMPORT FOREIGN SCHEMA</code> only generates tables for non-parameterized GET endpoints (e.g., <code>/users</code>, <code>/orders</code>). Endpoints with path parameters like <code>/users/{user_id}/posts</code> are skipped because they require WHERE clause values at query time. Create these tables manually using the <code>endpoint</code> option with <code>{param}</code> placeholders — see <a href="#path-parameters">Path Parameters</a> for examples.</p>
+</div>
+<h2 id="path-parameters">Path Parameters</h2>
+<p>The OpenAPI FDW supports path parameter substitution. Define parameters in the endpoint template using <code>{param_name}</code> syntax, and provide values via WHERE clauses:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Endpoint template with path parameter</span>
+<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">openapi</span><span class="p">.</span><span class="n">user_posts</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">user_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">title</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">body</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
 <span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
 <span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">calendly_server</span>
+<span class="n">server</span><span class="w"> </span><span class="n">my_api_server</span>
+<span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">endpoint</span><span class="w"> </span><span class="s1">&#39;/users/{user_id}/posts&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="n">rowid_column</span><span class="w"> </span><span class="s1">&#39;id&#39;</span>
+<span class="p">);</span>
+
+<span class="c1">-- Query with path parameter - generates GET /users/123/posts</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">openapi</span><span class="p">.</span><span class="n">user_posts</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">user_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;123&#39;</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<h3 id="multiple-path-parameters">Multiple Path Parameters</h3>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">openapi</span><span class="p">.</span><span class="n">project_issues</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">org</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">repo</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">title</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">status</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="p">)</span>
+<span class="n">server</span><span class="w"> </span><span class="n">my_api_server</span>
+<span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">endpoint</span><span class="w"> </span><span class="s1">&#39;/projects/{org}/{repo}/issues&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="n">rowid_column</span><span class="w"> </span><span class="s1">&#39;id&#39;</span>
+<span class="p">);</span>
+
+<span class="c1">-- Generates GET /projects/acme/widgets/issues</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">openapi</span><span class="p">.</span><span class="n">project_issues</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">org</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;acme&#39;</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">repo</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;widgets&#39;</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<h2 id="query-pushdown">Query Pushdown</h2>
+<h3 id="single-resource-access">Single Resource Access</h3>
+<p>When filtering by the <code>rowid_column</code>, the FDW automatically requests a single resource:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Generates GET /users/user-123</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">openapi</span><span class="p">.</span><span class="n">users</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;user-123&#39;</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<h3 id="query-parameters">Query Parameters</h3>
+<p>Other WHERE clause filters are passed as query parameters:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Generates GET /users?status=active</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">openapi</span><span class="p">.</span><span class="n">users</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;active&#39;</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<p>Columns used as query or path parameters always return the value from the WHERE clause, even if the API response contains the same field with different casing. This ensures PostgreSQL's post-filter always passes.</p>
+<h2 id="pagination">Pagination</h2>
+<p>The FDW automatically handles pagination. It supports:</p>
+<ol>
+<li><strong>Cursor-based pagination</strong> - Uses <code>cursor_param</code> and <code>cursor_path</code></li>
+<li><strong>URL-based pagination</strong> - Follows <code>next</code> links in response</li>
+</ol>
+<h3 id="configuring-pagination">Configuring Pagination</h3>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">paginated_api</span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;event_types&#39;</span>
+<span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;supabase:openapi-fdw&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;{See: &quot;Available Versions&quot;}&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;{See: &quot;Available Versions&quot;}&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;{See: &quot;Available Versions&quot;}&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">base_url</span><span class="w"> </span><span class="s1">&#39;https://openapi.example.com&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">page_size</span><span class="w"> </span><span class="s1">&#39;100&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">page_size_param</span><span class="w"> </span><span class="s1">&#39;limit&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">cursor_param</span><span class="w"> </span><span class="s1">&#39;cursor&#39;</span>
+<span class="w">  </span><span class="p">);</span>
+</code></pre></div></td></tr></table></div>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">openapi</span><span class="p">.</span><span class="n">items</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="p">)</span>
+<span class="n">server</span><span class="w"> </span><span class="n">paginated_api</span>
+<span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">endpoint</span><span class="w"> </span><span class="s1">&#39;/items&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="n">cursor_path</span><span class="w"> </span><span class="s1">&#39;/meta/next_cursor&#39;</span>
+<span class="p">);</span>
+</code></pre></div></td></tr></table></div>
+<h2 id="geojson-support">GeoJSON Support</h2>
+<p>For APIs that return GeoJSON, use <code>object_path</code> to extract properties:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">openapi</span><span class="p">.</span><span class="n">locations</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">category</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="p">)</span>
+<span class="n">server</span><span class="w"> </span><span class="n">my_api_server</span>
+<span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">endpoint</span><span class="w"> </span><span class="s1">&#39;/locations&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="n">response_path</span><span class="w"> </span><span class="s1">&#39;/features&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="n">object_path</span><span class="w"> </span><span class="s1">&#39;/properties&#39;</span>
+<span class="p">);</span>
+</code></pre></div></td></tr></table></div>
+<h2 id="supported-data-types">Supported Data Types</h2>
+<table>
+<thead>
+<tr>
+<th>Postgres Type</th>
+<th>JSON Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>text</td>
+<td>string</td>
+</tr>
+<tr>
+<td>boolean</td>
+<td>boolean</td>
+</tr>
+<tr>
+<td>smallint</td>
+<td>number</td>
+</tr>
+<tr>
+<td>integer</td>
+<td>number</td>
+</tr>
+<tr>
+<td>bigint</td>
+<td>number</td>
+</tr>
+<tr>
+<td>real</td>
+<td>number</td>
+</tr>
+<tr>
+<td>double precision</td>
+<td>number</td>
+</tr>
+<tr>
+<td>numeric</td>
+<td>number</td>
+</tr>
+<tr>
+<td>date</td>
+<td>string (ISO 8601)</td>
+</tr>
+<tr>
+<td>timestamp</td>
+<td>string (ISO 8601)</td>
+</tr>
+<tr>
+<td>timestamptz</td>
+<td>string (ISO 8601)</td>
+</tr>
+<tr>
+<td>jsonb</td>
+<td>object/array</td>
+</tr>
+<tr>
+<td>uuid</td>
+<td>string</td>
+</tr>
+</tbody>
+</table>
+<h3 id="the-attrs-column">The <code>attrs</code> Column</h3>
+<p>Any foreign table can include an <code>attrs</code> column of type <code>jsonb</code> to capture the entire raw JSON response for each row:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span>
+<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">openapi</span><span class="p">.</span><span class="n">users</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span><span class="w">  </span><span class="c1">-- Contains full JSON object</span>
+<span class="p">)</span>
+<span class="n">server</span><span class="w"> </span><span class="n">my_api_server</span>
+<span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="n">endpoint</span><span class="w"> </span><span class="s1">&#39;/users&#39;</span><span class="p">);</span>
+</code></pre></div></td></tr></table></div>
+<h2 id="limitations">Limitations</h2>
+<ul>
+<li><strong>Read-only</strong>: This FDW only supports SELECT operations. INSERT, UPDATE, and DELETE are not supported at this time.</li>
+<li><strong>No transactions</strong>: Each SQL statement results in immediate HTTP requests; there is no transactional grouping.</li>
+<li><strong>Authentication</strong>: Currently supports API Key and Bearer Token authentication. OAuth flows are not supported.</li>
+<li><strong>OpenAPI version</strong>: Only OpenAPI 3.0+ specifications are supported (not Swagger 2.0).</li>
+</ul>
+<h2 id="rate-limiting">Rate Limiting</h2>
+<p>The FDW automatically handles rate limiting:</p>
+<ul>
+<li><strong>HTTP 429 responses</strong>: Automatically retries up to 3 times</li>
+<li><strong>Retry-After header</strong>: Respects server-specified delay when provided</li>
+<li><strong>Exponential backoff</strong>: Falls back to 1s, 2s, 4s delays when no Retry-After header is present</li>
+</ul>
+<p>For APIs with very strict rate limits, consider using materialized views to cache results.</p>
+<h2 id="examples">Examples</h2>
+<h3 id="basic-query">Basic Query</h3>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Create a foreign server connecting to the Weather.gov API</span>
+<span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">openapi_server</span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.1.4/openapi_fdw.wasm&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;supabase:openapi-fdw&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.1.4&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;dd434f8565b060b181d1e69e1e4d5c8b9c3ac5ca444056d3c2fb939038d308fe&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">base_url</span><span class="w"> </span><span class="s1">&#39;https://api.weather.gov&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">spec_url</span><span class="w"> </span><span class="s1">&#39;https://api.weather.gov/openapi.json&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 
-<span class="k">select</span><span class="w"> </span><span class="n">attrs</span><span class="o">-&gt;</span><span class="s1">&#39;profile&#39;</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;name&#39;</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">profile_name</span>
-<span class="k">from</span><span class="w"> </span><span class="n">calendly</span><span class="p">.</span><span class="n">event_types</span><span class="p">;</span>
+<span class="c1">-- Create a schema to hold the imported foreign tables</span>
+<span class="k">create</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">openapi</span><span class="p">;</span>
 
-<span class="k">select</span><span class="w"> </span><span class="n">attrs</span><span class="o">-&gt;</span><span class="s1">&#39;custom_questions&#39;</span><span class="o">-&gt;</span><span class="mi">0</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;name&#39;</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">first_question_name</span>
-<span class="k">from</span><span class="w"> </span><span class="n">calendly</span><span class="p">.</span><span class="n">event_types</span><span class="p">;</span>
+<span class="c1">-- Auto-import all API endpoints as foreign tables based on the OpenAPI spec</span>
+<span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">openapi</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">openapi_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">openapi</span><span class="p">;</span>
+
+<span class="c1">-- Query the stations endpoint to get weather station data</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">openapi</span><span class="p">.</span><span class="n">stations</span><span class="w"> </span><span class="k">limit</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<h3 id="nested-resources">Nested Resources</h3>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Create a foreign table for a parameterized endpoint with {zone_id} path parameter</span>
+<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">openapi</span><span class="p">.</span><span class="n">zone_stations</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">zone_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="k">type</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="p">)</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">openapi_server</span>
+<span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">endpoint</span><span class="w"> </span><span class="s1">&#39;/zones/forecast/{zone_id}/stations&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="n">rowid_column</span><span class="w"> </span><span class="s1">&#39;id&#39;</span>
+<span class="p">);</span>
+
+<span class="c1">-- Query stations for Alaska zone AKZ317 - generates GET /zones/forecast/AKZ317/stations</span>
+<span class="k">select</span><span class="w"> </span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="k">type</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">openapi</span><span class="p">.</span><span class="n">zone_stations</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">zone_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;AKZ317&#39;</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<h3 id="custom-headers">Custom Headers</h3>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">custom_api</span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;supabase:openapi-fdw&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;{See: &quot;Available Versions&quot;}&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;{See: &quot;Available Versions&quot;}&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;{See: &quot;Available Versions&quot;}&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">base_url</span><span class="w"> </span><span class="s1">&#39;https://openapi.example.com&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">api_key</span><span class="w"> </span><span class="s1">&#39;your-key&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">user_agent</span><span class="w"> </span><span class="s1">&#39;MyApp/1.0&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">accept</span><span class="w"> </span><span class="s1">&#39;application/json&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">headers</span><span class="w"> </span><span class="s1">&#39;{&quot;X-Request-ID&quot;: &quot;postgres-fdw&quot;, &quot;X-Feature-Flag&quot;: &quot;beta&quot;}&#39;</span>
+<span class="w">  </span><span class="p">);</span>
+</code></pre></div></td></tr></table></div>
+<h3 id="response-path-extraction">Response Path Extraction</h3>
+<p>For APIs that wrap data in a container object:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- API returns: {&quot;data&quot;: [...], &quot;meta&quot;: {...}}</span>
+<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">openapi</span><span class="p">.</span><span class="n">items</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="p">)</span>
+<span class="n">server</span><span class="w"> </span><span class="n">my_api_server</span>
+<span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">endpoint</span><span class="w"> </span><span class="s1">&#39;/items&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="n">response_path</span><span class="w"> </span><span class="s1">&#39;/data&#39;</span>
+<span class="p">);</span>
+</code></pre></div></td></tr></table></div>
+<h3 id="combining-with-materialized-views">Combining with Materialized Views</h3>
+<p>For frequently accessed data, use materialized views to reduce API calls:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span>
+<span class="normal">7</span>
+<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">materialized</span><span class="w"> </span><span class="k">view</span><span class="w"> </span><span class="n">api_users_cache</span><span class="w"> </span><span class="k">as</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">openapi</span><span class="p">.</span><span class="n">users</span><span class="p">;</span>
+
+<span class="c1">-- Query the cache</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">api_users_cache</span><span class="p">;</span>
+
+<span class="c1">-- Refresh when needed</span>
+<span class="n">refresh</span><span class="w"> </span><span class="n">materialized</span><span class="w"> </span><span class="k">view</span><span class="w"> </span><span class="n">api_users_cache</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 
 
@@ -3689,7 +3706,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../cal/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Cal.com">
+          <a href="../notion/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Notion">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -3699,20 +3716,20 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                Cal.com
+                Notion
               </div>
             </div>
           </a>
         
         
           
-          <a href="../clerk/" class="md-footer__link md-footer__link--next" aria-label="Next: Clerk">
+          <a href="../orb/" class="md-footer__link md-footer__link--next" aria-label="Next: Orb">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Clerk
+                Orb
               </div>
             </div>
             <div class="md-footer__button md-icon">
