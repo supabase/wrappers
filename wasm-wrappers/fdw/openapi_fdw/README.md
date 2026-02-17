@@ -86,7 +86,7 @@ cargo component build --release --target wasm32-unknown-unknown
 ### Running Tests
 
 ```bash
-# 518 unit tests
+# 534 unit tests
 cargo test
 
 # Integration tests (Docker: PostgreSQL + MockServer)
@@ -148,7 +148,7 @@ For queries you run frequently, a [materialized view](https://supabase.com/blog/
 
 | Version | Date | Notes |
 | --- | --- | --- |
-| 0.2.0 | 2026-02-15 | Modular architecture, POST-for-read, `spec_json` inline specs, YAML spec support, LIMIT pushdown, OpenAPI 3.1 support, security hardening, 531 unit tests, 5 real-world examples |
+| 0.2.0 | 2026-02-15 | Modular architecture, POST-for-read, `spec_json` inline specs, YAML spec support, LIMIT pushdown, OpenAPI 3.1 support, security hardening, 534 unit tests, 5 real-world examples |
 | 0.1.4 | 2026-02-09 | Type coercion, auth validation, table naming, URL fixes |
 | 0.1.3 | 2026-02-06 | Avoid cloning JSON response data |
 | 0.1.2 | 2026-02-01 | Fix query param filtering |

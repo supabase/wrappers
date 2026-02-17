@@ -158,7 +158,7 @@ fn test_openapi_to_pg_type_time_format() {
         format: Some("time".to_string()),
         ..Default::default()
     };
-    assert_eq!(openapi_to_pg_type(&time_schema, &spec), "time");
+    assert_eq!(openapi_to_pg_type(&time_schema, &spec), "text");
 }
 
 #[test]
@@ -177,14 +177,14 @@ fn test_openapi_to_pg_type_byte_binary_format() {
         format: Some("byte".to_string()),
         ..Default::default()
     };
-    assert_eq!(openapi_to_pg_type(&byte_schema, &spec), "bytea");
+    assert_eq!(openapi_to_pg_type(&byte_schema, &spec), "text");
 
     let binary_schema = Schema {
         schema_type: Some("string".to_string()),
         format: Some("binary".to_string()),
         ..Default::default()
     };
-    assert_eq!(openapi_to_pg_type(&binary_schema, &spec), "bytea");
+    assert_eq!(openapi_to_pg_type(&binary_schema, &spec), "text");
 }
 
 #[test]
@@ -1657,16 +1657,16 @@ fn test_extract_columns_31_all_nullable_format_types() {
     let columns = extract_columns(&schema, &spec, false);
 
     let expected = vec![
-        ("binary_field", "bytea"),
+        ("binary_field", "text"),
         ("bool_field", "boolean"),
-        ("byte_field", "bytea"),
+        ("byte_field", "text"),
         ("date_field", "date"),
         ("datetime_field", "timestamptz"),
         ("double_field", "double precision"),
         ("float_field", "real"),
         ("int32_field", "integer"),
         ("int64_field", "bigint"),
-        ("time_field", "time"),
+        ("time_field", "text"),
         ("unix_time_field", "timestamptz"),
         ("uuid_field", "uuid"),
     ];

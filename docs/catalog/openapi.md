@@ -18,7 +18,7 @@ This wrapper allows you to query any REST API endpoint as a PostgreSQL foreign t
 
 | Version | Wasm Package URL | Checksum | Required Wrappers Version |
 | ------- | ---------------- | -------- | ------------------------- |
-| 0.2.0 | `https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.2.0/openapi_fdw.wasm` | `{checksum}` | >=0.5.0 |
+| 0.2.0 | `https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.2.0/openapi_fdw.wasm` | _published on release_ | >=0.5.0 |
 | 0.1.4 | `https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.1.4/openapi_fdw.wasm` | `dd434f8565b060b181d1e69e1e4d5c8b9c3ac5ca444056d3c2fb939038d308fe` | >=0.5.0 |
 
 ## Preparation
@@ -378,8 +378,6 @@ options (
 | date | string (ISO 8601) |
 | timestamp* | string (ISO 8601) |
 | timestamptz | string (ISO 8601) |
-| bytea | string (base64) |
-| time | string (HH:MM:SS) |
 | jsonb | object/array |
 | uuid | string |
 

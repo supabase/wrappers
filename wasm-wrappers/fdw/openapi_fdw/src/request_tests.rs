@@ -11,6 +11,7 @@ fn make_fdw_for_url(base_url: &str, endpoint: &str) -> OpenApiFdw {
             ..Default::default()
         },
         endpoint: endpoint.to_string(),
+        resolved_endpoint: endpoint.to_string(),
         ..Default::default()
     }
 }
@@ -140,6 +141,42 @@ fn test_resolve_pagination_url_same_origin_case_insensitive() {
         .resolve_pagination_url("https://api.example.com/items?page=2")
         .unwrap();
     assert_eq!(url, "https://api.example.com/items?page=2");
+}
+
+// --- Pagination bug fix regression tests ---
+
+#[test]
+fn test_resolve_pagination_url_query_only_with_path_params() {
+    // Bug fix: query-only pagination should use resolved_endpoint (post-substitution),
+    // not the raw template with {param} placeholders
+    let fdw = OpenApiFdw {
+        config: ServerConfig {
+            base_url: "https://api.example.com".to_string(),
+            ..Default::default()
+        },
+        endpoint: "/pets/{pet_id}/toys".to_string(),
+        resolved_endpoint: "/pets/123/toys".to_string(),
+        ..Default::default()
+    };
+    let url = fdw.resolve_pagination_url("?page=2").unwrap();
+    assert_eq!(url, "https://api.example.com/pets/123/toys?page=2");
+}
+
+#[test]
+fn test_resolve_pagination_url_absolute_path_with_base_path() {
+    // Bug fix: absolute-path pagination should use only the origin, not the
+    // full base_url, to avoid duplicating the path prefix
+    let fdw = make_fdw_for_url("https://api.example.com/v1", "/items");
+    let url = fdw.resolve_pagination_url("/v1/items?page=2").unwrap();
+    assert_eq!(url, "https://api.example.com/v1/items?page=2");
+}
+
+#[test]
+fn test_resolve_pagination_url_absolute_path_different_path() {
+    // Absolute path that differs from base_url path — uses origin only
+    let fdw = make_fdw_for_url("https://api.example.com/v1", "/items");
+    let url = fdw.resolve_pagination_url("/v2/items?page=2").unwrap();
+    assert_eq!(url, "https://api.example.com/v2/items?page=2");
 }
 
 // --- extract_origin tests ---

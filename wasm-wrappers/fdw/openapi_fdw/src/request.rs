@@ -180,10 +180,22 @@ impl OpenApiFdw {
             }
             Ok(next_url.to_string())
         } else if next_url.starts_with('?') {
-            let endpoint_base = self.endpoint.split('?').next().unwrap_or(&self.endpoint);
+            // Use resolved_endpoint (post path-param substitution) if available,
+            // falling back to the template for endpoints without path params.
+            let ep = if self.resolved_endpoint.is_empty() {
+                &self.endpoint
+            } else {
+                &self.resolved_endpoint
+            };
+            let endpoint_base = ep.split('?').next().unwrap_or(ep);
             Ok(format!("{}{endpoint_base}{next_url}", self.config.base_url))
         } else if next_url.starts_with('/') {
-            Ok(format!("{}{next_url}", self.config.base_url))
+            // Use only the origin (scheme://host) to avoid duplicating any
+            // path prefix that base_url may contain (e.g. /v1).
+            Ok(format!(
+                "{}{next_url}",
+                extract_origin(&self.config.base_url)
+            ))
         } else {
             Ok(format!("{}/{next_url}", self.config.base_url))
         }
@@ -381,6 +393,10 @@ impl OpenApiFdw {
         // Substitute path parameters (no self borrow — takes &mut injected_params directly)
         let (endpoint, path_params_used) =
             Self::substitute_path_params(&self.endpoint, &quals, &mut self.injected_params)?;
+
+        // Store resolved endpoint for pagination (query-only URLs need the
+        // substituted path, not the raw template with {param} placeholders).
+        self.resolved_endpoint = endpoint.clone();
 
         // Check for rowid pushdown for single-resource access
         // Only if endpoint doesn't already have path params and rowid qual exists

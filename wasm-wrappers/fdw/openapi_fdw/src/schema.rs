@@ -22,8 +22,10 @@ pub fn openapi_to_pg_type(schema: &Schema, spec: &OpenApiSpec) -> &'static str {
         Some("string") => match resolved.format.as_deref() {
             Some("date") => "date",
             Some("date-time") => "timestamptz",
-            Some("time") => "time",
-            Some("byte") | Some("binary") => "bytea",
+            // time and bytea are not supported by the WIT type-oid interface,
+            // so we map them to text (the FDW casts values via JSON at runtime)
+            Some("time") => "text",
+            Some("byte") | Some("binary") => "text",
             Some("uuid") => "uuid",
             _ => "text",
         },

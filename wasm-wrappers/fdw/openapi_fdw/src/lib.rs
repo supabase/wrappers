@@ -50,6 +50,7 @@ struct OpenApiFdw {
     method: http::Method,
     request_body: String,
     endpoint: String,
+    resolved_endpoint: String, // endpoint after path param substitution (for pagination)
     response_path: Option<String>,
     object_path: Option<String>, // Extract nested object from each row (e.g., "/properties" for GeoJSON)
     rowid_col: String,
@@ -86,6 +87,7 @@ impl Default for OpenApiFdw {
             method: http::Method::Get,
             request_body: String::new(),
             endpoint: String::new(),
+            resolved_endpoint: String::new(),
             response_path: None,
             object_path: None,
             rowid_col: String::new(),
