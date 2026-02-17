@@ -21,12 +21,19 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          fetch-depth: 2
+          fetch-depth: 0
       - id: filter
         run: |
-          CHANGED=$(git diff --name-only HEAD~1)
+          if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
+            BASE=${{ github.event.pull_request.base.sha }}
+            HEAD=${{ github.event.pull_request.head.sha }}
+          else
+            BASE=${{ github.event.before }}
+            HEAD=${{ github.sha }}
+          fi
+          CHANGED=$(git diff --name-only "$BASE" "$HEAD")
           echo "native=$(echo "$CHANGED" | grep -qE '^(wrappers/|supabase-wrappers/|supabase-wrappers-macros/|\.github/workflows/test_wrappers\.yml)' && echo true || echo false)" >> "$GITHUB_OUTPUT"
-          echo "wasm=$(echo "$CHANGED" | grep -qE '^(wasm-wrappers/|wrappers/src/fdw/wasm_fdw/|\.github/workflows/test_wrappers\.yml)' && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "wasm=$(echo "$CHANGED" | grep -qE '^(wasm-wrappers/|supabase-wrappers/|wrappers/src/fdw/wasm_fdw/|\.github/workflows/test_wrappers\.yml)' && echo true || echo false)" >> "$GITHUB_OUTPUT"
 
   # =============================================================
   # Native wrappers test
@@ -45,11 +52,9 @@ jobs:
         run: |
           docker compose -f wrappers/.ci/docker-compose-native.yaml up -d
 
-      - uses: actions-rs/toolchain@v1
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: 1.88.0
-          default: true
-          override: true
           components: rustfmt, clippy
 
       - run: |
@@ -95,11 +100,9 @@ jobs:
         run: |
           docker compose -f wrappers/.ci/docker-compose-wasm.yaml up -d
 
-      - uses: actions-rs/toolchain@v1
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: 1.88.0
-          default: true
-          override: true
           components: rustfmt, clippy
 
       - run: |
