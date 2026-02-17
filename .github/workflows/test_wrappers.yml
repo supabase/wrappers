@@ -31,6 +31,12 @@ jobs:
             BASE=${{ github.event.before }}
             HEAD=${{ github.sha }}
           fi
+          # Null SHA (force push / new branch): can't diff, so run everything
+          if [[ "$BASE" == "0000000000000000000000000000000000000000" ]]; then
+            echo "native=true" >> "$GITHUB_OUTPUT"
+            echo "wasm=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           CHANGED=$(git diff --name-only "$BASE" "$HEAD")
           echo "native=$(echo "$CHANGED" | grep -qE '^(wrappers/|supabase-wrappers/|supabase-wrappers-macros/|\.github/workflows/test_wrappers\.yml)' && echo true || echo false)" >> "$GITHUB_OUTPUT"
           echo "wasm=$(echo "$CHANGED" | grep -qE '^(wasm-wrappers/|supabase-wrappers/|wrappers/src/fdw/wasm_fdw/|\.github/workflows/test_wrappers\.yml)' && echo true || echo false)" >> "$GITHUB_OUTPUT"
