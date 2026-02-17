@@ -89,9 +89,6 @@ cargo component build --release --target wasm32-unknown-unknown
 # 518 unit tests
 cargo test
 
-# Micro-benchmarks (Criterion)
-cargo bench --bench fdw_benchmarks
-
 # Integration tests (Docker: PostgreSQL + MockServer)
 bash test/run.sh
 
