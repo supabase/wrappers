@@ -18,8 +18,8 @@ This wrapper allows you to query any REST API endpoint as a PostgreSQL foreign t
 
 | Version | Wasm Package URL | Checksum | Required Wrappers Version |
 | ------- | ---------------- | -------- | ------------------------- |
-| 0.2.0   | `https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.2.0/openapi_fdw.wasm` | `{checksum}` | >=0.5.0 |
-| 0.1.4   | `https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.1.4/openapi_fdw.wasm` | `dd434f8565b060b181d1e69e1e4d5c8b9c3ac5ca444056d3c2fb939038d308fe` | >=0.5.0 |
+| 0.2.0 | `https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.2.0/openapi_fdw.wasm` | `{checksum}` | >=0.5.0 |
+| 0.1.4 | `https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.1.4/openapi_fdw.wasm` | `dd434f8565b060b181d1e69e1e4d5c8b9c3ac5ca444056d3c2fb939038d308fe` | >=0.5.0 |
 
 ## Preparation
 
@@ -413,6 +413,8 @@ The FDW automatically handles rate limiting:
 For APIs with very strict rate limits, consider using materialized views to cache results.
 
 ## Examples
+
+For additional real-world examples with multiple tables, pagination, and advanced features, see the **[examples directory on GitHub](https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/openapi_fdw/examples)**. There are step-by-step walkthroughs for querying the NWS Weather API, PokéAPI, CarAPI, GitHub, and Threads.
 
 ### Basic Query
 

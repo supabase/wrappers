@@ -55,13 +55,20 @@ print_separator() {
     "------------------" "--------" "--------" "--------" "----"
 }
 
-# Benchmark a synchronous query (openapi-fdw or pg_http)
+# Benchmark a synchronous query by inserting results into a temp table.
+# This measures the full lifecycle: API call -> parse -> write to local table.
 bench_sync() {
   local sql="$1"
   local iterations="$2"
+  local table="${3:-_bench_sink}"
   local times=()
 
+  # Create the destination table from the query schema (once)
+  psql_cmd -c "DROP TABLE IF EXISTS $table;" > /dev/null
+  psql_cmd -c "CREATE TABLE $table AS $sql LIMIT 0;" > /dev/null
+
   for _ in $(seq 1 "$iterations"); do
+    psql_cmd -c "TRUNCATE $table;" > /dev/null
     local elapsed
     elapsed=$(psql_cmd -c "
       DO \$bench\$
@@ -69,7 +76,7 @@ bench_sync() {
         t0 timestamptz := clock_timestamp();
         t1 timestamptz;
       BEGIN
-        PERFORM * FROM ($sql) AS _b;
+        INSERT INTO $table $sql;
         t1 := clock_timestamp();
         RAISE NOTICE '%', extract(epoch from (t1 - t0)) * 1000;
       END \$bench\$;
@@ -78,6 +85,8 @@ bench_sync() {
       times+=("$elapsed")
     fi
   done
+
+  psql_cmd -c "DROP TABLE IF EXISTS $table;" > /dev/null
 
   if [ ${#times[@]} -gt 0 ]; then
     compute_stats "${times[@]}"
