@@ -8,10 +8,10 @@ fmt:
 	cargo fmt
 
 clippy:
-	RUSTFLAGS="-D warnings" cargo clippy --all --tests --no-deps
+	RUSTFLAGS="-D warnings" cargo clippy --all --tests --no-deps --target $$(rustc -vV | awk '/^host:/ {print $$2}')
 
 test:
-	cargo test
+	cargo test --target $$(rustc -vV | awk '/^host:/ {print $$2}')
 
 build:
 	cargo component build --release --target wasm32-unknown-unknown
