@@ -1,6 +1,6 @@
-# NWS Weather API Example
+# Weather.gov API Example
 
-Query the [National Weather Service API](https://www.weather.gov/documentation/services-web-api) using SQL. This example exercises all major features of the OpenAPI FDW against a real, free, no-auth API.
+Query the [Weather.gov API](https://www.weather.gov/documentation/services-web-api) using SQL. This example exercises all major features of the OpenAPI FDW against a real, free, no-auth API.
 
 ## Server Configuration
 
@@ -21,7 +21,23 @@ create server nws
 
 ## 1. Quick Start with IMPORT FOREIGN SCHEMA
 
-The `nws_import` server has a `spec_url` pointing to the NWS OpenAPI spec, so tables can be auto-generated:
+The `nws_import` server has a `spec_url` pointing to the Weather.gov OpenAPI spec, so tables can be auto-generated:
+
+```sql
+create server nws_import
+  foreign data wrapper wasm_wrapper
+  options (
+    fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.2.0/openapi_fdw.wasm',
+    fdw_package_name 'supabase:openapi-fdw',
+    fdw_package_version '0.2.0',
+    base_url 'https://api.weather.gov',
+    user_agent 'openapi-fdw-example/0.2.0',
+    accept 'application/geo+json',
+    spec_url 'https://api.weather.gov/openapi.json',
+    page_size '50',
+    page_size_param 'limit'
+  );
+```
 
 ```sql
 CREATE SCHEMA IF NOT EXISTS nws_auto;
@@ -407,23 +423,3 @@ LIMIT 5;
 | 000SE | <https://api.weather.gov/zones/county/CAC037> |
 | 001AS | <https://api.weather.gov/zones/county/ASC050> |
 | 001BH | <https://api.weather.gov/zones/county/SDC093> |
-
-## Features Demonstrated
-
-| Feature | Table(s) |
-| --- | --- |
-| IMPORT FOREIGN SCHEMA | `nws_import` server |
-| GeoJSON extraction (`response_path` + `object_path`) | `stations`, `active_alerts`, `station_observations` |
-| Cursor-based pagination (`cursor_path`) | `stations` |
-| Path parameter substitution | `station_observations`, `latest_observation`, `point_metadata`, `forecast_periods` |
-| Query parameter pushdown | `active_alerts` (with `WHERE severity = ...`) |
-| camelCase → snake_case matching | All tables |
-| Custom headers (`user_agent`, `accept`) | All servers |
-| LIMIT pushdown | Any table with `LIMIT` |
-| Debug mode (`debug`) | `stations_debug` |
-| Single object response | `latest_observation`, `point_metadata` |
-| Type coercion (timestamptz, jsonb, boolean, integer) | `active_alerts`, `forecast_periods` |
-| `attrs` catch-all column | All tables |
-| Multiple path parameters | `forecast_periods` |
-| Nested response extraction (JSON pointer) | `forecast_periods` |
-| `rowid_column` | `stations`, `active_alerts` |

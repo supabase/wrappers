@@ -22,6 +22,18 @@ create server carapi
 The `carapi_import` server has a `spec_url` pointing to the CarAPI OpenAPI spec, so tables can be auto-generated:
 
 ```sql
+create server carapi_import
+  foreign data wrapper wasm_wrapper
+  options (
+    fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.2.0/openapi_fdw.wasm',
+    fdw_package_name 'supabase:openapi-fdw',
+    fdw_package_version '0.2.0',
+    base_url 'https://carapi.app/api',
+    spec_url 'https://carapi.app/swagger.json'
+  );
+```
+
+```sql
 CREATE SCHEMA IF NOT EXISTS carapi_auto;
 
 IMPORT FOREIGN SCHEMA "unused"
@@ -425,19 +437,3 @@ SELECT name, attrs
 FROM makes
 LIMIT 1;
 ```
-
-## Features Demonstrated
-
-| Feature | Table(s) |
-| --- | --- |
-| IMPORT FOREIGN SCHEMA | `carapi_import` server |
-| Page-based pagination (auto-followed) | `makes`, `models`, `trims`, `bodies`, `engines`, `mileages`, `exterior_colors` |
-| Auto-detected `data` wrapper key | All tables |
-| Query parameter pushdown | `models`, `trims`, `bodies`, `engines`, `mileages`, `exterior_colors` |
-| Integer type coercion | `trims` (msrp), `bodies` (curb_weight), `engines` (horsepower), `mileages` (mpg) |
-| `timestamptz` coercion | `trims` (created, modified) |
-| LIMIT pushdown | Any table with `LIMIT` |
-| Debug mode (`debug`) | `makes_debug` |
-| `attrs` catch-all column | All tables |
-| `rowid_column` | All tables |
-| No authentication required | All servers |

@@ -547,19 +547,3 @@ LIMIT 3;
 | 18555728842018816 | THREADS | ABC123xyz |
 | 18051838931694754 | THREADS | DEF456uvw |
 | 18099070105919840 | THREADS | GHI789rst |
-
-## Features Demonstrated
-
-| Feature | Table(s) |
-| --- | --- |
-| IMPORT FOREIGN SCHEMA (inline `spec_json`) | `threads_import` server |
-| API key auth (query param) | All tables |
-| Cursor-based pagination (auto-detected) | `my_threads`, `my_replies`, `keyword_search` |
-| Path parameter substitution | `thread_detail`, `thread_replies`, `thread_conversation` |
-| Query parameter pushdown | `keyword_search` (with `WHERE q = ...`), `profile_lookup` (with `WHERE username = ...`) |
-| Single object response | `my_profile`, `thread_detail`, `profile_lookup` |
-| Endpoint query string (field selection) | All tables except `profile_lookup` |
-| Type coercion (timestamptz, boolean, bigint) | `my_threads`, `profile_lookup` |
-| Debug mode | `keyword_search_debug` |
-| `attrs` catch-all column | All tables |
-| `rowid_column` | `my_threads`, `keyword_search`, `profile_lookup` |

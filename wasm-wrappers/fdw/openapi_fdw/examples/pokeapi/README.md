@@ -21,7 +21,21 @@ create server pokeapi
 
 ## 1. Quick Start with IMPORT FOREIGN SCHEMA
 
-The `pokeapi_import` server has a `spec_url` pointing to the PokeAPI OpenAPI spec (YAML format — the FDW parses both JSON and YAML), so tables can be auto-generated:
+The `pokeapi_import` server has a `spec_url` pointing to the PokeAPI OpenAPI spec (YAML format, the FDW parses both JSON and YAML), so tables can be auto-generated:
+
+```sql
+create server pokeapi_import
+  foreign data wrapper wasm_wrapper
+  options (
+    fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.2.0/openapi_fdw.wasm',
+    fdw_package_name 'supabase:openapi-fdw',
+    fdw_package_version '0.2.0',
+    base_url 'https://pokeapi.co/api/v2',
+    spec_url 'https://raw.githubusercontent.com/PokeAPI/pokeapi/master/openapi.yml',
+    page_size '20',
+    page_size_param 'limit'
+  );
+```
 
 ```sql
 CREATE SCHEMA IF NOT EXISTS pokeapi_auto;
@@ -396,22 +410,3 @@ WHERE name = 'pikachu';
 | name | encounters_url |
 | --- | --- |
 | pikachu | <https://pokeapi.co/api/v2/pokemon/25/encounters> |
-
-## Features Demonstrated
-
-| Feature | Table(s) |
-| --- | --- |
-| IMPORT FOREIGN SCHEMA | `pokeapi_import` server |
-| YAML spec support | `pokeapi_import` server (spec is YAML, not JSON) |
-| Offset-based pagination (auto-followed `next` URL) | `pokemon`, `types`, `berries` |
-| Auto-detected `results` wrapper key | All list tables |
-| Path parameter substitution | `pokemon_detail`, `type_detail`, `berry_detail` |
-| Single object response | `pokemon_detail`, `type_detail`, `berry_detail` |
-| Integer type coercion | `pokemon_detail`, `berry_detail` |
-| Boolean type coercion | `pokemon_detail` |
-| JSONB for complex nested data | `pokemon_detail`, `type_detail`, `berry_detail` |
-| LIMIT pushdown | Any table with `LIMIT` |
-| Debug mode (`debug`) | `pokemon_debug` |
-| `attrs` catch-all column | All tables |
-| `rowid_column` | All tables |
-| No authentication required | All servers |

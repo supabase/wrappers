@@ -30,6 +30,24 @@ The `github_import` server has a `spec_url` pointing to the GitHub REST API Open
 > **Note:** The GitHub OpenAPI spec is large (~15 MB). The initial import may take a few seconds to fetch and parse.
 
 ```sql
+create server github_import
+  foreign data wrapper wasm_wrapper
+  options (
+    fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.2.0/openapi_fdw.wasm',
+    fdw_package_name 'supabase:openapi-fdw',
+    fdw_package_version '0.2.0',
+    base_url 'https://api.github.com',
+    api_key '<YOUR_GITHUB_TOKEN>',
+    user_agent 'openapi-fdw-example/0.2.0',
+    accept 'application/vnd.github+json',
+    headers '{"X-GitHub-Api-Version": "2022-11-28"}',
+    page_size '30',
+    page_size_param 'per_page',
+    spec_url 'https://raw.githubusercontent.com/github/rest-api-description/main/descriptions/api.github.com/api.github.com.json'
+  );
+```
+
+```sql
 CREATE SCHEMA IF NOT EXISTS github_auto;
 
 IMPORT FOREIGN SCHEMA "unused"
@@ -502,20 +520,3 @@ LIMIT 3;
 | my-project | public | true |
 | dotfiles | public | false |
 | cool-app | public | true |
-
-## Features Demonstrated
-
-| Feature | Table(s) |
-| --- | --- |
-| IMPORT FOREIGN SCHEMA | `github_import` server |
-| Bearer token auth (Authorization header) | All tables |
-| Custom HTTP headers (X-GitHub-Api-Version) | All tables |
-| Page-based pagination (auto-detected) | `my_repos`, `repo_issues`, `repo_pulls`, `repo_releases`, `search_repos` |
-| Path parameter substitution | `repo_detail`, `repo_issues`, `repo_pulls`, `repo_releases` |
-| Query parameter pushdown | `my_repos` (`type`, `sort`), `repo_issues` (`state`), `repo_pulls` (`state`), `search_repos` (`q`) |
-| Single object response | `my_profile`, `repo_detail` |
-| Auto-detected wrapper key (`items`) | `search_repos`, `search_repos_debug` |
-| Type coercion (timestamptz, boolean, bigint) | All tables |
-| Debug mode | `search_repos_debug` |
-| `attrs` catch-all column | All tables |
-| `rowid_column` | `my_repos`, `repo_issues`, `repo_pulls`, `repo_releases`, `search_repos` |
