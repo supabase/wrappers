@@ -533,7 +533,7 @@ INFO:  [openapi_fdw] Scan complete: 3 rows, 2 columns
 
 ## 12. The `attrs` Column
 
-Every table includes an `attrs jsonb` column that captures all fields not mapped to named columns:
+Every table includes an `attrs jsonb` column that captures the full JSON response object for each row. This is useful for accessing fields you haven't defined as named columns:
 
 ```sql
 SELECT id, attrs->>'media_product_type' AS product_type,

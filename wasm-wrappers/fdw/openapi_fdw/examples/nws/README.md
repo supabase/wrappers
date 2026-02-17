@@ -408,7 +408,7 @@ INFO:  [openapi_fdw] Scan complete: 5 rows, 2 columns
 
 ## 9. The `attrs` Column
 
-Every table includes an `attrs jsonb` column that captures **all fields not mapped to named columns**. This is useful for exploring what data the API returns without defining every column.
+Every table includes an `attrs jsonb` column that captures the full JSON response object for each row. This is useful for exploring what data the API returns without defining every column.
 
 ```sql
 SELECT station_identifier, attrs->>'county' AS county

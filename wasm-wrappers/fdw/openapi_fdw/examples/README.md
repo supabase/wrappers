@@ -40,4 +40,4 @@ Each example shows how to configure the FDW against a real API, with complete se
 | Single object response | ✓ | | ✓ | ✓ | |
 | Auto-detected wrapper key | | ✓ | ✓ | ✓ | |
 | Debug mode | ✓ | ✓ | ✓ | ✓ | |
-| `attrs` catch-all column | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `attrs` full JSON column | ✓ | ✓ | ✓ | ✓ | ✓ |

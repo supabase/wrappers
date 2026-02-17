@@ -396,7 +396,7 @@ INFO:  [openapi_fdw] Scan complete: 3 rows, 1 columns
 
 ## 9. The `attrs` Column
 
-Every table includes an `attrs jsonb` column that captures **all fields not mapped to named columns**. This is useful for exploring what data the API returns without defining every column upfront.
+Every table includes an `attrs jsonb` column that captures the full JSON response object for each row. This is useful for exploring what data the API returns without defining every column upfront.
 
 For list endpoints, `attrs` will be mostly empty since the API only returns `name` and `url`. For detail endpoints, `attrs` captures the remaining fields:
 

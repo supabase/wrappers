@@ -506,7 +506,7 @@ INFO:  [openapi_fdw] Scan complete: 1 rows, 2 columns
 
 ## 10. The `attrs` Column
 
-Every table includes an `attrs jsonb` column that captures all fields not mapped to named columns:
+Every table includes an `attrs jsonb` column that captures the full JSON response object for each row:
 
 ```sql
 SELECT name, attrs->>'visibility' AS visibility,
