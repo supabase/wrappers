@@ -2,9 +2,19 @@ name: Code Coverage
 
 on:
   pull_request:
+    paths:
+      - 'wrappers/**'
+      - 'supabase-wrappers/**'
+      - 'supabase-wrappers-macros/**'
+      - '.github/workflows/coverage.yml'
   push:
     branches:
       - main
+    paths:
+      - 'wrappers/**'
+      - 'supabase-wrappers/**'
+      - 'supabase-wrappers-macros/**'
+      - '.github/workflows/coverage.yml'
 
 permissions:
   contents: write
