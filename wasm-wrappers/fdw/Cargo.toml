@@ -17,10 +17,6 @@ members = [
 ]
 resolver = "2"
 
-[profile.release]
-strip = "debuginfo"
-lto = true
-
 [workspace.package]
 edition = "2024"
 rust-version = "1.88"

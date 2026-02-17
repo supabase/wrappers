@@ -34,7 +34,8 @@ Full reference: [fdw.dev/catalog/openapi](https://fdw.dev/catalog/openapi/)
 ## Quick Start
 
 ```sql
-CREATE SERVER my_api
+-- Create a server pointing to any OpenAPI-compliant API
+CREATE SERVER my_api_server
 FOREIGN DATA WRAPPER wasm_wrapper
 OPTIONS (
     fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.2.0/openapi_fdw.wasm',
@@ -46,16 +47,18 @@ OPTIONS (
     api_key_id '<vault_secret_id>'
 );
 
--- Auto-generate tables from the spec
-IMPORT FOREIGN SCHEMA openapi FROM SERVER my_api INTO api;
+-- Import all endpoints as tables
+IMPORT FOREIGN SCHEMA openapi 
+FROM SERVER my_api_server
+INTO openapi;
 
 -- Or create tables manually
 CREATE FOREIGN TABLE api.users (
     id text, name text, email text, attrs jsonb
 ) SERVER my_api OPTIONS (endpoint '/users');
 
--- Query
-SELECT * FROM api.users WHERE id = '123';
+-- Query the API
+SELECT * FROM openapi.users WHERE id = '123';
 ```
 
 ## Examples
@@ -80,7 +83,7 @@ Each includes a `README.md` walkthrough and an `init.sql` you can run directly.
 cargo component build --release --target wasm32-unknown-unknown
 ```
 
-### Testing
+### Running Tests
 
 ```bash
 # 518 unit tests
