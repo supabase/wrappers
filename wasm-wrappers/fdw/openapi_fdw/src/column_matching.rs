@@ -15,13 +15,13 @@ use crate::{OpenApiFdw, extract_effective_row};
 
 /// How a SQL column name was resolved to a JSON key.
 ///
-/// Avoids cloning strings that already exist in [`CachedColumn`] — only the
+/// Avoids cloning strings that already exist in CachedColumn -- only the
 /// case-insensitive fallback (rare) needs its own allocation.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum KeyMatch {
-    /// JSON key matches `CachedColumn::name` exactly
+    /// JSON key matches CachedColumn::name exactly
     Exact,
-    /// JSON key matches `CachedColumn::camel_name`
+    /// JSON key matches CachedColumn::camel_name
     CamelCase,
     /// JSON key matched case-insensitively (stores the original API key)
     CaseInsensitive(String),
@@ -29,9 +29,9 @@ pub(crate) enum KeyMatch {
 
 /// Pre-computed column metadata to avoid repeated WASM boundary crossings.
 ///
-/// During `iter_scan`, each call to `ctx.get_columns()`, `col.name()`, and
-/// `col.type_oid()` crosses the WASM boundary. By caching these once in
-/// `begin_scan`, we eliminate ~2000 boundary crossings per 100-row scan.
+/// During iter_scan, each call to ctx.get_columns(), col.name(), and
+/// col.type_oid() crosses the WASM boundary. By caching these once in
+/// begin_scan, we eliminate ~2000 boundary crossings per 100-row scan.
 #[derive(Debug)]
 pub(crate) struct CachedColumn {
     pub name: String,
@@ -39,11 +39,11 @@ pub(crate) struct CachedColumn {
     pub camel_name: String,
     pub lower_name: String,
     /// Alphanumeric-only lowercase name for normalized matching.
-    /// Strips `@`, `.`, `-`, `$`, etc. so `@id` → `_id` → `id` can match.
+    /// Strips @, ., -, $ etc. so @id / _id / id can match.
     pub alnum_name: String,
 }
 
-/// Convert `snake_case` to `camelCase`
+/// Convert snake_case to camelCase
 pub(crate) fn to_camel_case(s: &str) -> String {
     let mut result = String::with_capacity(s.len());
     let mut capitalize_next = false;
@@ -64,8 +64,8 @@ pub(crate) fn to_camel_case(s: &str) -> String {
 
 /// Strip non-alphanumeric chars and lowercase for normalized matching.
 ///
-/// Used to match JSON keys with special characters (`@id`, `user.name`, `$oid`)
-/// to sanitized SQL column names (`_id`, `user_name`, `_oid`).
+/// Used to match JSON keys with special characters (@id, user.name, $oid)
+/// to sanitized SQL column names (_id, user_name, _oid).
 pub(crate) fn normalize_to_alnum(s: &str) -> String {
     s.chars()
         .filter(|c| c.is_alphanumeric())
@@ -77,10 +77,10 @@ impl OpenApiFdw {
     /// Normalize a date/datetime string for RFC3339 parsing.
     ///
     /// Handles two non-RFC3339 formats:
-    /// - Date-only `"2024-01-15"` → `"2024-01-15T00:00:00Z"`
-    /// - ISO 8601 tz without colon `"2024-01-15T12:00:00+0000"` → `"2024-01-15T12:00:00+00:00"`
+    /// - Date-only "2024-01-15" becomes "2024-01-15T00:00:00Z"
+    /// - ISO 8601 tz without colon "2024-01-15T12:00:00+0000" becomes "2024-01-15T12:00:00+00:00"
     ///
-    /// Returns `Cow<str>` to avoid allocating when the string is already valid.
+    /// Returns Cow<str> to avoid allocating when the string is already valid.
     pub(crate) fn normalize_datetime(s: &str) -> Cow<'_, str> {
         // Date-only: exactly 10 chars matching YYYY-MM-DD pattern
         if s.len() == 10 && s.as_bytes().get(4) == Some(&b'-') && s.as_bytes().get(7) == Some(&b'-')
@@ -110,8 +110,12 @@ impl OpenApiFdw {
 
     /// Build a map from column index to resolved JSON key, using the first row's keys.
     ///
-    /// This runs the 3-step matching (exact → camelCase → case-insensitive) once per
-    /// column instead of once per column per row. Called after each `make_request`.
+    /// Runs the 3-step matching (exact, camelCase, case-insensitive) once per column
+    /// instead of once per column per row. Called after each make_request.
+    ///
+    /// Only the first row of each page is probed. This works because most APIs return
+    /// rows with the same key shape. If a later row has different keys, unmatched
+    /// columns fall back to an O(n) scan in json_to_cell_cached (correct but slower).
     pub(crate) fn build_column_key_map(&mut self) {
         if self.cached_columns.is_empty() || self.src_rows.is_empty() {
             self.column_key_map = vec![None; self.cached_columns.len()];
@@ -249,8 +253,8 @@ impl OpenApiFdw {
 
     /// Convert a JSON value to a Cell using cached column metadata and pre-resolved key map.
     ///
-    /// Uses `CachedColumn` fields instead of WASM resource methods, and the pre-built
-    /// `column_key_map` for O(1) JSON key lookup instead of per-row 3-step matching.
+    /// Uses CachedColumn fields instead of WASM resource methods, and the pre-built
+    /// column_key_map for O(1) JSON key lookup instead of per-row 3-step matching.
     pub(crate) fn json_to_cell_cached(
         &self,
         src_row: &JsonValue,

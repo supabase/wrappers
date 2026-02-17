@@ -96,7 +96,7 @@ We need to provide Postgres with the credentials to access the API and any addit
 | ------ | :------: | ----------- |
 | `fdw_package_*` | Yes | Standard Wasm FDW package metadata. See [Available Versions](#available-versions). |
 | `base_url` | Yes* | Base URL for the API (e.g., `https://api.example.com/v1`). *Optional if `spec_url` or `spec_json` provides servers. |
-| `spec_url` | No | URL to the OpenAPI specification JSON. Required for `IMPORT FOREIGN SCHEMA`. Mutually exclusive with `spec_json`. |
+| `spec_url` | No | URL to the OpenAPI specification (JSON or YAML). Required for `IMPORT FOREIGN SCHEMA`. Mutually exclusive with `spec_json`. |
 | `spec_json` | No | Inline OpenAPI 3.0+ JSON spec for `IMPORT FOREIGN SCHEMA`. Mutually exclusive with `spec_url`. Useful when the API doesn't publish a spec URL. |
 | `api_key` | No | API key for authentication. |
 | `api_key_id` | No | Vault secret key ID storing the API key. Use instead of `api_key`. |
@@ -369,17 +369,21 @@ options (
 | ------------- | --------- |
 | text | string |
 | boolean | boolean |
-| smallint | number |
+| smallint* | number |
 | integer | number |
 | bigint | number |
 | real | number |
 | double precision | number |
-| numeric | number |
+| numeric* | number |
 | date | string (ISO 8601) |
-| timestamp | string (ISO 8601) |
+| timestamp* | string (ISO 8601) |
 | timestamptz | string (ISO 8601) |
+| bytea | string (base64) |
+| time | string (HH:MM:SS) |
 | jsonb | object/array |
 | uuid | string |
+
+\* Types marked with an asterisk work when you define tables manually, but `IMPORT FOREIGN SCHEMA` won't generate columns with these types automatically.
 
 ### The `attrs` Column
 
@@ -402,11 +406,11 @@ options (endpoint '/users');
 - **Authentication**: Currently supports API Key and Bearer Token authentication. OAuth flows are not supported.
 - **OpenAPI version**: Only OpenAPI 3.0+ specifications are supported (not Swagger 2.0).
 
-## Rate Limiting
+## Automatic Retries
 
-The FDW automatically handles rate limiting:
+The FDW automatically retries transient HTTP errors up to 3 times:
 
-- **HTTP 429 responses**: Automatically retries up to 3 times
+- **HTTP 429** (Rate Limit), **502** (Bad Gateway), **503** (Service Unavailable)
 - **Retry-After header**: Respects server-specified delay when provided
 - **Exponential backoff**: Falls back to 1s, 2s, 4s delays when no Retry-After header is present
 

@@ -312,6 +312,40 @@ fn test_apply_headers_all_options_combined() {
     );
 }
 
+// --- apply_headers: Deduplication ---
+
+#[test]
+fn test_apply_headers_custom_content_type_replaces_default() {
+    let mut config = ServerConfig::default();
+    config
+        .apply_headers(
+            None,
+            None,
+            Some(r#"{"Content-Type": "text/xml"}"#.to_string()),
+        )
+        .unwrap();
+    // Custom content-type should replace the default, not add a duplicate
+    assert_eq!(config.headers.len(), 1);
+    assert_eq!(config.headers[0].0, "content-type");
+    assert_eq!(config.headers[0].1, "text/xml");
+}
+
+#[test]
+fn test_apply_headers_custom_header_does_not_duplicate() {
+    let mut config = ServerConfig::default();
+    config
+        .apply_headers(
+            Some("MyApp/1.0".to_string()),
+            None,
+            Some(r#"{"User-Agent": "CustomBot/2.0"}"#.to_string()),
+        )
+        .unwrap();
+    // Custom user-agent should replace the one set via option, not duplicate
+    assert_eq!(config.headers.len(), 2); // content-type + user-agent
+    let ua = config.headers.iter().find(|h| h.0 == "user-agent").unwrap();
+    assert_eq!(ua.1, "CustomBot/2.0");
+}
+
 // --- apply_auth: API key as header (default) ---
 
 #[test]
@@ -503,21 +537,54 @@ fn test_auth_no_credentials() {
 // --- apply_auth: Edge cases ---
 
 #[test]
-fn test_auth_api_key_empty_string() {
+fn test_auth_api_key_empty_string_skipped() {
     let mut config = ServerConfig::default();
     config
         .apply_auth(Some(String::new()), None, "header", "Authorization", None)
         .unwrap();
-    assert_eq!(config.headers[0].1, "Bearer ");
+    // Empty api_key is filtered out — no auth header should be added
+    assert!(config.headers.is_empty());
 }
 
 #[test]
-fn test_auth_bearer_token_empty_string() {
+fn test_auth_bearer_token_empty_string_skipped() {
     let mut config = ServerConfig::default();
     config
         .apply_auth(None, Some(String::new()), "header", "Authorization", None)
         .unwrap();
-    assert_eq!(config.headers[0].1, "Bearer ");
+    // Empty bearer_token is filtered out — no auth header should be added
+    assert!(config.headers.is_empty());
+}
+
+#[test]
+fn test_auth_api_key_whitespace_only_skipped() {
+    let mut config = ServerConfig::default();
+    config
+        .apply_auth(
+            Some("   ".to_string()),
+            None,
+            "header",
+            "Authorization",
+            None,
+        )
+        .unwrap();
+    assert!(config.headers.is_empty());
+}
+
+#[test]
+fn test_auth_both_empty_no_mutual_exclusivity_error() {
+    // When both credentials are empty, they're filtered out, so no mutual exclusivity error
+    let mut config = ServerConfig::default();
+    config
+        .apply_auth(
+            Some(String::new()),
+            Some(String::new()),
+            "header",
+            "Authorization",
+            None,
+        )
+        .unwrap();
+    assert!(config.headers.is_empty());
 }
 
 #[test]

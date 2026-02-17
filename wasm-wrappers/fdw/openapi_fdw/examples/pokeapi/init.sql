@@ -51,6 +51,21 @@ create server pokeapi_debug
   );
 
 -- ============================================================
+-- Server 3: pokeapi_import — With spec_url for IMPORT FOREIGN SCHEMA
+-- ============================================================
+create server pokeapi_import
+  foreign data wrapper wasm_wrapper
+  options (
+    fdw_package_url 'file:///openapi_fdw.wasm',
+    fdw_package_name 'supabase:openapi-fdw',
+    fdw_package_version '0.2.0',
+    base_url 'https://pokeapi.co/api/v2',
+    spec_url 'https://raw.githubusercontent.com/PokeAPI/pokeapi/master/openapi.yml',
+    page_size '20',
+    page_size_param 'limit'
+  );
+
+-- ============================================================
 -- Table 1: pokemon
 -- Paginated list of all Pokémon (~1350 items)
 -- Features: offset-based pagination, auto-detected `results`

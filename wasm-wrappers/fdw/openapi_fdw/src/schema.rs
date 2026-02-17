@@ -1,13 +1,13 @@
-//! Schema generation and type mapping for `OpenAPI` FDW
+//! Schema generation and type mapping for OpenAPI FDW
 //!
-//! This module handles mapping `OpenAPI` types to `PostgreSQL` types
+//! This module handles mapping OpenAPI types to PostgreSQL types
 //! and generating CREATE FOREIGN TABLE statements.
 
 use std::collections::HashMap;
 
 use crate::spec::{EndpointInfo, OpenApiSpec, Schema};
 
-/// Maps `OpenAPI` schema types to `PostgreSQL` type names
+/// Maps OpenAPI schema types to PostgreSQL type names
 pub fn openapi_to_pg_type(schema: &Schema, spec: &OpenApiSpec) -> &'static str {
     // Resolve $ref if present; otherwise borrow the original (no clone).
     let owned;
@@ -53,7 +53,7 @@ pub struct ColumnDef {
     pub nullable: bool,
 }
 
-/// Extract column definitions from an `OpenAPI` response schema
+/// Extract column definitions from an OpenAPI response schema
 pub fn extract_columns(schema: &Schema, spec: &OpenApiSpec, include_attrs: bool) -> Vec<ColumnDef> {
     let mut columns = Vec::new();
 
@@ -122,12 +122,12 @@ pub fn extract_columns(schema: &Schema, spec: &OpenApiSpec, include_attrs: bool)
     columns
 }
 
-/// Sanitize a column name for `PostgreSQL` (converts `camelCase` to `snake_case`)
+/// Sanitize a column name for PostgreSQL (converts camelCase to snake_case)
 ///
 /// Handles consecutive uppercase (acronyms) correctly:
-/// - `clusterIP` → `cluster_ip` (not `cluster_i_p`)
-/// - `HTMLParser` → `html_parser` (not `h_t_m_l_parser`)
-/// - `getHTTPSUrl` → `get_https_url`
+/// - clusterIP becomes cluster_ip (not cluster_i_p)
+/// - HTMLParser becomes html_parser (not h_t_m_l_parser)
+/// - getHTTPSUrl becomes get_https_url
 fn sanitize_column_name(name: &str) -> String {
     let mut result = String::new();
     let chars: Vec<char> = name.chars().collect();

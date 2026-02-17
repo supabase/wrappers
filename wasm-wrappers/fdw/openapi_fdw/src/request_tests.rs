@@ -280,52 +280,57 @@ fn test_rowid_url_encoding_normal_ids() {
     );
 }
 
-// --- Retry delay cap tests ---
+// --- Retry delay tests (using production functions) ---
 
 #[test]
-fn test_retry_delay_cap_normal_value() {
+fn test_retry_delay_from_header_normal_value() {
     // Normal Retry-After: 5 seconds → 5000ms, well under cap
-    let secs: u64 = 5;
-    let max_delay: u64 = 30_000;
-    let delay = secs.saturating_mul(1000).min(max_delay);
-    assert_eq!(delay, 5000);
+    assert_eq!(retry_delay_from_header(5, MAX_RETRY_DELAY_MS), 5000);
 }
 
 #[test]
-fn test_retry_delay_cap_large_value() {
+fn test_retry_delay_from_header_large_value() {
     // Absurdly large Retry-After: 999999 seconds → capped to 30s
-    let secs: u64 = 999_999;
-    let max_delay: u64 = 30_000;
-    let delay = secs.saturating_mul(1000).min(max_delay);
-    assert_eq!(delay, 30_000);
+    assert_eq!(retry_delay_from_header(999_999, MAX_RETRY_DELAY_MS), 30_000);
 }
 
 #[test]
-fn test_retry_delay_cap_u64_max() {
+fn test_retry_delay_from_header_u64_max() {
     // u64::MAX seconds → saturating_mul prevents overflow, then capped
-    let secs: u64 = u64::MAX;
-    let max_delay: u64 = 30_000;
-    let delay = secs.saturating_mul(1000).min(max_delay);
-    assert_eq!(delay, 30_000);
+    assert_eq!(
+        retry_delay_from_header(u64::MAX, MAX_RETRY_DELAY_MS),
+        30_000
+    );
 }
 
 #[test]
-fn test_retry_delay_cap_zero() {
+fn test_retry_delay_from_header_zero() {
     // Retry-After: 0 → 0ms (immediate retry)
-    let secs: u64 = 0;
-    let max_delay: u64 = 30_000;
-    let delay = secs.saturating_mul(1000).min(max_delay);
-    assert_eq!(delay, 0);
+    assert_eq!(retry_delay_from_header(0, MAX_RETRY_DELAY_MS), 0);
 }
 
 #[test]
-fn test_retry_backoff_cap() {
-    // Exponential backoff at retry_count=10 would be 1024s, but capped
-    let retry_count: u32 = 10;
-    let max_delay: u64 = 30_000;
-    let backoff = 1000u64.saturating_mul(1 << retry_count);
-    let delay = backoff.min(max_delay);
-    assert_eq!(delay, 30_000);
+fn test_exponential_backoff_first_retry() {
+    // retry_count=0 → 1000ms
+    assert_eq!(exponential_backoff_delay(0, MAX_RETRY_DELAY_MS), 1000);
+}
+
+#[test]
+fn test_exponential_backoff_second_retry() {
+    // retry_count=1 → 2000ms
+    assert_eq!(exponential_backoff_delay(1, MAX_RETRY_DELAY_MS), 2000);
+}
+
+#[test]
+fn test_exponential_backoff_third_retry() {
+    // retry_count=2 → 4000ms
+    assert_eq!(exponential_backoff_delay(2, MAX_RETRY_DELAY_MS), 4000);
+}
+
+#[test]
+fn test_exponential_backoff_capped() {
+    // retry_count=10 would be 1024s, but capped to 30s
+    assert_eq!(exponential_backoff_delay(10, MAX_RETRY_DELAY_MS), 30_000);
 }
 
 // --- build_query_params: LIMIT-to-page_size optimization ---
@@ -446,6 +451,26 @@ fn test_fetch_spec_from_spec_json_too_large() {
     assert!(err.contains("spec_json too large"));
     assert!(err.contains("200 bytes"));
     assert!(err.contains("limit: 100 bytes"));
+}
+
+#[test]
+fn test_fetch_spec_from_spec_json_rejects_non_http_base_url() {
+    let spec_with_bad_server = r#"{
+        "openapi": "3.0.0",
+        "info": { "title": "Test", "version": "1.0" },
+        "servers": [{ "url": "file:///etc/passwd" }],
+        "paths": {}
+    }"#;
+    let mut fdw = OpenApiFdw {
+        config: ServerConfig {
+            spec_json: Some(spec_with_bad_server.to_string()),
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    let err = fdw.fetch_spec().unwrap_err();
+    assert!(err.contains("base_url (from spec servers)"));
+    assert!(err.contains("Must start with http://"));
 }
 
 #[test]

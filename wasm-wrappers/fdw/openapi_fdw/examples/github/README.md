@@ -23,7 +23,38 @@ create server github
 
 ---
 
-## 1. Your Profile
+## 1. Quick Start with IMPORT FOREIGN SCHEMA
+
+The `github_import` server has a `spec_url` pointing to the GitHub REST API OpenAPI spec, so tables can be auto-generated:
+
+> **Note:** The GitHub OpenAPI spec is large (~15 MB). The initial import may take a few seconds to fetch and parse.
+
+```sql
+CREATE SCHEMA IF NOT EXISTS github_auto;
+
+IMPORT FOREIGN SCHEMA "unused"
+FROM SERVER github_import
+INTO github_auto;
+```
+
+See what was generated:
+
+```sql
+SELECT foreign_table_name FROM information_schema.foreign_tables
+WHERE foreign_table_schema = 'github_auto';
+```
+
+Pick a generated table and query it:
+
+```sql
+SELECT * FROM github_auto.user LIMIT 1;
+```
+
+The rest of this example uses manually defined tables to demonstrate specific features (path parameters, query pushdown, custom headers, etc.).
+
+---
+
+## 2. Your Profile
 
 Single object response. The FDW returns one row with your GitHub profile info.
 
@@ -71,7 +102,7 @@ SELECT login, name, email, bio, company, location, blog,
 FROM my_profile;
 ```
 
-## 2. Your Repositories
+## 3. Your Repositories
 
 Paginated list of your repos. The FDW auto-detects page-based pagination via `Link` headers.
 
@@ -141,7 +172,7 @@ FROM my_repos
 LIMIT 5;
 ```
 
-## 3. Repository Detail (Path Parameters)
+## 4. Repository Detail (Path Parameters)
 
 Look up a specific repository. The `{owner}` and `{repo}` placeholders in the endpoint are replaced with values from your WHERE clause.
 
@@ -194,7 +225,7 @@ FROM repo_detail
 WHERE owner = 'supabase' AND repo = 'wrappers';
 ```
 
-## 4. Repository Issues
+## 5. Repository Issues
 
 Issues for a repository. Two path parameters plus query pushdown for state filtering:
 
@@ -261,7 +292,7 @@ WHERE owner = 'supabase' AND repo = 'wrappers'
 LIMIT 3;
 ```
 
-## 5. Pull Requests
+## 6. Pull Requests
 
 Pull requests with state filtering via query pushdown:
 
@@ -330,7 +361,7 @@ WHERE owner = 'supabase' AND repo = 'wrappers' AND state = 'open'
 LIMIT 5;
 ```
 
-## 6. Releases
+## 7. Releases
 
 Paginated list of releases for a repository:
 
@@ -385,7 +416,7 @@ WHERE owner = 'supabase' AND repo = 'wrappers'
 LIMIT 3;
 ```
 
-## 7. Search Repositories (Query Pushdown)
+## 8. Search Repositories (Query Pushdown)
 
 When a WHERE clause references `q`, the FDW sends it as a query parameter to the `/search/repositories` endpoint. The FDW auto-detects the `items` wrapper key in the response.
 
@@ -440,7 +471,7 @@ WHERE q = 'postgres foreign data wrapper rust'
 LIMIT 5;
 ```
 
-## 8. Debug Mode
+## 9. Debug Mode
 
 The `search_repos_debug` table uses the `github_debug` server which has `debug 'true'`. This emits HTTP request details as PostgreSQL INFO messages.
 
@@ -455,7 +486,7 @@ INFO:  [openapi_fdw] HTTP GET https://api.github.com/search/repositories?per_pag
 INFO:  [openapi_fdw] Scan complete: 1 rows, 2 columns
 ```
 
-## The `attrs` Column
+## 10. The `attrs` Column
 
 Every table includes an `attrs jsonb` column that captures all fields not mapped to named columns:
 
@@ -476,6 +507,7 @@ LIMIT 3;
 
 | Feature | Table(s) |
 | --- | --- |
+| IMPORT FOREIGN SCHEMA | `github_import` server |
 | Bearer token auth (Authorization header) | All tables |
 | Custom HTTP headers (X-GitHub-Api-Version) | All tables |
 | Page-based pagination (auto-detected) | `my_repos`, `repo_issues`, `repo_pulls`, `repo_releases`, `search_repos` |

@@ -3,14 +3,14 @@
 /// A pagination token: either a cursor string or a full/partial URL.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum PaginationToken {
-    /// Token-based pagination (e.g., Stripe `next_cursor`)
+    /// Token-based pagination (e.g., Stripe next_cursor)
     Cursor(String),
-    /// Link-based pagination (e.g., GitHub `Link` header, HAL `_links`)
+    /// Link-based pagination (e.g., GitHub Link header, HAL _links)
     Url(String),
 }
 
 impl PaginationToken {
-    /// Returns the inner cursor string, or `None` if this is a URL.
+    /// Returns the inner cursor string, or None if this is a URL.
     pub(crate) fn as_cursor(&self) -> Option<&str> {
         match self {
             Self::Cursor(s) => Some(s),
@@ -18,7 +18,7 @@ impl PaginationToken {
         }
     }
 
-    /// Returns the inner URL string, or `None` if this is a cursor.
+    /// Returns the inner URL string, or None if this is a cursor.
     pub(crate) fn as_url(&self) -> Option<&str> {
         match self {
             Self::Url(s) => Some(s),
@@ -48,7 +48,7 @@ impl PaginationState {
         self.pages_fetched = 0;
     }
 
-    /// Returns `true` when there are no more pages to fetch.
+    /// Returns true when there are no more pages to fetch.
     pub(crate) fn is_exhausted(&self) -> bool {
         self.next.is_none()
     }
@@ -68,7 +68,7 @@ impl PaginationState {
         }
     }
 
-    /// Returns `true` if the page limit has been reached.
+    /// Returns true if the page limit has been reached.
     pub(crate) fn exceeds_limit(&self, max_pages: usize) -> bool {
         self.pages_fetched >= max_pages
     }
@@ -81,11 +81,11 @@ impl PaginationState {
         self.pages_fetched += 1;
     }
 
-    /// Record the first page after initial `make_request` in `begin_scan`.
+    /// Record the first page after initial make_request in begin_scan.
     ///
-    /// Only sets `pages_fetched = 1`. Does NOT copy `next` into `previous` —
-    /// there was no token sent for the first page, so `previous` must stay
-    /// `None` to avoid a false-positive loop detection.
+    /// Only sets pages_fetched = 1. Does NOT copy next into previous --
+    /// there was no token sent for the first page, so previous must stay
+    /// None to avoid a false-positive loop detection.
     pub(crate) fn record_first_page(&mut self) {
         self.pages_fetched = 1;
     }

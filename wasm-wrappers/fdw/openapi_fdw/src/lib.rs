@@ -1,7 +1,7 @@
-//! `OpenAPI` Foreign Data Wrapper
+//! OpenAPI Foreign Data Wrapper
 //!
-//! A generic Wasm FDW that dynamically parses `OpenAPI` 3.0+ specifications
-//! and exposes API endpoints as `PostgreSQL` foreign tables.
+//! A generic Wasm FDW that dynamically parses OpenAPI 3.0+ specifications
+//! and exposes API endpoints as PostgreSQL foreign tables.
 
 // Allow usize->i64 casts for stats (expected to fit on 64-bit systems)
 #![allow(clippy::cast_possible_wrap)]
@@ -37,7 +37,7 @@ use pagination::PaginationState;
 use schema::generate_all_tables;
 use spec::OpenApiSpec;
 
-/// The `OpenAPI` FDW state
+/// The OpenAPI FDW state
 #[derive(Debug)]
 struct OpenApiFdw {
     // Server-level configuration (set once in init, some overridden per table)
@@ -107,10 +107,10 @@ impl Default for OpenApiFdw {
 ///
 /// # Safety
 ///
-/// This `static mut` is safe because Wasm execution is single-threaded:
+/// This static mut is safe because Wasm execution is single-threaded:
 /// - No concurrent access is possible (no data races)
-/// - Initialized once in `init()` before any scan/modify methods are called
-/// - All access goes through `this_mut()` which returns exclusive `&mut` reference
+/// - Initialized once in init() before any scan/modify methods are called
+/// - All access goes through this_mut() which returns exclusive &mut reference
 static mut INSTANCE: *mut OpenApiFdw = std::ptr::null_mut::<OpenApiFdw>();
 static FDW_NAME: &str = "OpenApiFdw";
 
@@ -120,7 +120,7 @@ const DEFAULT_PAGE_SIZE_PARAM: &str = "limit";
 const DEFAULT_CURSOR_PARAM: &str = "after";
 const DEFAULT_ROWID_COLUMN: &str = "id";
 
-/// Validate that a URL starts with `http://` or `https://`.
+/// Validate that a URL starts with http:// or https://.
 fn validate_url(url: &str, field_name: &str) -> Result<(), String> {
     if !url.starts_with("http://") && !url.starts_with("https://") {
         return Err(format!(
@@ -130,14 +130,14 @@ fn validate_url(url: &str, field_name: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// Parse a string option value as `usize`, returning a descriptive error.
+/// Parse a string option value as usize, returning a descriptive error.
 fn parse_usize_option(value: &str, field_name: &str) -> Result<usize, String> {
     value
         .parse()
         .map_err(|_| format!("Invalid value for '{field_name}': '{value}'"))
 }
 
-/// Parse an optional string as a boolean flag (`"true"` or `"1"` → true).
+/// Parse an optional string as a boolean flag ("true" or "1" means true).
 fn parse_bool_flag(value: Option<&str>) -> bool {
     value.is_some_and(|v| v == "true" || v == "1")
 }
@@ -149,8 +149,8 @@ fn should_stop_scanning(consumed: i64, limit: Option<i64>) -> bool {
 
 /// Extract the effective row from a JSON value, optionally dereferencing an object path.
 ///
-/// Used in `iter_scan` and `build_column_key_map` to apply `object_path`
-/// (e.g., `"/properties"` for GeoJSON) to each row before column matching.
+/// Used in iter_scan and build_column_key_map to apply object_path
+/// (e.g., "/properties" for GeoJSON) to each row before column matching.
 pub(crate) fn extract_effective_row<'a>(
     row: &'a JsonValue,
     object_path: Option<&str>,
@@ -174,7 +174,7 @@ impl OpenApiFdw {
         // methods are called. Wasm is single-threaded, so only one &mut
         // reference exists at a time (no aliasing).
         unsafe {
-            debug_assert!(!INSTANCE.is_null(), "OpenApiFdw not initialized");
+            assert!(!INSTANCE.is_null(), "OpenApiFdw not initialized");
             &mut (*INSTANCE)
         }
     }
@@ -213,10 +213,10 @@ impl Guest for OpenApiFdw {
         }
 
         // Whether to include an 'attrs' jsonb column in IMPORT FOREIGN SCHEMA output
-        this.config.include_attrs = opts
+        // Default is true; only "false" or "0" explicitly disables it
+        this.config.include_attrs = !opts
             .get("include_attrs")
-            .map(|v| v != "false")
-            .unwrap_or(true);
+            .is_some_and(|v| v == "false" || v == "0");
 
         // Validate spec_url format if provided
         if let Some(ref spec_url) = this.config.spec_url {
@@ -237,7 +237,11 @@ impl Guest for OpenApiFdw {
 
         // Maximum pages per scan (default 1000, prevents infinite pagination loops)
         if let Some(s) = opts.get("max_pages") {
-            this.config.max_pages = parse_usize_option(&s, "max_pages")?;
+            let val = parse_usize_option(&s, "max_pages")?;
+            if val == 0 {
+                return Err("max_pages must be at least 1".to_string());
+            }
+            this.config.max_pages = val;
         }
 
         // Maximum response body size (default 50 MiB)
@@ -343,7 +347,6 @@ impl Guest for OpenApiFdw {
         // Check if we need to fetch more data
         if this.src_idx >= this.src_rows.len() {
             stats::inc_stats(FDW_NAME, stats::Metric::RowsIn, this.src_rows.len() as i64);
-            stats::inc_stats(FDW_NAME, stats::Metric::RowsOut, this.src_rows.len() as i64);
 
             // No more pages to fetch
             if this.pagination.is_exhausted() {
@@ -389,6 +392,7 @@ impl Guest for OpenApiFdw {
 
         this.src_idx += 1;
         this.consumed_row_cnt += 1;
+        stats::inc_stats(FDW_NAME, stats::Metric::RowsOut, 1);
         if this.config.debug {
             this.scan_row_count += 1;
         }

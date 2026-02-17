@@ -50,6 +50,19 @@ create server carapi_debug
   );
 
 -- ============================================================
+-- Server 3: carapi_import — With spec_url for IMPORT FOREIGN SCHEMA
+-- ============================================================
+create server carapi_import
+  foreign data wrapper wasm_wrapper
+  options (
+    fdw_package_url 'file:///openapi_fdw.wasm',
+    fdw_package_name 'supabase:openapi-fdw',
+    fdw_package_version '0.2.0',
+    base_url 'https://carapi.app/api',
+    spec_url 'https://carapi.app/swagger.json'
+  );
+
+-- ============================================================
 -- Table 1: makes
 -- All car manufacturers (paginated)
 -- Features: auto-detected "data" wrapper, page-based pagination

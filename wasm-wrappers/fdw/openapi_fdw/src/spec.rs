@@ -1,6 +1,6 @@
-//! `OpenAPI` 3.0+ specification parsing
+//! OpenAPI 3.0+ specification parsing
 //!
-//! This module provides types and functions for parsing `OpenAPI` specifications
+//! This module provides types and functions for parsing OpenAPI specifications
 //! and extracting endpoint/schema information for FDW table generation.
 
 use serde::Deserialize;
@@ -10,12 +10,12 @@ use std::collections::HashMap;
 
 /// Raw schema for deserialization — handles OpenAPI 3.1 type arrays.
 ///
-/// OpenAPI 3.1 changed `type` from a string to potentially an array:
-/// - 3.0: `"type": "string"` with `"nullable": true`
-/// - 3.1: `"type": ["string", "null"]`
+/// OpenAPI 3.1 changed type from a string to potentially an array:
+/// - 3.0: "type": "string" with "nullable": true
+/// - 3.1: "type": ["string", "null"]
 ///
-/// This intermediate struct captures the raw `type` field, then `From<RawSchema>`
-/// extracts the actual type and sets `nullable` accordingly.
+/// This intermediate struct captures the raw type field, then From<RawSchema>
+/// extracts the actual type and sets nullable accordingly.
 #[derive(Debug, Deserialize)]
 struct RawSchema {
     #[serde(rename = "type")]
@@ -88,7 +88,7 @@ impl From<RawSchema> for Schema {
     }
 }
 
-/// Represents an `OpenAPI` 3.0+ specification
+/// Represents an OpenAPI 3.0+ specification
 #[derive(Debug, Deserialize)]
 pub struct OpenApiSpec {
     /// OpenAPI version (must be 3.x)
@@ -183,7 +183,7 @@ pub(crate) struct Components {
 }
 
 impl OpenApiSpec {
-    /// Parse an `OpenAPI` spec from a JSON value
+    /// Parse an OpenAPI spec from a JSON value
     pub fn from_json(json: JsonValue) -> Result<Self, String> {
         let spec: Self = serde_json::from_value(json)
             .map_err(|e| format!("Failed to parse OpenAPI spec: {e}"))?;
@@ -198,7 +198,7 @@ impl OpenApiSpec {
         Ok(spec)
     }
 
-    /// Parse an `OpenAPI` spec from a JSON string (used in tests)
+    /// Parse an OpenAPI spec from a JSON string (used in tests)
     #[cfg(test)]
     pub fn from_str(s: &str) -> Result<Self, String> {
         let spec: Self =
@@ -214,7 +214,18 @@ impl OpenApiSpec {
         Ok(spec)
     }
 
-    /// Get the base URL from the spec (first server URL), substituting any variables
+    /// Parse an OpenAPI spec from a YAML string (used in tests)
+    #[cfg(test)]
+    pub fn from_yaml_str(s: &str) -> Result<Self, String> {
+        let json: JsonValue =
+            serde_yaml_ng::from_str(s).map_err(|e| format!("Failed to parse YAML: {e}"))?;
+        Self::from_json(json)
+    }
+
+    /// Get the base URL from the spec's first server entry, substituting any variables.
+    ///
+    /// Only the first server is used. Multi-server specs should set the base_url
+    /// server option explicitly to select a different server.
     pub fn base_url(&self) -> Option<String> {
         self.servers.first().map(|s| {
             let mut url = s.url.clone();
@@ -227,10 +238,10 @@ impl OpenApiSpec {
 
     /// Get all endpoint paths that support GET or POST operations (for querying).
     ///
-    /// Parameterized paths (e.g., `/users/{id}`, `/users/{user_id}/posts`) are
+    /// Parameterized paths (e.g., /users/{id}, /users/{user_id}/posts) are
     /// excluded because they require path parameter values from WHERE clauses at
     /// query time. Users should create these tables manually with the appropriate
-    /// `endpoint` option containing `{param}` placeholders. See the documentation
+    /// endpoint option containing {param} placeholders. See the documentation
     /// for path parameter examples.
     pub fn get_endpoints(&self) -> Vec<EndpointInfo> {
         let mut endpoints = Vec::new();
@@ -291,7 +302,7 @@ impl OpenApiSpec {
         media_type.schema.clone()
     }
 
-    /// Parse a `#/components/{section}/{name}` reference, returning the name if it matches.
+    /// Parse a #/components/{section}/{name} reference, returning the name if it matches.
     fn parse_component_ref<'a>(reference: &'a str, section: &str) -> Option<&'a str> {
         let path = reference.strip_prefix("#/components/")?;
         let name = path.strip_prefix(section)?.strip_prefix('/')?;
@@ -494,9 +505,9 @@ impl OpenApiSpec {
         merged
     }
 
-    /// Merge parent-level `properties` and `required` into a composition result.
+    /// Merge parent-level properties and required into a composition result.
     ///
-    /// Per OpenAPI 3.1, properties defined alongside `allOf`/`oneOf`/`anyOf`
+    /// Per OpenAPI 3.1, properties defined alongside allOf/oneOf/anyOf
     /// should be merged into the composed schema (parent properties override).
     fn merge_parent_siblings(parent: &Schema, merged: &mut Schema) {
         for (name, prop) in &parent.properties {
@@ -531,9 +542,9 @@ pub struct EndpointInfo {
 impl EndpointInfo {
     /// Generate a table name from the endpoint path.
     ///
-    /// Uses the full path to avoid collisions (e.g., `/v1/users` and `/v2/users`
-    /// become `v1_users` and `v2_users` instead of both becoming `users`).
-    /// POST endpoints get a `_post` suffix to avoid collisions with GET tables.
+    /// Uses the full path to avoid collisions (e.g., /v1/users and /v2/users
+    /// become v1_users and v2_users instead of both becoming users).
+    /// POST endpoints get a _post suffix to avoid collisions with GET tables.
     pub fn table_name(&self) -> String {
         let cleaned = self.path.trim_matches('/');
 

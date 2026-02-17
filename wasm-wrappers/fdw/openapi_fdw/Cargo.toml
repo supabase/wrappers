@@ -12,6 +12,7 @@ crate-type = ["cdylib"]
 wit-bindgen-rt = "0.41.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+serde_yaml_ng = "0.10"
 urlencoding = "2.1"
 
 [package.metadata.component]

@@ -2,6 +2,26 @@
 
 Query the [Meta Threads API](https://developers.facebook.com/docs/threads) using SQL. This example demonstrates authenticated API access, cursor-based pagination, path parameter substitution, and query param pushdown.
 
+> The Threads API does not publish a public OpenAPI spec. This example uses `spec_json` to provide an inline spec for `IMPORT FOREIGN SCHEMA`, and hand-written table definitions for endpoints that need path parameters or custom options.
+
+## Prerequisites
+
+You need a Meta Threads access token. To get one:
+
+1. Create or use an existing app at [developers.facebook.com](https://developers.facebook.com/apps/)
+2. Add the **Threads API** product to your app
+3. Enable the required permissions (see below)
+4. Generate an access token from the [Threads API Tools](https://developers.facebook.com/docs/threads/get-started) page
+
+### Required Permissions
+
+| Permission | Needed for |
+| --- | --- |
+| `threads_basic` | All tables (profile, threads, replies, thread detail, profile lookup, publishing limit) |
+| `threads_keyword_search` | `keyword_search` and `keyword_search_debug` tables (sections 8 and 11) |
+
+> Short-lived tokens expire after 1 hour. For longer sessions, [exchange for a long-lived token](https://developers.facebook.com/docs/threads/get-started/long-lived-tokens) (60 days).
+
 ## Server Configuration
 
 ```sql
@@ -20,7 +40,88 @@ create server threads
 
 ---
 
-## 1. Your Profile
+## 1. Inline Spec with IMPORT FOREIGN SCHEMA
+
+The Threads API has no public OpenAPI spec, so this example uses `spec_json` to embed a hand-written spec directly in the server definition. The FDW parses the inline JSON the same way it would a fetched `spec_url`, auto-generating `CREATE FOREIGN TABLE` statements with correct column names and types.
+
+This approach also works well for APIs that publish a spec that's too large, outdated, or inaccurate, or when you want a customized subset of endpoints.
+
+### Create a server with an inline spec
+
+Here's a minimal example with two endpoints (`/me` and `/profile_lookup`). The full `threads_import` server in [`init.sql`](init.sql) covers all 8 GET endpoints used by this example.
+
+```sql
+create server threads_import
+  foreign data wrapper wasm_wrapper
+  options (
+    fdw_package_url '...openapi_fdw.wasm',
+    fdw_package_name 'supabase:openapi-fdw',
+    fdw_package_version '0.2.0',
+    base_url 'https://graph.threads.net',
+    api_key '<YOUR_ACCESS_TOKEN>',
+    api_key_header 'access_token',
+    api_key_location 'query',
+    spec_json '{
+      "openapi": "3.0.0",
+      "info": { "title": "Threads API", "version": "1.0.0" },
+      "paths": {
+        "/me": {
+          "get": {
+            "responses": { "default": { "content": { "application/json": { "schema": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "string" },
+                "username": { "type": "string" },
+                "name": { "type": "string" }
+              }
+            }}}}}
+          }
+        },
+        "/profile_lookup": {
+          "get": {
+            "parameters": [{ "name": "username", "in": "query", "schema": { "type": "string" } }],
+            "responses": { "default": { "content": { "application/json": { "schema": {
+              "type": "object",
+              "properties": {
+                "username": { "type": "string" },
+                "name": { "type": "string" },
+                "follower_count": { "type": "integer" },
+                "is_verified": { "type": "boolean" }
+              }
+            }}}}}
+          }
+        }
+      }
+    }'
+  );
+```
+
+### Auto-generate tables from the inline spec
+
+```sql
+CREATE SCHEMA IF NOT EXISTS threads_auto;
+
+IMPORT FOREIGN SCHEMA "unused"
+FROM SERVER threads_import
+INTO threads_auto;
+```
+
+### See what was generated
+
+```sql
+SELECT foreign_table_name FROM information_schema.foreign_tables
+WHERE foreign_table_schema = 'threads_auto';
+```
+
+Endpoints with path parameters (`/{thread_id}/replies`, `/{thread_id}/conversation`) are skipped during import and need manual table definitions (see sections 5-7).
+
+---
+
+The rest of this example uses manually defined tables to demonstrate specific features (path parameters, custom pagination, field selection via endpoint query strings, etc.).
+
+---
+
+## 2. Your Profile
 
 Single object response. The FDW returns one row with your Threads profile info.
 
@@ -52,7 +153,7 @@ FROM my_profile;
 
 > Your results will reflect your own Threads profile.
 
-## 2. Your Threads
+## 3. Your Threads
 
 Paginated list of your posts. The FDW auto-detects the `data` wrapper key and follows cursor-based pagination (`paging.cursors.after`).
 
@@ -120,7 +221,7 @@ WHERE media_type = 'TEXT_POST'
 LIMIT 5;
 ```
 
-## 3. Your Replies
+## 4. Your Replies
 
 Same pagination pattern as threads, filtered to your replies:
 
@@ -165,7 +266,7 @@ FROM my_replies
 LIMIT 5;
 ```
 
-## 4. Thread Detail (Path Parameter)
+## 5. Thread Detail (Path Parameter)
 
 Look up a specific thread by ID. The `{thread_id}` placeholder in the endpoint is replaced with the value from your WHERE clause.
 
@@ -206,7 +307,7 @@ WHERE thread_id = '<THREAD_ID>';
 | --- | --- | --- | --- |
 | Your thread text... | TEXT_POST | 2026-02-12 04:46:47+00 | EVERYONE |
 
-## 5. Thread Replies
+## 6. Thread Replies
 
 Top-level replies to a specific thread. Requires `thread_id` path parameter:
 
@@ -250,7 +351,7 @@ WHERE thread_id = '<THREAD_ID>'
 LIMIT 10;
 ```
 
-## 6. Thread Conversation
+## 7. Thread Conversation
 
 All replies at all depths, flattened into a single list:
 
@@ -293,9 +394,9 @@ WHERE thread_id = '<THREAD_ID>'
 LIMIT 20;
 ```
 
-## 7. Keyword Search (Query Param Pushdown)
+## 8. Keyword Search (Query Param Pushdown)
 
-When a WHERE clause references `q`, the FDW sends it as a query parameter to the `/keyword_search` endpoint. Requires the `threads_keyword_search` permission on your app.
+When a WHERE clause references `q`, the FDW sends it as a query parameter to the `/keyword_search` endpoint (requires `threads_keyword_search` permission -- see [Prerequisites](#prerequisites)).
 
 ```sql
 create foreign table keyword_search (
@@ -343,9 +444,9 @@ WHERE q = 'threads'
 LIMIT 5;
 ```
 
-## 8. Profile Lookup
+## 9. Profile Lookup
 
-Look up any public profile by username. Requires the `threads_basic` permission.
+Look up any public profile by username.
 
 ```sql
 create foreign table profile_lookup (
@@ -388,7 +489,7 @@ FROM profile_lookup
 WHERE username = 'threads';
 ```
 
-## 9. Publishing Limit
+## 10. Publishing Limit
 
 Check your current rate limit usage:
 
@@ -415,7 +516,7 @@ FROM publishing_limit;
 | --- | --- | --- | --- |
 | 0 | `{"quota_total": 250, "quota_duration": 86400}` | 0 | `{"quota_total": 1000, "quota_duration": 86400}` |
 
-## 10. Debug Mode
+## 11. Debug Mode
 
 The `keyword_search_debug` table uses the `threads_debug` server which has `debug 'true'`. This emits HTTP request details as PostgreSQL INFO messages.
 
@@ -428,35 +529,6 @@ Look for INFO output like:
 ```log
 INFO:  [openapi_fdw] HTTP GET https://graph.threads.net/keyword_search?... -> 200 (1234 bytes)
 INFO:  [openapi_fdw] Scan complete: 3 rows, 2 columns
-```
-
-## 11. IMPORT FOREIGN SCHEMA (Inline `spec_json`)
-
-Meta's Threads API does not publish an official OpenAPI spec at a public URL. Instead of `spec_url`, this example uses `spec_json` to provide a hand-written spec directly in the server definition. The inline spec describes just the 8 GET endpoints used by this example.
-
-This approach also works well for APIs that:
-
-- Don't publish an OpenAPI spec at all (like Threads)
-- Publish a spec that's too large, outdated, or inaccurate
-- Need a customized subset of endpoints
-
-The FDW parses the inline JSON the same way it would a fetched spec, auto-generating `CREATE FOREIGN TABLE` statements with correct column names and types. Endpoints with path parameters (`/{thread_id}/replies`, `/{thread_id}/conversation`) are skipped — those need manual table definitions like the ones above.
-
-Auto-generate table definitions from the inline spec:
-
-```sql
-CREATE SCHEMA IF NOT EXISTS threads_auto;
-
-IMPORT FOREIGN SCHEMA "unused"
-FROM SERVER threads_import
-INTO threads_auto;
-```
-
-See what was generated:
-
-```sql
-SELECT foreign_table_name FROM information_schema.foreign_tables
-WHERE foreign_table_schema = 'threads_auto';
 ```
 
 ## 12. The `attrs` Column
@@ -480,6 +552,7 @@ LIMIT 3;
 
 | Feature | Table(s) |
 | --- | --- |
+| IMPORT FOREIGN SCHEMA (inline `spec_json`) | `threads_import` server |
 | API key auth (query param) | All tables |
 | Cursor-based pagination (auto-detected) | `my_threads`, `my_replies`, `keyword_search` |
 | Path parameter substitution | `thread_detail`, `thread_replies`, `thread_conversation` |
@@ -488,6 +561,5 @@ LIMIT 3;
 | Endpoint query string (field selection) | All tables except `profile_lookup` |
 | Type coercion (timestamptz, boolean, bigint) | `my_threads`, `profile_lookup` |
 | Debug mode | `keyword_search_debug` |
-| IMPORT FOREIGN SCHEMA | `threads_import` server |
 | `attrs` catch-all column | All tables |
 | `rowid_column` | `my_threads`, `keyword_search`, `profile_lookup` |

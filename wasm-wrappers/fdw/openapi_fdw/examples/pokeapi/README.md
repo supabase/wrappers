@@ -19,7 +19,36 @@ create server pokeapi
 
 ---
 
-## 1. Pokemon List
+## 1. Quick Start with IMPORT FOREIGN SCHEMA
+
+The `pokeapi_import` server has a `spec_url` pointing to the PokeAPI OpenAPI spec (YAML format — the FDW parses both JSON and YAML), so tables can be auto-generated:
+
+```sql
+CREATE SCHEMA IF NOT EXISTS pokeapi_auto;
+
+IMPORT FOREIGN SCHEMA "unused"
+FROM SERVER pokeapi_import
+INTO pokeapi_auto;
+```
+
+See what was generated:
+
+```sql
+SELECT foreign_table_name FROM information_schema.foreign_tables
+WHERE foreign_table_schema = 'pokeapi_auto';
+```
+
+Pick a generated table and query it:
+
+```sql
+SELECT * FROM pokeapi_auto.pokemon LIMIT 3;
+```
+
+The rest of this example uses manually defined tables to demonstrate specific features (path parameters, jsonb extraction, debug mode, etc.).
+
+---
+
+## 2. Pokemon List
 
 Fetches the paginated list of all Pokemon (~1350 entries). Demonstrates **offset-based pagination** with auto-detected `results` wrapper key and `limit` page size parameter. The FDW automatically follows the `next` URL in each response to fetch subsequent pages.
 
@@ -52,7 +81,7 @@ LIMIT 5;
 
 List endpoints only return `name` and `url` pairs. Use the detail table to get full data for a specific Pokemon.
 
-## 2. Pokemon Detail
+## 3. Pokemon Detail
 
 **Path parameter substitution**: the `{name}` placeholder in the endpoint is replaced with the value from your WHERE clause. Returns a single object with full Pokemon data.
 
@@ -139,7 +168,7 @@ WHERE name IN ('charizard', 'blastoise');
 
 Try other Pokemon: `bulbasaur`, `charizard`, `mewtwo`, `snorlax`, `gengar`.
 
-## 3. Types List
+## 4. Types List
 
 Fetches all Pokemon types. With only 21 types, this fits within a single page (page size is 20, so it takes two small fetches).
 
@@ -185,7 +214,7 @@ FROM types;
 | unknown | <https://pokeapi.co/api/v2/type/10001/> |
 | shadow | <https://pokeapi.co/api/v2/type/10002/> |
 
-## 4. Type Detail
+## 5. Type Detail
 
 Detailed information about a single type, including **damage relations** (strengths and weaknesses) and a list of all Pokemon of that type.
 
@@ -238,7 +267,7 @@ WHERE name = 'dragon';
 
 Try other types: `water`, `electric`, `dragon`, `fairy`, `ghost`.
 
-## 5. Berries List
+## 6. Berries List
 
 Fetches all berries (64 items). Demonstrates pagination across multiple pages.
 
@@ -269,7 +298,7 @@ LIMIT 5;
 | rawst | <https://pokeapi.co/api/v2/berry/4/> |
 | aspear | <https://pokeapi.co/api/v2/berry/5/> |
 
-## 6. Berry Detail
+## 7. Berry Detail
 
 Detailed information about a single berry, including growth data, flavors, and natural gift properties.
 
@@ -334,7 +363,7 @@ WHERE name = 'sitrus';
 
 Try other berries: `chesto`, `pecha`, `rawst`, `aspear`, `leppa`, `oran`, `sitrus`.
 
-## 7. Debug Mode
+## 8. Debug Mode
 
 The `pokemon_debug` table uses the `pokeapi_debug` server which has `debug 'true'`. This emits HTTP request details (method, URL, status, response size) and scan statistics as PostgreSQL INFO messages.
 
@@ -351,7 +380,7 @@ INFO:  [openapi_fdw] HTTP GET https://pokeapi.co/api/v2/pokemon?limit=20 -> 200 
 INFO:  [openapi_fdw] Scan complete: 3 rows, 1 columns
 ```
 
-## 8. The `attrs` Column
+## 9. The `attrs` Column
 
 Every table includes an `attrs jsonb` column that captures **all fields not mapped to named columns**. This is useful for exploring what data the API returns without defining every column upfront.
 
@@ -372,6 +401,8 @@ WHERE name = 'pikachu';
 
 | Feature | Table(s) |
 | --- | --- |
+| IMPORT FOREIGN SCHEMA | `pokeapi_import` server |
+| YAML spec support | `pokeapi_import` server (spec is YAML, not JSON) |
 | Offset-based pagination (auto-followed `next` URL) | `pokemon`, `types`, `berries` |
 | Auto-detected `results` wrapper key | All list tables |
 | Path parameter substitution | `pokemon_detail`, `type_detail`, `berry_detail` |

@@ -12,10 +12,10 @@ pub(crate) const DEFAULT_MAX_RESPONSE_BYTES: usize = 50 * 1024 * 1024; // 50 MiB
 
 /// Server-level configuration.
 ///
-/// Fields are set once in `init()` from server options. A few fields
-/// (`page_size`, `page_size_param`, `cursor_param`) can be overridden
-/// per-table in `begin_scan`; call `save_pagination_defaults()` after
-/// init and `restore_pagination_defaults()` at the start of each scan.
+/// Fields are set once in init() from server options. A few fields
+/// (page_size, page_size_param, cursor_param) can be overridden
+/// per-table in begin_scan; call save_pagination_defaults() after
+/// init and restore_pagination_defaults() at the start of each scan.
 pub(crate) struct ServerConfig {
     pub(crate) base_url: String,
     pub(crate) headers: Vec<(String, String)>,
@@ -94,7 +94,7 @@ impl Default for ServerConfig {
 impl ServerConfig {
     /// Snapshot the current pagination fields as server-level defaults.
     ///
-    /// Call once at the end of `init()`, after server options are parsed.
+    /// Call once at the end of init(), after server options are parsed.
     pub(crate) fn save_pagination_defaults(&mut self) {
         self.default_page_size = self.page_size;
         self.default_page_size_param
@@ -104,7 +104,7 @@ impl ServerConfig {
 
     /// Restore pagination fields to server-level defaults.
     ///
-    /// Call at the start of each `begin_scan()`, before applying table-level overrides.
+    /// Call at the start of each begin_scan(), before applying table-level overrides.
     pub(crate) fn restore_pagination_defaults(&mut self) {
         self.page_size = self.default_page_size;
         self.page_size_param
@@ -123,7 +123,7 @@ impl ServerConfig {
 
     /// Apply header configuration from extracted option values.
     ///
-    /// Separated from `configure_headers` for testability (Options is a WASM resource).
+    /// Separated from configure_headers for testability (Options is a WASM resource).
     pub(crate) fn apply_headers(
         &mut self,
         user_agent: Option<String>,
@@ -146,7 +146,14 @@ impl ServerConfig {
                 .map_err(|e| format!("Invalid JSON for 'headers' option: {e}"))?;
             for (key, value) in headers {
                 if let Some(v) = value.as_str() {
-                    self.headers.push((key.to_lowercase(), v.to_string()));
+                    let key_lower = key.to_lowercase();
+                    // Replace existing header with same name to avoid duplicates
+                    // (e.g., custom content-type overrides the default)
+                    if let Some(existing) = self.headers.iter_mut().find(|h| h.0 == key_lower) {
+                        existing.1 = v.to_string();
+                    } else {
+                        self.headers.push((key_lower, v.to_string()));
+                    }
                 } else {
                     return Err(format!(
                         "Invalid non-string value for header '{key}' in 'headers' option"
@@ -207,7 +214,7 @@ impl ServerConfig {
 
     /// Apply authentication configuration from extracted option values.
     ///
-    /// Separated from `configure_auth` for testability (Options is a WASM resource).
+    /// Separated from configure_auth for testability (Options is a WASM resource).
     pub(crate) fn apply_auth(
         &mut self,
         api_key: Option<String>,
@@ -216,6 +223,12 @@ impl ServerConfig {
         api_key_header: &str,
         api_key_prefix: Option<String>,
     ) -> FdwResult {
+        // Filter out empty/whitespace-only credentials (likely vault misconfiguration).
+        // The warning is emitted upstream by configure_auth; here we just skip them
+        // to avoid sending meaningless auth headers (e.g., "Bearer ").
+        let api_key = api_key.filter(|k| !k.trim().is_empty());
+        let bearer_token = bearer_token.filter(|t| !t.trim().is_empty());
+
         // Enforce mutual exclusivity — both would emit duplicate auth headers
         if api_key.is_some() && bearer_token.is_some() {
             return Err(

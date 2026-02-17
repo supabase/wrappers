@@ -5531,3 +5531,190 @@ fn test_table_name_multiple_special_chars() {
     };
     assert_eq!(endpoint.table_name(), "api_v2_1_me_data");
 }
+
+// ── YAML parsing tests ──────────────────────────────────────────────
+
+#[test]
+fn test_parse_yaml_spec() {
+    let yaml = r#"
+openapi: "3.0.0"
+info:
+  title: Test API
+  version: "1.0"
+paths:
+  /users:
+    get:
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+"#;
+    let spec = OpenApiSpec::from_yaml_str(yaml).unwrap();
+    assert_eq!(spec.openapi, "3.0.0");
+    let endpoints = spec.get_endpoints();
+    assert_eq!(endpoints.len(), 1);
+    assert_eq!(endpoints[0].path, "/users");
+}
+
+#[test]
+fn test_parse_yaml_spec_with_refs() {
+    let yaml = r##"
+openapi: "3.0.0"
+info:
+  title: Test API
+  version: "1.0"
+paths:
+  /pets:
+    get:
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Pet"
+components:
+  schemas:
+    Pet:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        tag:
+          type: string
+"##;
+    let spec = OpenApiSpec::from_yaml_str(yaml).unwrap();
+    let endpoints = spec.get_endpoints();
+    assert_eq!(endpoints.len(), 1);
+    let schema = endpoints[0].response_schema.as_ref().unwrap();
+    let items = schema.items.as_ref().unwrap();
+    let resolved = spec.resolve_schema(items);
+    assert!(resolved.properties.contains_key("id"));
+    assert!(resolved.properties.contains_key("name"));
+    assert!(resolved.properties.contains_key("tag"));
+}
+
+#[test]
+fn test_parse_yaml_spec_31() {
+    let yaml = r#"
+openapi: "3.1.0"
+info:
+  title: Test API
+  version: "1.0"
+servers:
+  - url: https://api.example.com
+paths:
+  /items:
+    get:
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                  label:
+                    type:
+                      - string
+                      - "null"
+"#;
+    let spec = OpenApiSpec::from_yaml_str(yaml).unwrap();
+    assert_eq!(spec.openapi, "3.1.0");
+    assert_eq!(spec.base_url(), Some("https://api.example.com".to_string()));
+    let endpoints = spec.get_endpoints();
+    assert_eq!(endpoints.len(), 1);
+    let schema = endpoints[0].response_schema.as_ref().unwrap();
+    let label = schema.properties.get("label").unwrap();
+    assert!(label.nullable);
+}
+
+#[test]
+fn test_parse_yaml_spec_rejects_swagger_20() {
+    let yaml = r#"
+swagger: "2.0"
+info:
+  title: Old API
+  version: "1.0"
+paths: {}
+"#;
+    // serde_yaml_ng will parse this but it'll fail the openapi version check
+    // because the "openapi" field is missing
+    let result = OpenApiSpec::from_yaml_str(yaml);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_yaml_json_produce_same_spec() {
+    let json = r#"{
+        "openapi": "3.0.0",
+        "info": {"title": "Test", "version": "1.0"},
+        "paths": {
+            "/users": {
+                "get": {
+                    "responses": {
+                        "200": {
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "id": {"type": "integer"},
+                                            "name": {"type": "string"}
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }"#;
+
+    let yaml = r#"
+openapi: "3.0.0"
+info:
+  title: Test
+  version: "1.0"
+paths:
+  /users:
+    get:
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+"#;
+
+    let json_spec = OpenApiSpec::from_str(json).unwrap();
+    let yaml_spec = OpenApiSpec::from_yaml_str(yaml).unwrap();
+
+    let json_endpoints = json_spec.get_endpoints();
+    let yaml_endpoints = yaml_spec.get_endpoints();
+    assert_eq!(json_endpoints.len(), yaml_endpoints.len());
+    assert_eq!(json_endpoints[0].path, yaml_endpoints[0].path);
+
+    let json_schema = json_endpoints[0].response_schema.as_ref().unwrap();
+    let yaml_schema = yaml_endpoints[0].response_schema.as_ref().unwrap();
+    assert_eq!(json_schema.properties.len(), yaml_schema.properties.len());
+    assert!(json_schema.properties.contains_key("id"));
+    assert!(yaml_schema.properties.contains_key("id"));
+}

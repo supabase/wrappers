@@ -1,5 +1,6 @@
 -- OpenAPI FDW example: GitHub API
--- Requires a GitHub personal access token (set GITHUB_TOKEN env var).
+-- Requires a GitHub personal access token. Replace 'placeholder' in the server definitions
+-- below with your token.
 -- See: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens
 -- Note: fdw_package_url uses file:// for local Docker testing. In production, use the
 -- GitHub release URL: https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.2.0/openapi_fdw.wasm
@@ -60,6 +61,28 @@ create server github_debug
     page_size '30',
     page_size_param 'per_page',
     debug 'true'
+  );
+
+-- ============================================================
+-- Server 3: github_import — With spec_url for IMPORT FOREIGN SCHEMA
+-- Note: The GitHub spec is large (~15 MB). The FDW's default
+-- max_response_bytes (50 MiB) can handle it, but the initial
+-- IMPORT may take a few seconds.
+-- ============================================================
+create server github_import
+  foreign data wrapper wasm_wrapper
+  options (
+    fdw_package_url 'file:///openapi_fdw.wasm',
+    fdw_package_name 'supabase:openapi-fdw',
+    fdw_package_version '0.2.0',
+    base_url 'https://api.github.com',
+    api_key 'placeholder',
+    user_agent 'openapi-fdw-example/0.2.0',
+    accept 'application/vnd.github+json',
+    headers '{"X-GitHub-Api-Version": "2022-11-28"}',
+    page_size '30',
+    page_size_param 'per_page',
+    spec_url 'https://raw.githubusercontent.com/github/rest-api-description/main/descriptions/api.github.com/api.github.com.json'
   );
 
 -- ============================================================

@@ -7,14 +7,26 @@ use serde_json::Value as JsonValue;
 use crate::bindings::supabase::wrappers::{
     http, stats, time,
     types::{Cell, Context, FdwError, FdwResult, Value},
+    utils,
 };
 use crate::spec::OpenApiSpec;
 use crate::{FDW_NAME, OpenApiFdw};
 
 const RETRY_AFTER_HEADER: &str = "retry-after";
+pub(crate) const MAX_RETRY_DELAY_MS: u64 = 30_000;
+
+/// Compute retry delay from a Retry-After header value (in seconds), capped to max_delay_ms.
+pub(crate) fn retry_delay_from_header(secs: u64, max_delay_ms: u64) -> u64 {
+    secs.saturating_mul(1000).min(max_delay_ms)
+}
+
+/// Compute exponential backoff delay for a retry attempt, capped to max_delay_ms.
+pub(crate) fn exponential_backoff_delay(retry_count: u32, max_delay_ms: u64) -> u64 {
+    1000u64.saturating_mul(1 << retry_count).min(max_delay_ms)
+}
 
 /// Extract the origin (scheme://authority) from a URL for same-origin comparison.
-/// Returns everything up to (but not including) the first `/` after `://`.
+/// Returns everything up to (but not including) the first / after ://.
 fn extract_origin(url: &str) -> &str {
     if let Some(scheme_end) = url.find("://") {
         let rest = &url[scheme_end + 3..];
@@ -29,7 +41,7 @@ fn extract_origin(url: &str) -> &str {
 }
 
 /// Redact a query parameter value from a URL for safe logging.
-/// Replaces the value of the named parameter with `[REDACTED]`.
+/// Replaces the value of the named parameter with [REDACTED].
 fn redact_query_param(url: &str, param_name: &str) -> String {
     let encoded_prefix = format!("{}=", urlencoding::encode(param_name));
     if let Some(start) = url.find(&encoded_prefix) {
@@ -44,7 +56,7 @@ fn redact_query_param(url: &str, param_name: &str) -> String {
 }
 
 impl OpenApiFdw {
-    /// Fetch and parse the `OpenAPI` spec
+    /// Fetch and parse the OpenAPI spec
     pub(crate) fn fetch_spec(&mut self) -> Result<(), FdwError> {
         if let Some(ref url) = self.config.spec_url {
             let req = http::Request {
@@ -68,14 +80,25 @@ impl OpenApiFdw {
                 ));
             }
 
-            let spec_json: JsonValue =
-                serde_json::from_str(&resp.body).map_err(|e| e.to_string())?;
+            // Try JSON first, fall back to YAML (many OpenAPI specs are published as YAML)
+            let spec_json: JsonValue = match serde_json::from_str(&resp.body) {
+                Ok(v) => v,
+                Err(json_err) => {
+                    serde_yaml_ng::from_str::<JsonValue>(&resp.body).map_err(|yaml_err| {
+                        format!(
+                            "Failed to parse OpenAPI spec as JSON ({json_err}) \
+                             or YAML ({yaml_err})"
+                        )
+                    })?
+                }
+            };
             let spec = OpenApiSpec::from_json(spec_json)?;
 
             // Use base_url from spec if not explicitly set
             if self.config.base_url.is_empty() {
                 if let Some(url) = spec.base_url() {
                     self.config.base_url = url.trim_end_matches('/').to_string();
+                    crate::validate_url(&self.config.base_url, "base_url (from spec servers)")?;
                 }
             }
 
@@ -98,6 +121,7 @@ impl OpenApiFdw {
             if self.config.base_url.is_empty() {
                 if let Some(url) = spec.base_url() {
                     self.config.base_url = url.trim_end_matches('/').to_string();
+                    crate::validate_url(&self.config.base_url, "base_url (from spec servers)")?;
                 }
             }
 
@@ -116,11 +140,14 @@ impl OpenApiFdw {
         if let Value::Cell(cell) = qual.value() {
             match cell {
                 Cell::String(s) => Some(s),
+                Cell::I8(n) => Some(n.to_string()),
+                Cell::I16(n) => Some(n.to_string()),
                 Cell::I32(n) => Some(n.to_string()),
                 Cell::I64(n) => Some(n.to_string()),
                 Cell::F32(n) => Some(n.to_string()),
                 Cell::F64(n) => Some(n.to_string()),
                 Cell::Bool(b) => Some(b.to_string()),
+                Cell::Uuid(u) => Some(u),
                 _ => None,
             }
         } else {
@@ -130,15 +157,14 @@ impl OpenApiFdw {
 
     /// Resolve a relative or absolute pagination URL against the base URL and endpoint.
     ///
-    /// Handles four forms of `next_url`:
-    /// - Absolute URLs (`http://...`, `https://...`) → validated against `base_url` origin
-    /// - Query-only (`?page=2`) → resolves against `base_url + endpoint`
-    /// - Absolute paths (`/items?page=2`) → resolves against `base_url`
-    /// - Bare relative paths (`page/2`) → resolves against `base_url/`
+    /// Handles four forms of next_url:
+    /// - Absolute URLs (http://..., https://...) -- validated against base_url origin
+    /// - Query-only (?page=2) -- resolves against base_url + endpoint
+    /// - Absolute paths (/items?page=2) -- resolves against base_url
+    /// - Bare relative paths (page/2) -- resolves against base_url/
     ///
-    /// # Errors
     /// Returns an error if an absolute pagination URL points to a different origin
-    /// than `base_url`, which would leak authentication credentials to a third party.
+    /// than base_url, which would leak authentication credentials to a third party.
     pub(crate) fn resolve_pagination_url(&self, next_url: &str) -> Result<String, String> {
         if next_url.starts_with("http://") || next_url.starts_with("https://") {
             let next_origin = extract_origin(next_url);
@@ -165,7 +191,7 @@ impl OpenApiFdw {
 
     /// Substitute path parameters in endpoint template from quals.
     ///
-    /// Writes substituted values into `injected` so they can be re-injected
+    /// Writes substituted values into injected so they can be re-injected
     /// into result rows (ensuring PostgreSQL's post-filter passes).
     ///
     /// Returns (resolved_endpoint, path_params_used) where path_params_used
@@ -219,7 +245,9 @@ impl OpenApiFdw {
                         &endpoint[start + end + 1..]
                     );
                 } else {
-                    // Track missing parameter and remove it from the endpoint to continue
+                    // Track missing parameter and remove the {param} placeholder to continue
+                    // parsing. This is safe because OpenAPI path params are always separated
+                    // by '/' (e.g., /{a}/{b}), so removing one doesn't mangle the next.
                     missing_params.push(param_name.to_string());
                     endpoint = format!("{}{}", &endpoint[..start], &endpoint[start + end + 1..]);
                 }
@@ -248,7 +276,7 @@ impl OpenApiFdw {
     /// Build query parameters from pagination state, quals, and API key.
     ///
     /// Returns (url_params, injected_entries) where injected_entries are
-    /// qual values to merge into `self.injected_params` for row injection.
+    /// qual values to merge into self.injected_params for row injection.
     /// Excludes path parameters and rowid column.
     pub(crate) fn build_query_params(
         &self,
@@ -321,12 +349,12 @@ impl OpenApiFdw {
 
     /// Build the URL for a request, handling path parameters and pagination.
     ///
-    /// Updates `self.injected_params` in place (avoids cloning on pagination).
+    /// Updates self.injected_params in place (avoids cloning on pagination).
     ///
     /// Supports endpoint templates like:
-    /// - `/users/{user_id}/posts`
-    /// - `/projects/{org}/{repo}/issues`
-    /// - `/resources/{type}/{id}`
+    /// - /users/{user_id}/posts
+    /// - /projects/{org}/{repo}/issues
+    /// - /resources/{type}/{id}
     ///
     /// Path parameters are substituted from WHERE clause quals.
     ///
@@ -400,10 +428,9 @@ impl OpenApiFdw {
             body: self.request_body.clone(),
         };
 
-        // Retry loop for rate limiting (HTTP 429)
+        // Retry loop for transient errors (HTTP 429 rate limit, 502/503 server errors)
         let mut retry_count = 0;
         const MAX_RETRIES: u32 = 3;
-        const MAX_RETRY_DELAY_MS: u64 = 30_000;
 
         let resp = loop {
             let resp = match req.method {
@@ -411,12 +438,17 @@ impl OpenApiFdw {
                 _ => http::get(&req)?,
             };
 
-            // Handle rate limiting (HTTP 429)
-            if resp.status_code == 429 {
+            let is_retryable = matches!(resp.status_code, 429 | 502 | 503);
+            if is_retryable {
                 if retry_count >= MAX_RETRIES {
+                    let hint = if resp.status_code == 429 {
+                        " Consider adding a page_size option to reduce request frequency."
+                    } else {
+                        ""
+                    };
                     return Err(format!(
-                        "API rate limit exceeded after {MAX_RETRIES} retries. \
-                         Consider adding a page_size option to reduce request frequency."
+                        "API request failed with HTTP {} after {MAX_RETRIES} retries.{hint}",
+                        resp.status_code
                     ));
                 }
 
@@ -427,12 +459,8 @@ impl OpenApiFdw {
                     .iter()
                     .find(|h| h.0.to_lowercase() == RETRY_AFTER_HEADER)
                     .and_then(|h| h.1.parse::<u64>().ok())
-                    .map(|secs| secs.saturating_mul(1000).min(MAX_RETRY_DELAY_MS))
-                    .unwrap_or_else(|| {
-                        // Exponential backoff: 1s, 2s, 4s (capped)
-                        let backoff = 1000u64.saturating_mul(1 << retry_count);
-                        backoff.min(MAX_RETRY_DELAY_MS)
-                    });
+                    .map(|secs| retry_delay_from_header(secs, MAX_RETRY_DELAY_MS))
+                    .unwrap_or_else(|| exponential_backoff_delay(retry_count, MAX_RETRY_DELAY_MS));
 
                 time::sleep(delay_ms);
                 retry_count += 1;
@@ -502,6 +530,20 @@ impl OpenApiFdw {
 
         // Build column key map for O(1) lookups during iter_scan
         self.build_column_key_map();
+
+        // Debug: warn once if object_path doesn't match response structure
+        if self.config.debug {
+            if let Some(ref path) = self.object_path {
+                if let Some(first_row) = self.src_rows.first() {
+                    if first_row.pointer(path).is_none() {
+                        utils::report_info(&format!(
+                            "[openapi_fdw] object_path '{path}' not found in response. \
+                             Falling back to full row object."
+                        ));
+                    }
+                }
+            }
+        }
 
         Ok(())
     }

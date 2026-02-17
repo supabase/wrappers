@@ -19,7 +19,36 @@ create server nws
 
 ---
 
-## 1. Weather Stations
+## 1. Quick Start with IMPORT FOREIGN SCHEMA
+
+The `nws_import` server has a `spec_url` pointing to the NWS OpenAPI spec, so tables can be auto-generated:
+
+```sql
+CREATE SCHEMA IF NOT EXISTS nws_auto;
+
+IMPORT FOREIGN SCHEMA "unused"
+FROM SERVER nws_import
+INTO nws_auto;
+```
+
+See what was generated:
+
+```sql
+SELECT foreign_table_name FROM information_schema.foreign_tables
+WHERE foreign_table_schema = 'nws_auto';
+```
+
+Pick a generated table and query it:
+
+```sql
+SELECT * FROM nws_auto.alerts LIMIT 3;
+```
+
+The rest of this example uses manually defined tables to demonstrate specific features (GeoJSON extraction, path parameters, custom pagination, etc.).
+
+---
+
+## 2. Weather Stations
 
 Fetches the full list of US weather stations. Demonstrates **GeoJSON extraction** (`response_path` + `object_path`), **cursor-based pagination** (`cursor_path`), and **camelCase-to-snake_case** column matching (`stationIdentifier` → `station_identifier`).
 
@@ -77,7 +106,7 @@ LIMIT 3;
 | 000PG | Southside Road | `{"value": 129.2352, "unitCode": "wmoUnit:m"}` |
 | 000SE | SCE South Hills Park | `{"value": 242.9256, "unitCode": "wmoUnit:m"}` |
 
-## 2. Active Alerts
+## 3. Active Alerts
 
 Different GeoJSON shape with **timestamptz coercion** for `onset` and `expires` columns.
 
@@ -131,7 +160,7 @@ WHERE severity IN ('Severe', 'Extreme')
 LIMIT 10;
 ```
 
-## 3. Query Param Pushdown (severity filter)
+## 4. Query Param Pushdown (severity filter)
 
 When a WHERE clause references a column that isn't a path parameter, the FDW sends it as a **query parameter** to the API. The NWS alerts endpoint supports a `severity` filter — and because it echoes `severity` back in every response object, the column is populated naturally:
 
@@ -151,7 +180,7 @@ LIMIT 3;
 
 Try other severity values: `Extreme`, `Moderate`, `Minor`, `Unknown`.
 
-## 4. Station Observations
+## 5. Station Observations
 
 **Path parameter substitution**: the `{station_id}` placeholder in the endpoint is replaced with the value from your WHERE clause.
 
@@ -207,7 +236,7 @@ LIMIT 3;
 | 2026-02-14 03:40:00+00 | 7 | 25.92 | Cloudy |
 | 2026-02-14 03:35:00+00 | 8 | 25.92 | Cloudy |
 
-## 5. Current Conditions
+## 6. Current Conditions
 
 **Single object response** — the `/observations/latest` endpoint returns one GeoJSON Feature (not a FeatureCollection). The FDW auto-detects this and returns a single row.
 
@@ -244,7 +273,7 @@ WHERE station_id = 'KDEN';
 | --- | --- | --- | --- | --- | --- |
 | Cloudy | 7 | 24.084 | 310 | | 65.63 |
 
-## 6. Point Metadata & Forecast
+## 7. Point Metadata & Forecast
 
 This two-step flow demonstrates **composite path parameters** and **nested response extraction**.
 
@@ -344,31 +373,6 @@ WHERE wfo = 'BOU' AND x = '63' AND y = '62';
 
 > Grid coordinates vary by location. Always use Step 1 to find the right values for your area.
 
-## 7. IMPORT FOREIGN SCHEMA
-
-Auto-generate table definitions from the NWS OpenAPI spec. The `nws_import` server has a `spec_url` configured.
-
-```sql
-CREATE SCHEMA IF NOT EXISTS nws_auto;
-
-IMPORT FOREIGN SCHEMA "unused"
-FROM SERVER nws_import
-INTO nws_auto;
-```
-
-See what was generated:
-
-```sql
-SELECT foreign_table_name FROM information_schema.foreign_tables
-WHERE foreign_table_schema = 'nws_auto';
-```
-
-Pick a generated table and query it:
-
-```sql
-SELECT * FROM nws_auto.alerts LIMIT 3;
-```
-
 ## 8. Debug Mode
 
 The `stations_debug` table uses the `nws_debug` server which has `debug 'true'`. This emits HTTP request details (method, URL, status, response size) and scan statistics (row/column counts) as PostgreSQL INFO messages.
@@ -408,6 +412,7 @@ LIMIT 5;
 
 | Feature | Table(s) |
 | --- | --- |
+| IMPORT FOREIGN SCHEMA | `nws_import` server |
 | GeoJSON extraction (`response_path` + `object_path`) | `stations`, `active_alerts`, `station_observations` |
 | Cursor-based pagination (`cursor_path`) | `stations` |
 | Path parameter substitution | `station_observations`, `latest_observation`, `point_metadata`, `forecast_periods` |
@@ -416,7 +421,6 @@ LIMIT 5;
 | Custom headers (`user_agent`, `accept`) | All servers |
 | LIMIT pushdown | Any table with `LIMIT` |
 | Debug mode (`debug`) | `stations_debug` |
-| IMPORT FOREIGN SCHEMA | `nws_import` server |
 | Single object response | `latest_observation`, `point_metadata` |
 | Type coercion (timestamptz, jsonb, boolean, integer) | `active_alerts`, `forecast_periods` |
 | `attrs` catch-all column | All tables |

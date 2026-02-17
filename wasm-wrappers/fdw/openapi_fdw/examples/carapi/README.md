@@ -17,7 +17,36 @@ create server carapi
 
 ---
 
-## 1. Makes
+## 1. Quick Start with IMPORT FOREIGN SCHEMA
+
+The `carapi_import` server has a `spec_url` pointing to the CarAPI OpenAPI spec, so tables can be auto-generated:
+
+```sql
+CREATE SCHEMA IF NOT EXISTS carapi_auto;
+
+IMPORT FOREIGN SCHEMA "unused"
+FROM SERVER carapi_import
+INTO carapi_auto;
+```
+
+See what was generated:
+
+```sql
+SELECT foreign_table_name FROM information_schema.foreign_tables
+WHERE foreign_table_schema = 'carapi_auto';
+```
+
+Pick a generated table and query it:
+
+```sql
+SELECT * FROM carapi_auto.makes_v2 LIMIT 3;
+```
+
+The rest of this example uses manually defined tables to demonstrate specific features (query pushdown, type coercion, debug mode, etc.).
+
+---
+
+## 2. Makes
 
 Fetches all car manufacturers. Demonstrates **page-based pagination** with auto-detected `data` wrapper key. The CarAPI wraps responses in `{"collection": {...}, "data": [...]}` and the FDW auto-detects the `data` key.
 
@@ -48,7 +77,7 @@ LIMIT 5;
 | 2 | Audi |
 | 25 | Bentley |
 
-## 2. Models
+## 3. Models
 
 Car models filtered by make and year. Demonstrates **query parameter pushdown** — the WHERE clause values are sent as query parameters to the API, so only matching data is returned.
 
@@ -83,7 +112,7 @@ LIMIT 5;
 | 7308 | C-HR | Toyota |
 | 4779 | Camry | Toyota |
 
-## 3. Trims
+## 4. Trims
 
 Trim levels with MSRP pricing. Combines query pushdown (year, make, model) with integer type coercion for pricing fields.
 
@@ -141,7 +170,7 @@ WHERE year = '2020' AND make = 'Honda' AND model = 'Civic'
 LIMIT 3;
 ```
 
-## 4. Bodies
+## 5. Bodies
 
 Vehicle body dimensions. Demonstrates mixed types — integer for counts/weights, text for decimal measurements.
 
@@ -195,7 +224,7 @@ WHERE year = '2020' AND make = 'Toyota' AND model = 'RAV4'
 LIMIT 3;
 ```
 
-## 5. Engines
+## 6. Engines
 
 Engine specifications and performance data.
 
@@ -255,7 +284,7 @@ WHERE year = '2020' AND make = 'Ford' AND model = 'Mustang'
 LIMIT 3;
 ```
 
-## 6. Mileages
+## 7. Mileages
 
 Fuel economy and range data (EPA ratings).
 
@@ -306,7 +335,7 @@ WHERE year = '2020' AND make = 'Honda' AND model = 'Accord'
 LIMIT 3;
 ```
 
-## 7. Exterior Colors
+## 8. Exterior Colors
 
 Paint colors with RGB values.
 
@@ -344,7 +373,7 @@ LIMIT 5;
 | Galactic Aqua Mica | 37,54,65 |
 | Midnight Black Metallic | 23,23,23 |
 
-## 8. OBD Codes
+## 9. OBD Codes
 
 OBD-II diagnostic trouble codes. A small dataset available on the free tier.
 
@@ -372,7 +401,7 @@ LIMIT 5;
 | P0100 | Mass or Volume Air Flow Sensor A Circuit |
 | U1000 | Manufacturer Controlled DTC |
 
-## 9. Debug Mode
+## 10. Debug Mode
 
 The `makes_debug` table uses the `carapi_debug` server which has `debug 'true'`. This emits HTTP request details and scan statistics as PostgreSQL INFO messages.
 
@@ -387,7 +416,7 @@ INFO:  [openapi_fdw] HTTP GET https://carapi.app/api/makes/v2 -> 200 (1404 bytes
 INFO:  [openapi_fdw] Scan complete: 1 rows, 1 columns
 ```
 
-## 10. The `attrs` Column
+## 11. The `attrs` Column
 
 Every table includes an `attrs jsonb` column that captures **all fields not mapped to named columns**. This is useful for exploring what data the API returns without defining every column upfront.
 
@@ -401,6 +430,7 @@ LIMIT 1;
 
 | Feature | Table(s) |
 | --- | --- |
+| IMPORT FOREIGN SCHEMA | `carapi_import` server |
 | Page-based pagination (auto-followed) | `makes`, `models`, `trims`, `bodies`, `engines`, `mileages`, `exterior_colors` |
 | Auto-detected `data` wrapper key | All tables |
 | Query parameter pushdown | `models`, `trims`, `bodies`, `engines`, `mileages`, `exterior_colors` |

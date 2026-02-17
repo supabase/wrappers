@@ -8,7 +8,7 @@ Point it at an OpenAPI spec and query the API with SQL. The FDW parses the spec 
 
 ## Features
 
-- **Automatic schema import** — Reads OpenAPI 3.0/3.1 specs (via `spec_url` or inline `spec_json`) and generates foreign tables with `IMPORT FOREIGN SCHEMA`
+- **Automatic schema import** — Reads OpenAPI 3.0/3.1 specs in JSON or YAML (via `spec_url` or inline `spec_json`) and generates foreign tables with `IMPORT FOREIGN SCHEMA`
 - **Automatic pagination** — Detects and follows cursor-based, offset-based, and Link-header pagination across multiple pages
 - **Path parameter support** — Substitutes path parameters from WHERE clauses (e.g., `WHERE user_id = '123'` fills `/users/{user_id}/posts`)
 - **Query pushdown** — Forwards non-path WHERE clauses as query parameters to filter at the API level
@@ -148,7 +148,7 @@ For queries you run frequently, a [materialized view](https://supabase.com/blog/
 
 | Version | Date | Notes |
 | --- | --- | --- |
-| 0.2.0 | 2026-02-15 | Modular architecture, POST-for-read, `spec_json` inline specs, LIMIT pushdown, OpenAPI 3.1 support, security hardening, 518 unit tests, 5 real-world examples |
+| 0.2.0 | 2026-02-15 | Modular architecture, POST-for-read, `spec_json` inline specs, YAML spec support, LIMIT pushdown, OpenAPI 3.1 support, security hardening, 531 unit tests, 5 real-world examples |
 | 0.1.4 | 2026-02-09 | Type coercion, auth validation, table naming, URL fixes |
 | 0.1.3 | 2026-02-06 | Avoid cloning JSON response data |
 | 0.1.2 | 2026-02-01 | Fix query param filtering |
