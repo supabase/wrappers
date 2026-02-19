@@ -135,6 +135,10 @@ impl ServerConfig {
 
         if let Some(user_agent) = user_agent {
             self.headers.push(("user-agent".to_owned(), user_agent));
+        } else {
+            // Default user-agent if not provided (some APIs reject requests without it)
+            self.headers
+                .push(("user-agent".to_owned(), "Wrappers OpenAPI FDW".to_string()));
         }
 
         if let Some(accept) = accept {
