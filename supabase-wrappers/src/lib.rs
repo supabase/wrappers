@@ -320,6 +320,17 @@ mod qual;
 mod scan;
 mod sort;
 
+// The upper module uses pgrx::PgList which requires PG features
+#[cfg(any(
+    feature = "pg13",
+    feature = "pg14",
+    feature = "pg15",
+    feature = "pg16",
+    feature = "pg17",
+    feature = "pg18"
+))]
+mod upper;
+
 /// PgBox'ed `FdwRoutine`, used in [`fdw_routine`](interface::ForeignDataWrapper::fdw_routine)
 pub type FdwRoutine<A = AllocatedByPostgres> = PgBox<pg_sys::FdwRoutine, A>;
 
