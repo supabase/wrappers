@@ -6,7 +6,7 @@ use serde_json::Value as JsonValue;
 
 use crate::bindings::supabase::wrappers::{
     http, stats, time,
-    types::{Cell, Context, FdwError, FdwResult, Value},
+    types::{Cell, Context, FdwError, FdwResult, Qual, Value},
     utils,
 };
 use crate::spec::OpenApiSpec;
@@ -131,9 +131,7 @@ impl OpenApiFdw {
     }
 
     /// Extract a qual value as a string
-    pub(crate) fn qual_value_to_string(
-        qual: &crate::bindings::supabase::wrappers::types::Qual,
-    ) -> Option<String> {
+    pub(crate) fn qual_value_to_string(qual: &Qual) -> Option<String> {
         if qual.operator() != "=" {
             return None;
         }
@@ -213,7 +211,7 @@ impl OpenApiFdw {
     /// Returns an error if required path parameters are missing from quals.
     pub(crate) fn substitute_path_params(
         endpoint: &str,
-        quals: &[crate::bindings::supabase::wrappers::types::Qual],
+        quals: &[Qual],
         injected: &mut HashMap<String, String>,
     ) -> Result<(String, Vec<String>), String> {
         if !endpoint.contains('{') {
@@ -292,7 +290,7 @@ impl OpenApiFdw {
     /// Excludes path parameters and rowid column.
     pub(crate) fn build_query_params(
         &self,
-        quals: &[crate::bindings::supabase::wrappers::types::Qual],
+        quals: &[Qual],
         path_params_used: &[String],
     ) -> (Vec<String>, Vec<(String, String)>) {
         // Pre-allocate for cursor + page_size + quals + api_key
@@ -491,7 +489,7 @@ impl OpenApiFdw {
                 Some((ref param_name, _)) => redact_query_param(&req.url, param_name),
                 None => req.url.clone(),
             };
-            crate::bindings::supabase::wrappers::utils::report_info(&format!(
+            utils::report_info(&format!(
                 "[openapi_fdw] HTTP {} {} -> {} ({} bytes)",
                 if matches!(req.method, http::Method::Post) {
                     "POST"
