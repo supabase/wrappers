@@ -10,105 +10,137 @@ permissions:
 
 jobs:
   # =============================================================
+  # Detect which paths changed to skip unneeded jobs
+  # =============================================================
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      native: ${{ steps.filter.outputs.native }}
+      wasm: ${{ steps.filter.outputs.wasm }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - id: filter
+        run: |
+          if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
+            BASE=${{ github.event.pull_request.base.sha }}
+            HEAD=${{ github.event.pull_request.head.sha }}
+          else
+            BASE=${{ github.event.before }}
+            HEAD=${{ github.sha }}
+          fi
+          # Null SHA (force push / new branch): can't diff, so run everything
+          if [[ "$BASE" == "0000000000000000000000000000000000000000" ]]; then
+            echo "native=true" >> "$GITHUB_OUTPUT"
+            echo "wasm=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          CHANGED=$(git diff --name-only "$BASE" "$HEAD")
+          echo "native=$(echo "$CHANGED" | grep -qE '^(wrappers/|supabase-wrappers/|supabase-wrappers-macros/|\.github/workflows/test_wrappers\.yml)' && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "wasm=$(echo "$CHANGED" | grep -qE '^(wasm-wrappers/|supabase-wrappers/|wrappers/src/fdw/wasm_fdw/|\.github/workflows/test_wrappers\.yml)' && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+  # =============================================================
   # Native wrappers test
   # =============================================================
   test_native:
     name: Run native wrappers tests
+    needs: [changes]
+    if: needs.changes.outputs.native == 'true'
     runs-on: blacksmith-4vcpu-ubuntu-2404
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v6
+      - name: Checkout code
+        uses: actions/checkout@v6
 
-    - name: Build docker images
-      run: |
-        docker compose -f wrappers/.ci/docker-compose-native.yaml up -d
+      - name: Build docker images
+        run: |
+          docker compose -f wrappers/.ci/docker-compose-native.yaml up -d
 
-    - uses: actions-rs/toolchain@v1
-      with:
-        toolchain: 1.88.0
-        default: true
-        override: true
-        components: rustfmt, clippy
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: 1.88.0
+          components: rustfmt, clippy
 
-    - run: |
-        sudo apt remove -y postgres*
-        sudo apt -y install curl ca-certificates build-essential pkg-config libssl-dev
-        sudo install -d /usr/share/postgresql-common/pgdg
-        sudo curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
-        . /etc/os-release
-        sudo sh -c "echo 'deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $VERSION_CODENAME-pgdg main' > /etc/apt/sources.list.d/pgdg.list"
-        sudo apt update -y -qq --fix-missing
-        sudo apt -y install postgresql-client-15 postgresql-15 postgresql-server-dev-15
-        sudo apt -y autoremove && sudo apt -y clean
-        sudo chmod a+rwx `/usr/lib/postgresql/15/bin/pg_config --pkglibdir` `/usr/lib/postgresql/15/bin/pg_config --sharedir`/extension /var/run/postgresql/
+      - run: |
+          sudo apt remove -y postgres*
+          sudo apt -y install curl ca-certificates build-essential pkg-config libssl-dev
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          . /etc/os-release
+          sudo sh -c "echo 'deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $VERSION_CODENAME-pgdg main' > /etc/apt/sources.list.d/pgdg.list"
+          sudo apt update -y -qq --fix-missing
+          sudo apt -y install postgresql-client-15 postgresql-15 postgresql-server-dev-15
+          sudo apt -y autoremove && sudo apt -y clean
+          sudo chmod a+rwx `/usr/lib/postgresql/15/bin/pg_config --pkglibdir` `/usr/lib/postgresql/15/bin/pg_config --sharedir`/extension /var/run/postgresql/
 
-    - run: cargo install --locked cargo-pgrx --version 0.16.1
-    - run: cargo pgrx init --pg15 /usr/lib/postgresql/15/bin/pg_config
+      - run: cargo install --locked cargo-pgrx --version 0.16.1
+      - run: cargo pgrx init --pg15 /usr/lib/postgresql/15/bin/pg_config
 
-    - name: Format code
-      run: |
-        cd wrappers && cargo fmt --check
+      - name: Format code
+        run: |
+          cd wrappers && cargo fmt --check
 
-    - name: Run clippy
-      run: |
-        cd wrappers && RUSTFLAGS="-D warnings" cargo clippy --all --tests --no-deps --features native_fdws,helloworld_fdw
+      - name: Run clippy
+        run: |
+          cd wrappers && RUSTFLAGS="-D warnings" cargo clippy --all --tests --no-deps --features native_fdws,helloworld_fdw
 
-    - name: Perform test
-      run: cd wrappers && cargo pgrx test --features "native_fdws pg15"
+      - name: Perform test
+        run: cd wrappers && cargo pgrx test --features "native_fdws pg15"
 
   # =============================================================
   # Wasm wrappers test
   # =============================================================
   test_wasm:
     name: Run Wasm wrappers tests
+    needs: [changes]
+    if: needs.changes.outputs.wasm == 'true'
     runs-on: blacksmith-4vcpu-ubuntu-2404
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v6
+      - name: Checkout code
+        uses: actions/checkout@v6
 
-    - name: Build docker images
-      run: |
-        docker compose -f wrappers/.ci/docker-compose-wasm.yaml up -d
+      - name: Build docker images
+        run: |
+          docker compose -f wrappers/.ci/docker-compose-wasm.yaml up -d
 
-    - uses: actions-rs/toolchain@v1
-      with:
-        toolchain: 1.88.0
-        default: true
-        override: true
-        components: rustfmt, clippy
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: 1.88.0
+          components: rustfmt, clippy
 
-    - run: |
-        sudo apt remove -y postgres*
-        sudo apt -y install curl ca-certificates build-essential pkg-config libssl-dev
-        sudo install -d /usr/share/postgresql-common/pgdg
-        sudo curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
-        . /etc/os-release
-        sudo sh -c "echo 'deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $VERSION_CODENAME-pgdg main' > /etc/apt/sources.list.d/pgdg.list"
-        sudo apt update -y -qq --fix-missing
-        sudo apt -y install postgresql-client-15 postgresql-15 postgresql-server-dev-15
-        sudo apt -y autoremove && sudo apt -y clean
-        sudo chmod a+rwx `/usr/lib/postgresql/15/bin/pg_config --pkglibdir` `/usr/lib/postgresql/15/bin/pg_config --sharedir`/extension /var/run/postgresql/
+      - run: |
+          sudo apt remove -y postgres*
+          sudo apt -y install curl ca-certificates build-essential pkg-config libssl-dev
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          . /etc/os-release
+          sudo sh -c "echo 'deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $VERSION_CODENAME-pgdg main' > /etc/apt/sources.list.d/pgdg.list"
+          sudo apt update -y -qq --fix-missing
+          sudo apt -y install postgresql-client-15 postgresql-15 postgresql-server-dev-15
+          sudo apt -y autoremove && sudo apt -y clean
+          sudo chmod a+rwx `/usr/lib/postgresql/15/bin/pg_config --pkglibdir` `/usr/lib/postgresql/15/bin/pg_config --sharedir`/extension /var/run/postgresql/
 
-    - run: cargo install --locked cargo-pgrx --version 0.16.1
-    - run: cargo pgrx init --pg15 /usr/lib/postgresql/15/bin/pg_config
-    - run: cargo install --locked cargo-component --version 0.21.1
-    - run: rustup target add wasm32-unknown-unknown
+      - run: cargo install --locked cargo-pgrx --version 0.16.1
+      - run: cargo pgrx init --pg15 /usr/lib/postgresql/15/bin/pg_config
+      - run: cargo install --locked cargo-component --version 0.21.1
+      - run: rustup target add wasm32-unknown-unknown
 
-    - name: Build Wasm FDWs
-      run: |
-        cd ./wasm-wrappers/fdw && cargo component build --release --target wasm32-unknown-unknown
+      - name: Build Wasm FDWs
+        run: |
+          cd ./wasm-wrappers/fdw && cargo component build --release --target wasm32-unknown-unknown
 
-    # we don't want to check format for generated files, so we use
-    # 'git diff --quiet' trick here, instead of 'cargo fmt --check'
-    - name: Format code
-      run: |
-        cd ./wasm-wrappers/fdw && cargo fmt && git diff --quiet
+      # we don't want to check format for generated files, so we use
+      # 'git diff --quiet' trick here, instead of 'cargo fmt --check'
+      - name: Format code
+        run: |
+          cd ./wasm-wrappers/fdw && cargo fmt && git diff --quiet
 
-    - name: Run clippy
-      run: |
-        cd ./wasm-wrappers/fdw && RUSTFLAGS="-D warnings" cargo clippy --all --tests --no-deps
+      - name: Run clippy
+        run: |
+          cd ./wasm-wrappers/fdw && RUSTFLAGS="-D warnings" cargo clippy --all --tests --no-deps
 
-    - name: Perform test
-      run: cd wrappers && cargo pgrx test --features "wasm_fdw pg15"
+      - name: Perform test
+        run: cd wrappers && cargo pgrx test --features "wasm_fdw pg15"
