@@ -1,0 +1,896 @@
+[
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/items"
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "[{\"id\":1,\"name\":\"Widget\",\"price\":9.99,\"in_stock\":true},{\"id\":2,\"name\":\"Gadget\",\"price\":24.99,\"in_stock\":true},{\"id\":3,\"name\":\"Doohickey\",\"price\":4.99,\"in_stock\":false}]"
+      }
+    }
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/products"
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "{\"data\":[{\"id\":\"prod-1\",\"name\":\"Laptop\",\"price\":999.99},{\"id\":\"prod-2\",\"name\":\"Mouse\",\"price\":29.99}],\"total\":2}"
+      }
+    }
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/features"
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-104.99,39.74]},\"properties\":{\"station_id\":\"KDEN\",\"name\":\"Denver International\",\"state\":\"CO\",\"elevation\":5431}},{\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-118.41,33.94]},\"properties\":{\"station_id\":\"KLAX\",\"name\":\"Los Angeles International\",\"state\":\"CA\",\"elevation\":126}},{\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[-87.90,41.97]},\"properties\":{\"station_id\":\"KORD\",\"name\":\"O Hare International\",\"state\":\"IL\",\"elevation\":672}}]}"
+      }
+    }
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/paginated-items",
+      "queryStringParameters": {
+        "after": [
+          "cursor_page2"
+        ],
+        "limit": [
+          "2"
+        ]
+      }
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "{\"data\":[{\"id\":3,\"value\":\"page2-a\"},{\"id\":4,\"value\":\"page2-b\"}],\"cursor\":\"cursor_page3\"}"
+      }
+    },
+    "priority": 10
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/paginated-items",
+      "queryStringParameters": {
+        "after": [
+          "cursor_page3"
+        ],
+        "limit": [
+          "2"
+        ]
+      }
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "{\"data\":[{\"id\":5,\"value\":\"page3-a\"}]}"
+      }
+    },
+    "priority": 10
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/paginated-items"
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "{\"data\":[{\"id\":1,\"value\":\"page1-a\"},{\"id\":2,\"value\":\"page1-b\"}],\"cursor\":\"cursor_page2\"}"
+      }
+    },
+    "priority": 0
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/url-paginated",
+      "queryStringParameters": {
+        "page": [
+          "2"
+        ],
+        "limit": [
+          "2"
+        ]
+      }
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "{\"items\":[{\"id\":3,\"label\":\"third\"}],\"pagination\":{\"next\":\"\"}}"
+      }
+    },
+    "priority": 10
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/url-paginated"
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "{\"items\":[{\"id\":1,\"label\":\"first\"},{\"id\":2,\"label\":\"second\"}],\"pagination\":{\"next\":\"http://mockserver:1080/url-paginated?page=2&limit=2\"}}"
+      }
+    },
+    "priority": 0
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/search",
+      "queryStringParameters": {
+        "category": [
+          "electronics"
+        ]
+      }
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "[{\"id\":1,\"name\":\"Laptop\",\"category\":\"electronics\"},{\"id\":2,\"name\":\"Phone\",\"category\":\"electronics\"}]"
+      }
+    }
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/users/42/posts"
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "[{\"id\":101,\"title\":\"First Post\",\"body\":\"Hello world\"},{\"id\":102,\"title\":\"Second Post\",\"body\":\"More content\"}]"
+      }
+    }
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/camel-case"
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "[{\"id\":1,\"firstName\":\"Alice\",\"lastName\":\"Smith\",\"emailAddress\":\"alice@example.com\"},{\"id\":2,\"firstName\":\"Bob\",\"lastName\":\"Jones\",\"emailAddress\":\"bob@example.com\"}]"
+      }
+    }
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/not-found/999"
+    },
+    "httpResponse": {
+      "statusCode": 404,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "{\"error\":\"Not found\"}"
+      }
+    }
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/rate-limited"
+    },
+    "httpResponse": {
+      "statusCode": 429,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ],
+        "Retry-After": [
+          "1"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "{\"error\":\"Too many requests\"}"
+      }
+    },
+    "times": {
+      "remainingTimes": 1,
+      "unlimited": false
+    },
+    "priority": 10
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/rate-limited"
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "[{\"id\":1,\"status\":\"ok\"}]"
+      }
+    },
+    "priority": 0
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/auth/bearer",
+      "headers": {
+        "Authorization": [
+          "Bearer test-api-key-123"
+        ]
+      }
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "[{\"id\":1,\"status\":\"authenticated\"}]"
+      }
+    }
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/auth/custom-header",
+      "headers": {
+        "X-API-Key": [
+          "custom-key-456"
+        ]
+      }
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "[{\"id\":1,\"status\":\"custom_auth\"}]"
+      }
+    }
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/auth/custom-prefix",
+      "headers": {
+        "Authorization": [
+          "Token prefix-key-789"
+        ]
+      }
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "[{\"id\":1,\"status\":\"prefix_auth\"}]"
+      }
+    }
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/auth/token",
+      "headers": {
+        "Authorization": [
+          "Bearer bearer-token-abc"
+        ]
+      }
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "[{\"id\":1,\"status\":\"bearer_auth\"}]"
+      }
+    }
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/auth/headers-json",
+      "headers": {
+        "X-Custom-One": [
+          "value1"
+        ],
+        "X-Custom-Two": [
+          "value2"
+        ]
+      }
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "[{\"id\":1,\"status\":\"headers_json\"}]"
+      }
+    }
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/typed-data"
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "[{\"id\":1,\"name\":\"typed-row\",\"uuid_field\":\"550e8400-e29b-41d4-a716-446655440000\",\"score\":3.14,\"rating\":2.71828,\"count\":42,\"active\":true,\"created_date\":\"2024-01-15\",\"updated_at\":\"2024-06-15T10:30:00Z\",\"tags\":[\"a\",\"b\",\"c\"],\"metadata\":{\"key\":\"val\"},\"nullable_field\":null}]"
+      }
+    }
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/singleton"
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "{\"id\":\"only-one\",\"name\":\"singleton\",\"version\":42}"
+      }
+    }
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/empty-results"
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "[]"
+      }
+    }
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/records-wrapped"
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "{\"records\":[{\"id\":1,\"value\":\"rec-wrap\"},{\"id\":2,\"value\":\"rec-two\"}],\"total\":2}"
+      }
+    }
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/entries-wrapped"
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "{\"entries\":[{\"id\":1,\"label\":\"entry-1\"},{\"id\":2,\"label\":\"entry-2\"}]}"
+      }
+    }
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/results-wrapped"
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "{\"results\":[{\"id\":1,\"value\":\"res-wrap\"}],\"count\":1}"
+      }
+    }
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/pascal-case"
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "[{\"Id\":1,\"Name\":\"PascalAlice\",\"Age\":30},{\"Id\":2,\"Name\":\"PascalBob\",\"Age\":25}]"
+      }
+    }
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/has-more-items",
+      "queryStringParameters": {
+        "after": [
+          "cursor_hasmore_2"
+        ]
+      }
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "{\"data\":[{\"id\":2,\"value\":\"hm2\"}],\"has_more\":false}"
+      }
+    },
+    "priority": 10
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/has-more-items"
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "{\"data\":[{\"id\":1,\"value\":\"hm1\"}],\"has_more\":true,\"next_cursor\":\"cursor_hasmore_2\"}"
+      }
+    },
+    "priority": 0
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/relative-paged",
+      "queryStringParameters": {
+        "page": [
+          "2"
+        ]
+      }
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "{\"data\":[{\"id\":2,\"label\":\"rel2\"}]}"
+      }
+    },
+    "priority": 10
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/relative-paged"
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "{\"data\":[{\"id\":1,\"label\":\"rel1\"}],\"next\":\"?page=2\"}"
+      }
+    },
+    "priority": 0
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/orgs/acme/repos/widget/issues"
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "[{\"id\":1,\"title\":\"Bug report\",\"state\":\"open\"},{\"id\":2,\"title\":\"Feature request\",\"state\":\"closed\"}]"
+      }
+    }
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/resources/res-42"
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "{\"id\":\"res-42\",\"name\":\"found-by-id\"}"
+      }
+    }
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/server-error"
+    },
+    "httpResponse": {
+      "statusCode": 500,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "{\"error\":\"Internal server error\"}"
+      }
+    }
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/invalid-json"
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": "not valid json {{"
+    }
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/unix-timestamps"
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "[{\"id\":1,\"name\":\"epoch-row\",\"created_at\":1686816600,\"updated_at\":\"2024-06-15T10:30:00Z\"}]"
+      }
+    }
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/acronym-fields"
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "[{\"id\":1,\"clusterIP\":\"10.0.0.1\",\"apiURL\":\"https://api.test.com\",\"htmlParser\":\"v2\"}]"
+      }
+    }
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/mixed-types"
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "[{\"id\":1,\"count\":42,\"enabled\":true,\"ratio\":3.14,\"name\":\"test\"},{\"id\":2,\"count\":null,\"enabled\":null,\"ratio\":null,\"name\":null}]"
+      }
+    }
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/jsonld-graph"
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/ld+json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "{\"@context\":{\"@version\":\"1.1\",\"wx\":\"https://api.weather.gov/ontology#\"},\"@graph\":[{\"@id\":\"urn:alert:1\",\"@type\":\"wx:Alert\",\"headline\":\"Storm warning\",\"severity\":\"Severe\"},{\"@id\":\"urn:alert:2\",\"@type\":\"wx:Alert\",\"headline\":\"Heat advisory\",\"severity\":\"Moderate\"}]}"
+      }
+    }
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/auth/query-key",
+      "queryStringParameters": {
+        "api_key": [
+          "query-key-123"
+        ]
+      }
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "[{\"id\":1,\"status\":\"query_auth\"}]"
+      }
+    }
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/auth/cookie",
+      "headers": {
+        "cookie": [
+          "session=cookie-key-abc"
+        ]
+      }
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "[{\"id\":1,\"status\":\"cookie_auth\"}]"
+      }
+    }
+  },
+  {
+    "httpRequest": {
+      "method": "POST",
+      "path": "/search"
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "[{\"id\":1,\"label\":\"found-via-post\"}]"
+      }
+    }
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/jsonld-features"
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/geo+json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "{\"@context\":[\"https://geojson.org/geojson-ld/geojson-context.jsonld\"],\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"properties\":{\"@id\":\"https://api.weather.gov/stations/KDEN\",\"@type\":\"wx:ObservationStation\",\"stationIdentifier\":\"KDEN\",\"name\":\"Denver International\",\"timeZone\":\"America/Denver\"}},{\"type\":\"Feature\",\"properties\":{\"@id\":\"https://api.weather.gov/stations/KLAX\",\"@type\":\"wx:ObservationStation\",\"stationIdentifier\":\"KLAX\",\"name\":\"Los Angeles International\",\"timeZone\":\"America/Los_Angeles\"}}]}"
+      }
+    }
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/config-test-custom",
+      "queryStringParameters": {
+        "limit": [
+          "5"
+        ]
+      }
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "[{\"id\":1,\"value\":\"custom-page-size\"}]"
+      }
+    }
+  },
+  {
+    "httpRequest": {
+      "method": "GET",
+      "path": "/config-test-default",
+      "queryStringParameters": {
+        "limit": [
+          "10"
+        ]
+      }
+    },
+    "httpResponse": {
+      "statusCode": 200,
+      "headers": {
+        "content-type": [
+          "application/json"
+        ]
+      },
+      "body": {
+        "type": "JSON",
+        "json": "[{\"id\":1,\"value\":\"server-default-size\"}]"
+      }
+    }
+  }
+]

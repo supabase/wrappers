@@ -12,13 +12,14 @@ tags:
 
 [OpenAPI](https://www.openapis.org/) is a specification for describing HTTP APIs. The OpenAPI Wrapper is a generic WebAssembly (Wasm) foreign data wrapper that can connect to any REST API with an OpenAPI 3.0+ specification.
 
-This wrapper allows you to query any REST API endpoint as a PostgreSQL foreign table, with support for path parameters, pagination, and automatic schema import.
+This wrapper allows you to query any REST API endpoint as a PostgreSQL foreign table, with support for path parameters, pagination, POST-for-read endpoints, and automatic schema import.
 
 ## Available Versions
 
 | Version | Wasm Package URL | Checksum | Required Wrappers Version |
 | ------- | ---------------- | -------- | ------------------------- |
-| 0.1.4   | `https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.1.4/openapi_fdw.wasm` | `dd434f8565b060b181d1e69e1e4d5c8b9c3ac5ca444056d3c2fb939038d308fe` | >=0.5.0 |
+| 0.2.0 | `https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.2.0/openapi_fdw.wasm` | _published on release_ | >=0.5.0 |
+| 0.1.4 | `https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.1.4/openapi_fdw.wasm` | `dd434f8565b060b181d1e69e1e4d5c8b9c3ac5ca444056d3c2fb939038d308fe` | >=0.5.0 |
 
 ## Preparation
 
@@ -94,12 +95,14 @@ We need to provide Postgres with the credentials to access the API and any addit
 | Option | Required | Description |
 | ------ | :------: | ----------- |
 | `fdw_package_*` | Yes | Standard Wasm FDW package metadata. See [Available Versions](#available-versions). |
-| `base_url` | Yes* | Base URL for the API (e.g., `https://api.example.com/v1`). *Optional if `spec_url` provides servers. |
-| `spec_url` | No | URL to the OpenAPI specification JSON. Required for `IMPORT FOREIGN SCHEMA`. |
+| `base_url` | Yes* | Base URL for the API (e.g., `https://api.example.com/v1`). *Optional if `spec_url` or `spec_json` provides servers. |
+| `spec_url` | No | URL to the OpenAPI specification (JSON or YAML). Required for `IMPORT FOREIGN SCHEMA`. Mutually exclusive with `spec_json`. |
+| `spec_json` | No | Inline OpenAPI 3.0+ JSON spec for `IMPORT FOREIGN SCHEMA`. Mutually exclusive with `spec_url`. Useful when the API doesn't publish a spec URL. |
 | `api_key` | No | API key for authentication. |
 | `api_key_id` | No | Vault secret key ID storing the API key. Use instead of `api_key`. |
 | `api_key_header` | No | Header name for API key (default: `Authorization`). |
 | `api_key_prefix` | No | Prefix for API key value (default: `Bearer` for Authorization header). |
+| `api_key_location` | No | Where to send the API key: `header` (default), `query`, or `cookie`. |
 | `bearer_token` | No | Bearer token for authentication (alternative to `api_key`). |
 | `bearer_token_id` | No | Vault secret key ID storing the bearer token. |
 | `user_agent` | No | Custom User-Agent header value. |
@@ -109,6 +112,9 @@ We need to provide Postgres with the credentials to access the API and any addit
 | `page_size` | No | Default page size for pagination (0 = no automatic limit). |
 | `page_size_param` | No | Query parameter name for page size (default: `limit`). |
 | `cursor_param` | No | Query parameter name for pagination cursor (default: `after`). |
+| `max_pages` | No | Maximum pages per scan to prevent infinite pagination loops (default: `1000`). |
+| `max_response_bytes` | No | Maximum response body size in bytes (default: `52428800` / 50 MiB). |
+| `debug` | No | Emit HTTP request details and scan stats via PostgreSQL INFO messages when set to `'true'` or `'1'`. |
 
 ### Create a schema
 
@@ -151,10 +157,12 @@ options (
 | `cursor_param` | No | Override server-level cursor parameter name. |
 | `page_size_param` | No | Override server-level page size parameter name. |
 | `page_size` | No | Override server-level page size. |
+| `method` | No | HTTP method for this endpoint. Use `POST` for read-via-POST endpoints (default: `GET`). |
+| `request_body` | No | Request body string for POST endpoints. |
 
 ### Automatic Schema Import
 
-If you provide a `spec_url` in the server options, you can automatically import table definitions:
+If you provide a `spec_url` or `spec_json` in the server options, you can automatically import table definitions:
 
 ```sql
 -- Import all endpoints
@@ -244,12 +252,67 @@ select * from openapi.users where status = 'active';
 
 Columns used as query or path parameters always return the value from the WHERE clause, even if the API response contains the same field with different casing. This ensures PostgreSQL's post-filter always passes.
 
+### LIMIT Pushdown
+
+When your query includes a `LIMIT`, the FDW uses it as the `page_size` for the first API request, reducing unnecessary data transfer:
+
+```sql
+-- Sends GET /users?limit=5 (uses LIMIT as page_size)
+select * from openapi.users limit 5;
+```
+
+## POST-for-Read Endpoints
+
+Some APIs use POST requests for read operations (e.g., search or query endpoints). Use the `method` and `request_body` table options:
+
+```sql
+create foreign table openapi.search_results (
+  id text,
+  title text,
+  score real,
+  attrs jsonb
+)
+server my_api_server
+options (
+  endpoint '/search',
+  method 'POST',
+  request_body '{"query": "openapi", "limit": 50}'
+);
+
+select id, title, score from openapi.search_results;
+```
+
+## Debug Mode
+
+Enable debug mode to see HTTP request details and scan statistics in PostgreSQL INFO messages:
+
+```sql
+create server debug_api
+  foreign data wrapper wasm_wrapper
+  options (
+    fdw_package_name 'supabase:openapi-fdw',
+    fdw_package_url '{See: "Available Versions"}',
+    fdw_package_checksum '{See: "Available Versions"}',
+    fdw_package_version '{See: "Available Versions"}',
+    base_url 'https://api.example.com',
+    debug 'true'
+  );
+```
+
+Debug output includes:
+
+- HTTP method and URL for each request
+- Response status code and body size
+- Total rows fetched and pages retrieved
+- Pagination details
+
 ## Pagination
 
 The FDW automatically handles pagination. It supports:
 
 1. **Cursor-based pagination** - Uses `cursor_param` and `cursor_path`
 2. **URL-based pagination** - Follows `next` links in response
+3. **Offset-based pagination** - Auto-detected from common patterns
 
 ### Configuring Pagination
 
@@ -306,17 +369,19 @@ options (
 | ------------- | --------- |
 | text | string |
 | boolean | boolean |
-| smallint | number |
+| smallint* | number |
 | integer | number |
 | bigint | number |
 | real | number |
 | double precision | number |
-| numeric | number |
+| numeric* | number |
 | date | string (ISO 8601) |
-| timestamp | string (ISO 8601) |
+| timestamp* | string (ISO 8601) |
 | timestamptz | string (ISO 8601) |
 | jsonb | object/array |
 | uuid | string |
+
+\* Types marked with an asterisk work when you define tables manually, but `IMPORT FOREIGN SCHEMA` won't generate columns with these types automatically.
 
 ### The `attrs` Column
 
@@ -339,17 +404,19 @@ options (endpoint '/users');
 - **Authentication**: Currently supports API Key and Bearer Token authentication. OAuth flows are not supported.
 - **OpenAPI version**: Only OpenAPI 3.0+ specifications are supported (not Swagger 2.0).
 
-## Rate Limiting
+## Automatic Retries
 
-The FDW automatically handles rate limiting:
+The FDW automatically retries transient HTTP errors up to 3 times:
 
-- **HTTP 429 responses**: Automatically retries up to 3 times
+- **HTTP 429** (Rate Limit), **502** (Bad Gateway), **503** (Service Unavailable)
 - **Retry-After header**: Respects server-specified delay when provided
 - **Exponential backoff**: Falls back to 1s, 2s, 4s delays when no Retry-After header is present
 
 For APIs with very strict rate limits, consider using materialized views to cache results.
 
 ## Examples
+
+For additional real-world examples with multiple tables, pagination, and advanced features, see the **[examples directory on GitHub](https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/openapi_fdw/examples)**. There are step-by-step walkthroughs for querying the NWS Weather API, PokéAPI, CarAPI, GitHub, and Threads.
 
 ### Basic Query
 
@@ -358,10 +425,10 @@ For APIs with very strict rate limits, consider using materialized views to cach
 create server openapi_server
   foreign data wrapper wasm_wrapper
   options (
-    fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.1.4/openapi_fdw.wasm',
+    fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.2.0/openapi_fdw.wasm',
     fdw_package_name 'supabase:openapi-fdw',
-    fdw_package_version '0.1.4',
-    fdw_package_checksum 'dd434f8565b060b181d1e69e1e4d5c8b9c3ac5ca444056d3c2fb939038d308fe',
+    fdw_package_version '0.2.0',
+    fdw_package_checksum '{See: "Available Versions"}',
     base_url 'https://api.weather.gov',
     spec_url 'https://api.weather.gov/openapi.json'
   );
@@ -395,6 +462,26 @@ options (
 select id, type from openapi.zone_stations where zone_id = 'AKZ317';
 ```
 
+### POST-for-Read
+
+```sql
+-- Query a search API that uses POST for read operations
+create foreign table openapi.search_results (
+  id text,
+  title text,
+  score real,
+  attrs jsonb
+)
+server my_api_server
+options (
+  endpoint '/search',
+  method 'POST',
+  request_body '{"query": "postgresql", "limit": 25}'
+);
+
+select id, title, score from openapi.search_results;
+```
+
 ### Custom Headers
 
 ```sql
@@ -410,6 +497,24 @@ create server custom_api
     user_agent 'MyApp/1.0',
     accept 'application/json',
     headers '{"X-Request-ID": "postgres-fdw", "X-Feature-Flag": "beta"}'
+  );
+```
+
+### API Key Location
+
+By default, the API key is sent as a header. Use `api_key_location` to send it as a query parameter or cookie instead:
+
+```sql
+create server query_auth_api
+  foreign data wrapper wasm_wrapper
+  options (
+    fdw_package_name 'supabase:openapi-fdw',
+    fdw_package_url '{See: "Available Versions"}',
+    fdw_package_checksum '{See: "Available Versions"}',
+    fdw_package_version '{See: "Available Versions"}',
+    base_url 'https://api.example.com',
+    api_key 'sk-your-api-key',
+    api_key_location 'query'  -- sends as ?api_key=sk-... (uses api_key_header as param name)
   );
 ```
 

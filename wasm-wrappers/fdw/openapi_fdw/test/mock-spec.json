@@ -1,0 +1,673 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Edge Case Test API",
+    "description": "Comprehensive API spec for testing OpenAPI FDW edge cases: type mappings, $ref resolution, allOf/oneOf composition, parameterized paths, various response shapes.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://{region}.api.example.com/v{version}",
+      "variables": {
+        "region": {
+          "default": "us-east-1"
+        },
+        "version": {
+          "default": "1"
+        }
+      }
+    }
+  ],
+  "paths": {
+    "/typed-records": {
+      "get": {
+        "operationId": "getTypedRecords",
+        "summary": "Get records with all supported types",
+        "responses": {
+          "200": {
+            "description": "Array of typed records",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TypedRecord"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/composed-items": {
+      "get": {
+        "operationId": "getComposedItems",
+        "summary": "Get items using allOf composition (inheritance)",
+        "responses": {
+          "200": {
+            "description": "Array of composed items",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ComposedItem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/polymorphic": {
+      "get": {
+        "operationId": "getPolymorphic",
+        "summary": "Get items using oneOf composition (polymorphism)",
+        "responses": {
+          "200": {
+            "description": "Array of polymorphic items",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PolymorphicItem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/singleton": {
+      "get": {
+        "operationId": "getSingleton",
+        "summary": "Get a single object (not array)",
+        "responses": {
+          "200": {
+            "description": "Single object response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Singleton"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/no-schema-endpoint": {
+      "get": {
+        "operationId": "getNoSchema",
+        "summary": "Endpoint with no response schema defined",
+        "responses": {
+          "200": {
+            "description": "Success with no content schema"
+          }
+        }
+      }
+    },
+    "/created-response": {
+      "get": {
+        "operationId": "getCreatedResponse",
+        "summary": "Endpoint with only 201 response (no 200)",
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "created": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/xml-only": {
+      "get": {
+        "operationId": "getXmlOnly",
+        "summary": "Endpoint with only XML content type",
+        "responses": {
+          "200": {
+            "description": "XML response",
+            "content": {
+              "application/xml": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ref-response": {
+      "get": {
+        "operationId": "getRefResponse",
+        "summary": "Endpoint using $ref at the response level (Fix 1)",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ItemListResponse"
+          }
+        }
+      }
+    },
+    "/wildcard-response": {
+      "get": {
+        "operationId": "getWildcardResponse",
+        "summary": "Endpoint using 2XX wildcard status code (Fix 2)",
+        "responses": {
+          "2XX": {
+            "description": "Any success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "integer",
+                        "format": "int64"
+                      },
+                      "status": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users-write-only": {
+      "get": {
+        "operationId": "getUsersWriteOnly",
+        "summary": "Endpoint with writeOnly properties that should be excluded (Fix 3)",
+        "responses": {
+          "200": {
+            "description": "User list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserWithPassword"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/primitive-union": {
+      "get": {
+        "operationId": "getPrimitiveUnion",
+        "summary": "Endpoint with oneOf primitive types in a property (Fix 5)",
+        "responses": {
+          "200": {
+            "description": "Items with flexible value field",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FlexibleValue"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/charset-endpoint": {
+      "get": {
+        "operationId": "getCharsetEndpoint",
+        "summary": "Endpoint with charset in content-type (Fix 8)",
+        "responses": {
+          "200": {
+            "description": "JSON with charset",
+            "content": {
+              "application/json; charset=utf-8": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "id"
+                    ],
+                    "properties": {
+                      "id": {
+                        "type": "integer",
+                        "format": "int64"
+                      },
+                      "label": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ref-with-siblings": {
+      "get": {
+        "operationId": "getRefWithSiblings",
+        "summary": "Endpoint with $ref + sibling properties (Fix 12)",
+        "responses": {
+          "200": {
+            "description": "Items using $ref with extra properties",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExtendedEntity"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/search": {
+      "post": {
+        "operationId": "searchItems",
+        "summary": "Search items via POST (POST-for-read)",
+        "responses": {
+          "200": {
+            "description": "Search results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RefResponseItem"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/resources/{id}": {
+      "get": {
+        "operationId": "getResourceById",
+        "summary": "Get resource by ID (single path param, should be skipped by IMPORT)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Single resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TypedRecord"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orgs/{org}/repos/{repo}/issues": {
+      "get": {
+        "operationId": "getOrgRepoIssues",
+        "summary": "Get issues (multiple path params, should be skipped by IMPORT)",
+        "parameters": [
+          {
+            "name": "org",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Issues list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Issue"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "TypedRecord": {
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "score": {
+            "type": "number",
+            "format": "float"
+          },
+          "rating": {
+            "type": "number",
+            "format": "double"
+          },
+          "count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "created_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "address": {
+            "$ref": "#/components/schemas/Address"
+          },
+          "nullable_field": {
+            "type": "string",
+            "nullable": true
+          },
+          "created_epoch": {
+            "type": "integer",
+            "format": "unix-time"
+          },
+          "multi_type_field": {
+            "description": "OpenAPI 3.1 multi-type array — should map to jsonb (Fix 4)",
+            "type": [
+              "string",
+              "integer"
+            ]
+          }
+        }
+      },
+      "Address": {
+        "type": "object",
+        "properties": {
+          "street": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "zip": {
+            "type": "string"
+          }
+        }
+      },
+      "BaseEntity": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ComposedItem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/BaseEntity"
+          },
+          {
+            "type": "object",
+            "required": [
+              "title"
+            ],
+            "properties": {
+              "title": {
+                "type": "string"
+              },
+              "priority": {
+                "type": "integer",
+                "format": "int32"
+              }
+            }
+          }
+        ]
+      },
+      "PolymorphicItem": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "user_id": {
+                "type": "string"
+              },
+              "user_name": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "properties": {
+              "org_id": {
+                "type": "string"
+              },
+              "org_name": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      },
+      "Singleton": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "Issue": {
+        "type": "object",
+        "required": [
+          "id",
+          "title"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "title": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          }
+        }
+      },
+      "RefResponseItem": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "label": {
+            "type": "string"
+          }
+        }
+      },
+      "UserWithPassword": {
+        "type": "object",
+        "required": [
+          "id",
+          "username"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "username": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string",
+            "writeOnly": true
+          },
+          "password_hash": {
+            "type": "string",
+            "writeOnly": true
+          }
+        }
+      },
+      "ExtendedEntity": {
+        "description": "Uses $ref with sibling properties (OpenAPI 3.1 pattern, Fix 12)",
+        "$ref": "#/components/schemas/BaseEntity",
+        "properties": {
+          "extra_field": {
+            "type": "string"
+          }
+        }
+      },
+      "FlexibleValue": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          },
+          "value": {
+            "description": "Can be string or integer — oneOf primitives should map to jsonb",
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "responses": {
+      "ItemListResponse": {
+        "description": "A list of items (used via $ref from /ref-response)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/RefResponseItem"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

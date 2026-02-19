@@ -1,0 +1,25 @@
+services:
+  mockserver:
+    image: mockserver/mockserver:mockserver-5.15.0
+    ports:
+      - "1080:1080"
+    volumes:
+      - ./mock-spec.json:/config/mock-spec.json:ro
+
+  db:
+    image: supabase/postgres:15.14.1.081
+    ports:
+      - "54322:5432"
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/99-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U supabase_admin"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+    depends_on:
+      - mockserver
