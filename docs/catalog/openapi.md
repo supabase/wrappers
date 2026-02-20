@@ -18,7 +18,7 @@ This wrapper allows you to query any REST API endpoint as a PostgreSQL foreign t
 
 | Version | Wasm Package URL | Checksum | Required Wrappers Version |
 | ------- | ---------------- | -------- | ------------------------- |
-| 0.2.0 | `https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.2.0/openapi_fdw.wasm` | _published on release_ | >=0.5.0 |
+| 0.2.0 | `https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.2.0/openapi_fdw.wasm` | `f0d4d6e50f7c519a66363bd8bdbe1ea8086ca810ca14b43fb0ed18b64acdf6aa` | >=0.5.0 |
 | 0.1.4 | `https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.1.4/openapi_fdw.wasm` | `dd434f8565b060b181d1e69e1e4d5c8b9c3ac5ca444056d3c2fb939038d308fe` | >=0.5.0 |
 
 ## Preparation
@@ -66,10 +66,10 @@ We need to provide Postgres with the credentials to access the API and any addit
     create server my_api_server
       foreign data wrapper wasm_wrapper
       options (
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.2.0/openapi_fdw.wasm',
         fdw_package_name 'supabase:openapi-fdw',
-        fdw_package_url '{See: "Available Versions"}',
-        fdw_package_checksum '{See: "Available Versions"}',
-        fdw_package_version '{See: "Available Versions"}',
+        fdw_package_version '0.2.0',
+        fdw_package_checksum 'f0d4d6e50f7c519a66363bd8bdbe1ea8086ca810ca14b43fb0ed18b64acdf6aa',
         base_url 'https://api.example.com/v1',
         api_key_id '<key_ID>'  -- The Key ID from Vault
       );
@@ -81,10 +81,10 @@ We need to provide Postgres with the credentials to access the API and any addit
     create server my_api_server
       foreign data wrapper wasm_wrapper
       options (
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.2.0/openapi_fdw.wasm',
         fdw_package_name 'supabase:openapi-fdw',
-        fdw_package_url '{See: "Available Versions"}',
-        fdw_package_checksum '{See: "Available Versions"}',
-        fdw_package_version '{See: "Available Versions"}',
+        fdw_package_version '0.2.0',
+        fdw_package_checksum 'f0d4d6e50f7c519a66363bd8bdbe1ea8086ca810ca14b43fb0ed18b64acdf6aa',
         base_url 'https://api.example.com/v1',
         api_key 'your-api-key'
       );
@@ -290,10 +290,10 @@ Enable debug mode to see HTTP request details and scan statistics in PostgreSQL 
 create server debug_api
   foreign data wrapper wasm_wrapper
   options (
+    fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.2.0/openapi_fdw.wasm',
     fdw_package_name 'supabase:openapi-fdw',
-    fdw_package_url '{See: "Available Versions"}',
-    fdw_package_checksum '{See: "Available Versions"}',
-    fdw_package_version '{See: "Available Versions"}',
+    fdw_package_version '0.2.0',
+    fdw_package_checksum 'f0d4d6e50f7c519a66363bd8bdbe1ea8086ca810ca14b43fb0ed18b64acdf6aa',
     base_url 'https://api.example.com',
     debug 'true'
   );
@@ -320,10 +320,10 @@ The FDW automatically handles pagination. It supports:
 create server paginated_api
   foreign data wrapper wasm_wrapper
   options (
+    fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.2.0/openapi_fdw.wasm',
     fdw_package_name 'supabase:openapi-fdw',
-    fdw_package_url '{See: "Available Versions"}',
-    fdw_package_checksum '{See: "Available Versions"}',
-    fdw_package_version '{See: "Available Versions"}',
+    fdw_package_version '0.2.0',
+    fdw_package_checksum 'f0d4d6e50f7c519a66363bd8bdbe1ea8086ca810ca14b43fb0ed18b64acdf6aa',
     base_url 'https://openapi.example.com',
     page_size '100',
     page_size_param 'limit',
@@ -428,7 +428,7 @@ create server openapi_server
     fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.2.0/openapi_fdw.wasm',
     fdw_package_name 'supabase:openapi-fdw',
     fdw_package_version '0.2.0',
-    fdw_package_checksum '{See: "Available Versions"}',
+    fdw_package_checksum 'f0d4d6e50f7c519a66363bd8bdbe1ea8086ca810ca14b43fb0ed18b64acdf6aa',
     base_url 'https://api.weather.gov',
     spec_url 'https://api.weather.gov/openapi.json'
   );
@@ -488,10 +488,10 @@ select id, title, score from openapi.search_results;
 create server custom_api
   foreign data wrapper wasm_wrapper
   options (
+    fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.2.0/openapi_fdw.wasm',
     fdw_package_name 'supabase:openapi-fdw',
-    fdw_package_url '{See: "Available Versions"}',
-    fdw_package_checksum '{See: "Available Versions"}',
-    fdw_package_version '{See: "Available Versions"}',
+    fdw_package_version '0.2.0',
+    fdw_package_checksum 'f0d4d6e50f7c519a66363bd8bdbe1ea8086ca810ca14b43fb0ed18b64acdf6aa',
     base_url 'https://openapi.example.com',
     api_key 'your-key',
     user_agent 'MyApp/1.0',
@@ -508,10 +508,10 @@ By default, the API key is sent as a header. Use `api_key_location` to send it a
 create server query_auth_api
   foreign data wrapper wasm_wrapper
   options (
+    fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.2.0/openapi_fdw.wasm',
     fdw_package_name 'supabase:openapi-fdw',
-    fdw_package_url '{See: "Available Versions"}',
-    fdw_package_checksum '{See: "Available Versions"}',
-    fdw_package_version '{See: "Available Versions"}',
+    fdw_package_version '0.2.0',
+    fdw_package_checksum 'f0d4d6e50f7c519a66363bd8bdbe1ea8086ca810ca14b43fb0ed18b64acdf6aa',
     base_url 'https://api.example.com',
     api_key 'sk-your-api-key',
     api_key_location 'query'  -- sends as ?api_key=sk-... (uses api_key_header as param name)
