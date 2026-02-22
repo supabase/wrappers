@@ -1,6 +1,6 @@
 [package]
 name = "wrappers"
-version = "0.5.7"
+version = "0.6.0"
 publish = false
 homepage = "https://github.com/supabase/wrappers/tree/main/wrappers"
 repository = "https://github.com/supabase/wrappers/tree/main/wrappers"
