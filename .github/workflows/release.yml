@@ -41,7 +41,7 @@ jobs:
         run: |
           VERSION=$(cargo metadata --format-version 1 --no-deps --offline | jq -r '.packages[] | select(.name == "supabase-wrappers-macros") | .version')
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" --user-agent "supabase-wrappers" https://crates.io/api/v1/crates/supabase-wrappers-macros/$VERSION)
-          if [ "$STATUS" != "200" ]; then
+          if [ "$STATUS" = "404" ]; then
             cargo publish -p supabase-wrappers-macros
           else
             echo "Version $VERSION already published, skipping."
@@ -57,7 +57,7 @@ jobs:
         run: |
           VERSION=$(cargo metadata --format-version 1 --no-deps --offline | jq -r '.packages[] | select(.name == "supabase-wrappers") | .version')
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" --user-agent "supabase-wrappers" https://crates.io/api/v1/crates/supabase-wrappers/$VERSION)
-          if [ "$STATUS" != "200" ]; then
+          if [ "$STATUS" = "404" ]; then
             cargo publish -p supabase-wrappers
           else
             echo "Version $VERSION already published, skipping."
