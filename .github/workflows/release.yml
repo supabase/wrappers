@@ -3,13 +3,9 @@ name: Release
 
 on:
   push:
-    branches:
-      - bo/ci/crates-io-publish
     # Sequence of patterns matched against refs/tags
     tags:
       - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
-    paths:
-      - '.github/workflows/release.yml'
 
 permissions:
   contents: write
@@ -46,7 +42,7 @@ jobs:
           VERSION=$(cargo metadata --format-version 1 --no-deps --offline | jq -r '.packages[] | select(.name == "supabase-wrappers-macros") | .version')
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" --user-agent "supabase-wrappers" https://crates.io/api/v1/crates/supabase-wrappers-macros/$VERSION)
           if [ "$STATUS" != "200" ]; then
-            cargo publish -p supabase-wrappers-macros --dry-run
+            cargo publish -p supabase-wrappers-macros
           else
             echo "Version $VERSION already published, skipping."
           fi
@@ -62,171 +58,171 @@ jobs:
           VERSION=$(cargo metadata --format-version 1 --no-deps --offline | jq -r '.packages[] | select(.name == "supabase-wrappers") | .version')
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" --user-agent "supabase-wrappers" https://crates.io/api/v1/crates/supabase-wrappers/$VERSION)
           if [ "$STATUS" != "200" ]; then
-            cargo publish -p supabase-wrappers --dry-run
+            cargo publish -p supabase-wrappers
           else
             echo "Version $VERSION already published, skipping."
           fi
 
-  # release:
-  #   name: Create Release
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v6
-  #     - name: Create Release
-  #       id: create_release
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #         tag: ${{ github.ref_name }}
-  #       run: |
-  #         gh release create "$tag" \
-  #             --repo="$GITHUB_REPOSITORY" \
-  #             --title="${tag}" \
-  #             --generate-notes
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+      - name: Create Release
+        id: create_release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref_name }}
+        run: |
+          gh release create "$tag" \
+              --repo="$GITHUB_REPOSITORY" \
+              --title="${tag}" \
+              --generate-notes
 
-  # build-linux-gnu:
-  #   name: release artifacts
-  #   needs:
-  #     - release
-  #   strategy:
-  #     matrix:
-  #       extension_name:
-  #         - wrappers
-  #       pgrx_version:
-  #         - 0.16.1
-  #       postgres: [14, 15, 16, 17, 18]
-  #       features:
-  #         - "all_fdws"
-  #       box:
-  #         - { runner: blacksmith-4vcpu-ubuntu-2404, arch: amd64 }
-  #         - { runner: blacksmith-4vcpu-ubuntu-2404-arm, arch: arm64 }
-  #   runs-on: ${{ matrix.box.runner }}
-  #   timeout-minutes: 90
-  #   steps:
-  #     - name: checkout code
-  #       uses: actions/checkout@v6
-  #       with:
-  #         fetch-depth: 0
+  build-linux-gnu:
+    name: release artifacts
+    needs:
+      - release
+    strategy:
+      matrix:
+        extension_name:
+          - wrappers
+        pgrx_version:
+          - 0.16.1
+        postgres: [14, 15, 16, 17, 18]
+        features:
+          - "all_fdws"
+        box:
+          - { runner: blacksmith-4vcpu-ubuntu-2404, arch: amd64 }
+          - { runner: blacksmith-4vcpu-ubuntu-2404-arm, arch: arm64 }
+    runs-on: ${{ matrix.box.runner }}
+    timeout-minutes: 90
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
-  #     - name: upgrade gcc to 13 on Ubuntu 20.04
-  #       run: |
-  #         ubuntu_version=$(lsb_release -rs)
-  #         echo "Detected Ubuntu version: $ubuntu_version"
+      - name: upgrade gcc to 13 on Ubuntu 20.04
+        run: |
+          ubuntu_version=$(lsb_release -rs)
+          echo "Detected Ubuntu version: $ubuntu_version"
 
-  #         if [[ "$ubuntu_version" == "20.04" ]]; then
-  #           echo "Upgrading GCC to version 13 on Ubuntu 20.04..."
+          if [[ "$ubuntu_version" == "20.04" ]]; then
+            echo "Upgrading GCC to version 13 on Ubuntu 20.04..."
 
-  #           sudo apt update
-  #           sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-  #           sudo apt update
-  #           sudo apt install -y build-essential gcc-13 g++-13
+            sudo apt update
+            sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+            sudo apt update
+            sudo apt install -y build-essential gcc-13 g++-13
 
-  #           sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100
-  #           sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100
+            sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100
+            sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100
 
-  #           echo "Using GCC version:"
-  #           gcc --version
-  #         else
-  #           echo "No upgrade needed for this version."
-  #         fi
+            echo "Using GCC version:"
+            gcc --version
+          else
+            echo "No upgrade needed for this version."
+          fi
 
-  #     - name: build release artifacts
-  #       run: |
-  #         cd wrappers
+      - name: build release artifacts
+        run: |
+          cd wrappers
 
-  #         # Add postgres package repo and install requested postgres version
-  #         sudo apt update
-  #         sudo apt remove -y postgres*
-  #         sudo apt -y install curl ca-certificates pkg-config libssl-dev
-  #         sudo install -d /usr/share/postgresql-common/pgdg
-  #         sudo curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
-  #         . /etc/os-release
-  #         sudo sh -c "echo 'deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $VERSION_CODENAME-pgdg main' > /etc/apt/sources.list.d/pgdg.list"
-  #         sudo apt update -y -qq --fix-missing
-  #         sudo apt -y install postgresql-${{ matrix.postgres }} postgresql-server-dev-${{ matrix.postgres }}
-  #         sudo apt -y autoremove && sudo apt -y clean
-  #         sudo chmod a+rwx `/usr/lib/postgresql/${{ matrix.postgres }}/bin/pg_config --pkglibdir` `/usr/lib/postgresql/${{ matrix.postgres }}/bin/pg_config --sharedir`/extension /var/run/postgresql/
+          # Add postgres package repo and install requested postgres version
+          sudo apt update
+          sudo apt remove -y postgres*
+          sudo apt -y install curl ca-certificates pkg-config libssl-dev
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          . /etc/os-release
+          sudo sh -c "echo 'deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $VERSION_CODENAME-pgdg main' > /etc/apt/sources.list.d/pgdg.list"
+          sudo apt update -y -qq --fix-missing
+          sudo apt -y install postgresql-${{ matrix.postgres }} postgresql-server-dev-${{ matrix.postgres }}
+          sudo apt -y autoremove && sudo apt -y clean
+          sudo chmod a+rwx `/usr/lib/postgresql/${{ matrix.postgres }}/bin/pg_config --pkglibdir` `/usr/lib/postgresql/${{ matrix.postgres }}/bin/pg_config --sharedir`/extension /var/run/postgresql/
 
-  #         # Ensure installed pg_config is first on path
-  #         export PATH=$PATH:/usr/lib/postgresql/${{ matrix.postgres }}/bin
+          # Ensure installed pg_config is first on path
+          export PATH=$PATH:/usr/lib/postgresql/${{ matrix.postgres }}/bin
 
-  #         curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile minimal --default-toolchain 1.88.0 && \
-  #           rustup --version && \
-  #           rustc --version && \
-  #           cargo --version
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile minimal --default-toolchain 1.88.0 && \
+            rustup --version && \
+            rustc --version && \
+            cargo --version
 
-  #         # Ensure cargo/rust on path
-  #         source "$HOME/.cargo/env"
+          # Ensure cargo/rust on path
+          source "$HOME/.cargo/env"
 
-  #         cargo install --locked cargo-pgrx --version ${{ matrix.pgrx_version }}
-  #         cargo pgrx init --pg${{ matrix.postgres }}=/usr/lib/postgresql/${{ matrix.postgres }}/bin/pg_config
+          cargo install --locked cargo-pgrx --version ${{ matrix.pgrx_version }}
+          cargo pgrx init --pg${{ matrix.postgres }}=/usr/lib/postgresql/${{ matrix.postgres }}/bin/pg_config
 
-  #         # selects the pgVer from pg_config on path
-  #         # https://github.com/tcdi/pgrx/issues/288
-  #         cargo pgrx package --no-default-features --features pg${{ matrix.postgres }},${{ matrix.features }}
+          # selects the pgVer from pg_config on path
+          # https://github.com/tcdi/pgrx/issues/288
+          cargo pgrx package --no-default-features --features pg${{ matrix.postgres }},${{ matrix.features }}
 
-  #         # Extension version and path
-  #         extension_version=${{ github.ref_name }}
-  #         extension_dir=../target/release/${{ matrix.extension_name }}-pg${{ matrix.postgres }}/usr/share/postgresql/${{ matrix.postgres }}/extension
-  #         # strip the leading v
-  #         deb_version=${extension_version:1}
+          # Extension version and path
+          extension_version=${{ github.ref_name }}
+          extension_dir=../target/release/${{ matrix.extension_name }}-pg${{ matrix.postgres }}/usr/share/postgresql/${{ matrix.postgres }}/extension
+          # strip the leading v
+          deb_version=${extension_version:1}
 
-  #         # copy schema file to version update sql files
-  #         for tag in $(git tag -l "v*"); do
-  #           if [[ $tag != $extension_version ]]; then
-  #             prev_version=${tag:1}
-  #             cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--${prev_version}--${deb_version}.sql
-  #           fi
-  #         done
+          # copy schema file to version update sql files
+          for tag in $(git tag -l "v*"); do
+            if [[ $tag != $extension_version ]]; then
+              prev_version=${tag:1}
+              cp ${extension_dir}/${{ matrix.extension_name }}--${deb_version}.sql ${extension_dir}/${{ matrix.extension_name }}--${prev_version}--${deb_version}.sql
+            fi
+          done
 
-  #         # Create installable package
-  #         mkdir archive
-  #         cp `find ../target/release -type f -name "${{ matrix.extension_name }}*"` archive
+          # Create installable package
+          mkdir archive
+          cp `find ../target/release -type f -name "${{ matrix.extension_name }}*"` archive
 
-  #         # name of the package directory before packaging
-  #         package_dir=${{ matrix.extension_name }}-${{ github.ref_name }}-pg${{ matrix.postgres }}-${{ matrix.box.arch }}-linux-gnu
+          # name of the package directory before packaging
+          package_dir=${{ matrix.extension_name }}-${{ github.ref_name }}-pg${{ matrix.postgres }}-${{ matrix.box.arch }}-linux-gnu
 
-  #         # Copy files into directory structure
-  #         mkdir -p ${package_dir}/usr/lib/postgresql/lib
-  #         mkdir -p ${package_dir}/var/lib/postgresql/extension
-  #         cp archive/*.so ${package_dir}/usr/lib/postgresql/lib
-  #         cp archive/*.control ${package_dir}/var/lib/postgresql/extension
-  #         cp archive/*.sql ${package_dir}/var/lib/postgresql/extension
+          # Copy files into directory structure
+          mkdir -p ${package_dir}/usr/lib/postgresql/lib
+          mkdir -p ${package_dir}/var/lib/postgresql/extension
+          cp archive/*.so ${package_dir}/usr/lib/postgresql/lib
+          cp archive/*.control ${package_dir}/var/lib/postgresql/extension
+          cp archive/*.sql ${package_dir}/var/lib/postgresql/extension
 
-  #         # symlinks to Copy files into directory structure
-  #         mkdir -p ${package_dir}/usr/lib/postgresql/${{ matrix.postgres }}/lib
-  #         cd ${package_dir}/usr/lib/postgresql/${{ matrix.postgres }}/lib
-  #         cp -s ../../lib/*.so .
-  #         cd ../../../../../..
+          # symlinks to Copy files into directory structure
+          mkdir -p ${package_dir}/usr/lib/postgresql/${{ matrix.postgres }}/lib
+          cd ${package_dir}/usr/lib/postgresql/${{ matrix.postgres }}/lib
+          cp -s ../../lib/*.so .
+          cd ../../../../../..
 
-  #         mkdir -p ${package_dir}/usr/share/postgresql/${{ matrix.postgres }}/extension
-  #         cd ${package_dir}/usr/share/postgresql/${{ matrix.postgres }}/extension
-  #         cp -s ../../../../../var/lib/postgresql/extension/${{ matrix.extension_name }}.control .
-  #         cp -s ../../../../../var/lib/postgresql/extension/${{ matrix.extension_name }}*.sql .
-  #         cd ../../../../../..
+          mkdir -p ${package_dir}/usr/share/postgresql/${{ matrix.postgres }}/extension
+          cd ${package_dir}/usr/share/postgresql/${{ matrix.postgres }}/extension
+          cp -s ../../../../../var/lib/postgresql/extension/${{ matrix.extension_name }}.control .
+          cp -s ../../../../../var/lib/postgresql/extension/${{ matrix.extension_name }}*.sql .
+          cd ../../../../../..
 
-  #         mkdir -p ${package_dir}/DEBIAN
-  #         touch ${package_dir}/DEBIAN/control
-  #         echo 'Package: ${{ matrix.extension_name }}' >> ${package_dir}/DEBIAN/control
-  #         echo 'Version:' ${deb_version} >> ${package_dir}/DEBIAN/control
-  #         echo 'Architecture: ${{ matrix.box.arch }}' >> ${package_dir}/DEBIAN/control
-  #         echo 'Maintainer: supabase' >> ${package_dir}/DEBIAN/control
-  #         echo 'Description: A PostgreSQL extension' >> ${package_dir}/DEBIAN/control
+          mkdir -p ${package_dir}/DEBIAN
+          touch ${package_dir}/DEBIAN/control
+          echo 'Package: ${{ matrix.extension_name }}' >> ${package_dir}/DEBIAN/control
+          echo 'Version:' ${deb_version} >> ${package_dir}/DEBIAN/control
+          echo 'Architecture: ${{ matrix.box.arch }}' >> ${package_dir}/DEBIAN/control
+          echo 'Maintainer: supabase' >> ${package_dir}/DEBIAN/control
+          echo 'Description: A PostgreSQL extension' >> ${package_dir}/DEBIAN/control
 
-  #         # Create deb package
-  #         sudo chown -R root:root ${package_dir}
-  #         sudo chmod -R 00755 ${package_dir}
-  #         sudo dpkg-deb --build --root-owner-group ${package_dir}
+          # Create deb package
+          sudo chown -R root:root ${package_dir}
+          sudo chmod -R 00755 ${package_dir}
+          sudo dpkg-deb --build --root-owner-group ${package_dir}
 
-  #     - name: Get upload url
-  #       run: echo UPLOAD_URL=$(curl --silent https://api.github.com/repos/${{ github.repository }}/releases/latest | jq .upload_url --raw-output) >> $GITHUB_ENV
+      - name: Get upload url
+        run: echo UPLOAD_URL=$(curl --silent https://api.github.com/repos/${{ github.repository }}/releases/latest | jq .upload_url --raw-output) >> $GITHUB_ENV
 
-  #     - name: Upload release asset
-  #       uses: actions/upload-release-asset@v1
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #       with:
-  #         upload_url: ${{ env.UPLOAD_URL }}
-  #         asset_path: ./wrappers/${{ matrix.extension_name }}-${{ github.ref_name }}-pg${{ matrix.postgres }}-${{ matrix.box.arch }}-linux-gnu.deb
-  #         asset_name: ${{ matrix.extension_name }}-${{ github.ref_name }}-pg${{ matrix.postgres }}-${{ matrix.box.arch }}-linux-gnu.deb
-  #         asset_content_type: application/vnd.debian.binary-package
+      - name: Upload release asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ env.UPLOAD_URL }}
+          asset_path: ./wrappers/${{ matrix.extension_name }}-${{ github.ref_name }}-pg${{ matrix.postgres }}-${{ matrix.box.arch }}-linux-gnu.deb
+          asset_name: ${{ matrix.extension_name }}-${{ github.ref_name }}-pg${{ matrix.postgres }}-${{ matrix.box.arch }}-linux-gnu.deb
+          asset_content_type: application/vnd.debian.binary-package
