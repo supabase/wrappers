@@ -14,6 +14,9 @@ jobs:
   publish-to-crates-io:
     name: Publish to crates.io
     runs-on: blacksmith-4vcpu-ubuntu-2404
+    environment: release
+    permissions:
+      id-token: write
     steps:
       - uses: actions/checkout@v6
       - uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -35,9 +38,12 @@ jobs:
       - run: cargo install --locked cargo-pgrx --version 0.16.1
       - run: cargo pgrx init --pg15 /usr/lib/postgresql/15/bin/pg_config
 
+      - uses: rust-lang/crates-io-auth-action@v1
+        id: auth
+        
       - name: Check and publish supabase-wrappers-macros
         env:
-            CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+            CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
         run: |
           VERSION=$(cargo metadata --format-version 1 --no-deps --offline | jq -r '.packages[] | select(.name == "supabase-wrappers-macros") | .version')
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" --user-agent "supabase-wrappers" https://crates.io/api/v1/crates/supabase-wrappers-macros/$VERSION)
@@ -53,7 +59,7 @@ jobs:
 
       - name: Check and publish supabase-wrappers
         env:
-            CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+            CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
         run: |
           VERSION=$(cargo metadata --format-version 1 --no-deps --offline | jq -r '.packages[] | select(.name == "supabase-wrappers") | .version')
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" --user-agent "supabase-wrappers" https://crates.io/api/v1/crates/supabase-wrappers/$VERSION)
