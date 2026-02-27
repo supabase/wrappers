@@ -2,7 +2,9 @@ use std::fs;
 use std::path::Path;
 
 fn main() {
-    generate_s3vec_type_sql();
+    if std::env::var("CARGO_FEATURE_S3VECTORS_FDW").is_ok() {
+        generate_s3vec_type_sql();
+    }
 }
 
 /// Generates `s3vec_type_sql.rs` in OUT_DIR, which contains the `pgrx::extension_sql!` call
