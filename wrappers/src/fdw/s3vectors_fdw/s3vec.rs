@@ -8,6 +8,7 @@ use std::ffi::CStr;
 
 #[derive(Debug, Default, PostgresType, Serialize, Deserialize)]
 #[inoutfuncs]
+#[pgrx(sql = false)] // SQL is written manually below to support idempotent upgrades
 pub(super) struct S3Vec {
     pub key: String,
     pub data: Vec<f32>,
@@ -38,6 +39,19 @@ impl InOutFuncs for S3Vec {
         buffer.push_str(&format!("s3vec:{}", self.data.len()));
     }
 }
+
+// Idempotent SQL for S3Vec type and its in/out functions.
+//
+// pgrx generates plain CREATE TYPE / CREATE FUNCTION (no OR REPLACE / IF NOT EXISTS),
+// which fails when upgrading from a version that already has S3Vec.  By setting
+// sql = false above and writing the SQL here we wrap every statement in a nested
+// BEGIN/EXCEPTION WHEN duplicate_object THEN NULL block so the whole block
+// succeeds whether or not the objects already exist.
+//
+// pgrx::extension_sql! requires a string literal, so build.rs generates
+// s3vec_type_sql.rs with the versioned library name (e.g. "wrappers-0.6.0")
+// embedded as a literal from CARGO_PKG_NAME/VERSION at compile time.
+include!(concat!(env!("OUT_DIR"), "/s3vec_type_sql.rs"));
 
 impl From<&ListOutputVector> for S3Vec {
     fn from(v: &ListOutputVector) -> Self {
