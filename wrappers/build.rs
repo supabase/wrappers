@@ -42,7 +42,7 @@ BEGIN
             IMMUTABLE PARALLEL SAFE
             LANGUAGE c
             AS '{lib_name}', 's3vec_in_wrapper';
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_function THEN NULL;
     END;
 
     -- 3. Output function
@@ -52,7 +52,7 @@ BEGIN
             IMMUTABLE STRICT PARALLEL SAFE
             LANGUAGE c
             AS '{lib_name}', 's3vec_out_wrapper';
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_function THEN NULL;
     END;
 
     -- 4. Complete type definition (must come after in/out functions)
