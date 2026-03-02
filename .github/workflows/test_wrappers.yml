@@ -199,7 +199,7 @@ jobs:
         run: |
           NEW_VERSION=$(cargo metadata --format-version 1 --no-deps --manifest-path wrappers/Cargo.toml | jq -r '.packages[] | select(.name == "wrappers") | .version')
           echo "NEW_VERSION=${NEW_VERSION}" >> "$GITHUB_ENV"
-          cd wrappers && sudo env PATH="$PATH" RUSTUP_HOME="$HOME/.rustup" CARGO_HOME="$HOME/.cargo" cargo pgrx install \
+          cd wrappers && sudo env PATH="$PATH" RUSTUP_HOME="$HOME/.rustup" CARGO_HOME="$HOME/.cargo" PGRX_HOME="$HOME/.pgrx" cargo pgrx install \
             --no-default-features \
             --features "pg15,native_fdws" \
             --pg-config /usr/lib/postgresql/15/bin/pg_config
