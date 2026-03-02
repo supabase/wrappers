@@ -144,3 +144,95 @@ jobs:
 
       - name: Perform test
         run: cd wrappers && cargo pgrx test --features "wasm_fdw pg15"
+
+  # =============================================================
+  # Extension upgrade test
+  # =============================================================
+  test_upgrade:
+    name: Run extension upgrade test
+    needs: [changes]
+    if: needs.changes.outputs.native == 'true'
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: 1.88.0
+
+      - name: Install PostgreSQL 15
+        run: |
+          sudo apt remove -y postgres*
+          sudo apt -y install curl ca-certificates build-essential pkg-config libssl-dev
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          . /etc/os-release
+          sudo sh -c "echo 'deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $VERSION_CODENAME-pgdg main' > /etc/apt/sources.list.d/pgdg.list"
+          sudo apt update -y -qq --fix-missing
+          sudo apt -y install postgresql-client-15 postgresql-15 postgresql-server-dev-15
+          sudo apt -y autoremove && sudo apt -y clean
+          sudo chmod a+rwx `/usr/lib/postgresql/15/bin/pg_config --pkglibdir` `/usr/lib/postgresql/15/bin/pg_config --sharedir`/extension /var/run/postgresql/
+
+      - run: cargo install --locked cargo-pgrx --version 0.16.1
+      - run: cargo pgrx init --pg15 /usr/lib/postgresql/15/bin/pg_config
+      - name: Make Rust toolchain available to sudo
+        run: sudo ln -sf "$HOME/.cargo/bin"/* /usr/local/bin/
+
+      - name: Download and install latest released extension
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          LATEST_TAG=$(gh release list --repo "$GITHUB_REPOSITORY" --limit 50 --json tagName --jq '[.[] | select(.tagName | test("^v[0-9]+\\.[0-9]+\\.[0-9]+$"))] | .[0].tagName')
+          echo "LATEST_TAG=${LATEST_TAG}" >> "$GITHUB_ENV"
+          echo "OLD_VERSION=${LATEST_TAG#v}" >> "$GITHUB_ENV"
+          gh release download "$LATEST_TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern "wrappers-${LATEST_TAG}-pg15-amd64-linux-gnu.deb" \
+            --dir /tmp/wrappers-released
+          sudo dpkg -i /tmp/wrappers-released/*.deb
+
+      - name: Build and install current branch extension
+        run: |
+          NEW_VERSION=$(cargo metadata --format-version 1 --no-deps --manifest-path wrappers/Cargo.toml | jq -r '.packages[] | select(.name == "wrappers") | .version')
+          echo "NEW_VERSION=${NEW_VERSION}" >> "$GITHUB_ENV"
+          cd wrappers && sudo env PATH="$PATH" RUSTUP_HOME="$HOME/.rustup" CARGO_HOME="$HOME/.cargo" PGRX_HOME="$HOME/.pgrx" cargo pgrx install \
+            --no-default-features \
+            --features "pg15,native_fdws" \
+            --pg-config /usr/lib/postgresql/15/bin/pg_config
+
+      - name: Create upgrade SQL script
+        run: |
+          if [[ "$OLD_VERSION" != "$NEW_VERSION" ]]; then
+            sudo cp /usr/share/postgresql/15/extension/wrappers--${NEW_VERSION}.sql \
+                    /usr/share/postgresql/15/extension/wrappers--${OLD_VERSION}--${NEW_VERSION}.sql
+          fi
+
+      - name: Run upgrade test
+        run: |
+          if ! sudo pg_lsclusters | awk '$1 == "15" && $2 == "main" {found=1} END {exit !found}'; then
+            sudo pg_createcluster 15 main
+          fi
+
+          sudo pg_ctlcluster 15 main start
+          PG_PORT=$(sudo pg_lsclusters | awk '$1 == "15" && $2 == "main" {print $3}')
+          until sudo -u postgres psql -p "$PG_PORT" -c '\q' 2>/dev/null; do sleep 1; done
+
+          sudo -u postgres psql -p "$PG_PORT" -c "CREATE EXTENSION wrappers VERSION '${OLD_VERSION}';"
+
+          if [[ "$OLD_VERSION" != "$NEW_VERSION" ]]; then
+            sudo -u postgres psql -p "$PG_PORT" -c "ALTER EXTENSION wrappers UPDATE TO '${NEW_VERSION}';"
+            EXPECTED="$NEW_VERSION"
+          else
+            EXPECTED="$OLD_VERSION"
+          fi
+
+          INSTALLED=$(sudo -u postgres psql -p "$PG_PORT" -t -A -c "SELECT extversion FROM pg_extension WHERE extname = 'wrappers';")
+          if [[ "$INSTALLED" != "$EXPECTED" ]]; then
+            echo "Upgrade test FAILED: expected ${EXPECTED}, got ${INSTALLED}"
+            exit 1
+          fi
+          echo "Upgrade test passed: ${OLD_VERSION} -> ${NEW_VERSION}"
