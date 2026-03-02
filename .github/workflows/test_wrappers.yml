@@ -213,20 +213,24 @@ jobs:
 
       - name: Run upgrade test
         run: |
-          sudo pg_createcluster 15 main 2>/dev/null || true
-          sudo pg_ctlcluster 15 main start
-          until sudo -u postgres psql -c '\q' 2>/dev/null; do sleep 1; done
+          if ! sudo pg_lsclusters | awk '$1 == "15" && $2 == "main" {found=1} END {exit !found}'; then
+            sudo pg_createcluster 15 main
+          fi
 
-          sudo -u postgres psql -c "CREATE EXTENSION wrappers VERSION '${OLD_VERSION}';"
+          sudo pg_ctlcluster 15 main start
+          PG_PORT=$(sudo pg_lsclusters | awk '$1 == "15" && $2 == "main" {print $3}')
+          until sudo -u postgres psql -p "$PG_PORT" -c '\q' 2>/dev/null; do sleep 1; done
+
+          sudo -u postgres psql -p "$PG_PORT" -c "CREATE EXTENSION wrappers VERSION '${OLD_VERSION}';"
 
           if [[ "$OLD_VERSION" != "$NEW_VERSION" ]]; then
-            sudo -u postgres psql -c "ALTER EXTENSION wrappers UPDATE TO '${NEW_VERSION}';"
+            sudo -u postgres psql -p "$PG_PORT" -c "ALTER EXTENSION wrappers UPDATE TO '${NEW_VERSION}';"
             EXPECTED="$NEW_VERSION"
           else
             EXPECTED="$OLD_VERSION"
           fi
 
-          INSTALLED=$(sudo -u postgres psql -t -A -c "SELECT extversion FROM pg_extension WHERE extname = 'wrappers';")
+          INSTALLED=$(sudo -u postgres psql -p "$PG_PORT" -t -A -c "SELECT extversion FROM pg_extension WHERE extname = 'wrappers';")
           if [[ "$INSTALLED" != "$EXPECTED" ]]; then
             echo "Upgrade test FAILED: expected ${EXPECTED}, got ${INSTALLED}"
             exit 1
