@@ -37,22 +37,22 @@ BEGIN
 
     -- 2. Input function
     BEGIN
-        CREATE FUNCTION "s3vec_in"("input" cstring)
+        CREATE OR REPLACE FUNCTION "s3vec_in"("input" cstring)
             RETURNS S3Vec
             IMMUTABLE PARALLEL SAFE
             LANGUAGE c
             AS '{lib_name}', 's3vec_in_wrapper';
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_function THEN NULL;
     END;
 
     -- 3. Output function
     BEGIN
-        CREATE FUNCTION "s3vec_out"("input" S3Vec)
+        CREATE OR REPLACE FUNCTION "s3vec_out"("input" S3Vec)
             RETURNS cstring
             IMMUTABLE STRICT PARALLEL SAFE
             LANGUAGE c
             AS '{lib_name}', 's3vec_out_wrapper';
-    EXCEPTION WHEN duplicate_object THEN NULL;
+    EXCEPTION WHEN duplicate_function THEN NULL;
     END;
 
     -- 4. Complete type definition (must come after in/out functions)
@@ -65,11 +65,53 @@ BEGIN
         );
     EXCEPTION WHEN duplicate_object THEN NULL;
     END;
+
+    -- 5. s3vec_knn function
+    -- PostgreSQL has no CREATE OR REPLACE OPERATOR, so we manage the function
+    -- and operator together here with EXCEPTION WHEN to make upgrades idempotent.
+    BEGIN
+        CREATE OR REPLACE FUNCTION "s3vec_knn"("_left" S3Vec, "_right" S3Vec)
+            RETURNS bool
+            IMMUTABLE STRICT PARALLEL SAFE
+            LANGUAGE c
+            AS '{lib_name}', 's3vec_knn_wrapper';
+    EXCEPTION WHEN duplicate_function THEN NULL;
+    END;
+
+    -- 6. s3vec_knn operator (<==> for S3Vec)
+    BEGIN
+        CREATE OPERATOR <==> (
+            PROCEDURE = "s3vec_knn",
+            LEFTARG = S3Vec,
+            RIGHTARG = S3Vec
+        );
+    EXCEPTION WHEN duplicate_function THEN NULL;
+    END;
+
+    -- 7. metadata_filter function
+    BEGIN
+        CREATE OR REPLACE FUNCTION "metadata_filter"("_left" jsonb, "_right" jsonb)
+            RETURNS bool
+            IMMUTABLE STRICT PARALLEL SAFE
+            LANGUAGE c
+            AS '{lib_name}', 'metadata_filter_wrapper';
+    EXCEPTION WHEN duplicate_function THEN NULL;
+    END;
+
+    -- 8. metadata_filter operator (<==> for jsonb)
+    BEGIN
+        CREATE OPERATOR <==> (
+            PROCEDURE = "metadata_filter",
+            LEFTARG = jsonb,
+            RIGHTARG = jsonb
+        );
+    EXCEPTION WHEN duplicate_function THEN NULL;
+    END;
 END
 $s3vec_upgrade$;
 "#,
     name = "s3vec_type",
-    creates = [Type(S3Vec)],
+    creates = [Type(S3Vec), Function(s3vec_knn), Function(metadata_filter)],
 );
 "##
     );

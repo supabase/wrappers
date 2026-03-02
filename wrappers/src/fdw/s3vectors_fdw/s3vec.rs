@@ -121,15 +121,13 @@ impl TryFrom<*mut bytea> for S3Vec {
     }
 }
 
-#[pg_operator(create_or_replace, immutable, parallel_safe)]
-#[opname(<==>)]
+#[pg_extern(sql = false)] // SQL is written manually in build.rs to support idempotent upgrades
 fn s3vec_knn(_left: S3Vec, _right: S3Vec) -> bool {
     // always return true here, actual calculation will be done in the wrapper
     true
 }
 
-#[pg_operator(create_or_replace, immutable, parallel_safe)]
-#[opname(<==>)]
+#[pg_extern(sql = false)] // SQL is written manually in build.rs to support idempotent upgrades
 fn metadata_filter(_left: JsonB, _right: JsonB) -> bool {
     // always return true here, actual calculation will be done in the wrapper
     true
