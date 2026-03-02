@@ -179,6 +179,8 @@ jobs:
 
       - run: cargo install --locked cargo-pgrx --version 0.16.1
       - run: cargo pgrx init --pg15 /usr/lib/postgresql/15/bin/pg_config
+      - name: Make Rust toolchain available to sudo
+        run: sudo ln -sf "$HOME/.cargo/bin"/* /usr/local/bin/
 
       - name: Download and install latest released extension
         env:
@@ -197,9 +199,7 @@ jobs:
         run: |
           NEW_VERSION=$(cargo metadata --format-version 1 --no-deps --manifest-path wrappers/Cargo.toml | jq -r '.packages[] | select(.name == "wrappers") | .version')
           echo "NEW_VERSION=${NEW_VERSION}" >> "$GITHUB_ENV"
-          sudo chmod -R a+rwx `/usr/lib/postgresql/15/bin/pg_config --pkglibdir` `/usr/lib/postgresql/15/bin/pg_config --sharedir`
-          ls -l `/usr/lib/postgresql/15/bin/pg_config --sharedir`
-          cd wrappers && cargo pgrx install \
+          cd wrappers && sudo cargo pgrx install \
             --no-default-features \
             --features "pg15,native_fdws" \
             --pg-config /usr/lib/postgresql/15/bin/pg_config
