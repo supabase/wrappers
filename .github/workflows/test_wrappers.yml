@@ -213,6 +213,7 @@ jobs:
 
       - name: Run upgrade test
         run: |
+          sudo pg_createcluster 15 main 2>/dev/null || true
           sudo pg_ctlcluster 15 main start
           until sudo -u postgres psql -c '\q' 2>/dev/null; do sleep 1; done
 
