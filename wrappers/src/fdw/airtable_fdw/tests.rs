@@ -35,7 +35,15 @@ mod tests {
                     strings_array_field jsonb,
                     numerics_array_field jsonb,
                     bools_array_field jsonb,
-                    objects_array_field jsonb
+                    objects_array_field jsonb,
+                    char_field "char",
+                    int2_field smallint,
+                    int4_field integer,
+                    int8_field bigint,
+                    float4_field real,
+                    float8_field double precision,
+                    date_field date,
+                    timestamptz_field timestamptz
                   )
                   SERVER airtable_server
                   OPTIONS (
@@ -176,6 +184,16 @@ mod tests {
                 })
                 .collect::<Vec<_>>();
             assert_eq!(results, vec![vec!["bar", "baz"], vec!["qux"]]);
+
+            let results = c
+                .select("SELECT * FROM airtable_table", None, &[])
+                .expect("No results for a given query")
+                .filter_map(|r| {
+                    r.get_by_name::<&str, _>("string_field")
+                        .expect("string_field is missing")
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(results, vec!["two", "three"]);
 
             let results = c
                 .select("SELECT string_field FROM airtable_view", None, &[])

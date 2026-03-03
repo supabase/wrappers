@@ -49,7 +49,15 @@ if __name__ == "__main__":
             "strings_array_field": ["foo", "bar"],
             "numerics_array_field": [1, 2],
             "bools_array_field": [False],
-            "objects_array_field": [{"foo": "bar"}, {"foo": "baz"}]
+            "objects_array_field": [{"foo": "bar"}, {"foo": "baz"}],
+            "char_field": 1,
+            "int2_field": 1,
+            "int4_field": 123,
+            "int8_field": 123456789012345678,
+            "float4_field": 1.23,
+            "float8_field": 1.23456789012345,
+            "date_field": "2023-07-19",
+            "timestamptz_field": "2023-07-19T06:39:15.000Z",
         },
     )
     client.create(
@@ -63,7 +71,15 @@ if __name__ == "__main__":
             "strings_array_field": ["baz", "qux"],
             "numerics_array_field": [3, 4],
             "bools_array_field": [True, False, True],
-            "objects_array_field": [{"foo": "qux"}]
+            "objects_array_field": [{"foo": "qux"}],
+            "char_field": 2,
+            "int2_field": 2,
+            "int4_field": 456,
+            "int8_field": 123456789012345678,
+            "float4_field": 4.56,
+            "float8_field": 1.23456789012345,
+            "date_field": "2023-07-20",
+            "timestamptz_field": "2023-07-20T06:39:15.000Z",
         },
     )
 
