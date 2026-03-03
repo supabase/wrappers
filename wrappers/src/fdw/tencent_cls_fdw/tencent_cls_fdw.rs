@@ -174,17 +174,30 @@ impl TencentClsFdw {
             HeaderValue::from_str(&timestamp.to_string()).unwrap(),
         );
 
-        let resp_text = self.rt.block_on(async {
+        let resp_text: String = self.rt.block_on(async {
             let resp = client
                 .post(&url)
                 .headers(headers)
                 .header("Content-Type", "application/json")
                 .body(payload)
                 .send()
-                .await?;
+                .await
+                .map_err(|e| TencentClsFdwError::RequestMiddlewareError(e))?;
 
-            let resp = resp.error_for_status()?;
-            Ok(resp.text().await?)
+            let status = resp.status();
+            let text = resp
+                .text()
+                .await
+                .map_err(|e| TencentClsFdwError::RequestError(e))?;
+
+            if !status.is_success() {
+                return Err(TencentClsFdwError::ApiError(format!(
+                    "HTTP {}: {}",
+                    status,
+                    &text[..text.len().min(500)]
+                )));
+            }
+            Ok::<_, TencentClsFdwError>(text)
         })?;
 
         if resp_text.len() > self.max_response_size {
