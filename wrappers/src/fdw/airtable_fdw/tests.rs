@@ -200,10 +200,10 @@ mod tests {
                         .get_by_name::<f32, _>("float4_field")
                         .expect("float4_field is missing")?;
                     let _date = r
-                        .get_by_name::<pgrx::Date, _>("date_field")
+                        .get_by_name::<pgrx::datum::Date, _>("date_field")
                         .expect("date_field is missing")?;
                     let _timestamptz = r
-                        .get_by_name::<pgrx::TimestampWithTimeZone, _>("timestamptz_field")
+                        .get_by_name::<pgrx::datum::TimestampWithTimeZone, _>("timestamptz_field")
                         .expect("timestamptz_field is missing")?;
                     Some(string)
                 })
