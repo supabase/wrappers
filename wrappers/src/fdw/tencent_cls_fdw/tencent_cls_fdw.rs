@@ -183,18 +183,7 @@ impl TencentClsFdw {
                 .send()
                 .await?;
 
-            if resp.status() != StatusCode::OK {
-                let status = resp.status();
-                let text = resp.text().await.unwrap_or_default();
-                return Err(reqwest_middleware::Error::from(
-                    reqwest::Error::from(
-                        std::io::Error::new(
-                            std::io::ErrorKind::Other,
-                            format!("HTTP {status}: {text}"),
-                        )
-                    )
-                ));
-            }
+            let resp = resp.error_for_status()?;
             Ok(resp.text().await?)
         })?;
 
