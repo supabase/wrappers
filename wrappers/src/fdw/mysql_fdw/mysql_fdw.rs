@@ -97,7 +97,7 @@ fn parse_naive_datetime(s: &str) -> Option<NaiveDateTime> {
 #[wrappers_fdw(
     version = "0.1.0",
     author = "Wener",
-    website = "https://github.com/wenerme/wrappers/tree/develop/wrappers/src/fdw/mysql_fdw",
+    website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/mysql_fdw",
     error_type = "MysqlFdwError"
 )]
 pub(crate) struct MysqlFdw {
