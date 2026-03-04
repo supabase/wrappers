@@ -141,6 +141,10 @@ def create_bids_table(catalog, namespace):
         NestedField(field_id=36, name="pat_icol", field_type=IntegerType(), required=False),
         NestedField(field_id=37, name="pat_lcol", field_type=LongType(), required=False),
         NestedField(field_id=38, name="pat_tcol", field_type=TimestampType(), required=False),
+        NestedField(field_id=39, name="pat_tzcol", field_type=TimestamptzType(), required=False),
+        NestedField(field_id=40, name="pat_dtcol2", field_type=DateType(), required=False),
+        NestedField(field_id=41, name="pat_tzcol2", field_type=TimestamptzType(), required=False),
+        NestedField(field_id=42, name="pat_tzcol3", field_type=TimestamptzType(), required=False),
 
         identifier_field_ids=[1],
     )
@@ -160,6 +164,9 @@ def create_bids_table(catalog, namespace):
         ),
         PartitionField(
             source_id=7, field_id=1008, transform=DayTransform(), name="dt_day"
+        ),
+        PartitionField(
+            source_id=8, field_id=1009, transform=DayTransform(), name="tstz_day"
         ),
         PartitionField(
             source_id=11, field_id=1010, transform=IdentityTransform(), name="bcol_ident"
@@ -187,6 +194,18 @@ def create_bids_table(catalog, namespace):
         ),
         PartitionField(
             source_id=38, field_id=1026, transform=MonthTransform(), name="pat_tcol_month"
+        ),
+        PartitionField(
+            source_id=39, field_id=1028, transform=MonthTransform(), name="pat_tzcol_month"
+        ),
+        PartitionField(
+            source_id=40, field_id=1030, transform=YearTransform(), name="pat_dtcol2_year"
+        ),
+        PartitionField(
+            source_id=41, field_id=1032, transform=YearTransform(), name="pat_tzcol2_year"
+        ),
+        PartitionField(
+            source_id=42, field_id=1034, transform=HourTransform(), name="pat_tzcol3_hour"
         ),
     )
 
