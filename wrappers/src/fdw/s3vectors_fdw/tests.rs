@@ -66,7 +66,7 @@ mod tests {
                     VALUES (
                         'test1',
                         '[1.0, 2.0, 1.0]',
-                        '{"model": "test1", "dimensions": 3}'::jsonb
+                        '{"model": "test1", "dimensions": 3, "null_field": null, "bool_field": false, "float_field": 1.23, "array_field": [1, "two", {"three": 3}]}'::jsonb
                     )"#,
                 None,
                 &[],

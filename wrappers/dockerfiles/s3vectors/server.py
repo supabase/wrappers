@@ -71,7 +71,7 @@ class MockServer(BaseHTTPRequestHandler):
       {
          "data": { "float32": [ 222.33, 44.55, 6.678 ] },
          "key": "test-key3",
-         "metadata": { "model": "test", "dimension": 3 }
+         "metadata": { "model": "test", "dimension": 3, "null_field": null, "bool_field": false, "float_field": 1.23, "array_field": [1, "two", {"three": 3}] }
       }
    ]
 }
@@ -84,12 +84,12 @@ class MockServer(BaseHTTPRequestHandler):
       {
          "data": { "float32": [ 123.45, 67.89, 0.0 ] },
          "key": "test-key1",
-         "metadata": { "model": "test", "dimension": 3 }
+         "metadata": { "model": "test", "dimension": 3, "null_field": null, "bool_field": false, "float_field": 1.23, "array_field": [1, "two", {"three": 3}] }
       },
       {
          "data": { "float32": [ 987.65, 43.21, -4.2 ] },
          "key": "test-key2",
-         "metadata": { "model": "test", "dimension": 3 }
+         "metadata": { "model": "test", "dimension": 3, "null_field": null, "bool_field": false, "float_field": 1.23, "array_field": [1, "two", {"three": 3}] }
       }
    ]
 }
@@ -102,13 +102,13 @@ class MockServer(BaseHTTPRequestHandler):
          "data": { "float32": [ 123.45, 67.89, 0.0 ] },
          "distance": 0.84733,
          "key": "test-key1",
-         "metadata": { "model": "test", "dimension": 3 }
+         "metadata": { "model": "test", "dimension": 3, "null_field": null, "bool_field": false, "float_field": 1.23, "array_field": [1, "two", {"three": 3}] }
       },
       {
          "data": { "float32": [ 987.65, 43.21, -4.2 ] },
          "distance": 0.32804,
          "key": "test-key2",
-         "metadata": { "model": "test", "dimension": 3 }
+         "metadata": { "model": "test", "dimension": 3, "null_field": null, "bool_field": false, "float_field": 1.23, "array_field": [1, "two", {"three": 3}] }
       }
    ]
 }
@@ -121,7 +121,7 @@ class MockServer(BaseHTTPRequestHandler):
          "data": { "float32": [ 123.45, 67.89, 0.0 ] },
          "distance": 0.84733,
          "key": "test-key1",
-         "metadata": { "model": "test", "dimension": 3 }
+         "metadata": { "model": "test", "dimension": 3, "null_field": null, "bool_field": false, "float_field": 1.23, "array_field": [1, "two", {"three": 3}] }
       }
    ]
 }

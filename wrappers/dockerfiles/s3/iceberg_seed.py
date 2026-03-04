@@ -190,7 +190,19 @@ def create_bids_table(catalog, namespace):
         ),
     )
 
-    sort_order = SortOrder(SortField(source_id=2, transform=IdentityTransform()))
+    sort_order = SortOrder(fields=[
+        SortField(source_id=1, transform=IdentityTransform()),
+        SortField(source_id=2, transform=IdentityTransform()),
+        SortField(source_id=3, transform=IdentityTransform()),
+        SortField(source_id=4, transform=IdentityTransform()),
+        SortField(source_id=6, transform=IdentityTransform()),
+        SortField(source_id=7, transform=IdentityTransform()),
+        SortField(source_id=8, transform=IdentityTransform()),
+        SortField(source_id=10, transform=IdentityTransform()),
+        SortField(source_id=11, transform=IdentityTransform()),
+        SortField(source_id=13, transform=IdentityTransform()),
+        SortField(source_id=15, transform=IdentityTransform()),
+    ])
 
     if catalog.table_exists(tblname):
         catalog.purge_table(tblname)
@@ -259,7 +271,11 @@ def create_asks_table(catalog, namespace):
         ),
     )
 
-    sort_order = SortOrder(SortField(source_id=2, transform=IdentityTransform()))
+    sort_order = SortOrder(fields=[
+        SortField(source_id=1, transform=IdentityTransform()),
+        SortField(source_id=2, transform=IdentityTransform()),
+        SortField(source_id=3, transform=IdentityTransform()),
+    ])
 
     if catalog.table_exists(tblname):
         catalog.purge_table(tblname)
