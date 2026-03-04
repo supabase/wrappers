@@ -501,3 +501,45 @@ pub(crate) unsafe fn extract_quals(
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[cfg(all(feature = "pg_test", pgrx_embed))]
+    use pgrx::IntoDatum;
+
+    #[cfg(all(feature = "pg_test", pgrx_embed))]
+    #[test]
+    fn test_form_array_from_datum_int4_array() {
+        let values = vec![1_i32, 2_i32, 3_i32];
+        let datum = values
+            .into_datum()
+            .expect("int4 array datum should be created");
+
+        let result = unsafe { form_array_from_datum(datum, false, pg_sys::INT4ARRAYOID) };
+        let result = result.expect("int4 array should be parsed");
+
+        assert_eq!(result.len(), 3);
+        assert!(matches!(result[0], Cell::I32(1)));
+        assert!(matches!(result[1], Cell::I32(2)));
+        assert!(matches!(result[2], Cell::I32(3)));
+    }
+
+    #[test]
+    fn test_form_array_from_datum_null_datum_returns_none() {
+        let result = unsafe { form_array_from_datum(0.into(), true, pg_sys::INT4ARRAYOID) };
+        assert!(result.is_none());
+    }
+
+    #[cfg(all(feature = "pg_test", pgrx_embed))]
+    #[test]
+    fn test_form_array_from_datum_unsupported_oid_returns_none() {
+        let values = vec![1_i32, 2_i32];
+        let datum = values
+            .into_datum()
+            .expect("int4 array datum should be created");
+
+        let result = unsafe { form_array_from_datum(datum, false, pg_sys::UUIDARRAYOID) };
+        assert!(result.is_none());
+    }
+}

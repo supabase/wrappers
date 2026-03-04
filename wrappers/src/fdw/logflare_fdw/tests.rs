@@ -30,6 +30,17 @@ mod tests {
                     id text,
                     timestamp bigint,
                     event_message text,
+                    bool_field bool,
+                    char_field "char",
+                    int2_field smallint,
+                    int4_field integer,
+                    int8_field bigint,
+                    float4_field real,
+                    float8_field double precision,
+                    numeric_field numeric,
+                    date_field date,
+                    ts_field timestamp,
+                    tstz_field timestamptz,
                     _result text
                   )
                   SERVER logflare_server

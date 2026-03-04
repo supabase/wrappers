@@ -54,7 +54,18 @@
                     "tenant_params": []
                 }
             ],
-            "timestamp": 1739866449830000
+            "timestamp": 1739866449830000,
+            "bool_field": false,
+            "char_field": 12,
+            "int2_field": 123,
+            "int4_field": 1234,
+            "int8_field": 12345678,
+            "float4_field": 12.34,
+            "float8_field": 1.23456789012345,
+            "numeric_field": 1234.5678,
+            "date_field": "2023-07-19",
+            "ts_field": "2023-07-19T06:39:15.000Z",
+            "tstz_field": "2023-07-19T06:39:15.000Z"
         },
         {
             "event_message": "GET /",
@@ -110,7 +121,18 @@
                     "tenant_params": []
                 }
             ],
-            "timestamp": 1739866449826000
+            "timestamp": 1739866449826000,
+            "bool_field": false,
+            "char_field": 12,
+            "int2_field": 123,
+            "int4_field": 1234,
+            "int8_field": 12345678,
+            "float4_field": 12.34,
+            "float8_field": 1.23456789012345,
+            "numeric_field": 1234.5678,
+            "date_field": "2023-07-19",
+            "ts_field": "2023-07-19T06:39:15.000Z",
+            "tstz_field": "2023-07-19T06:39:15.000Z"
         }
     ]
 }
