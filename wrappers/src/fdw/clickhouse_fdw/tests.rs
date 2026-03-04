@@ -22,6 +22,7 @@ mod tests {
 
             rt.block_on(async {
                 handle.execute("DROP TABLE IF EXISTS test_table").await?;
+                handle.execute("DROP TABLE IF EXISTS test_table_nn").await?;
                 handle
                     .execute(
                         "CREATE TABLE test_table (
@@ -233,6 +234,49 @@ mod tests {
                     .unwrap()
                     .len(),
                 0
+            );
+            c.update(
+                "INSERT INTO test_table_nn (
+                    id, name, amt, uid, fstr, bignum, dnum,
+                    is_valid, i8col, u8col, i16col, u16col,
+                    i32col, u32col, created_at, updated_at
+                 )
+                 VALUES (
+                    $1, $2, $3, $4, $5, $6, $7,
+                    $8, $9, $10, $11, $12,
+                    $13, $14, $15, $16
+                 )",
+                None,
+                &[
+                    1i64.into(),
+                    "sample_nn".into(),
+                    99.9.into(),
+                    pgrx::Uuid::from_bytes([1u8; 16]).into(),
+                    "abcde".into(),
+                    "99999999".into(),
+                    pgrx::AnyNumeric::try_from(42.123).unwrap().into(),
+                    true.into(),
+                    7i8.into(),
+                    8i16.into(),
+                    9i16.into(),
+                    10i32.into(),
+                    11i32.into(),
+                    12i64.into(),
+                    Timestamp::new(2025, 5, 2, 3, 4, 5.0).into(),
+                    TimestampWithTimeZone::with_timezone(2025, 5, 2, 3, 4, 5.0, "Asia/Singapore")
+                        .unwrap()
+                        .into(),
+                ],
+            )
+            .unwrap();
+            assert_eq!(
+                c.select("SELECT name FROM test_table_nn WHERE id = 1", None, &[])
+                    .unwrap()
+                    .first()
+                    .get_one::<&str>()
+                    .unwrap()
+                    .unwrap(),
+                "sample_nn"
             );
             c.update(
                 "INSERT INTO test_table (name) VALUES ($1)",
