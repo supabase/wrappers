@@ -270,13 +270,11 @@ mod tests {
             )
             .unwrap();
             assert_eq!(
-                c.select("SELECT name FROM test_table_nn WHERE id = 1", None, &[])
+                c.select("SELECT * FROM test_table_nn WHERE id = 1", None, &[])
                     .unwrap()
-                    .first()
-                    .get_one::<&str>()
-                    .unwrap()
-                    .unwrap(),
-                "sample_nn"
+                    .filter_map(|r| r.get_by_name::<&str, _>("name").unwrap())
+                    .collect::<Vec<_>>(),
+                vec!["sample_nn"]
             );
             c.update(
                 "INSERT INTO test_table (name) VALUES ($1)",
