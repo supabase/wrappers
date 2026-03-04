@@ -45,6 +45,30 @@ mod tests {
                             updated_at DateTime64(6, 'Asia/Singapore')
                         ) engine = Memory",
                     )
+                    .await?;
+                handle
+                    .execute(
+                        "CREATE TABLE test_table_nn (
+                            id Int64,
+                            name TEXT,
+                            amt Float64,
+                            uid UUID,
+                            fstr FixedString(5),
+                            bignum UInt256,
+                            dnum Decimal(18, 3),
+                            arr_i64 Array(Int64) default [],
+                            arr_str Array(String) default [],
+                            is_valid Bool,
+                            i8col Int8,
+                            u8col UInt8,
+                            i16col Int16,
+                            u16col UInt16,
+                            i32col Int32,
+                            u32col UInt32,
+                            created_at DateTime('UTC'),
+                            updated_at DateTime64(6, 'Asia/Singapore')
+                        ) engine = Memory",
+                    )
                     .await
             })
             .expect("test_table in ClickHouse");
@@ -91,6 +115,39 @@ mod tests {
                   SERVER my_clickhouse_server
                   OPTIONS (
                     table 'test_table',
+                    rowid_column 'id',
+                    stream_buffer_size '512'
+                  )
+             "#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"
+                  CREATE FOREIGN TABLE test_table_nn (
+                    id bigint,
+                    name text,
+                    amt double precision,
+                    uid uuid,
+                    fstr text,
+                    bignum text,
+                    dnum numeric,
+                    arr_i64 bigint[],
+                    arr_str text[],
+                    is_valid boolean,
+                    i8col "char",
+                    u8col smallint,
+                    i16col smallint,
+                    u16col integer,
+                    i32col integer,
+                    u32col bigint,
+                    created_at timestamp,
+                    updated_at timestamptz
+                  )
+                  SERVER my_clickhouse_server
+                  OPTIONS (
+                    table 'test_table_nn',
                     rowid_column 'id',
                     stream_buffer_size '512'
                   )
@@ -167,6 +224,12 @@ mod tests {
 
             assert_eq!(
                 c.select("SELECT * FROM test_table", None, &[])
+                    .unwrap()
+                    .len(),
+                0
+            );
+            assert_eq!(
+                c.select("SELECT * FROM test_table_nn", None, &[])
                     .unwrap()
                     .len(),
                 0
