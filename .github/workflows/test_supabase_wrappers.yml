@@ -53,4 +53,4 @@ jobs:
         run: |
           cd supabase-wrappers && RUSTFLAGS="-D warnings" cargo clippy --all --tests --no-deps
 
-      - run: cargo pgrx test -p supabase-wrappers --features "pg15 pg_test"
+      - run: cargo test -p supabase-wrappers --no-default-features --features pg15 --lib
