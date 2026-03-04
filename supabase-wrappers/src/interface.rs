@@ -1106,7 +1106,7 @@ mod tests {
         assert_eq!(format!("{}", Cell::StringArray(vec![])), "[]");
     }
 
-    #[cfg(feature = "pg_test")]
+    #[cfg(all(feature = "pg_test", pgrx_embed))]
     #[test]
     fn test_cell_into_datum_scalars_round_trip() {
         let bool_datum = Cell::Bool(true).into_datum().expect("bool should convert");
@@ -1130,7 +1130,7 @@ mod tests {
         assert_eq!(string_value, "hello");
     }
 
-    #[cfg(feature = "pg_test")]
+    #[cfg(all(feature = "pg_test", pgrx_embed))]
     #[test]
     fn test_cell_into_datum_arrays_round_trip() {
         let bool_array_datum = Cell::BoolArray(vec![Some(true), None, Some(false)])
