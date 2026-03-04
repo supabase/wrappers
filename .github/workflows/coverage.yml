@@ -57,6 +57,8 @@ jobs:
 
       - name: Generate code coverage
         id: coverage
+        env:
+          RUSTFLAGS: "-D warnings -Clink-arg=-Wl,--unresolved-symbols=ignore-all"
         run: |
           source <(cargo llvm-cov show-env --export-prefix --no-cfg-coverage)
           cargo llvm-cov clean --workspace
