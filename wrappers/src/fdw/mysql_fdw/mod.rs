@@ -34,7 +34,16 @@ enum MysqlFdwError {
 
 impl From<MysqlFdwError> for ErrorReport {
     fn from(value: MysqlFdwError) -> Self {
-        ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, format!("{value}"), "")
+        match value {
+            MysqlFdwError::CreateRuntimeError(e) => e.into(),
+            MysqlFdwError::OptionsError(e) => e.into(),
+            MysqlFdwError::MysqlError(_) => ErrorReport::new(
+                PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                "mysql connection or query error".to_string(),
+                "check connection string and query syntax",
+            ),
+            other => ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, format!("{other}"), ""),
+        }
     }
 }
 

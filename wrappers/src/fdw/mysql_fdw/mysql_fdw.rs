@@ -8,10 +8,7 @@ use supabase_wrappers::prelude::*;
 
 use super::{MysqlFdwError, MysqlFdwResult};
 
-fn get_col<T: FromValue>(
-    src_row: &mysql_async::Row,
-    col_name: &str,
-) -> MysqlFdwResult<Option<T>> {
+fn get_col<T: FromValue>(src_row: &mysql_async::Row, col_name: &str) -> MysqlFdwResult<Option<T>> {
     match src_row.get_opt::<Option<T>, &str>(col_name) {
         Some(Ok(v)) => Ok(v),
         Some(Err(e)) => Err(MysqlFdwError::ConversionError(format!(
@@ -29,24 +26,16 @@ fn field_to_cell(src_row: &mysql_async::Row, tgt_col: &Column) -> MysqlFdwResult
         PgOid::BuiltIn(PgBuiltInOids::BOOLOID) => {
             get_col::<bool>(src_row, col_name)?.map(Cell::Bool)
         }
-        PgOid::BuiltIn(PgBuiltInOids::CHAROID) => {
-            get_col::<i8>(src_row, col_name)?.map(Cell::I8)
-        }
-        PgOid::BuiltIn(PgBuiltInOids::INT2OID) => {
-            get_col::<i16>(src_row, col_name)?.map(Cell::I16)
-        }
+        PgOid::BuiltIn(PgBuiltInOids::CHAROID) => get_col::<i8>(src_row, col_name)?.map(Cell::I8),
+        PgOid::BuiltIn(PgBuiltInOids::INT2OID) => get_col::<i16>(src_row, col_name)?.map(Cell::I16),
         PgOid::BuiltIn(PgBuiltInOids::FLOAT4OID) => {
             get_col::<f32>(src_row, col_name)?.map(Cell::F32)
         }
-        PgOid::BuiltIn(PgBuiltInOids::INT4OID) => {
-            get_col::<i32>(src_row, col_name)?.map(Cell::I32)
-        }
+        PgOid::BuiltIn(PgBuiltInOids::INT4OID) => get_col::<i32>(src_row, col_name)?.map(Cell::I32),
         PgOid::BuiltIn(PgBuiltInOids::FLOAT8OID) => {
             get_col::<f64>(src_row, col_name)?.map(Cell::F64)
         }
-        PgOid::BuiltIn(PgBuiltInOids::INT8OID) => {
-            get_col::<i64>(src_row, col_name)?.map(Cell::I64)
-        }
+        PgOid::BuiltIn(PgBuiltInOids::INT8OID) => get_col::<i64>(src_row, col_name)?.map(Cell::I64),
         PgOid::BuiltIn(PgBuiltInOids::NUMERICOID) => get_col::<f64>(src_row, col_name)?
             .map(pgrx::AnyNumeric::try_from)
             .transpose()?
@@ -54,31 +43,37 @@ fn field_to_cell(src_row: &mysql_async::Row, tgt_col: &Column) -> MysqlFdwResult
         PgOid::BuiltIn(PgBuiltInOids::TEXTOID) => {
             get_col::<String>(src_row, col_name)?.map(Cell::String)
         }
-        PgOid::BuiltIn(PgBuiltInOids::DATEOID) => {
-            get_col::<String>(src_row, col_name)?.and_then(|s| {
-                NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok().map(|v| {
-                    let epoch = NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
-                    let seconds_from_epoch = v.signed_duration_since(epoch).num_seconds();
-                    let ts = to_timestamp(seconds_from_epoch as f64);
-                    Cell::Date(pgrx::prelude::Date::from(ts))
-                })
-            })
-        }
+        PgOid::BuiltIn(PgBuiltInOids::DATEOID) => match get_col::<String>(src_row, col_name)? {
+            Some(s) => {
+                let v = NaiveDate::parse_from_str(&s, "%Y-%m-%d").map_err(|e| {
+                    MysqlFdwError::ConversionError(format!("failed to parse date '{}': {}", s, e))
+                })?;
+                let epoch = NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
+                let seconds_from_epoch = v.signed_duration_since(epoch).num_seconds();
+                let ts = to_timestamp(seconds_from_epoch as f64);
+                Some(Cell::Date(pgrx::prelude::Date::from(ts)))
+            }
+            None => None,
+        },
         PgOid::BuiltIn(PgBuiltInOids::TIMESTAMPOID) => {
-            get_col::<String>(src_row, col_name)?.and_then(|s| {
-                parse_naive_datetime(&s).map(|v| {
+            match get_col::<String>(src_row, col_name)? {
+                Some(s) => {
+                    let v = parse_naive_datetime(&s)?;
                     let ts = to_timestamp(v.and_utc().timestamp() as f64);
-                    Cell::Timestamp(ts.to_utc())
-                })
-            })
+                    Some(Cell::Timestamp(ts.to_utc()))
+                }
+                None => None,
+            }
         }
         PgOid::BuiltIn(PgBuiltInOids::TIMESTAMPTZOID) => {
-            get_col::<String>(src_row, col_name)?.and_then(|s| {
-                parse_naive_datetime(&s).map(|v| {
+            match get_col::<String>(src_row, col_name)? {
+                Some(s) => {
+                    let v = parse_naive_datetime(&s)?;
                     let ts = to_timestamp(v.and_utc().timestamp() as f64);
-                    Cell::Timestamptz(ts)
-                })
-            })
+                    Some(Cell::Timestamptz(ts))
+                }
+                None => None,
+            }
         }
         _ => {
             return Err(MysqlFdwError::UnsupportedColumnType(tgt_col.name.clone()));
@@ -88,10 +83,16 @@ fn field_to_cell(src_row: &mysql_async::Row, tgt_col: &Column) -> MysqlFdwResult
     Ok(ret)
 }
 
-fn parse_naive_datetime(s: &str) -> Option<NaiveDateTime> {
+fn parse_naive_datetime(s: &str) -> MysqlFdwResult<NaiveDateTime> {
     NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S%.f")
         .or_else(|_| NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S"))
-        .ok()
+        .map_err(|e| {
+            MysqlFdwError::ConversionError(format!("failed to parse datetime '{}': {}", s, e))
+        })
+}
+
+fn quote_ident(name: &str) -> String {
+    format!("`{}`", name.replace('`', "``"))
 }
 
 #[wrappers_fdw(
@@ -124,12 +125,16 @@ impl MysqlFdw {
         } else {
             columns
                 .iter()
-                .map(|c| c.name.clone())
+                .map(|c| quote_ident(&c.name))
                 .collect::<Vec<String>>()
                 .join(", ")
         };
 
-        let mut sql = format!("select {} from {} as _wrappers_tbl", tgts, &self.table);
+        let mut sql = format!(
+            "select {} from {} as _wrappers_tbl",
+            tgts,
+            quote_ident(&self.table)
+        );
 
         if !quals.is_empty() {
             let cond = quals
@@ -147,7 +152,7 @@ impl MysqlFdw {
             let order_by = sorts
                 .iter()
                 .map(|sort| {
-                    let mut clause = sort.field.to_string();
+                    let mut clause = quote_ident(&sort.field);
                     if sort.reversed {
                         clause.push_str(" desc");
                     } else {
@@ -209,8 +214,7 @@ impl ForeignDataWrapper<MysqlFdwError> for MysqlFdw {
 
         let url = self.conn_str.clone();
         self.scan_result = self.rt.block_on(async {
-            let opts =
-                mysql_async::Opts::from_url(&url).map_err(mysql_async::Error::from)?;
+            let opts = mysql_async::Opts::from_url(&url).map_err(mysql_async::Error::from)?;
             let mut conn = mysql_async::Conn::new(opts).await?;
             let result: Vec<mysql_async::Row> = conn.query(&sql).await?;
             let _ = conn.disconnect().await;

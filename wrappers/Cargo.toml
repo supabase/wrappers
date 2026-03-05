@@ -212,6 +212,7 @@ native_fdws = [
     "logflare_fdw",
     "auth0_fdw",
     "mssql_fdw",
+    "mysql_fdw",
     "redis_fdw",
     "cognito_fdw",
     "iceberg_fdw",
