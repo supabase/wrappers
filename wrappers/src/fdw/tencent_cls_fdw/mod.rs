@@ -39,6 +39,9 @@ enum TencentClsFdwError {
 
     #[error("response too large ({0} bytes, max {1})")]
     ResponseTooLarge(usize, usize),
+
+    #[error("vault secret not found for id '{0}'")]
+    VaultSecretNotFound(String),
 }
 
 impl From<TencentClsFdwError> for ErrorReport {
