@@ -12,8 +12,7 @@ fn get_col<T: FromValue>(src_row: &mysql_async::Row, col_name: &str) -> MysqlFdw
     match src_row.get_opt::<Option<T>, &str>(col_name) {
         Some(Ok(v)) => Ok(v),
         Some(Err(e)) => Err(MysqlFdwError::ConversionError(format!(
-            "column '{}': {}",
-            col_name, e
+            "column '{col_name}': {e}"
         ))),
         None => Ok(None),
     }
@@ -46,7 +45,7 @@ fn field_to_cell(src_row: &mysql_async::Row, tgt_col: &Column) -> MysqlFdwResult
         PgOid::BuiltIn(PgBuiltInOids::DATEOID) => match get_col::<String>(src_row, col_name)? {
             Some(s) => {
                 let v = NaiveDate::parse_from_str(&s, "%Y-%m-%d").map_err(|e| {
-                    MysqlFdwError::ConversionError(format!("failed to parse date '{}': {}", s, e))
+                    MysqlFdwError::ConversionError(format!("failed to parse date '{s}': {e}"))
                 })?;
                 let epoch = NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
                 let seconds_from_epoch = v.signed_duration_since(epoch).num_seconds();
@@ -86,9 +85,7 @@ fn field_to_cell(src_row: &mysql_async::Row, tgt_col: &Column) -> MysqlFdwResult
 fn parse_naive_datetime(s: &str) -> MysqlFdwResult<NaiveDateTime> {
     NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S%.f")
         .or_else(|_| NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S"))
-        .map_err(|e| {
-            MysqlFdwError::ConversionError(format!("failed to parse datetime '{}': {}", s, e))
-        })
+        .map_err(|e| MysqlFdwError::ConversionError(format!("failed to parse datetime '{s}': {e}")))
 }
 
 fn quote_ident(name: &str) -> String {
