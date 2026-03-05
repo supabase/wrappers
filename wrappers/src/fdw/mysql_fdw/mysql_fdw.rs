@@ -92,6 +92,37 @@ fn quote_ident(name: &str) -> String {
     format!("`{}`", name.replace('`', "``"))
 }
 
+fn deparse_qual(qual: &Qual, fmt: &mut MysqlCellFormatter) -> String {
+    let field = quote_ident(&qual.field);
+    if qual.use_or {
+        match &qual.value {
+            Value::Cell(_) => unreachable!(),
+            Value::Array(cells) => {
+                let conds: Vec<String> = cells
+                    .iter()
+                    .map(|cell| format!("{} {} {}", field, qual.operator, fmt.fmt_cell(cell)))
+                    .collect();
+                conds.join(" or ")
+            }
+        }
+    } else {
+        match &qual.value {
+            Value::Cell(cell) => match qual.operator.as_str() {
+                "is" | "is not" => match cell {
+                    Cell::String(s) if s == "null" => {
+                        format!("{} {} null", field, qual.operator)
+                    }
+                    _ => format!("{} {} {}", field, qual.operator, fmt.fmt_cell(cell)),
+                },
+                "~~" => format!("{} like {}", field, fmt.fmt_cell(cell)),
+                "!~~" => format!("{} not like {}", field, fmt.fmt_cell(cell)),
+                _ => format!("{} {} {}", field, qual.operator, fmt.fmt_cell(cell)),
+            },
+            Value::Array(_) => unreachable!(),
+        }
+    }
+}
+
 struct MysqlCellFormatter;
 
 impl CellFormatter for MysqlCellFormatter {
@@ -116,6 +147,7 @@ pub(crate) struct MysqlFdw {
     rt: Runtime,
     conn_str: String,
     table: String,
+    rowid_col: String,
     tgt_cols: Vec<Column>,
     scan_result: Vec<mysql_async::Row>,
     iter_idx: usize,
@@ -151,7 +183,7 @@ impl MysqlFdw {
             let mut fmt = MysqlCellFormatter;
             let cond = quals
                 .iter()
-                .map(|q| q.deparse_with_fmt(&mut fmt))
+                .map(|q| deparse_qual(q, &mut fmt))
                 .collect::<Vec<String>>()
                 .join(" and ");
 
@@ -194,7 +226,8 @@ impl ForeignDataWrapper<MysqlFdwError> for MysqlFdw {
             Some(conn_str) => conn_str.to_owned(),
             None => {
                 let conn_str_id = require_option("conn_string_id", &server.options)?;
-                get_vault_secret(conn_str_id).unwrap_or_default()
+                get_vault_secret(conn_str_id)
+                    .ok_or_else(|| MysqlFdwError::VaultSecretNotFound(conn_str_id.to_string()))?
             }
         };
 
@@ -204,6 +237,7 @@ impl ForeignDataWrapper<MysqlFdwError> for MysqlFdw {
             rt,
             conn_str,
             table: String::default(),
+            rowid_col: String::default(),
             tgt_cols: Vec::new(),
             scan_result: Vec::new(),
             iter_idx: 0,
@@ -273,6 +307,111 @@ impl ForeignDataWrapper<MysqlFdwError> for MysqlFdw {
 
     fn end_scan(&mut self) -> MysqlFdwResult<()> {
         self.scan_result.clear();
+        Ok(())
+    }
+
+    fn begin_modify(&mut self, options: &HashMap<String, String>) -> MysqlFdwResult<()> {
+        self.table = require_option("table", options)?.to_string();
+        self.rowid_col = require_option("rowid_column", options)?.to_string();
+        Ok(())
+    }
+
+    fn insert(&mut self, src: &Row) -> MysqlFdwResult<()> {
+        let mut fmt = MysqlCellFormatter;
+        let mut cols = Vec::new();
+        let mut vals = Vec::new();
+
+        for (col, cell) in src.iter() {
+            cols.push(quote_ident(col));
+            match cell {
+                Some(cell) => vals.push(fmt.fmt_cell(cell)),
+                None => vals.push("null".to_string()),
+            }
+        }
+
+        let sql = format!(
+            "insert into {} ({}) values ({})",
+            quote_ident(&self.table),
+            cols.join(", "),
+            vals.join(", ")
+        );
+
+        let url = self.conn_str.clone();
+        self.rt.block_on(async {
+            let opts = mysql_async::Opts::from_url(&url).map_err(mysql_async::Error::from)?;
+            let mut conn = mysql_async::Conn::new(opts).await?;
+            conn.query_drop(&sql).await?;
+            let _ = conn.disconnect().await;
+            Ok::<_, mysql_async::Error>(())
+        })?;
+
+        stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsOut, 1);
+
+        Ok(())
+    }
+
+    fn update(&mut self, rowid: &Cell, new_row: &Row) -> MysqlFdwResult<()> {
+        let mut fmt = MysqlCellFormatter;
+        let mut sets = Vec::new();
+
+        for (col, cell) in new_row.iter() {
+            if col == &self.rowid_col {
+                continue;
+            }
+            let value = match cell {
+                Some(cell) => fmt.fmt_cell(cell),
+                None => "null".to_string(),
+            };
+            sets.push(format!("{} = {}", quote_ident(col), value));
+        }
+
+        let sql = format!(
+            "update {} set {} where {} = {}",
+            quote_ident(&self.table),
+            sets.join(", "),
+            quote_ident(&self.rowid_col),
+            fmt.fmt_cell(rowid)
+        );
+
+        let url = self.conn_str.clone();
+        self.rt.block_on(async {
+            let opts = mysql_async::Opts::from_url(&url).map_err(mysql_async::Error::from)?;
+            let mut conn = mysql_async::Conn::new(opts).await?;
+            conn.query_drop(&sql).await?;
+            let _ = conn.disconnect().await;
+            Ok::<_, mysql_async::Error>(())
+        })?;
+
+        stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsOut, 1);
+
+        Ok(())
+    }
+
+    fn delete(&mut self, rowid: &Cell) -> MysqlFdwResult<()> {
+        let mut fmt = MysqlCellFormatter;
+
+        let sql = format!(
+            "delete from {} where {} = {}",
+            quote_ident(&self.table),
+            quote_ident(&self.rowid_col),
+            fmt.fmt_cell(rowid)
+        );
+
+        let url = self.conn_str.clone();
+        self.rt.block_on(async {
+            let opts = mysql_async::Opts::from_url(&url).map_err(mysql_async::Error::from)?;
+            let mut conn = mysql_async::Conn::new(opts).await?;
+            conn.query_drop(&sql).await?;
+            let _ = conn.disconnect().await;
+            Ok::<_, mysql_async::Error>(())
+        })?;
+
+        stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsOut, 1);
+
+        Ok(())
+    }
+
+    fn end_modify(&mut self) -> MysqlFdwResult<()> {
         Ok(())
     }
 }

@@ -30,6 +30,9 @@ enum MysqlFdwError {
 
     #[error("{0}")]
     IoError(#[from] std::io::Error),
+
+    #[error("vault secret not found for id '{0}'")]
+    VaultSecretNotFound(String),
 }
 
 impl From<MysqlFdwError> for ErrorReport {
