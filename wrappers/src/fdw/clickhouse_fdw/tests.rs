@@ -5,7 +5,7 @@ mod tests {
     use pgrx::prelude::*;
     use pgrx::{
         Uuid,
-        datum::{Timestamp, TimestampWithTimeZone},
+        datum::{Date, Timestamp, TimestampWithTimeZone},
         pg_test,
     };
     use supabase_wrappers::prelude::create_async_runtime;
@@ -22,6 +22,7 @@ mod tests {
 
             rt.block_on(async {
                 handle.execute("DROP TABLE IF EXISTS test_table").await?;
+                handle.execute("DROP TABLE IF EXISTS test_table_nn").await?;
                 handle
                     .execute(
                         "CREATE TABLE test_table (
@@ -41,6 +42,54 @@ mod tests {
                             u16col Nullable(UInt16),
                             i32col Nullable(Int32),
                             u32col Nullable(UInt32),
+                            u64col Nullable(UInt64),
+                            f32col Nullable(Float32),
+                            i128col Nullable(Int128),
+                            u128col Nullable(UInt128),
+                            i256col Nullable(Int256),
+                            u256col Nullable(UInt256),
+                            dtcol Nullable(Date),
+                            arr_bool Array(Bool) default [],
+                            arr_i16 Array(Int16) default [],
+                            arr_i32 Array(Int32) default [],
+                            arr_f32 Array(Float32) default [],
+                            arr_f64 Array(Float64) default [],
+                            created_at DateTime('UTC'),
+                            updated_at DateTime64(6, 'Asia/Singapore')
+                        ) engine = Memory",
+                    )
+                    .await?;
+                handle
+                    .execute(
+                        "CREATE TABLE test_table_nn (
+                            id Int64,
+                            name TEXT,
+                            amt Float64,
+                            uid UUID,
+                            fstr FixedString(5),
+                            bignum UInt256,
+                            dnum Decimal(18, 3),
+                            arr_i64 Array(Int64) default [],
+                            arr_str Array(String) default [],
+                            is_valid Bool,
+                            i8col Int8,
+                            u8col UInt8,
+                            i16col Int16,
+                            u16col UInt16,
+                            i32col Int32,
+                            u32col UInt32,
+                            u64col UInt64,
+                            f32col Float32,
+                            i128col Int128,
+                            u128col UInt128,
+                            i256col Int256,
+                            u256col UInt256,
+                            dtcol Date,
+                            arr_bool Array(Bool) default [],
+                            arr_i16 Array(Int16) default [],
+                            arr_i32 Array(Int32) default [],
+                            arr_f32 Array(Float32) default [],
+                            arr_f64 Array(Float64) default [],
                             created_at DateTime('UTC'),
                             updated_at DateTime64(6, 'Asia/Singapore')
                         ) engine = Memory",
@@ -85,12 +134,67 @@ mod tests {
                     u16col integer,
                     i32col integer,
                     u32col bigint,
+                    u64col bigint,
+                    i128col text,
+                    u128col text,
+                    i256col text,
+                    u256col text,
+                    dtcol date,
+                    arr_bool boolean[],
+                    arr_i16 smallint[],
+                    arr_i32 integer[],
+                    arr_f32 real[],
+                    arr_f64 double precision[],
                     created_at timestamp,
                     updated_at timestamptz
                   )
                   SERVER my_clickhouse_server
                   OPTIONS (
                     table 'test_table',
+                    rowid_column 'id',
+                    stream_buffer_size '512'
+                  )
+             "#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"
+                  CREATE FOREIGN TABLE test_table_nn (
+                    id bigint,
+                    name text,
+                    amt double precision,
+                    uid uuid,
+                    fstr text,
+                    bignum text,
+                    dnum numeric,
+                    arr_i64 bigint[],
+                    arr_str text[],
+                    is_valid boolean,
+                    i8col "char",
+                    u8col smallint,
+                    i16col smallint,
+                    u16col integer,
+                    i32col integer,
+                    u32col bigint,
+                    u64col bigint,
+                    i128col text,
+                    u128col text,
+                    i256col text,
+                    u256col text,
+                    dtcol date,
+                    arr_bool boolean[],
+                    arr_i16 smallint[],
+                    arr_i32 integer[],
+                    arr_f32 real[],
+                    arr_f64 double precision[],
+                    created_at timestamp,
+                    updated_at timestamptz
+                  )
+                  SERVER my_clickhouse_server
+                  OPTIONS (
+                    table 'test_table_nn',
                     rowid_column 'id',
                     stream_buffer_size '512'
                   )
@@ -118,6 +222,17 @@ mod tests {
                     u16col integer,
                     i32col integer,
                     u32col bigint,
+                    u64col bigint,
+                    i128col text,
+                    u128col text,
+                    i256col text,
+                    u256col text,
+                    dtcol date,
+                    arr_bool boolean[],
+                    arr_i16 smallint[],
+                    arr_i32 integer[],
+                    arr_f32 real[],
+                    arr_f64 double precision[],
                     created_at timestamp,
                     updated_at timestamptz
                   )
@@ -151,6 +266,17 @@ mod tests {
                     u16col integer,
                     i32col integer,
                     u32col bigint,
+                    u64col bigint,
+                    i128col text,
+                    u128col text,
+                    i256col text,
+                    u256col text,
+                    dtcol date,
+                    arr_bool boolean[],
+                    arr_i16 smallint[],
+                    arr_i32 integer[],
+                    arr_f32 real[],
+                    arr_f64 double precision[],
                     created_at timestamp,
                     updated_at timestamptz
                   )
@@ -170,6 +296,61 @@ mod tests {
                     .unwrap()
                     .len(),
                 0
+            );
+            assert_eq!(
+                c.select("SELECT * FROM test_table_nn", None, &[])
+                    .unwrap()
+                    .len(),
+                0
+            );
+            c.update(
+                "INSERT INTO test_table_nn (
+                    id, name, amt, uid, fstr, bignum, dnum,
+                    is_valid, i8col, u8col, i16col, u16col,
+                    i32col, u32col, u64col, i128col, u128col, i256col, u256col,
+                    dtcol, created_at, updated_at
+                 )
+                 VALUES (
+                    $1, $2, $3, $4, $5, $6, $7,
+                    $8, $9, $10, $11, $12,
+                    $13, $14, $15, $16, $17, $18, $19, $20,
+                    $21, $22
+                 )",
+                None,
+                &[
+                    1i64.into(),
+                    "sample_nn".into(),
+                    99.9.into(),
+                    pgrx::Uuid::from_bytes([1u8; 16]).into(),
+                    "abcde".into(),
+                    "99999999".into(),
+                    pgrx::AnyNumeric::try_from(42.123).unwrap().into(),
+                    true.into(),
+                    7i8.into(),
+                    8i16.into(),
+                    9i16.into(),
+                    10i32.into(),
+                    11i32.into(),
+                    12i64.into(),
+                    13i64.into(),
+                    "123".into(),
+                    "234".into(),
+                    "345".into(),
+                    "456".into(),
+                    Date::new(2025, 1, 1).into(),
+                    Timestamp::new(2025, 5, 2, 3, 4, 5.0).into(),
+                    TimestampWithTimeZone::with_timezone(2025, 5, 2, 3, 4, 5.0, "Asia/Singapore")
+                        .unwrap()
+                        .into(),
+                ],
+            )
+            .unwrap();
+            assert_eq!(
+                c.select("SELECT * FROM test_table_nn WHERE id = 1", None, &[])
+                    .unwrap()
+                    .filter_map(|r| r.get_by_name::<&str, _>("name").unwrap())
+                    .collect::<Vec<_>>(),
+                vec!["sample_nn"]
             );
             c.update(
                 "INSERT INTO test_table (name) VALUES ($1)",

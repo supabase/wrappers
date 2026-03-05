@@ -114,9 +114,22 @@ mod tests {
             assert_eq!(results, vec!["0.123", "1234.56789"]);
 
             c.update(
-                "INSERT INTO test_table (id, name) VALUES ($1, $2)",
+                "INSERT INTO test_table (id, name, num, is_active, col_int8, col_int16, col_int32, col_float32, col_float64, attrs, signup_dt, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11::date, $12::timestamp)",
                 None,
-                &[42.into(), "baz".into()],
+                &[
+                    42.into(),
+                    "baz".into(),
+                    9.876_f64.into(),
+                    true.into(),
+                    8_i8.into(),
+                    16_i16.into(),
+                    32_i32.into(),
+                    1.23_f32.into(),
+                    4.56_f64.into(),
+                    r#"{"source":"test","active":true}"#.into(),
+                    "2024-01-02".into(),
+                    "2024-01-02 03:04:05".into(),
+                ],
             )
             .unwrap();
 

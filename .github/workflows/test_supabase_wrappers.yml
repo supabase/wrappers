@@ -53,4 +53,7 @@ jobs:
         run: |
           cd supabase-wrappers && RUSTFLAGS="-D warnings" cargo clippy --all --tests --no-deps
 
-      - run: cd supabase-wrappers && cargo test
+      - name: Run tests
+        env:
+          RUSTFLAGS: "-D warnings -Clink-arg=-Wl,--unresolved-symbols=ignore-all"
+        run: cargo test -p supabase-wrappers --no-default-features --features pg15 --lib

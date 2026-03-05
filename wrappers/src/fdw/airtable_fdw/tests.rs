@@ -35,7 +35,15 @@ mod tests {
                     strings_array_field jsonb,
                     numerics_array_field jsonb,
                     bools_array_field jsonb,
-                    objects_array_field jsonb
+                    objects_array_field jsonb,
+                    char_field "char",
+                    int2_field smallint,
+                    int4_field integer,
+                    int8_field bigint,
+                    float4_field real,
+                    float8_field double precision,
+                    date_field date,
+                    timestamptz_field timestamptz
                   )
                   SERVER airtable_server
                   OPTIONS (
@@ -176,6 +184,31 @@ mod tests {
                 })
                 .collect::<Vec<_>>();
             assert_eq!(results, vec![vec!["bar", "baz"], vec!["qux"]]);
+
+            let results = c
+                .select("SELECT * FROM airtable_table", None, &[])
+                .expect("No results for a given query")
+                .filter_map(|r| {
+                    // Ensure additional column types can be deserialized from SELECT *
+                    let string = r
+                        .get_by_name::<&str, _>("string_field")
+                        .expect("string_field is missing")?;
+                    let _int4 = r
+                        .get_by_name::<i32, _>("int4_field")
+                        .expect("int4_field is missing")?;
+                    let _float4 = r
+                        .get_by_name::<f32, _>("float4_field")
+                        .expect("float4_field is missing")?;
+                    let _date = r
+                        .get_by_name::<pgrx::datum::Date, _>("date_field")
+                        .expect("date_field is missing")?;
+                    let _timestamptz = r
+                        .get_by_name::<pgrx::datum::TimestampWithTimeZone, _>("timestamptz_field")
+                        .expect("timestamptz_field is missing")?;
+                    Some(string)
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(results, vec!["two", "three"]);
 
             let results = c
                 .select("SELECT string_field FROM airtable_view", None, &[])

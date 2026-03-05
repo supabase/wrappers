@@ -57,10 +57,12 @@ jobs:
 
       - name: Generate code coverage
         id: coverage
+        env:
+          RUSTFLAGS: "-D warnings -Clink-arg=-Wl,--unresolved-symbols=ignore-all"
         run: |
           source <(cargo llvm-cov show-env --export-prefix --no-cfg-coverage)
           cargo llvm-cov clean --workspace
-          cargo test -p supabase-wrappers --lib
+          cargo test -p supabase-wrappers --no-default-features --features pg15 --lib
           cargo pgrx test --features "native_fdws" --manifest-path wrappers/Cargo.toml pg15
           cargo llvm-cov report --lcov --output-path lcov.info
 

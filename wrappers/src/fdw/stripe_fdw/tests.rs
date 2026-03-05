@@ -481,91 +481,95 @@ mod tests {
             assert_eq!(results, vec![(1.0, true)]);
 
             // Stripe mock container is currently stateless, so we cannot test
-            // data modify for now but will keep the code below for future use.
+            // data modify result for now but will keep the code below for future use.
             //
             // ref: https://github.com/stripe/stripe-mock
 
-            /*
             // test insert
-            c.update(
-                r#"
+            let _ = c
+                .update(
+                    r#"
                 INSERT INTO stripe.customers(email, name, description)
                 VALUES ('test@test.com', 'test name', null)
                 "#,
-                None,
-                &[],
-            );
-
-            let results = c
-                .select(
-                    "SELECT * FROM stripe.customers WHERE email = 'test@test.com'",
                     None,
                     &[],
-                ).unwrap()
-                .filter_map(|r| {
-                    r.get_by_name::<&str, _>("email")
-                        .unwrap()
-                        .and_then(|v| v.value::<&str>())
-                        .zip(r.get_by_name::<&str, _>("name").unwrap().and_then(|v| v.value::<&str>()))
-                })
-                .collect::<Vec<_>>();
+                )
+                .unwrap();
 
-            assert_eq!(results, vec![("test@test.com", "test name")]);
+            // let results = c
+            //     .select(
+            //         "SELECT * FROM stripe.customers WHERE email = 'test@test.com'",
+            //         None,
+            //         &[],
+            //     ).unwrap()
+            //     .filter_map(|r| {
+            //         r.get_by_name::<&str, _>("email")
+            //             .unwrap()
+            //             .and_then(|v| v.value::<&str>())
+            //             .zip(r.get_by_name::<&str, _>("name").unwrap().and_then(|v| v.value::<&str>()))
+            //     })
+            //     .collect::<Vec<_>>();
+
+            // assert_eq!(results, vec![("test@test.com", "test name")]);
 
             // test update
-            c.update(
-                r#"
+            let _ = c
+                .update(
+                    r#"
                 UPDATE stripe.customers
                 SET description = 'hello fdw'
                 WHERE email = 'test@test.com'
                 "#,
-                None,
-                &[],
-            );
-
-            let results = c
-                .select(
-                    "SELECT * FROM stripe.customers WHERE email = 'test@test.com'",
                     None,
                     &[],
-                ).unwrap()
-                .filter_map(|r| {
-                    r.get_by_name::<&str, _>("email").unwrap().and_then(|v| v.value::<&str>()).zip(
-                        r.get_by_name::<&str, _>("description")
-                            .unwrap()
-                            .and_then(|v| v.value::<&str>()),
-                    )
-                })
-                .collect::<Vec<_>>();
+                )
+                .unwrap();
 
-            assert_eq!(results, vec![("test@test.com", "hello fdw")]);
+            // let results = c
+            //     .select(
+            //         "SELECT * FROM stripe.customers WHERE email = 'test@test.com'",
+            //         None,
+            //         &[],
+            //     ).unwrap()
+            //     .filter_map(|r| {
+            //         r.get_by_name::<&str, _>("email").unwrap().and_then(|v| v.value::<&str>()).zip(
+            //             r.get_by_name::<&str, _>("description")
+            //                 .unwrap()
+            //                 .and_then(|v| v.value::<&str>()),
+            //         )
+            //     })
+            //     .collect::<Vec<_>>();
+
+            // assert_eq!(results, vec![("test@test.com", "hello fdw")]);
 
             // test delete
-            c.update(
-                r#"
+            let _ = c
+                .update(
+                    r#"
                 DELETE FROM stripe.customers WHERE email = 'test@test.com'
                 "#,
-                None,
-                &[],
-            );
-
-            let results = c
-                .select(
-                    "SELECT * FROM stripe.customers WHERE email = 'test@test.com'",
                     None,
                     &[],
-                ).unwrap()
-                .filter_map(|r| {
-                    r.get_by_name::<&str, _>("email").unwrap().and_then(|v| v.value::<&str>()).zip(
-                        r.get_by_name::<&str, _>("description")
-                            .unwrap()
-                            .and_then(|v| v.value::<&str>()),
-                    )
-                })
-                .collect::<Vec<_>>();
+                )
+                .unwrap();
 
-            assert!(results.is_empty());
-            */
+            // let results = c
+            //     .select(
+            //         "SELECT * FROM stripe.customers WHERE email = 'test@test.com'",
+            //         None,
+            //         &[],
+            //     ).unwrap()
+            //     .filter_map(|r| {
+            //         r.get_by_name::<&str, _>("email").unwrap().and_then(|v| v.value::<&str>()).zip(
+            //             r.get_by_name::<&str, _>("description")
+            //                 .unwrap()
+            //                 .and_then(|v| v.value::<&str>()),
+            //         )
+            //     })
+            //     .collect::<Vec<_>>();
+
+            // assert!(results.is_empty());
         });
     }
 }

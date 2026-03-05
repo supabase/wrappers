@@ -30,6 +30,21 @@ mod tests {
                     id text,
                     timestamp bigint,
                     event_message text,
+                    bool_field bool,
+                    char_field "char",
+                    int2_field smallint,
+                    int4_field integer,
+                    int8_field bigint,
+                    float4_field real,
+                    float8_field double precision,
+                    numeric_field numeric,
+                    date_field date,
+                    ts_field timestamp,
+                    tstz_field timestamptz,
+                    _param_id text,
+                    _param_date_field date,
+                    _param_ts_field timestamp,
+                    _param_tstz_field timestamptz,
                     _result text
                   )
                   SERVER logflare_server
@@ -55,6 +70,24 @@ mod tests {
                     "f45121ea-1738-46c9-a506-9ee52ff8220f"
                 ]
             );
+
+            let results = c
+                .select(
+                    "
+                    SELECT * FROM logflare_table
+                    WHERE _param_id = '84e1ed2a-3627-4d70-b311-c0e7c0bed313'
+                    AND _param_date_field = '2023-07-19'::date
+                    AND _param_ts_field = '2023-07-19T06:39:15'::timestamp
+                    AND _param_tstz_field = '2023-07-19T06:39:15.000Z'::timestamptz
+                ",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("id").unwrap())
+                .collect::<Vec<_>>();
+
+            assert_eq!(results, vec!["84e1ed2a-3627-4d70-b311-c0e7c0bed313"]);
         });
     }
 }
