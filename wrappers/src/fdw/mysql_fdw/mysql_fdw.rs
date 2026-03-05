@@ -95,6 +95,20 @@ fn quote_ident(name: &str) -> String {
     format!("`{}`", name.replace('`', "``"))
 }
 
+struct MysqlCellFormatter;
+
+impl CellFormatter for MysqlCellFormatter {
+    fn fmt_cell(&mut self, cell: &Cell) -> String {
+        match cell {
+            Cell::Bool(v) => format!("{}", *v as u8),
+            Cell::String(v) => {
+                format!("'{}'", v.replace('\\', "\\\\").replace('\'', "\\'"))
+            }
+            _ => format!("{cell}"),
+        }
+    }
+}
+
 #[wrappers_fdw(
     version = "0.1.0",
     author = "Wener",
@@ -137,9 +151,10 @@ impl MysqlFdw {
         );
 
         if !quals.is_empty() {
+            let mut fmt = MysqlCellFormatter;
             let cond = quals
                 .iter()
-                .map(|q| q.deparse())
+                .map(|q| q.deparse_with_fmt(&mut fmt))
                 .collect::<Vec<String>>()
                 .join(" and ");
 
