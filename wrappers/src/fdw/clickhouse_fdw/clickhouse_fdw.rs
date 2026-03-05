@@ -815,6 +815,14 @@ impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
                             };
                             Ok(val)
                         }
+                        SqlType::UInt64 | SqlType::Nullable(SqlType::UInt64) => {
+                            let val = if is_nullable {
+                                ChValue::from(Some(*v as u64))
+                            } else {
+                                ChValue::from(*v as u64)
+                            };
+                            Ok(val)
+                        }
                         _ => Err(ClickHouseFdwError::UnsupportedColumnType(
                             tgt_type.to_string().into(),
                         )),
@@ -831,9 +839,25 @@ impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
                     Cell::String(v) => {
                         let s = v.as_str();
 
-                        // i256 and u256 are saved as string in Postgres, so we parse it
-                        // back to ClickHouse if target column is Int256 or UInt256
+                        // big integers are saved as string in Postgres, so we parse it
+                        // back to ClickHouse if target column is big integer type
                         let val = match tgt_col.sql_type() {
+                            SqlType::Int128 | SqlType::Nullable(SqlType::Int128) => {
+                                let v = i128::from_str(s)?;
+                                if is_nullable {
+                                    ChValue::from(Some(v))
+                                } else {
+                                    ChValue::from(v)
+                                }
+                            }
+                            SqlType::UInt128 | SqlType::Nullable(SqlType::UInt128) => {
+                                let v = u128::from_str(s)?;
+                                if is_nullable {
+                                    ChValue::from(Some(v))
+                                } else {
+                                    ChValue::from(v)
+                                }
+                            }
                             SqlType::Int256 | SqlType::Nullable(SqlType::Int256) => {
                                 let v = i256::from_str(s)?;
                                 if is_nullable {

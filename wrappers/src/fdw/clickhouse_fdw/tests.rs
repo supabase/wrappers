@@ -5,7 +5,7 @@ mod tests {
     use pgrx::prelude::*;
     use pgrx::{
         Uuid,
-        datum::{Timestamp, TimestampWithTimeZone},
+        datum::{Date, Timestamp, TimestampWithTimeZone},
         pg_test,
     };
     use supabase_wrappers::prelude::create_async_runtime;
@@ -42,6 +42,18 @@ mod tests {
                             u16col Nullable(UInt16),
                             i32col Nullable(Int32),
                             u32col Nullable(UInt32),
+                            u64col Nullable(UInt64),
+                            f32col Nullable(Float32),
+                            i128col Nullable(Int128),
+                            u128col Nullable(UInt128),
+                            i256col Nullable(Int256),
+                            u256col Nullable(UInt256),
+                            dtcol Nullable(Date),
+                            arr_bool Array(Bool) default [],
+                            arr_i16 Array(Int16) default [],
+                            arr_i32 Array(Int32) default [],
+                            arr_f32 Array(Float32) default [],
+                            arr_f64 Array(Float64) default [],
                             created_at DateTime('UTC'),
                             updated_at DateTime64(6, 'Asia/Singapore')
                         ) engine = Memory",
@@ -66,6 +78,18 @@ mod tests {
                             u16col UInt16,
                             i32col Int32,
                             u32col UInt32,
+                            u64col UInt64,
+                            f32col Float32,
+                            i128col Int128,
+                            u128col UInt128,
+                            i256col Int256,
+                            u256col UInt256,
+                            dtcol Date,
+                            arr_bool Array(Bool) default [],
+                            arr_i16 Array(Int16) default [],
+                            arr_i32 Array(Int32) default [],
+                            arr_f32 Array(Float32) default [],
+                            arr_f64 Array(Float64) default [],
                             created_at DateTime('UTC'),
                             updated_at DateTime64(6, 'Asia/Singapore')
                         ) engine = Memory",
@@ -110,6 +134,17 @@ mod tests {
                     u16col integer,
                     i32col integer,
                     u32col bigint,
+                    u64col bigint,
+                    i128col text,
+                    u128col text,
+                    i256col text,
+                    u256col text,
+                    dtcol date,
+                    arr_bool boolean[],
+                    arr_i16 smallint[],
+                    arr_i32 integer[],
+                    arr_f32 real[],
+                    arr_f64 double precision[],
                     created_at timestamp,
                     updated_at timestamptz
                   )
@@ -143,6 +178,17 @@ mod tests {
                     u16col integer,
                     i32col integer,
                     u32col bigint,
+                    u64col bigint,
+                    i128col text,
+                    u128col text,
+                    i256col text,
+                    u256col text,
+                    dtcol date,
+                    arr_bool boolean[],
+                    arr_i16 smallint[],
+                    arr_i32 integer[],
+                    arr_f32 real[],
+                    arr_f64 double precision[],
                     created_at timestamp,
                     updated_at timestamptz
                   )
@@ -176,6 +222,17 @@ mod tests {
                     u16col integer,
                     i32col integer,
                     u32col bigint,
+                    u64col bigint,
+                    i128col text,
+                    u128col text,
+                    i256col text,
+                    u256col text,
+                    dtcol date,
+                    arr_bool boolean[],
+                    arr_i16 smallint[],
+                    arr_i32 integer[],
+                    arr_f32 real[],
+                    arr_f64 double precision[],
                     created_at timestamp,
                     updated_at timestamptz
                   )
@@ -209,6 +266,17 @@ mod tests {
                     u16col integer,
                     i32col integer,
                     u32col bigint,
+                    u64col bigint,
+                    i128col text,
+                    u128col text,
+                    i256col text,
+                    u256col text,
+                    dtcol date,
+                    arr_bool boolean[],
+                    arr_i16 smallint[],
+                    arr_i32 integer[],
+                    arr_f32 real[],
+                    arr_f64 double precision[],
                     created_at timestamp,
                     updated_at timestamptz
                   )
@@ -239,12 +307,14 @@ mod tests {
                 "INSERT INTO test_table_nn (
                     id, name, amt, uid, fstr, bignum, dnum,
                     is_valid, i8col, u8col, i16col, u16col,
-                    i32col, u32col, created_at, updated_at
+                    i32col, u32col, u64col, i128col, u128col, i256col, u256col,
+                    dtcol, created_at, updated_at
                  )
                  VALUES (
                     $1, $2, $3, $4, $5, $6, $7,
                     $8, $9, $10, $11, $12,
-                    $13, $14, $15, $16
+                    $13, $14, $15, $16, $17, $18, $19, $20,
+                    $21, $22
                  )",
                 None,
                 &[
@@ -262,6 +332,12 @@ mod tests {
                     10i32.into(),
                     11i32.into(),
                     12i64.into(),
+                    13i64.into(),
+                    "123".into(),
+                    "234".into(),
+                    "345".into(),
+                    "456".into(),
+                    Date::new(2025, 1, 1).into(),
                     Timestamp::new(2025, 5, 2, 3, 4, 5.0).into(),
                     TimestampWithTimeZone::with_timezone(2025, 5, 2, 3, 4, 5.0, "Asia/Singapore")
                         .unwrap()
