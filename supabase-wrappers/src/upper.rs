@@ -176,6 +176,14 @@ unsafe fn extract_aggregates(
                     None
                 };
 
+                // Aggregates that require a column (SUM, AVG, MIN, MAX, CountColumn)
+                // must have a resolved column reference. Reject pushdown for
+                // non-column expressions like SUM(a + b) to avoid invalid SQL.
+                if column.is_none() && kind != AggregateKind::Count {
+                    debug2!("Aggregate {kind:?} has no simple column reference, skipping pushdown");
+                    return None;
+                }
+
                 aggregates.push(Aggregate {
                     kind,
                     column,
@@ -206,30 +214,33 @@ unsafe fn extract_aggregates(
 /// # Safety
 ///
 /// All pointer parameters must be valid PostgreSQL planner structures.
+/// Returns `None` if any GROUP BY item is not a plain column reference,
+/// which means we cannot safely push down the grouping.
 unsafe fn extract_group_by_columns(
     root: *mut pg_sys::PlannerInfo,
     _input_rel: *mut pg_sys::RelOptInfo,
-) -> Vec<Column> {
+) -> Option<Vec<Column>> {
     unsafe {
         let mut group_by = Vec::new();
 
         let parse = (*root).parse;
         if parse.is_null() {
-            return group_by;
+            return Some(group_by);
         }
 
         let group_clause = (*parse).groupClause;
         if group_clause.is_null() || (*group_clause).length == 0 {
-            return group_by;
+            return Some(group_by);
         }
 
         let target_list = (*parse).targetList;
         if target_list.is_null() {
-            return group_by;
+            return Some(group_by);
         }
 
         for sort_group_clause in list_iter::<pg_sys::SortGroupClause>(group_clause) {
             let tle_resno = (*sort_group_clause).tleSortGroupRef;
+            let mut found = false;
 
             for tle in list_iter::<pg_sys::TargetEntry>(target_list) {
                 if (*tle).ressortgroupref == tle_resno {
@@ -238,13 +249,19 @@ unsafe fn extract_group_by_columns(
                         && let Some(col) = extract_column_from_var(root, expr as *mut pg_sys::Var)
                     {
                         group_by.push(col);
+                        found = true;
                     }
                     break;
                 }
             }
+
+            if !found {
+                debug2!("GROUP BY item is not a plain column, skipping pushdown");
+                return None;
+            }
         }
 
-        group_by
+        Some(group_by)
     }
 }
 
@@ -305,8 +322,11 @@ pub(super) extern "C-unwind" fn get_foreign_upper_paths<
             }
         }
 
-        // Extract GROUP BY columns
-        let group_by = extract_group_by_columns(root, input_rel);
+        // Extract GROUP BY columns (returns None if any item is not a plain column)
+        let group_by = match extract_group_by_columns(root, input_rel) {
+            Some(cols) => cols,
+            None => return,
+        };
         if !group_by.is_empty() {
             debug2!(
                 "Extracted GROUP BY columns: {:?}",
@@ -328,6 +348,38 @@ pub(super) extern "C-unwind" fn get_foreign_upper_paths<
         // Store aggregates and group_by in the FdwState so they survive to execution
         state.aggregates = aggregates.clone();
         state.group_by = group_by.clone();
+
+        // Rebuild state.tgts to reflect the aggregate output shape.
+        // The executor uses tgts for tuple validation/slot mapping, so it must
+        // match what iter_scan will return: GROUP BY columns first, then
+        // aggregate result columns (using alias as name).
+        {
+            let mut new_tgts = Vec::new();
+            let mut col_num = 1usize;
+            for col in &group_by {
+                new_tgts.push(Column {
+                    name: col.name.clone(),
+                    num: col_num,
+                    type_oid: col.type_oid,
+                });
+                col_num += 1;
+            }
+            for agg in &aggregates {
+                new_tgts.push(Column {
+                    name: agg.alias.clone(),
+                    num: col_num,
+                    // Aggregate result type depends on the function; use the
+                    // column type as a reasonable default, or INVALID for COUNT(*).
+                    type_oid: agg
+                        .column
+                        .as_ref()
+                        .map(|c| c.type_oid)
+                        .unwrap_or(pg_sys::INT8OID),
+                });
+                col_num += 1;
+            }
+            state.tgts = new_tgts;
+        }
 
         // Cost estimation
         let rows = if group_by.is_empty() { 1i64 } else { 100 };
