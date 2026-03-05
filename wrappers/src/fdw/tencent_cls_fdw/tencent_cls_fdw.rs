@@ -40,16 +40,14 @@ fn tc3_sign(
     let hashed_payload = hex::encode(Sha256::digest(payload.as_bytes()));
     let canonical_headers = format!("content-type:application/json\nhost:{host}\n");
     let signed_headers = "content-type;host";
-    let canonical_request = format!(
-        "POST\n/\n\n{canonical_headers}\n{signed_headers}\n{hashed_payload}"
-    );
+    let canonical_request =
+        format!("POST\n/\n\n{canonical_headers}\n{signed_headers}\n{hashed_payload}");
 
     // Step 2: String to sign
     let credential_scope = format!("{date}/{service}/tc3_request");
     let hashed_canonical = hex::encode(Sha256::digest(canonical_request.as_bytes()));
-    let string_to_sign = format!(
-        "TC3-HMAC-SHA256\n{timestamp}\n{credential_scope}\n{hashed_canonical}"
-    );
+    let string_to_sign =
+        format!("TC3-HMAC-SHA256\n{timestamp}\n{credential_scope}\n{hashed_canonical}");
 
     // Step 3: Signing key chain
     let k_date = hmac_sha256(format!("TC3{secret_key}").as_bytes(), date.as_bytes());
@@ -157,18 +155,24 @@ impl TencentClsFdw {
         let timestamp = Utc::now().timestamp();
         let host = &self.endpoint;
 
-        let authorization =
-            tc3_sign(&self.secret_id, &self.secret_key, "cls", host, timestamp, &payload);
+        let authorization = tc3_sign(
+            &self.secret_id,
+            &self.secret_key,
+            "cls",
+            host,
+            timestamp,
+            &payload,
+        );
 
         let url = format!("https://{host}/");
         let mut headers = HeaderMap::new();
-        headers.insert("Authorization", HeaderValue::from_str(&authorization).unwrap());
+        headers.insert(
+            "Authorization",
+            HeaderValue::from_str(&authorization).unwrap(),
+        );
         headers.insert("X-TC-Action", HeaderValue::from_static("SearchLog"));
         headers.insert("X-TC-Version", HeaderValue::from_static("2020-10-16"));
-        headers.insert(
-            "X-TC-Region",
-            HeaderValue::from_str(&self.region).unwrap(),
-        );
+        headers.insert("X-TC-Region", HeaderValue::from_str(&self.region).unwrap());
         headers.insert(
             "X-TC-Timestamp",
             HeaderValue::from_str(&timestamp.to_string()).unwrap(),
@@ -210,21 +214,13 @@ impl TencentClsFdw {
         let resp: JsonValue = serde_json::from_str(&resp_text)?;
 
         // Check for API error
-        if let Some(error) = resp
-            .pointer("/Response/Error")
-            .and_then(|e| e.as_object())
-        {
+        if let Some(error) = resp.pointer("/Response/Error").and_then(|e| e.as_object()) {
             let code = error
                 .get("Code")
                 .and_then(|v| v.as_str())
                 .unwrap_or("Unknown");
-            let message = error
-                .get("Message")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
-            return Err(TencentClsFdwError::ApiError(format!(
-                "{code}: {message}"
-            )));
+            let message = error.get("Message").and_then(|v| v.as_str()).unwrap_or("");
+            return Err(TencentClsFdwError::ApiError(format!("{code}: {message}")));
         }
 
         Ok(resp)
@@ -236,9 +232,7 @@ impl TencentClsFdw {
         tgt_cols: &[Column],
         quals: &[Qual],
     ) -> TencentClsFdwResult<Vec<Row>> {
-        let results = resp
-            .pointer("/Response/Results")
-            .and_then(|v| v.as_array());
+        let results = resp.pointer("/Response/Results").and_then(|v| v.as_array());
 
         let results = match results {
             Some(arr) => arr,
@@ -261,24 +255,19 @@ impl TencentClsFdw {
                         // Meta column: full result JSON
                         "_result" => Some(Cell::String(record.to_string())),
                         // Param columns: echo back WHERE values
-                        name if name.starts_with("_") => {
-                            quals.iter().find_map(|q| {
-                                if q.field == tgt_col.name {
-                                    if let Value::Cell(cell) = &q.value {
-                                        Some(cell.clone())
-                                    } else {
-                                        None
-                                    }
+                        name if name.starts_with("_") => quals.iter().find_map(|q| {
+                            if q.field == tgt_col.name {
+                                if let Value::Cell(cell) = &q.value {
+                                    Some(cell.clone())
                                 } else {
                                     None
                                 }
-                            })
-                        }
+                            } else {
+                                None
+                            }
+                        }),
                         // Standard CLS result fields
-                        "log_time" => record
-                            .get("Time")
-                            .and_then(|v| v.as_i64())
-                            .map(Cell::I64),
+                        "log_time" => record.get("Time").and_then(|v| v.as_i64()).map(Cell::I64),
                         "source" => record
                             .get("Source")
                             .and_then(|v| v.as_str())
@@ -333,14 +322,16 @@ impl ForeignDataWrapper<TencentClsFdwError> for TencentClsFdw {
             Some(id) => id.to_owned(),
             None => {
                 let id_key = require_option("secret_id_id", &server.options)?;
-                get_vault_secret(id_key).unwrap_or_default()
+                get_vault_secret(id_key)
+                    .ok_or_else(|| TencentClsFdwError::VaultSecretNotFound(id_key.to_string()))?
             }
         };
         let secret_key = match server.options.get("secret_key") {
             Some(key) => key.to_owned(),
             None => {
                 let key_id = require_option("secret_key_id", &server.options)?;
-                get_vault_secret(key_id).unwrap_or_default()
+                get_vault_secret(key_id)
+                    .ok_or_else(|| TencentClsFdwError::VaultSecretNotFound(key_id.to_string()))?
             }
         };
 
@@ -423,7 +414,15 @@ impl ForeignDataWrapper<TencentClsFdwError> for TencentClsFdw {
             }
         }
 
-        let resp = self.search_log(topic_id, &effective_query, from_ms, to_ms, limit, syntax_rule, "")?;
+        let resp = self.search_log(
+            topic_id,
+            &effective_query,
+            from_ms,
+            to_ms,
+            limit,
+            syntax_rule,
+            "",
+        )?;
         let result = self.resp_to_rows(&resp, columns, quals)?;
 
         if !result.is_empty() {
