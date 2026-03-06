@@ -1162,12 +1162,13 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     ) -> Result<(), E> {
         // This should not be called unless supported_aggregates() returns non-empty.
         // If we reach here, the FDW declared aggregate support but didn't override
-        // this method — emit a warning so the developer knows to implement it.
-        crate::utils::report_warning(
-            "begin_aggregate_scan called but not implemented; \
+        // this method — abort the transaction to prevent wrong results.
+        crate::utils::report_error(
+            pgrx::PgSqlErrorCode::ERRCODE_FDW_ERROR,
+            "begin_aggregate_scan() not implemented; \
              override this method when supported_aggregates() is non-empty",
         );
-        Ok(())
+        unreachable!()
     }
 
     /// Obtain a list of foreign table creation commands
