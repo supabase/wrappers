@@ -13,7 +13,7 @@ use std::os::raw::c_int;
 use std::ptr;
 
 use crate::instance;
-use crate::interface::{Cell, Column, Limit, Qual, Row, Sort, Value};
+use crate::interface::{Aggregate, Cell, Column, Limit, Qual, Row, Sort, Value};
 use crate::limit::*;
 use crate::memctx;
 use crate::options::options_to_hashmap;
@@ -24,24 +24,28 @@ use crate::sort::*;
 use crate::utils::{self, ReportableError, SerdeList, report_error};
 
 // Fdw private state for scan
-struct FdwState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
+pub(crate) struct FdwState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
     // foreign data wrapper instance
-    instance: Option<W>,
+    pub(crate) instance: Option<W>,
 
     // query conditions
-    quals: Vec<Qual>,
+    pub(crate) quals: Vec<Qual>,
 
     // query target column list
-    tgts: Vec<Column>,
+    pub(crate) tgts: Vec<Column>,
 
     // sort list
-    sorts: Vec<Sort>,
+    pub(crate) sorts: Vec<Sort>,
 
     // limit
-    limit: Option<Limit>,
+    pub(crate) limit: Option<Limit>,
 
     // foreign table options
-    opts: HashMap<String, String>,
+    pub(crate) opts: HashMap<String, String>,
+
+    // aggregate pushdown
+    pub(crate) aggregates: Vec<Aggregate>,
+    pub(crate) group_by: Vec<Column>,
 
     // temporary memory context per foreign table, created under Wrappers root
     // memory context
@@ -63,6 +67,8 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwState<E, W> {
             sorts: Vec::new(),
             limit: None,
             opts: HashMap::new(),
+            aggregates: Vec::new(),
+            group_by: Vec::new(),
             tmp_ctx,
             values: Vec::new(),
             nulls: Vec::new(),
@@ -83,6 +89,20 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwState<E, W> {
             )
         } else {
             Ok((0, 0))
+        }
+    }
+
+    #[inline]
+    pub(crate) fn is_aggregate_scan(&self) -> bool {
+        !self.aggregates.is_empty()
+    }
+
+    #[inline]
+    fn begin_aggregate_scan(&mut self) -> Result<(), E> {
+        if let Some(ref mut instance) = self.instance {
+            instance.begin_aggregate_scan(&self.aggregates, &self.group_by, &self.quals, &self.opts)
+        } else {
+            Ok(())
         }
     }
 
@@ -326,6 +346,14 @@ pub(super) extern "C-unwind" fn explain_foreign_scan<
 
         let value = ctx.pstrdup(&format!("limit = {:?}", state.limit));
         pg_sys::ExplainPropertyText(label, value, es);
+
+        if !state.aggregates.is_empty() {
+            let value = ctx.pstrdup(&format!("aggregates = {:?}", state.aggregates));
+            pg_sys::ExplainPropertyText(label, value, es);
+
+            let value = ctx.pstrdup(&format!("group_by = {:?}", state.group_by));
+            pg_sys::ExplainPropertyText(label, value, es);
+        }
     }
 }
 
@@ -405,7 +433,12 @@ pub(super) extern "C-unwind" fn begin_foreign_scan<
 
         // begin scan if it is not EXPLAIN statement
         if eflags & pg_sys::EXEC_FLAG_EXPLAIN_ONLY as c_int <= 0 {
-            let result = state.begin_scan();
+            // choose aggregate scan or normal scan based on state
+            let result = if state.is_aggregate_scan() {
+                state.begin_aggregate_scan()
+            } else {
+                state.begin_scan()
+            };
             if result.is_err() {
                 drop_fdw_state(state.as_ptr());
                 (*plan).fdw_private = ptr::null::<FdwState<E, W>>() as _;
