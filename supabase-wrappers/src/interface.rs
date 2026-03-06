@@ -1180,7 +1180,7 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
         Self: Sized,
     {
         unsafe {
-            use crate::{import_foreign_schema, modify, scan, upper};
+            use crate::{import_foreign_schema, modify, scan};
             let mut fdw_routine =
                 FdwRoutine::<AllocatedByRust>::alloc_node(pg_sys::NodeTag::T_FdwRoutine);
 
@@ -1195,7 +1195,18 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
             fdw_routine.ExplainForeignScan = Some(scan::explain_foreign_scan::<E, Self>);
 
             // upper path planning (aggregate pushdown)
-            fdw_routine.GetForeignUpperPaths = Some(upper::get_foreign_upper_paths::<E, Self>);
+            #[cfg(any(
+                feature = "pg13",
+                feature = "pg14",
+                feature = "pg15",
+                feature = "pg16",
+                feature = "pg17",
+                feature = "pg18"
+            ))]
+            {
+                use crate::upper;
+                fdw_routine.GetForeignUpperPaths = Some(upper::get_foreign_upper_paths::<E, Self>);
+            }
 
             // scan phase
             fdw_routine.BeginForeignScan = Some(scan::begin_foreign_scan::<E, Self>);
