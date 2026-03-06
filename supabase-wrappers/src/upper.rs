@@ -143,6 +143,12 @@ unsafe fn extract_aggregates(
                     }
                 };
 
+                // FILTER clause not supported for pushdown
+                if !(*aggref).aggfilter.is_null() {
+                    debug2!("Aggregate has FILTER clause, skipping pushdown");
+                    return None;
+                }
+
                 // DISTINCT only supported for COUNT(column)
                 if !(*aggref).aggdistinct.is_null() {
                     match kind {
@@ -189,6 +195,7 @@ unsafe fn extract_aggregates(
                     column,
                     distinct: !(*aggref).aggdistinct.is_null(),
                     alias: format!("agg_{resno}"),
+                    type_oid: (*aggref).aggtype,
                 });
             }
 
@@ -368,13 +375,7 @@ pub(super) extern "C-unwind" fn get_foreign_upper_paths<
                 new_tgts.push(Column {
                     name: agg.alias.clone(),
                     num: col_num,
-                    // Aggregate result type depends on the function; use the
-                    // column type as a reasonable default, or INVALID for COUNT(*).
-                    type_oid: agg
-                        .column
-                        .as_ref()
-                        .map(|c| c.type_oid)
-                        .unwrap_or(pg_sys::INT8OID),
+                    type_oid: agg.type_oid,
                 });
                 col_num += 1;
             }

@@ -755,6 +755,7 @@ impl AggregateKind {
 ///     column: None,
 ///     distinct: false,
 ///     alias: "count".to_string(),
+///     type_oid: pgrx::pg_sys::INT8OID,
 /// };
 ///
 /// // SUM(amount) aggregate
@@ -767,6 +768,7 @@ impl AggregateKind {
 ///     }),
 ///     distinct: false,
 ///     alias: "total_amount".to_string(),
+///     type_oid: pgrx::pg_sys::FLOAT8OID,
 /// };
 /// ```
 #[derive(Debug, Clone)]
@@ -782,6 +784,9 @@ pub struct Aggregate {
 
     /// Output column name/alias for the aggregate result
     pub alias: String,
+
+    /// Result type OID of the aggregate function (from Aggref::aggtype)
+    pub type_oid: Oid,
 }
 
 impl Aggregate {
@@ -797,6 +802,7 @@ impl Aggregate {
     ///     column: None,
     ///     distinct: false,
     ///     alias: "cnt".to_string(),
+    ///     type_oid: pgrx::pg_sys::INT8OID,
     /// };
     /// assert_eq!(count_all.deparse(), "COUNT(*)");
     ///
@@ -805,6 +811,7 @@ impl Aggregate {
     ///     column: Some(Column { name: "price".to_string(), num: 1, type_oid: pgrx::pg_sys::Oid::INVALID }),
     ///     distinct: false,
     ///     alias: "total".to_string(),
+    ///     type_oid: pgrx::pg_sys::FLOAT8OID,
     /// };
     /// assert_eq!(sum_col.deparse(), "SUM(price)");
     /// ```
@@ -835,6 +842,7 @@ impl Aggregate {
     ///     column: None,
     ///     distinct: false,
     ///     alias: "cnt".to_string(),
+    ///     type_oid: pgrx::pg_sys::INT8OID,
     /// };
     /// assert_eq!(count_all.deparse_with_alias(), "COUNT(*) AS cnt");
     /// ```
@@ -1152,10 +1160,13 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
         _quals: &[Qual],
         _options: &HashMap<String, String>,
     ) -> Result<(), E> {
-        // Default: This should not be called if supported_aggregates() returns empty.
-        // If called, it means the FDW declared aggregate support but didn't implement
-        // this method - which is a programming error. We'll just proceed with an
-        // empty result set by returning Ok.
+        // This should not be called unless supported_aggregates() returns non-empty.
+        // If we reach here, the FDW declared aggregate support but didn't override
+        // this method — emit a warning so the developer knows to implement it.
+        crate::utils::report_warning(
+            "begin_aggregate_scan called but not implemented; \
+             override this method when supported_aggregates() is non-empty",
+        );
         Ok(())
     }
 
