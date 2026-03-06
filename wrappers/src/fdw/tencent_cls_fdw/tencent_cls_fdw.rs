@@ -12,6 +12,7 @@ use reqwest_retry::{RetryTransientMiddleware, policies::ExponentialBackoff};
 use serde_json::value::Value as JsonValue;
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
+use std::time::Duration;
 
 use supabase_wrappers::prelude::*;
 
@@ -68,7 +69,10 @@ fn hmac_sha256(key: &[u8], data: &[u8]) -> Vec<u8> {
 }
 
 fn create_client() -> TencentClsFdwResult<ClientWithMiddleware> {
-    let client = reqwest::Client::builder().build()?;
+    let client = reqwest::Client::builder()
+        .connect_timeout(Duration::from_secs(10))
+        .timeout(Duration::from_secs(30))
+        .build()?;
     let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
     Ok(ClientBuilder::new(client)
         .with(RetryTransientMiddleware::new_with_policy(retry_policy))
@@ -168,16 +172,26 @@ impl TencentClsFdw {
         let mut headers = HeaderMap::new();
         headers.insert(
             "Authorization",
-            HeaderValue::from_str(&authorization).unwrap(),
+            HeaderValue::from_str(&authorization).map_err(|e| {
+                TencentClsFdwError::ApiError(format!("invalid Authorization header: {e}"))
+            })?,
         );
         headers.insert("X-TC-Action", HeaderValue::from_static("SearchLog"));
         headers.insert("X-TC-Version", HeaderValue::from_static("2020-10-16"));
-        headers.insert("X-TC-Region", HeaderValue::from_str(&self.region).unwrap());
+        headers.insert(
+            "X-TC-Region",
+            HeaderValue::from_str(&self.region).map_err(|e| {
+                TencentClsFdwError::ApiError(format!("invalid X-TC-Region header: {e}"))
+            })?,
+        );
         headers.insert(
             "X-TC-Timestamp",
-            HeaderValue::from_str(&timestamp.to_string()).unwrap(),
+            HeaderValue::from_str(&timestamp.to_string()).map_err(|e| {
+                TencentClsFdwError::ApiError(format!("invalid X-TC-Timestamp header: {e}"))
+            })?,
         );
 
+        let max_response_size = self.max_response_size;
         let resp_text: String = self.rt.block_on(async {
             let resp = client
                 .post(&url)
@@ -189,10 +203,25 @@ impl TencentClsFdw {
                 .map_err(|e| TencentClsFdwError::RequestMiddlewareError(e))?;
 
             let status = resp.status();
+            let max_size = max_response_size;
+
+            if let Some(content_len) = resp.content_length() {
+                if content_len as usize > max_size {
+                    return Err(TencentClsFdwError::ResponseTooLarge(
+                        content_len as usize,
+                        max_size,
+                    ));
+                }
+            }
+
             let text = resp
                 .text()
                 .await
                 .map_err(|e| TencentClsFdwError::RequestError(e))?;
+
+            if text.len() > max_size {
+                return Err(TencentClsFdwError::ResponseTooLarge(text.len(), max_size));
+            }
 
             if !status.is_success() {
                 return Err(TencentClsFdwError::ApiError(format!(
@@ -203,13 +232,6 @@ impl TencentClsFdw {
             }
             Ok::<_, TencentClsFdwError>(text)
         })?;
-
-        if resp_text.len() > self.max_response_size {
-            return Err(TencentClsFdwError::ResponseTooLarge(
-                resp_text.len(),
-                self.max_response_size,
-            ));
-        }
 
         let resp: JsonValue = serde_json::from_str(&resp_text)?;
 
