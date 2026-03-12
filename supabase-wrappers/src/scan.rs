@@ -6,8 +6,6 @@ use pgrx::{
     prelude::*,
 };
 use std::collections::HashMap;
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 
 use pgrx::pg_sys::panic::ErrorReport;
@@ -54,7 +52,7 @@ struct FdwState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
     nulls: Vec<bool>,
     row: Row,
     // fingerprint of current parameter values to detect rescan changes
-    param_fingerprint: u64,
+    param_fingerprint: String,
     _phantom: PhantomData<E>,
 }
 
@@ -71,7 +69,7 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwState<E, W> {
             values: Vec::new(),
             nulls: Vec::new(),
             row: Row::new(),
-            param_fingerprint: 0,
+            param_fingerprint: String::new(),
             _phantom: PhantomData,
         }
     }
@@ -334,8 +332,8 @@ pub(super) extern "C-unwind" fn explain_foreign_scan<
     }
 }
 
-// extract paramter value and assign it to qual in scan state
-unsafe fn assign_paramenter_value<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
+// extract parameter value and assign it to qual in scan state
+unsafe fn assign_parameter_value<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     node: *mut pg_sys::ForeignScanState,
     state: &mut FdwState<E, W>,
 ) {
@@ -396,44 +394,32 @@ unsafe fn assign_paramenter_value<E: Into<ErrorReport>, W: ForeignDataWrapper<E>
     }
 }
 
-#[derive(Hash, PartialEq, Eq)]
-struct ParamFingerPrint<'a> {
-    field: &'a str,
-    operator: &'a str,
-    use_or: bool,
-    kind: u32,
-    id: usize,
-    type_oid: Oid,
-    eval_value: String,
-}
-
 fn compute_param_fingerprint<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     state: &FdwState<E, W>,
-) -> u64 {
-    let mut hasher = DefaultHasher::new();
-
-    for qual in &state.quals {
-        let Some(param) = &qual.param else {
-            continue;
-        };
-        let param_finger_print = ParamFingerPrint {
-            field: &qual.field,
-            operator: &qual.operator,
-            use_or: qual.use_or,
-            kind: param.kind,
-            id: param.id,
-            type_oid: param.type_oid,
-            eval_value: match param.eval_value.lock() {
-                Ok(value) => {
-                    format!("{:?}", *value)
-                }
-                Err(_) => "param_eval_lock_error".to_string(),
-            },
-        };
-
-        param_finger_print.hash(&mut hasher);
-    }
-    hasher.finish()
+) -> String {
+    state
+        .quals
+        .iter()
+        .filter_map(|qual| {
+            qual.param.as_ref().map(|param| {
+                let eval_value = match param.eval_value.lock() {
+                    Ok(value) => format!("{:?}", *value),
+                    Err(_) => "lock_error".to_string(),
+                };
+                format!(
+                    "{}|{}|{}|{}|{}|{}|{}",
+                    qual.field,
+                    qual.operator,
+                    qual.use_or,
+                    param.kind,
+                    param.id,
+                    param.type_oid,
+                    eval_value,
+                )
+            })
+        })
+        .collect::<Vec<_>>()
+        .join(";")
 }
 
 #[pg_guard]
@@ -452,7 +438,7 @@ pub(super) extern "C-unwind" fn begin_foreign_scan<
         assert!(!state.is_null());
 
         // assign parameter values to qual
-        assign_paramenter_value(node, &mut state);
+        assign_parameter_value(node, &mut state);
         state.param_fingerprint = compute_param_fingerprint(&state);
 
         // begin scan if it is not EXPLAIN statement
@@ -492,7 +478,7 @@ pub(super) extern "C-unwind" fn iterate_foreign_scan<
         let mut state = PgBox::<FdwState<E, W>>::from_pg((*node).fdw_state as _);
 
         // evaluate parameter values
-        assign_paramenter_value(node, &mut state);
+        assign_parameter_value(node, &mut state);
 
         // clear slot
         let slot = (*node).ss.ss_ScanTupleSlot;
@@ -549,10 +535,12 @@ pub(super) extern "C-unwind" fn re_scan_foreign_scan<
         let fdw_state = (*node).fdw_state as *mut FdwState<E, W>;
         if !fdw_state.is_null() {
             let mut state = PgBox::<FdwState<E, W>>::from_pg(fdw_state);
-            assign_paramenter_value(node, &mut state);
+            assign_parameter_value(node, &mut state);
             let next_fingerprint = compute_param_fingerprint(&state);
             let result = if next_fingerprint != state.param_fingerprint {
                 state.param_fingerprint = next_fingerprint;
+                // end the active scan to release resources before restarting with new params
+                let _ = state.end_scan();
                 state.begin_scan()
             } else {
                 state.re_scan()
