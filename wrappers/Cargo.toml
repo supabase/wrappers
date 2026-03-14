@@ -143,6 +143,20 @@ mssql_fdw = [
     "num-traits",
     "thiserror",
 ]
+tencent_cls_fdw = [
+    "reqwest",
+    "reqwest-middleware",
+    "reqwest-retry",
+    "serde_json",
+    "serde",
+    "hmac",
+    "sha2",
+    "hex",
+    "chrono",
+    "tokio",
+    "url",
+    "thiserror",
+]
 redis_fdw = [
     "redis",
     "serde_json",
@@ -285,6 +299,9 @@ parquet = { version = "55.1.0", features = ["async"], optional = true }
 arrow-array = { version = "55.1.0", optional = true }
 arrow-schema = { version = "55.1.0", optional = true }
 arrow-json = { version = "55.1.0", optional = true }
+
+# for tencent_cls_fdw
+hmac = { version = "0.12", optional = true }
 
 # for mssql_fdw
 tiberius = { version = "0.12.2", features = [
