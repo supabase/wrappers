@@ -225,7 +225,7 @@ supabase-wrappers = { path = "../supabase-wrappers", default-features = false }
 # Since Rustls 0.22, it is required to choose the provider of the cryptographic
 # primitives at start.
 # ref: https://docs.rs/rustls/latest/rustls/index.html#cryptography-providers
-rustls = "0.23.27"
+rustls = "0.23.37"
 
 # for clickhouse_fdw
 clickhouse-rs = { git = "https://github.com/burmecia/clickhouse-rs.git", branch = "supabase-patch", features = [
@@ -299,7 +299,7 @@ num-traits = { version = "0.2.17", optional = true }
 redis = { version = "0.27.5", features = ["streams", "tls-rustls", "tls-rustls-insecure"], optional = true }
 
 # for wasm_fdw
-wasmtime = { version = "36.0.5", features = [
+wasmtime = { version = "36.0.6", features = [
     "runtime",
     "cranelift",
     "component-model",
