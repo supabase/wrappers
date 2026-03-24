@@ -1,7 +1,9 @@
 use arrow_array::RecordBatch;
 use chrono::{Duration, NaiveDate};
 use iceberg::{
-    spec::{DataFileFormat, Literal, PrimitiveLiteral, Struct, TableMetadata, Transform},
+    spec::{
+        DataFileFormat, Literal, PartitionKey, PrimitiveLiteral, Struct, TableMetadata, Transform,
+    },
     writer::file_writer::location_generator,
 };
 
@@ -224,7 +226,7 @@ impl LocationGenerator {
 }
 
 impl location_generator::LocationGenerator for LocationGenerator {
-    fn generate_location(&self, file_name: &str) -> String {
+    fn generate_location(&self, _partition_key: Option<&PartitionKey>, file_name: &str) -> String {
         format!("{}/{}", self.dir_path, file_name)
     }
 }

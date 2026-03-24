@@ -359,7 +359,6 @@ values (1, 'New Record', now());
 
 ### Limitations for Insertion
 
-- Schema evolution during insert is not supported
 - Only append operations are supported (no upserts)
 - Complex data types (nested structs, arrays, maps) have limited support
 
@@ -371,13 +370,45 @@ When using the `create_table_if_not_exists` option, please be aware of the follo
 - **Partitioning**: The automatically created table will use default partitioning settings. You cannot specify custom partition or sort specifications during automatic creation.
 - **Identifier Fields**: The automatically created table will not have any identifier fields specified. If you need identifier fields, you must create the Iceberg table manually beforehand.
 
+## Schema Evolution
+
+The Iceberg FDW supports [Apache Iceberg schema evolution](https://iceberg.apache.org/spec/#schema-evolution). When columns are added to an Iceberg table after data has already been written, rows from older data files will return `NULL` for those new columns, which matches Iceberg spec behavior.
+
+For example, given a table that initially has `id` and `name` columns, and later gains a `score` column:
+
+```sql
+-- rows written before the column was added return NULL for 'score',
+-- while newer rows return the actual value
+select id, name, score from iceberg.members order by id;
+
+-- id | name  | score
+-- ----+-------+-------
+--  1 | alice | NULL
+--  2 | bob   | NULL
+--  3 | carol |    42
+--  4 | dave  |    99
+```
+
+Filter pushdown on newly-added columns also works correctly:
+
+```sql
+select name from iceberg.members where score > 50;
+
+-- name
+-- ------
+-- dave
+```
+
+!!! note
+
+    The foreign table definition in Postgres must include any new columns to read them. Re-run `import foreign schema` or add the columns manually with `alter foreign table` after evolving the Iceberg schema.
+
 ## Limitations
 
 This section describes important limitations and considerations when using this FDW:
 
 - Only supports specific data type mappings between Postgres and Iceberg
 - UPDATE, DELETE, and TRUNCATE operations are not supported
-- [Apache Iceberg schema evolution](https://iceberg.apache.org/spec/#schema-evolution) is not supported
 - When using Iceberg REST catalog, only supports AWS S3 (or compatible) as the storage
 - Materialized views using these foreign tables may fail during logical backups
 
