@@ -401,7 +401,7 @@ select name from iceberg.members where score > 50;
 
 !!! note
 
-    The foreign table definition in Postgres must include any new columns to read them. Re-run `import foreign schema` or add the columns manually with `alter foreign table` after evolving the Iceberg schema.
+    The foreign table definition in Postgres must include any new columns to read them. Re-run `import foreign schema` (which will refresh the `schema_id` option) or add the columns manually with `alter foreign table` and update or drop any pinned `schema_id` on the foreign table; otherwise, the FDW may still use an older schema and report `ColumnNotFound` for newly-evolved columns.
 
 ## Limitations
 
