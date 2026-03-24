@@ -184,9 +184,9 @@ iceberg_fdw = [
     "uuid",
 ]
 duckdb_fdw = [
-    "arrow-array",
-    "arrow-schema",
-    "arrow-json",
+    "arrow-array-compat",
+    "arrow-schema-compat",
+    "arrow-json-compat",
     "chrono",
     "duckdb",
     "regex",
@@ -326,6 +326,12 @@ rust_decimal = { version = "1.37.1", optional = true }
 
 # for duckdb_fdw
 duckdb = { version = "=1.3.2", features = ["bundled"], optional = true }
+# Version-pinned arrow compat deps matching duckdb's bundled arrow (55.x).
+# The workspace uses arrow 57.x for iceberg_fdw; using 57.x here causes type
+# incompatibilities because duckdb::arrow::* types implement the 55.x traits.
+arrow-array-compat = { package = "arrow-array", version = "55", optional = true }
+arrow-json-compat = { package = "arrow-json", version = "55", optional = true }
+arrow-schema-compat = { package = "arrow-schema", version = "55", optional = true }
 
 [dev-dependencies]
 pgrx-tests = "=0.16.1"

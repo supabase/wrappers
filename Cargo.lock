@@ -414,6 +414,28 @@ dependencies = [
 
 [[package]]
 name = "arrow-json"
+version = "55.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5709d974c4ea5be96d900c01576c7c0b99705f4a3eec343648cb1ca863988a9c"
+dependencies = [
+ "arrow-array 55.2.0",
+ "arrow-buffer 55.2.0",
+ "arrow-cast 55.2.0",
+ "arrow-data 55.2.0",
+ "arrow-schema 55.2.0",
+ "chrono",
+ "half 2.7.1",
+ "indexmap 2.12.0",
+ "lexical-core 1.0.6",
+ "memchr",
+ "num",
+ "serde 1.0.228",
+ "serde_json",
+ "simdutf8",
+]
+
+[[package]]
+name = "arrow-json"
 version = "57.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0ff8357658bedc49792b13e2e862b80df908171275f8e6e075c460da5ee4bf86"
@@ -9648,8 +9670,11 @@ name = "wrappers"
 version = "0.6.0"
 dependencies = [
  "anyhow",
+ "arrow-array 55.2.0",
  "arrow-array 57.3.0",
- "arrow-json",
+ "arrow-json 55.2.0",
+ "arrow-json 57.3.0",
+ "arrow-schema 55.2.0",
  "arrow-schema 57.3.0",
  "async-compression 0.3.15",
  "aws-config",

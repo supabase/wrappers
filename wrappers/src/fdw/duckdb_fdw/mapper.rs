@@ -1,5 +1,5 @@
-use arrow_array::{Array, RecordBatch, array::ArrayRef};
-use arrow_json::ArrayWriter;
+use arrow_array_compat::{Array, RecordBatch, array::ArrayRef};
+use arrow_json_compat::ArrayWriter;
 use duckdb::{
     self,
     types::{EnumType, ListType, ValueRef},
