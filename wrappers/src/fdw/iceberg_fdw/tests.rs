@@ -37,6 +37,13 @@ mod tests {
                 &[],
             )
             .unwrap();
+            // deliberately drop the schema_id option to test the default schema handling
+            c.update(
+                r#"ALTER FOREIGN TABLE iceberg.bids OPTIONS (DROP schema_id)"#,
+                None,
+                &[],
+            )
+            .unwrap();
 
             let results = c
                 .select("SELECT * FROM iceberg.bids order by symbol", None, &[])
@@ -353,6 +360,79 @@ mod tests {
                 .filter_map(|r| r.get_by_name::<&str, _>("tcol").unwrap())
                 .collect::<Vec<_>>();
             assert_eq!(results, vec!["test text"]);
+
+            // -------------- test schema evolution. -------------------
+
+            // All four rows must be returned in id order.
+            let ids = c
+                .select(
+                    "SELECT id FROM iceberg.schema_evolution ORDER BY id",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<i64, _>("id").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(ids, vec![1, 2, 3, 4]);
+
+            // Rows written before the schema evolution must have NULL for the
+            // newly added columns.
+            let scores_for_old_rows = c
+                .select(
+                    "SELECT score FROM iceberg.schema_evolution WHERE id IN (1, 2) ORDER BY id",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .map(|r| r.get_by_name::<i32, _>("score").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(scores_for_old_rows, vec![None, None]);
+            let tags_for_old_rows = c
+                .select(
+                    "SELECT tag FROM iceberg.schema_evolution WHERE id IN (1, 2) ORDER BY id",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .map(|r| r.get_by_name::<&str, _>("tag").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(tags_for_old_rows, vec![None, None]);
+
+            // Rows written after the schema evolution must carry the new column
+            // values correctly.
+            let scores_for_new_rows = c
+                .select(
+                    "SELECT score FROM iceberg.schema_evolution WHERE id IN (3, 4) ORDER BY id",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<i32, _>("score").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(scores_for_new_rows, vec![42, 99]);
+
+            let tags_for_new_rows = c
+                .select(
+                    "SELECT tag FROM iceberg.schema_evolution WHERE id IN (3, 4) ORDER BY id",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("tag").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(tags_for_new_rows, vec!["gold", "silver"]);
+
+            // Pushdown filter on a newly added column must work correctly.
+            let names = c
+                .select(
+                    "SELECT name FROM iceberg.schema_evolution WHERE score > 50 ORDER BY id",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("name").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(names, vec!["dave"]);
         });
     }
 }

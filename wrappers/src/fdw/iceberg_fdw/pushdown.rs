@@ -2,8 +2,7 @@ use super::{IcebergFdwError, IcebergFdwResult};
 use chrono::NaiveDate;
 use iceberg::{
     expr::{Predicate, Reference},
-    spec::{Datum, PrimitiveType, Type},
-    table::Table,
+    spec::{Datum, PrimitiveType, Schema, Type},
 };
 use pgrx::varlena;
 use rust_decimal::Decimal;
@@ -98,8 +97,7 @@ fn cell_to_iceberg_datum(cell: &Cell, tgt_type: &Type) -> IcebergFdwResult<Optio
 
 // try to translate quals to predicates and push them down to Iceberg,
 // return None if pushdown is not possible
-pub(super) fn try_pushdown(table: &Table, quals: &[Qual]) -> IcebergFdwResult<Option<Predicate>> {
-    let schema = table.metadata().current_schema();
+pub(super) fn try_pushdown(schema: &Schema, quals: &[Qual]) -> IcebergFdwResult<Option<Predicate>> {
     let mut preds: Vec<Predicate> = Vec::new();
 
     for qual in quals {

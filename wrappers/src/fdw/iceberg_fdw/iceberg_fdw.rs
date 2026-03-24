@@ -1,19 +1,23 @@
 use arrow_array::{Array, RecordBatch, array::ArrayRef, builder::ArrayBuilder};
 use futures::StreamExt;
 use iceberg::{
-    Catalog, NamespaceIdent, TableCreation, TableIdent,
+    Catalog, CatalogBuilder, NamespaceIdent, TableCreation, TableIdent,
+    arrow::schema_to_arrow_schema,
     expr::Predicate,
     scan::ArrowRecordBatchStream,
-    spec::{DataFileFormat, NestedFieldRef, PrimitiveType, Type},
+    spec::{DataFileFormat, NestedFieldRef, PartitionKey, PrimitiveType, Type},
     table::Table,
     transaction::{ApplyTransactionAction, Transaction},
     writer::{
-        IcebergWriter, IcebergWriterBuilder, base_writer::data_file_writer::DataFileWriterBuilder,
-        file_writer::ParquetWriterBuilder,
+        IcebergWriter, IcebergWriterBuilder,
+        base_writer::data_file_writer::DataFileWriterBuilder,
+        file_writer::{ParquetWriterBuilder, rolling_writer::RollingFileWriterBuilder},
     },
 };
-use iceberg_catalog_rest::{RestCatalog, RestCatalogConfig};
-use iceberg_catalog_s3tables::{S3TablesCatalog, S3TablesCatalogConfig};
+use iceberg_catalog_rest::{
+    REST_CATALOG_PROP_URI, REST_CATALOG_PROP_WAREHOUSE, RestCatalogBuilder,
+};
+use iceberg_catalog_s3tables::S3TablesCatalogBuilder;
 use parquet::file::properties::WriterProperties;
 use pgrx::pg_sys;
 use std::collections::{HashMap, HashSet, VecDeque};
@@ -32,7 +36,7 @@ use super::{
 use crate::stats;
 
 #[wrappers_fdw(
-    version = "0.1.4",
+    version = "0.1.5",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/iceberg_fdw",
     error_type = "IcebergFdwError"
@@ -200,7 +204,7 @@ impl IcebergFdw {
         if let Some(table) = &self.table {
             let metadata = table.metadata();
             let iceberg_schema = metadata.current_schema();
-            let schema: arrow_schema::Schema = (iceberg_schema.as_ref()).try_into()?;
+            let schema = schema_to_arrow_schema(iceberg_schema.as_ref())?;
 
             for partition_rows in partitions.iter() {
                 // create builder for each column
@@ -261,19 +265,26 @@ impl IcebergFdw {
                 // get partition value from location generator
                 let partition_value = location_generator.partition_value();
 
-                let parquet_writer_builder = ParquetWriterBuilder::new(
-                    WriterProperties::default(),
-                    schema.clone(),
+                let parquet_writer_builder =
+                    ParquetWriterBuilder::new(WriterProperties::default(), schema.clone());
+                let rolling_writer_builder = RollingFileWriterBuilder::new_with_default_file_size(
+                    parquet_writer_builder,
                     table.file_io().clone(),
                     location_generator,
                     file_name_generator,
                 );
-                let data_file_writer_builder = DataFileWriterBuilder::new(
-                    parquet_writer_builder,
-                    partition_value,
-                    metadata.default_partition_spec().spec_id(),
-                );
-                let mut data_file_writer = self.rt.block_on(data_file_writer_builder.build())?;
+                let data_file_writer_builder = DataFileWriterBuilder::new(rolling_writer_builder);
+                // convert Option<Struct> partition value to Option<PartitionKey>
+                let partition_key = partition_value.map(|pv| {
+                    PartitionKey::new(
+                        metadata.default_partition_spec().as_ref().clone(),
+                        metadata.current_schema().clone(),
+                        pv,
+                    )
+                });
+                let mut data_file_writer = self
+                    .rt
+                    .block_on(data_file_writer_builder.build(partition_key))?;
 
                 // write the record batch to Iceberg and close the writer and get
                 // the data file
@@ -432,21 +443,20 @@ impl ForeignDataWrapper<IcebergFdwError> for IcebergFdw {
         //   1. S3 tables
         //   2. REST catalog with S3 (or compatible) as backend storage
         let catalog: Box<dyn Catalog> =
-            if let Some(aws_s3table_arn) = props.get("aws_s3table_bucket_arn") {
-                let catalog_config = S3TablesCatalogConfig::builder()
-                    .table_bucket_arn(aws_s3table_arn.into())
-                    .properties(props)
-                    .build();
-                Box::new(rt.block_on(S3TablesCatalog::new(catalog_config))?)
+            if let Some(aws_s3table_arn) = props.get("aws_s3table_bucket_arn").cloned() {
+                Box::new(
+                    rt.block_on(
+                        S3TablesCatalogBuilder::default()
+                            .with_table_bucket_arn(aws_s3table_arn)
+                            .load("s3tables", props),
+                    )?,
+                )
             } else {
-                let catalog_uri = require_option("catalog_uri", &props)?;
-                let warehouse = require_option_or("warehouse", &props, "warehouse");
-                let catalog_config = RestCatalogConfig::builder()
-                    .warehouse(warehouse.into())
-                    .uri(catalog_uri.into())
-                    .props(props)
-                    .build();
-                Box::new(RestCatalog::new(catalog_config))
+                let catalog_uri = require_option("catalog_uri", &props)?.to_string();
+                let warehouse = require_option_or("warehouse", &props, "warehouse").to_string();
+                props.insert(REST_CATALOG_PROP_URI.to_string(), catalog_uri);
+                props.insert(REST_CATALOG_PROP_WAREHOUSE.to_string(), warehouse);
+                Box::new(rt.block_on(RestCatalogBuilder::default().load("rest", props))?)
             };
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
@@ -482,7 +492,16 @@ impl ForeignDataWrapper<IcebergFdwError> for IcebergFdw {
         let tbl_ident = TableIdent::from_strs(require_option("table", options)?.split("."))?;
         let table = self.rt.block_on(self.catalog.load_table(&tbl_ident))?;
 
-        let schema = table.metadata().current_schema();
+        // resolve schema by id if specified (for schema evolution support), else use current
+        let schema = if let Some(id_str) = options.get("schema_id") {
+            let schema_id = id_str.parse::<i32>()?;
+            table
+                .metadata()
+                .schema_by_id(schema_id)
+                .ok_or_else(|| IcebergFdwError::SchemaNotFound(schema_id))?
+        } else {
+            table.metadata().current_schema()
+        };
         for tgt_col in columns {
             let col_name = &tgt_col.name;
             let field = schema
@@ -491,7 +510,7 @@ impl ForeignDataWrapper<IcebergFdwError> for IcebergFdw {
             self.src_fields.push(field.clone());
         }
 
-        self.predicate = try_pushdown(&table, quals)?;
+        self.predicate = try_pushdown(schema, quals)?;
         self.table = table.into();
         self.tgt_cols = columns.to_vec();
 
@@ -670,11 +689,12 @@ impl ForeignDataWrapper<IcebergFdwError> for IcebergFdw {
                     r#"create foreign table if not exists {} (
                         {}
                     )
-                    server {} options (table '{}'{})"#,
+                    server {} options (table '{}', schema_id '{}'{})"#,
                     tbl.identifier().name,
                     fields.join(","),
                     stmt.server_name,
                     tbl.identifier(),
+                    schema.schema_id(),
                     rowid_column.unwrap_or_default(),
                 ));
             }

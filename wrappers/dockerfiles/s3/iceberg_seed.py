@@ -324,9 +324,66 @@ def create_asks_table(catalog, namespace):
     print(data)
 
 
+def create_schema_evolution_table(catalog, namespace):
+    """Creates a table and evolves its schema to test schema evolution support.
+
+    Step 1: Create table with initial schema (id, name).
+    Step 2: Insert rows using the original schema.
+    Step 3: Add a new nullable column 'score' via update_schema().
+    Step 4: Add another new nullable column 'tag' via update_schema().
+    Step 5: Insert rows that include the new columns.
+    Rows inserted before the schema update should return NULL for 'score' and 'tag'.
+    """
+    tblname = f"{namespace}.schema_evolution"
+    schema = Schema(
+        NestedField(field_id=1, name="id", field_type=LongType(), required=True),
+        NestedField(field_id=2, name="name", field_type=StringType(), required=False),
+        identifier_field_ids=[1],
+    )
+
+    if catalog.table_exists(tblname):
+        catalog.purge_table(tblname)
+    tbl = catalog.create_table(identifier=tblname, schema=schema)
+
+    # Insert initial rows (no 'score' or 'tag' column yet)
+    df_v1 = pa.Table.from_pylist(
+        [
+            {"id": 1, "name": "alice"},
+            {"id": 2, "name": "bob"},
+        ],
+        schema=tbl.schema().as_arrow(),
+    )
+    tbl.overwrite(df_v1)
+
+    # Evolve schema: add 'score' (integer) column
+    with tbl.update_schema() as update:
+        update.add_column("score", IntegerType())
+
+    # Evolve schema again: add 'tag' (string) column
+    with tbl.update_schema() as update:
+        update.add_column("tag", StringType())
+
+    # Refresh table handle so it picks up the new schema
+    tbl = catalog.load_table(tblname)
+
+    # Insert new rows that use the evolved schema
+    df_v2 = pa.Table.from_pylist(
+        [
+            {"id": 3, "name": "carol", "score": 42, "tag": "gold"},
+            {"id": 4, "name": "dave",  "score": 99, "tag": "silver"},
+        ],
+        schema=tbl.schema().as_arrow(),
+    )
+    tbl.append(df_v2)
+
+    data = tbl.scan().to_arrow()
+    print(data)
+
+
 catalog.create_namespace_if_not_exists(namespace)
 ns = catalog.list_namespaces()
 tables = catalog.list_tables(namespace)
 
 create_bids_table(catalog, namespace)
 create_asks_table(catalog, namespace)
+create_schema_evolution_table(catalog, namespace)
