@@ -16,6 +16,9 @@ enum MysqlFdwError {
     #[error("column conversion failure: {0}")]
     ConversionError(String),
 
+    #[error("connection pool is not initialized")]
+    NoConnectionPool,
+
     #[error("{0}")]
     MysqlError(#[from] mysql_async::Error),
 

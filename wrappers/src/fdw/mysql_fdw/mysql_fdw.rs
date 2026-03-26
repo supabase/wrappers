@@ -1,6 +1,9 @@
 use crate::stats;
 use chrono::{NaiveDate, NaiveDateTime};
-use mysql_async::prelude::*;
+use futures_util::stream::StreamExt;
+use mysql_async::{
+    Conn, Error as MySqlError, Pool, ResultSetStream, Row as MySqlRow, TextProtocol, prelude::*,
+};
 use pgrx::{PgBuiltInOids, PgOid, prelude::to_timestamp};
 use std::collections::HashMap;
 
@@ -8,7 +11,7 @@ use supabase_wrappers::prelude::*;
 
 use super::{MysqlFdwError, MysqlFdwResult};
 
-fn get_col<T: FromValue>(src_row: &mysql_async::Row, col_name: &str) -> MysqlFdwResult<Option<T>> {
+fn get_col<T: FromValue>(src_row: &MySqlRow, col_name: &str) -> MysqlFdwResult<Option<T>> {
     match src_row.get_opt::<Option<T>, &str>(col_name) {
         Some(Ok(v)) => Ok(v),
         Some(Err(e)) => Err(MysqlFdwError::ConversionError(format!(
@@ -18,7 +21,7 @@ fn get_col<T: FromValue>(src_row: &mysql_async::Row, col_name: &str) -> MysqlFdw
     }
 }
 
-fn field_to_cell(src_row: &mysql_async::Row, tgt_col: &Column) -> MysqlFdwResult<Option<Cell>> {
+fn field_to_cell(src_row: &MySqlRow, tgt_col: &Column) -> MysqlFdwResult<Option<Cell>> {
     let col_name = tgt_col.name.as_str();
 
     let ret = match PgOid::from(tgt_col.type_oid) {
@@ -145,12 +148,13 @@ impl CellFormatter for MysqlCellFormatter {
 )]
 pub(crate) struct MysqlFdw {
     rt: Runtime,
-    conn_str: String,
+    pool: Option<Pool>,
     table: String,
     rowid_col: String,
     tgt_cols: Vec<Column>,
-    scan_result: Vec<mysql_async::Row>,
-    iter_idx: usize,
+    sql_query: String,
+    stream: Option<ResultSetStream<'static, 'static, 'static, MySqlRow, TextProtocol>>,
+    scaned_row_cnt: usize,
 }
 
 impl MysqlFdw {
@@ -217,6 +221,51 @@ impl MysqlFdw {
 
         Ok(sql)
     }
+
+    fn create_conn(&self) -> MysqlFdwResult<Conn> {
+        if let Some(pool) = &self.pool {
+            let conn = self.rt.block_on(async {
+                let conn = pool.get_conn().await?;
+                Ok::<_, MySqlError>(conn)
+            })?;
+            Ok(conn)
+        } else {
+            Err(MysqlFdwError::NoConnectionPool)
+        }
+    }
+
+    fn setup_streaming(&mut self) -> MysqlFdwResult<()> {
+        let sql = self.sql_query.clone();
+        let conn = self.create_conn()?;
+
+        self.stream = self
+            .rt
+            .block_on(async {
+                let stream = sql.stream::<MySqlRow, _>(conn).await?;
+                Ok::<_, MySqlError>(stream)
+            })?
+            .into();
+        Ok(())
+    }
+
+    fn execute_sql(&mut self, sql: String) -> MysqlFdwResult<()> {
+        let mut conn = self.create_conn()?;
+        self.rt.block_on(async {
+            conn.query_drop(&sql).await?;
+            Ok::<_, MySqlError>(())
+        })?;
+        stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsOut, 1);
+        Ok(())
+    }
+
+    fn disconnect_pool(&mut self) -> MysqlFdwResult<()> {
+        if let Some(pool) = self.pool.take() {
+            self.rt.block_on(async {
+                let _ = pool.disconnect().await;
+            });
+        }
+        Ok(())
+    }
 }
 
 impl ForeignDataWrapper<MysqlFdwError> for MysqlFdw {
@@ -231,16 +280,19 @@ impl ForeignDataWrapper<MysqlFdwError> for MysqlFdw {
             }
         };
 
+        let pool = Pool::new(conn_str.as_str());
+
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
 
         Ok(MysqlFdw {
             rt,
-            conn_str,
+            pool: pool.into(),
             table: String::default(),
             rowid_col: String::default(),
             tgt_cols: Vec::new(),
-            scan_result: Vec::new(),
-            iter_idx: 0,
+            sql_query: String::default(),
+            stream: None,
+            scaned_row_cnt: 0,
         })
     }
 
@@ -254,60 +306,53 @@ impl ForeignDataWrapper<MysqlFdwError> for MysqlFdw {
     ) -> MysqlFdwResult<()> {
         self.table = require_option("table", options)?.to_string();
         self.tgt_cols = columns.to_vec();
-        self.iter_idx = 0;
+        self.scaned_row_cnt = 0;
+        self.sql_query = self.deparse(quals, columns, sorts, limit)?;
+        self.setup_streaming()
+    }
 
-        let sql = self.deparse(quals, columns, sorts, limit)?;
+    fn iter_scan(&mut self, row: &mut Row) -> MysqlFdwResult<Option<()>> {
+        if let Some(stream) = &mut self.stream {
+            let src_row = self.rt.block_on(async {
+                if let Some(mysql_row) = stream.next().await {
+                    let mysql_row = mysql_row?;
+                    return Ok(Some(mysql_row));
+                }
+                Ok::<_, MySqlError>(None)
+            })?;
 
-        let url = self.conn_str.clone();
-        self.scan_result = self.rt.block_on(async {
-            let opts = mysql_async::Opts::from_url(&url).map_err(mysql_async::Error::from)?;
-            let mut conn = mysql_async::Conn::new(opts).await?;
-            let result: Vec<mysql_async::Row> = conn.query(&sql).await?;
-            let _ = conn.disconnect().await;
-            Ok::<_, mysql_async::Error>(result)
-        })?;
+            if let Some(src_row) = &src_row {
+                let mut tgt_row = Row::new();
+                for tgt_col in &self.tgt_cols {
+                    let cell = field_to_cell(src_row, tgt_col)?;
+                    tgt_row.push(&tgt_col.name, cell);
+                }
+                row.replace_with(tgt_row);
+                self.scaned_row_cnt += 1;
+                return Ok(Some(()));
+            }
+        }
 
         stats::inc_stats(
             Self::FDW_NAME,
             stats::Metric::RowsIn,
-            self.scan_result.len() as i64,
+            self.scaned_row_cnt as i64,
         );
         stats::inc_stats(
             Self::FDW_NAME,
             stats::Metric::RowsOut,
-            self.scan_result.len() as i64,
+            self.scaned_row_cnt as i64,
         );
 
-        Ok(())
-    }
-
-    fn iter_scan(&mut self, row: &mut Row) -> MysqlFdwResult<Option<()>> {
-        if self.iter_idx >= self.scan_result.len() {
-            return Ok(None);
-        }
-
-        let src_row = &self.scan_result[self.iter_idx];
-        let mut tgt_row = Row::new();
-
-        for tgt_col in &self.tgt_cols {
-            let cell = field_to_cell(src_row, tgt_col)?;
-            tgt_row.push(&tgt_col.name, cell);
-        }
-
-        row.replace_with(tgt_row);
-        self.iter_idx += 1;
-
-        Ok(Some(()))
+        Ok(None)
     }
 
     fn re_scan(&mut self) -> MysqlFdwResult<()> {
-        self.iter_idx = 0;
-        Ok(())
+        self.setup_streaming()
     }
 
     fn end_scan(&mut self) -> MysqlFdwResult<()> {
-        self.scan_result.clear();
-        Ok(())
+        self.disconnect_pool()
     }
 
     fn begin_modify(&mut self, options: &HashMap<String, String>) -> MysqlFdwResult<()> {
@@ -335,17 +380,7 @@ impl ForeignDataWrapper<MysqlFdwError> for MysqlFdw {
             cols.join(", "),
             vals.join(", ")
         );
-
-        let url = self.conn_str.clone();
-        self.rt.block_on(async {
-            let opts = mysql_async::Opts::from_url(&url).map_err(mysql_async::Error::from)?;
-            let mut conn = mysql_async::Conn::new(opts).await?;
-            conn.query_drop(&sql).await?;
-            let _ = conn.disconnect().await;
-            Ok::<_, mysql_async::Error>(())
-        })?;
-
-        stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsOut, 1);
+        self.execute_sql(sql)?;
 
         Ok(())
     }
@@ -372,17 +407,7 @@ impl ForeignDataWrapper<MysqlFdwError> for MysqlFdw {
             quote_ident(&self.rowid_col),
             fmt.fmt_cell(rowid)
         );
-
-        let url = self.conn_str.clone();
-        self.rt.block_on(async {
-            let opts = mysql_async::Opts::from_url(&url).map_err(mysql_async::Error::from)?;
-            let mut conn = mysql_async::Conn::new(opts).await?;
-            conn.query_drop(&sql).await?;
-            let _ = conn.disconnect().await;
-            Ok::<_, mysql_async::Error>(())
-        })?;
-
-        stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsOut, 1);
+        self.execute_sql(sql)?;
 
         Ok(())
     }
@@ -396,22 +421,12 @@ impl ForeignDataWrapper<MysqlFdwError> for MysqlFdw {
             quote_ident(&self.rowid_col),
             fmt.fmt_cell(rowid)
         );
-
-        let url = self.conn_str.clone();
-        self.rt.block_on(async {
-            let opts = mysql_async::Opts::from_url(&url).map_err(mysql_async::Error::from)?;
-            let mut conn = mysql_async::Conn::new(opts).await?;
-            conn.query_drop(&sql).await?;
-            let _ = conn.disconnect().await;
-            Ok::<_, mysql_async::Error>(())
-        })?;
-
-        stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsOut, 1);
+        self.execute_sql(sql)?;
 
         Ok(())
     }
 
     fn end_modify(&mut self) -> MysqlFdwResult<()> {
-        Ok(())
+        self.disconnect_pool()
     }
 }
