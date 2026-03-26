@@ -34,6 +34,7 @@
 | [Slack](./wasm-wrappers/fdw/slack_fdw)          | A Wasm FDW for [Slack](https://www.slack.com/)                                | ✅   | ❌     |
 | [Snowflake](./wasm-wrappers/fdw/snowflake_fdw)  | A Wasm FDW for [Snowflake](https://www.snowflake.com/)                        | ✅   | ✅     |
 | [Stripe](./wrappers/src/fdw/stripe_fdw)         | A FDW for [Stripe](https://stripe.com/) API                                   | ✅   | ✅     |
+| [Tencent CLS](./wrappers/src/fdw/tencent_cls_fdw) | A FDW for [Tencent Cloud Log Service](https://www.tencentcloud.com/products/cls) | ✅ | ❌  |
 
 ### Warning
 

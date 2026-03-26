@@ -30,6 +30,7 @@ nav:
           - S3 Vectors: "catalog/s3vectors.md"
           - Stripe: "catalog/stripe.md"
           - SQL Server: "catalog/mssql.md"
+          - Tencent CLS: "catalog/tencent_cls.md"
       - Wasm:
           - catalog/wasm/index.md
           - Cal.com: "catalog/cal.md"
