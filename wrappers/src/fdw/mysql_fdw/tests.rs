@@ -25,8 +25,9 @@ mod tests {
             .expect("failed to execute query");
         };
         exec_mysql_query("CREATE DATABASE IF NOT EXISTS testdb");
+        exec_mysql_query("DROP TABLE IF EXISTS testdb.users");
         exec_mysql_query(
-            r#"CREATE TABLE IF NOT EXISTS testdb.users (
+            r#"CREATE TABLE testdb.users (
                 id BIGINT PRIMARY KEY AUTO_INCREMENT,
                 name VARCHAR(100) NOT NULL,
                 email VARCHAR(200) NOT NULL,
@@ -37,16 +38,17 @@ mod tests {
                 salary DOUBLE,
                 balance DECIMAL(12,2),
                 birth_date DATE,
+                metadata JSON,
                 created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
             )"#,
         );
         exec_mysql_query("TRUNCATE TABLE testdb.users");
         exec_mysql_query(
-            r#"INSERT INTO testdb.users (name, email, active, age, score, rating, salary, balance, birth_date, created_at) VALUES
-                ('Alice', 'alice@example.com', TRUE, 30, 85, 4.5, 75000.50, 120.50, '1995-03-15', '2026-03-01 10:00:00'),
-                ('Bob', 'bob@example.com', FALSE, 41, 72, 3.5, 52000.75, 88.25, '1984-07-22', '2026-03-02 11:30:00'),
-                ('Carol', 'carol@example.com', TRUE, 27, 91, 5.0, 98000.00, 999.99, '1998-11-30', '2026-03-03 09:15:00'),
-                ('Dave', 'dave@example.com', TRUE, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-04 14:45:00')"#,
+            r#"INSERT INTO testdb.users (name, email, active, age, score, rating, salary, balance, birth_date, metadata, created_at) VALUES
+                ('Alice', 'alice@example.com', TRUE, 30, 85, 4.5, 75000.50, 120.50, '1995-03-15', '{\"role\": \"admin\", \"level\": 5}', '2026-03-01 10:00:00'),
+                ('Bob', 'bob@example.com', FALSE, 41, 72, 3.5, 52000.75, 88.25, '1984-07-22', '{\"role\": \"user\", \"level\": 2}', '2026-03-02 11:30:00'),
+                ('Carol', 'carol@example.com', TRUE, 27, 91, 5.0, 98000.00, 999.99, '1998-11-30', '{\"role\": \"editor\", \"level\": 3}', '2026-03-03 09:15:00'),
+                ('Dave', 'dave@example.com', TRUE, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-04 14:45:00')"#,
         );
     }
 
@@ -94,6 +96,27 @@ mod tests {
                 &[],
             )
             .expect("failed to import foreign schema");
+            c.update(
+                r#"
+                CREATE FOREIGN TABLE mysql.users2 (
+                    id bigint,
+                    name text,
+                    email text,
+                    active boolean,
+                    age integer,
+                    balance numeric,
+                    created_at timestamp
+                )
+                SERVER mysql_server
+                OPTIONS (
+                    table '(select id,name,email,active,age,balance,created_at from testdb.users)',
+                    rowid_column 'id'
+                );
+            "#,
+                None,
+                &[],
+            )
+            .expect("failed to create foreign table with custom query");
 
             let results = c
                 .select("SELECT * FROM mysql.users order by id", None, &[])
@@ -102,10 +125,17 @@ mod tests {
                 .collect::<Vec<_>>();
             assert_eq!(results, vec!["Alice", "Bob", "Carol", "Dave"]);
 
+            let results = c
+                .select("SELECT * FROM mysql.users2 order by id", None, &[])
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("name").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(results, vec!["Alice", "Bob", "Carol", "Dave"]);
+
             c.update(
                 r#"INSERT INTO mysql.users
-                    (name, email, active, age, score, rating, salary, balance, birth_date, created_at)
-                    VALUES ('Eve', 'eve@example.com', true, 35, 88, 4.0, 60000.00, 42.75, '1990-06-10', '2026-03-05 08:00:00')"#,
+                    (name, email, active, age, score, rating, salary, balance, birth_date, metadata, created_at)
+                    VALUES ('Eve', 'eve@example.com', true, 35, 88, 4.0, 60000.00, 42.75, '1990-06-10', '{"role": "guest", "level": 1}', '2026-03-05 08:00:00')"#,
                 None,
                 &[],
             )
@@ -190,6 +220,32 @@ mod tests {
                 .next()
                 .and_then(|r| r.get_by_name::<f32, _>("rating").ok().flatten());
             assert_eq!(rating, Some(5.0f32));
+
+            // Verify JSON (metadata) is mapped to jsonb and round-trips correctly
+            let metadata = c
+                .select(
+                    r#"SELECT metadata->>'role' AS role FROM mysql.users WHERE id = 1"#,
+                    None,
+                    &[],
+                )
+                .expect("failed to select metadata")
+                .next()
+                .and_then(|r| r.get_by_name::<&str, _>("role").ok().flatten())
+                .map(str::to_string);
+            assert_eq!(metadata.as_deref(), Some("admin"));
+
+            // Verify NULL JSON round-trips as NULL
+            let null_metadata = c
+                .select(
+                    r#"SELECT metadata FROM mysql.users WHERE id = 4"#,
+                    None,
+                    &[],
+                )
+                .expect("failed to select null metadata")
+                .next()
+                .and_then(|r| r.get_by_name::<pgrx::datum::JsonB, _>("metadata").ok())
+                .expect("row missing");
+            assert!(null_metadata.is_none());
 
             c.update(r#"DELETE FROM mysql.users WHERE id = 2"#, None, &[])
                 .expect("failed to delete row through mysql fdw");

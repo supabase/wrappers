@@ -45,6 +45,15 @@ fn field_to_cell(src_row: &MySqlRow, tgt_col: &Column) -> MysqlFdwResult<Option<
         PgOid::BuiltIn(PgBuiltInOids::TEXTOID) => {
             get_col::<String>(src_row, col_name)?.map(Cell::String)
         }
+        PgOid::BuiltIn(PgBuiltInOids::JSONBOID) => match get_col::<String>(src_row, col_name)? {
+            Some(s) => {
+                let v: serde_json::Value = serde_json::from_str(&s).map_err(|e| {
+                    MysqlFdwError::ConversionError(format!("failed to parse json '{s}': {e}"))
+                })?;
+                Some(Cell::Json(pgrx::JsonB(v)))
+            }
+            None => None,
+        },
         PgOid::BuiltIn(PgBuiltInOids::DATEOID) => match get_col::<String>(src_row, col_name)? {
             Some(s) => {
                 let v = NaiveDate::parse_from_str(&s, "%Y-%m-%d").map_err(|e| {
@@ -173,6 +182,10 @@ impl CellFormatter for MysqlCellFormatter {
             Cell::String(v) => {
                 format!("'{}'", v.replace('\\', "\\\\").replace('\'', "\\'"))
             }
+            Cell::Json(v) => {
+                let s = v.0.to_string();
+                format!("'{}'", s.replace('\\', "\\\\").replace('\'', "\\'"))
+            }
             _ => format!("{cell}"),
         }
     }
@@ -215,11 +228,12 @@ impl MysqlFdw {
                 .join(", ")
         };
 
-        let mut sql = format!(
-            "select {} from {} as _wrappers_tbl",
-            tgts,
+        let table = if self.table.starts_with("(") && self.table.ends_with(")") {
+            self.table.clone()
+        } else {
             quote_ident(&self.table)
-        );
+        };
+        let mut sql = format!("select {tgts} from {table} as _wrappers_tbl");
 
         if !quals.is_empty() {
             let mut fmt = MysqlCellFormatter;

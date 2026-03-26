@@ -148,6 +148,7 @@ mysql_fdw = [
     "chrono",
     "tokio",
     "futures-util",
+    "serde_json",
     "thiserror",
 ]
 redis_fdw = [
