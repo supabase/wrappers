@@ -1,10 +1,10 @@
 ---
 source:
 documentation:
-author: supabase
+author: 陈杨文(https://github.com/wenerme)
 tags:
   - native
-  - official
+  - community
 ---
 
 # MySQL
