@@ -4877,7 +4877,7 @@ dependencies = [
  "pem",
  "percent-encoding",
  "rand 0.9.2",
- "rustls 0.23.34",
+ "rustls 0.23.37",
  "rustls-pemfile 2.2.0",
  "serde 1.0.228",
  "serde_json",

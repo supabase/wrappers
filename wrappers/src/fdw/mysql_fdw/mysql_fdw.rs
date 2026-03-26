@@ -4,8 +4,8 @@ use futures_util::stream::StreamExt;
 use mysql_async::{
     Conn, Error as MySqlError, Pool, ResultSetStream, Row as MySqlRow, TextProtocol, prelude::*,
 };
-use pgrx::{PgBuiltInOids, PgOid, prelude::to_timestamp};
-use std::collections::HashMap;
+use pgrx::{PgBuiltInOids, PgOid, pg_sys, prelude::to_timestamp};
+use std::collections::{HashMap, HashSet};
 
 use supabase_wrappers::prelude::*;
 
@@ -89,6 +89,44 @@ fn parse_naive_datetime(s: &str) -> MysqlFdwResult<NaiveDateTime> {
     NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S%.f")
         .or_else(|_| NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S"))
         .map_err(|e| MysqlFdwError::ConversionError(format!("failed to parse datetime '{s}': {e}")))
+}
+
+/// Maps a MySQL column type to the corresponding PostgreSQL type string.
+/// Returns `None` for types that have no direct mapping (caller decides strict/skip).
+fn mysql_type_to_pg(
+    data_type: &str,
+    column_type: &str,
+    numeric_precision: Option<u64>,
+    numeric_scale: Option<u64>,
+) -> Option<String> {
+    match data_type.to_lowercase().as_str() {
+        "boolean" | "bool" => Some("boolean".to_string()),
+        "tinyint" => {
+            // tinyint(1) is the conventional MySQL boolean representation
+            if column_type.to_lowercase() == "tinyint(1)" {
+                Some("boolean".to_string())
+            } else {
+                Some("smallint".to_string())
+            }
+        }
+        "smallint" | "year" => Some("smallint".to_string()),
+        "mediumint" | "int" | "integer" => Some("integer".to_string()),
+        "bigint" => Some("bigint".to_string()),
+        "float" => Some("real".to_string()),
+        "double" | "double precision" => Some("double precision".to_string()),
+        "decimal" | "numeric" => match (numeric_precision, numeric_scale) {
+            (Some(p), Some(s)) => Some(format!("numeric({p},{s})")),
+            _ => Some("numeric".to_string()),
+        },
+        "char" | "varchar" | "tinytext" | "text" | "mediumtext" | "longtext" | "enum" | "set" => {
+            Some("text".to_string())
+        }
+        "date" => Some("date".to_string()),
+        "datetime" | "timestamp" => Some("timestamp".to_string()),
+        "time" => Some("time".to_string()),
+        "json" => Some("jsonb".to_string()),
+        _ => None,
+    }
 }
 
 fn quote_ident(name: &str) -> String {
@@ -428,5 +466,145 @@ impl ForeignDataWrapper<MysqlFdwError> for MysqlFdw {
 
     fn end_modify(&mut self) -> MysqlFdwResult<()> {
         self.disconnect_pool()
+    }
+
+    fn import_foreign_schema(
+        &mut self,
+        stmt: ImportForeignSchemaStmt,
+    ) -> MysqlFdwResult<Vec<String>> {
+        let is_strict =
+            require_option_or("strict", &stmt.options, "false").eq_ignore_ascii_case("true");
+
+        // remote_schema is the MySQL database (schema) name
+        let db = stmt.remote_schema.replace('\'', "\\'");
+
+        let sql = format!(
+            r#"
+            select table_name, column_name, data_type, column_type, is_nullable,
+             numeric_precision, numeric_scale, column_key
+             from information_schema.columns
+             where table_schema = '{db}'
+             order by table_name, ordinal_position
+        "#
+        );
+
+        let mut conn = self.create_conn()?;
+        let rows: Vec<MySqlRow> = self.rt.block_on(async { conn.query(sql).await })?;
+        self.rt.block_on(async { conn.disconnect().await })?;
+
+        // Collect column info grouped by table, preserving row order
+        let mut table_names: Vec<String> = Vec::new();
+        // (col_name, data_type, column_type, is_nullable, numeric_precision, numeric_scale, is_pk)
+        type TableColInfo =
+            HashMap<String, Vec<(String, String, String, bool, Option<u64>, Option<u64>, bool)>>;
+        let mut table_cols: TableColInfo = HashMap::new();
+
+        for row in &rows {
+            let table_name: String = row.get("TABLE_NAME").unwrap_or_default();
+            let column_name: String = row.get("COLUMN_NAME").unwrap_or_default();
+            let data_type: String = row.get("DATA_TYPE").unwrap_or_default();
+            let column_type: String = row.get("COLUMN_TYPE").unwrap_or_default();
+            let is_nullable: String = row.get("IS_NULLABLE").unwrap_or_default();
+            let numeric_precision: Option<u64> =
+                row.get::<Option<u64>, _>("NUMERIC_PRECISION").flatten();
+            let numeric_scale: Option<u64> = row.get::<Option<u64>, _>("NUMERIC_SCALE").flatten();
+            let column_key: String = row.get("COLUMN_KEY").unwrap_or_default();
+
+            if !table_cols.contains_key(&table_name) {
+                table_names.push(table_name.clone());
+            }
+            table_cols.entry(table_name).or_default().push((
+                column_name,
+                data_type,
+                column_type,
+                is_nullable.eq_ignore_ascii_case("YES"),
+                numeric_precision,
+                numeric_scale,
+                column_key == "PRI",
+            ));
+        }
+
+        // Apply LIMIT TO / EXCEPT filtering
+        let all_tables: HashSet<&str> = table_names.iter().map(|s| s.as_str()).collect();
+        let table_list: HashSet<&str> = stmt.table_list.iter().map(|s| s.as_str()).collect();
+        let selected: HashSet<&str> = match stmt.list_type {
+            ImportSchemaType::FdwImportSchemaAll => all_tables,
+            ImportSchemaType::FdwImportSchemaLimitTo => {
+                all_tables.intersection(&table_list).copied().collect()
+            }
+            ImportSchemaType::FdwImportSchemaExcept => {
+                all_tables.difference(&table_list).copied().collect()
+            }
+        };
+
+        let mut ret: Vec<String> = Vec::new();
+
+        for table_name in &table_names {
+            if !selected.contains(table_name.as_str()) {
+                continue;
+            }
+
+            let columns = match table_cols.get(table_name) {
+                Some(c) => c,
+                None => continue,
+            };
+
+            let mut fields: Vec<String> = Vec::new();
+            let mut rowid_col: Option<String> = None;
+
+            for (col_name, data_type, column_type, is_nullable, num_prec, num_scale, is_pk) in
+                columns
+            {
+                match mysql_type_to_pg(data_type, column_type, *num_prec, *num_scale) {
+                    Some(pg_type) => {
+                        let not_null = if !is_nullable { " not null" } else { "" };
+                        let quoted_col = pgrx::spi::quote_identifier(col_name);
+                        fields.push(format!("{quoted_col} {pg_type}{not_null}"));
+                        if *is_pk && rowid_col.is_none() {
+                            rowid_col = Some(col_name.clone());
+                        }
+                    }
+                    None => {
+                        if is_strict {
+                            return Err(MysqlFdwError::UnsupportedColumnType(format!(
+                                "{table_name}.{col_name}"
+                            )));
+                        }
+                    }
+                }
+            }
+
+            if !fields.is_empty() {
+                let rowid_opt = rowid_col
+                    .map(|r| format!(", rowid_column '{}'", r.replace('\'', "''")))
+                    .unwrap_or_default();
+                let table_ident = pgrx::spi::quote_identifier(table_name);
+                let table_opt = table_name.replace('\'', "''");
+
+                ret.push(format!(
+                    r#"create foreign table if not exists {table_ident} (
+                    {}
+                )
+                server {} options (table '{table_opt}'{rowid_opt})"#,
+                    fields.join(",\n"),
+                    stmt.server_name,
+                ));
+            }
+        }
+
+        self.disconnect_pool()?;
+
+        Ok(ret)
+    }
+
+    fn validator(options: Vec<Option<String>>, catalog: Option<pg_sys::Oid>) -> MysqlFdwResult<()> {
+        if let Some(oid) = catalog
+            && oid == FOREIGN_TABLE_RELATION_ID
+        {
+            // check required option
+            check_options_contain(&options, "table")?;
+        }
+
+        Ok(())
     }
 }
