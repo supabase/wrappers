@@ -28,7 +28,7 @@ enum DuckdbFdwError {
     NumericError(#[from] pgrx::datum::numeric_support::error::Error),
 
     #[error("arrow error: {0}")]
-    ArrowError(#[from] arrow_schema::ArrowError),
+    ArrowError(#[from] arrow_schema_compat::ArrowError),
 
     #[error("uuid error: {0}")]
     UuidConversionError(#[from] uuid::Error),

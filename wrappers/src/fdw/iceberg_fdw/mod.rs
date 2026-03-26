@@ -27,6 +27,9 @@ enum IcebergFdwError {
     #[error("cannot import column '{0}' data type '{1}'")]
     ImportColumnError(String, String),
 
+    #[error("schema with id {0} not found")]
+    SchemaNotFound(i32),
+
     #[error("vault error: '{0}'")]
     VaultError(String),
 

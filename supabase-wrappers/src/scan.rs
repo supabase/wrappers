@@ -51,6 +51,8 @@ struct FdwState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
     values: Vec<Datum>,
     nulls: Vec<bool>,
     row: Row,
+    // fingerprint of current parameter values to detect rescan changes
+    param_fingerprint: String,
     _phantom: PhantomData<E>,
 }
 
@@ -67,6 +69,7 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwState<E, W> {
             values: Vec::new(),
             nulls: Vec::new(),
             row: Row::new(),
+            param_fingerprint: String::new(),
             _phantom: PhantomData,
         }
     }
@@ -329,8 +332,8 @@ pub(super) extern "C-unwind" fn explain_foreign_scan<
     }
 }
 
-// extract paramter value and assign it to qual in scan state
-unsafe fn assign_paramenter_value<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
+// extract parameter value and assign it to qual in scan state
+unsafe fn assign_parameter_value<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     node: *mut pg_sys::ForeignScanState,
     state: &mut FdwState<E, W>,
 ) {
@@ -341,19 +344,23 @@ unsafe fn assign_paramenter_value<E: Into<ErrorReport>, W: ForeignDataWrapper<E>
         // assign parameter value to qual
         for qual in &mut state.quals.iter_mut() {
             if let Some(param) = &mut qual.param {
+                let mut current_value: Option<Value> = None;
                 match param.kind {
                     ParamKind::PARAM_EXTERN => {
                         // get parameter list in execution state
                         let plist_info = (*estate).es_param_list_info;
-                        if plist_info.is_null() {
-                            continue;
-                        }
-                        let params_cnt = (*plist_info).numParams as usize;
-                        let plist = (*plist_info).params.as_slice(params_cnt);
-                        let p: pg_sys::ParamExternData = plist[param.id - 1];
-                        if let Some(cell) = Cell::from_polymorphic_datum(p.value, p.isnull, p.ptype)
-                        {
-                            qual.value = Value::Cell(cell);
+                        if !plist_info.is_null() {
+                            let params_cnt = (*plist_info).numParams as usize;
+                            if param.id > 0 && param.id <= params_cnt {
+                                let plist = (*plist_info).params.as_slice(params_cnt);
+                                let p: pg_sys::ParamExternData = plist[param.id - 1];
+                                if let Some(cell) =
+                                    Cell::from_polymorphic_datum(p.value, p.isnull, p.ptype)
+                                {
+                                    qual.value = Value::Cell(cell.clone());
+                                    current_value = Some(Value::Cell(cell));
+                                }
+                            }
                         }
                     }
                     ParamKind::PARAM_EXEC => {
@@ -370,19 +377,49 @@ unsafe fn assign_paramenter_value<E: Into<ErrorReport>, W: ForeignDataWrapper<E>
                         ) && let Some(cell) =
                             Cell::from_polymorphic_datum(datum, isnull, param.type_oid)
                         {
-                            let mut eval_value = param
-                                .eval_value
-                                .lock()
-                                .expect("param.eval_value should be locked");
-                            *eval_value = Some(Value::Cell(cell.clone()));
-                            qual.value = Value::Cell(cell);
+                            qual.value = Value::Cell(cell.clone());
+                            current_value = Some(Value::Cell(cell));
                         }
                     }
                     _ => {}
                 }
+
+                let mut eval_value = param
+                    .eval_value
+                    .lock()
+                    .expect("param.eval_value should be locked");
+                *eval_value = current_value;
             }
         }
     }
+}
+
+fn compute_param_fingerprint<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
+    state: &FdwState<E, W>,
+) -> String {
+    state
+        .quals
+        .iter()
+        .filter_map(|qual| {
+            qual.param.as_ref().map(|param| {
+                let eval_value = match param.eval_value.lock() {
+                    Ok(value) => format!("{:?}", *value),
+                    Err(_) => "lock_error".to_string(),
+                };
+                format!(
+                    "{}|{}|{}|{}|{}|{}|{}",
+                    qual.field,
+                    qual.operator,
+                    qual.use_or,
+                    param.kind,
+                    param.id,
+                    param.type_oid,
+                    eval_value,
+                )
+            })
+        })
+        .collect::<Vec<_>>()
+        .join(";")
 }
 
 #[pg_guard]
@@ -401,7 +438,8 @@ pub(super) extern "C-unwind" fn begin_foreign_scan<
         assert!(!state.is_null());
 
         // assign parameter values to qual
-        assign_paramenter_value(node, &mut state);
+        assign_parameter_value(node, &mut state);
+        state.param_fingerprint = compute_param_fingerprint(&state);
 
         // begin scan if it is not EXPLAIN statement
         if eflags & pg_sys::EXEC_FLAG_EXPLAIN_ONLY as c_int <= 0 {
@@ -440,7 +478,7 @@ pub(super) extern "C-unwind" fn iterate_foreign_scan<
         let mut state = PgBox::<FdwState<E, W>>::from_pg((*node).fdw_state as _);
 
         // evaluate parameter values
-        assign_paramenter_value(node, &mut state);
+        assign_parameter_value(node, &mut state);
 
         // clear slot
         let slot = (*node).ss.ss_ScanTupleSlot;
@@ -497,7 +535,16 @@ pub(super) extern "C-unwind" fn re_scan_foreign_scan<
         let fdw_state = (*node).fdw_state as *mut FdwState<E, W>;
         if !fdw_state.is_null() {
             let mut state = PgBox::<FdwState<E, W>>::from_pg(fdw_state);
-            let result = state.re_scan();
+            assign_parameter_value(node, &mut state);
+            let next_fingerprint = compute_param_fingerprint(&state);
+            let result = if next_fingerprint != state.param_fingerprint {
+                state.param_fingerprint = next_fingerprint;
+                // end the active scan to release resources before restarting with new params
+                let _ = state.end_scan();
+                state.begin_scan()
+            } else {
+                state.re_scan()
+            };
             if result.is_err() {
                 drop_fdw_state(state.as_ptr());
                 (*node).fdw_state = ptr::null::<FdwState<E, W>>() as _;
