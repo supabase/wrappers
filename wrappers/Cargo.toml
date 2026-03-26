@@ -143,6 +143,14 @@ mssql_fdw = [
     "num-traits",
     "thiserror",
 ]
+mysql_fdw = [
+    "mysql_async",
+    "chrono",
+    "tokio",
+    "futures-util",
+    "serde_json",
+    "thiserror",
+]
 redis_fdw = [
     "redis",
     "serde_json",
@@ -206,6 +214,7 @@ native_fdws = [
     "logflare_fdw",
     "auth0_fdw",
     "mssql_fdw",
+    "mysql_fdw",
     "redis_fdw",
     "cognito_fdw",
     "iceberg_fdw",
@@ -285,6 +294,9 @@ parquet = { version = "57.3.0", features = ["async"], optional = true }
 arrow-array = { version = "57.3.0", optional = true }
 arrow-schema = { version = "57.3.0", optional = true }
 arrow-json = { version = "57.3.0", optional = true }
+
+# for mysql_fdw
+mysql_async = { version = "0.36.1", optional = true, default-features = false, features = ["default-rustls"] }
 
 # for mssql_fdw
 tiberius = { version = "0.12.2", features = [

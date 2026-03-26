@@ -222,3 +222,17 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-local
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: testdb
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: mysqladmin ping -h localhost -P 3306 -u root -ppassword || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 20

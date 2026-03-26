@@ -24,6 +24,7 @@ nav:
           - Firebase: "catalog/firebase.md"
           - Iceberg : "catalog/iceberg.md"
           - Logflare: "catalog/logflare.md"
+          - MySQL: "catalog/mysql.md"
           - Redis: "catalog/redis.md"
           - S3 (CSV, JSON, Parquet): "catalog/s3.md"
           - S3 Vectors: "catalog/s3vectors.md"

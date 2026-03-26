@@ -22,6 +22,7 @@
 | [HubSpot](./wasm-wrappers/fdw/hubspot_fdw)      | A Wasm FDW for [HubSpot](https://www.hubspot.com/)                            | ✅   | ❌     |
 | [Infura](./wasm-wrappers/fdw/infura_fdw)        | A Wasm FDW for [Infura](https://www.infura.io/) blockchain data               | ✅   | ❌     |
 | [Logflare](./wrappers/src/fdw/logflare_fdw)     | A FDW for [Logflare](https://logflare.app/)                                   | ✅   | ❌     |
+| [MySQL](./wrappers/src/fdw/mysql_fdw)           | A FDW for [MySQL](https://www.mysql.com/)                                     | ✅   | ✅     |
 | [Notion](./wasm-wrappers/fdw/notion_fdw)        | A Wasm FDW for [Notion](https://www.notion.so/)                               | ✅   | ❌     |
 | [OpenAPI](./wasm-wrappers/fdw/openapi_fdw)      | A Wasm FDW for any [OpenAPI](https://www.openapis.org/) 3.0+ REST API         | ✅   | ❌     |
 | [Orb](./wasm-wrappers/fdw/orb_fdw)              | A Wasm FDW for [Orb](https://www.withorb.com/)                                | ✅   | ❌     |
