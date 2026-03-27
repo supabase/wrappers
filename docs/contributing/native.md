@@ -25,6 +25,12 @@ pub trait ForeignDataWrapper {
     fn delete(...);
     fn end_modify(...);
 
+    // functions for aggregate pushdown (optional)
+    fn supported_aggregates(...) -> Vec<AggregateKind>;
+    fn supports_group_by(...) -> bool;
+    fn get_aggregate_rel_size(...) -> (i64, i32);
+    fn begin_aggregate_scan(...);
+
     // other optional functions
     ...
 }
