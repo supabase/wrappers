@@ -682,6 +682,175 @@ impl Limit {
     }
 }
 
+/// Represents the type of aggregate function for pushdown
+///
+/// This enum is used to declare which aggregate functions an FDW supports
+/// for remote execution via [`ForeignDataWrapper::supported_aggregates`].
+///
+/// ## Examples
+///
+/// ```rust,no_run
+/// use supabase_wrappers::prelude::*;
+///
+/// fn get_supported() -> Vec<AggregateKind> {
+///     vec![
+///         AggregateKind::Count,
+///         AggregateKind::Sum,
+///         AggregateKind::Avg,
+///     ]
+/// }
+/// ```
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AggregateKind {
+    /// COUNT(*) - count all rows
+    Count,
+    /// COUNT(column) - count non-null values in a column
+    CountColumn,
+    /// SUM(column) - sum of values
+    Sum,
+    /// AVG(column) - average of values
+    Avg,
+    /// MIN(column) - minimum value
+    Min,
+    /// MAX(column) - maximum value
+    Max,
+}
+
+impl AggregateKind {
+    /// Returns the SQL function name for this aggregate kind
+    ///
+    /// ## Examples
+    ///
+    /// ```rust,no_run
+    /// use supabase_wrappers::prelude::*;
+    ///
+    /// assert_eq!(AggregateKind::Count.sql_name(), "COUNT");
+    /// assert_eq!(AggregateKind::Sum.sql_name(), "SUM");
+    /// ```
+    pub fn sql_name(&self) -> &'static str {
+        match self {
+            AggregateKind::Count => "COUNT",
+            AggregateKind::CountColumn => "COUNT",
+            AggregateKind::Sum => "SUM",
+            AggregateKind::Avg => "AVG",
+            AggregateKind::Min => "MIN",
+            AggregateKind::Max => "MAX",
+        }
+    }
+}
+
+/// Represents a single aggregate operation in a pushed-down query
+///
+/// This struct contains all information needed for an FDW to execute an
+/// aggregate function remotely.
+///
+/// ## Examples
+///
+/// ```rust,no_run
+/// use supabase_wrappers::prelude::*;
+///
+/// // COUNT(*) aggregate
+/// let count_all = Aggregate {
+///     kind: AggregateKind::Count,
+///     column: None,
+///     distinct: false,
+///     alias: "count".to_string(),
+///     type_oid: pgrx::pg_sys::INT8OID,
+/// };
+///
+/// // SUM(amount) aggregate
+/// let sum_amount = Aggregate {
+///     kind: AggregateKind::Sum,
+///     column: Some(Column {
+///         name: "amount".to_string(),
+///         num: 1,
+///         type_oid: pgrx::pg_sys::FLOAT8OID,
+///     }),
+///     distinct: false,
+///     alias: "total_amount".to_string(),
+///     type_oid: pgrx::pg_sys::FLOAT8OID,
+/// };
+/// ```
+#[derive(Debug, Clone)]
+pub struct Aggregate {
+    /// Type of aggregate function
+    pub kind: AggregateKind,
+
+    /// Column being aggregated (None for COUNT(*))
+    pub column: Option<Column>,
+
+    /// Whether DISTINCT modifier is applied (e.g., COUNT(DISTINCT col))
+    pub distinct: bool,
+
+    /// Output column name/alias for the aggregate result
+    pub alias: String,
+
+    /// Result type OID of the aggregate function (from Aggref::aggtype)
+    pub type_oid: Oid,
+}
+
+impl Aggregate {
+    /// Deparses the aggregate into SQL syntax
+    ///
+    /// ## Examples
+    ///
+    /// ```rust,no_run
+    /// use supabase_wrappers::prelude::*;
+    ///
+    /// let count_all = Aggregate {
+    ///     kind: AggregateKind::Count,
+    ///     column: None,
+    ///     distinct: false,
+    ///     alias: "cnt".to_string(),
+    ///     type_oid: pgrx::pg_sys::INT8OID,
+    /// };
+    /// assert_eq!(count_all.deparse(), "COUNT(*)");
+    ///
+    /// let sum_col = Aggregate {
+    ///     kind: AggregateKind::Sum,
+    ///     column: Some(Column { name: "price".to_string(), num: 1, type_oid: pgrx::pg_sys::Oid::INVALID }),
+    ///     distinct: false,
+    ///     alias: "total".to_string(),
+    ///     type_oid: pgrx::pg_sys::FLOAT8OID,
+    /// };
+    /// assert_eq!(sum_col.deparse(), "SUM(price)");
+    /// ```
+    pub fn deparse(&self) -> String {
+        let func_name = self.kind.sql_name();
+        match self.kind {
+            AggregateKind::Count => format!("{func_name}(*)"),
+            _ => {
+                let col_name = self.column.as_ref().map(|c| c.name.as_str()).unwrap_or("*");
+                if self.distinct {
+                    format!("{func_name}(DISTINCT {col_name})")
+                } else {
+                    format!("{func_name}({col_name})")
+                }
+            }
+        }
+    }
+
+    /// Deparses the aggregate with its alias for use in SELECT
+    ///
+    /// ## Examples
+    ///
+    /// ```rust,no_run
+    /// use supabase_wrappers::prelude::*;
+    ///
+    /// let count_all = Aggregate {
+    ///     kind: AggregateKind::Count,
+    ///     column: None,
+    ///     distinct: false,
+    ///     alias: "cnt".to_string(),
+    ///     type_oid: pgrx::pg_sys::INT8OID,
+    /// };
+    /// assert_eq!(count_all.deparse_with_alias(), "COUNT(*) AS cnt");
+    /// ```
+    pub fn deparse_with_alias(&self) -> String {
+        format!("{} AS {}", self.deparse(), self.alias)
+    }
+}
+
 /// The Foreign Data Wrapper trait
 ///
 /// This is the main interface for your foreign data wrapper. Required functions
@@ -831,6 +1000,177 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
         Ok(())
     }
 
+    // =========================================================================
+    // Aggregate Pushdown Methods
+    // =========================================================================
+
+    /// Returns the list of aggregate functions this FDW can push down to the
+    /// remote data source.
+    ///
+    /// Default implementation returns an empty vector (no aggregate pushdown).
+    /// Override this method to enable aggregate pushdown for your FDW.
+    ///
+    /// When this method returns a non-empty vector, the framework will:
+    /// 1. Check if the query's aggregates are all supported
+    /// 2. Call [`get_aggregate_rel_size`](Self::get_aggregate_rel_size) for cost estimation
+    /// 3. Create an aggregate path in the query planner
+    /// 4. Call [`begin_aggregate_scan`](Self::begin_aggregate_scan) if the aggregate path is chosen
+    ///
+    /// ## Examples
+    ///
+    /// ```rust,ignore
+    /// use supabase_wrappers::prelude::*;
+    ///
+    /// fn supported_aggregates(&self) -> Vec<AggregateKind> {
+    ///     vec![
+    ///         AggregateKind::Count,
+    ///         AggregateKind::CountColumn,
+    ///         AggregateKind::Sum,
+    ///         AggregateKind::Avg,
+    ///         AggregateKind::Min,
+    ///         AggregateKind::Max,
+    ///     ]
+    /// }
+    /// ```
+    fn supported_aggregates(&self) -> Vec<AggregateKind> {
+        vec![]
+    }
+
+    /// Returns whether this FDW supports GROUP BY pushdown alongside aggregates.
+    ///
+    /// Only relevant if [`supported_aggregates`](Self::supported_aggregates) returns a non-empty vector.
+    /// Default implementation returns `false`.
+    ///
+    /// When `true`, GROUP BY columns will be passed to [`begin_aggregate_scan`](Self::begin_aggregate_scan).
+    ///
+    /// ## Examples
+    ///
+    /// ```rust,ignore
+    /// fn supports_group_by(&self) -> bool {
+    ///     true
+    /// }
+    /// ```
+    fn supports_group_by(&self) -> bool {
+        false
+    }
+
+    /// Estimate the size of aggregate query results for query planning.
+    ///
+    /// Called during query planning when aggregate pushdown is being considered.
+    /// Returns `(estimated_rows, mean_row_width_bytes)`.
+    ///
+    /// Default implementation estimates:
+    /// - 1 row for ungrouped aggregates (e.g., `SELECT COUNT(*) FROM t`)
+    /// - 100 rows for grouped aggregates (e.g., `SELECT dept, COUNT(*) FROM t GROUP BY dept`)
+    ///
+    /// Override this method if you can provide better estimates based on your
+    /// knowledge of the remote data source.
+    ///
+    /// ## Parameters
+    ///
+    /// - `aggregates`: List of aggregate operations to be computed
+    /// - `group_by`: Columns in GROUP BY clause (empty if none)
+    /// - `quals`: WHERE clause conditions
+    /// - `options`: Foreign table options
+    ///
+    /// ## Examples
+    ///
+    /// ```rust,ignore
+    /// fn get_aggregate_rel_size(
+    ///     &mut self,
+    ///     aggregates: &[Aggregate],
+    ///     group_by: &[Column],
+    ///     quals: &[Qual],
+    ///     options: &HashMap<String, String>,
+    /// ) -> Result<(i64, i32), MyFdwError> {
+    ///     let rows = if group_by.is_empty() { 1 } else { 50 };
+    ///     let width = 8 * aggregates.len() as i32;
+    ///     Ok((rows, width))
+    /// }
+    /// ```
+    fn get_aggregate_rel_size(
+        &mut self,
+        aggregates: &[Aggregate],
+        group_by: &[Column],
+        _quals: &[Qual],
+        _options: &HashMap<String, String>,
+    ) -> Result<(i64, i32), E> {
+        // Default: 1 row if no GROUP BY, otherwise estimate 100 rows
+        let rows = if group_by.is_empty() { 1 } else { 100 };
+        let width = 8 * aggregates.len() as i32;
+        Ok((rows, width))
+    }
+
+    /// Called when beginning execution of a pushed-down aggregate query.
+    ///
+    /// This method is called instead of [`begin_scan`](Self::begin_scan) when
+    /// the query planner chooses the aggregate pushdown path. The FDW should
+    /// prepare to return aggregate results based on the provided parameters.
+    ///
+    /// After this method returns successfully, [`iter_scan`](Self::iter_scan)
+    /// will be called to retrieve the aggregate results.
+    ///
+    /// ## Parameters
+    ///
+    /// - `aggregates`: List of aggregate operations to compute
+    /// - `group_by`: Columns to group by (empty for ungrouped aggregates)
+    /// - `quals`: WHERE clause conditions to apply before aggregation
+    /// - `options`: Foreign table options
+    ///
+    /// ## Result Row Format
+    ///
+    /// The rows returned by [`iter_scan`](Self::iter_scan) should contain:
+    /// 1. GROUP BY column values (in order specified)
+    /// 2. Aggregate results (in order specified, using `alias` as column name)
+    ///
+    /// ## Examples
+    ///
+    /// ```rust,ignore
+    /// fn begin_aggregate_scan(
+    ///     &mut self,
+    ///     aggregates: &[Aggregate],
+    ///     group_by: &[Column],
+    ///     quals: &[Qual],
+    ///     options: &HashMap<String, String>,
+    /// ) -> Result<(), MyFdwError> {
+    ///     // Build remote query with aggregates
+    ///     let mut select_items = Vec::new();
+    ///
+    ///     // Add GROUP BY columns
+    ///     for col in group_by {
+    ///         select_items.push(col.name.clone());
+    ///     }
+    ///
+    ///     // Add aggregate expressions
+    ///     for agg in aggregates {
+    ///         select_items.push(agg.deparse_with_alias());
+    ///     }
+    ///
+    ///     let query = format!("SELECT {} FROM ...", select_items.join(", "));
+    ///
+    ///     // Execute and store results for iter_scan
+    ///     self.results = self.execute_query(&query)?;
+    ///     Ok(())
+    /// }
+    /// ```
+    fn begin_aggregate_scan(
+        &mut self,
+        _aggregates: &[Aggregate],
+        _group_by: &[Column],
+        _quals: &[Qual],
+        _options: &HashMap<String, String>,
+    ) -> Result<(), E> {
+        // This should not be called unless supported_aggregates() returns non-empty.
+        // If we reach here, the FDW declared aggregate support but didn't override
+        // this method — abort the transaction to prevent wrong results.
+        crate::utils::report_error(
+            pgrx::PgSqlErrorCode::ERRCODE_FDW_ERROR,
+            "begin_aggregate_scan() not implemented; \
+             override this method when supported_aggregates() is non-empty",
+        );
+        unreachable!()
+    }
+
     /// Obtain a list of foreign table creation commands
     ///
     /// Return a list of string, each of which must contain a CREATE FOREIGN TABLE
@@ -865,6 +1205,20 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
             fdw_routine.GetForeignPaths = Some(scan::get_foreign_paths::<E, Self>);
             fdw_routine.GetForeignPlan = Some(scan::get_foreign_plan::<E, Self>);
             fdw_routine.ExplainForeignScan = Some(scan::explain_foreign_scan::<E, Self>);
+
+            // upper path planning (aggregate pushdown)
+            #[cfg(any(
+                feature = "pg13",
+                feature = "pg14",
+                feature = "pg15",
+                feature = "pg16",
+                feature = "pg17",
+                feature = "pg18"
+            ))]
+            {
+                use crate::upper;
+                fdw_routine.GetForeignUpperPaths = Some(upper::get_foreign_upper_paths::<E, Self>);
+            }
 
             // scan phase
             fdw_routine.BeginForeignScan = Some(scan::begin_foreign_scan::<E, Self>);
