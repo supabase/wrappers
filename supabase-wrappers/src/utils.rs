@@ -355,10 +355,17 @@ pub fn create_async_runtime() -> Result<Runtime, CreateRuntimeError> {
     Ok(Builder::new_current_thread().enable_all().build()?)
 }
 
-/// Get decrypted secret from Vault by secret ID
+/// Get decrypted secret from Vault by secret ID or name
 ///
-/// Get decrypted secret as string from Vault by secret ID. Vault is an extension for storing
-/// encrypted secrets, [see more details](https://github.com/supabase/vault).
+/// If the value is a valid UUID, look up by `id` or `key_id`.
+/// Otherwise, fall back to lookup by `name`, since vault secret names
+/// cannot be valid UUIDs (they are human-readable labels).
+///
+/// This allows all FDW `*_id` options (e.g. `conn_string_id`, `api_key_id`)
+/// to accept either a UUID or a vault secret name.
+///
+/// Vault is an extension for storing encrypted secrets,
+/// [see more details](https://github.com/supabase/vault).
 pub fn get_vault_secret(secret_id: &str) -> Option<String> {
     match Uuid::try_parse(secret_id) {
         Ok(sid) => {
@@ -377,13 +384,7 @@ pub fn get_vault_secret(secret_id: &str) -> Option<String> {
                 }
             }
         }
-        Err(err) => {
-            report_error(
-                PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                &format!("invalid secret id \"{secret_id}\": {err}"),
-            );
-            None
-        }
+        Err(_) => get_vault_secret_by_name(secret_id),
     }
 }
 
