@@ -366,8 +366,8 @@ pub fn create_async_runtime() -> Result<Runtime, CreateRuntimeError> {
 ///
 /// Vault is an extension for storing encrypted secrets,
 /// [see more details](https://github.com/supabase/vault).
-pub fn get_vault_secret(secret_id: &str) -> Option<String> {
-    match Uuid::try_parse(secret_id) {
+pub fn get_vault_secret(secret_id_or_name: &str) -> Option<String> {
+    match Uuid::try_parse(secret_id_or_name) {
         Ok(sid) => {
             let sid = sid.into_bytes();
             match Spi::get_one_with_args::<String>(
@@ -378,13 +378,13 @@ pub fn get_vault_secret(secret_id: &str) -> Option<String> {
                 Err(err) => {
                     report_error(
                         PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                        &format!("query vault failed \"{secret_id}\": {err}"),
+                        &format!("query vault failed \"{secret_id_or_name}\": {err}"),
                     );
                     None
                 }
             }
         }
-        Err(_) => get_vault_secret_by_name(secret_id),
+        Err(_) => get_vault_secret_by_name(secret_id_or_name),
     }
 }
 
