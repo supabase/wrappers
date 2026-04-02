@@ -21,6 +21,7 @@ Each FDW documentation includes a detailed "Limitations" section that describes 
 | ClickHouse    |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |    ✅     |
 | Cloudflare D1 |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |    ✅     |
 | DuckDB        |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
+| DynamoDB      |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |    ❌     |
 | Firebase      |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
 | Gravatar      |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
 | HubSpot       |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
