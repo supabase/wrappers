@@ -25,7 +25,7 @@ pub(super) fn attr_to_json(attr: &AttributeValue) -> JsonValue {
             }
         }
         AttributeValue::B(b) => {
-            // base64-encode binary for JSON representation
+            // hex-encode binary for JSON representation
             use std::fmt::Write;
             let bytes = b.as_ref();
             let mut s = String::with_capacity(bytes.len() * 2);
@@ -116,14 +116,22 @@ pub(super) fn attr_to_cell(attr: &AttributeValue, col: &Column) -> DynamoDbFdwRe
         },
 
         AttributeValue::N(n) => match col.type_oid {
-            pg_sys::INT2OID => n
-                .parse::<i64>()
-                .map(|v| Some(Cell::I16(v as i16)))
-                .map_err(|_| DynamoDbFdwError::ParseError(col.name.clone(), n.clone())),
-            pg_sys::INT4OID => n
-                .parse::<i64>()
-                .map(|v| Some(Cell::I32(v as i32)))
-                .map_err(|_| DynamoDbFdwError::ParseError(col.name.clone(), n.clone())),
+            pg_sys::INT2OID => {
+                let v = n
+                    .parse::<i64>()
+                    .map_err(|_| DynamoDbFdwError::ParseError(col.name.clone(), n.clone()))?;
+                let v_i16 = i16::try_from(v)
+                    .map_err(|_| DynamoDbFdwError::TypeMismatch(col.name.clone()))?;
+                Ok(Some(Cell::I16(v_i16)))
+            }
+            pg_sys::INT4OID => {
+                let v = n
+                    .parse::<i64>()
+                    .map_err(|_| DynamoDbFdwError::ParseError(col.name.clone(), n.clone()))?;
+                let v_i32 = i32::try_from(v)
+                    .map_err(|_| DynamoDbFdwError::TypeMismatch(col.name.clone()))?;
+                Ok(Some(Cell::I32(v_i32)))
+            }
             pg_sys::INT8OID => n
                 .parse::<i64>()
                 .map(|v| Some(Cell::I64(v)))
@@ -137,10 +145,8 @@ pub(super) fn attr_to_cell(attr: &AttributeValue, col: &Column) -> DynamoDbFdwRe
                 .map(|v| Some(Cell::F64(v)))
                 .map_err(|_| DynamoDbFdwError::ParseError(col.name.clone(), n.clone())),
             pg_sys::NUMERICOID => {
-                let parsed = n
-                    .parse::<f64>()
+                let numeric = pgrx::AnyNumeric::try_from(n.as_str())
                     .map_err(|_| DynamoDbFdwError::ParseError(col.name.clone(), n.clone()))?;
-                let numeric = pgrx::AnyNumeric::try_from(parsed)?;
                 Ok(Some(Cell::Numeric(numeric)))
             }
             // Default: return as text string (DynamoDB numbers are strings internally)

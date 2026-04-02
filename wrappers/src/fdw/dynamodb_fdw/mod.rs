@@ -31,6 +31,9 @@ enum DynamoDbFdwError {
     #[error("parse error for column '{0}': {1}")]
     ParseError(String, String),
 
+    #[error("invalid server options: {0}")]
+    InvalidServerOptions(String),
+
     #[error("{0}")]
     CreateRuntimeError(#[from] CreateRuntimeError),
 

@@ -56,18 +56,26 @@ impl DynamoDbFdw {
     fn build_client(server: &ForeignServer) -> DynamoDbFdwResult<(Runtime, Client)> {
         let rt = create_async_runtime()?;
 
-        let creds = match server.options.get("vault_access_key_id") {
-            Some(vault_access_key_id) => {
-                let vault_secret_key = require_option("vault_secret_access_key", &server.options)?;
-                get_vault_secret(vault_access_key_id)
-                    .zip(get_vault_secret(vault_secret_key))
-                    .expect("vault secrets not found")
+        // get AWS credentials from server options
+        let creds = {
+            match server.options.get("vault_access_key_id") {
+                Some(vault_access_key_id) => {
+                    // if using credentials stored in Vault
+                    let vault_secret_access_key =
+                        require_option("vault_secret_access_key", &server.options)?;
+                    get_vault_secret(vault_access_key_id)
+                        .zip(get_vault_secret(vault_secret_access_key))
+                }
+                None => {
+                    // if using credentials directly specified
+                    let aws_access_key_id =
+                        require_option("aws_access_key_id", &server.options)?.to_string();
+                    let aws_secret_access_key =
+                        require_option("aws_secret_access_key", &server.options)?.to_string();
+                    Some((aws_access_key_id, aws_secret_access_key))
+                }
             }
-            None => {
-                let key_id = require_option("aws_access_key_id", &server.options)?.to_string();
-                let secret = require_option("aws_secret_access_key", &server.options)?.to_string();
-                (key_id, secret)
-            }
+            .expect("AWS credentials should be provided in server options")
         };
 
         let region = require_option_or("region", &server.options, "us-east-1").to_string();
@@ -231,12 +239,6 @@ impl DynamoDbFdw {
             self.exhausted = true;
         }
 
-        stats::inc_stats(
-            Self::FDW_NAME,
-            stats::Metric::BytesIn,
-            self.rows.len() as i64,
-        );
-
         Ok(())
     }
 
@@ -282,12 +284,6 @@ impl DynamoDbFdw {
         if self.last_key.is_none() {
             self.exhausted = true;
         }
-
-        stats::inc_stats(
-            Self::FDW_NAME,
-            stats::Metric::BytesIn,
-            self.rows.len() as i64,
-        );
 
         Ok(())
     }
@@ -624,13 +620,34 @@ impl ForeignDataWrapper<DynamoDbFdwError> for DynamoDbFdw {
         if let Some(oid) = catalog {
             if oid == FOREIGN_SERVER_RELATION_ID {
                 // Must have either (aws_access_key_id + aws_secret_access_key)
-                // or (vault_access_key_id + vault_secret_access_key)
-                let has_direct = check_options_contain(&options, "aws_access_key_id").is_ok()
-                    && check_options_contain(&options, "aws_secret_access_key").is_ok();
-                let has_vault = check_options_contain(&options, "vault_access_key_id").is_ok()
-                    && check_options_contain(&options, "vault_secret_access_key").is_ok();
+                // or (vault_access_key_id + vault_secret_access_key).
+                let has = |key: &str| check_options_contain(&options, key).is_ok();
+
+                let direct_id = has("aws_access_key_id");
+                let direct_secret = has("aws_secret_access_key");
+                let vault_id = has("vault_access_key_id");
+                let vault_secret = has("vault_secret_access_key");
+
+                // Reject partial direct credentials with a precise missing-key error.
+                match (direct_id, direct_secret) {
+                    (true, false) => check_options_contain(&options, "aws_secret_access_key")?,
+                    (false, true) => check_options_contain(&options, "aws_access_key_id")?,
+                    _ => {}
+                }
+
+                // Reject partial vault credentials with a precise missing-key error.
+                match (vault_id, vault_secret) {
+                    (true, false) => check_options_contain(&options, "vault_secret_access_key")?,
+                    (false, true) => check_options_contain(&options, "vault_access_key_id")?,
+                    _ => {}
+                }
+
+                let has_direct = direct_id && direct_secret;
+                let has_vault = vault_id && vault_secret;
                 if !has_direct && !has_vault {
-                    check_options_contain(&options, "aws_access_key_id")?;
+                    return Err(DynamoDbFdwError::InvalidServerOptions(
+                        "must provide either (aws_access_key_id + aws_secret_access_key) or (vault_access_key_id + vault_secret_access_key)".to_string(),
+                    ));
                 }
             } else if oid == FOREIGN_TABLE_RELATION_ID {
                 check_options_contain(&options, "table")?;
