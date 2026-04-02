@@ -48,3 +48,6 @@ mod iceberg_fdw;
 
 #[cfg(feature = "duckdb_fdw")]
 mod duckdb_fdw;
+
+#[cfg(feature = "dynamodb_fdw")]
+mod dynamodb_fdw;

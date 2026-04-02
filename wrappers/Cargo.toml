@@ -202,6 +202,13 @@ duckdb_fdw = [
     "thiserror",
     "uuid",
 ]
+dynamodb_fdw = [
+    "aws-config",
+    "aws-sdk-dynamodb",
+    "serde_json",
+    "thiserror",
+    "tokio",
+]
 # Does not include helloworld_fdw because of its general uselessness
 native_fdws = [
     "airtable_fdw",
@@ -219,12 +226,12 @@ native_fdws = [
     "cognito_fdw",
     "iceberg_fdw",
     "duckdb_fdw",
+    "dynamodb_fdw",
 ]
 all_fdws = [
     "native_fdws",
     "wasm_fdw",
 ]
-
 [dependencies]
 pgrx = { version = "=0.16.1" }
 #supabase-wrappers = "0.1"
@@ -278,6 +285,9 @@ aws-smithy-async = { version = "1.2.5", optional = true }
 
 # for cognito fdw
 aws-sdk-cognitoidentityprovider = { version ="1.103.0", optional = true }
+
+# for dynamodb_fdw
+aws-sdk-dynamodb = { version = "1.60.0", optional = true }
 
 csv = { version = "1.2", optional = true }
 tokio = { version = "1", features = ["full"], optional = true }

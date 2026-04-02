@@ -989,6 +989,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "aws-sdk-dynamodb"
+version = "1.100.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "15204f660c916ca74c17dc8dad054b513343618807e779d9d41fdc3635d3343c"
+dependencies = [
+ "aws-credential-types",
+ "aws-runtime",
+ "aws-smithy-async",
+ "aws-smithy-http",
+ "aws-smithy-json",
+ "aws-smithy-runtime",
+ "aws-smithy-runtime-api",
+ "aws-smithy-types",
+ "aws-types",
+ "bytes",
+ "fastrand 2.3.0",
+ "http 0.2.12",
+ "regex-lite",
+ "tracing",
+]
+
+[[package]]
 name = "aws-sdk-s3"
 version = "1.109.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1961,7 +1983,7 @@ checksum = "a1d728cc89cf3aee9ff92b05e62b19ee65a02b5702cff7d5a377e32c6ae29d8d"
 [[package]]
 name = "clickhouse-rs"
 version = "1.1.0-alpha.1"
-source = "git+https://github.com/burmecia/clickhouse-rs.git?branch=supabase-patch#96ddf4105e48c140156b55ba8742f654c259a7c6"
+source = "git+https://github.com/burmecia/clickhouse-rs.git?branch=supabase-patch#512dcf3bfeb838b1c6ae2c8e6a0fe25922c76dde"
 dependencies = [
  "byteorder",
  "cfg-if",
@@ -1992,7 +2014,7 @@ dependencies = [
 [[package]]
 name = "clickhouse-rs-cityhash-sys"
 version = "0.1.2"
-source = "git+https://github.com/burmecia/clickhouse-rs.git?branch=supabase-patch#96ddf4105e48c140156b55ba8742f654c259a7c6"
+source = "git+https://github.com/burmecia/clickhouse-rs.git?branch=supabase-patch#512dcf3bfeb838b1c6ae2c8e6a0fe25922c76dde"
 dependencies = [
  "cc",
 ]
@@ -2954,7 +2976,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -6321,7 +6343,7 @@ dependencies = [
  "once_cell",
  "socket2 0.6.1",
  "tracing",
- "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -6945,7 +6967,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys 0.11.0",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -7899,7 +7921,7 @@ dependencies = [
  "getrandom 0.3.4",
  "once_cell",
  "rustix 1.1.2",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -9322,7 +9344,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.48.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -9830,6 +9852,7 @@ dependencies = [
  "async-compression 0.3.15",
  "aws-config",
  "aws-sdk-cognitoidentityprovider",
+ "aws-sdk-dynamodb",
  "aws-sdk-s3",
  "aws-sdk-s3vectors",
  "aws-smithy-async",
