@@ -223,6 +223,32 @@ services:
       timeout: 5s
       retries: 3
 
+  dynamodb:
+    image: amazon/dynamodb-local
+    container_name: dynamodb-local
+    ports:
+      - "8008:8000"
+    command: ["-jar", "DynamoDBLocal.jar", "-sharedDb", "-inMemory"]
+    healthcheck:
+      test: curl -s http://0.0.0.0:8000/ || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  dynamodb-init:
+    image: amazon/aws-cli
+    container_name: dynamodb-init
+    depends_on:
+      dynamodb:
+        condition: service_healthy
+    environment:
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_DEFAULT_REGION: us-east-1
+    entrypoint: ["/bin/sh", "/init.sh"]
+    volumes:
+      - ../dockerfiles/dynamodb/init.sh:/init.sh
+
   mysql:
     image: mysql:8.0
     container_name: mysql-local
