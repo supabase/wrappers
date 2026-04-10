@@ -71,7 +71,7 @@ We need to provide Postgres with the credentials to connect to Stripe, and any a
       foreign data wrapper stripe_wrapper
       options (
         api_key_id '<key_ID>',  -- The Key ID from above, required if api_key_name is not specified.
-        api_key_name '<key_Name>', -- The Key Name from above, required if api_key_id is not specified.
+        api_key_name 'stripe', -- The Key Name from above, required if api_key_id is not specified.
         api_url 'https://api.stripe.com/v1/',  -- Stripe API base URL, optional. Default is 'https://api.stripe.com/v1/'
         api_version '2024-06-20'  -- Stripe API version, optional. Default is your Stripe account’s default API version.
       );
