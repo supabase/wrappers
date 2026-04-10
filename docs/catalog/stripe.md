@@ -44,7 +44,7 @@ By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server
 select vault.create_secret(
   '<Stripe API key>',
   'stripe',                          -- key name, used for api_key_name option
-  'Stripe API key for Wrappers'
+  'Stripe API key for Wrappers'      -- key description
 );
 ```
 
@@ -59,37 +59,23 @@ select id from vault.secrets where name = 'stripe';
 We need to provide Postgres with the credentials to connect to Stripe, and any additional options. We can do this using the `create server` command:
 
 
-=== "With Vault (using key ID)"
+=== "With Vault"
 
-    Use the `api_key_id` option with the UUID returned by `vault.create_secret` (or retrieved from `vault.secrets`):
+    You can connect using either the `api_key_id` or `api_key_name` option — only one is required. If both are provided, `api_key_id` takes precedence.
 
-    ```sql
-    create server stripe_server
-      foreign data wrapper stripe_wrapper
-      options (
-        api_key_id '<key_ID>',  -- The UUID returned by vault.create_secret
-        api_url 'https://api.stripe.com/v1/',  -- Stripe API base URL, optional. Default is 'https://api.stripe.com/v1/'
-        api_version '2024-06-20'  -- Stripe API version, optional. Default is your Stripe account’s default API version.
-      );
-    ```
-
-=== "With Vault (using key name)"
-
-    Alternatively, use the `api_key_name` option with the name given to the secret when calling `vault.create_secret` (the second argument, `'stripe'` in the example above):
+    - `api_key_id`: the UUID returned by `vault.create_secret` (or found via `select id from vault.secrets where name = 'stripe'`)
+    - `api_key_name`: the name given to the secret when calling `vault.create_secret` (the second argument, e.g. `'stripe'`)
 
     ```sql
     create server stripe_server
       foreign data wrapper stripe_wrapper
       options (
-        api_key_name 'stripe',  -- The name used when creating the secret in Vault
+        api_key_id '<key_ID>',  -- The Key ID from above, required if api_key_name is not specified.
+        api_key_name '<key_Name>', -- The Key Name from above, required if api_key_id is not specified.
         api_url 'https://api.stripe.com/v1/',  -- Stripe API base URL, optional. Default is 'https://api.stripe.com/v1/'
         api_version '2024-06-20'  -- Stripe API version, optional. Default is your Stripe account’s default API version.
       );
     ```
-
-    !!! note
-
-        You only need to specify one of `api_key_id` or `api_key_name`. If both are provided, `api_key_id` takes precedence.
 
 === "Without Vault"
 
