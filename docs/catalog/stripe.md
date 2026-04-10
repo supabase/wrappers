@@ -40,7 +40,7 @@ create foreign data wrapper stripe_wrapper
 By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
 
 ```sql
--- Save your Stripe API key in Vault and retrieve the `key_id`
+-- Save your Stripe API key in Vault and retrieve the secret id (UUID) used for api_key_id
 select vault.create_secret(
   '<Stripe API key>',
   'stripe',                          -- key name, used for api_key_name option
@@ -48,10 +48,10 @@ select vault.create_secret(
 );
 ```
 
-The `vault.create_secret` function returns the UUID of the newly created secret. You can also query this UUID later:
+The `vault.create_secret` function returns the secret id (UUID) used for the `api_key_id` option. You can also retrieve this id later:
 
 ```sql
-select id from vault.secrets where name = 'stripe';
+select id as key_id from vault.secrets where name = 'stripe';
 ```
 
 ### Connecting to Stripe
