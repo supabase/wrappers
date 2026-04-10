@@ -61,17 +61,27 @@ We need to provide Postgres with the credentials to connect to Stripe, and any a
 
 === "With Vault"
 
-    You can connect using either the `api_key_id` or `api_key_name` option — only one is required. If both are provided, `api_key_id` takes precedence.
+    You can connect using either `api_key_id` or `api_key_name` — only one is required. If both are provided, `api_key_id` takes precedence.
 
-    - `api_key_id`: the UUID returned by `vault.create_secret` (or found via `select id from vault.secrets where name = 'stripe'`)
-    - `api_key_name`: the name given to the secret when calling `vault.create_secret` (the second argument, e.g. `'stripe'`)
+    **Option 1: using `api_key_id`** (the UUID returned by `vault.create_secret`)
 
     ```sql
     create server stripe_server
       foreign data wrapper stripe_wrapper
       options (
-        api_key_id '<key_ID>',  -- The Key ID from above, required if api_key_name is not specified.
-        api_key_name 'stripe', -- The Key Name from above, required if api_key_id is not specified.
+        api_key_id '<key_id>',  -- UUID returned by vault.create_secret, or retrieved via: select id from vault.secrets where name = 'stripe'
+        api_url 'https://api.stripe.com/v1/',  -- Stripe API base URL, optional. Default is 'https://api.stripe.com/v1/'
+        api_version '2024-06-20'  -- Stripe API version, optional. Default is your Stripe account’s default API version.
+      );
+    ```
+
+    **Option 2: using `api_key_name`** (the name given to the secret, i.e. the second argument to `vault.create_secret`)
+
+    ```sql
+    create server stripe_server
+      foreign data wrapper stripe_wrapper
+      options (
+        api_key_name 'stripe',  -- name used when creating the secret via vault.create_secret
         api_url 'https://api.stripe.com/v1/',  -- Stripe API base URL, optional. Default is 'https://api.stripe.com/v1/'
         api_version '2024-06-20'  -- Stripe API version, optional. Default is your Stripe account’s default API version.
       );
