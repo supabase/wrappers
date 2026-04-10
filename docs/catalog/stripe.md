@@ -40,12 +40,18 @@ create foreign data wrapper stripe_wrapper
 By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
 
 ```sql
--- Save your Stripe API key in Vault and retrieve the created `key_id`
+-- Save your Stripe API key in Vault and retrieve the secret id (UUID) used for api_key_id
 select vault.create_secret(
   '<Stripe API key>',
-  'stripe',
-  'Stripe API key for Wrappers'
+  'stripe',                          -- key name, used for api_key_name option
+  'Stripe API key for Wrappers'      -- key description
 );
+```
+
+The `vault.create_secret` function returns the secret id (UUID) used for the `api_key_id` option. You can also retrieve this id later:
+
+```sql
+select id as key_id from vault.secrets where name = 'stripe';
 ```
 
 ### Connecting to Stripe
@@ -55,12 +61,27 @@ We need to provide Postgres with the credentials to connect to Stripe, and any a
 
 === "With Vault"
 
+    You can connect using either `api_key_id` or `api_key_name` — only one is required. If both are provided, `api_key_id` takes precedence.
+
+    **Option 1: using `api_key_id`** (the UUID returned by `vault.create_secret`)
+
     ```sql
     create server stripe_server
       foreign data wrapper stripe_wrapper
       options (
-        api_key_id '<key_ID>', -- The Key ID from above, required if api_key_name is not specified.
-        api_key_name '<key_Name>', -- The Key Name from above, required if api_key_id is not specified.
+        api_key_id '<key_id>',  -- UUID returned by vault.create_secret, or retrieved via: select id from vault.secrets where name = 'stripe'
+        api_url 'https://api.stripe.com/v1/',  -- Stripe API base URL, optional. Default is 'https://api.stripe.com/v1/'
+        api_version '2024-06-20'  -- Stripe API version, optional. Default is your Stripe account’s default API version.
+      );
+    ```
+
+    **Option 2: using `api_key_name`** (the name given to the secret, i.e. the second argument to `vault.create_secret`)
+
+    ```sql
+    create server stripe_server
+      foreign data wrapper stripe_wrapper
+      options (
+        api_key_name 'stripe',  -- name used when creating the secret via vault.create_secret
         api_url 'https://api.stripe.com/v1/',  -- Stripe API base URL, optional. Default is 'https://api.stripe.com/v1/'
         api_version '2024-06-20'  -- Stripe API version, optional. Default is your Stripe account’s default API version.
       );
