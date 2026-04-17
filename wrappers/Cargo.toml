@@ -151,6 +151,20 @@ mysql_fdw = [
     "serde_json",
     "thiserror",
 ]
+tencent_cls_fdw = [
+    "reqwest",
+    "reqwest-middleware",
+    "reqwest-retry",
+    "serde_json",
+    "serde",
+    "hmac",
+    "sha2",
+    "hex",
+    "chrono",
+    "tokio",
+    "url",
+    "thiserror",
+]
 redis_fdw = [
     "redis",
     "serde_json",
@@ -222,6 +236,7 @@ native_fdws = [
     "auth0_fdw",
     "mssql_fdw",
     "mysql_fdw",
+    "tencent_cls_fdw",
     "redis_fdw",
     "cognito_fdw",
     "iceberg_fdw",
@@ -307,6 +322,9 @@ arrow-json = { version = "57.3.0", optional = true }
 
 # for mysql_fdw
 mysql_async = { version = "0.36.1", optional = true, default-features = false, features = ["default-rustls"] }
+
+# for tencent_cls_fdw
+hmac = { version = "0.12", optional = true }
 
 # for mssql_fdw
 tiberius = { version = "0.12.2", features = [
