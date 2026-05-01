@@ -1,5 +1,6 @@
 use crate::stats;
 use num_traits::cast::ToPrimitive;
+use pgrx::pg_sys;
 use pgrx::{PgBuiltInOids, PgOid, prelude::to_timestamp};
 use std::collections::HashMap;
 use tiberius::{
@@ -13,6 +14,27 @@ use tokio_util::compat::TokioAsyncWriteCompatExt;
 use supabase_wrappers::prelude::*;
 
 use super::{MssqlFdwError, MssqlFdwResult};
+
+// Map a Postgres expected aggregate result type to a SQL Server type that
+// (a) tiberius will read back into the same Rust scalar type that field_to_cell
+// expects for that Postgres OID and (b) holds the value without truncation.
+// We wrap every aggregate expression in `CAST(... AS <mssql_type>)` so that
+// MSSQL's natural result types (int32 for SUM/AVG over int, int32 for COUNT,
+// etc.) cannot mismatch what Postgres expects (int8 for SUM(int), numeric
+// for SUM(int8), int8 for COUNT, ...).
+fn pg_oid_to_mssql_cast(type_oid: pg_sys::Oid) -> Option<&'static str> {
+    match PgOid::from(type_oid) {
+        PgOid::BuiltIn(PgBuiltInOids::INT8OID) => Some("bigint"),
+        PgOid::BuiltIn(PgBuiltInOids::INT4OID) => Some("int"),
+        PgOid::BuiltIn(PgBuiltInOids::INT2OID) => Some("smallint"),
+        PgOid::BuiltIn(PgBuiltInOids::FLOAT4OID) => Some("real"),
+        PgOid::BuiltIn(PgBuiltInOids::FLOAT8OID) => Some("float"),
+        PgOid::BuiltIn(PgBuiltInOids::NUMERICOID) => Some("numeric(38,10)"),
+        PgOid::BuiltIn(PgBuiltInOids::DATEOID) => Some("date"),
+        PgOid::BuiltIn(PgBuiltInOids::TIMESTAMPOID) => Some("datetime2"),
+        _ => None,
+    }
+}
 
 // convert a source field to a wrappers cell
 fn field_to_cell(src_row: &tiberius::Row, tgt_col: &Column) -> MssqlFdwResult<Option<Cell>> {
@@ -94,7 +116,7 @@ impl CellFormatter for MssqlCellFormatter {
 }
 
 #[wrappers_fdw(
-    version = "0.1.3",
+    version = "0.1.4",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/mssql_fdw",
     error_type = "MssqlFdwError"
@@ -187,6 +209,88 @@ impl MssqlFdw {
 
             let real_limit = limit.offset + limit.count;
             sql.push_str(&format!(" offset 0 rows fetch next {real_limit} rows only",));
+        }
+
+        Ok(sql)
+    }
+
+    fn deparse_aggregate(
+        &self,
+        aggregates: &[Aggregate],
+        group_by: &[Column],
+        quals: &[Qual],
+    ) -> MssqlFdwResult<String> {
+        // SELECT: group-by columns first, then aggregate expressions with
+        // aliases. Each aggregate is wrapped in CAST(... AS <mssql_type>) so
+        // the value returned from MSSQL is read back into the exact Rust
+        // scalar type field_to_cell uses for the Postgres aggregate result
+        // type. COUNT is mapped to COUNT_BIG so the result fits Postgres'
+        // int8 expectation without overflow.
+        let mut select_items: Vec<String> = group_by.iter().map(|c| c.name.clone()).collect();
+        for agg in aggregates {
+            let inner = match agg.kind {
+                AggregateKind::Count => "count_big(*)".to_string(),
+                AggregateKind::CountColumn => {
+                    let col = agg.column.as_ref().map(|c| c.name.as_str()).unwrap_or("*");
+                    if agg.distinct {
+                        format!("count_big(distinct {col})")
+                    } else {
+                        format!("count_big({col})")
+                    }
+                }
+                _ => {
+                    let col = agg.column.as_ref().map(|c| c.name.as_str()).unwrap_or("*");
+                    format!("{}({})", agg.kind.sql_name().to_lowercase(), col)
+                }
+            };
+            let cast_type = pg_oid_to_mssql_cast(agg.type_oid).ok_or_else(|| {
+                MssqlFdwError::SyntaxError(format!(
+                    "aggregate result type oid {} is not supported for pushdown",
+                    agg.type_oid.to_u32()
+                ))
+            })?;
+            select_items.push(format!("cast({inner} as {cast_type}) as {}", agg.alias));
+        }
+
+        let mut sql = format!(
+            "select {} from {} as _wrappers_tbl",
+            select_items.join(", "),
+            &self.table
+        );
+
+        // WHERE — same boolean-test handling as deparse()
+        if !quals.is_empty() {
+            let cond = quals
+                .iter()
+                .map(|q| {
+                    let oper = q.operator.as_str();
+                    let mut fmt = MssqlCellFormatter {};
+                    if let Value::Cell(cell) = &q.value
+                        && let Cell::Bool(_) = cell
+                    {
+                        if oper == "is" {
+                            return format!("{} = {}", q.field, fmt.fmt_cell(cell));
+                        } else if oper == "is not" {
+                            return format!("{} <> {}", q.field, fmt.fmt_cell(cell));
+                        }
+                    }
+                    q.deparse_with_fmt(&mut fmt)
+                })
+                .collect::<Vec<String>>()
+                .join(" and ");
+            if !cond.is_empty() {
+                sql.push_str(&format!(" where {cond}"));
+            }
+        }
+
+        // GROUP BY
+        if !group_by.is_empty() {
+            let cols = group_by
+                .iter()
+                .map(|c| c.name.as_str())
+                .collect::<Vec<_>>()
+                .join(", ");
+            sql.push_str(&format!(" group by {cols}"));
         }
 
         Ok(sql)
@@ -289,6 +393,76 @@ impl ForeignDataWrapper<MssqlFdwError> for MssqlFdw {
 
     fn end_scan(&mut self) -> MssqlFdwResult<()> {
         self.scan_result.clear();
+        Ok(())
+    }
+
+    fn supported_aggregates(&self) -> Vec<AggregateKind> {
+        vec![
+            AggregateKind::Count,
+            AggregateKind::CountColumn,
+            AggregateKind::Sum,
+            AggregateKind::Avg,
+            AggregateKind::Min,
+            AggregateKind::Max,
+        ]
+    }
+
+    fn supports_group_by(&self) -> bool {
+        true
+    }
+
+    fn begin_aggregate_scan(
+        &mut self,
+        aggregates: &[Aggregate],
+        group_by: &[Column],
+        quals: &[Qual],
+        options: &HashMap<String, String>,
+    ) -> MssqlFdwResult<()> {
+        self.table = require_option("table", options)?.to_string();
+        self.iter_idx = 0;
+
+        // tgt_cols must match the SELECT output order: group-by columns first,
+        // then aggregate result columns named by their aliases. field_to_cell
+        // looks up each column by name in the tiberius row, so the alias here
+        // must match the AS alias emitted by deparse_aggregate.
+        let mut tgt_cols: Vec<Column> = group_by.to_vec();
+        for (i, agg) in aggregates.iter().enumerate() {
+            tgt_cols.push(Column {
+                name: agg.alias.clone(),
+                num: group_by.len() + i + 1,
+                type_oid: agg.type_oid,
+            });
+        }
+        self.tgt_cols = tgt_cols;
+
+        // create sql server client
+        let tcp = self
+            .rt
+            .block_on(TcpStream::connect(self.config.get_addr()))?;
+        tcp.set_nodelay(true)?;
+        let mut client = self
+            .rt
+            .block_on(Client::connect(self.config.clone(), tcp.compat_write()))?;
+
+        let sql = self.deparse_aggregate(aggregates, group_by, quals)?;
+
+        self.scan_result = self.rt.block_on(
+            self.rt
+                .block_on(client.simple_query(sql))?
+                .into_first_result(),
+        )?;
+
+        stats::inc_stats(
+            Self::FDW_NAME,
+            stats::Metric::RowsIn,
+            self.scan_result.len() as i64,
+        );
+        stats::inc_stats(
+            Self::FDW_NAME,
+            stats::Metric::RowsOut,
+            self.scan_result.len() as i64,
+        );
+
         Ok(())
     }
 }

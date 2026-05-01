@@ -363,7 +363,7 @@ where
 }
 
 #[wrappers_fdw(
-    version = "0.1.10",
+    version = "0.1.11",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/clickhouse_fdw",
     error_type = "ClickHouseFdwError"
@@ -493,6 +493,81 @@ impl ClickHouseFdw {
         if let Some(limit) = limit {
             let real_limit = limit.offset + limit.count;
             sql.push_str(&format!(" limit {real_limit}"));
+        }
+
+        Ok(sql)
+    }
+
+    fn deparse_aggregate(
+        &mut self,
+        aggregates: &[Aggregate],
+        group_by: &[Column],
+        quals: &[Qual],
+    ) -> ClickHouseFdwResult<String> {
+        let table = if self.table.starts_with('(') {
+            let re = Regex::new(r"\$\{(\w+)\}").unwrap();
+            let mut params = Vec::new();
+            let mut replacement = |caps: &Captures| -> ClickHouseFdwResult<String> {
+                let param = &caps[1];
+                for qual in quals.iter() {
+                    if qual.field == param {
+                        params.push(qual.clone());
+                        match &qual.value {
+                            Value::Cell(cell) => return Ok(cell.to_string()),
+                            Value::Array(arr) => {
+                                return Err(ClickHouseFdwError::NoArrayParameter(format!(
+                                    "{arr:?}"
+                                )));
+                            }
+                        }
+                    }
+                }
+                Err(ClickHouseFdwError::UnmatchedParameter(param.to_owned()))
+            };
+            let s = self.replace_all_params(&re, &mut replacement)?;
+            self.params = params;
+            s
+        } else {
+            self.table.clone()
+        };
+
+        // SELECT: group-by columns first, then aggregate expressions with aliases
+        let mut select_items: Vec<String> = group_by.iter().map(|c| c.name.clone()).collect();
+        for agg in aggregates {
+            select_items.push(agg.deparse_with_alias());
+        }
+        let mut sql = format!("select {} from {}", select_items.join(", "), &table);
+
+        // WHERE: same filtering as deparse() — skip params and array-valued quals
+        if !quals.is_empty() {
+            let mut formatter = Formatter {};
+            let cond = quals
+                .iter()
+                .filter(|q| {
+                    let is_param = self.params.iter().any(|p| p.field == q.field);
+                    let is_array = match &q.value {
+                        Value::Cell(c) => c.is_array(),
+                        _ => false,
+                    };
+                    !is_param && !is_array
+                })
+                .map(|q| q.deparse_with_fmt(&mut formatter))
+                .collect::<Vec<String>>()
+                .join(" and ");
+
+            if !cond.is_empty() {
+                sql.push_str(&format!(" where {cond}"));
+            }
+        }
+
+        // GROUP BY
+        if !group_by.is_empty() {
+            let cols = group_by
+                .iter()
+                .map(|c| c.name.as_str())
+                .collect::<Vec<_>>()
+                .join(", ");
+            sql.push_str(&format!(" group by {cols}"));
         }
 
         Ok(sql)
@@ -1016,6 +1091,60 @@ impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
 
         // execute query on ClickHouse
         self.rt.block_on(client.execute(&sql))?;
+        Ok(())
+    }
+
+    fn supported_aggregates(&self) -> Vec<AggregateKind> {
+        vec![
+            AggregateKind::Count,
+            AggregateKind::CountColumn,
+            AggregateKind::Sum,
+            AggregateKind::Avg,
+            AggregateKind::Min,
+            AggregateKind::Max,
+        ]
+    }
+
+    fn supports_group_by(&self) -> bool {
+        true
+    }
+
+    fn begin_aggregate_scan(
+        &mut self,
+        aggregates: &[Aggregate],
+        group_by: &[Column],
+        quals: &[Qual],
+        options: &HashMap<String, String>,
+    ) -> ClickHouseFdwResult<()> {
+        self.table = require_option("table", options)?.to_string();
+        self.params = Vec::new();
+        self.sql_query = self.deparse_aggregate(aggregates, group_by, quals)?;
+        self.is_scan_complete = false;
+        self.current_row_data = None;
+
+        // tgt_cols must match the SELECT output order: group-by columns first,
+        // then aggregate result columns named by their aliases. convert_row_simple
+        // looks up each column by name in the ClickHouse result row, so the alias
+        // in tgt_cols must match the AS alias in the SQL query.
+        let mut tgt_cols: Vec<Column> = group_by.to_vec();
+        for (i, agg) in aggregates.iter().enumerate() {
+            tgt_cols.push(Column {
+                name: agg.alias.clone(),
+                num: group_by.len() + i + 1,
+                type_oid: agg.type_oid,
+            });
+        }
+        self.tgt_cols = tgt_cols;
+
+        self.stream_buffer_size = options
+            .get("stream_buffer_size")
+            .map(|s| s.parse::<usize>().map(|size| size.clamp(1, 100_000)))
+            .transpose()
+            .map_err(ClickHouseFdwError::ParseIntError)?
+            .unwrap_or(1024);
+
+        self.setup_streaming()?;
+
         Ok(())
     }
 }

@@ -66,3 +66,27 @@ projects:
           data:
             - id: 1
               time_col: "12:30:00.45"
+        - id: agg_test
+          columns:
+            - name: id
+              type: INTEGER
+              mode: REQUIRED
+            - name: name
+              type: STRING
+              mode: REQUIRED
+            - name: amount
+              type: NUMERIC
+              mode: REQUIRED
+          data:
+            - id: 1
+              name: alice
+              amount: 10.0
+            - id: 1
+              name: alice
+              amount: 20.0
+            - id: 2
+              name: bob
+              amount: 30.0
+            - id: 2
+              name: carol
+              amount: 40.0

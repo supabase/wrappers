@@ -10,6 +10,7 @@ This is a foreign data wrapper for [Microsoft SQL Server](https://www.microsoft.
 
 | Version | Date       | Notes                                                |
 | ------- | ---------- | ---------------------------------------------------- |
+| 0.1.4   | 2026-04-28 | Add aggregate pushdown support                       |
 | 0.1.3   | 2025-02-12 | Fix Numeric type conversion error                    |
 | 0.1.2   | 2024-09-30 | Support for pgrx 0.12.6                              |
 | 0.1.1   | 2024-09-09 | Add boolean test qual support                        |

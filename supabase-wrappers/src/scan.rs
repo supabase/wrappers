@@ -13,7 +13,7 @@ use std::os::raw::c_int;
 use std::ptr;
 
 use crate::instance;
-use crate::interface::{Cell, Column, Limit, Qual, Row, Sort, Value};
+use crate::interface::{Aggregate, Cell, Column, Limit, Qual, Row, Sort, Value};
 use crate::limit::*;
 use crate::memctx;
 use crate::options::options_to_hashmap;
@@ -24,24 +24,28 @@ use crate::sort::*;
 use crate::utils::{self, ReportableError, SerdeList, report_error};
 
 // Fdw private state for scan
-struct FdwState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
+pub(crate) struct FdwState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
     // foreign data wrapper instance
-    instance: Option<W>,
+    pub(crate) instance: Option<W>,
 
     // query conditions
-    quals: Vec<Qual>,
+    pub(crate) quals: Vec<Qual>,
 
     // query target column list
-    tgts: Vec<Column>,
+    pub(crate) tgts: Vec<Column>,
 
     // sort list
-    sorts: Vec<Sort>,
+    pub(crate) sorts: Vec<Sort>,
 
     // limit
-    limit: Option<Limit>,
+    pub(crate) limit: Option<Limit>,
 
     // foreign table options
-    opts: HashMap<String, String>,
+    pub(crate) opts: HashMap<String, String>,
+
+    // aggregate pushdown
+    pub(crate) aggregates: Vec<Aggregate>,
+    pub(crate) group_by: Vec<Column>,
 
     // temporary memory context per foreign table, created under Wrappers root
     // memory context
@@ -65,6 +69,8 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwState<E, W> {
             sorts: Vec::new(),
             limit: None,
             opts: HashMap::new(),
+            aggregates: Vec::new(),
+            group_by: Vec::new(),
             tmp_ctx,
             values: Vec::new(),
             nulls: Vec::new(),
@@ -86,6 +92,20 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwState<E, W> {
             )
         } else {
             Ok((0, 0))
+        }
+    }
+
+    #[inline]
+    pub(crate) fn is_aggregate_scan(&self) -> bool {
+        !self.aggregates.is_empty()
+    }
+
+    #[inline]
+    fn begin_aggregate_scan(&mut self) -> Result<(), E> {
+        if let Some(ref mut instance) = self.instance {
+            instance.begin_aggregate_scan(&self.aggregates, &self.group_by, &self.quals, &self.opts)
+        } else {
+            Ok(())
         }
     }
 
@@ -270,10 +290,99 @@ pub(super) extern "C-unwind" fn get_foreign_plan<E: Into<ErrorReport>, W: Foreig
 ) -> *mut pg_sys::ForeignScan {
     debug2!("---> get_foreign_plan");
     unsafe {
-        let state = PgBox::<FdwState<E, W>>::from_pg((*baserel).fdw_private as _);
+        let mut state = PgBox::<FdwState<E, W>>::from_pg((*baserel).fdw_private as _);
 
         // make foreign scan plan
         let scan_clauses = pg_sys::extract_actual_clauses(scan_clauses, false);
+
+        // Aggregate pushdown: state.aggregates was populated by upper.rs via the
+        // shared FdwState pointer (input_rel.fdw_private and output_rel.fdw_private
+        // alias the same object). That mutation is visible regardless of which
+        // path the planner picked, so it cannot be used as the discriminator —
+        // we must key off baserel.reloptkind. When the planner picked the upper
+        // aggregate path, baserel IS the upper rel; otherwise we are being called
+        // for the base-rel scan path (with a local Aggregate node above us) and
+        // must NOT treat this as an aggregate scan.
+        let is_agg = (*baserel).reloptkind == pg_sys::RelOptKind::RELOPT_UPPER_REL
+            && state.is_aggregate_scan();
+
+        if !is_agg && state.is_aggregate_scan() {
+            // Upper-path was registered but the planner chose the base-rel scan
+            // (typically because a local HashAgg over a small input was cheaper).
+            // Drop the aggregate state so begin_foreign_scan dispatches to
+            // begin_scan and the tuple slot is the base-rel's row type.
+            state.aggregates = Vec::new();
+            state.group_by = Vec::new();
+        }
+
+        let (final_tlist, agg_fdw_scan_tlist) = if is_agg {
+            // baserel here is the GROUP_AGG upper rel; its reltarget->exprs
+            // contains the aggregate outputs (Var nodes for GROUP BY columns
+            // and Aggref nodes for the aggregates). Build both the plan tlist
+            // and fdw_scan_tlist from it so:
+            //   1. final_tlist has the right Aggref/Var nodes for
+            //      set_foreignscan_references to rewrite into Var(INDEX_VAR,n).
+            //   2. fdw_scan_tlist drives ExecTypeFromTL to a tuple descriptor
+            //      whose attribute types match what iter_scan returns —
+            //      otherwise heap_form_tuple dereferences a non-pointer Datum
+            //      and segfaults.
+            let reltarget = (*baserel).reltarget;
+            let exprs = (*reltarget).exprs;
+            let n = if exprs.is_null() {
+                0
+            } else {
+                (*exprs).length as usize
+            };
+            let mut agg_tlist: *mut pg_sys::List = ptr::null_mut();
+            for i in 0..n {
+                let cell = (*exprs).elements.add(i);
+                let expr = (*cell).ptr_value as *mut pg_sys::Expr;
+                let tle = pg_sys::makeTargetEntry(
+                    expr,
+                    (i + 1) as pg_sys::AttrNumber,
+                    ptr::null_mut(),
+                    false,
+                );
+                // Preserve sortgrouprefs so Sort nodes can identify columns.
+                if !(*reltarget).sortgrouprefs.is_null() {
+                    (*tle).ressortgroupref = *(*reltarget).sortgrouprefs.add(i);
+                }
+                agg_tlist = pg_sys::lappend(agg_tlist, tle as *mut std::ffi::c_void);
+            }
+            let fdw_scan_tlist = pg_sys::list_copy(agg_tlist);
+
+            // Now that we know the upper path is in the plan, project state.tgts
+            // to match the aggregate output shape. iterate_foreign_scan uses
+            // tgts to map cells returned by the FDW's iter_scan into the
+            // correct attribute slots; for aggregate scans this is GROUP BY
+            // columns first, then aggregate result columns keyed by alias.
+            // We keep this off the base-rel-scan code path so state.tgts (the
+            // base-rel scan columns set in get_foreign_rel_size) is preserved
+            // when the planner picks the base-rel path.
+            let mut new_tgts = Vec::new();
+            let mut col_num = 1usize;
+            for col in &state.group_by {
+                new_tgts.push(Column {
+                    name: col.name.clone(),
+                    num: col_num,
+                    type_oid: col.type_oid,
+                });
+                col_num += 1;
+            }
+            for agg in &state.aggregates {
+                new_tgts.push(Column {
+                    name: agg.alias.clone(),
+                    num: col_num,
+                    type_oid: agg.type_oid,
+                });
+                col_num += 1;
+            }
+            state.tgts = new_tgts;
+
+            (agg_tlist, fdw_scan_tlist)
+        } else {
+            (tlist, ptr::null_mut())
+        };
 
         // 'serialize' state to list, basically what we're doing here is to store
         // the state pointer as an integer constant in the list, so it can be
@@ -285,12 +394,12 @@ pub(super) extern "C-unwind" fn get_foreign_plan<E: Into<ErrorReport>, W: Foreig
             PgMemoryContexts::For(state.tmp_ctx).switch_to(|_| FdwState::serialize_to_list(state));
 
         pg_sys::make_foreignscan(
-            tlist,
+            final_tlist,
             scan_clauses,
             (*baserel).relid,
             ptr::null_mut(),
             fdw_private as _,
-            ptr::null_mut(),
+            agg_fdw_scan_tlist,
             ptr::null_mut(),
             outer_plan,
         )
@@ -329,6 +438,14 @@ pub(super) extern "C-unwind" fn explain_foreign_scan<
 
         let value = ctx.pstrdup(&format!("limit = {:?}", state.limit));
         pg_sys::ExplainPropertyText(label, value, es);
+
+        if !state.aggregates.is_empty() {
+            let value = ctx.pstrdup(&format!("aggregates = {:?}", state.aggregates));
+            pg_sys::ExplainPropertyText(label, value, es);
+
+            let value = ctx.pstrdup(&format!("group_by = {:?}", state.group_by));
+            pg_sys::ExplainPropertyText(label, value, es);
+        }
     }
 }
 
@@ -443,16 +560,26 @@ pub(super) extern "C-unwind" fn begin_foreign_scan<
 
         // begin scan if it is not EXPLAIN statement
         if eflags & pg_sys::EXEC_FLAG_EXPLAIN_ONLY as c_int <= 0 {
-            let result = state.begin_scan();
+            // choose aggregate scan or normal scan based on state
+            let result = if state.is_aggregate_scan() {
+                state.begin_aggregate_scan()
+            } else {
+                state.begin_scan()
+            };
             if result.is_err() {
                 drop_fdw_state(state.as_ptr());
                 (*plan).fdw_private = ptr::null::<FdwState<E, W>>() as _;
                 result.report_unwrap();
             }
 
-            let rel = scan_state.ss_currentRelation;
-            let tup_desc = (*rel).rd_att;
-            let natts = (*tup_desc).natts as usize;
+            // For aggregate upper-rel scans, scanrelid=0 so ss_currentRelation is
+            // NULL. Use the number of output columns from state.tgts instead.
+            let natts = if state.is_aggregate_scan() {
+                state.tgts.len()
+            } else {
+                let rel = scan_state.ss_currentRelation;
+                (*(*rel).rd_att).natts as usize
+            };
 
             // initialize scan result lists
             state
@@ -500,6 +627,7 @@ pub(super) extern "C-unwind" fn iterate_foreign_scan<
                 return slot;
             }
 
+            let is_agg = state.is_aggregate_scan();
             PgMemoryContexts::For(state.tmp_ctx).switch_to(|_| {
                 for i in 0..state.row.cells.len() {
                     let att_idx = state.tgts[i].num - 1;
@@ -509,13 +637,32 @@ pub(super) extern "C-unwind" fn iterate_foreign_scan<
                             state.values[att_idx] = cell.into_datum().unwrap();
                             state.nulls[att_idx] = false;
                         }
-                        None => state.nulls[att_idx] = true,
+                        None => {
+                            state.nulls[att_idx] = true;
+                        }
                     }
                 }
 
-                (*slot).tts_values = state.values.as_mut_ptr();
-                (*slot).tts_isnull = state.nulls.as_mut_ptr();
-                pg_sys::ExecStoreVirtualTuple(slot);
+                if is_agg {
+                    // For aggregate scans the slot type is TTSOpsHeapTuple (because
+                    // fdw_scan_tlist != NIL).  ExecStoreVirtualTuple is only correct
+                    // for TTSOpsVirtual slots; using it on a HeapTuple slot leaves
+                    // hslot->tuple == NULL, which causes tts_heap_materialize (called
+                    // by Sort) to re-read tts_values after zeroing tts_nvalid —
+                    // resulting in a SIGSEGV when a Sort node is present (ORDER BY).
+                    // Form a proper HeapTuple and use ExecStoreHeapTuple instead.
+                    let desc = (*slot).tts_tupleDescriptor;
+                    let htup = pg_sys::heap_form_tuple(
+                        desc,
+                        state.values.as_mut_ptr(),
+                        state.nulls.as_mut_ptr(),
+                    );
+                    pg_sys::ExecStoreHeapTuple(htup, slot, true);
+                } else {
+                    (*slot).tts_values = state.values.as_mut_ptr();
+                    (*slot).tts_isnull = state.nulls.as_mut_ptr();
+                    pg_sys::ExecStoreVirtualTuple(slot);
+                }
             });
         }
 
