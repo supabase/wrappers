@@ -352,44 +352,27 @@ pub(super) extern "C-unwind" fn get_foreign_upper_paths<
             }
         }
 
-        // Store aggregates and group_by in the FdwState so they survive to execution
+        // Store aggregates and group_by in the FdwState so they survive to
+        // execution. Note: input_rel.fdw_private and output_rel.fdw_private
+        // share the same FdwState pointer, so this mutation is visible through
+        // both. get_foreign_plan must therefore key off baserel.reloptkind to
+        // tell whether the planner actually picked the upper path or fell back
+        // to the base-rel scan with a local Aggregate on top.
         state.aggregates = aggregates.clone();
         state.group_by = group_by.clone();
 
-        // Rebuild state.tgts to reflect the aggregate output shape.
-        // The executor uses tgts for tuple validation/slot mapping, so it must
-        // match what iter_scan will return: GROUP BY columns first, then
-        // aggregate result columns (using alias as name).
-        {
-            let mut new_tgts = Vec::new();
-            let mut col_num = 1usize;
-            for col in &group_by {
-                new_tgts.push(Column {
-                    name: col.name.clone(),
-                    num: col_num,
-                    type_oid: col.type_oid,
-                });
-                col_num += 1;
-            }
-            for agg in &aggregates {
-                new_tgts.push(Column {
-                    name: agg.alias.clone(),
-                    num: col_num,
-                    type_oid: agg.type_oid,
-                });
-                col_num += 1;
-            }
-            state.tgts = new_tgts;
-        }
-
-        // Cost estimation
-        let rows = if group_by.is_empty() { 1i64 } else { 100 };
+        // Cost estimation. We deliberately price the pushdown at ~0 so the
+        // planner prefers it over the local HashAgg/GroupAgg alternatives that
+        // also live on grouped_rel — pushdown collapses the row stream at the
+        // remote side and is essentially always cheaper than fetching rows and
+        // aggregating locally.
+        let rows: i64 = 1;
         let startup_cost = state
             .opts
             .get("startup_cost")
             .and_then(|c| c.parse::<f64>().ok())
             .unwrap_or(0.0);
-        let total_cost = startup_cost + rows as f64;
+        let total_cost = startup_cost;
 
         debug2!(
             "Aggregate pushdown cost estimate: rows={rows}, startup={startup_cost}, total={total_cost}"

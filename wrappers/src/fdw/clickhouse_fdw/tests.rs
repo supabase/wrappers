@@ -908,4 +908,541 @@ mod tests {
             );
         });
     }
+
+    /// Verify that aggregate queries are pushed down to ClickHouse.
+    ///
+    /// With pushdown the PostgreSQL plan is a bare `ForeignScan` — there is no
+    /// local `Aggregate` / `HashAggregate` / `GroupAggregate` node on top.
+    /// We check this via `EXPLAIN` alongside correctness assertions.
+    ///
+    /// Test data (table `agg_test`):
+    ///   id=1, name='alice', amt=10  (row 1)
+    ///   id=1, name='alice', amt=20  (row 2 — duplicate name)
+    ///   id=2, name='bob',   amt=30  (row 3)
+    ///   id=2, name='carol', amt=40  (row 4)
+    #[pg_test]
+    fn clickhouse_aggregate_pushdown_test() {
+        Spi::connect_mut(|c| {
+            let clickhouse_pool = ch::Pool::new("tcp://default:default@localhost:9000/default");
+            let rt = create_async_runtime().expect("failed to create runtime");
+            let mut handle = rt
+                .block_on(async { clickhouse_pool.get_handle().await })
+                .expect("handle");
+
+            rt.block_on(async {
+                handle.execute("DROP TABLE IF EXISTS agg_test").await?;
+                handle
+                    .execute(
+                        "CREATE TABLE agg_test (
+                            id    Int64,
+                            name  String,
+                            amt   Float64
+                        ) engine = Memory",
+                    )
+                    .await?;
+                handle
+                    .execute(
+                        "INSERT INTO agg_test VALUES
+                            (1, 'alice', 10.0),
+                            (1, 'alice', 20.0),
+                            (2, 'bob',   30.0),
+                            (2, 'carol', 40.0)",
+                    )
+                    .await
+            })
+            .expect("agg_test in ClickHouse");
+
+            c.update(
+                "CREATE FOREIGN DATA WRAPPER clickhouse_agg_wrapper
+                 HANDLER click_house_fdw_handler VALIDATOR click_house_fdw_validator",
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                "CREATE SERVER agg_server FOREIGN DATA WRAPPER clickhouse_agg_wrapper
+                 OPTIONS (conn_string 'tcp://default:default@localhost:9000/default')",
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                "CREATE FOREIGN TABLE agg_test (
+                    id   bigint,
+                    name text,
+                    amt  double precision
+                 )
+                 SERVER agg_server
+                 OPTIONS (table 'agg_test')",
+                None,
+                &[],
+            )
+            .unwrap();
+
+            // Collect EXPLAIN output and assert no local Aggregate node is present.
+            // With pushdown the ForeignScan IS the aggregate; without pushdown
+            // PostgreSQL adds an Aggregate / HashAggregate / GroupAggregate node
+            // on top of the ForeignScan.
+            macro_rules! assert_pushed_down {
+                ($c:expr, $sql:expr) => {{
+                    let explain = format!("EXPLAIN {}", $sql);
+                    // EXPLAIN returns a single-column result. SpiHeapTupleData::get
+                    // uses 1-based ordinal access; SpiTupleTable::get_one is only
+                    // available on the table-level (after .first()), not on iterators.
+                    let plan: Vec<String> = $c
+                        .select(&explain, None, &[])
+                        .unwrap()
+                        .filter_map(|r| r.get::<&str>(1).unwrap().map(|s| s.to_string()))
+                        .collect();
+                    // PostgreSQL plan node lines always include "(cost=...)",
+                    // e.g. "HashAggregate  (cost=...)" or "->  Aggregate  (cost=...)".
+                    // The FDW's own EXPLAIN extra output (e.g. "Wrappers: aggregates = [...]")
+                    // does NOT include "(cost=", so we use both substrings to avoid
+                    // false positives from the FDW's debug info.
+                    assert!(
+                        !plan
+                            .iter()
+                            .any(|l| l.contains("Aggregate") && l.contains("(cost=")),
+                        "Expected pushdown for [{}] but plan shows local aggregation: {:?}",
+                        $sql,
+                        plan
+                    );
+                }};
+            }
+
+            // --- COUNT(*) — whole-table scalar aggregate ---
+            assert_eq!(
+                c.select("SELECT COUNT(*) FROM agg_test", None, &[])
+                    .unwrap()
+                    .first()
+                    .get_one::<i64>()
+                    .unwrap()
+                    .unwrap(),
+                4
+            );
+            assert_pushed_down!(c, "SELECT COUNT(*) FROM agg_test");
+
+            // --- COUNT(name) GROUP BY id ---
+            let mut rows: Vec<(i64, i64)> = c
+                .select(
+                    "SELECT id, COUNT(name) AS cnt FROM agg_test GROUP BY id ORDER BY id",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .map(|r| {
+                    let id = r.get_by_name::<i64, _>("id").unwrap().unwrap();
+                    let cnt = r.get_by_name::<i64, _>("cnt").unwrap().unwrap();
+                    (id, cnt)
+                })
+                .collect();
+            rows.sort();
+            assert_eq!(rows, vec![(1, 2), (2, 2)]);
+            assert_pushed_down!(c, "SELECT id, COUNT(name) AS cnt FROM agg_test GROUP BY id");
+
+            // --- SUM(amt) GROUP BY id ---
+            let mut rows: Vec<(i64, f64)> = c
+                .select(
+                    "SELECT id, SUM(amt) AS s FROM agg_test GROUP BY id ORDER BY id",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .map(|r| {
+                    let id = r.get_by_name::<i64, _>("id").unwrap().unwrap();
+                    let s = r.get_by_name::<f64, _>("s").unwrap().unwrap();
+                    (id, s)
+                })
+                .collect();
+            rows.sort_by_key(|&(id, _)| id);
+            assert_eq!(rows, vec![(1, 30.0), (2, 70.0)]);
+            assert_pushed_down!(c, "SELECT id, SUM(amt) AS s FROM agg_test GROUP BY id");
+
+            // --- AVG(amt) — whole-table ---
+            let avg: f64 = c
+                .select("SELECT AVG(amt) FROM agg_test", None, &[])
+                .unwrap()
+                .first()
+                .get_one::<f64>()
+                .unwrap()
+                .unwrap();
+            assert!(
+                (avg - 25.0).abs() < 1e-9,
+                "AVG(amt) expected 25.0, got {avg}"
+            );
+            assert_pushed_down!(c, "SELECT AVG(amt) FROM agg_test");
+
+            // --- MIN / MAX in the same query ---
+            assert_eq!(
+                c.select("SELECT MIN(id), MAX(id) FROM agg_test", None, &[])
+                    .unwrap()
+                    .first()
+                    .get_two::<i64, i64>()
+                    .unwrap(),
+                (Some(1), Some(2))
+            );
+            assert_pushed_down!(c, "SELECT MIN(id), MAX(id) FROM agg_test");
+
+            // --- COUNT(DISTINCT name) — whole-table (alice, bob, carol = 3) ---
+            assert_eq!(
+                c.select("SELECT COUNT(DISTINCT name) FROM agg_test", None, &[])
+                    .unwrap()
+                    .first()
+                    .get_one::<i64>()
+                    .unwrap()
+                    .unwrap(),
+                3
+            );
+            assert_pushed_down!(c, "SELECT COUNT(DISTINCT name) FROM agg_test");
+
+            // --- COUNT(DISTINCT name) GROUP BY id ---
+            // id=1: only 'alice' → 1; id=2: 'bob','carol' → 2
+            let mut rows: Vec<(i64, i64)> = c
+                .select(
+                    "SELECT id, COUNT(DISTINCT name) AS cnt FROM agg_test GROUP BY id ORDER BY id",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .map(|r| {
+                    let id = r.get_by_name::<i64, _>("id").unwrap().unwrap();
+                    let cnt = r.get_by_name::<i64, _>("cnt").unwrap().unwrap();
+                    (id, cnt)
+                })
+                .collect();
+            rows.sort();
+            assert_eq!(rows, vec![(1, 1), (2, 2)]);
+            assert_pushed_down!(
+                c,
+                "SELECT id, COUNT(DISTINCT name) AS cnt FROM agg_test GROUP BY id"
+            );
+
+            // --- WHERE + aggregate: qual is pushed alongside the aggregate ---
+            // 2 rows match id = 1, so SUM(amt) = 10 + 20 = 30.
+            let s: f64 = c
+                .select("SELECT SUM(amt) FROM agg_test WHERE id = 1", None, &[])
+                .unwrap()
+                .first()
+                .get_one::<f64>()
+                .unwrap()
+                .unwrap();
+            assert!((s - 30.0).abs() < 1e-9, "expected 30.0, got {s}");
+            assert_pushed_down!(c, "SELECT SUM(amt) FROM agg_test WHERE id = 1");
+
+            // ----------------- Negative pushdown cases -----------------
+            // For these, upper.rs's extract_aggregates / extract_group_by_columns
+            // bails out and we never register the upper path, so the planner
+            // falls back to a local HashAggregate / GroupAggregate above the
+            // base ForeignScan. The defensive guard in scan.rs (clearing
+            // state.aggregates when baserel.reloptkind != UPPER_REL) keeps
+            // execution on the regular scan path and produces correct results.
+
+            macro_rules! assert_not_pushed_down {
+                ($c:expr, $sql:expr) => {{
+                    let explain = format!("EXPLAIN {}", $sql);
+                    let plan: Vec<String> = $c
+                        .select(&explain, None, &[])
+                        .unwrap()
+                        .filter_map(|r| r.get::<&str>(1).unwrap().map(|s| s.to_string()))
+                        .collect();
+                    assert!(
+                        plan.iter()
+                            .any(|l| l.contains("Aggregate") && l.contains("(cost=")),
+                        "Expected NO pushdown (a local Aggregate node) for [{}], plan: {:?}",
+                        $sql,
+                        plan
+                    );
+                }};
+            }
+
+            // HAVING clause: extract_aggregates bails when havingQual is set.
+            let mut rows: Vec<(i64, i64)> = c
+                .select(
+                    "SELECT id, COUNT(*)::bigint AS cnt FROM agg_test \
+                     GROUP BY id HAVING COUNT(*) > 1 ORDER BY id",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .map(|r| {
+                    let id = r.get_by_name::<i64, _>("id").unwrap().unwrap();
+                    let cnt = r.get_by_name::<i64, _>("cnt").unwrap().unwrap();
+                    (id, cnt)
+                })
+                .collect();
+            rows.sort();
+            assert_eq!(rows, vec![(1, 2), (2, 2)]);
+            assert_not_pushed_down!(
+                c,
+                "SELECT id, COUNT(*) FROM agg_test GROUP BY id HAVING COUNT(*) > 1"
+            );
+
+            // Unsupported aggregate function: stddev_samp is not in
+            // supported_aggregates() and is not even recognized by
+            // oid_to_aggregate_kind, so extract_aggregates returns None.
+            // values [10,20,30,40] → mean=25, sample stddev = sqrt(500/3) ≈ 12.9099
+            let stddev: f64 = c
+                .select("SELECT STDDEV(amt) FROM agg_test", None, &[])
+                .unwrap()
+                .first()
+                .get_one::<f64>()
+                .unwrap()
+                .unwrap();
+            assert!(
+                (stddev - 12.909_944).abs() < 1e-3,
+                "expected ~12.910, got {stddev}"
+            );
+            assert_not_pushed_down!(c, "SELECT STDDEV(amt) FROM agg_test");
+
+            // FILTER clause on aggregate: aggref->aggfilter is non-NULL.
+            let cnt: i64 = c
+                .select(
+                    "SELECT COUNT(*) FILTER (WHERE id = 1) FROM agg_test",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .first()
+                .get_one::<i64>()
+                .unwrap()
+                .unwrap();
+            assert_eq!(cnt, 2);
+            assert_not_pushed_down!(c, "SELECT COUNT(*) FILTER (WHERE id = 1) FROM agg_test");
+
+            // DISTINCT modifier on a non-COUNT aggregate (only COUNT(DISTINCT)
+            // is allowed for pushdown). All four amt values are distinct.
+            let s: f64 = c
+                .select("SELECT SUM(DISTINCT amt) FROM agg_test", None, &[])
+                .unwrap()
+                .first()
+                .get_one::<f64>()
+                .unwrap()
+                .unwrap();
+            assert!((s - 100.0).abs() < 1e-9, "expected 100.0, got {s}");
+            assert_not_pushed_down!(c, "SELECT SUM(DISTINCT amt) FROM agg_test");
+
+            // Aggregate over a non-Var expression (OpExpr). 11+21+31+41 = 104.
+            let s: f64 = c
+                .select("SELECT SUM(amt + 1) FROM agg_test", None, &[])
+                .unwrap()
+                .first()
+                .get_one::<f64>()
+                .unwrap()
+                .unwrap();
+            assert!((s - 104.0).abs() < 1e-9, "expected 104.0, got {s}");
+            assert_not_pushed_down!(c, "SELECT SUM(amt + 1) FROM agg_test");
+
+            // GROUP BY a non-column expression. extract_group_by_columns finds
+            // the SortGroupClause's TLE expr is OpExpr (not T_Var) and bails.
+            let mut rows: Vec<(i64, i64)> = c
+                .select(
+                    "SELECT id + 1 AS g, COUNT(*)::bigint AS cnt FROM agg_test \
+                     GROUP BY id + 1 ORDER BY g",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .map(|r| {
+                    let g = r.get_by_name::<i64, _>("g").unwrap().unwrap();
+                    let cnt = r.get_by_name::<i64, _>("cnt").unwrap().unwrap();
+                    (g, cnt)
+                })
+                .collect();
+            rows.sort();
+            assert_eq!(rows, vec![(2, 2), (3, 2)]);
+            assert_not_pushed_down!(
+                c,
+                "SELECT id + 1 AS g, COUNT(*) FROM agg_test GROUP BY id + 1"
+            );
+        });
+    }
+
+    /// Aggregate pushdown over a sub-query specified in the `table` foreign-table
+    /// option (both the static and parameterized forms).  Reuses the `agg_test`
+    /// ClickHouse table created elsewhere in this module via cargo-pgrx's shared
+    /// test database; if run in isolation it (re)creates the table.
+    #[pg_test]
+    fn clickhouse_aggregate_subquery_test() {
+        Spi::connect_mut(|c| {
+            let clickhouse_pool = ch::Pool::new("tcp://default:default@localhost:9000/default");
+            let rt = create_async_runtime().expect("failed to create runtime");
+            let mut handle = rt
+                .block_on(async { clickhouse_pool.get_handle().await })
+                .expect("handle");
+
+            rt.block_on(async {
+                handle.execute("DROP TABLE IF EXISTS agg_sub_test").await?;
+                handle
+                    .execute(
+                        "CREATE TABLE agg_sub_test (
+                            id    Int64,
+                            name  String,
+                            amt   Float64
+                        ) engine = Memory",
+                    )
+                    .await?;
+                handle
+                    .execute(
+                        "INSERT INTO agg_sub_test VALUES
+                            (1, 'alice', 10.0),
+                            (1, 'alice', 20.0),
+                            (2, 'bob',   30.0),
+                            (2, 'carol', 40.0),
+                            (3, 'dan',   99.0)",
+                    )
+                    .await
+            })
+            .expect("agg_sub_test in ClickHouse");
+
+            c.update(
+                "CREATE FOREIGN DATA WRAPPER ch_sub_wrapper
+                 HANDLER click_house_fdw_handler VALIDATOR click_house_fdw_validator",
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                "CREATE SERVER ch_sub_server FOREIGN DATA WRAPPER ch_sub_wrapper
+                 OPTIONS (conn_string 'tcp://default:default@localhost:9000/default')",
+                None,
+                &[],
+            )
+            .unwrap();
+
+            // --- Static sub-query (no params): aggregate must still push down.
+            // The remote side sees `SELECT ... FROM (select id, name, amt from
+            // agg_sub_test where id < 3) GROUP BY id`.
+            c.update(
+                "CREATE FOREIGN TABLE sub_static (
+                    id   bigint,
+                    name text,
+                    amt  double precision
+                 )
+                 SERVER ch_sub_server
+                 OPTIONS (table '(select id, name, amt from agg_sub_test where id < 3)')",
+                None,
+                &[],
+            )
+            .unwrap();
+
+            macro_rules! assert_pushed_down {
+                ($c:expr, $sql:expr) => {{
+                    let explain = format!("EXPLAIN {}", $sql);
+                    let plan: Vec<String> = $c
+                        .select(&explain, None, &[])
+                        .unwrap()
+                        .filter_map(|r| r.get::<&str>(1).unwrap().map(|s| s.to_string()))
+                        .collect();
+                    assert!(
+                        !plan
+                            .iter()
+                            .any(|l| l.contains("Aggregate") && l.contains("(cost=")),
+                        "Expected pushdown for [{}] but plan shows local aggregation: {:?}",
+                        $sql,
+                        plan
+                    );
+                }};
+            }
+
+            // Whole-table COUNT over the static sub-query.  id < 3 filters out
+            // the dan row, so only 4 rows remain.
+            let cnt: i64 = c
+                .select("SELECT COUNT(*) FROM sub_static", None, &[])
+                .unwrap()
+                .first()
+                .get_one::<i64>()
+                .unwrap()
+                .unwrap();
+            assert_eq!(cnt, 4);
+            assert_pushed_down!(c, "SELECT COUNT(*) FROM sub_static");
+
+            // GROUP BY over the sub-query.
+            let mut rows: Vec<(i64, i64)> = c
+                .select(
+                    "SELECT id, COUNT(*) AS cnt FROM sub_static GROUP BY id ORDER BY id",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .map(|r| {
+                    let id = r.get_by_name::<i64, _>("id").unwrap().unwrap();
+                    let cnt = r.get_by_name::<i64, _>("cnt").unwrap().unwrap();
+                    (id, cnt)
+                })
+                .collect();
+            rows.sort();
+            assert_eq!(rows, vec![(1, 2), (2, 2)]);
+            assert_pushed_down!(c, "SELECT id, COUNT(*) FROM sub_static GROUP BY id");
+
+            // SUM with extra WHERE on the foreign table: the WHERE qual is also
+            // pushed remotely (deparse_aggregate's WHERE-builder skips params
+            // and arrays but keeps regular quals).
+            let s: f64 = c
+                .select(
+                    "SELECT SUM(amt) FROM sub_static WHERE id = 2",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .first()
+                .get_one::<f64>()
+                .unwrap()
+                .unwrap();
+            assert!((s - 70.0).abs() < 1e-9, "expected 70.0, got {s}");
+            assert_pushed_down!(c, "SELECT SUM(amt) FROM sub_static WHERE id = 2");
+
+            // --- Parameterized sub-query: ${filter_id} is bound from a qual on
+            // the foreign-table column `filter_id`.  The qual is consumed as a
+            // parameter (not emitted as a remote WHERE clause).  Aggregate
+            // pushdown still applies — the deparsed remote SQL becomes
+            // `SELECT COUNT(*) AS agg_1 FROM (select 1 as filter_id, ...
+            //  from agg_sub_test where id = 1)`.
+            c.update(
+                "CREATE FOREIGN TABLE sub_param (
+                    filter_id bigint,
+                    id        bigint,
+                    name      text,
+                    amt       double precision
+                 )
+                 SERVER ch_sub_server
+                 OPTIONS (
+                    table '(select ${filter_id} as filter_id, id, name, amt \
+                            from agg_sub_test where id = ${filter_id})'
+                 )",
+                None,
+                &[],
+            )
+            .unwrap();
+
+            // id=1 → 2 rows.
+            let cnt: i64 = c
+                .select(
+                    "SELECT COUNT(*) FROM sub_param WHERE filter_id = 1",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .first()
+                .get_one::<i64>()
+                .unwrap()
+                .unwrap();
+            assert_eq!(cnt, 2);
+            assert_pushed_down!(c, "SELECT COUNT(*) FROM sub_param WHERE filter_id = 1");
+
+            // id=2 → SUM(amt) = 30 + 40 = 70.
+            let s: f64 = c
+                .select(
+                    "SELECT SUM(amt) FROM sub_param WHERE filter_id = 2",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .first()
+                .get_one::<f64>()
+                .unwrap()
+                .unwrap();
+            assert!((s - 70.0).abs() < 1e-9, "expected 70.0, got {s}");
+            assert_pushed_down!(c, "SELECT SUM(amt) FROM sub_param WHERE filter_id = 2");
+        });
+    }
 }

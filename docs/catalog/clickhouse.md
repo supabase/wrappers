@@ -153,13 +153,44 @@ create foreign table clickhouse.my_table (
 
 #### Notes
 
-- Supports `where`, `order by` and `limit` clause pushdown
+- Supports `where`, `order by`, `limit` and aggregate clause pushdown
 - Supports parametrized views in subqueries
 - When using `rowid_column`, it must be specified for data modification operations
 
 ## Query Pushdown Support
 
 This FDW supports `where`, `order by` and `limit` clause pushdown, as well as parametrized view (see above).
+
+### Aggregate Pushdown
+
+The FDW pushes common aggregate queries down to ClickHouse so the aggregation
+runs remotely and only the final result rows are transferred to Postgres. This
+is much faster than fetching every row and aggregating locally, especially
+over large tables.
+
+**Supported aggregates** — `count(*)`, `count(col)`, `count(distinct col)`,
+`sum(col)`, `avg(col)`, `min(col)`, `max(col)`.
+
+**Supported shapes** — scalar aggregates, `group by` over plain columns, with
+or without a `where` clause. Pushdown also works when the foreign `table`
+option is a sub-query or a parametrized view.
+
+```sql
+-- All of these run as a single aggregate query on ClickHouse:
+select count(*) from clickhouse.my_table;
+select id, sum(amount) from clickhouse.my_table group by id;
+select count(distinct name) from clickhouse.my_table where id = 1;
+```
+
+**Cases that are not pushed down** — the query still returns the correct
+result, but the aggregation happens in Postgres after fetching the rows:
+
+- The query has a `having` clause
+- The aggregate has a `filter (where …)` clause
+- A `distinct` modifier is used on anything other than `count`
+- The aggregate's argument is not a plain column (for example `sum(a + 1)`)
+- A `group by` item is not a plain column (for example `group by id + 1`)
+- The aggregate function is not in the list above (for example `stddev`, `string_agg`)
 
 ## Supported Data Types
 
@@ -243,4 +274,70 @@ select * from clickhouse.people;
 insert into clickhouse.people values (4, 'Yoda');
 update clickhouse.people set name = 'Princess Leia' where id = 2;
 delete from clickhouse.people where id = 3;
+```
+
+### Aggregate Query Examples
+
+These examples assume the `clickhouse.people` foreign table from the previous
+section, plus an `orders` table with a row per order:
+
+```sql
+-- Run on ClickHouse
+create table orders (
+  id        Int64,
+  person_id Int64,
+  amount    Float64,
+  status    String
+)
+engine=MergeTree()
+order by id;
+
+insert into orders values
+  (1, 1, 100.0, 'paid'),
+  (2, 1,  50.0, 'paid'),
+  (3, 2, 200.0, 'pending'),
+  (4, 2,  75.0, 'paid'),
+  (5, 3, 300.0, 'paid');
+```
+
+```sql
+-- Foreign table on Postgres
+create foreign table clickhouse.orders (
+  id        bigint,
+  person_id bigint,
+  amount    double precision,
+  status    text
+)
+  server clickhouse_server
+  options (
+    table 'orders'
+  );
+```
+
+Each query below runs a single aggregate query against ClickHouse and returns
+just the result rows:
+
+```sql
+-- Total order count
+select count(*) from clickhouse.orders;
+
+-- Total revenue from paid orders
+select sum(amount) from clickhouse.orders where status = 'paid';
+
+-- Per-person order count and revenue
+select person_id, count(*) as orders, sum(amount) as revenue
+from clickhouse.orders
+group by person_id
+order by person_id;
+
+-- Smallest and largest order
+select min(amount), max(amount) from clickhouse.orders;
+
+-- Number of distinct customers who placed an order
+select count(distinct person_id) from clickhouse.orders;
+
+-- Average order value per status
+select status, avg(amount) as avg_amount
+from clickhouse.orders
+group by status;
 ```
