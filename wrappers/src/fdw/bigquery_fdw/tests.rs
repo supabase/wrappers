@@ -286,7 +286,13 @@ mod tests {
             // own debug output.
             macro_rules! assert_pushed_down {
                 ($c:expr, $sql:expr) => {{
-                    let explain = format!("EXPLAIN {}", $sql);
+                    // EXPLAIN ANALYZE — under the mock_auth setup the test
+                    // wiremock requires every BigQueryFdw::new() to be matched
+                    // by exactly one token fetch, which only happens when the
+                    // plan actually executes. Plan-node lines still contain
+                    // "Aggregate" and "(cost=" under EXPLAIN ANALYZE, so the
+                    // pushdown matchers are unchanged.
+                    let explain = format!("EXPLAIN ANALYZE {}", $sql);
                     let plan: Vec<String> = $c
                         .select(&explain, None, &[])
                         .unwrap()
@@ -305,7 +311,13 @@ mod tests {
 
             macro_rules! assert_not_pushed_down {
                 ($c:expr, $sql:expr) => {{
-                    let explain = format!("EXPLAIN {}", $sql);
+                    // EXPLAIN ANALYZE — under the mock_auth setup the test
+                    // wiremock requires every BigQueryFdw::new() to be matched
+                    // by exactly one token fetch, which only happens when the
+                    // plan actually executes. Plan-node lines still contain
+                    // "Aggregate" and "(cost=" under EXPLAIN ANALYZE, so the
+                    // pushdown matchers are unchanged.
+                    let explain = format!("EXPLAIN ANALYZE {}", $sql);
                     let plan: Vec<String> = $c
                         .select(&explain, None, &[])
                         .unwrap()
