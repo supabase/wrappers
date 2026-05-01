@@ -145,11 +145,49 @@ create foreign table mssql.users (
       - `where` clauses
       - `order by` clauses
       - `limit` clauses
+      - aggregate clauses
 - See Data Types section for type mappings between PostgreSQL and SQL Server
 
 ## Query Pushdown Support
 
 This FDW supports `where`, `order by` and `limit` clause pushdown.
+
+### Aggregate Pushdown
+
+The FDW pushes common aggregate queries down to SQL Server so the aggregation
+runs remotely and only the final result rows are transferred to Postgres. This
+is much faster than fetching every row and aggregating locally, especially
+over large tables.
+
+**Supported aggregates** — `count(*)`, `count(col)`, `count(distinct col)`,
+`sum(col)`, `avg(col)`, `min(col)`, `max(col)`.
+
+**Supported shapes** — scalar aggregates, `group by` over plain columns, with
+or without a `where` clause. Pushdown also works when the foreign `table`
+option is a sub-query.
+
+```sql
+-- All of these run as a single aggregate query on SQL Server:
+select count(*) from mssql.users;
+select id, sum(amount) from mssql.users group by id;
+select count(distinct name) from mssql.users where id = 42;
+```
+
+`count(*)` and `count(col)` are translated to SQL Server's `count_big` so the
+result fits Postgres' `bigint` without overflow. Each aggregate is also wrapped
+in a `cast(... as <sql_server_type>)` so values come back in the exact type
+Postgres expects (for example, `sum` over a `bigint` column is cast to
+`numeric`, matching Postgres' `sum(bigint) → numeric` rule).
+
+**Cases that are not pushed down** — the query still returns the correct
+result, but the aggregation happens in Postgres after fetching the rows:
+
+- The query has a `having` clause
+- The aggregate has a `filter (where …)` clause
+- A `distinct` modifier is used on anything other than `count`
+- The aggregate's argument is not a plain column (for example `sum(a + 1)`)
+- A `group by` item is not a plain column (for example `group by id + 1`)
+- The aggregate function is not in the list above (for example `stddev`, `string_agg`)
 
 ## Supported Data Types
 
@@ -230,4 +268,68 @@ create foreign table mssql.users_subquery (
   );
 
 select * from mssql.users_subquery;
+```
+
+### Aggregate Query Examples
+
+These examples assume an `orders` table on SQL Server and a matching foreign
+table on Postgres:
+
+```sql
+-- Run on SQL Server
+create table orders (
+  id        bigint,
+  user_id   bigint,
+  amount    numeric(18,2),
+  status    varchar(20)
+);
+
+insert into orders (id, user_id, amount, status) values
+  (1, 42, 100.00, 'paid'),
+  (2, 42,  50.00, 'paid'),
+  (3, 43, 200.00, 'pending'),
+  (4, 43,  75.00, 'paid'),
+  (5, 44, 300.00, 'paid');
+```
+
+```sql
+-- Foreign table on Postgres
+create foreign table mssql.orders (
+  id      bigint,
+  user_id bigint,
+  amount  numeric(18,2),
+  status  text
+)
+  server mssql_server
+  options (
+    table 'orders'
+  );
+```
+
+Each query below runs a single aggregate query against SQL Server and returns
+just the result rows:
+
+```sql
+-- Total order count
+select count(*) from mssql.orders;
+
+-- Total revenue from paid orders
+select sum(amount) from mssql.orders where status = 'paid';
+
+-- Per-user order count and revenue
+select user_id, count(*) as orders, sum(amount) as revenue
+from mssql.orders
+group by user_id
+order by user_id;
+
+-- Smallest and largest order
+select min(amount), max(amount) from mssql.orders;
+
+-- Number of distinct users who placed an order
+select count(distinct user_id) from mssql.orders;
+
+-- Average order value per status
+select status, avg(amount) as avg_amount
+from mssql.orders
+group by status;
 ```

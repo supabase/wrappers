@@ -363,7 +363,7 @@ where
 }
 
 #[wrappers_fdw(
-    version = "0.1.10",
+    version = "0.1.11",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/clickhouse_fdw",
     error_type = "ClickHouseFdwError"

@@ -144,13 +144,45 @@ create foreign table bigquery.my_bigquery_table (
 
 #### Notes
 
-- Supports `where`, `order by` and `limit` clause pushdown
+- Supports `where`, `order by`, `limit` and aggregate clause pushdown
 - When using `rowid_column`, it must be specified for data modification operations
 - Data in the streaming buffer cannot be updated or deleted until the buffer is flushed (up to 90 minutes)
 
 ## Query Pushdown Support
 
 This FDW supports `where`, `order by` and `limit` clause pushdown.
+
+### Aggregate Pushdown
+
+The FDW pushes common aggregate queries down to BigQuery so the aggregation
+runs remotely and only the final result rows are transferred to Postgres. This
+is much faster than fetching every row and aggregating locally, especially
+over large tables — and on BigQuery it also reduces the bytes scanned billed
+to your project.
+
+**Supported aggregates** — `count(*)`, `count(col)`, `count(distinct col)`,
+`sum(col)`, `avg(col)`, `min(col)`, `max(col)`.
+
+**Supported shapes** — scalar aggregates, `group by` over plain columns, with
+or without a `where` clause. Pushdown also works when the foreign `table`
+option is a sub-query.
+
+```sql
+-- All of these run as a single aggregate query on BigQuery:
+select count(*) from bigquery.my_table;
+select id, sum(amount) from bigquery.my_table group by id;
+select count(distinct name) from bigquery.my_table where id = 1;
+```
+
+**Cases that are not pushed down** — the query still returns the correct
+result, but the aggregation happens in Postgres after fetching the rows:
+
+- The query has a `having` clause
+- The aggregate has a `filter (where …)` clause
+- A `distinct` modifier is used on anything other than `count`
+- The aggregate's argument is not a plain column (for example `sum(a + 1)`)
+- A `group by` item is not a plain column (for example `group by id + 1`)
+- The aggregate function is not in the list above (for example `stddev`, `string_agg`)
 
 ## Inserting Rows & the Streaming Buffer
 
@@ -255,4 +287,68 @@ where id = 1;
 -- delete data
 delete from bigquery.people
 where id = 2;
+```
+
+### Aggregate Query Examples
+
+These examples assume an `orders` table on BigQuery and a matching foreign
+table on Postgres:
+
+```sql
+-- Run on BigQuery
+create table your_project_id.your_dataset_id.orders (
+  id       int64,
+  user_id  int64,
+  amount   numeric,
+  status   string
+);
+
+insert into your_project_id.your_dataset_id.orders values
+  (1, 1, 100.0, 'paid'),
+  (2, 1,  50.0, 'paid'),
+  (3, 2, 200.0, 'pending'),
+  (4, 2,  75.0, 'paid'),
+  (5, 3, 300.0, 'paid');
+```
+
+```sql
+-- Foreign table on Postgres
+create foreign table bigquery.orders (
+  id      bigint,
+  user_id bigint,
+  amount  numeric,
+  status  text
+)
+  server bigquery_server
+  options (
+    table 'orders'
+  );
+```
+
+Each query below runs a single aggregate query against BigQuery and returns
+just the result rows:
+
+```sql
+-- Total order count
+select count(*) from bigquery.orders;
+
+-- Total revenue from paid orders
+select sum(amount) from bigquery.orders where status = 'paid';
+
+-- Per-user order count and revenue
+select user_id, count(*) as orders, sum(amount) as revenue
+from bigquery.orders
+group by user_id
+order by user_id;
+
+-- Smallest and largest order
+select min(amount), max(amount) from bigquery.orders;
+
+-- Number of distinct users who placed an order
+select count(distinct user_id) from bigquery.orders;
+
+-- Average order value per status
+select status, avg(amount) as avg_amount
+from bigquery.orders
+group by status;
 ```

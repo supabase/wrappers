@@ -19,7 +19,7 @@ use crate::setup_rustls_default_crypto_provider;
 use supabase_wrappers::prelude::*;
 
 #[wrappers_fdw(
-    version = "0.1.6",
+    version = "0.1.7",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/bigquery_fdw",
     error_type = "BigQueryFdwError"
@@ -41,6 +41,61 @@ pub(crate) struct BigQueryFdw {
 impl BigQueryFdw {
     const FDW_NAME: &'static str = "BigQueryFdw";
 
+    // Resolve the FROM clause source for the deparsed remote SQL: either a
+    // sub-query in parentheses (passed through verbatim), or the
+    // backtick-quoted `project.dataset.table`.
+    fn resolved_table(&self) -> String {
+        if self.table.starts_with('(') {
+            self.table.clone()
+        } else {
+            format!("`{}.{}.{}`", self.project_id, self.dataset_id, self.table)
+        }
+    }
+
+    fn deparse_aggregate(
+        &self,
+        aggregates: &[Aggregate],
+        group_by: &[Column],
+        quals: &[Qual],
+    ) -> String {
+        // SELECT: group-by columns first, then aggregate expressions with
+        // their aliases. BigQuery's standard SQL is compatible with the
+        // default deparse output (e.g. `COUNT(*) AS agg_1`,
+        // `SUM(col) AS agg_2`, `COUNT(DISTINCT col) AS agg_3`).
+        let mut select_items: Vec<String> = group_by.iter().map(|c| c.name.clone()).collect();
+        for agg in aggregates {
+            select_items.push(agg.deparse_with_alias());
+        }
+
+        let mut sql = format!(
+            "select {} from {}",
+            select_items.join(", "),
+            self.resolved_table()
+        );
+
+        if !quals.is_empty() {
+            let cond = quals
+                .iter()
+                .map(|q| q.deparse())
+                .collect::<Vec<String>>()
+                .join(" and ");
+            if !cond.is_empty() {
+                sql.push_str(&format!(" where {cond}"));
+            }
+        }
+
+        if !group_by.is_empty() {
+            let cols = group_by
+                .iter()
+                .map(|c| c.name.as_str())
+                .collect::<Vec<_>>()
+                .join(", ");
+            sql.push_str(&format!(" group by {cols}"));
+        }
+
+        sql
+    }
+
     fn deparse(
         &self,
         quals: &[Qual],
@@ -57,11 +112,7 @@ impl BigQueryFdw {
                 .collect::<Vec<String>>()
                 .join(", ")
         };
-        let table = if self.table.starts_with('(') {
-            self.table.clone()
-        } else {
-            format!("`{}.{}.{}`", self.project_id, self.dataset_id, self.table,)
-        };
+        let table = self.resolved_table();
 
         let mut sql = if quals.is_empty() {
             format!("select {tgts} from {table}")
@@ -94,6 +145,70 @@ impl BigQueryFdw {
         }
 
         sql
+    }
+
+    // Issue a query against BigQuery and stash the result + pagination tokens
+    // on `self`. Shared between begin_scan and begin_aggregate_scan; both
+    // produce a SQL string and then iterate the same way through iter_scan.
+    fn run_query(&mut self, sql: String, options: &HashMap<String, String>) {
+        let location = options
+            .get("location")
+            .map(|t| t.to_owned())
+            .unwrap_or_else(|| "US".to_string());
+
+        let mut timeout: i32 = 30_000;
+        if let Some(timeout_str) = options.get("timeout") {
+            match timeout_str.parse::<i32>() {
+                Ok(t) => timeout = t,
+                Err(_) => report_error(
+                    PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                    &format!("invalid timeout value: {timeout_str}"),
+                ),
+            }
+        }
+
+        if let Some(client) = &self.client {
+            let mut req = QueryRequest::new(sql);
+            req.location = Some(location);
+            req.timeout_ms = Some(timeout);
+
+            match self.rt.block_on(client.job().query(&self.project_id, req)) {
+                Ok(resp) => {
+                    if resp.job_complete == Some(false) {
+                        report_error(
+                            PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                            &format!("query timeout {timeout}ms expired"),
+                        );
+                    } else {
+                        let rows_in = resp
+                            .total_rows
+                            .as_ref()
+                            .and_then(|v| v.parse::<i64>().ok())
+                            .unwrap_or(0i64);
+                        stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsIn, rows_in);
+                        stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsOut, rows_in);
+                        stats::inc_stats(
+                            Self::FDW_NAME,
+                            stats::Metric::BytesIn,
+                            resp.total_bytes_processed
+                                .as_ref()
+                                .and_then(|v| v.parse::<i64>().ok())
+                                .unwrap_or(0i64),
+                        );
+                        self.job_ref = resp.job_reference.clone();
+                        self.page_token = resp.page_token.clone();
+                        self.scan_result = Some(ResultSet::new_from_query_response(resp));
+                    }
+                }
+                Err(err) => {
+                    self.scan_result = None;
+                    report_error(
+                        PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                        &format!("query failed: {err}"),
+                    );
+                }
+            }
+        }
     }
 
     // read one source row from result set and convert it to Postgres row
@@ -267,76 +382,8 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
         self.table = require_option("table", options)?.to_string();
         self.tgt_cols = columns.to_vec();
 
-        let location = options
-            .get("location")
-            .map(|t| t.to_owned())
-            .unwrap_or_else(|| "US".to_string());
-
-        let mut timeout: i32 = 30_000;
-        if let Some(timeout_str) = options.get("timeout") {
-            match timeout_str.parse::<i32>() {
-                Ok(t) => timeout = t,
-                Err(_) => report_error(
-                    PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                    &format!("invalid timeout value: {timeout_str}"),
-                ),
-            }
-        }
-
-        if let Some(client) = &self.client {
-            let sql = self.deparse(quals, columns, sorts, limit);
-            let mut req = QueryRequest::new(sql);
-            req.location = Some(location);
-            req.timeout_ms = Some(timeout);
-
-            // execute query on BigQuery
-            match self.rt.block_on(client.job().query(&self.project_id, req)) {
-                Ok(resp) => {
-                    if resp.job_complete == Some(false) {
-                        report_error(
-                            PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                            &format!("query timeout {timeout}ms expired"),
-                        );
-                    } else {
-                        stats::inc_stats(
-                            Self::FDW_NAME,
-                            stats::Metric::RowsIn,
-                            resp.total_rows
-                                .as_ref()
-                                .and_then(|v| v.parse::<i64>().ok())
-                                .unwrap_or(0i64),
-                        );
-                        stats::inc_stats(
-                            Self::FDW_NAME,
-                            stats::Metric::RowsOut,
-                            resp.total_rows
-                                .as_ref()
-                                .and_then(|v| v.parse::<i64>().ok())
-                                .unwrap_or(0i64),
-                        );
-                        stats::inc_stats(
-                            Self::FDW_NAME,
-                            stats::Metric::BytesIn,
-                            resp.total_bytes_processed
-                                .as_ref()
-                                .and_then(|v| v.parse::<i64>().ok())
-                                .unwrap_or(0i64),
-                        );
-                        self.job_ref = resp.job_reference.clone();
-                        self.page_token = resp.page_token.clone();
-                        let rs = ResultSet::new_from_query_response(resp);
-                        self.scan_result = Some(rs);
-                    }
-                }
-                Err(err) => {
-                    self.scan_result = None;
-                    report_error(
-                        PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                        &format!("query failed: {err}"),
-                    );
-                }
-            }
-        }
+        let sql = self.deparse(quals, columns, sorts, limit);
+        self.run_query(sql, options);
 
         Ok(())
     }
@@ -507,6 +554,50 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
                 );
             }
         }
+        Ok(())
+    }
+
+    fn supported_aggregates(&self) -> Vec<AggregateKind> {
+        vec![
+            AggregateKind::Count,
+            AggregateKind::CountColumn,
+            AggregateKind::Sum,
+            AggregateKind::Avg,
+            AggregateKind::Min,
+            AggregateKind::Max,
+        ]
+    }
+
+    fn supports_group_by(&self) -> bool {
+        true
+    }
+
+    fn begin_aggregate_scan(
+        &mut self,
+        aggregates: &[Aggregate],
+        group_by: &[Column],
+        quals: &[Qual],
+        options: &HashMap<String, String>,
+    ) -> Result<(), BigQueryFdwError> {
+        self.table = require_option("table", options)?.to_string();
+
+        // tgt_cols must match the SELECT output order: GROUP BY columns first,
+        // then aggregate result columns named by their aliases. extract_row
+        // looks up each column by name in the BigQuery result, so each alias
+        // here must match the AS alias emitted by deparse_aggregate.
+        let mut tgt_cols: Vec<Column> = group_by.to_vec();
+        for (i, agg) in aggregates.iter().enumerate() {
+            tgt_cols.push(Column {
+                name: agg.alias.clone(),
+                num: group_by.len() + i + 1,
+                type_oid: agg.type_oid,
+            });
+        }
+        self.tgt_cols = tgt_cols;
+
+        let sql = self.deparse_aggregate(aggregates, group_by, quals);
+        self.run_query(sql, options);
+
         Ok(())
     }
 }

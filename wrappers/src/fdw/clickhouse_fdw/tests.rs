@@ -1378,11 +1378,7 @@ mod tests {
             // pushed remotely (deparse_aggregate's WHERE-builder skips params
             // and arrays but keeps regular quals).
             let s: f64 = c
-                .select(
-                    "SELECT SUM(amt) FROM sub_static WHERE id = 2",
-                    None,
-                    &[],
-                )
+                .select("SELECT SUM(amt) FROM sub_static WHERE id = 2", None, &[])
                 .unwrap()
                 .first()
                 .get_one::<f64>()
