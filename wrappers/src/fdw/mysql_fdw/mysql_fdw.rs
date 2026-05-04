@@ -138,6 +138,30 @@ fn mysql_type_to_pg(
     }
 }
 
+// Like Aggregate::deparse() but wraps column names in MySQL backtick quotes.
+fn deparse_agg_mysql(agg: &Aggregate) -> String {
+    let func_name = agg.kind.sql_name();
+    match agg.kind {
+        AggregateKind::Count => format!("{func_name}(*)"),
+        _ => {
+            let col = agg
+                .column
+                .as_ref()
+                .map(|c| quote_ident(&c.name))
+                .unwrap_or_else(|| "*".to_string());
+            if agg.distinct {
+                format!("{func_name}(DISTINCT {col})")
+            } else {
+                format!("{func_name}({col})")
+            }
+        }
+    }
+}
+
+fn deparse_agg_with_alias_mysql(agg: &Aggregate) -> String {
+    format!("{} AS {}", deparse_agg_mysql(agg), quote_ident(&agg.alias))
+}
+
 fn quote_ident(name: &str) -> String {
     format!("`{}`", name.replace('`', "``"))
 }
@@ -192,7 +216,7 @@ impl CellFormatter for MysqlCellFormatter {
 }
 
 #[wrappers_fdw(
-    version = "0.1.0",
+    version = "0.1.1",
     author = "Wener",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/mysql_fdw",
     error_type = "MysqlFdwError"
@@ -205,7 +229,7 @@ pub(crate) struct MysqlFdw {
     tgt_cols: Vec<Column>,
     sql_query: String,
     stream: Option<ResultSetStream<'static, 'static, 'static, MySqlRow, TextProtocol>>,
-    scaned_row_cnt: usize,
+    scanned_row_cnt: usize,
 }
 
 impl MysqlFdw {
@@ -228,7 +252,7 @@ impl MysqlFdw {
                 .join(", ")
         };
 
-        let table = if self.table.starts_with("(") && self.table.ends_with(")") {
+        let table = if self.table.starts_with('(') && self.table.ends_with(')') {
             self.table.clone()
         } else {
             quote_ident(&self.table)
@@ -269,6 +293,57 @@ impl MysqlFdw {
         if let Some(limit) = limit {
             let real_limit = limit.offset + limit.count;
             sql.push_str(&format!(" limit {real_limit}"));
+        }
+
+        Ok(sql)
+    }
+
+    fn deparse_aggregate(
+        &self,
+        aggregates: &[Aggregate],
+        group_by: &[Column],
+        quals: &[Qual],
+    ) -> MysqlFdwResult<String> {
+        let table = if self.table.starts_with('(') && self.table.ends_with(')') {
+            self.table.clone()
+        } else {
+            quote_ident(&self.table)
+        };
+
+        // SELECT: group-by columns first (backtick-quoted), then aggregate expressions
+        let mut select_items: Vec<String> = group_by.iter().map(|c| quote_ident(&c.name)).collect();
+        for agg in aggregates {
+            select_items.push(deparse_agg_with_alias_mysql(agg));
+        }
+        let mut sql = format!(
+            "select {} from {} as _wrappers_tbl",
+            select_items.join(", "),
+            table
+        );
+
+        // WHERE: same qual-to-SQL as deparse(), skip array-valued quals
+        if !quals.is_empty() {
+            let mut fmt = MysqlCellFormatter;
+            let cond = quals
+                .iter()
+                // Array quals (use_or=true) are skipped — PostgreSQL re-applies them locally.
+                .filter(|q| !matches!(&q.value, Value::Array(_)))
+                .map(|q| deparse_qual(q, &mut fmt))
+                .collect::<Vec<String>>()
+                .join(" and ");
+            if !cond.is_empty() {
+                sql.push_str(&format!(" where {cond}"));
+            }
+        }
+
+        // GROUP BY: backtick-quoted column names
+        if !group_by.is_empty() {
+            let cols = group_by
+                .iter()
+                .map(|c| quote_ident(&c.name))
+                .collect::<Vec<_>>()
+                .join(", ");
+            sql.push_str(&format!(" group by {cols}"));
         }
 
         Ok(sql)
@@ -344,7 +419,7 @@ impl ForeignDataWrapper<MysqlFdwError> for MysqlFdw {
             tgt_cols: Vec::new(),
             sql_query: String::default(),
             stream: None,
-            scaned_row_cnt: 0,
+            scanned_row_cnt: 0,
         })
     }
 
@@ -358,7 +433,7 @@ impl ForeignDataWrapper<MysqlFdwError> for MysqlFdw {
     ) -> MysqlFdwResult<()> {
         self.table = require_option("table", options)?.to_string();
         self.tgt_cols = columns.to_vec();
-        self.scaned_row_cnt = 0;
+        self.scanned_row_cnt = 0;
         self.sql_query = self.deparse(quals, columns, sorts, limit)?;
         self.setup_streaming()
     }
@@ -380,7 +455,7 @@ impl ForeignDataWrapper<MysqlFdwError> for MysqlFdw {
                     tgt_row.push(&tgt_col.name, cell);
                 }
                 row.replace_with(tgt_row);
-                self.scaned_row_cnt += 1;
+                self.scanned_row_cnt += 1;
                 return Ok(Some(()));
             }
         }
@@ -388,12 +463,12 @@ impl ForeignDataWrapper<MysqlFdwError> for MysqlFdw {
         stats::inc_stats(
             Self::FDW_NAME,
             stats::Metric::RowsIn,
-            self.scaned_row_cnt as i64,
+            self.scanned_row_cnt as i64,
         );
         stats::inc_stats(
             Self::FDW_NAME,
             stats::Metric::RowsOut,
-            self.scaned_row_cnt as i64,
+            self.scanned_row_cnt as i64,
         );
 
         Ok(None)
@@ -480,6 +555,48 @@ impl ForeignDataWrapper<MysqlFdwError> for MysqlFdw {
 
     fn end_modify(&mut self) -> MysqlFdwResult<()> {
         self.disconnect_pool()
+    }
+
+    fn supported_aggregates(&self) -> Vec<AggregateKind> {
+        vec![
+            AggregateKind::Count,
+            AggregateKind::CountColumn,
+            AggregateKind::Sum,
+            AggregateKind::Avg,
+            AggregateKind::Min,
+            AggregateKind::Max,
+        ]
+    }
+
+    fn supports_group_by(&self) -> bool {
+        true
+    }
+
+    fn begin_aggregate_scan(
+        &mut self,
+        aggregates: &[Aggregate],
+        group_by: &[Column],
+        quals: &[Qual],
+        options: &HashMap<String, String>,
+    ) -> MysqlFdwResult<()> {
+        self.table = require_option("table", options)?.to_string();
+        self.scanned_row_cnt = 0;
+        self.sql_query = self.deparse_aggregate(aggregates, group_by, quals)?;
+
+        // tgt_cols must match the SELECT order exactly: group-by columns first,
+        // then aggregate result columns named by their aliases. iter_scan uses
+        // tgt_col.name to look up each value in the MySQL result row.
+        let mut tgt_cols: Vec<Column> = group_by.to_vec();
+        for (i, agg) in aggregates.iter().enumerate() {
+            tgt_cols.push(Column {
+                name: agg.alias.clone(),
+                num: group_by.len() + i + 1,
+                type_oid: agg.type_oid,
+            });
+        }
+        self.tgt_cols = tgt_cols;
+
+        self.setup_streaming()
     }
 
     fn import_foreign_schema(

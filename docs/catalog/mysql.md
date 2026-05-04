@@ -133,13 +133,44 @@ create foreign table mysql.my_table (
 
 #### Notes
 
-- Supports `where`, `order by` and `limit` clause pushdown
+- Supports `where`, `order by`, `limit` and aggregate clause pushdown
 - Data is streamed row-by-row from MySQL, making it suitable for large result sets
 - When using `rowid_column`, it must be specified for data modification operations
 
 ## Query Pushdown Support
 
 This FDW supports `where`, `order by` and `limit` clause pushdown.
+
+### Aggregate Pushdown
+
+The FDW pushes common aggregate queries down to MySQL so the aggregation
+runs remotely and only the final result rows are transferred to Postgres. This
+is much faster than fetching every row and aggregating locally, especially
+over large tables.
+
+**Supported aggregates** — `count(*)`, `count(col)`, `count(distinct col)`,
+`sum(col)`, `avg(col)`, `min(col)`, `max(col)`.
+
+**Supported shapes** — scalar aggregates, `group by` over plain columns, with
+or without a `where` clause. Pushdown also works when the foreign `table`
+option is a sub-query.
+
+```sql
+-- All of these run as a single aggregate query on MySQL:
+select count(*) from mysql.my_table;
+select status, sum(amount) from mysql.my_table group by status;
+select count(distinct name) from mysql.my_table where id = 1;
+```
+
+**Cases that are not pushed down** — the query still returns the correct
+result, but the aggregation happens in Postgres after fetching the rows:
+
+- The query has a `having` clause
+- The aggregate has a `filter (where …)` clause
+- A `distinct` modifier is used on anything other than `count`
+- The aggregate's argument is not a plain column (for example `sum(a + 1)`)
+- A `group by` item is not a plain column (for example `group by id + 1`)
+- The aggregate function is not in the list above (for example `stddev`, `group_concat`)
 
 ## Import Foreign Schema
 
@@ -280,6 +311,70 @@ where id = 1;
 -- Delete a row
 delete from mysql.people
 where id = 2;
+```
+
+### Aggregate Query Examples
+
+These examples assume an `orders` table in MySQL and a matching foreign
+table on Postgres:
+
+```sql
+-- Run on MySQL
+create table orders (
+  id      bigint primary key auto_increment,
+  user_id bigint not null,
+  amount  decimal(12,2) not null,
+  status  varchar(50) not null
+);
+
+insert into orders (user_id, amount, status) values
+  (1, 100.00, 'paid'),
+  (1,  50.00, 'paid'),
+  (2, 200.00, 'pending'),
+  (2,  75.00, 'paid'),
+  (3, 300.00, 'paid');
+```
+
+```sql
+-- Foreign table on Postgres
+create foreign table mysql.orders (
+  id      bigint,
+  user_id bigint,
+  amount  numeric,
+  status  text
+)
+  server mysql_server
+  options (
+    table 'orders'
+  );
+```
+
+Each query below runs a single aggregate query against MySQL and returns
+just the result rows:
+
+```sql
+-- Total order count
+select count(*) from mysql.orders;
+
+-- Total revenue from paid orders
+select sum(amount) from mysql.orders where status = 'paid';
+
+-- Per-user order count and revenue
+select user_id, count(*) as orders, sum(amount) as revenue
+from mysql.orders
+group by user_id
+order by user_id;
+
+-- Smallest and largest order
+select min(amount), max(amount) from mysql.orders;
+
+-- Number of distinct users who placed an order
+select count(distinct user_id) from mysql.orders;
+
+-- Average order value per status
+select status, avg(amount) as avg_amount
+from mysql.orders
+group by status;
 ```
 
 ### Import foreign schema example
