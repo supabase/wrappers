@@ -321,13 +321,12 @@ impl MysqlFdw {
             table
         );
 
-        // WHERE: same qual-to-SQL as deparse(), skip array-valued quals
+        // WHERE: preserve all pushed-down quals, including array-valued ones,
+        // because aggregate pushdown has no lower ForeignScan left to reapply them.
         if !quals.is_empty() {
             let mut fmt = MysqlCellFormatter;
             let cond = quals
                 .iter()
-                // Array quals (use_or=true) are skipped — PostgreSQL re-applies them locally.
-                .filter(|q| !matches!(&q.value, Value::Array(_)))
                 .map(|q| deparse_qual(q, &mut fmt))
                 .collect::<Vec<String>>()
                 .join(" and ");
