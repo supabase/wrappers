@@ -50,6 +50,11 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     fn delete(&mut self, rowid: &Cell) -> Result<(), E>;
     fn end_modify(&mut self) -> Result<(), E>;
 
+    // Optional methods for aggregate pushdown
+    fn supported_aggregates(&self) -> Vec<AggregateKind>;
+    fn supports_group_by(&self) -> bool;
+    fn begin_aggregate_scan(&mut self, aggregates: &[Aggregate], group_by: &[Column], quals: &[Qual], options: &HashMap<String, String>) -> Result<(), E>;
+
     // Optional methods
     fn re_scan(&mut self) -> Result<(), E>;
     fn get_rel_size(...) -> Result<(i64, i32), E>;
@@ -89,23 +94,24 @@ pub struct MyFdw { ... }
 
 ### Native FDWs (wrappers/src/fdw/)
 
-| FDW | Feature Flag | Supports Write |
-|-----|--------------|----------------|
-| BigQuery | `bigquery_fdw` | Yes |
-| ClickHouse | `clickhouse_fdw` | Yes |
-| Stripe | `stripe_fdw` | Yes |
-| S3 Vectors | `s3vectors_fdw` | Yes |
-| S3 | `s3_fdw` | No |
-| Firebase | `firebase_fdw` | No |
-| Airtable | `airtable_fdw` | No |
-| Auth0 | `auth0_fdw` | No |
-| AWS Cognito | `cognito_fdw` | No |
-| DuckDB | `duckdb_fdw` | No |
-| Apache Iceberg | `iceberg_fdw` | No |
-| Logflare | `logflare_fdw` | No |
-| Redis | `redis_fdw` | No |
-| SQL Server | `mssql_fdw` | No |
-| HelloWorld | `helloworld_fdw` | No (demo) |
+| FDW | Feature Flag | Supports Write | Aggregate Pushdown |
+|-----|--------------|----------------|--------------------|
+| BigQuery | `bigquery_fdw` | Yes | Yes |
+| ClickHouse | `clickhouse_fdw` | Yes | Yes |
+| MySQL | `mysql_fdw` | Yes | Yes |
+| Stripe | `stripe_fdw` | Yes | No |
+| S3 Vectors | `s3vectors_fdw` | Yes | No |
+| S3 | `s3_fdw` | No | No |
+| Firebase | `firebase_fdw` | No | No |
+| Airtable | `airtable_fdw` | No | No |
+| Auth0 | `auth0_fdw` | No | No |
+| AWS Cognito | `cognito_fdw` | No | No |
+| DuckDB | `duckdb_fdw` | No | No |
+| Apache Iceberg | `iceberg_fdw` | No | No |
+| Logflare | `logflare_fdw` | No | No |
+| Redis | `redis_fdw` | No | No |
+| SQL Server | `mssql_fdw` | No | Yes |
+| HelloWorld | `helloworld_fdw` | No (demo) | No |
 
 ### Wasm FDWs (wasm-wrappers/fdw/)
 
@@ -291,6 +297,46 @@ FDWs receive pushdown hints through `begin_scan`:
 - `limit`: LIMIT/OFFSET to limit at source
 
 Use `Qual::deparse()` to convert to SQL-like strings.
+
+### Aggregate Pushdown
+
+FDWs can push `COUNT`, `SUM`, `AVG`, `MIN`, `MAX` (with optional `GROUP BY`) down to the remote source by implementing three optional trait methods:
+
+```rust
+fn supported_aggregates(&self) -> Vec<AggregateKind> {
+    vec![
+        AggregateKind::Count,
+        AggregateKind::CountColumn,
+        AggregateKind::Sum,
+        AggregateKind::Avg,
+        AggregateKind::Min,
+        AggregateKind::Max,
+    ]
+}
+
+fn supports_group_by(&self) -> bool { true }
+
+fn begin_aggregate_scan(
+    &mut self,
+    aggregates: &[Aggregate],
+    group_by: &[Column],
+    quals: &[Qual],
+    options: &HashMap<String, String>,
+) -> Result<(), E> {
+    // Build remote SQL, set self.tgt_cols (group-by columns first,
+    // then aggregate aliases), then initiate streaming.
+    Ok(())
+}
+```
+
+Key types from `supabase_wrappers::prelude`:
+- `AggregateKind`: enum of `Count | CountColumn | Sum | Avg | Min | Max`
+- `Aggregate`: holds `kind`, `column: Option<Column>`, `distinct: bool`, `alias: String`, `type_oid`
+- `Aggregate::deparse_with_alias()` renders `FUNC(col) AS alias` (no remote quoting — apply your own if needed)
+
+`iter_scan` is reused unchanged; `tgt_cols` must match the SELECT order exactly so column-name lookup works.
+
+FDWs that support aggregate pushdown: BigQuery, ClickHouse, MySQL.
 
 ## PostgreSQL Version Support
 

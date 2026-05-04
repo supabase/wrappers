@@ -10,4 +10,5 @@ This is a foreign data wrapper for [MySQL](https://www.mysql.com/). It is develo
 
 | Version | Date       | Notes                                          |
 | ------- | ---------- | ---------------------------------------------- |
+| 0.1.1   | 2026-04-28 | Added aggregate pushdown support               |
 | 0.1.0   | 2026-03-27 | Initial version                                |
