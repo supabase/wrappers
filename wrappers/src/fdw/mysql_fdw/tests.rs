@@ -336,6 +336,19 @@ mod tests {
                 &[],
             )
             .expect("failed to create foreign table");
+            // Subquery foreign table — exercises the starts_with('(') branch in
+            // deparse_aggregate, which passes the subquery through unquoted.
+            c.update(
+                "CREATE FOREIGN TABLE mysql_agg.orders_sub (
+                    amount numeric,
+                    status text
+                 )
+                 SERVER mysql_agg_server
+                 OPTIONS (table '(select amount, status from testdb.orders)')",
+                None,
+                &[],
+            )
+            .expect("failed to create subquery foreign table");
 
             // Helper: collect EXPLAIN lines and assert no local Aggregate node.
             // A pushed-down aggregate is a bare ForeignScan; a non-pushed aggregate
@@ -592,6 +605,107 @@ mod tests {
                 "expected STDDEV ≈ 60.21, got {stddev}"
             );
             assert_not_pushed_down!(c, "SELECT STDDEV(amount) FROM mysql_agg.orders");
+
+            // --- IN clause: array-valued qual must be included in the pushed-down WHERE ---
+            // id IN (1,2,3) → Alice(100,active), Bob(50,active), Carol(200,inactive)
+            // deparse_aggregate renders use_or=true array quals as `id`=1 or `id`=2 or `id`=3
+            let cnt: i64 = c
+                .select(
+                    "SELECT COUNT(*) FROM mysql_agg.orders WHERE id IN (1, 2, 3)",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .first()
+                .get_one::<i64>()
+                .unwrap()
+                .unwrap();
+            assert_eq!(cnt, 3, "COUNT(*) WHERE id IN (1,2,3) expected 3, got {cnt}");
+            assert_pushed_down!(
+                c,
+                "SELECT COUNT(*) FROM mysql_agg.orders WHERE id IN (1, 2, 3)"
+            );
+
+            // SUM over the same IN filter: 100+50+200 = 350
+            let s: f64 = c
+                .select(
+                    "SELECT SUM(amount) FROM mysql_agg.orders WHERE id IN (1, 2, 3)",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .first()
+                .get_one::<pgrx::AnyNumeric>()
+                .unwrap()
+                .unwrap()
+                .to_string()
+                .parse()
+                .unwrap();
+            assert!(
+                (s - 350.0).abs() < 0.01,
+                "SUM WHERE id IN (1,2,3) expected 350.0, got {s}"
+            );
+            assert_pushed_down!(
+                c,
+                "SELECT SUM(amount) FROM mysql_agg.orders WHERE id IN (1, 2, 3)"
+            );
+
+            // --- Subquery table: verify aggregate pushdown through starts_with('(') branch ---
+            // COUNT(*) over the subquery — same 5 rows
+            let cnt: i64 = c
+                .select("SELECT COUNT(*) FROM mysql_agg.orders_sub", None, &[])
+                .unwrap()
+                .first()
+                .get_one::<i64>()
+                .unwrap()
+                .unwrap();
+            assert_eq!(cnt, 5);
+            assert_pushed_down!(c, "SELECT COUNT(*) FROM mysql_agg.orders_sub");
+
+            // GROUP BY SUM over the subquery
+            // active: 100+50+75=225, inactive: 200+150=350
+            let mut rows: Vec<(String, f64)> = c
+                .select(
+                    "SELECT status, SUM(amount) AS s FROM mysql_agg.orders_sub
+                     GROUP BY status ORDER BY status",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .map(|r| {
+                    let st = r
+                        .get_by_name::<&str, _>("status")
+                        .unwrap()
+                        .unwrap()
+                        .to_string();
+                    let s: f64 = r
+                        .get_by_name::<pgrx::AnyNumeric, _>("s")
+                        .unwrap()
+                        .unwrap()
+                        .to_string()
+                        .parse()
+                        .unwrap();
+                    (st, s)
+                })
+                .collect();
+            rows.sort_by(|a, b| a.0.cmp(&b.0));
+            assert_eq!(rows.len(), 2);
+            assert_eq!(rows[0].0, "active");
+            assert!(
+                (rows[0].1 - 225.0).abs() < 0.01,
+                "active SUM expected 225.0, got {}",
+                rows[0].1
+            );
+            assert_eq!(rows[1].0, "inactive");
+            assert!(
+                (rows[1].1 - 350.0).abs() < 0.01,
+                "inactive SUM expected 350.0, got {}",
+                rows[1].1
+            );
+            assert_pushed_down!(
+                c,
+                "SELECT status, SUM(amount) FROM mysql_agg.orders_sub GROUP BY status"
+            );
         });
     }
 }
