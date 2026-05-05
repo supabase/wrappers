@@ -938,6 +938,25 @@ fn test_link_header_multiple_separate_entries() {
 }
 
 #[test]
+fn test_link_header_quoted_pair_escapes() {
+    // RFC 7230 quoted-pair: a backslash-escaped quote inside a parameter
+    // value must not flip the quote state, and a comma inside such a
+    // quoted-string must not be treated as an entry separator.
+    let mut fdw = make_fdw_for_pagination("");
+    let resp = serde_json::json!({});
+    let headers = vec![h(
+        "Link",
+        "<https://api.example.com/p1>; title=\"a \\\"quoted, comma\\\" page\"; rel=\"first\", \
+         <https://api.example.com/p2>; rel=\"next\"",
+    )];
+    fdw.handle_pagination(&resp, &headers);
+    assert_eq!(
+        fdw.pagination.next,
+        Some(PaginationToken::Url("https://api.example.com/p2".to_string()))
+    );
+}
+
+#[test]
 fn test_link_header_empty_or_malformed() {
     // Malformed entries should not panic and should not produce a next URL.
     let mut fdw = make_fdw_for_pagination("");

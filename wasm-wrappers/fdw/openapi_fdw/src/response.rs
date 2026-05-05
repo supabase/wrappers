@@ -219,14 +219,22 @@ fn parse_link_header_next(value: &str) -> Option<String> {
 }
 
 /// Split a Link header value into entries on top-level commas, ignoring
-/// commas inside angle-bracketed URIs or quoted strings.
+/// commas inside angle-bracketed URIs or quoted strings. Honors RFC 7230
+/// `quoted-pair` escapes so a backslash-escaped quote inside a parameter
+/// value (e.g. `title="a \"q\""`) does not flip the quote state.
 fn split_link_entries(s: &str) -> Vec<&str> {
     let mut entries = Vec::new();
     let mut depth = 0i32;
     let mut in_quotes = false;
+    let mut escape = false;
     let mut start = 0;
     for (i, c) in s.char_indices() {
+        if escape {
+            escape = false;
+            continue;
+        }
         match c {
+            '\\' if in_quotes => escape = true,
             '<' if !in_quotes => depth += 1,
             '>' if !in_quotes => depth = depth.saturating_sub(1),
             '"' => in_quotes = !in_quotes,
