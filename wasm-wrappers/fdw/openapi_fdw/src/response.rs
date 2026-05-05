@@ -105,11 +105,21 @@ impl OpenApiFdw {
         }
     }
 
-    /// Handle pagination from the response
-    pub(crate) fn handle_pagination(&mut self, resp: &JsonValue) {
+    /// Handle pagination from the response.
+    ///
+    /// Precedence (first match wins):
+    ///   1. Explicit `cursor_path` configured by the user
+    ///   2. RFC 8288 `Link` header with `rel="next"` (GitHub, GitLab, etc.)
+    ///   3. JSON-body auto-detection: known next-URL paths
+    ///   4. JSON-body auto-detection: `has_more` flag + cursor paths
+    pub(crate) fn handle_pagination(
+        &mut self,
+        resp: &JsonValue,
+        headers: &[(String, String)],
+    ) {
         self.pagination.clear_next();
 
-        // Try configured cursor path first
+        // 1. Try configured cursor path first (explicit user config wins)
         if !self.cursor_path.is_empty() {
             if let Some(value) = Self::extract_non_empty_string(resp, &self.cursor_path) {
                 if value.starts_with("http://") || value.starts_with("https://") {
@@ -121,12 +131,19 @@ impl OpenApiFdw {
             }
         }
 
-        // Only try auto-detection for object responses
+        // 2. RFC 8288 Link header with rel="next" (cross-origin protection
+        //    is enforced later in resolve_pagination_url when the URL is used).
+        if let Some(url) = find_link_header_next(headers) {
+            self.pagination.next = Some(PaginationToken::Url(url));
+            return;
+        }
+
+        // Only try body auto-detection for object responses
         if resp.as_object().is_none() {
             return;
         }
 
-        // Check for next URL in common locations
+        // 3. Check for next URL in common JSON-body locations
         for path in NEXT_URL_PATHS {
             if let Some(url) = Self::extract_non_empty_string(resp, path) {
                 self.pagination.next = Some(PaginationToken::Url(url));
@@ -161,6 +178,88 @@ impl OpenApiFdw {
             .filter(|s| !s.is_empty())
             .map(ToString::to_string)
     }
+}
+
+/// Find the URL of the first `Link` header entry with `rel="next"`.
+///
+/// Header names are matched case-insensitively. Multiple `Link` headers
+/// (whether comma-concatenated or sent as separate entries) are all searched.
+pub(crate) fn find_link_header_next(headers: &[(String, String)]) -> Option<String> {
+    headers
+        .iter()
+        .filter(|(name, _)| name.eq_ignore_ascii_case("link"))
+        .find_map(|(_, value)| parse_link_header_next(value))
+}
+
+/// Parse an RFC 8288 `Link` header value and return the URL of the first
+/// entry whose `rel` parameter contains the value `next`.
+///
+/// Handles multi-link headers like:
+///   `<https://api/items?page=2>; rel="next", <https://api/items?page=10>; rel="last"`
+/// and multi-rel values like `rel="next prev"`.
+fn parse_link_header_next(value: &str) -> Option<String> {
+    for entry in split_link_entries(value) {
+        let entry = entry.trim();
+        if !entry.starts_with('<') {
+            continue;
+        }
+        let Some(close) = entry.find('>') else {
+            continue;
+        };
+        let url = entry[1..close].trim();
+        if url.is_empty() {
+            continue;
+        }
+        let params = &entry[close + 1..];
+        if has_rel_next(params) {
+            return Some(url.to_string());
+        }
+    }
+    None
+}
+
+/// Split a Link header value into entries on top-level commas, ignoring
+/// commas inside angle-bracketed URIs or quoted strings.
+fn split_link_entries(s: &str) -> Vec<&str> {
+    let mut entries = Vec::new();
+    let mut depth = 0i32;
+    let mut in_quotes = false;
+    let mut start = 0;
+    for (i, c) in s.char_indices() {
+        match c {
+            '<' if !in_quotes => depth += 1,
+            '>' if !in_quotes => depth = depth.saturating_sub(1),
+            '"' => in_quotes = !in_quotes,
+            ',' if depth == 0 && !in_quotes => {
+                entries.push(&s[start..i]);
+                start = i + 1;
+            }
+            _ => {}
+        }
+    }
+    if start <= s.len() {
+        entries.push(&s[start..]);
+    }
+    entries
+}
+
+/// Returns true if the parameter list (after the URI part of a Link entry)
+/// contains a `rel` parameter whose value is or includes `next`.
+fn has_rel_next(params: &str) -> bool {
+    for raw in params.split(';') {
+        let part = raw.trim();
+        let Some((name, value)) = part.split_once('=') else {
+            continue;
+        };
+        if !name.trim().eq_ignore_ascii_case("rel") {
+            continue;
+        }
+        let value = value.trim().trim_matches('"');
+        return value
+            .split_ascii_whitespace()
+            .any(|v| v.eq_ignore_ascii_case("next"));
+    }
+    false
 }
 
 #[cfg(test)]
