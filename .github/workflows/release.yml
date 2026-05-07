@@ -2,6 +2,13 @@ name: Release
 
 
 on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Run build/package jobs without publishing crates.io or GitHub Release assets"
+        required: true
+        default: true
+        type: boolean
   push:
     # Sequence of patterns matched against refs/tags
     tags:
@@ -13,6 +20,7 @@ permissions:
 jobs:
   publish-to-crates-io:
     name: Publish to crates.io
+    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
     runs-on: blacksmith-4vcpu-ubuntu-2404
     environment: release
     permissions:
@@ -76,6 +84,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Create Release
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
         id: create_release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -221,9 +230,11 @@ jobs:
           sudo dpkg-deb --build --root-owner-group ${package_dir}
 
       - name: Get upload url
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
         run: echo UPLOAD_URL=$(curl --silent https://api.github.com/repos/${{ github.repository }}/releases/latest | jq .upload_url --raw-output) >> $GITHUB_ENV
 
       - name: Upload release asset
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
         uses: actions/upload-release-asset@e8f9f06c4b078e705bd2ea027f0926603fc9b4d5 # v1.0.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -232,3 +243,10 @@ jobs:
           asset_path: ./wrappers/${{ matrix.extension_name }}-${{ github.ref_name }}-pg${{ matrix.postgres }}-${{ matrix.box.arch }}-linux-gnu.deb
           asset_name: ${{ matrix.extension_name }}-${{ github.ref_name }}-pg${{ matrix.postgres }}-${{ matrix.box.arch }}-linux-gnu.deb
           asset_content_type: application/vnd.debian.binary-package
+
+      - name: Upload dry-run artifact
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.extension_name }}-${{ github.ref_name }}-pg${{ matrix.postgres }}-${{ matrix.box.arch }}-linux-gnu
+          path: ./wrappers/${{ matrix.extension_name }}-${{ github.ref_name }}-pg${{ matrix.postgres }}-${{ matrix.box.arch }}-linux-gnu.deb
