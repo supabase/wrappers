@@ -10,9 +10,9 @@ on:
         default: true
         type: boolean
       version:
-        description: "Fake version tag for dry-run packaging (e.g. v0.0.0-dry-run)"
+        description: "Fake version tag for dry-run packaging (e.g. v0.0.0)"
         required: false
-        default: "v0.0.0-dry-run"
+        default: "v0.0.0"
         type: string
   push:
     # Sequence of patterns matched against refs/tags
@@ -110,8 +110,7 @@ jobs:
           - wrappers
         pgrx_version:
           - 0.16.1
-        #postgres: [14, 15, 16, 17, 18]
-        postgres: [15]
+        postgres: [14, 15, 16, 17, 18]
         features:
           - "all_fdws"
         box:
