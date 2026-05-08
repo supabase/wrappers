@@ -152,10 +152,18 @@ jobs:
 
           # Resolve effective version: use input for manual dry-runs, tag for real releases
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            EFFECTIVE_VERSION="${{ inputs.version }}"
+            RAW_VERSION="${{ inputs.version }}"
           else
-            EFFECTIVE_VERSION="${{ github.ref_name }}"
+            RAW_VERSION="${{ github.ref_name }}"
           fi
+
+          if [[ -z "${RAW_VERSION}" ]]; then
+            echo "Version must not be empty"
+            exit 1
+          fi
+
+          NORMALIZED_VERSION="${RAW_VERSION#v}"
+          EFFECTIVE_VERSION="v${NORMALIZED_VERSION}"
           echo "Building version: ${EFFECTIVE_VERSION}"
 
           # Add postgres package repo and install requested postgres version
