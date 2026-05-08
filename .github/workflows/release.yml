@@ -161,6 +161,15 @@ jobs:
           # Ensure installed pg_config is first on path
           export PATH=$PATH:/usr/lib/postgresql/${{ matrix.postgres }}/bin
 
+          # Extra toolchain + linker config for arm64
+          if [[ "${{ matrix.box.arch }}" == "arm64" ]]; then
+            sudo apt update
+            sudo apt install -y lld
+            export RUSTFLAGS="-C link-arg=-fuse-ld=lld"
+            export CFLAGS="${CFLAGS:-} -fPIC"
+            export CXXFLAGS="${CXXFLAGS:-} -fPIC"
+          fi
+          
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile minimal --default-toolchain 1.88.0 && \
             rustup --version && \
             rustc --version && \
