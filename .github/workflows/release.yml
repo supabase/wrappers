@@ -105,7 +105,8 @@ jobs:
           - wrappers
         pgrx_version:
           - 0.16.1
-        postgres: [14, 15, 16, 17, 18]
+        #postgres: [14, 15, 16, 17, 18]
+        postgres: [15]
         features:
           - "all_fdws"
         box:
@@ -169,7 +170,7 @@ jobs:
             export CFLAGS="${CFLAGS:-} -fPIC"
             export CXXFLAGS="${CXXFLAGS:-} -fPIC"
           fi
-          
+
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile minimal --default-toolchain 1.88.0 && \
             rustup --version && \
             rustc --version && \
