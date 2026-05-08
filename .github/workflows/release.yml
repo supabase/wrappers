@@ -4,13 +4,8 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
-      dry_run:
-        description: "Run build/package jobs without publishing crates.io or GitHub Release assets"
-        required: true
-        default: true
-        type: boolean
       version:
-        description: "Fake version tag for dry-run packaging (e.g. v0.0.0)"
+        description: "Version tag to use for manual dry-run packaging (e.g. v0.0.0)"
         required: false
         default: "v0.0.0"
         type: string
@@ -275,7 +270,7 @@ jobs:
           asset_content_type: application/vnd.debian.binary-package
 
       - name: Upload dry-run artifact
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+        if: ${{ github.event_name == 'workflow_dispatch' }}
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.extension_name }}-${{ inputs.version }}-pg${{ matrix.postgres }}-${{ matrix.box.arch }}-linux-gnu
