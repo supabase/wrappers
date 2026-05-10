@@ -1,0 +1,1 @@
+{"data":{"order":{"fulfillments":{"nodes":[{"id":"gid://shopify/Fulfillment/1","status":"SUCCESS","createdAt":"2024-02-02T00:00:00Z","updatedAt":"2024-02-02T00:00:00Z"}]},"refunds":[{"id":"gid://shopify/Refund/1","createdAt":"2024-02-03T00:00:00Z"}]}}}

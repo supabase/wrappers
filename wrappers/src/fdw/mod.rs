@@ -10,6 +10,9 @@ mod clickhouse_fdw;
 #[cfg(feature = "stripe_fdw")]
 mod stripe_fdw;
 
+#[cfg(feature = "shopify_fdw")]
+mod shopify_fdw;
+
 #[cfg(feature = "firebase_fdw")]
 mod firebase_fdw;
 

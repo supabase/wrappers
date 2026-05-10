@@ -1,0 +1,1 @@
+{"data":{"draftOrders":{"nodes":[{"id":"gid://shopify/DraftOrder/1","name":"#D1","status":"OPEN","email":"alice@example.com","note":null,"createdAt":"2024-03-01T00:00:00Z","updatedAt":"2024-03-01T00:00:00Z","completedAt":null}],"pageInfo":{"hasNextPage":false,"endCursor":null}}}}
