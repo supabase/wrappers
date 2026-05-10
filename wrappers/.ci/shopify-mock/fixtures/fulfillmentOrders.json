@@ -1,0 +1,1 @@
+{"data":{"fulfillmentOrders":{"nodes":[{"id":"gid://shopify/FulfillmentOrder/1","status":"OPEN","requestStatus":"UNSUBMITTED","createdAt":"2024-02-01T10:00:00Z","updatedAt":"2024-02-01T10:00:00Z"}],"pageInfo":{"hasNextPage":false,"endCursor":null}}}}

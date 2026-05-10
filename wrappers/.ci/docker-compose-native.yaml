@@ -61,6 +61,18 @@ services:
     healthcheck:
       test: sleep 4
       retries: 20
+
+  shopify:
+    build:
+      context: shopify-mock
+      dockerfile: Dockerfile
+    container_name: shopify-mock
+    ports:
+      - "12112:3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 5s
+      retries: 10
       
   firebase:
     image: andreysenov/firebase-tools:11.24.1-node-14-alpine

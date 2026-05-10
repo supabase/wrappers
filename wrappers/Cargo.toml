@@ -58,6 +58,16 @@ stripe_fdw = [
     "thiserror",
     "url",
 ]
+shopify_fdw = [
+    "chrono",
+    "http",
+    "reqwest",
+    "reqwest-middleware",
+    "reqwest-retry",
+    "serde_json",
+    "thiserror",
+    "url",
+]
 firebase_fdw = [
     "reqwest",
     "reqwest-middleware",
@@ -215,6 +225,7 @@ native_fdws = [
     "bigquery_fdw",
     "clickhouse_fdw",
     "stripe_fdw",
+    "shopify_fdw",
     "firebase_fdw",
     "s3_fdw",
     "s3vectors_fdw",
