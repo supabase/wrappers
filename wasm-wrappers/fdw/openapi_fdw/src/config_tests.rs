@@ -155,9 +155,11 @@ fn test_restore_does_not_affect_non_pagination_fields() {
 fn test_apply_headers_content_type_always_added() {
     let mut config = ServerConfig::default();
     config.apply_headers(None, None, None).unwrap();
-    assert_eq!(config.headers.len(), 1);
+    // content-type + default user-agent (added when none provided)
+    assert_eq!(config.headers.len(), 2);
     assert_eq!(config.headers[0].0, "content-type");
     assert_eq!(config.headers[0].1, "application/json");
+    assert_eq!(config.headers[1].0, "user-agent");
 }
 
 #[test]
@@ -177,9 +179,10 @@ fn test_apply_headers_with_accept() {
     config
         .apply_headers(None, Some("application/geo+json".to_string()), None)
         .unwrap();
-    assert_eq!(config.headers.len(), 2);
-    assert_eq!(config.headers[1].0, "accept");
-    assert_eq!(config.headers[1].1, "application/geo+json");
+    // content-type + default user-agent + accept
+    assert_eq!(config.headers.len(), 3);
+    assert_eq!(config.headers[2].0, "accept");
+    assert_eq!(config.headers[2].1, "application/geo+json");
 }
 
 #[test]
@@ -209,10 +212,10 @@ fn test_apply_headers_custom_json() {
             Some(r#"{"X-Custom": "value1", "Feature-Flag": "beta"}"#.to_string()),
         )
         .unwrap();
-    // content-type + 2 custom headers
-    assert_eq!(config.headers.len(), 3);
+    // content-type + default user-agent + 2 custom headers
+    assert_eq!(config.headers.len(), 4);
     // Custom headers should be lowercased
-    let custom_headers: Vec<_> = config.headers[1..].to_vec();
+    let custom_headers: Vec<_> = config.headers[2..].to_vec();
     assert!(
         custom_headers
             .iter()
@@ -235,8 +238,9 @@ fn test_apply_headers_custom_json_lowercases_keys() {
             Some(r#"{"X-API-KEY": "secret123"}"#.to_string()),
         )
         .unwrap();
-    assert_eq!(config.headers[1].0, "x-api-key");
-    assert_eq!(config.headers[1].1, "secret123");
+    // Index 0: content-type, index 1: default user-agent, index 2: custom header
+    assert_eq!(config.headers[2].0, "x-api-key");
+    assert_eq!(config.headers[2].1, "secret123");
 }
 
 #[test]
@@ -263,8 +267,8 @@ fn test_apply_headers_empty_json_object() {
     config
         .apply_headers(None, None, Some("{}".to_string()))
         .unwrap();
-    // Only content-type, no custom headers
-    assert_eq!(config.headers.len(), 1);
+    // content-type + default user-agent, no custom headers
+    assert_eq!(config.headers.len(), 2);
 }
 
 #[test]
@@ -324,10 +328,10 @@ fn test_apply_headers_custom_content_type_replaces_default() {
             Some(r#"{"Content-Type": "text/xml"}"#.to_string()),
         )
         .unwrap();
-    // Custom content-type should replace the default, not add a duplicate
-    assert_eq!(config.headers.len(), 1);
-    assert_eq!(config.headers[0].0, "content-type");
-    assert_eq!(config.headers[0].1, "text/xml");
+    // Custom content-type replaces the default; default user-agent is still added
+    assert_eq!(config.headers.len(), 2);
+    let ct = config.headers.iter().find(|h| h.0 == "content-type").unwrap();
+    assert_eq!(ct.1, "text/xml");
 }
 
 #[test]
