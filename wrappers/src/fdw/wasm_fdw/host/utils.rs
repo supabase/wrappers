@@ -40,6 +40,10 @@ const _: () = {
         fn get_vault_secret_by_name(&mut self, secret_name: String) -> Option<String> {
             get_vault_secret_by_name(&secret_name)
         }
+
+        fn query_setting(&mut self, name: String) -> Option<String> {
+            query_setting(&name)
+        }
     }
 };
 
@@ -78,6 +82,10 @@ const _: () = {
 
         fn get_vault_secret_by_name(&mut self, secret_name: String) -> Option<String> {
             get_vault_secret_by_name(&secret_name)
+        }
+
+        fn query_setting(&mut self, name: String) -> Option<String> {
+            query_setting(&name)
         }
     }
 };
