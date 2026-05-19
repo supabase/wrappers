@@ -789,7 +789,10 @@ fn test_link_header_picks_rel_next() {
 fn test_link_header_case_insensitive_name() {
     let mut fdw = make_fdw_for_pagination("");
     let resp = serde_json::json!({});
-    let headers = vec![h("link", "<https://api.example.com/items?page=2>; rel=\"next\"")];
+    let headers = vec![h(
+        "link",
+        "<https://api.example.com/items?page=2>; rel=\"next\"",
+    )];
     fdw.handle_pagination(&resp, &headers);
     assert_eq!(
         fdw.pagination.next,
@@ -808,7 +811,9 @@ fn test_link_header_unquoted_rel() {
     fdw.handle_pagination(&resp, &headers);
     assert_eq!(
         fdw.pagination.next,
-        Some(PaginationToken::Url("https://api.example.com/p2".to_string()))
+        Some(PaginationToken::Url(
+            "https://api.example.com/p2".to_string()
+        ))
     );
 }
 
@@ -821,7 +826,9 @@ fn test_link_header_multi_rel_value() {
     fdw.handle_pagination(&resp, &headers);
     assert_eq!(
         fdw.pagination.next,
-        Some(PaginationToken::Url("https://api.example.com/p2".to_string()))
+        Some(PaginationToken::Url(
+            "https://api.example.com/p2".to_string()
+        ))
     );
 }
 
@@ -837,7 +844,9 @@ fn test_link_header_with_other_params() {
     fdw.handle_pagination(&resp, &headers);
     assert_eq!(
         fdw.pagination.next,
-        Some(PaginationToken::Url("https://api.example.com/p2".to_string()))
+        Some(PaginationToken::Url(
+            "https://api.example.com/p2".to_string()
+        ))
     );
 }
 
@@ -861,7 +870,10 @@ fn test_link_header_array_response_still_paginates() {
     // Body autodetect skips arrays, but Link header must still drive pagination.
     let mut fdw = make_fdw_for_pagination("");
     let resp = serde_json::json!([{"id": 1}, {"id": 2}]);
-    let headers = vec![h("Link", "<https://api.github.com/items?page=2>; rel=\"next\"")];
+    let headers = vec![h(
+        "Link",
+        "<https://api.github.com/items?page=2>; rel=\"next\"",
+    )];
     fdw.handle_pagination(&resp, &headers);
     assert_eq!(
         fdw.pagination.next,
@@ -879,7 +891,10 @@ fn test_link_header_beats_json_body_autodetect() {
         "links": {"next": "https://api.example.com/from-body"},
         "data": []
     });
-    let headers = vec![h("Link", "<https://api.example.com/from-header>; rel=\"next\"")];
+    let headers = vec![h(
+        "Link",
+        "<https://api.example.com/from-header>; rel=\"next\"",
+    )];
     fdw.handle_pagination(&resp, &headers);
     assert_eq!(
         fdw.pagination.next,
@@ -933,7 +948,9 @@ fn test_link_header_multiple_separate_entries() {
     fdw.handle_pagination(&resp, &headers);
     assert_eq!(
         fdw.pagination.next,
-        Some(PaginationToken::Url("https://api.example.com/p2".to_string()))
+        Some(PaginationToken::Url(
+            "https://api.example.com/p2".to_string()
+        ))
     );
 }
 
@@ -952,7 +969,9 @@ fn test_link_header_quoted_pair_escapes() {
     fdw.handle_pagination(&resp, &headers);
     assert_eq!(
         fdw.pagination.next,
-        Some(PaginationToken::Url("https://api.example.com/p2".to_string()))
+        Some(PaginationToken::Url(
+            "https://api.example.com/p2".to_string()
+        ))
     );
 }
 

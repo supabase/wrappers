@@ -112,11 +112,7 @@ impl OpenApiFdw {
     ///   2. RFC 8288 `Link` header with `rel="next"` (GitHub, GitLab, etc.)
     ///   3. JSON-body auto-detection: known next-URL paths
     ///   4. JSON-body auto-detection: `has_more` flag + cursor paths
-    pub(crate) fn handle_pagination(
-        &mut self,
-        resp: &JsonValue,
-        headers: &[(String, String)],
-    ) {
+    pub(crate) fn handle_pagination(&mut self, resp: &JsonValue, headers: &[(String, String)]) {
         self.pagination.clear_next();
 
         // 1. Try configured cursor path first (explicit user config wins)

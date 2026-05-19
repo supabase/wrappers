@@ -330,7 +330,11 @@ fn test_apply_headers_custom_content_type_replaces_default() {
         .unwrap();
     // Custom content-type replaces the default; default user-agent is still added
     assert_eq!(config.headers.len(), 2);
-    let ct = config.headers.iter().find(|h| h.0 == "content-type").unwrap();
+    let ct = config
+        .headers
+        .iter()
+        .find(|h| h.0 == "content-type")
+        .unwrap();
     assert_eq!(ct.1, "text/xml");
 }
 
