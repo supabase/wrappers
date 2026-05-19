@@ -379,6 +379,26 @@ WHERE owner = 'supabase' AND repo = 'wrappers' AND state = 'open'
 LIMIT 5;
 ```
 
+### Pagination across pages (RFC 8288 `Link` header)
+
+GitHub paginates list responses using the [RFC 8288](https://datatracker.ietf.org/doc/html/rfc8288) `Link` response header. When the FDW sees a `Link: <...>; rel="next"` header it follows the link to fetch the next page, up to `max_pages` (default 1000). No JSON-body cursor configuration is needed.
+
+The `supabase/wrappers` repo has well over one page of PRs, so the count below forces multiple HTTP requests behind one SQL query:
+
+```sql
+SELECT count(*) AS total_prs
+FROM repo_pulls
+WHERE owner = 'supabase' AND repo = 'wrappers' AND state = 'all';
+```
+
+| total_prs |
+| --- |
+| 487 |
+
+> Your number will reflect the current state of the repo. With `page_size '30'` on the `github` server, this single SQL query issues ~17 HTTP GETs to `/repos/supabase/wrappers/pulls`, each chained from the previous response's `Link: <...>; rel="next"`. Bumping `page_size` to `'100'` (the GitHub maximum) reduces that to ~5 requests.
+
+To watch it happen, point the table at the `github_debug` server and look for the sequence of `HTTP GET ... -> 200` INFO messages — one per page.
+
 ## 7. Releases
 
 Paginated list of releases for a repository:

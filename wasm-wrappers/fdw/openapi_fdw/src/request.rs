@@ -535,8 +535,9 @@ impl OpenApiFdw {
 
         stats::inc_stats(FDW_NAME, stats::Metric::BytesIn, resp.body.len() as i64);
 
-        // Handle pagination before extracting data (borrows resp_json)
-        self.handle_pagination(&resp_json);
+        // Handle pagination before extracting data (borrows resp_json).
+        // Headers are needed for RFC 8288 Link-header pagination (e.g., GitHub).
+        self.handle_pagination(&resp_json, &resp.headers);
 
         // Extract data by taking ownership (avoids cloning the array)
         self.src_rows = self.extract_data(&mut resp_json)?;

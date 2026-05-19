@@ -311,8 +311,9 @@ Debug output includes:
 The FDW automatically handles pagination. It supports:
 
 1. **Cursor-based pagination** - Uses `cursor_param` and `cursor_path`
-2. **URL-based pagination** - Follows `next` links in response
-3. **Offset-based pagination** - Auto-detected from common patterns
+2. **URL-based pagination** - Follows `next` links in response body (e.g., `/links/next`, `/meta/pagination/next`)
+3. **`Link` header pagination** - Follows [RFC 8288](https://datatracker.ietf.org/doc/html/rfc8288) `Link: <...>; rel="next"` response headers (GitHub, GitLab, and most REST APIs)
+4. **Offset-based pagination** - Auto-detected from common patterns
 
 ### Configuring Pagination
 
