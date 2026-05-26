@@ -474,6 +474,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -697,6 +701,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../dynamodb/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DynamoDB
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../firebase/" class="md-nav__link">
         
   
@@ -761,6 +793,34 @@
     
   
     Logflare
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mysql/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MySQL
   
 
     
@@ -1111,6 +1171,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Query Pushdown Support">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#aggregate-pushdown" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Aggregate Pushdown
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1163,6 +1240,17 @@
     <span class="md-ellipsis">
       
         Remote Subquery Example
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#aggregate-query-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Aggregate Query Examples
       
     </span>
   </a>
@@ -2561,6 +2649,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Query Pushdown Support">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#aggregate-pushdown" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Aggregate Pushdown
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2613,6 +2718,17 @@
     <span class="md-ellipsis">
       
         Remote Subquery Example
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#aggregate-query-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Aggregate Query Examples
       
     </span>
   </a>
@@ -2843,12 +2959,46 @@
 <li><code>where</code> clauses</li>
 <li><code>order by</code> clauses</li>
 <li><code>limit</code> clauses</li>
+<li>aggregate clauses</li>
 </ul>
 </li>
 <li>See Data Types section for type mappings between PostgreSQL and SQL Server</li>
 </ul>
 <h2 id="query-pushdown-support">Query Pushdown Support</h2>
 <p>This FDW supports <code>where</code>, <code>order by</code> and <code>limit</code> clause pushdown.</p>
+<h3 id="aggregate-pushdown">Aggregate Pushdown</h3>
+<p>The FDW pushes common aggregate queries down to SQL Server so the aggregation
+runs remotely and only the final result rows are transferred to Postgres. This
+is much faster than fetching every row and aggregating locally, especially
+over large tables.</p>
+<p><strong>Supported aggregates</strong> — <code>count(*)</code>, <code>count(col)</code>, <code>count(distinct col)</code>,
+<code>sum(col)</code>, <code>avg(col)</code>, <code>min(col)</code>, <code>max(col)</code>.</p>
+<p><strong>Supported shapes</strong> — scalar aggregates, <code>group by</code> over plain columns, with
+or without a <code>where</code> clause. Pushdown also works when the foreign <code>table</code>
+option is a sub-query.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- All of these run as a single aggregate query on SQL Server:</span>
+<span class="k">select</span><span class="w"> </span><span class="k">count</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">mssql</span><span class="p">.</span><span class="n">users</span><span class="p">;</span>
+<span class="k">select</span><span class="w"> </span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="k">sum</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">mssql</span><span class="p">.</span><span class="n">users</span><span class="w"> </span><span class="k">group</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">id</span><span class="p">;</span>
+<span class="k">select</span><span class="w"> </span><span class="k">count</span><span class="p">(</span><span class="k">distinct</span><span class="w"> </span><span class="n">name</span><span class="p">)</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">mssql</span><span class="p">.</span><span class="n">users</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">42</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<p><code>count(*)</code> and <code>count(col)</code> are translated to SQL Server's <code>count_big</code> so the
+result fits Postgres' <code>bigint</code> without overflow. Each aggregate is also wrapped
+in a <code>cast(... as &lt;sql_server_type&gt;)</code> so values come back in the exact type
+Postgres expects (for example, <code>sum</code> over a <code>bigint</code> column is cast to
+<code>numeric</code>, matching Postgres' <code>sum(bigint) → numeric</code> rule).</p>
+<p><strong>Cases that are not pushed down</strong> — the query still returns the correct
+result, but the aggregation happens in Postgres after fetching the rows:</p>
+<ul>
+<li>The query has a <code>having</code> clause</li>
+<li>The aggregate has a <code>filter (where …)</code> clause</li>
+<li>A <code>distinct</code> modifier is used on anything other than <code>count</code></li>
+<li>The aggregate's argument is not a plain column (for example <code>sum(a + 1)</code>)</li>
+<li>A <code>group by</code> item is not a plain column (for example <code>group by id + 1</code>)</li>
+<li>The aggregate function is not in the list above (for example <code>stddev</code>, <code>string_agg</code>)</li>
+</ul>
 <h2 id="supported-data-types">Supported Data Types</h2>
 <table>
 <thead>
@@ -2988,6 +3138,105 @@
 <span class="w">  </span><span class="p">);</span>
 
 <span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">mssql</span><span class="p">.</span><span class="n">users_subquery</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<h3 id="aggregate-query-examples">Aggregate Query Examples</h3>
+<p>These examples assume an <code>orders</code> table on SQL Server and a matching foreign
+table on Postgres:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Run on SQL Server</span>
+<span class="k">create</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">id</span><span class="w">        </span><span class="nb">bigint</span><span class="p">,</span>
+<span class="w">  </span><span class="n">user_id</span><span class="w">   </span><span class="nb">bigint</span><span class="p">,</span>
+<span class="w">  </span><span class="n">amount</span><span class="w">    </span><span class="nb">numeric</span><span class="p">(</span><span class="mi">18</span><span class="p">,</span><span class="mi">2</span><span class="p">),</span>
+<span class="w">  </span><span class="n">status</span><span class="w">    </span><span class="nb">varchar</span><span class="p">(</span><span class="mi">20</span><span class="p">)</span>
+<span class="p">);</span>
+
+<span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">user_id</span><span class="p">,</span><span class="w"> </span><span class="n">amount</span><span class="p">,</span><span class="w"> </span><span class="n">status</span><span class="p">)</span><span class="w"> </span><span class="k">values</span>
+<span class="w">  </span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">42</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p">.</span><span class="mi">00</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;paid&#39;</span><span class="p">),</span>
+<span class="w">  </span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">42</span><span class="p">,</span><span class="w">  </span><span class="mi">50</span><span class="p">.</span><span class="mi">00</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;paid&#39;</span><span class="p">),</span>
+<span class="w">  </span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">43</span><span class="p">,</span><span class="w"> </span><span class="mi">200</span><span class="p">.</span><span class="mi">00</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;pending&#39;</span><span class="p">),</span>
+<span class="w">  </span><span class="p">(</span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="mi">43</span><span class="p">,</span><span class="w">  </span><span class="mi">75</span><span class="p">.</span><span class="mi">00</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;paid&#39;</span><span class="p">),</span>
+<span class="w">  </span><span class="p">(</span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="mi">44</span><span class="p">,</span><span class="w"> </span><span class="mi">300</span><span class="p">.</span><span class="mi">00</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;paid&#39;</span><span class="p">);</span>
+</code></pre></div></td></tr></table></div>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Foreign table on Postgres</span>
+<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">mssql</span><span class="p">.</span><span class="n">orders</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">id</span><span class="w">      </span><span class="nb">bigint</span><span class="p">,</span>
+<span class="w">  </span><span class="n">user_id</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
+<span class="w">  </span><span class="n">amount</span><span class="w">  </span><span class="nb">numeric</span><span class="p">(</span><span class="mi">18</span><span class="p">,</span><span class="mi">2</span><span class="p">),</span>
+<span class="w">  </span><span class="n">status</span><span class="w">  </span><span class="nb">text</span>
+<span class="p">)</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">mssql_server</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">table</span><span class="w"> </span><span class="s1">&#39;orders&#39;</span>
+<span class="w">  </span><span class="p">);</span>
+</code></pre></div></td></tr></table></div>
+<p>Each query below runs a single aggregate query against SQL Server and returns
+just the result rows:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Total order count</span>
+<span class="k">select</span><span class="w"> </span><span class="k">count</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">mssql</span><span class="p">.</span><span class="n">orders</span><span class="p">;</span>
+
+<span class="c1">-- Total revenue from paid orders</span>
+<span class="k">select</span><span class="w"> </span><span class="k">sum</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">mssql</span><span class="p">.</span><span class="n">orders</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;paid&#39;</span><span class="p">;</span>
+
+<span class="c1">-- Per-user order count and revenue</span>
+<span class="k">select</span><span class="w"> </span><span class="n">user_id</span><span class="p">,</span><span class="w"> </span><span class="k">count</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">orders</span><span class="p">,</span><span class="w"> </span><span class="k">sum</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">revenue</span>
+<span class="k">from</span><span class="w"> </span><span class="n">mssql</span><span class="p">.</span><span class="n">orders</span>
+<span class="k">group</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">user_id</span>
+<span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">user_id</span><span class="p">;</span>
+
+<span class="c1">-- Smallest and largest order</span>
+<span class="k">select</span><span class="w"> </span><span class="k">min</span><span class="p">(</span><span class="n">amount</span><span class="p">),</span><span class="w"> </span><span class="k">max</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">mssql</span><span class="p">.</span><span class="n">orders</span><span class="p">;</span>
+
+<span class="c1">-- Number of distinct users who placed an order</span>
+<span class="k">select</span><span class="w"> </span><span class="k">count</span><span class="p">(</span><span class="k">distinct</span><span class="w"> </span><span class="n">user_id</span><span class="p">)</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">mssql</span><span class="p">.</span><span class="n">orders</span><span class="p">;</span>
+
+<span class="c1">-- Average order value per status</span>
+<span class="k">select</span><span class="w"> </span><span class="n">status</span><span class="p">,</span><span class="w"> </span><span class="k">avg</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">avg_amount</span>
+<span class="k">from</span><span class="w"> </span><span class="n">mssql</span><span class="p">.</span><span class="n">orders</span>
+<span class="k">group</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">status</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 
 

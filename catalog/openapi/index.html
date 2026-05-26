@@ -472,6 +472,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -697,6 +701,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../dynamodb/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DynamoDB
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../firebase/" class="md-nav__link">
         
   
@@ -761,6 +793,34 @@
     
   
     Logflare
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mysql/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MySQL
   
 
     
@@ -1518,8 +1578,41 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#limit-pushdown" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LIMIT Pushdown
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#post-for-read-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST-for-Read Endpoints
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#debug-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Debug Mode
+      
+    </span>
+  </a>
   
 </li>
       
@@ -1602,10 +1695,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#rate-limiting" class="md-nav__link">
+  <a href="#automatic-retries" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Rate Limiting
+        Automatic Retries
       
     </span>
   </a>
@@ -1647,10 +1740,32 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#post-for-read" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST-for-Read
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#custom-headers" class="md-nav__link">
     <span class="md-ellipsis">
       
         Custom Headers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#api-key-location" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API Key Location
       
     </span>
   </a>
@@ -2758,8 +2873,41 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#limit-pushdown" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LIMIT Pushdown
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#post-for-read-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST-for-Read Endpoints
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#debug-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Debug Mode
+      
+    </span>
+  </a>
   
 </li>
       
@@ -2842,10 +2990,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#rate-limiting" class="md-nav__link">
+  <a href="#automatic-retries" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Rate Limiting
+        Automatic Retries
       
     </span>
   </a>
@@ -2887,10 +3035,32 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#post-for-read" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST-for-Read
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#custom-headers" class="md-nav__link">
     <span class="md-ellipsis">
       
         Custom Headers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#api-key-location" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API Key Location
       
     </span>
   </a>
@@ -2971,7 +3141,7 @@
 
 <h1 id="openapi">OpenAPI</h1>
 <p><a href="https://www.openapis.org/">OpenAPI</a> is a specification for describing HTTP APIs. The OpenAPI Wrapper is a generic WebAssembly (Wasm) foreign data wrapper that can connect to any REST API with an OpenAPI 3.0+ specification.</p>
-<p>This wrapper allows you to query any REST API endpoint as a PostgreSQL foreign table, with support for path parameters, pagination, and automatic schema import.</p>
+<p>This wrapper allows you to query any REST API endpoint as a PostgreSQL foreign table, with support for path parameters, pagination, POST-for-read endpoints, and automatic schema import.</p>
 <h2 id="available-versions">Available Versions</h2>
 <table>
 <thead>
@@ -2983,6 +3153,12 @@
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>0.2.0</td>
+<td><code>https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.2.0/openapi_fdw.wasm</code></td>
+<td><code>f0d4d6e50f7c519a66363bd8bdbe1ea8086ca810ca14b43fb0ed18b64acdf6aa</code></td>
+<td>&gt;=0.5.0</td>
+</tr>
 <tr>
 <td>0.1.4</td>
 <td><code>https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.1.4/openapi_fdw.wasm</code></td>
@@ -3036,10 +3212,10 @@
 <span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">my_api_server</span>
 <span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.2.0/openapi_fdw.wasm&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;supabase:openapi-fdw&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;{See: &quot;Available Versions&quot;}&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;{See: &quot;Available Versions&quot;}&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;{See: &quot;Available Versions&quot;}&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.2.0&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;f0d4d6e50f7c519a66363bd8bdbe1ea8086ca810ca14b43fb0ed18b64acdf6aa&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">base_url</span><span class="w"> </span><span class="s1">&#39;https://api.example.com/v1&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">api_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;key_ID&gt;&#39;</span><span class="w">  </span><span class="c1">-- The Key ID from Vault</span>
 <span class="w">  </span><span class="p">);</span>
@@ -3058,10 +3234,10 @@
 <span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">my_api_server</span>
 <span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.2.0/openapi_fdw.wasm&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;supabase:openapi-fdw&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;{See: &quot;Available Versions&quot;}&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;{See: &quot;Available Versions&quot;}&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;{See: &quot;Available Versions&quot;}&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.2.0&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;f0d4d6e50f7c519a66363bd8bdbe1ea8086ca810ca14b43fb0ed18b64acdf6aa&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">base_url</span><span class="w"> </span><span class="s1">&#39;https://api.example.com/v1&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">api_key</span><span class="w"> </span><span class="s1">&#39;your-api-key&#39;</span>
 <span class="w">  </span><span class="p">);</span>
@@ -3087,12 +3263,17 @@
 <tr>
 <td><code>base_url</code></td>
 <td style="text-align: center;">Yes*</td>
-<td>Base URL for the API (e.g., <code>https://api.example.com/v1</code>). *Optional if <code>spec_url</code> provides servers.</td>
+<td>Base URL for the API (e.g., <code>https://api.example.com/v1</code>). *Optional if <code>spec_url</code> or <code>spec_json</code> provides servers.</td>
 </tr>
 <tr>
 <td><code>spec_url</code></td>
 <td style="text-align: center;">No</td>
-<td>URL to the OpenAPI specification JSON. Required for <code>IMPORT FOREIGN SCHEMA</code>.</td>
+<td>URL to the OpenAPI specification (JSON or YAML). Required for <code>IMPORT FOREIGN SCHEMA</code>. Mutually exclusive with <code>spec_json</code>.</td>
+</tr>
+<tr>
+<td><code>spec_json</code></td>
+<td style="text-align: center;">No</td>
+<td>Inline OpenAPI 3.0+ JSON spec for <code>IMPORT FOREIGN SCHEMA</code>. Mutually exclusive with <code>spec_url</code>. Useful when the API doesn't publish a spec URL.</td>
 </tr>
 <tr>
 <td><code>api_key</code></td>
@@ -3113,6 +3294,11 @@
 <td><code>api_key_prefix</code></td>
 <td style="text-align: center;">No</td>
 <td>Prefix for API key value (default: <code>Bearer</code> for Authorization header).</td>
+</tr>
+<tr>
+<td><code>api_key_location</code></td>
+<td style="text-align: center;">No</td>
+<td>Where to send the API key: <code>header</code> (default), <code>query</code>, or <code>cookie</code>.</td>
 </tr>
 <tr>
 <td><code>bearer_token</code></td>
@@ -3158,6 +3344,21 @@
 <td><code>cursor_param</code></td>
 <td style="text-align: center;">No</td>
 <td>Query parameter name for pagination cursor (default: <code>after</code>).</td>
+</tr>
+<tr>
+<td><code>max_pages</code></td>
+<td style="text-align: center;">No</td>
+<td>Maximum pages per scan to prevent infinite pagination loops (default: <code>1000</code>).</td>
+</tr>
+<tr>
+<td><code>max_response_bytes</code></td>
+<td style="text-align: center;">No</td>
+<td>Maximum response body size in bytes (default: <code>52428800</code> / 50 MiB).</td>
+</tr>
+<tr>
+<td><code>debug</code></td>
+<td style="text-align: center;">No</td>
+<td>Emit HTTP request details and scan stats via PostgreSQL INFO messages when set to <code>'true'</code> or <code>'1'</code>.</td>
 </tr>
 </tbody>
 </table>
@@ -3242,10 +3443,20 @@
 <td style="text-align: center;">No</td>
 <td>Override server-level page size.</td>
 </tr>
+<tr>
+<td><code>method</code></td>
+<td style="text-align: center;">No</td>
+<td>HTTP method for this endpoint. Use <code>POST</code> for read-via-POST endpoints (default: <code>GET</code>).</td>
+</tr>
+<tr>
+<td><code>request_body</code></td>
+<td style="text-align: center;">No</td>
+<td>Request body string for POST endpoints.</td>
+</tr>
 </tbody>
 </table>
 <h3 id="automatic-schema-import">Automatic Schema Import</h3>
-<p>If you provide a <code>spec_url</code> in the server options, you can automatically import table definitions:</p>
+<p>If you provide a <code>spec_url</code> or <code>spec_json</code> in the server options, you can automatically import table definitions:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -3363,11 +3574,78 @@
 <span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">openapi</span><span class="p">.</span><span class="n">users</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;active&#39;</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 <p>Columns used as query or path parameters always return the value from the WHERE clause, even if the API response contains the same field with different casing. This ensures PostgreSQL's post-filter always passes.</p>
+<h3 id="limit-pushdown">LIMIT Pushdown</h3>
+<p>When your query includes a <code>LIMIT</code>, the FDW uses it as the <code>page_size</code> for the first API request, reducing unnecessary data transfer:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Sends GET /users?limit=5 (uses LIMIT as page_size)</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">openapi</span><span class="p">.</span><span class="n">users</span><span class="w"> </span><span class="k">limit</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<h2 id="post-for-read-endpoints">POST-for-Read Endpoints</h2>
+<p>Some APIs use POST requests for read operations (e.g., search or query endpoints). Use the <code>method</code> and <code>request_body</code> table options:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">openapi</span><span class="p">.</span><span class="n">search_results</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">title</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">score</span><span class="w"> </span><span class="nb">real</span><span class="p">,</span>
+<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="p">)</span>
+<span class="n">server</span><span class="w"> </span><span class="n">my_api_server</span>
+<span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">endpoint</span><span class="w"> </span><span class="s1">&#39;/search&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="k">method</span><span class="w"> </span><span class="s1">&#39;POST&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="n">request_body</span><span class="w"> </span><span class="s1">&#39;{&quot;query&quot;: &quot;openapi&quot;, &quot;limit&quot;: 50}&#39;</span>
+<span class="p">);</span>
+
+<span class="k">select</span><span class="w"> </span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">score</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">openapi</span><span class="p">.</span><span class="n">search_results</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<h2 id="debug-mode">Debug Mode</h2>
+<p>Enable debug mode to see HTTP request details and scan statistics in PostgreSQL INFO messages:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">debug_api</span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.2.0/openapi_fdw.wasm&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;supabase:openapi-fdw&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.2.0&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;f0d4d6e50f7c519a66363bd8bdbe1ea8086ca810ca14b43fb0ed18b64acdf6aa&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">base_url</span><span class="w"> </span><span class="s1">&#39;https://api.example.com&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">debug</span><span class="w"> </span><span class="s1">&#39;true&#39;</span>
+<span class="w">  </span><span class="p">);</span>
+</code></pre></div></td></tr></table></div>
+<p>Debug output includes:</p>
+<ul>
+<li>HTTP method and URL for each request</li>
+<li>Response status code and body size</li>
+<li>Total rows fetched and pages retrieved</li>
+<li>Pagination details</li>
+</ul>
 <h2 id="pagination">Pagination</h2>
 <p>The FDW automatically handles pagination. It supports:</p>
 <ol>
 <li><strong>Cursor-based pagination</strong> - Uses <code>cursor_param</code> and <code>cursor_path</code></li>
-<li><strong>URL-based pagination</strong> - Follows <code>next</code> links in response</li>
+<li><strong>URL-based pagination</strong> - Follows <code>next</code> links in response body (e.g., <code>/links/next</code>, <code>/meta/pagination/next</code>)</li>
+<li><strong><code>Link</code> header pagination</strong> - Follows <a href="https://datatracker.ietf.org/doc/html/rfc8288">RFC 8288</a> <code>Link: &lt;...&gt;; rel="next"</code> response headers (GitHub, GitLab, and most REST APIs)</li>
+<li><strong>Offset-based pagination</strong> - Auto-detected from common patterns</li>
 </ol>
 <h3 id="configuring-pagination">Configuring Pagination</h3>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
@@ -3384,10 +3662,10 @@
 <span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">paginated_api</span>
 <span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.2.0/openapi_fdw.wasm&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;supabase:openapi-fdw&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;{See: &quot;Available Versions&quot;}&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;{See: &quot;Available Versions&quot;}&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;{See: &quot;Available Versions&quot;}&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.2.0&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;f0d4d6e50f7c519a66363bd8bdbe1ea8086ca810ca14b43fb0ed18b64acdf6aa&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">base_url</span><span class="w"> </span><span class="s1">&#39;https://openapi.example.com&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">page_size</span><span class="w"> </span><span class="s1">&#39;100&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">page_size_param</span><span class="w"> </span><span class="s1">&#39;limit&#39;</span><span class="p">,</span>
@@ -3458,7 +3736,7 @@
 <td>boolean</td>
 </tr>
 <tr>
-<td>smallint</td>
+<td>smallint*</td>
 <td>number</td>
 </tr>
 <tr>
@@ -3478,7 +3756,7 @@
 <td>number</td>
 </tr>
 <tr>
-<td>numeric</td>
+<td>numeric*</td>
 <td>number</td>
 </tr>
 <tr>
@@ -3486,7 +3764,7 @@
 <td>string (ISO 8601)</td>
 </tr>
 <tr>
-<td>timestamp</td>
+<td>timestamp*</td>
 <td>string (ISO 8601)</td>
 </tr>
 <tr>
@@ -3503,6 +3781,7 @@
 </tr>
 </tbody>
 </table>
+<p>* Types marked with an asterisk work when you define tables manually, but <code>IMPORT FOREIGN SCHEMA</code> won't generate columns with these types automatically.</p>
 <h3 id="the-attrs-column">The <code>attrs</code> Column</h3>
 <p>Any foreign table can include an <code>attrs</code> column of type <code>jsonb</code> to capture the entire raw JSON response for each row:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
@@ -3526,15 +3805,16 @@
 <li><strong>Authentication</strong>: Currently supports API Key and Bearer Token authentication. OAuth flows are not supported.</li>
 <li><strong>OpenAPI version</strong>: Only OpenAPI 3.0+ specifications are supported (not Swagger 2.0).</li>
 </ul>
-<h2 id="rate-limiting">Rate Limiting</h2>
-<p>The FDW automatically handles rate limiting:</p>
+<h2 id="automatic-retries">Automatic Retries</h2>
+<p>The FDW automatically retries transient HTTP errors up to 3 times:</p>
 <ul>
-<li><strong>HTTP 429 responses</strong>: Automatically retries up to 3 times</li>
+<li><strong>HTTP 429</strong> (Rate Limit), <strong>502</strong> (Bad Gateway), <strong>503</strong> (Service Unavailable)</li>
 <li><strong>Retry-After header</strong>: Respects server-specified delay when provided</li>
 <li><strong>Exponential backoff</strong>: Falls back to 1s, 2s, 4s delays when no Retry-After header is present</li>
 </ul>
 <p>For APIs with very strict rate limits, consider using materialized views to cache results.</p>
 <h2 id="examples">Examples</h2>
+<p>For additional real-world examples with multiple tables, pagination, and advanced features, see the <strong><a href="https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/openapi_fdw/examples">examples directory on GitHub</a></strong>. There are step-by-step walkthroughs for querying the NWS Weather API, PokéAPI, CarAPI, GitHub, and Threads.</p>
 <h3 id="basic-query">Basic Query</h3>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
@@ -3559,10 +3839,10 @@
 <span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">openapi_server</span>
 <span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.1.4/openapi_fdw.wasm&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.2.0/openapi_fdw.wasm&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;supabase:openapi-fdw&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.1.4&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;dd434f8565b060b181d1e69e1e4d5c8b9c3ac5ca444056d3c2fb939038d308fe&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.2.0&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;f0d4d6e50f7c519a66363bd8bdbe1ea8086ca810ca14b43fb0ed18b64acdf6aa&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">base_url</span><span class="w"> </span><span class="s1">&#39;https://api.weather.gov&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">spec_url</span><span class="w"> </span><span class="s1">&#39;https://api.weather.gov/openapi.json&#39;</span>
 <span class="w">  </span><span class="p">);</span>
@@ -3605,6 +3885,37 @@
 <span class="c1">-- Query stations for Alaska zone AKZ317 - generates GET /zones/forecast/AKZ317/stations</span>
 <span class="k">select</span><span class="w"> </span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="k">type</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">openapi</span><span class="p">.</span><span class="n">zone_stations</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">zone_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;AKZ317&#39;</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
+<h3 id="post-for-read">POST-for-Read</h3>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Query a search API that uses POST for read operations</span>
+<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">openapi</span><span class="p">.</span><span class="n">search_results</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">title</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">score</span><span class="w"> </span><span class="nb">real</span><span class="p">,</span>
+<span class="w">  </span><span class="n">attrs</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="p">)</span>
+<span class="n">server</span><span class="w"> </span><span class="n">my_api_server</span>
+<span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">endpoint</span><span class="w"> </span><span class="s1">&#39;/search&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="k">method</span><span class="w"> </span><span class="s1">&#39;POST&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="n">request_body</span><span class="w"> </span><span class="s1">&#39;{&quot;query&quot;: &quot;postgresql&quot;, &quot;limit&quot;: 25}&#39;</span>
+<span class="p">);</span>
+
+<span class="k">select</span><span class="w"> </span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">score</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">openapi</span><span class="p">.</span><span class="n">search_results</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
 <h3 id="custom-headers">Custom Headers</h3>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
@@ -3621,15 +3932,39 @@
 <span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">custom_api</span>
 <span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.2.0/openapi_fdw.wasm&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;supabase:openapi-fdw&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;{See: &quot;Available Versions&quot;}&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;{See: &quot;Available Versions&quot;}&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;{See: &quot;Available Versions&quot;}&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.2.0&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;f0d4d6e50f7c519a66363bd8bdbe1ea8086ca810ca14b43fb0ed18b64acdf6aa&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">base_url</span><span class="w"> </span><span class="s1">&#39;https://openapi.example.com&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">api_key</span><span class="w"> </span><span class="s1">&#39;your-key&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">user_agent</span><span class="w"> </span><span class="s1">&#39;MyApp/1.0&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">accept</span><span class="w"> </span><span class="s1">&#39;application/json&#39;</span><span class="p">,</span>
 <span class="w">    </span><span class="n">headers</span><span class="w"> </span><span class="s1">&#39;{&quot;X-Request-ID&quot;: &quot;postgres-fdw&quot;, &quot;X-Feature-Flag&quot;: &quot;beta&quot;}&#39;</span>
+<span class="w">  </span><span class="p">);</span>
+</code></pre></div></td></tr></table></div>
+<h3 id="api-key-location">API Key Location</h3>
+<p>By default, the API key is sent as a header. Use <code>api_key_location</code> to send it as a query parameter or cookie instead:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">query_auth_api</span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.2.0/openapi_fdw.wasm&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;supabase:openapi-fdw&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.2.0&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;f0d4d6e50f7c519a66363bd8bdbe1ea8086ca810ca14b43fb0ed18b64acdf6aa&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">base_url</span><span class="w"> </span><span class="s1">&#39;https://api.example.com&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">api_key</span><span class="w"> </span><span class="s1">&#39;sk-your-api-key&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">api_key_location</span><span class="w"> </span><span class="s1">&#39;query&#39;</span><span class="w">  </span><span class="c1">-- sends as ?api_key=sk-... (uses api_key_header as param name)</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 <h3 id="response-path-extraction">Response Path Extraction</h3>

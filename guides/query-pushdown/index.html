@@ -467,6 +467,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -689,6 +693,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../catalog/dynamodb/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DynamoDB
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../catalog/firebase/" class="md-nav__link">
         
   
@@ -753,6 +785,34 @@
     
   
     Logflare
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../catalog/mysql/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MySQL
   
 
     
@@ -1611,6 +1671,56 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#aggregate-pushdown" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Aggregate Pushdown
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Aggregate Pushdown">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#group-by-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GROUP BY Support
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#supported-aggregate-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supported Aggregate Functions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#implementing-aggregate-pushdown" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementing Aggregate Pushdown
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2216,6 +2326,56 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#aggregate-pushdown" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Aggregate Pushdown
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Aggregate Pushdown">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#group-by-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GROUP BY Support
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#supported-aggregate-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supported Aggregate Functions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#implementing-aggregate-pushdown" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementing Aggregate Pushdown
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2242,7 +2402,7 @@
 <p>Query pushdown is a technique that enhances query performance by executing parts of the query directly on the data source. It reduces data transfer between the database and the application, enabling faster execution and improved performance.</p>
 <p><img alt="assets/query-pushdown-dark.png" src="../../assets/query-pushdown-dark.png" /></p>
 <h3 id="using-query-pushdown">Using Query Pushdown</h3>
-<p>In Wrappers, the pushdown logic is integrated into each FDW. You don’t need to modify your queries to benefit from this feature. For example, the <a href="https://supabase.com/docs/guides/database/extensions/wrappers/stripe">Stripe FDW</a> automatically applies query pushdown for <code>id</code> within the <code>customer</code> object:</p>
+<p>In Wrappers, the pushdown logic is integrated into each FDW. You don't need to modify your queries to benefit from this feature. For example, the <a href="https://supabase.com/docs/guides/database/extensions/wrappers/stripe">Stripe FDW</a> automatically applies query pushdown for <code>id</code> within the <code>customer</code> object:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="o">*</span>
@@ -2262,6 +2422,103 @@
 <span class="k">limit</span><span class="w"> </span><span class="mi">20</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 <p>This query executes <code>order by name limit 20</code> on ClickHouse before transferring the result to Postgres.</p>
+<h3 id="aggregate-pushdown">Aggregate Pushdown</h3>
+<p>Aggregate pushdown allows aggregate functions like <code>COUNT</code>, <code>SUM</code>, <code>AVG</code>, <code>MIN</code>, and <code>MAX</code> to be executed directly on the foreign data source. This is especially valuable for analytics queries where you only need summary statistics rather than raw data.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="k">count</span><span class="p">(</span><span class="o">*</span><span class="p">),</span><span class="w"> </span><span class="k">sum</span><span class="p">(</span><span class="n">amount</span><span class="p">),</span><span class="w"> </span><span class="k">avg</span><span class="p">(</span><span class="n">amount</span><span class="p">)</span>
+<span class="k">from</span><span class="w"> </span><span class="n">foreign_table</span>
+<span class="k">where</span><span class="w"> </span><span class="n">status</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;active&#39;</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<p>Instead of fetching all matching rows and computing aggregates locally, the FDW can push the entire aggregation to the remote source. This dramatically reduces data transfer - returning just a single row with the computed values.</p>
+<h4 id="group-by-support">GROUP BY Support</h4>
+<p>FDWs that support aggregate pushdown can also support <code>GROUP BY</code> pushdown:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="n">department</span><span class="p">,</span><span class="w"> </span><span class="k">count</span><span class="p">(</span><span class="o">*</span><span class="p">),</span><span class="w"> </span><span class="k">avg</span><span class="p">(</span><span class="n">salary</span><span class="p">)</span>
+<span class="k">from</span><span class="w"> </span><span class="n">employees</span>
+<span class="k">group</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">department</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<p>This executes the grouping and aggregation on the remote server, returning only the grouped results.</p>
+<h4 id="supported-aggregate-functions">Supported Aggregate Functions</h4>
+<p>The Wrappers framework supports pushing down these aggregate functions:</p>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>COUNT(*)</code></td>
+<td>Count all rows</td>
+</tr>
+<tr>
+<td><code>COUNT(column)</code></td>
+<td>Count non-null values</td>
+</tr>
+<tr>
+<td><code>COUNT(DISTINCT column)</code></td>
+<td>Count unique non-null values</td>
+</tr>
+<tr>
+<td><code>SUM(column)</code></td>
+<td>Sum of values</td>
+</tr>
+<tr>
+<td><code>AVG(column)</code></td>
+<td>Average of values</td>
+</tr>
+<tr>
+<td><code>MIN(column)</code></td>
+<td>Minimum value</td>
+</tr>
+<tr>
+<td><code>MAX(column)</code></td>
+<td>Maximum value</td>
+</tr>
+</tbody>
+</table>
+<h4 id="implementing-aggregate-pushdown">Implementing Aggregate Pushdown</h4>
+<p>FDW developers can enable aggregate pushdown by implementing these trait methods:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">fn</span><span class="w"> </span><span class="nf">supported_aggregates</span><span class="p">(</span><span class="o">&amp;</span><span class="bp">self</span><span class="p">)</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nb">Vec</span><span class="o">&lt;</span><span class="n">AggregateKind</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="fm">vec!</span><span class="p">[</span><span class="n">AggregateKind</span><span class="p">::</span><span class="n">Count</span><span class="p">,</span><span class="w"> </span><span class="n">AggregateKind</span><span class="p">::</span><span class="n">Sum</span><span class="p">,</span><span class="w"> </span><span class="n">AggregateKind</span><span class="p">::</span><span class="n">Avg</span><span class="p">]</span>
+<span class="p">}</span>
+
+<span class="k">fn</span><span class="w"> </span><span class="nf">supports_group_by</span><span class="p">(</span><span class="o">&amp;</span><span class="bp">self</span><span class="p">)</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kc">true</span>
+<span class="p">}</span>
+
+<span class="k">fn</span><span class="w"> </span><span class="nf">begin_aggregate_scan</span><span class="p">(</span>
+<span class="w">    </span><span class="o">&amp;</span><span class="k">mut</span><span class="w"> </span><span class="bp">self</span><span class="p">,</span>
+<span class="w">    </span><span class="n">aggregates</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="p">[</span><span class="n">Aggregate</span><span class="p">],</span>
+<span class="w">    </span><span class="n">group_by</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="p">[</span><span class="n">Column</span><span class="p">],</span>
+<span class="w">    </span><span class="n">quals</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="p">[</span><span class="n">Qual</span><span class="p">],</span>
+<span class="w">    </span><span class="n">options</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="nc">HashMap</span><span class="o">&lt;</span><span class="nb">String</span><span class="p">,</span><span class="w"> </span><span class="nb">String</span><span class="o">&gt;</span><span class="p">,</span>
+<span class="p">)</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nb">Result</span><span class="o">&lt;</span><span class="p">(),</span><span class="w"> </span><span class="n">Error</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// Build and execute remote aggregate query</span>
+<span class="w">    </span><span class="nb">Ok</span><span class="p">(())</span>
+<span class="p">}</span>
+</code></pre></div></td></tr></table></div>
+<p>See the <a href="https://docs.rs/supabase-wrappers/latest/supabase_wrappers/">API documentation</a> for detailed information on implementing aggregate pushdown.</p>
 
 
 

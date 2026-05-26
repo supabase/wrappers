@@ -474,6 +474,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -697,6 +701,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../dynamodb/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DynamoDB
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../firebase/" class="md-nav__link">
         
   
@@ -761,6 +793,34 @@
     
   
     Logflare
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mysql/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MySQL
   
 
     
@@ -4964,30 +5024,48 @@
 <span class="normal">3</span>
 <span class="normal">4</span>
 <span class="normal">5</span>
-<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Save your Stripe API key in Vault and retrieve the created `key_id`</span>
+<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Save your Stripe API key in Vault and retrieve the secret id (UUID) used for api_key_id</span>
 <span class="k">select</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">create_secret</span><span class="p">(</span>
 <span class="w">  </span><span class="s1">&#39;&lt;Stripe API key&gt;&#39;</span><span class="p">,</span>
-<span class="w">  </span><span class="s1">&#39;stripe&#39;</span><span class="p">,</span>
-<span class="w">  </span><span class="s1">&#39;Stripe API key for Wrappers&#39;</span>
+<span class="w">  </span><span class="s1">&#39;stripe&#39;</span><span class="p">,</span><span class="w">                          </span><span class="c1">-- key name, used for api_key_name option</span>
+<span class="w">  </span><span class="s1">&#39;Stripe API key for Wrappers&#39;</span><span class="w">      </span><span class="c1">-- key description</span>
 <span class="p">);</span>
+</code></pre></div></td></tr></table></div>
+<p>The <code>vault.create_secret</code> function returns the secret id (UUID) used for the <code>api_key_id</code> option. You can also retrieve this id later:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">key_id</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">secrets</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;stripe&#39;</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 <h3 id="connecting-to-stripe">Connecting to Stripe</h3>
 <p>We need to provide Postgres with the credentials to connect to Stripe, and any additional options. We can do this using the <code>create server</code> command:</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">With Vault</label><label for="__tabbed_1_2">Without Vault</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
+<p>You can connect using either <code>api_key_id</code> or <code>api_key_name</code> — only one is required. If both are provided, <code>api_key_id</code> takes precedence.</p>
+<p><strong>Option 1: using <code>api_key_id</code></strong> (the UUID returned by <code>vault.create_secret</code>)</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
 <span class="normal">4</span>
 <span class="normal">5</span>
 <span class="normal">6</span>
-<span class="normal">7</span>
-<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">stripe_server</span>
+<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">stripe_server</span>
 <span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">stripe_wrapper</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">api_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;key_ID&gt;&#39;</span><span class="p">,</span><span class="w"> </span><span class="c1">-- The Key ID from above, required if api_key_name is not specified.</span>
-<span class="w">    </span><span class="n">api_key_name</span><span class="w"> </span><span class="s1">&#39;&lt;key_Name&gt;&#39;</span><span class="p">,</span><span class="w"> </span><span class="c1">-- The Key Name from above, required if api_key_id is not specified.</span>
+<span class="w">    </span><span class="n">api_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;key_id&gt;&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- UUID returned by vault.create_secret, or retrieved via: select id from vault.secrets where name = &#39;stripe&#39;</span>
+<span class="w">    </span><span class="n">api_url</span><span class="w"> </span><span class="s1">&#39;https://api.stripe.com/v1/&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- Stripe API base URL, optional. Default is &#39;https://api.stripe.com/v1/&#39;</span>
+<span class="w">    </span><span class="n">api_version</span><span class="w"> </span><span class="s1">&#39;2024-06-20&#39;</span><span class="w">  </span><span class="c1">-- Stripe API version, optional. Default is your Stripe account’s default API version.</span>
+<span class="w">  </span><span class="p">);</span>
+</code></pre></div></td></tr></table></div>
+<p><strong>Option 2: using <code>api_key_name</code></strong> (the name given to the secret, i.e. the second argument to <code>vault.create_secret</code>)</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span>
+<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">stripe_server</span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">stripe_wrapper</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">api_key_name</span><span class="w"> </span><span class="s1">&#39;stripe&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- name used when creating the secret via vault.create_secret</span>
 <span class="w">    </span><span class="n">api_url</span><span class="w"> </span><span class="s1">&#39;https://api.stripe.com/v1/&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- Stripe API base URL, optional. Default is &#39;https://api.stripe.com/v1/&#39;</span>
 <span class="w">    </span><span class="n">api_version</span><span class="w"> </span><span class="s1">&#39;2024-06-20&#39;</span><span class="w">  </span><span class="c1">-- Stripe API version, optional. Default is your Stripe account’s default API version.</span>
 <span class="w">  </span><span class="p">);</span>

@@ -12,13 +12,13 @@
         <meta name="author" content="supabase">
       
       
-        <link rel="canonical" href="https://supabase.github.io/wrappers/catalog/s3vectors/">
+        <link rel="canonical" href="https://supabase.github.io/wrappers/catalog/dynamodb/">
       
       
-        <link rel="prev" href="../s3/">
+        <link rel="prev" href="../duckdb/">
       
       
-        <link rel="next" href="../stripe/">
+        <link rel="next" href="../firebase/">
       
       
         
@@ -29,7 +29,7 @@
     
     
       
-        <title>S3 Vectors - Wrappers</title>
+        <title>DynamoDB - Wrappers</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#s3-vectors" class="md-skip">
+        <a href="#aws-dynamodb" class="md-skip">
           Skip to content
         </a>
       
@@ -115,7 +115,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              S3 Vectors
+              DynamoDB
             
           </span>
         </div>
@@ -698,10 +698,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../dynamodb/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DynamoDB
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -717,6 +744,381 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#preparation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Preparation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Preparation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#enable-wrappers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enable Wrappers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#enable-the-dynamodb-wrapper" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enable the DynamoDB Wrapper
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#store-your-credentials-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Store your credentials (optional)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#connecting-to-dynamodb" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Connecting to DynamoDB
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Connecting to DynamoDB">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#additional-server-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Additional Server Options
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create-a-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Create a schema
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Options
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#entities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Entities
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Entities">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#dynamodb-tables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DynamoDB Tables
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="DynamoDB Tables">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Operations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#query-pushdown-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Query Pushdown Support
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Query Pushdown Support">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#query-efficient-uses-dynamodb-query-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Query (efficient — uses DynamoDB Query API)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scan-full-table-uses-dynamodb-scan-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scan (full table — uses DynamoDB Scan API)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#supported-operators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supported Operators
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#supported-data-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supported Data Types
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Basic setup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#import-all-tables-automatically" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Import all tables automatically
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create-a-foreign-table-manually" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Create a foreign table manually
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#query-with-partition-key-pushdown" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Query with partition key pushdown
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#query-with-filter-full-scan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Query with filter (full scan)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#insert-a-new-item" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Insert a new item
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#update-specific-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Update specific attributes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#delete-an-item" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Delete an item
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-dynamodb-local-for-development" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using DynamoDB Local for development
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -894,37 +1296,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    S3 Vectors
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../s3vectors/" class="md-nav__link">
         
   
   
@@ -940,393 +1315,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#preparation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Preparation
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Preparation">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#enable-wrappers" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Enable Wrappers
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#enable-the-s3-vectors-wrapper" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Enable the S3 Vectors Wrapper
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#store-your-credentials-optional" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Store your credentials (optional)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#connecting-to-s3-vectors" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Connecting to S3 Vectors
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Connecting to S3 Vectors">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#additional-server-options" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Additional Server Options
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#create-a-schema" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Create a schema
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#options" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Options
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#entities" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Entities
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Entities">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#s3-vector-tables" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        S3 Vector Tables
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="S3 Vector Tables">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Operations
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Usage
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#custom-data-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Custom Data Types
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Custom Data Types">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#s3vec" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        s3vec
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#functions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Functions
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Functions">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#s3vec_distances3vec" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        s3vec_distance(s3vec)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#query-pushdown-support" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Query Pushdown Support
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Query Pushdown Support">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#vector-similarity-search-ann" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Vector Similarity Search (ANN)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#key-based-queries" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Key-based Queries
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#supported-query-patterns" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Supported Query Patterns
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#supported-data-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Supported Data Types
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#limitations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Limitations
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Examples
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Examples">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#basic-setup" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Basic Setup
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#querying-vectors" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Querying Vectors
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#inserting-vectors" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Inserting Vectors
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#deleting-vectors" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Deleting Vectors
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#vector-similarity-search-with-filtering" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Vector Similarity Search with Filtering
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#advanced-example-semantic-search" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Advanced Example: Semantic Search
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -2631,10 +2619,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#enable-the-s3-vectors-wrapper" class="md-nav__link">
+  <a href="#enable-the-dynamodb-wrapper" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Enable the S3 Vectors Wrapper
+        Enable the DynamoDB Wrapper
       
     </span>
   </a>
@@ -2653,15 +2641,15 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#connecting-to-s3-vectors" class="md-nav__link">
+  <a href="#connecting-to-dynamodb" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Connecting to S3 Vectors
+        Connecting to DynamoDB
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Connecting to S3 Vectors">
+    <nav class="md-nav" aria-label="Connecting to DynamoDB">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2720,15 +2708,15 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#s3-vector-tables" class="md-nav__link">
+  <a href="#dynamodb-tables" class="md-nav__link">
     <span class="md-ellipsis">
       
-        S3 Vector Tables
+        DynamoDB Tables
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="S3 Vector Tables">
+    <nav class="md-nav" aria-label="DynamoDB Tables">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2753,56 +2741,11 @@
   
 </li>
         
-      </ul>
-    </nav>
-  
-</li>
-        
           <li class="md-nav__item">
-  <a href="#custom-data-types" class="md-nav__link">
+  <a href="#notes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Custom Data Types
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Custom Data Types">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#s3vec" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        s3vec
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#functions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Functions
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Functions">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#s3vec_distances3vec" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        s3vec_distance(s3vec)
+        Notes
       
     </span>
   </a>
@@ -2832,10 +2775,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#vector-similarity-search-ann" class="md-nav__link">
+  <a href="#query-efficient-uses-dynamodb-query-api" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Vector Similarity Search (ANN)
+        Query (efficient — uses DynamoDB Query API)
       
     </span>
   </a>
@@ -2843,10 +2786,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#key-based-queries" class="md-nav__link">
+  <a href="#scan-full-table-uses-dynamodb-scan-api" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Key-based Queries
+        Scan (full table — uses DynamoDB Scan API)
       
     </span>
   </a>
@@ -2854,10 +2797,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#supported-query-patterns" class="md-nav__link">
+  <a href="#supported-operators" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Supported Query Patterns
+        Supported Operators
       
     </span>
   </a>
@@ -2907,7 +2850,7 @@
   <a href="#basic-setup" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Basic Setup
+        Basic setup
       
     </span>
   </a>
@@ -2915,10 +2858,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#querying-vectors" class="md-nav__link">
+  <a href="#import-all-tables-automatically" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Querying Vectors
+        Import all tables automatically
       
     </span>
   </a>
@@ -2926,10 +2869,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#inserting-vectors" class="md-nav__link">
+  <a href="#create-a-foreign-table-manually" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Inserting Vectors
+        Create a foreign table manually
       
     </span>
   </a>
@@ -2937,10 +2880,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#deleting-vectors" class="md-nav__link">
+  <a href="#query-with-partition-key-pushdown" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Deleting Vectors
+        Query with partition key pushdown
       
     </span>
   </a>
@@ -2948,10 +2891,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#vector-similarity-search-with-filtering" class="md-nav__link">
+  <a href="#query-with-filter-full-scan" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Vector Similarity Search with Filtering
+        Query with filter (full scan)
       
     </span>
   </a>
@@ -2959,10 +2902,43 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#advanced-example-semantic-search" class="md-nav__link">
+  <a href="#insert-a-new-item" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Advanced Example: Semantic Search
+        Insert a new item
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#update-specific-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Update specific attributes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#delete-an-item" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Delete an item
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-dynamodb-local-for-development" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using DynamoDB Local for development
       
     </span>
   </a>
@@ -3012,22 +2988,22 @@
   
 
 
-<h1 id="s3-vectors">S3 Vectors</h1>
-<p><a href="https://aws.amazon.com/s3/features/vectors/">AWS S3 Vectors</a> is a managed service that stores and queries high-dimensional vectors at scale, optimized for machine learning and artificial intelligence applications.</p>
-<p>The S3 Vectors Wrapper allows you to read, write, and perform vector similarity search operations on S3 Vectors within your Postgres database.</p>
+<h1 id="aws-dynamodb">AWS DynamoDB</h1>
+<p><a href="https://aws.amazon.com/dynamodb/">AWS DynamoDB</a> is a fully managed, serverless, key-value NoSQL database designed to run high-performance applications at any scale.</p>
+<p>The DynamoDB Wrapper allows you to read and write DynamoDB table data within your Postgres database.</p>
 <h2 id="preparation">Preparation</h2>
-<p>Before you can query S3 Vectors, you need to enable the Wrappers extension and store your credentials in Postgres.</p>
+<p>Before you can query DynamoDB, you need to enable the Wrappers extension and store your credentials in Postgres.</p>
 <h3 id="enable-wrappers">Enable Wrappers</h3>
 <p>Make sure the <code>wrappers</code> extension is installed on your database:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">extension</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">wrappers</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">extensions</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
-<h3 id="enable-the-s3-vectors-wrapper">Enable the S3 Vectors Wrapper</h3>
-<p>Enable the <code>s3_vectors_wrapper</code> FDW:</p>
+<h3 id="enable-the-dynamodb-wrapper">Enable the DynamoDB Wrapper</h3>
+<p>Enable the <code>dynamodb_wrapper</code> FDW:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
-<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">s3_vectors_wrapper</span>
-<span class="w">  </span><span class="k">handler</span><span class="w"> </span><span class="n">s3_vectors_fdw_handler</span>
-<span class="w">  </span><span class="k">validator</span><span class="w"> </span><span class="n">s3_vectors_fdw_validator</span><span class="p">;</span>
+<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">dynamodb_wrapper</span>
+<span class="w">  </span><span class="k">handler</span><span class="w"> </span><span class="n">dynamo_db_fdw_handler</span>
+<span class="w">  </span><span class="k">validator</span><span class="w"> </span><span class="n">dynamo_db_fdw_validator</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 <h3 id="store-your-credentials-optional">Store your credentials (optional)</h3>
 <p>By default, Postgres stores FDW credentials inside <code>pg_catalog.pg_foreign_server</code> in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with <a href="https://supabase.com/docs/guides/database/vault">Vault</a>, which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.</p>
@@ -3042,21 +3018,23 @@
 <span class="normal"> 9</span>
 <span class="normal">10</span>
 <span class="normal">11</span>
-<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Save your AWS credentials in Vault and retrieve the created</span>
-<span class="c1">-- `vault_access_key_id` and `vault_secret_access_key`</span>
+<span class="normal">12</span>
+<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Save your AWS access key ID in Vault</span>
 <span class="k">select</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">create_secret</span><span class="p">(</span>
-<span class="w">  </span><span class="s1">&#39;&lt;access key id&gt;&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- secret to be encrypted</span>
-<span class="w">  </span><span class="s1">&#39;vault_access_key_id&#39;</span><span class="p">,</span><span class="w">  </span><span class="c1">-- secret name</span>
-<span class="w">  </span><span class="s1">&#39;AWS access key for Wrappers&#39;</span><span class="w">  </span><span class="c1">-- secret description</span>
+<span class="w">  </span><span class="s1">&#39;&lt;access key id&gt;&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="s1">&#39;dynamodb_access_key_id&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="s1">&#39;AWS access key ID for DynamoDB Wrappers&#39;</span>
 <span class="p">);</span>
+
+<span class="c1">-- Save your AWS secret access key in Vault</span>
 <span class="k">select</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">create_secret</span><span class="p">(</span>
 <span class="w">  </span><span class="s1">&#39;&lt;secret access key&gt;&#39;</span><span class="p">,</span>
-<span class="w">  </span><span class="s1">&#39;vault_secret_access_key&#39;</span><span class="p">,</span>
-<span class="w">  </span><span class="s1">&#39;AWS secret access key for Wrappers&#39;</span>
+<span class="w">  </span><span class="s1">&#39;dynamodb_secret_access_key&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="s1">&#39;AWS secret access key for DynamoDB Wrappers&#39;</span>
 <span class="p">);</span>
 </code></pre></div></td></tr></table></div>
-<h3 id="connecting-to-s3-vectors">Connecting to S3 Vectors</h3>
-<p>We need to provide Postgres with the credentials to connect to S3 Vectors. We can do this using the <code>create server</code> command.</p>
+<h3 id="connecting-to-dynamodb">Connecting to DynamoDB</h3>
+<p>We need to provide Postgres with the credentials to connect to DynamoDB. We can do this using the <code>create server</code> command.</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">With Vault</label><label for="__tabbed_1_2">Without Vault</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
@@ -3071,87 +3049,144 @@
 <span class="normal"> 9</span>
 <span class="normal">10</span>
 <span class="normal">11</span>
-<span class="normal">12</span>
-<span class="normal">13</span>
-<span class="normal">14</span>
-<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">s3_vectors_server</span>
-<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">s3_vectors_wrapper</span>
+<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">dynamodb_server</span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">dynamodb_wrapper</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
 <span class="w">    </span><span class="c1">-- The key id saved in Vault from above</span>
-<span class="w">    </span><span class="n">vault_access_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;key_ID&gt;&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">vault_access_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;vault_key_id&gt;&#39;</span><span class="p">,</span>
 
 <span class="w">    </span><span class="c1">-- The secret id saved in Vault from above</span>
-<span class="w">    </span><span class="n">vault_secret_access_key</span><span class="w"> </span><span class="s1">&#39;&lt;secret_key&gt;&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">vault_secret_access_key</span><span class="w"> </span><span class="s1">&#39;&lt;vault_secret_id&gt;&#39;</span><span class="p">,</span>
 
-<span class="w">    </span><span class="c1">-- AWS region</span>
-<span class="w">    </span><span class="n">aws_region</span><span class="w"> </span><span class="s1">&#39;us-east-1&#39;</span><span class="p">,</span>
-
-<span class="w">    </span><span class="c1">-- Optional: Custom endpoint URL for alternative S3 services</span>
-<span class="w">    </span><span class="n">endpoint_url</span><span class="w"> </span><span class="s1">&#39;http://localhost:8080&#39;</span>
+<span class="w">    </span><span class="c1">-- AWS region where your DynamoDB table(s) reside</span>
+<span class="w">    </span><span class="n">region</span><span class="w"> </span><span class="s1">&#39;us-east-1&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span>
-<span class="normal">13</span>
-<span class="normal">14</span>
-<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">s3_vectors_server</span>
-<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">s3_vectors_wrapper</span>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span>
+<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">dynamodb_server</span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">dynamodb_wrapper</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="c1">-- The AWS access key ID</span>
-<span class="w">    </span><span class="n">aws_access_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;key_ID&gt;&#39;</span><span class="p">,</span>
-
-<span class="w">    </span><span class="c1">-- The AWS secret access key</span>
-<span class="w">    </span><span class="n">aws_secret_access_key</span><span class="w"> </span><span class="s1">&#39;&lt;secret_key&gt;&#39;</span><span class="p">,</span>
-
-<span class="w">    </span><span class="c1">-- AWS region</span>
-<span class="w">    </span><span class="n">aws_region</span><span class="w"> </span><span class="s1">&#39;us-east-1&#39;</span><span class="p">,</span>
-
-<span class="w">    </span><span class="c1">-- Optional: Custom endpoint URL for alternative S3 services</span>
-<span class="w">    </span><span class="n">endpoint_url</span><span class="w"> </span><span class="s1">&#39;http://localhost:8080&#39;</span>
+<span class="w">    </span><span class="n">aws_access_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;your_access_key_id&gt;&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">aws_secret_access_key</span><span class="w"> </span><span class="s1">&#39;&lt;your_secret_access_key&gt;&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">region</span><span class="w"> </span><span class="s1">&#39;us-east-1&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 </div>
 </div>
 </div>
 <h4 id="additional-server-options">Additional Server Options</h4>
-<ul>
-<li><code>batch_size</code> - Controls the batch size of vectors read from or written to remote. Minimum value of 1, maximum value of 500, default value of 300.</li>
-</ul>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th style="text-align: center;">Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>region</code></td>
+<td style="text-align: center;">Yes</td>
+<td>AWS region where your DynamoDB tables reside (e.g. <code>us-east-1</code>)</td>
+</tr>
+<tr>
+<td><code>endpoint_url</code></td>
+<td style="text-align: center;">No</td>
+<td>Custom endpoint URL, useful for local development with DynamoDB Local</td>
+</tr>
+</tbody>
+</table>
 <h3 id="create-a-schema">Create a schema</h3>
 <p>We recommend creating a schema to hold all the foreign tables:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">;</span>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 <h2 id="options">Options</h2>
 <p>The full list of foreign table options are below:</p>
-<ul>
-<li><code>bucket_name</code> - The name of the S3 Vector bucket, required.</li>
-<li><code>index_name</code> - The name of the S3 Vector index, required.</li>
-<li><code>rowid_column</code> - The column to use as the row identifier for INSERT/DELETE operations, required.</li>
-</ul>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th style="text-align: center;">Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>table</code></td>
+<td style="text-align: center;">Yes</td>
+<td>The DynamoDB table name to query</td>
+</tr>
+<tr>
+<td><code>rowid_column</code></td>
+<td style="text-align: center;">No</td>
+<td>The column to use as the row identifier for <code>UPDATE</code> and <code>DELETE</code> operations. Must be the partition key column. Required for write operations.</td>
+</tr>
+</tbody>
+</table>
 <h2 id="entities">Entities</h2>
-<p>We can use SQL <a href="https://www.postgresql.org/docs/current/sql-importforeignschema.html">import foreign schema</a> to import foreign table definitions from S3 Vectors.</p>
-<p>For example, using below SQL can automatically create foreign tables in the <code>s3_vectors</code> schema.</p>
+<p>We can use SQL <a href="https://www.postgresql.org/docs/current/sql-importforeignschema.html">import foreign schema</a> to automatically create foreign table definitions from your DynamoDB tables.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">dynamodb</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">dynamodb_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<p>This will call <code>ListTables</code> and <code>DescribeTable</code> for each table and generate a <code>CREATE FOREIGN TABLE</code> statement with:</p>
+<ul>
+<li>Key columns (partition key and optional sort key) typed as <code>text</code></li>
+<li>A <code>_attrs jsonb</code> catch-all column that captures every non-key attribute as a JSON object</li>
+</ul>
+<p>For example, a DynamoDB table <code>users</code> with partition key <code>id</code> and attributes <code>name</code>, <code>age</code>, and <code>active</code> would produce:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
-<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- create foreign table for each index from S3 Vector bucket</span>
-<span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="ss">&quot;my-vector-bucket&quot;</span>
-<span class="w">  </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">s3_vectors_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">;</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">id</span><span class="w">    </span><span class="nb">text</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">null</span><span class="p">,</span>
+<span class="w">  </span><span class="n">_attrs</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="p">)</span>
+<span class="n">server</span><span class="w"> </span><span class="n">dynamodb_server</span>
+<span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="k">table</span><span class="w"> </span><span class="s1">&#39;users&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">rowid_column</span><span class="w"> </span><span class="s1">&#39;id&#39;</span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
-<h3 id="s3-vector-tables">S3 Vector Tables</h3>
-<p>This is an object representing S3 Vector index.</p>
-<p>Ref: <a href="https://docs.aws.amazon.com/AmazonS3/latest/API/API_Operations_Amazon_S3_Vectors.html">S3 Vectors API Reference</a></p>
+<p>You can then access individual attributes via standard JSON operators:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span>
+<span class="w">  </span><span class="n">id</span><span class="p">,</span>
+<span class="w">  </span><span class="n">_attrs</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;name&#39;</span><span class="w">           </span><span class="k">as</span><span class="w"> </span><span class="n">name</span><span class="p">,</span>
+<span class="w">  </span><span class="p">(</span><span class="n">_attrs</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;age&#39;</span><span class="p">)::</span><span class="nb">integer</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">age</span><span class="p">,</span>
+<span class="w">  </span><span class="p">(</span><span class="n">_attrs</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;active&#39;</span><span class="p">)::</span><span class="nb">boolean</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">active</span>
+<span class="k">from</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">.</span><span class="n">users</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<p>The <code>_attrs</code> name was chosen to avoid conflicts with real DynamoDB attribute names. If you need typed columns or a different layout, create the foreign table manually instead (see <a href="#create-a-foreign-table-manually">Create a foreign table manually</a>).</p>
+<p>You can also limit the import to specific tables:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span>
+<span class="normal">7</span>
+<span class="normal">8</span>
+<span class="normal">9</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Import only specific tables</span>
+<span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">dynamodb</span>
+<span class="w">  </span><span class="k">limit</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="p">(</span><span class="n">users</span><span class="p">,</span><span class="w"> </span><span class="n">orders</span><span class="p">)</span>
+<span class="w">  </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">dynamodb_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">;</span>
+
+<span class="c1">-- Import all tables except specific ones</span>
+<span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">dynamodb</span>
+<span class="w">  </span><span class="k">except</span><span class="w"> </span><span class="p">(</span><span class="n">staging_table</span><span class="p">)</span>
+<span class="w">  </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">dynamodb_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<h3 id="dynamodb-tables">DynamoDB Tables</h3>
+<p>Each foreign table maps to one DynamoDB table.</p>
 <h4 id="operations">Operations</h4>
 <table>
 <thead>
@@ -3166,17 +3201,16 @@
 </thead>
 <tbody>
 <tr>
-<td>table</td>
+<td>Table</td>
 <td style="text-align: center;">✅</td>
 <td style="text-align: center;">✅</td>
-<td style="text-align: center;">❌</td>
+<td style="text-align: center;">✅</td>
 <td style="text-align: center;">✅</td>
 <td style="text-align: center;">❌</td>
 </tr>
 </tbody>
 </table>
 <h4 id="usage">Usage</h4>
-<p>You can also manually create the foreign table like below if you did not use <code>import foreign schema</code>.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -3187,266 +3221,178 @@
 <span class="normal"> 8</span>
 <span class="normal"> 9</span>
 <span class="normal">10</span>
-<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="k">key</span><span class="w"> </span><span class="nb">text</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">null</span><span class="p">,</span>
-<span class="w">  </span><span class="k">data</span><span class="w"> </span><span class="n">s3vec</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">null</span><span class="p">,</span>
+<span class="normal">11</span>
+<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">.</span><span class="n">users</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">age</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
+<span class="w">  </span><span class="n">active</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span>
 <span class="w">  </span><span class="n">metadata</span><span class="w"> </span><span class="n">jsonb</span>
 <span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">s3_vectors_server</span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">bucket_name</span><span class="w"> </span><span class="s1">&#39;my-vector-bucket&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">index_name</span><span class="w"> </span><span class="s1">&#39;my-vector-index&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">rowid_column</span><span class="w"> </span><span class="s1">&#39;key&#39;</span>
-<span class="w">  </span><span class="p">);</span>
+<span class="n">server</span><span class="w"> </span><span class="n">dynamodb_server</span>
+<span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="k">table</span><span class="w"> </span><span class="s1">&#39;users&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="n">rowid_column</span><span class="w"> </span><span class="s1">&#39;id&#39;</span>
+<span class="p">);</span>
 </code></pre></div></td></tr></table></div>
-<h3 id="custom-data-types">Custom Data Types</h3>
-<h4 id="s3vec">s3vec</h4>
-<p>The <code>s3vec</code> type is a custom PostgreSQL data type designed to store and work with high-dimensional vectors for machine learning and AI applications.</p>
-<p><strong>Structure:</strong></p>
-<p>The <code>s3vec</code> type internally contains:</p>
+<h4 id="notes">Notes</h4>
 <ul>
-<li>Vector data as an array of 32-bit floating point numbers (Float32)</li>
-<li>Additional metadata fields for internal use</li>
-</ul>
-<p><strong>Input Formats:</strong></p>
-<p>The <code>s3vec</code> type accepts input in JSON array format:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Simple array format (most common)</span>
-<span class="s1">&#39;[0.1, 0.2, 0.3, 0.4, 0.5]&#39;</span><span class="p">::</span><span class="n">s3vec</span>
-
-<span class="c1">-- Full JSON object format (advanced)</span>
-<span class="s1">&#39;{&quot;data&quot;: [0.1, 0.2, 0.3], &quot;key&quot;: &quot;vector_001&quot;}&#39;</span><span class="p">::</span><span class="n">s3vec</span>
-</code></pre></div></td></tr></table></div>
-<p><strong>Output Format:</strong></p>
-<p>When displayed, the <code>s3vec</code> type shows a summary format:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code>s3vec:5  -- indicates an embedding with 5 dimensions
-</code></pre></div></td></tr></table></div>
-<p><strong>Usage Examples:</strong></p>
-<p>See the following sections for complete examples:</p>
-<ul>
-<li><a href="#inserting-vectors">Inserting Vectors</a> - Examples of inserting data with <code>s3vec</code> type</li>
-<li><a href="#querying-vectors">Querying Vectors</a> - Basic queries and vector similarity search</li>
-<li><a href="#vector-similarity-search-with-filtering">Vector Similarity Search with Filtering</a> - Advanced search with metadata filtering</li>
-<li><a href="#advanced-example-semantic-search">Advanced Example: Semantic Search</a> - Complete semantic search implementation</li>
-</ul>
-<p><strong>Operations:</strong></p>
-<ul>
-<li><strong>Vector similarity search</strong>: Use the <code>&lt;==&gt;</code> operator for approximate nearest neighbor search</li>
-<li><strong>Distance calculation</strong>: Use <code>s3vec_distance()</code> function to get similarity scores</li>
-<li><strong>Type casting</strong>: Convert JSON arrays to <code>s3vec</code> type using <code>::s3vec</code> cast</li>
-</ul>
-<p><strong>Constraints:</strong></p>
-<ul>
-<li>Only supports 32-bit floating point vectors (Float32)</li>
-<li>Vector dimensions should be consistent within the same index</li>
-<li>Cannot be null when used as vector data in S3 Vectors tables</li>
-</ul>
-<h3 id="functions">Functions</h3>
-<h4 id="s3vec_distances3vec">s3vec_distance(s3vec)</h4>
-<p>Returns the distance score from the most recent vector similarity search operation.</p>
-<p><strong>Syntax:</strong></p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="n">s3vec_distance</span><span class="p">(</span><span class="n">vector_data</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="nb">real</span>
-</code></pre></div></td></tr></table></div>
-<p><strong>Parameters:</strong></p>
-<ul>
-<li><code>vector_data</code> - An <code>s3vec</code> type column containing vector data</li>
-</ul>
-<p><strong>Returns:</strong></p>
-<ul>
-<li><code>real</code> - The distance score from the vector similarity search. This value is only meaningful when used in queries with the <code>&lt;==&gt;</code> operator for vector similarity search.</li>
-</ul>
-<p><strong>Usage:</strong></p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Get similarity search results with distance scores</span>
-<span class="k">select</span><span class="w"> </span><span class="n">s3vec_distance</span><span class="p">(</span><span class="k">data</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">distance</span><span class="p">,</span><span class="w"> </span><span class="k">key</span><span class="p">,</span><span class="w"> </span><span class="n">metadata</span>
-<span class="k">from</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span>
-<span class="k">where</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="s1">&#39;[0.1, 0.2, 0.3, 0.4, 0.5]&#39;</span><span class="p">::</span><span class="n">s3vec</span>
-<span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="mi">1</span>
-<span class="k">limit</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span>
-</code></pre></div></td></tr></table></div>
-<p><strong>Notes:</strong></p>
-<ul>
-<li>The distance value is only populated during vector similarity search operations using the <code>&lt;==&gt;</code> operator</li>
-<li>For other query types (key-based lookups, list all), the distance will be 0.0</li>
-<li>Lower distance values indicate higher similarity</li>
+<li>Column names in the foreign table must match the DynamoDB attribute names exactly (case-sensitive).</li>
+<li>Any DynamoDB attribute not listed as a column is silently ignored during reads, <strong>except</strong> when a <code>jsonb</code> column has no matching DynamoDB attribute by name — in that case it acts as a catch-all and receives all attributes not covered by any other declared column. This is how the <code>_attrs</code> column generated by <code>import_foreign_schema</code> works.</li>
+<li><code>INSERT</code> uses DynamoDB's <code>PutItem</code> operation, which <strong>replaces the entire item</strong> if an item with the same key already exists. Use <code>UPDATE</code> for partial attribute changes.</li>
+<li><code>UPDATE</code> and <code>DELETE</code> require <code>rowid_column</code> to be set to the partition key column name.</li>
 </ul>
 <h2 id="query-pushdown-support">Query Pushdown Support</h2>
-<p>This FDW supports limited query pushdown with specific operators based on the type of operation:</p>
-<h3 id="vector-similarity-search-ann">Vector Similarity Search (ANN)</h3>
-<p>For approximate nearest neighbor search using the <code>&lt;==&gt;</code> operator:</p>
+<p>The DynamoDB Wrapper supports two scan strategies depending on the <code>WHERE</code> clause:</p>
+<h3 id="query-efficient-uses-dynamodb-query-api">Query (efficient — uses DynamoDB <code>Query</code> API)</h3>
+<p>When a <code>WHERE</code> clause includes an <strong>equality filter on the partition key</strong>, the wrapper uses the DynamoDB <code>Query</code> API. This reads only the items matching the partition key, consuming far fewer read capacity units than a full scan.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Uses Query API (efficient)</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">.</span><span class="n">users</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;user123&#39;</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<p>Additional conditions on the sort key (if the table has one) are also pushed down as key condition expressions:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Uses Query API with sort key condition</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">.</span><span class="n">orders</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">customer_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;cust1&#39;</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">order_date</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="s1">&#39;2024-01-01&#39;</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<h3 id="scan-full-table-uses-dynamodb-scan-api">Scan (full table — uses DynamoDB <code>Scan</code> API)</h3>
+<p>When no partition key equality filter is present, the wrapper performs a full <code>Scan</code>. Non-key column filters are sent as a <code>FilterExpression</code>, which reduces the data transferred over the network but <strong>does not reduce the read capacity units consumed</strong> — DynamoDB reads every item before applying the filter.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Full Scan with FilterExpression (expensive on large tables)</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">.</span><span class="n">users</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">age</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">30</span><span class="p">;</span>
+
+<span class="c1">-- Full Scan, no filter</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">.</span><span class="n">users</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<h3 id="supported-operators">Supported Operators</h3>
 <table>
 <thead>
 <tr>
-<th>Operation</th>
-<th>Note</th>
+<th>Operator</th>
+<th style="text-align: center;">Pushdown</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>data &lt;==&gt; vector_value</code></td>
-<td>Vector similarity search with embeddings</td>
+<td><code>=</code></td>
+<td style="text-align: center;">✅</td>
 </tr>
 <tr>
-<td><code>metadata &lt;==&gt; json_filter</code></td>
-<td>Metadata filtering using S3 Vectors filter expressions</td>
+<td><code>&lt;</code></td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td><code>&lt;=</code></td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td><code>&gt;</code></td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td><code>&gt;=</code></td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td><code>&lt;&gt;</code></td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td><code>LIKE</code></td>
+<td style="text-align: center;">❌</td>
+</tr>
+<tr>
+<td><code>IN</code></td>
+<td style="text-align: center;">❌</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Metadata Filtering Syntax:</strong></p>
-<p>The <code>json_filter</code> uses S3 Vectors metadata filtering expressions with the following operators:</p>
-<ul>
-<li><strong>Equality</strong>: <code>$eq</code>, <code>$ne</code> - Exact match or not equal</li>
-<li><strong>Numeric Comparisons</strong>: <code>$gt</code>, <code>$gte</code>, <code>$lt</code>, <code>$lte</code> - Greater than, less than comparisons</li>
-<li><strong>Array Operations</strong>: <code>$in</code>, <code>$nin</code> - Match any/none of the values in array</li>
-<li><strong>Existence Check</strong>: <code>$exists</code> - Check if field exists</li>
-<li><strong>Logical Operations</strong>: <code>$and</code>, <code>$or</code> - Combine multiple conditions</li>
-</ul>
-<p><strong>Examples:</strong>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Simple equality</span>
-<span class="n">metadata</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="s1">&#39;{&quot;category&quot;: &quot;electronics&quot;}&#39;</span><span class="p">::</span><span class="n">jsonb</span>
-
-<span class="c1">-- Numeric range</span>
-<span class="n">metadata</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="s1">&#39;{&quot;price&quot;: {&quot;$gte&quot;: 100, &quot;$lte&quot;: 500}}&#39;</span><span class="p">::</span><span class="n">jsonb</span>
-
-<span class="c1">-- Array matching</span>
-<span class="n">metadata</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="s1">&#39;{&quot;tags&quot;: {&quot;$in&quot;: [&quot;popular&quot;, &quot;trending&quot;]}}&#39;</span><span class="p">::</span><span class="n">jsonb</span>
-
-<span class="c1">-- Complex logical conditions</span>
-<span class="n">metadata</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="s1">&#39;{&quot;$and&quot;: [{&quot;category&quot;: &quot;books&quot;}, {&quot;year&quot;: {&quot;$gte&quot;: 2020}}]}&#39;</span><span class="p">::</span><span class="n">jsonb</span>
-</code></pre></div></td></tr></table></div></p>
-<p>For more details on metadata filtering syntax, see the <a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-vectors-metadata-filtering.html">AWS S3 Vectors metadata filtering documentation</a>.</p>
-<h3 id="key-based-queries">Key-based Queries</h3>
-<p>For exact key lookups:</p>
-<table>
-<thead>
-<tr>
-<th>Operation</th>
-<th>Note</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>key = 'value'</code></td>
-<td>Exact key match</td>
-</tr>
-<tr>
-<td><code>key in ('val1', 'val2')</code></td>
-<td>Multiple key lookup</td>
-</tr>
-</tbody>
-</table>
-<h3 id="supported-query-patterns">Supported Query Patterns</h3>
-<ol>
-<li>
-<p><strong>List all vectors</strong> (no WHERE clause):
-   <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span><span class="p">;</span>
-</code></pre></div></td></tr></table></div></p>
-</li>
-<li>
-<p><strong>Get a specific vector by key</strong>:
-   <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="k">key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;vector_001&#39;</span><span class="p">;</span>
-</code></pre></div></td></tr></table></div></p>
-</li>
-<li>
-<p><strong>Vector similarity search</strong>:
-   <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="n">s3vec_distance</span><span class="p">(</span><span class="k">data</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">distance</span><span class="p">,</span><span class="w"> </span><span class="o">*</span>
-<span class="k">from</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span>
-<span class="k">where</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="s1">&#39;[0.1, 0.2, 0.3, ...]&#39;</span><span class="p">::</span><span class="n">s3vec</span>
-<span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="mi">1</span>
-<span class="k">limit</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span>
-</code></pre></div></td></tr></table></div></p>
-</li>
-<li>
-<p><strong>Vector search with metadata filtering</strong>:
-   <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="n">s3vec_distance</span><span class="p">(</span><span class="k">data</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">distance</span><span class="p">,</span><span class="w"> </span><span class="o">*</span>
-<span class="k">from</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span>
-<span class="k">where</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="s1">&#39;[0.1, 0.2, 0.3, ...]&#39;</span><span class="p">::</span><span class="n">s3vec</span>
-<span class="k">and</span><span class="w"> </span><span class="n">metadata</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="s1">&#39;{&quot;category&quot;: &quot;product&quot;}&#39;</span><span class="p">::</span><span class="n">jsonb</span>
-<span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="mi">1</span>
-<span class="k">limit</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span>
-</code></pre></div></td></tr></table></div></p>
-</li>
-</ol>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Only above specific query patterns are supported. Complex queries with unsupported operators or combinations may result in errors.</p>
+<div class="admonition warning">
+<p class="admonition-title">Scan costs on large tables</p>
+<p>Full table scans on large DynamoDB tables consume significant read capacity and can be slow. Always include a partition key equality filter when querying large tables.</p>
 </div>
 <h2 id="supported-data-types">Supported Data Types</h2>
 <table>
 <thead>
 <tr>
 <th>Postgres Type</th>
-<th>S3 Vectors Type</th>
+<th>DynamoDB Attribute Type</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>text</td>
-<td>String (for vector key)</td>
+<td><code>boolean</code></td>
+<td>Boolean (BOOL)</td>
 </tr>
 <tr>
-<td>s3vec</td>
-<td>Float32 vector data</td>
+<td><code>text</code></td>
+<td>String (S), Number (N as string), or default</td>
 </tr>
 <tr>
-<td>jsonb</td>
-<td>Document metadata</td>
+<td><code>smallint</code></td>
+<td>Number (N)</td>
+</tr>
+<tr>
+<td><code>integer</code></td>
+<td>Number (N)</td>
+</tr>
+<tr>
+<td><code>bigint</code></td>
+<td>Number (N)</td>
+</tr>
+<tr>
+<td><code>real</code></td>
+<td>Number (N)</td>
+</tr>
+<tr>
+<td><code>double precision</code></td>
+<td>Number (N)</td>
+</tr>
+<tr>
+<td><code>numeric</code></td>
+<td>Number (N)</td>
+</tr>
+<tr>
+<td><code>date</code></td>
+<td>String (S, ISO 8601 format)</td>
+</tr>
+<tr>
+<td><code>timestamp</code></td>
+<td>String (S, ISO 8601 format)</td>
+</tr>
+<tr>
+<td><code>timestamptz</code></td>
+<td>String (S, ISO 8601 format)</td>
+</tr>
+<tr>
+<td><code>bytea</code></td>
+<td>Binary (B)</td>
+</tr>
+<tr>
+<td><code>jsonb</code></td>
+<td>List (L), Map (M), String Set (SS), Number Set (NS), Binary Set (BS)</td>
 </tr>
 </tbody>
 </table>
+<p>DynamoDB stores numbers as strings internally. The wrapper coerces them to the declared Postgres column type at read time. If no numeric type is declared, numbers are returned as <code>text</code>.</p>
+<p>Compound types (List, Map, String Set, Number Set, Binary Set) are always converted to <code>jsonb</code>.</p>
 <h2 id="limitations">Limitations</h2>
 <p>This section describes important limitations and considerations when using this FDW:</p>
 <ul>
-<li>Only supports specific query patterns as described in the Query Pushdown section</li>
-<li>Vector similarity search is limited to Float32 vectors</li>
-<li>UPDATE operations are not supported (use DELETE + INSERT instead)</li>
-<li>Complex WHERE clauses with AND/OR combinations are not supported except for specific vector search patterns</li>
-<li>Materialized views using these foreign tables may fail during logical backups</li>
+<li><code>TRUNCATE</code> is not supported. Use <code>DELETE</code> without a <code>WHERE</code> clause to remove all rows (this performs a full scan and individual <code>DeleteItem</code> calls, so it is slow on large tables).</li>
+<li>Full table scans (<code>Scan</code> API) do not reduce read capacity unit consumption even when a <code>FilterExpression</code> is used.</li>
+<li><code>LIKE</code> and <code>IN</code> operators are not pushed down — filtering is done in Postgres after fetching rows.</li>
+<li><code>UPDATE</code> cannot change partition key or sort key values, as DynamoDB does not support key updates in place.</li>
+<li><code>INSERT</code> replaces the entire item if the key already exists (<code>PutItem</code> semantics). Use <code>UPDATE</code> to add or change individual attributes without replacing the whole item.</li>
+<li>Compound DynamoDB types (List, Map, sets) are read as <code>jsonb</code> and written as a JSON string (DynamoDB String attribute). To write native DynamoDB List or Map attributes, manage items directly through the AWS SDK.</li>
+<li>Materialized views using these foreign tables may fail during logical backups.</li>
+<li>DynamoDB transactions are not supported.</li>
 </ul>
 <h2 id="examples">Examples</h2>
-<h3 id="basic-setup">Basic Setup</h3>
-<p>First, create a server for S3 Vectors:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span>
-<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">s3_vectors_server</span>
-<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">s3_vectors_wrapper</span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">aws_access_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;AWS_access_key_ID&gt;&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">aws_secret_access_key</span><span class="w"> </span><span class="s1">&#39;&lt;AWS_secret_access_key&gt;&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">aws_region</span><span class="w"> </span><span class="s1">&#39;us-east-1&#39;</span>
-<span class="w">  </span><span class="p">);</span>
-</code></pre></div></td></tr></table></div>
-<p>Import the foreign table:</p>
+<h3 id="basic-setup">Basic setup</h3>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -3461,136 +3407,118 @@
 <span class="normal">12</span>
 <span class="normal">13</span>
 <span class="normal">14</span>
-<span class="normal">15</span>
-<span class="normal">16</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Import all indexes from a vector bucket</span>
-<span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="ss">&quot;my-vector-bucket&quot;</span>
-<span class="w">  </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">s3_vectors_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">;</span>
+<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">extension</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">wrappers</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">extensions</span><span class="p">;</span>
 
-<span class="c1">-- or, create the foreign table manually</span>
-<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="k">key</span><span class="w"> </span><span class="nb">text</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">null</span><span class="p">,</span>
-<span class="w">  </span><span class="k">data</span><span class="w"> </span><span class="n">s3vec</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">null</span><span class="p">,</span>
-<span class="w">  </span><span class="n">metadata</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">dynamodb_wrapper</span>
+<span class="w">  </span><span class="k">handler</span><span class="w"> </span><span class="n">dynamo_db_fdw_handler</span>
+<span class="w">  </span><span class="k">validator</span><span class="w"> </span><span class="n">dynamo_db_fdw_validator</span><span class="p">;</span>
+
+<span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">dynamodb_server</span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">dynamodb_wrapper</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">aws_access_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;aws_access_key&gt;&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">aws_secret_access_key</span><span class="w"> </span><span class="s1">&#39;&lt;aws_secret_key&gt;&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">region</span><span class="w"> </span><span class="s1">&#39;us-east-1&#39;</span>
+<span class="w">  </span><span class="p">);</span>
+
+<span class="k">create</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<h3 id="import-all-tables-automatically">Import all tables automatically</h3>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">dynamodb</span>
+<span class="w">  </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">dynamodb_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<p>Each imported table has key columns plus <code>_attrs jsonb</code> for everything else:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Access non-key attributes via JSON operators</span>
+<span class="k">select</span>
+<span class="w">  </span><span class="n">id</span><span class="p">,</span>
+<span class="w">  </span><span class="n">_attrs</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;name&#39;</span><span class="w">              </span><span class="k">as</span><span class="w"> </span><span class="n">name</span><span class="p">,</span>
+<span class="w">  </span><span class="p">(</span><span class="n">_attrs</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;age&#39;</span><span class="p">)::</span><span class="nb">integer</span><span class="w">    </span><span class="k">as</span><span class="w"> </span><span class="n">age</span><span class="p">,</span>
+<span class="w">  </span><span class="p">(</span><span class="n">_attrs</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;active&#39;</span><span class="p">)::</span><span class="nb">boolean</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">active</span><span class="p">,</span>
+<span class="w">  </span><span class="n">_attrs</span><span class="o">-&gt;</span><span class="s1">&#39;tags&#39;</span><span class="w">               </span><span class="k">as</span><span class="w"> </span><span class="n">tags</span><span class="w">   </span><span class="c1">-- nested Map</span>
+<span class="k">from</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">.</span><span class="n">users</span><span class="p">;</span>
+
+<span class="c1">-- Partition key pushdown still works on imported tables</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">.</span><span class="n">orders</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">order_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;ord-001&#39;</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<h3 id="create-a-foreign-table-manually">Create a foreign table manually</h3>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">.</span><span class="n">products</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">product_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">price</span><span class="w"> </span><span class="nb">numeric</span><span class="p">,</span>
+<span class="w">  </span><span class="n">in_stock</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span>
+<span class="w">  </span><span class="n">tags</span><span class="w"> </span><span class="n">jsonb</span>
 <span class="p">)</span>
-<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">s3_vectors_server</span>
-<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">bucket_name</span><span class="w"> </span><span class="s1">&#39;my-vector-bucket&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">index_name</span><span class="w"> </span><span class="s1">&#39;my-vector-index&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">rowid_column</span><span class="w"> </span><span class="s1">&#39;key&#39;</span>
-<span class="w">  </span><span class="p">);</span>
-</code></pre></div></td></tr></table></div>
-<h3 id="querying-vectors">Querying Vectors</h3>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- List all vectors in an index</span>
-<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span><span class="p">;</span>
-
-<span class="c1">-- Get specific vector by key</span>
-<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="k">key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;product_001&#39;</span><span class="p">;</span>
-
-<span class="c1">-- Vector similarity search (top 5 similar vectors)</span>
-<span class="k">select</span><span class="w"> </span><span class="n">s3vec_distance</span><span class="p">(</span><span class="k">data</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">distance</span><span class="p">,</span><span class="w"> </span><span class="k">key</span><span class="p">,</span><span class="w"> </span><span class="n">metadata</span>
-<span class="k">from</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span>
-<span class="k">where</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="s1">&#39;[0.1, 0.2, 0.3, 0.4, 0.5]&#39;</span><span class="p">::</span><span class="n">s3vec</span>
-<span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="mi">1</span>
-<span class="k">limit</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span>
-</code></pre></div></td></tr></table></div>
-<h3 id="inserting-vectors">Inserting Vectors</h3>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span>
-<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Insert a single vector</span>
-<span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span><span class="w"> </span><span class="p">(</span><span class="k">key</span><span class="p">,</span><span class="w"> </span><span class="k">data</span><span class="p">,</span><span class="w"> </span><span class="n">metadata</span><span class="p">)</span>
-<span class="k">values</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="s1">&#39;product_001&#39;</span><span class="p">,</span>
-<span class="w">  </span><span class="s1">&#39;[0.1, 0.2, 0.3, 0.4, 0.5]&#39;</span><span class="p">::</span><span class="n">s3vec</span><span class="p">,</span>
-<span class="w">  </span><span class="s1">&#39;{&quot;category&quot;: &quot;electronics&quot;, &quot;price&quot;: 299.99}&#39;</span><span class="p">::</span><span class="n">jsonb</span>
+<span class="n">server</span><span class="w"> </span><span class="n">dynamodb_server</span>
+<span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="k">table</span><span class="w"> </span><span class="s1">&#39;products&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="n">rowid_column</span><span class="w"> </span><span class="s1">&#39;product_id&#39;</span>
 <span class="p">);</span>
-
-<span class="c1">-- Insert multiple vectors</span>
-<span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span><span class="w"> </span><span class="p">(</span><span class="k">key</span><span class="p">,</span><span class="w"> </span><span class="k">data</span><span class="p">,</span><span class="w"> </span><span class="n">metadata</span><span class="p">)</span>
-<span class="k">values</span>
-<span class="w">  </span><span class="p">(</span><span class="s1">&#39;product_002&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;[0.2, 0.3, 0.4, 0.5, 0.6]&#39;</span><span class="p">::</span><span class="n">s3vec</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;{&quot;category&quot;: &quot;books&quot;}&#39;</span><span class="p">::</span><span class="n">jsonb</span><span class="p">),</span>
-<span class="w">  </span><span class="p">(</span><span class="s1">&#39;product_003&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;[0.3, 0.4, 0.5, 0.6, 0.7]&#39;</span><span class="p">::</span><span class="n">s3vec</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;{&quot;category&quot;: &quot;clothing&quot;}&#39;</span><span class="p">::</span><span class="n">jsonb</span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
-<h3 id="deleting-vectors">Deleting Vectors</h3>
+<h3 id="query-with-partition-key-pushdown">Query with partition key pushdown</h3>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Efficient: uses DynamoDB Query API</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">.</span><span class="n">products</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">product_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;prod-001&#39;</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<h3 id="query-with-filter-full-scan">Query with filter (full scan)</h3>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Full scan with server-side FilterExpression</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">.</span><span class="n">products</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">price</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">50</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<h3 id="insert-a-new-item">Insert a new item</h3>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">.</span><span class="n">products</span><span class="w"> </span><span class="p">(</span><span class="n">product_id</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">price</span><span class="p">,</span><span class="w"> </span><span class="n">in_stock</span><span class="p">)</span>
+<span class="k">values</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;prod-999&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Widget&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">9</span><span class="p">.</span><span class="mi">99</span><span class="p">,</span><span class="w"> </span><span class="k">true</span><span class="p">);</span>
+</code></pre></div></td></tr></table></div>
+<h3 id="update-specific-attributes">Update specific attributes</h3>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Delete a specific vector by key</span>
-<span class="k">delete</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="k">key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;product_001&#39;</span><span class="p">;</span>
-
-<span class="c1">-- Delete all vectors</span>
-<span class="k">delete</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span><span class="p">;</span>
+<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Only updates &#39;price&#39; and &#39;in_stock&#39;; other attributes are preserved</span>
+<span class="k">update</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">.</span><span class="n">products</span>
+<span class="k">set</span><span class="w"> </span><span class="n">price</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">12</span><span class="p">.</span><span class="mi">99</span><span class="p">,</span><span class="w"> </span><span class="n">in_stock</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">false</span>
+<span class="k">where</span><span class="w"> </span><span class="n">product_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;prod-999&#39;</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
-<h3 id="vector-similarity-search-with-filtering">Vector Similarity Search with Filtering</h3>
+<h3 id="delete-an-item">Delete an item</h3>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">delete</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">.</span><span class="n">products</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">product_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;prod-999&#39;</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<h3 id="using-dynamodb-local-for-development">Using DynamoDB Local for development</h3>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
 <span class="normal">4</span>
 <span class="normal">5</span>
 <span class="normal">6</span>
-<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Find similar vectors with metadata filtering</span>
-<span class="k">select</span><span class="w"> </span><span class="n">s3vec_distance</span><span class="p">(</span><span class="k">data</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">distance</span><span class="p">,</span><span class="w"> </span><span class="k">key</span><span class="p">,</span><span class="w"> </span><span class="n">metadata</span>
-<span class="k">from</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span>
-<span class="k">where</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="s1">&#39;[0.1, 0.2, 0.3, 0.4, 0.5]&#39;</span><span class="p">::</span><span class="n">s3vec</span>
-<span class="k">and</span><span class="w"> </span><span class="n">metadata</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="s1">&#39;{&quot;category&quot;: &quot;electronics&quot;}&#39;</span><span class="p">::</span><span class="n">jsonb</span>
-<span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="mi">1</span>
-<span class="k">limit</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span>
-</code></pre></div></td></tr></table></div>
-<h3 id="advanced-example-semantic-search">Advanced Example: Semantic Search</h3>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span>
-<span class="normal">13</span>
-<span class="normal">14</span>
-<span class="normal">15</span>
-<span class="normal">16</span>
-<span class="normal">17</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Create a function to convert text to embeddings (pseudo-code)</span>
-<span class="c1">-- This would typically use an external embedding service</span>
-<span class="k">create</span><span class="w"> </span><span class="k">or</span><span class="w"> </span><span class="k">replace</span><span class="w"> </span><span class="k">function</span><span class="w"> </span><span class="n">text_to_embedding</span><span class="p">(</span><span class="n">input_text</span><span class="w"> </span><span class="nb">text</span><span class="p">)</span>
-<span class="k">returns</span><span class="w"> </span><span class="n">s3vec</span>
-<span class="k">language</span><span class="w"> </span><span class="k">sql</span>
-<span class="k">as</span><span class="w"> </span><span class="err">$$</span>
-<span class="w">  </span><span class="c1">-- This is a placeholder - you would implement actual text embedding logic</span>
-<span class="w">  </span><span class="k">select</span><span class="w"> </span><span class="s1">&#39;[0.1, 0.2, 0.3, 0.4, 0.5]&#39;</span><span class="p">::</span><span class="n">s3vec</span><span class="p">;</span>
-<span class="err">$$</span><span class="p">;</span>
-
-<span class="c1">-- Semantic search example</span>
-<span class="k">select</span><span class="w"> </span><span class="n">s3vec_distance</span><span class="p">(</span><span class="k">data</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">distance</span><span class="p">,</span><span class="w"> </span><span class="k">key</span><span class="p">,</span><span class="w"> </span><span class="n">metadata</span>
-<span class="k">from</span><span class="w"> </span><span class="n">s3_vectors</span><span class="p">.</span><span class="n">embeddings</span>
-<span class="k">where</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="n">text_to_embedding</span><span class="p">(</span><span class="s1">&#39;Find similar products&#39;</span><span class="p">)</span>
-<span class="k">and</span><span class="w"> </span><span class="n">metadata</span><span class="w"> </span><span class="o">&lt;==&gt;</span><span class="w"> </span><span class="s1">&#39;{&quot;status&quot;: &quot;active&quot;}&#39;</span><span class="p">::</span><span class="n">jsonb</span>
-<span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="mi">1</span>
-<span class="k">limit</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span>
+<span class="normal">7</span>
+<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">dynamodb_local_server</span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">dynamodb_wrapper</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">aws_access_key_id</span><span class="w"> </span><span class="s1">&#39;test&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">aws_secret_access_key</span><span class="w"> </span><span class="s1">&#39;test&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">region</span><span class="w"> </span><span class="s1">&#39;us-east-1&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">endpoint_url</span><span class="w"> </span><span class="s1">&#39;http://localhost:8000&#39;</span>
+<span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 
 
@@ -3624,7 +3552,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../s3/" class="md-footer__link md-footer__link--prev" aria-label="Previous: S3 (CSV, JSON, Parquet)">
+          <a href="../duckdb/" class="md-footer__link md-footer__link--prev" aria-label="Previous: DuckDB">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -3634,20 +3562,20 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                S3 (CSV, JSON, Parquet)
+                DuckDB
               </div>
             </div>
           </a>
         
         
           
-          <a href="../stripe/" class="md-footer__link md-footer__link--next" aria-label="Next: Stripe">
+          <a href="../firebase/" class="md-footer__link md-footer__link--next" aria-label="Next: Firebase">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Stripe
+                Firebase
               </div>
             </div>
             <div class="md-footer__button md-icon">

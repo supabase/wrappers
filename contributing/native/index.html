@@ -467,6 +467,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -689,6 +693,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../catalog/dynamodb/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DynamoDB
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../catalog/firebase/" class="md-nav__link">
         
   
@@ -753,6 +785,34 @@
     
   
     Logflare
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../catalog/mysql/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MySQL
   
 
     
@@ -2289,7 +2349,13 @@
 <span class="normal">16</span>
 <span class="normal">17</span>
 <span class="normal">18</span>
-<span class="normal">19</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">pub</span><span class="w"> </span><span class="k">trait</span><span class="w"> </span><span class="n">ForeignDataWrapper</span><span class="w"> </span><span class="p">{</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">pub</span><span class="w"> </span><span class="k">trait</span><span class="w"> </span><span class="n">ForeignDataWrapper</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="c1">// create a FDW instance</span>
 <span class="w">    </span><span class="k">fn</span><span class="w"> </span><span class="nf">new</span><span class="p">(</span><span class="o">..</span><span class="p">.)</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nc">Self</span><span class="p">;</span>
 
@@ -2304,6 +2370,12 @@
 <span class="w">    </span><span class="k">fn</span><span class="w"> </span><span class="nf">update</span><span class="p">(</span><span class="o">..</span><span class="p">.);</span>
 <span class="w">    </span><span class="k">fn</span><span class="w"> </span><span class="nf">delete</span><span class="p">(</span><span class="o">..</span><span class="p">.);</span>
 <span class="w">    </span><span class="k">fn</span><span class="w"> </span><span class="nf">end_modify</span><span class="p">(</span><span class="o">..</span><span class="p">.);</span>
+
+<span class="w">    </span><span class="c1">// functions for aggregate pushdown (optional)</span>
+<span class="w">    </span><span class="k">fn</span><span class="w"> </span><span class="nf">supported_aggregates</span><span class="p">(</span><span class="o">..</span><span class="p">.)</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nb">Vec</span><span class="o">&lt;</span><span class="n">AggregateKind</span><span class="o">&gt;</span><span class="p">;</span>
+<span class="w">    </span><span class="k">fn</span><span class="w"> </span><span class="nf">supports_group_by</span><span class="p">(</span><span class="o">..</span><span class="p">.)</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="kt">bool</span><span class="p">;</span>
+<span class="w">    </span><span class="k">fn</span><span class="w"> </span><span class="nf">get_aggregate_rel_size</span><span class="p">(</span><span class="o">..</span><span class="p">.)</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="p">(</span><span class="kt">i64</span><span class="p">,</span><span class="w"> </span><span class="kt">i32</span><span class="p">);</span>
+<span class="w">    </span><span class="k">fn</span><span class="w"> </span><span class="nf">begin_aggregate_scan</span><span class="p">(</span><span class="o">..</span><span class="p">.);</span>
 
 <span class="w">    </span><span class="c1">// other optional functions</span>
 <span class="w">    </span><span class="o">..</span><span class="p">.</span>
