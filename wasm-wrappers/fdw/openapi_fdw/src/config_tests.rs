@@ -9,10 +9,10 @@ fn test_session_token_default_none() {
 }
 
 #[test]
-fn test_session_token_prefix_default_bearer() {
+fn test_session_token_prefix_default_empty() {
     let config = ServerConfig::default();
-    // Default is empty string; configure_auth sets "Bearer" when the server option
-    // is absent. Direct Default::default() gives empty string.
+    // Struct Default gives an empty prefix; configure_auth applies the real
+    // "Bearer" default when the server option is absent.
     assert_eq!(config.auth_token_prefix, "");
 }
 
@@ -45,6 +45,16 @@ fn test_apply_session_token_replaces_existing_authorization() {
     let mut headers = vec![("authorization".to_owned(), "Bearer old-token".to_owned())];
     ServerConfig::apply_session_token(&mut headers, "new-token", "Bearer");
     // Should replace, not append
+    assert_eq!(headers.len(), 1);
+    assert_eq!(headers[0].1, "Bearer new-token");
+}
+
+#[test]
+fn test_apply_session_token_replaces_existing_authorization_case_insensitive() {
+    // Existing header uses capital "Authorization" (e.g. from the headers option).
+    // Header names are case-insensitive, so it should be replaced, not duplicated.
+    let mut headers = vec![("Authorization".to_owned(), "Bearer old-token".to_owned())];
+    ServerConfig::apply_session_token(&mut headers, "new-token", "Bearer");
     assert_eq!(headers.len(), 1);
     assert_eq!(headers[0].1, "Bearer new-token");
 }

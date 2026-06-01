@@ -220,8 +220,15 @@ impl ServerConfig {
             );
         }
 
-        self.auth_token_setting = opts.get("auth_token_setting");
-        self.auth_token_prefix = opts.require_or("auth_token_prefix", "Bearer");
+        // Treat an empty/whitespace-only setting name as unset, so the request
+        // path doesn't fire a pointless current_setting('') lookup per request.
+        self.auth_token_setting = opts
+            .get("auth_token_setting")
+            .filter(|s| !s.trim().is_empty());
+        self.auth_token_prefix = opts
+            .require_or("auth_token_prefix", "Bearer")
+            .trim()
+            .to_owned();
 
         Ok(())
     }
@@ -310,7 +317,13 @@ impl ServerConfig {
         } else {
             format!("{prefix} {token}")
         };
-        if let Some(h) = headers.iter_mut().find(|h| h.0 == "authorization") {
+        // HTTP header names are case-insensitive: match any existing
+        // authorization header regardless of casing so we replace rather than
+        // append a duplicate (e.g. a static "Authorization" from the headers option).
+        if let Some(h) = headers
+            .iter_mut()
+            .find(|h| h.0.eq_ignore_ascii_case("authorization"))
+        {
             h.1 = value;
         } else {
             headers.push(("authorization".to_owned(), value));
