@@ -764,4 +764,77 @@ mod tests {
             );
         });
     }
+
+    // Exercises the OpenAPI FDW `auth_token_setting` option end-to-end: the FDW
+    // resolves a Postgres session GUC via the `query-setting` host function and
+    // injects it as the `Authorization` header on each request. The mock server
+    // reflects the received header back so we can assert on it.
+    #[pg_test]
+    fn openapi_session_token_injection() {
+        Spi::connect_mut(|c| {
+            c.update(
+                r#"CREATE FOREIGN DATA WRAPPER wasm_wrapper
+                     HANDLER wasm_fdw_handler VALIDATOR wasm_fdw_validator"#,
+                None,
+                &[],
+            )
+            .unwrap();
+
+            c.update(
+                r#"CREATE SERVER openapi_auth_server
+                     FOREIGN DATA WRAPPER wasm_wrapper
+                     OPTIONS (
+                       fdw_package_url 'file://../../../wasm-wrappers/fdw/target/wasm32-unknown-unknown/release/openapi_fdw.wasm',
+                       fdw_package_name 'supabase:openapi-fdw',
+                       fdw_package_version '>=0.1.0',
+                       base_url 'http://localhost:8096/openapi',
+                       auth_token_setting 'app.test_token',
+                       auth_token_prefix 'Bearer'
+                     )"#,
+                None,
+                &[],
+            )
+            .unwrap();
+
+            c.update(
+                r#"
+                  CREATE FOREIGN TABLE openapi_whoami (
+                    received_auth text
+                  )
+                  SERVER openapi_auth_server
+                  OPTIONS (
+                    endpoint '/whoami',
+                    response_path '/data'
+                  )
+             "#,
+                None,
+                &[],
+            )
+            .unwrap();
+
+            // Negative: with the GUC unset, query-setting resolves to NULL and no
+            // Authorization header is injected, so the mock reflects an empty string.
+            let unset = c
+                .select("SELECT received_auth FROM openapi_whoami", None, &[])
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("received_auth").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(unset, vec![""]);
+
+            // Inject a per-session token, then confirm it reaches the API prefixed.
+            c.update(
+                "SELECT set_config('app.test_token', 'sess-secret-123', false)",
+                None,
+                &[],
+            )
+            .unwrap();
+
+            let injected = c
+                .select("SELECT received_auth FROM openapi_whoami", None, &[])
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("received_auth").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(injected, vec!["Bearer sess-secret-123"]);
+        });
+    }
 }
