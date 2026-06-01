@@ -177,6 +177,36 @@ fn iter_scan(ctx: &Context, row: &Row) -> Result<Option<u32>, FdwError> {
 }
 ```
 
+## Host functions
+
+The host (the Wrappers Wasm runtime) exposes a small set of functions to the guest Wasm FDW through the `utils` interface.
+
+| Function | Description |
+| --- | --- |
+| `utils::report_info` / `report_notice` / `report_warning` / `report_error` | Emit a PostgreSQL log message (visible in `psql`), handy for debugging. |
+| `utils::cell_to_string(cell)` | Format a `Cell` value as a string. |
+| `utils::get_vault_secret(id)` / `get_vault_secret_by_name(name)` | Read a decrypted secret from [Vault](https://supabase.com/docs/guides/database/vault). Use for static credentials. |
+| `utils::query_setting(name)` | Read a PostgreSQL session setting (GUC) at request time. Returns `None` if unset. |
+
+### Reading session settings
+
+`utils::query_setting(name)` wraps `current_setting(name, true)`, so it returns the current value of a session GUC, or `None` when it isn't set. This is useful when an FDW needs a value that varies per request, per user, or per transaction rather than a static server option.
+
+```rust
+// inside your FDW, read a value set earlier in the same transaction
+if let Some(token) = utils::query_setting("app.api_token") {
+    // use the token for this request
+}
+```
+
+The value is supplied from SQL with `set_config`, typically from a `SECURITY DEFINER` function that resolves it for the calling user and scopes it to the transaction:
+
+```sql
+select set_config('app.api_token', '<resolved-token>', true);  -- true = transaction-local
+```
+
+For example, the OpenAPI FDW's [`auth_token_setting`](../catalog/openapi.md#server-options) option reads a named session setting per request and uses it as the Authorization token.
+
 ## Developing locally
 
 We'll use the CLI to develop locally. This will be faster than the GitHub release workflow.

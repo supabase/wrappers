@@ -17,14 +17,14 @@ Point it at an OpenAPI spec and query the API with SQL. The FDW parses the spec 
 - **Rate-limit handling** — Retries automatically with exponential backoff on HTTP 429 responses
 - **Type coercion** — Maps JSON types to PostgreSQL types (`text`, `integer`, `boolean`, `timestamptz`, `jsonb`, etc.)
 - **camelCase matching** — Matches API field names like `stationIdentifier` to snake_case columns like `station_identifier`
-- **Auth support** — API key (header, query param, or cookie) and Bearer token authentication, with Supabase Vault integration
+- **Auth support** — API key (header, query param, or cookie) and Bearer token authentication, with Supabase Vault integration or per-request tokens from a session variable (`auth_token_setting`)
 - **Debug mode** — Set `debug 'true'` on the server to log HTTP request/response details as PostgreSQL INFO messages
 
 ## Limitations
 
 - Read-only (no INSERT/UPDATE/DELETE)
 - POST-for-read available via `method` table option, but only GET endpoints are auto-imported
-- Auth: API key and Bearer token only (no OAuth2 flows — use pre-obtained tokens)
+- Auth: API key and Bearer token, static or resolved per request from a session variable (no OAuth2 flows — supply pre-obtained tokens)
 - OpenAPI 3.x only (Swagger 2.0 is rejected)
 
 ## Documentation

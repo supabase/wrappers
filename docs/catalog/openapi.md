@@ -105,6 +105,8 @@ We need to provide Postgres with the credentials to access the API and any addit
 | `api_key_location` | No | Where to send the API key: `header` (default), `query`, or `cookie`. |
 | `bearer_token` | No | Bearer token for authentication (alternative to `api_key`). |
 | `bearer_token_id` | No | Vault secret key ID storing the bearer token. |
+| `auth_token_setting` | No | Name of a Postgres session variable (GUC) to read the auth token from at request time, e.g. `app.api_token`. When set and non-empty it overrides any static credential for that request. See [Per-request credentials](#per-request-credentials-session-variables). |
+| `auth_token_prefix` | No | Prefix for the `auth_token_setting` value in the Authorization header (default: `Bearer`). Set to an empty string to send the raw token. |
 | `user_agent` | No | Custom User-Agent header value. |
 | `accept` | No | Custom Accept header for content negotiation (e.g., `application/geo+json`). |
 | `headers` | No | Custom headers as JSON object (e.g., `'{"X-Custom": "value"}'`). |
@@ -402,7 +404,7 @@ options (endpoint '/users');
 
 - **Read-only**: This FDW only supports SELECT operations. INSERT, UPDATE, and DELETE are not supported at this time.
 - **No transactions**: Each SQL statement results in immediate HTTP requests; there is no transactional grouping.
-- **Authentication**: Currently supports API Key and Bearer Token authentication. OAuth flows are not supported.
+- **Authentication**: Supports API Key and Bearer Token authentication, either static (server option or Vault) or resolved per request from a session variable (see [Per-request credentials](#per-request-credentials-session-variables)). The FDW does not run OAuth flows itself, but a session variable lets you supply a token your application already obtained.
 - **OpenAPI version**: Only OpenAPI 3.0+ specifications are supported (not Swagger 2.0).
 
 ## Automatic Retries
@@ -518,6 +520,37 @@ create server query_auth_api
     api_key_location 'query'  -- sends as ?api_key=sk-... (uses api_key_header as param name)
   );
 ```
+
+### Per-request credentials (session variables)
+
+A server's credential is normally fixed when the server is created. To vary it per request (for example, per-user OAuth tokens in a multi-tenant app) set `auth_token_setting` to the name of a Postgres session variable, then resolve that variable per query with a `SECURITY DEFINER` function:
+
+```sql
+create server per_user_api
+  foreign data wrapper wasm_wrapper
+  options (
+    fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.2.0/openapi_fdw.wasm',
+    fdw_package_name 'supabase:openapi-fdw',
+    fdw_package_version '0.2.0',
+    fdw_package_checksum 'f0d4d6e50f7c519a66363bd8bdbe1ea8086ca810ca14b43fb0ed18b64acdf6aa',
+    base_url 'https://api.example.com',
+    auth_token_setting 'app.api_token'  -- read the token from this session variable each request
+  );
+
+-- Resolve the calling user's token (e.g. from an RLS-protected table keyed to
+-- auth.uid()) and pin it for the life of the transaction:
+create function set_api_token() returns void
+  language sql security definer set search_path = '' as $$
+  select set_config('app.api_token',
+    (select access_token from public.user_tokens where user_id = auth.uid()),
+    true);
+$$;
+
+select set_api_token();
+select * from some_foreign_table;
+```
+
+On each request the FDW reads `app.api_token` and sends it as `Authorization: Bearer <token>`. If the variable is unset or empty no token is injected, and any static credential on the server still applies. Use `auth_token_prefix` to change the `Bearer` prefix, or set it to an empty string to send the raw token.
 
 ### Response Path Extraction
 
