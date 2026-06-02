@@ -1,8 +1,9 @@
 use crate::stats;
-use bson::{Bson, Document};
+use bson::{Bson, Document, oid::ObjectId};
 use mongodb::{Client, Cursor};
 use pgrx::{pg_sys, varlena, PgBuiltInOids, PgOid, prelude::to_timestamp};
 use std::collections::HashMap;
+use std::str::FromStr;
 
 use supabase_wrappers::prelude::*;
 
@@ -110,6 +111,54 @@ fn bson_to_cell(value: &Bson, tgt_col: &Column) -> MongodbFdwResult<Option<Cell>
     };
 
     Ok(Some(cell))
+}
+
+/// Convert a `Cell` to a BSON value. `field_name` is used to detect `_id`
+/// fields for ObjectId hex coercion.
+fn cell_to_bson(field_name: &str, cell: &Cell) -> Bson {
+    match cell {
+        Cell::Bool(v) => Bson::Boolean(*v),
+        Cell::I8(v) => Bson::Int32(*v as i32),
+        Cell::I16(v) => Bson::Int32(*v as i32),
+        Cell::I32(v) => Bson::Int32(*v),
+        Cell::I64(v) => Bson::Int64(*v),
+        Cell::F32(v) => Bson::Double(*v as f64),
+        Cell::F64(v) => Bson::Double(*v),
+        Cell::Numeric(n) => match bson::Decimal128::from_str(&n.to_string()) {
+            Ok(d) => Bson::Decimal128(d),
+            Err(_) => Bson::String(n.to_string()),
+        },
+        Cell::String(s) => {
+            if field_name == "_id" && s.len() == 24 && s.chars().all(|c| c.is_ascii_hexdigit()) {
+                match ObjectId::parse_str(s) {
+                    Ok(oid) => Bson::ObjectId(oid),
+                    Err(_) => Bson::String(s.clone()),
+                }
+            } else {
+                Bson::String(s.clone())
+            }
+        }
+        Cell::Date(d) => {
+            // to_unix_epoch_days() returns days since Unix epoch (1970-01-01)
+            let millis = d.to_unix_epoch_days() as i64 * 86_400_000;
+            Bson::DateTime(bson::DateTime::from_millis(millis))
+        }
+        Cell::Timestamp(ts) => {
+            // into_inner() returns microseconds since PG epoch (2000-01-01);
+            // add PG_EPOCH_MS (946_684_800_000_000 µs) to get Unix µs, then convert to ms.
+            let pg_epoch_us: i64 = 946_684_800_000_000;
+            let unix_ms = (ts.into_inner() + pg_epoch_us) / 1000;
+            Bson::DateTime(bson::DateTime::from_millis(unix_ms))
+        }
+        Cell::Timestamptz(ts) => {
+            let pg_epoch_us: i64 = 946_684_800_000_000;
+            let unix_ms = (ts.into_inner() + pg_epoch_us) / 1000;
+            Bson::DateTime(bson::DateTime::from_millis(unix_ms))
+        }
+        Cell::Json(j) => bson::to_bson(&j.0).unwrap_or(Bson::Null),
+        Cell::Uuid(u) => Bson::String(u.to_string()),
+        _ => Bson::Null,
+    }
 }
 
 /// Cached state from begin_scan so re_scan can replay without re-deparsing.
