@@ -169,6 +169,45 @@ mod tests {
     }
 
     #[pg_test]
+    fn mongodb_update() {
+        let rt = create_async_runtime().unwrap();
+        setup_mongo_users(&rt);
+
+        Spi::connect_mut(|c| {
+            create_server_and_table(c);
+
+            c.update("UPDATE users SET age = 99 WHERE _id = 'u1'", None, &[]).unwrap();
+            let r: Option<i32> = c
+                .select("SELECT age FROM users WHERE _id = 'u1'", None, &[])
+                .unwrap().first().get(1).unwrap();
+            assert_eq!(r, Some(99));
+
+            // Setting a column to NULL should $unset the field.
+            c.update("UPDATE users SET age = NULL WHERE _id = 'u1'", None, &[]).unwrap();
+            let r: Option<i32> = c
+                .select("SELECT age FROM users WHERE _id = 'u1'", None, &[])
+                .unwrap().first().get(1).unwrap();
+            assert_eq!(r, None);
+        });
+    }
+
+    #[pg_test]
+    fn mongodb_delete() {
+        let rt = create_async_runtime().unwrap();
+        setup_mongo_users(&rt);
+
+        Spi::connect_mut(|c| {
+            create_server_and_table(c);
+
+            c.update("DELETE FROM users WHERE _id = 'u2'", None, &[]).unwrap();
+            let n: Option<i64> = c
+                .select("SELECT count(*)::bigint FROM users", None, &[])
+                .unwrap().first().get(1).unwrap();
+            assert_eq!(n, Some(3));
+        });
+    }
+
+    #[pg_test]
     fn mongodb_doc_column() {
         let rt = create_async_runtime().unwrap();
         setup_mongo_users(&rt);

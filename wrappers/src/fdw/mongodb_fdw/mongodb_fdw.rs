@@ -477,6 +477,72 @@ impl ForeignDataWrapper<MongodbFdwError> for MongodbFdw {
         Ok(())
     }
 
+    fn update(&mut self, rowid: &Cell, new_row: &Row) -> MongodbFdwResult<()> {
+        let mut set_doc = Document::new();
+        let mut unset_doc = Document::new();
+
+        for (name, cell) in new_row.iter() {
+            if name == &self.rowid_col || name == "_doc" {
+                continue;
+            }
+            match cell {
+                Some(c) => {
+                    set_doc.insert(name, cell_to_bson(name, c));
+                }
+                None => {
+                    unset_doc.insert(name, "");
+                }
+            }
+        }
+
+        let mut update = Document::new();
+        if !set_doc.is_empty() {
+            update.insert("$set", set_doc);
+        }
+        if !unset_doc.is_empty() {
+            update.insert("$unset", unset_doc);
+        }
+        if update.is_empty() {
+            return Ok(());
+        }
+
+        let filter = doc! { &self.rowid_col: cell_to_bson(&self.rowid_col, rowid) };
+        let (database, collection) = self
+            .modify_target
+            .clone()
+            .ok_or(MongodbFdwError::NoClient)?;
+        let client = self.client()?.clone();
+
+        self.rt.block_on(async move {
+            client
+                .database(&database)
+                .collection::<Document>(&collection)
+                .update_one(filter, update)
+                .await
+        })?;
+        stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsOut, 1);
+        Ok(())
+    }
+
+    fn delete(&mut self, rowid: &Cell) -> MongodbFdwResult<()> {
+        let filter = doc! { &self.rowid_col: cell_to_bson(&self.rowid_col, rowid) };
+        let (database, collection) = self
+            .modify_target
+            .clone()
+            .ok_or(MongodbFdwError::NoClient)?;
+        let client = self.client()?.clone();
+
+        self.rt.block_on(async move {
+            client
+                .database(&database)
+                .collection::<Document>(&collection)
+                .delete_one(filter)
+                .await
+        })?;
+        stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsOut, 1);
+        Ok(())
+    }
+
     fn end_modify(&mut self) -> MongodbFdwResult<()> {
         self.modify_target = None;
         Ok(())
