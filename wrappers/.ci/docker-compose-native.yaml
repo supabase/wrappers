@@ -263,7 +263,7 @@ services:
       timeout: 5s
       retries: 20
 
-  mongo:
+  mongodb:
     image: mongo:7
     container_name: mongo-local
     ports:
