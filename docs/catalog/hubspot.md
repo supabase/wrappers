@@ -131,17 +131,17 @@ Supported objects are listed below:
 
 | Object name                   |
 | ----------------------------- |
-| objects/companies             |
-| objects/contacts              |
-| objects/deals                 |
-| objects/feedback_submissions  |
-| objects/goal_targets          | 
-| objects/leads                 |
-| objects/line_items            |
-| objects/<objectType\>         |
-| objects/partner_clients       |
-| objects/products              |
-| objects/tickets               |
+| `objects/companies`           |
+| `objects/contacts`            |
+| `objects/deals`               |
+| `objects/feedback_submissions`|
+| `objects/goal_targets`        | 
+| `objects/leads`               |
+| `objects/line_items`          |
+| `objects/<objectType>`        |
+| `objects/partner_clients`     |
+| `objects/products`            |
+| `objects/tickets`              |
 
 !!! note
 
@@ -420,9 +420,9 @@ Ref: [HubSpot API docs](https://developers.hubspot.com/docs/reference/api/crm/ob
 
 #### Operations
 
-| Object       | Select | Insert | Update | Delete | Truncate |
-| ------------ | :----: | :----: | :----: | :----: | :------: |
-| <objectType> |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
+| Object         | Select | Insert | Update | Delete | Truncate |
+| -------------- | :----: | :----: | :----: | :----: | :------: |
+| `<objectType>` |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |
 
 #### Usage
 
