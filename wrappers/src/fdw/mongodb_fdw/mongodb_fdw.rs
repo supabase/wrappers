@@ -1,5 +1,5 @@
 use crate::stats;
-use bson::{Bson, Document, oid::ObjectId};
+use bson::{doc, Bson, Document, oid::ObjectId};
 use mongodb::{Client, Cursor};
 use pgrx::{pg_sys, varlena, PgBuiltInOids, PgOid, prelude::to_timestamp};
 use std::collections::HashMap;
@@ -159,6 +159,130 @@ fn cell_to_bson(field_name: &str, cell: &Cell) -> Bson {
         Cell::Uuid(u) => Bson::String(u.to_string()),
         _ => Bson::Null,
     }
+}
+
+/// Translate a single qual to a Mongo filter clause `{field: {$op: value}}`
+/// or `{field: ...}` when the operator is a top-level shortcut. Returns
+/// `None` when the qual cannot be pushed down (caller drops it; Postgres
+/// re-checks).
+fn qual_to_filter(qual: &Qual) -> Option<Document> {
+    let field = &qual.field;
+
+    // OR-of-equals (e.g., `f = ANY(ARRAY[a,b,c])` or `f <> ALL(ARRAY[...])`):
+    // translate to $in / $nin based on the per-element operator.
+    if qual.use_or {
+        if let Value::Array(cells) = &qual.value {
+            let vals: Vec<Bson> = cells.iter().map(|c| cell_to_bson(field, c)).collect();
+            return match qual.operator.as_str() {
+                "=" => Some(doc! { field: { "$in": vals } }),
+                "<>" | "!=" => Some(doc! { field: { "$nin": vals } }),
+                _ => None,
+            };
+        }
+        return None;
+    }
+
+    let cell = match &qual.value {
+        Value::Cell(c) => c,
+        Value::Array(_) => return None,
+    };
+
+    let bson_val = cell_to_bson(field, cell);
+
+    match qual.operator.as_str() {
+        "=" => Some(doc! { field: { "$eq": bson_val } }),
+        "<>" | "!=" => Some(doc! { field: { "$ne": bson_val } }),
+        "<" => Some(doc! { field: { "$lt": bson_val } }),
+        "<=" => Some(doc! { field: { "$lte": bson_val } }),
+        ">" => Some(doc! { field: { "$gt": bson_val } }),
+        ">=" => Some(doc! { field: { "$gte": bson_val } }),
+        // `IS NULL` / `IS NOT NULL` arrive as operator "is" / "is not" with
+        // Cell::String("null") per the convention in mysql_fdw.
+        "is" => {
+            if matches!(cell, Cell::String(s) if s == "null") {
+                Some(doc! { field: { "$eq": Bson::Null } })
+            } else {
+                None
+            }
+        }
+        "is not" => {
+            if matches!(cell, Cell::String(s) if s == "null") {
+                Some(doc! { field: { "$ne": Bson::Null } })
+            } else {
+                None
+            }
+        }
+        _ => None,
+    }
+}
+
+fn quals_to_filter(quals: &[Qual]) -> Document {
+    let mut filter = Document::new();
+    let mut and_clauses: Vec<Document> = Vec::new();
+
+    for q in quals {
+        match qual_to_filter(q) {
+            Some(clause) => {
+                for (k, v) in clause {
+                    if filter.contains_key(&k) {
+                        // Two quals target the same field; preserve both via $and.
+                        let existing = filter.remove(&k).unwrap();
+                        and_clauses.push(doc! { &k: existing });
+                        and_clauses.push(doc! { &k: v });
+                    } else {
+                        filter.insert(k, v);
+                    }
+                }
+            }
+            None => continue, // unsupported -> Postgres re-checks
+        }
+    }
+
+    if !and_clauses.is_empty() {
+        let and_arr: Vec<Bson> = and_clauses.into_iter().map(Bson::Document).collect();
+        match filter.remove("$and") {
+            Some(Bson::Array(mut existing)) => {
+                existing.extend(and_arr);
+                filter.insert("$and", existing);
+            }
+            _ => {
+                filter.insert("$and", and_arr);
+            }
+        }
+    }
+
+    filter
+}
+
+fn sorts_to_doc(sorts: &[Sort]) -> Option<Document> {
+    if sorts.is_empty() {
+        return None;
+    }
+    let mut d = Document::new();
+    for s in sorts {
+        d.insert(&s.field, if s.reversed { -1i32 } else { 1i32 });
+    }
+    Some(d)
+}
+
+fn limit_value(limit: &Option<Limit>) -> Option<i64> {
+    limit.as_ref().map(|l| l.offset + l.count)
+}
+
+/// Build a Mongo projection from declared columns. Returns `None` when a
+/// `_doc` jsonb column is present — we need the full document in that case.
+fn columns_to_projection(columns: &[Column]) -> Option<Document> {
+    if columns.iter().any(|c| c.name == "_doc") {
+        return None;
+    }
+    if columns.is_empty() {
+        return None;
+    }
+    let mut p = Document::new();
+    for c in columns {
+        p.insert(&c.name, 1i32);
+    }
+    Some(p)
 }
 
 /// Cached state from begin_scan so re_scan can replay without re-deparsing.
