@@ -232,4 +232,50 @@ mod tests {
             assert_eq!(tag0.as_deref(), Some("user"));
         });
     }
+
+    #[pg_test]
+    fn mongodb_objectid_roundtrip() {
+        let rt = create_async_runtime().unwrap();
+        let hex_id = "507f1f77bcf86cd799439011";
+
+        rt.block_on(async {
+            let client = Client::with_uri_str(MONGO_URI).await.unwrap();
+            let db = client.database("testdb");
+            db.collection::<Document>("oid_items").drop().await.ok();
+            let coll = db.collection::<Document>("oid_items");
+            let oid = bson::oid::ObjectId::parse_str(hex_id).unwrap();
+            coll.insert_one(doc! { "_id": oid, "label": "alpha" }).await.unwrap();
+        });
+
+        Spi::connect_mut(|c| {
+            c.update(
+                r#"CREATE FOREIGN DATA WRAPPER mongodb_wrapper
+                    HANDLER mongodb_fdw_handler VALIDATOR mongodb_fdw_validator"#,
+                None, &[],
+            ).unwrap();
+            c.update(
+                r#"CREATE SERVER mongo_server FOREIGN DATA WRAPPER mongodb_wrapper
+                   OPTIONS (conn_string 'mongodb://localhost:27017')"#,
+                None, &[],
+            ).unwrap();
+            c.update(
+                r#"CREATE FOREIGN TABLE oid_items (_id text, label text)
+                   SERVER mongo_server
+                   OPTIONS (database 'testdb', collection 'oid_items', rowid_column '_id')"#,
+                None, &[],
+            ).unwrap();
+
+            // Read: ObjectId returns as 24-char hex string.
+            let id: Option<String> = c
+                .select("SELECT _id FROM oid_items LIMIT 1", None, &[])
+                .unwrap().first().get(1).unwrap();
+            assert_eq!(id.as_deref(), Some(hex_id));
+
+            // Qual: filter by hex value should match the ObjectId-typed document.
+            let label: Option<String> = c
+                .select(&format!("SELECT label FROM oid_items WHERE _id = '{hex_id}'"), None, &[])
+                .unwrap().first().get(1).unwrap();
+            assert_eq!(label.as_deref(), Some("alpha"));
+        });
+    }
 }
