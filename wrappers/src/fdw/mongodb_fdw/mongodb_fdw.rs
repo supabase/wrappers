@@ -1,7 +1,7 @@
 use crate::stats;
-use bson::{doc, Bson, Document, oid::ObjectId};
+use bson::{Bson, Document, doc, oid::ObjectId};
 use mongodb::{Client, Cursor};
-use pgrx::{pg_sys, varlena, PgBuiltInOids, PgOid, prelude::to_timestamp};
+use pgrx::{PgBuiltInOids, PgOid, pg_sys, prelude::to_timestamp, varlena};
 use std::collections::HashMap;
 use std::str::FromStr;
 
@@ -74,12 +74,13 @@ fn bson_to_cell(value: &Bson, tgt_col: &Column) -> MongodbFdwResult<Option<Cell>
             Bson::Int32(v) => Cell::Numeric(pgrx::AnyNumeric::from(*v)),
             _ => return Err(mismatch(&format!("{:?}", value.element_type()))),
         },
-        PgOid::BuiltIn(PgBuiltInOids::TEXTOID)
-        | PgOid::BuiltIn(PgBuiltInOids::VARCHAROID) => match value {
-            Bson::String(s) => Cell::String(s.clone()),
-            Bson::ObjectId(oid) => Cell::String(oid.to_hex()),
-            _ => return Err(mismatch(&format!("{:?}", value.element_type()))),
-        },
+        PgOid::BuiltIn(PgBuiltInOids::TEXTOID) | PgOid::BuiltIn(PgBuiltInOids::VARCHAROID) => {
+            match value {
+                Bson::String(s) => Cell::String(s.clone()),
+                Bson::ObjectId(oid) => Cell::String(oid.to_hex()),
+                _ => return Err(mismatch(&format!("{:?}", value.element_type()))),
+            }
+        }
         PgOid::BuiltIn(PgBuiltInOids::TIMESTAMPOID) => match value {
             Bson::DateTime(dt) => {
                 let secs = dt.timestamp_millis() as f64 / 1000.0;
@@ -337,7 +338,10 @@ impl MongodbFdw {
             opts.sort = state.sort.clone();
             opts.limit = state.limit;
             opts.projection = state.projection.clone();
-            collection.find(state.filter.clone()).with_options(opts).await
+            collection
+                .find(state.filter.clone())
+                .with_options(opts)
+                .await
         })?;
 
         self.cursor = Some(cursor);
@@ -423,8 +427,16 @@ impl ForeignDataWrapper<MongodbFdwError> for MongodbFdw {
             }
         }
 
-        stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsIn, self.scanned_row_cnt as i64);
-        stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsOut, self.scanned_row_cnt as i64);
+        stats::inc_stats(
+            Self::FDW_NAME,
+            stats::Metric::RowsIn,
+            self.scanned_row_cnt as i64,
+        );
+        stats::inc_stats(
+            Self::FDW_NAME,
+            stats::Metric::RowsOut,
+            self.scanned_row_cnt as i64,
+        );
         Ok(None)
     }
 

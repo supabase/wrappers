@@ -16,11 +16,11 @@ mod tests {
             let coll = db.collection::<Document>("users");
             coll.insert_many(vec![
                 doc! { "_id": "u1", "name": "Alice", "age": 30, "active": true,
-                       "tags": ["admin", "ops"], "profile": { "level": 5 } },
+                "tags": ["admin", "ops"], "profile": { "level": 5 } },
                 doc! { "_id": "u2", "name": "Bob",   "age": 41, "active": false,
-                       "tags": ["user"], "profile": { "level": 2 } },
+                "tags": ["user"], "profile": { "level": 2 } },
                 doc! { "_id": "u3", "name": "Carol", "age": 27, "active": true,
-                       "tags": ["editor"], "profile": { "level": 3 } },
+                "tags": ["editor"], "profile": { "level": 3 } },
                 doc! { "_id": "u4", "name": "Dave",  "active": true },
             ])
             .await
@@ -105,45 +105,86 @@ mod tests {
             // =
             let r: Option<String> = c
                 .select("SELECT name FROM users WHERE age = 30", None, &[])
-                .unwrap().first().get(1).unwrap();
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
             assert_eq!(r.as_deref(), Some("Alice"));
 
             // != (excludes u4 because its age is missing -> NULL is excluded by !=)
             let r: Option<i64> = c
-                .select("SELECT count(*)::bigint FROM users WHERE age != 30", None, &[])
-                .unwrap().first().get(1).unwrap();
+                .select(
+                    "SELECT count(*)::bigint FROM users WHERE age != 30",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
             assert_eq!(r, Some(2));
 
             // < / <= / > / >=
             for (op, expected) in [("<", 1), ("<=", 2), (">", 1), (">=", 2)] {
                 let r: Option<i64> = c
-                    .select(&format!("SELECT count(*)::bigint FROM users WHERE age {op} 30"), None, &[])
-                    .unwrap().first().get(1).unwrap();
+                    .select(
+                        &format!("SELECT count(*)::bigint FROM users WHERE age {op} 30"),
+                        None,
+                        &[],
+                    )
+                    .unwrap()
+                    .first()
+                    .get(1)
+                    .unwrap();
                 assert_eq!(r, Some(expected), "operator {op}");
             }
 
             // IN
             let r: Option<i64> = c
-                .select("SELECT count(*)::bigint FROM users WHERE _id IN ('u1','u3')", None, &[])
-                .unwrap().first().get(1).unwrap();
+                .select(
+                    "SELECT count(*)::bigint FROM users WHERE _id IN ('u1','u3')",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
             assert_eq!(r, Some(2));
 
             // IS NULL — u4 has no `age`
             let r: Option<String> = c
                 .select("SELECT name FROM users WHERE age IS NULL", None, &[])
-                .unwrap().first().get(1).unwrap();
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
             assert_eq!(r.as_deref(), Some("Dave"));
 
             // IS NOT NULL
             let r: Option<i64> = c
-                .select("SELECT count(*)::bigint FROM users WHERE age IS NOT NULL", None, &[])
-                .unwrap().first().get(1).unwrap();
+                .select(
+                    "SELECT count(*)::bigint FROM users WHERE age IS NOT NULL",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
             assert_eq!(r, Some(3));
 
             // ORDER BY + LIMIT
             let r: Option<String> = c
-                .select("SELECT name FROM users WHERE age IS NOT NULL ORDER BY age DESC LIMIT 1", None, &[])
-                .unwrap().first().get(1).unwrap();
+                .select(
+                    "SELECT name FROM users WHERE age IS NOT NULL ORDER BY age DESC LIMIT 1",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
             assert_eq!(r.as_deref(), Some("Bob"));
         });
     }
@@ -158,12 +199,17 @@ mod tests {
 
             c.update(
                 "INSERT INTO users (_id, name, age, active) VALUES ('u5', 'Eve', 35, true)",
-                None, &[],
-            ).unwrap();
+                None,
+                &[],
+            )
+            .unwrap();
 
             let r: Option<String> = c
                 .select("SELECT name FROM users WHERE _id = 'u5'", None, &[])
-                .unwrap().first().get(1).unwrap();
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
             assert_eq!(r.as_deref(), Some("Eve"));
         });
     }
@@ -176,17 +222,25 @@ mod tests {
         Spi::connect_mut(|c| {
             create_server_and_table(c);
 
-            c.update("UPDATE users SET age = 99 WHERE _id = 'u1'", None, &[]).unwrap();
+            c.update("UPDATE users SET age = 99 WHERE _id = 'u1'", None, &[])
+                .unwrap();
             let r: Option<i32> = c
                 .select("SELECT age FROM users WHERE _id = 'u1'", None, &[])
-                .unwrap().first().get(1).unwrap();
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
             assert_eq!(r, Some(99));
 
             // Setting a column to NULL should $unset the field.
-            c.update("UPDATE users SET age = NULL WHERE _id = 'u1'", None, &[]).unwrap();
+            c.update("UPDATE users SET age = NULL WHERE _id = 'u1'", None, &[])
+                .unwrap();
             let r: Option<i32> = c
                 .select("SELECT age FROM users WHERE _id = 'u1'", None, &[])
-                .unwrap().first().get(1).unwrap();
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
             assert_eq!(r, None);
         });
     }
@@ -199,10 +253,14 @@ mod tests {
         Spi::connect_mut(|c| {
             create_server_and_table(c);
 
-            c.update("DELETE FROM users WHERE _id = 'u2'", None, &[]).unwrap();
+            c.update("DELETE FROM users WHERE _id = 'u2'", None, &[])
+                .unwrap();
             let n: Option<i64> = c
                 .select("SELECT count(*)::bigint FROM users", None, &[])
-                .unwrap().first().get(1).unwrap();
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
             assert_eq!(n, Some(3));
         });
     }
@@ -218,17 +276,25 @@ mod tests {
             let level: Option<i32> = c
                 .select(
                     "SELECT (_doc -> 'profile' ->> 'level')::int FROM users WHERE _id = 'u1'",
-                    None, &[],
+                    None,
+                    &[],
                 )
-                .unwrap().first().get(1).unwrap();
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
             assert_eq!(level, Some(5));
 
             let tag0: Option<String> = c
                 .select(
                     "SELECT (_doc -> 'tags' ->> 0) FROM users WHERE _id = 'u2'",
-                    None, &[],
+                    None,
+                    &[],
                 )
-                .unwrap().first().get(1).unwrap();
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
             assert_eq!(tag0.as_deref(), Some("user"));
         });
     }
@@ -244,37 +310,55 @@ mod tests {
             db.collection::<Document>("oid_items").drop().await.ok();
             let coll = db.collection::<Document>("oid_items");
             let oid = bson::oid::ObjectId::parse_str(hex_id).unwrap();
-            coll.insert_one(doc! { "_id": oid, "label": "alpha" }).await.unwrap();
+            coll.insert_one(doc! { "_id": oid, "label": "alpha" })
+                .await
+                .unwrap();
         });
 
         Spi::connect_mut(|c| {
             c.update(
                 r#"CREATE FOREIGN DATA WRAPPER mongodb_wrapper
                     HANDLER mongodb_fdw_handler VALIDATOR mongodb_fdw_validator"#,
-                None, &[],
-            ).unwrap();
+                None,
+                &[],
+            )
+            .unwrap();
             c.update(
                 r#"CREATE SERVER mongo_server FOREIGN DATA WRAPPER mongodb_wrapper
                    OPTIONS (conn_string 'mongodb://localhost:27017')"#,
-                None, &[],
-            ).unwrap();
+                None,
+                &[],
+            )
+            .unwrap();
             c.update(
                 r#"CREATE FOREIGN TABLE oid_items (_id text, label text)
                    SERVER mongo_server
                    OPTIONS (database 'testdb', collection 'oid_items', rowid_column '_id')"#,
-                None, &[],
-            ).unwrap();
+                None,
+                &[],
+            )
+            .unwrap();
 
             // Read: ObjectId returns as 24-char hex string.
             let id: Option<String> = c
                 .select("SELECT _id FROM oid_items LIMIT 1", None, &[])
-                .unwrap().first().get(1).unwrap();
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
             assert_eq!(id.as_deref(), Some(hex_id));
 
             // Qual: filter by hex value should match the ObjectId-typed document.
             let label: Option<String> = c
-                .select(&format!("SELECT label FROM oid_items WHERE _id = '{hex_id}'"), None, &[])
-                .unwrap().first().get(1).unwrap();
+                .select(
+                    &format!("SELECT label FROM oid_items WHERE _id = '{hex_id}'"),
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
             assert_eq!(label.as_deref(), Some("alpha"));
         });
     }
