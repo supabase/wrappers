@@ -93,4 +93,58 @@ mod tests {
             assert_eq!(age, None);
         });
     }
+
+    #[pg_test]
+    fn mongodb_pushdown() {
+        let rt = create_async_runtime().unwrap();
+        setup_mongo_users(&rt);
+
+        Spi::connect_mut(|c| {
+            create_server_and_table(c);
+
+            // =
+            let r: Option<String> = c
+                .select("SELECT name FROM users WHERE age = 30", None, &[])
+                .unwrap().first().get(1).unwrap();
+            assert_eq!(r.as_deref(), Some("Alice"));
+
+            // != (excludes u4 because its age is missing -> NULL is excluded by !=)
+            let r: Option<i64> = c
+                .select("SELECT count(*)::bigint FROM users WHERE age != 30", None, &[])
+                .unwrap().first().get(1).unwrap();
+            assert_eq!(r, Some(2));
+
+            // < / <= / > / >=
+            for (op, expected) in [("<", 1), ("<=", 2), (">", 1), (">=", 2)] {
+                let r: Option<i64> = c
+                    .select(&format!("SELECT count(*)::bigint FROM users WHERE age {op} 30"), None, &[])
+                    .unwrap().first().get(1).unwrap();
+                assert_eq!(r, Some(expected), "operator {op}");
+            }
+
+            // IN
+            let r: Option<i64> = c
+                .select("SELECT count(*)::bigint FROM users WHERE _id IN ('u1','u3')", None, &[])
+                .unwrap().first().get(1).unwrap();
+            assert_eq!(r, Some(2));
+
+            // IS NULL — u4 has no `age`
+            let r: Option<String> = c
+                .select("SELECT name FROM users WHERE age IS NULL", None, &[])
+                .unwrap().first().get(1).unwrap();
+            assert_eq!(r.as_deref(), Some("Dave"));
+
+            // IS NOT NULL
+            let r: Option<i64> = c
+                .select("SELECT count(*)::bigint FROM users WHERE age IS NOT NULL", None, &[])
+                .unwrap().first().get(1).unwrap();
+            assert_eq!(r, Some(3));
+
+            // ORDER BY + LIMIT
+            let r: Option<String> = c
+                .select("SELECT name FROM users WHERE age IS NOT NULL ORDER BY age DESC LIMIT 1", None, &[])
+                .unwrap().first().get(1).unwrap();
+            assert_eq!(r.as_deref(), Some("Bob"));
+        });
+    }
 }
