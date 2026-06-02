@@ -34,6 +34,9 @@ mod mssql_fdw;
 #[cfg(feature = "mysql_fdw")]
 mod mysql_fdw;
 
+#[cfg(feature = "tencent_cls_fdw")]
+mod tencent_cls_fdw;
+
 #[cfg(feature = "redis_fdw")]
 mod redis_fdw;
 
