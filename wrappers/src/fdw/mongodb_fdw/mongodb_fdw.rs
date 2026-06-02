@@ -1,12 +1,116 @@
 use crate::stats;
-use bson::Document;
+use bson::{Bson, Document};
 use mongodb::{Client, Cursor};
-use pgrx::pg_sys;
+use pgrx::{pg_sys, varlena, PgBuiltInOids, PgOid, prelude::to_timestamp};
 use std::collections::HashMap;
 
 use supabase_wrappers::prelude::*;
 
 use super::{MongodbFdwError, MongodbFdwResult};
+
+/// Convert a full BSON document into a `Cell::Json` (used for the `_doc` column
+/// and for nested-document / array columns).
+fn doc_to_jsonb_cell(doc: &Document) -> MongodbFdwResult<Cell> {
+    let v: serde_json::Value = bson::to_bson(doc)
+        .map_err(|e| MongodbFdwError::BsonError(e.to_string()))?
+        .into_relaxed_extjson();
+    Ok(Cell::Json(pgrx::JsonB(v)))
+}
+
+fn bson_to_jsonb_cell(b: &Bson) -> MongodbFdwResult<Cell> {
+    let v: serde_json::Value = b.clone().into_relaxed_extjson();
+    Ok(Cell::Json(pgrx::JsonB(v)))
+}
+
+/// Convert one BSON value into a `Cell` matching the declared column type.
+/// Returns Ok(None) when the BSON value is `Null` (column should be SQL NULL).
+fn bson_to_cell(value: &Bson, tgt_col: &Column) -> MongodbFdwResult<Option<Cell>> {
+    if matches!(value, Bson::Null) {
+        return Ok(None);
+    }
+
+    let col_name = tgt_col.name.as_str();
+    let mismatch = |bson_kind: &str| {
+        MongodbFdwError::ConversionError(format!(
+            "column '{col_name}': cannot convert bson {bson_kind} to postgres type"
+        ))
+    };
+
+    let cell = match PgOid::from(tgt_col.type_oid) {
+        PgOid::BuiltIn(PgBuiltInOids::BOOLOID) => match value {
+            Bson::Boolean(b) => Cell::Bool(*b),
+            _ => return Err(mismatch(&format!("{:?}", value.element_type()))),
+        },
+        PgOid::BuiltIn(PgBuiltInOids::INT2OID) => match value {
+            Bson::Int32(v) => Cell::I16((*v) as i16),
+            Bson::Int64(v) => Cell::I16((*v) as i16),
+            _ => return Err(mismatch(&format!("{:?}", value.element_type()))),
+        },
+        PgOid::BuiltIn(PgBuiltInOids::INT4OID) => match value {
+            Bson::Int32(v) => Cell::I32(*v),
+            Bson::Int64(v) => Cell::I32((*v) as i32),
+            _ => return Err(mismatch(&format!("{:?}", value.element_type()))),
+        },
+        PgOid::BuiltIn(PgBuiltInOids::INT8OID) => match value {
+            Bson::Int32(v) => Cell::I64((*v) as i64),
+            Bson::Int64(v) => Cell::I64(*v),
+            _ => return Err(mismatch(&format!("{:?}", value.element_type()))),
+        },
+        PgOid::BuiltIn(PgBuiltInOids::FLOAT4OID) => match value {
+            Bson::Double(v) => Cell::F32(*v as f32),
+            _ => return Err(mismatch(&format!("{:?}", value.element_type()))),
+        },
+        PgOid::BuiltIn(PgBuiltInOids::FLOAT8OID) => match value {
+            Bson::Double(v) => Cell::F64(*v),
+            _ => return Err(mismatch(&format!("{:?}", value.element_type()))),
+        },
+        PgOid::BuiltIn(PgBuiltInOids::NUMERICOID) => match value {
+            Bson::Decimal128(d) => {
+                Cell::Numeric(pgrx::AnyNumeric::try_from(d.to_string().as_str())?)
+            }
+            Bson::Double(v) => Cell::Numeric(pgrx::AnyNumeric::try_from(*v)?),
+            Bson::Int64(v) => Cell::Numeric(pgrx::AnyNumeric::from(*v)),
+            Bson::Int32(v) => Cell::Numeric(pgrx::AnyNumeric::from(*v)),
+            _ => return Err(mismatch(&format!("{:?}", value.element_type()))),
+        },
+        PgOid::BuiltIn(PgBuiltInOids::TEXTOID)
+        | PgOid::BuiltIn(PgBuiltInOids::VARCHAROID) => match value {
+            Bson::String(s) => Cell::String(s.clone()),
+            Bson::ObjectId(oid) => Cell::String(oid.to_hex()),
+            _ => return Err(mismatch(&format!("{:?}", value.element_type()))),
+        },
+        PgOid::BuiltIn(PgBuiltInOids::TIMESTAMPOID) => match value {
+            Bson::DateTime(dt) => {
+                let secs = dt.timestamp_millis() as f64 / 1000.0;
+                let ts = to_timestamp(secs);
+                Cell::Timestamp(ts.to_utc())
+            }
+            _ => return Err(mismatch(&format!("{:?}", value.element_type()))),
+        },
+        PgOid::BuiltIn(PgBuiltInOids::TIMESTAMPTZOID) => match value {
+            Bson::DateTime(dt) => {
+                let secs = dt.timestamp_millis() as f64 / 1000.0;
+                let ts = to_timestamp(secs);
+                Cell::Timestamptz(ts)
+            }
+            _ => return Err(mismatch(&format!("{:?}", value.element_type()))),
+        },
+        PgOid::BuiltIn(PgBuiltInOids::JSONBOID) => match value {
+            Bson::Document(d) => doc_to_jsonb_cell(d)?,
+            Bson::Array(_) => bson_to_jsonb_cell(value)?,
+            other => bson_to_jsonb_cell(other)?,
+        },
+        PgOid::BuiltIn(PgBuiltInOids::BYTEAOID) => match value {
+            Bson::Binary(bin) => {
+                Cell::Bytea(varlena::rust_byte_slice_to_bytea(&bin.bytes).into_pg())
+            }
+            _ => return Err(mismatch(&format!("{:?}", value.element_type()))),
+        },
+        _ => return Err(MongodbFdwError::UnsupportedColumnType(col_name.to_string())),
+    };
+
+    Ok(Some(cell))
+}
 
 /// Cached state from begin_scan so re_scan can replay without re-deparsing.
 #[derive(Clone, Default)]
