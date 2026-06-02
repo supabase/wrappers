@@ -147,4 +147,30 @@ mod tests {
             assert_eq!(r.as_deref(), Some("Bob"));
         });
     }
+
+    #[pg_test]
+    fn mongodb_doc_column() {
+        let rt = create_async_runtime().unwrap();
+        setup_mongo_users(&rt);
+
+        Spi::connect_mut(|c| {
+            create_server_and_table(c);
+
+            let level: Option<i32> = c
+                .select(
+                    "SELECT (_doc -> 'profile' ->> 'level')::int FROM users WHERE _id = 'u1'",
+                    None, &[],
+                )
+                .unwrap().first().get(1).unwrap();
+            assert_eq!(level, Some(5));
+
+            let tag0: Option<String> = c
+                .select(
+                    "SELECT (_doc -> 'tags' ->> 0) FROM users WHERE _id = 'u2'",
+                    None, &[],
+                )
+                .unwrap().first().get(1).unwrap();
+            assert_eq!(tag0.as_deref(), Some("user"));
+        });
+    }
 }
