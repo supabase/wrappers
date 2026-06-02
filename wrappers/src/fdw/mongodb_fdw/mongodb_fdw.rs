@@ -314,6 +314,34 @@ pub(crate) struct MongodbFdw {
 
 impl MongodbFdw {
     const FDW_NAME: &'static str = "MongodbFdw";
+
+    fn client(&self) -> MongodbFdwResult<&Client> {
+        self.client.as_ref().ok_or(MongodbFdwError::NoClient)
+    }
+
+    fn run_find(&mut self) -> MongodbFdwResult<()> {
+        let state = self
+            .scan_state
+            .as_ref()
+            .cloned()
+            .ok_or(MongodbFdwError::NoClient)?;
+        let client = self.client()?.clone();
+        let collection = client
+            .database(&state.database)
+            .collection::<Document>(&state.collection);
+
+        let cursor = self.rt.block_on(async {
+            use mongodb::options::FindOptions;
+            let mut opts = FindOptions::default();
+            opts.sort = state.sort.clone();
+            opts.limit = state.limit;
+            opts.projection = state.projection.clone();
+            collection.find(state.filter.clone()).with_options(opts).await
+        })?;
+
+        self.cursor = Some(cursor);
+        Ok(())
+    }
 }
 
 impl ForeignDataWrapper<MongodbFdwError> for MongodbFdw {
@@ -345,19 +373,62 @@ impl ForeignDataWrapper<MongodbFdwError> for MongodbFdw {
 
     fn begin_scan(
         &mut self,
-        _quals: &[Qual],
-        _columns: &[Column],
-        _sorts: &[Sort],
-        _limit: &Option<Limit>,
-        _options: &HashMap<String, String>,
+        quals: &[Qual],
+        columns: &[Column],
+        sorts: &[Sort],
+        limit: &Option<Limit>,
+        options: &HashMap<String, String>,
     ) -> MongodbFdwResult<()> {
-        // Filled in by Task 6.
-        Ok(())
+        let database = require_option("database", options)?.to_string();
+        let collection = require_option("collection", options)?.to_string();
+
+        self.tgt_cols = columns.to_vec();
+        self.scanned_row_cnt = 0;
+        self.scan_state = Some(ScanState {
+            database,
+            collection,
+            filter: quals_to_filter(quals),
+            sort: sorts_to_doc(sorts),
+            limit: limit_value(limit),
+            projection: columns_to_projection(columns),
+        });
+        self.run_find()
     }
 
-    fn iter_scan(&mut self, _row: &mut Row) -> MongodbFdwResult<Option<()>> {
-        // Filled in by Task 7.
+    fn iter_scan(&mut self, row: &mut Row) -> MongodbFdwResult<Option<()>> {
+        use futures_util::StreamExt;
+
+        if let Some(cursor) = &mut self.cursor {
+            let doc = self.rt.block_on(async { cursor.next().await });
+
+            if let Some(doc_result) = doc {
+                let doc = doc_result?;
+                let mut tgt_row = Row::new();
+                for col in &self.tgt_cols.clone() {
+                    if col.name == "_doc" {
+                        tgt_row.push(&col.name, Some(doc_to_jsonb_cell(&doc)?));
+                        continue;
+                    }
+                    let cell = match doc.get(&col.name) {
+                        Some(v) => bson_to_cell(v, col)?,
+                        None => None,
+                    };
+                    tgt_row.push(&col.name, cell);
+                }
+                row.replace_with(tgt_row);
+                self.scanned_row_cnt += 1;
+                return Ok(Some(()));
+            }
+        }
+
+        stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsIn, self.scanned_row_cnt as i64);
+        stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsOut, self.scanned_row_cnt as i64);
         Ok(None)
+    }
+
+    fn re_scan(&mut self) -> MongodbFdwResult<()> {
+        self.scanned_row_cnt = 0;
+        self.run_find()
     }
 
     fn end_scan(&mut self) -> MongodbFdwResult<()> {
