@@ -8,12 +8,14 @@ mod tests {
 
     const MONGO_URI: &str = "mongodb://localhost:27017";
 
-    fn setup_mongo_users(rt: &tokio::runtime::Runtime) {
+    /// Set up a named users-style collection, dropping it first for idempotency.
+    /// Each test passes a unique collection name to avoid parallel-run collisions.
+    fn setup_mongo_users(rt: &tokio::runtime::Runtime, coll_name: &str) {
         rt.block_on(async {
             let client = Client::with_uri_str(MONGO_URI).await.unwrap();
             let db = client.database("testdb");
-            db.collection::<Document>("users").drop().await.ok();
-            let coll = db.collection::<Document>("users");
+            db.collection::<Document>(coll_name).drop().await.ok();
+            let coll = db.collection::<Document>(coll_name);
             coll.insert_many(vec![
                 doc! { "_id": "u1", "name": "Alice", "age": 30, "active": true,
                 "tags": ["admin", "ops"], "profile": { "level": 5 } },
@@ -28,7 +30,7 @@ mod tests {
         });
     }
 
-    fn create_server_and_table(c: &mut pgrx::spi::SpiClient) {
+    fn create_server_and_table(c: &mut pgrx::spi::SpiClient, coll_name: &str) {
         c.update(
             r#"CREATE FOREIGN DATA WRAPPER mongodb_wrapper
                 HANDLER mongodb_fdw_handler VALIDATOR mongodb_fdw_validator"#,
@@ -44,15 +46,17 @@ mod tests {
         )
         .unwrap();
         c.update(
-            r#"CREATE FOREIGN TABLE users (
-                _id text,
-                name text,
-                age int,
-                active bool,
-                _doc jsonb
-              )
-              SERVER mongo_server
-              OPTIONS (database 'testdb', collection 'users', rowid_column '_id')"#,
+            &format!(
+                r#"CREATE FOREIGN TABLE users (
+                    _id text,
+                    name text,
+                    age int,
+                    active bool,
+                    _doc jsonb
+                  )
+                  SERVER mongo_server
+                  OPTIONS (database 'testdb', collection '{coll_name}', rowid_column '_id')"#
+            ),
             None,
             &[],
         )
@@ -62,10 +66,10 @@ mod tests {
     #[pg_test]
     fn mongodb_smoketest() {
         let rt = create_async_runtime().unwrap();
-        setup_mongo_users(&rt);
+        setup_mongo_users(&rt, "users_smoketest");
 
         Spi::connect_mut(|c| {
-            create_server_and_table(c);
+            create_server_and_table(c, "users_smoketest");
 
             let n: Option<i64> = c
                 .select("SELECT count(*)::bigint FROM users", None, &[])
@@ -97,10 +101,10 @@ mod tests {
     #[pg_test]
     fn mongodb_pushdown() {
         let rt = create_async_runtime().unwrap();
-        setup_mongo_users(&rt);
+        setup_mongo_users(&rt, "users_pushdown");
 
         Spi::connect_mut(|c| {
-            create_server_and_table(c);
+            create_server_and_table(c, "users_pushdown");
 
             // =
             let r: Option<String> = c
@@ -192,10 +196,10 @@ mod tests {
     #[pg_test]
     fn mongodb_insert() {
         let rt = create_async_runtime().unwrap();
-        setup_mongo_users(&rt);
+        setup_mongo_users(&rt, "users_insert");
 
         Spi::connect_mut(|c| {
-            create_server_and_table(c);
+            create_server_and_table(c, "users_insert");
 
             c.update(
                 "INSERT INTO users (_id, name, age, active) VALUES ('u5', 'Eve', 35, true)",
@@ -217,10 +221,10 @@ mod tests {
     #[pg_test]
     fn mongodb_update() {
         let rt = create_async_runtime().unwrap();
-        setup_mongo_users(&rt);
+        setup_mongo_users(&rt, "users_update");
 
         Spi::connect_mut(|c| {
-            create_server_and_table(c);
+            create_server_and_table(c, "users_update");
 
             c.update("UPDATE users SET age = 99 WHERE _id = 'u1'", None, &[])
                 .unwrap();
@@ -248,10 +252,10 @@ mod tests {
     #[pg_test]
     fn mongodb_delete() {
         let rt = create_async_runtime().unwrap();
-        setup_mongo_users(&rt);
+        setup_mongo_users(&rt, "users_delete");
 
         Spi::connect_mut(|c| {
-            create_server_and_table(c);
+            create_server_and_table(c, "users_delete");
 
             c.update("DELETE FROM users WHERE _id = 'u2'", None, &[])
                 .unwrap();
@@ -268,10 +272,10 @@ mod tests {
     #[pg_test]
     fn mongodb_doc_column() {
         let rt = create_async_runtime().unwrap();
-        setup_mongo_users(&rt);
+        setup_mongo_users(&rt, "users_doc_column");
 
         Spi::connect_mut(|c| {
-            create_server_and_table(c);
+            create_server_and_table(c, "users_doc_column");
 
             let level: Option<i32> = c
                 .select(
