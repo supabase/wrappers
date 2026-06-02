@@ -310,6 +310,7 @@ pub(crate) struct MongodbFdw {
     scan_state: Option<ScanState>,
     cursor: Option<Cursor<Document>>,
     scanned_row_cnt: usize,
+    modify_target: Option<(String, String)>, // (database, collection)
 }
 
 impl MongodbFdw {
@@ -368,6 +369,7 @@ impl ForeignDataWrapper<MongodbFdwError> for MongodbFdw {
             scan_state: None,
             cursor: None,
             scanned_row_cnt: 0,
+            modify_target: None,
         })
     }
 
@@ -434,6 +436,49 @@ impl ForeignDataWrapper<MongodbFdwError> for MongodbFdw {
     fn end_scan(&mut self) -> MongodbFdwResult<()> {
         self.cursor = None;
         self.scan_state = None;
+        Ok(())
+    }
+
+    fn begin_modify(&mut self, options: &HashMap<String, String>) -> MongodbFdwResult<()> {
+        let database = require_option("database", options)?.to_string();
+        let collection = require_option("collection", options)?.to_string();
+        self.rowid_col = require_option("rowid_column", options)?.to_string();
+        self.modify_target = Some((database, collection));
+        Ok(())
+    }
+
+    fn insert(&mut self, src: &Row) -> MongodbFdwResult<()> {
+        // Build the BSON document, skipping the `_doc` meta column and
+        // omitting null fields so Mongo doesn't store explicit nulls.
+        let mut doc = Document::new();
+        for (name, cell) in src.iter() {
+            if name == "_doc" {
+                continue;
+            }
+            if let Some(c) = cell {
+                doc.insert(name, cell_to_bson(name, c));
+            }
+        }
+
+        let (database, collection) = self
+            .modify_target
+            .clone()
+            .ok_or(MongodbFdwError::NoClient)?;
+        let client = self.client()?.clone();
+
+        self.rt.block_on(async move {
+            client
+                .database(&database)
+                .collection::<Document>(&collection)
+                .insert_one(doc)
+                .await
+        })?;
+        stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsOut, 1);
+        Ok(())
+    }
+
+    fn end_modify(&mut self) -> MongodbFdwResult<()> {
+        self.modify_target = None;
         Ok(())
     }
 

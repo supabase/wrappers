@@ -149,6 +149,26 @@ mod tests {
     }
 
     #[pg_test]
+    fn mongodb_insert() {
+        let rt = create_async_runtime().unwrap();
+        setup_mongo_users(&rt);
+
+        Spi::connect_mut(|c| {
+            create_server_and_table(c);
+
+            c.update(
+                "INSERT INTO users (_id, name, age, active) VALUES ('u5', 'Eve', 35, true)",
+                None, &[],
+            ).unwrap();
+
+            let r: Option<String> = c
+                .select("SELECT name FROM users WHERE _id = 'u5'", None, &[])
+                .unwrap().first().get(1).unwrap();
+            assert_eq!(r.as_deref(), Some("Eve"));
+        });
+    }
+
+    #[pg_test]
     fn mongodb_doc_column() {
         let rt = create_async_runtime().unwrap();
         setup_mongo_users(&rt);
