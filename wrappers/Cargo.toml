@@ -151,6 +151,16 @@ mysql_fdw = [
     "serde_json",
     "thiserror",
 ]
+mongodb_fdw = [
+    "mongodb",
+    "bson",
+    "tokio",
+    "futures-util",
+    "serde_json",
+    "thiserror",
+    "mongodb/bson-2",
+    "mongodb/compat-3-3-0",
+]
 redis_fdw = [
     "redis",
     "serde_json",
@@ -222,6 +232,7 @@ native_fdws = [
     "auth0_fdw",
     "mssql_fdw",
     "mysql_fdw",
+    "mongodb_fdw",
     "redis_fdw",
     "cognito_fdw",
     "iceberg_fdw",
@@ -307,6 +318,10 @@ arrow-json = { version = "57.3.0", optional = true }
 
 # for mysql_fdw
 mysql_async = { version = "0.36.1", optional = true, default-features = false, features = ["default-rustls"] }
+
+# for mongodb_fdw
+mongodb = { version = "3.2", optional = true, default-features = false, features = ["rustls-tls"] }
+bson = { version = "2.13", optional = true, features = ["chrono-0_4"] }
 
 # for mssql_fdw
 tiberius = { version = "0.12.2", features = [
