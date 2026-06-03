@@ -6,7 +6,7 @@ use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::PgSqlErrorCode;
 use thiserror::Error;
 
-use supabase_wrappers::prelude::{CreateRuntimeError, OptionsError};
+use supabase_wrappers::prelude::{CreateRuntimeError, OptionsError, sanitize_error_message};
 
 #[derive(Error, Debug)]
 enum MongodbFdwError {
@@ -43,12 +43,13 @@ impl From<MongodbFdwError> for ErrorReport {
         match value {
             MongodbFdwError::CreateRuntimeError(e) => e.into(),
             MongodbFdwError::OptionsError(e) => e.into(),
-            MongodbFdwError::MongoError(e) => ErrorReport::new(
-                PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                format!("mongodb error: {e}"),
-                "check connection string and collection",
-            ),
-            other => ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, format!("{other}"), ""),
+            // SECURITY: Sanitize error messages to prevent credential leakage —
+            // mongodb URI parse errors and some driver errors can echo the
+            // raw connection string back.
+            _ => {
+                let error_message = sanitize_error_message(&format!("{value}"));
+                ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, error_message, "")
+            }
         }
     }
 }
