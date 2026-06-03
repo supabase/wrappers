@@ -43,13 +43,25 @@ fn bson_to_cell(value: &Bson, tgt_col: &Column) -> MongodbFdwResult<Option<Cell>
             _ => return Err(mismatch(&format!("{:?}", value.element_type()))),
         },
         PgOid::BuiltIn(PgBuiltInOids::INT2OID) => match value {
-            Bson::Int32(v) => Cell::I16((*v) as i16),
-            Bson::Int64(v) => Cell::I16((*v) as i16),
+            Bson::Int32(v) => Cell::I16(i16::try_from(*v).map_err(|_| {
+                MongodbFdwError::ConversionError(format!(
+                    "column '{col_name}': bson int32 value {v} out of range for int2"
+                ))
+            })?),
+            Bson::Int64(v) => Cell::I16(i16::try_from(*v).map_err(|_| {
+                MongodbFdwError::ConversionError(format!(
+                    "column '{col_name}': bson int64 value {v} out of range for int2"
+                ))
+            })?),
             _ => return Err(mismatch(&format!("{:?}", value.element_type()))),
         },
         PgOid::BuiltIn(PgBuiltInOids::INT4OID) => match value {
             Bson::Int32(v) => Cell::I32(*v),
-            Bson::Int64(v) => Cell::I32((*v) as i32),
+            Bson::Int64(v) => Cell::I32(i32::try_from(*v).map_err(|_| {
+                MongodbFdwError::ConversionError(format!(
+                    "column '{col_name}': bson int64 value {v} out of range for int4"
+                ))
+            })?),
             _ => return Err(mismatch(&format!("{:?}", value.element_type()))),
         },
         PgOid::BuiltIn(PgBuiltInOids::INT8OID) => match value {
@@ -115,9 +127,11 @@ fn bson_to_cell(value: &Bson, tgt_col: &Column) -> MongodbFdwResult<Option<Cell>
 }
 
 /// Convert a `Cell` to a BSON value. `field_name` is used to detect `_id`
-/// fields for ObjectId hex coercion.
-fn cell_to_bson(field_name: &str, cell: &Cell) -> Bson {
-    match cell {
+/// fields for ObjectId hex coercion. Returns an error for unsupported Cell
+/// variants so callers don't silently store NULL for data that couldn't be
+/// encoded.
+fn cell_to_bson(field_name: &str, cell: &Cell) -> MongodbFdwResult<Bson> {
+    let bson = match cell {
         Cell::Bool(v) => Bson::Boolean(*v),
         Cell::I8(v) => Bson::Int32(*v as i32),
         Cell::I16(v) => Bson::Int32(*v as i32),
@@ -156,10 +170,17 @@ fn cell_to_bson(field_name: &str, cell: &Cell) -> Bson {
             let unix_ms = (ts.into_inner() + pg_epoch_us) / 1000;
             Bson::DateTime(bson::DateTime::from_millis(unix_ms))
         }
-        Cell::Json(j) => bson::to_bson(&j.0).unwrap_or(Bson::Null),
+        Cell::Json(j) => {
+            bson::to_bson(&j.0).map_err(|e| MongodbFdwError::BsonError(e.to_string()))?
+        }
         Cell::Uuid(u) => Bson::String(u.to_string()),
-        _ => Bson::Null,
-    }
+        _ => {
+            return Err(MongodbFdwError::ConversionError(format!(
+                "unsupported cell type for field '{field_name}'"
+            )));
+        }
+    };
+    Ok(bson)
 }
 
 /// Translate a single qual to a Mongo filter clause `{field: {$op: value}}`
@@ -173,7 +194,11 @@ fn qual_to_filter(qual: &Qual) -> Option<Document> {
     // translate to $in / $nin based on the per-element operator.
     if qual.use_or {
         if let Value::Array(cells) = &qual.value {
-            let vals: Vec<Bson> = cells.iter().map(|c| cell_to_bson(field, c)).collect();
+            let vals: Vec<Bson> = cells
+                .iter()
+                .map(|c| cell_to_bson(field, c))
+                .collect::<MongodbFdwResult<Vec<_>>>()
+                .ok()?;
             return match qual.operator.as_str() {
                 "=" => Some(doc! { field: { "$in": vals } }),
                 "<>" | "!=" => Some(doc! { field: { "$nin": vals } }),
@@ -188,7 +213,7 @@ fn qual_to_filter(qual: &Qual) -> Option<Document> {
         Value::Array(_) => return None,
     };
 
-    let bson_val = cell_to_bson(field, cell);
+    let bson_val = cell_to_bson(field, cell).ok()?;
 
     match qual.operator.as_str() {
         "=" => Some(doc! { field: { "$eq": bson_val } }),
@@ -404,40 +429,44 @@ impl ForeignDataWrapper<MongodbFdwError> for MongodbFdw {
     fn iter_scan(&mut self, row: &mut Row) -> MongodbFdwResult<Option<()>> {
         use futures_util::StreamExt;
 
-        if let Some(cursor) = &mut self.cursor {
-            let doc = self.rt.block_on(async { cursor.next().await });
+        // Pull the next document with a tight cursor borrow, then drop it so
+        // we can iterate self.tgt_cols without cloning.
+        let doc_opt = if let Some(cursor) = self.cursor.as_mut() {
+            self.rt.block_on(async { cursor.next().await })
+        } else {
+            None
+        };
 
-            if let Some(doc_result) = doc {
-                let doc = doc_result?;
-                let mut tgt_row = Row::new();
-                for col in &self.tgt_cols.clone() {
-                    if col.name == "_doc" {
-                        tgt_row.push(&col.name, Some(doc_to_jsonb_cell(&doc)?));
-                        continue;
-                    }
-                    let cell = match doc.get(&col.name) {
-                        Some(v) => bson_to_cell(v, col)?,
-                        None => None,
-                    };
-                    tgt_row.push(&col.name, cell);
-                }
-                row.replace_with(tgt_row);
-                self.scanned_row_cnt += 1;
-                return Ok(Some(()));
+        let Some(doc_result) = doc_opt else {
+            stats::inc_stats(
+                Self::FDW_NAME,
+                stats::Metric::RowsIn,
+                self.scanned_row_cnt as i64,
+            );
+            stats::inc_stats(
+                Self::FDW_NAME,
+                stats::Metric::RowsOut,
+                self.scanned_row_cnt as i64,
+            );
+            return Ok(None);
+        };
+        let doc = doc_result?;
+
+        let mut tgt_row = Row::new();
+        for col in &self.tgt_cols {
+            if col.name == "_doc" {
+                tgt_row.push(&col.name, Some(doc_to_jsonb_cell(&doc)?));
+                continue;
             }
+            let cell = match doc.get(&col.name) {
+                Some(v) => bson_to_cell(v, col)?,
+                None => None,
+            };
+            tgt_row.push(&col.name, cell);
         }
-
-        stats::inc_stats(
-            Self::FDW_NAME,
-            stats::Metric::RowsIn,
-            self.scanned_row_cnt as i64,
-        );
-        stats::inc_stats(
-            Self::FDW_NAME,
-            stats::Metric::RowsOut,
-            self.scanned_row_cnt as i64,
-        );
-        Ok(None)
+        row.replace_with(tgt_row);
+        self.scanned_row_cnt += 1;
+        Ok(Some(()))
     }
 
     fn re_scan(&mut self) -> MongodbFdwResult<()> {
@@ -468,7 +497,7 @@ impl ForeignDataWrapper<MongodbFdwError> for MongodbFdw {
                 continue;
             }
             if let Some(c) = cell {
-                doc.insert(name, cell_to_bson(name, c));
+                doc.insert(name, cell_to_bson(name, c)?);
             }
         }
 
@@ -499,7 +528,7 @@ impl ForeignDataWrapper<MongodbFdwError> for MongodbFdw {
             }
             match cell {
                 Some(c) => {
-                    set_doc.insert(name, cell_to_bson(name, c));
+                    set_doc.insert(name, cell_to_bson(name, c)?);
                 }
                 None => {
                     unset_doc.insert(name, "");
@@ -518,7 +547,7 @@ impl ForeignDataWrapper<MongodbFdwError> for MongodbFdw {
             return Ok(());
         }
 
-        let filter = doc! { &self.rowid_col: cell_to_bson(&self.rowid_col, rowid) };
+        let filter = doc! { &self.rowid_col: cell_to_bson(&self.rowid_col, rowid)? };
         let (database, collection) = self
             .modify_target
             .clone()
@@ -537,7 +566,7 @@ impl ForeignDataWrapper<MongodbFdwError> for MongodbFdw {
     }
 
     fn delete(&mut self, rowid: &Cell) -> MongodbFdwResult<()> {
-        let filter = doc! { &self.rowid_col: cell_to_bson(&self.rowid_col, rowid) };
+        let filter = doc! { &self.rowid_col: cell_to_bson(&self.rowid_col, rowid)? };
         let (database, collection) = self
             .modify_target
             .clone()
@@ -564,11 +593,20 @@ impl ForeignDataWrapper<MongodbFdwError> for MongodbFdw {
         options: Vec<Option<String>>,
         catalog: Option<pg_sys::Oid>,
     ) -> MongodbFdwResult<()> {
-        if let Some(oid) = catalog
-            && oid == FOREIGN_TABLE_RELATION_ID
-        {
-            check_options_contain(&options, "database")?;
-            check_options_contain(&options, "collection")?;
+        if let Some(oid) = catalog {
+            if oid == FOREIGN_SERVER_RELATION_ID {
+                let has_conn = check_options_contain(&options, "conn_string").is_ok();
+                let has_conn_id = check_options_contain(&options, "conn_string_id").is_ok();
+                if !has_conn && !has_conn_id {
+                    return Err(MongodbFdwError::MissingConnString);
+                }
+                if has_conn && has_conn_id {
+                    return Err(MongodbFdwError::ConflictingConnString);
+                }
+            } else if oid == FOREIGN_TABLE_RELATION_ID {
+                check_options_contain(&options, "database")?;
+                check_options_contain(&options, "collection")?;
+            }
         }
         Ok(())
     }

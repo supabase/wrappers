@@ -169,7 +169,7 @@ The following SQL predicates are translated to MongoDB filter operators:
 | `IS NULL`         | `{field: {$eq: null}}`  |
 | `IS NOT NULL`     | `{field: {$ne: null}}`  |
 
-Multiple `where` predicates are AND'd at the top level of the filter document. Predicates with `OR` semantics are combined via `$or: [...]`. Any predicate shape that is not supported is omitted from the MongoDB filter and re-checked by Postgres after the rows are returned — the result is always correct, and the fallback is automatic.
+Multiple `where` predicates are AND'd at the top level of the filter document. Array-form predicates like `IN (...)` / `NOT IN (...)` (and the equivalent `= ANY(ARRAY[...])` / `<> ALL(ARRAY[...])`) are pushed down as `$in` / `$nin`. Arbitrary `OR` predicates between unrelated columns are not pushed down — they are re-checked by Postgres. Any predicate shape that is not supported is omitted from the MongoDB filter and re-checked by Postgres after the rows are returned, so the result is always correct.
 
 ## Supported Data Types
 

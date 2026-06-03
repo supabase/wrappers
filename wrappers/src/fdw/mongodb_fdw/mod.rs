@@ -36,6 +36,12 @@ enum MongodbFdwError {
 
     #[error("vault secret not found for id '{0}'")]
     VaultSecretNotFound(String),
+
+    #[error("server option 'conn_string' or 'conn_string_id' is required")]
+    MissingConnString,
+
+    #[error("server options 'conn_string' and 'conn_string_id' cannot both be set")]
+    ConflictingConnString,
 }
 
 impl From<MongodbFdwError> for ErrorReport {
