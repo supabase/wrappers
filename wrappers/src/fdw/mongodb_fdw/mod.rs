@@ -43,9 +43,9 @@ impl From<MongodbFdwError> for ErrorReport {
         match value {
             MongodbFdwError::CreateRuntimeError(e) => e.into(),
             MongodbFdwError::OptionsError(e) => e.into(),
-            MongodbFdwError::MongoError(_) => ErrorReport::new(
+            MongodbFdwError::MongoError(e) => ErrorReport::new(
                 PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                "mongodb connection or query error".to_string(),
+                format!("mongodb error: {e}"),
                 "check connection string and collection",
             ),
             other => ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, format!("{other}"), ""),
