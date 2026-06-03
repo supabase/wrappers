@@ -303,6 +303,491 @@ mod tests {
         });
     }
 
+    /// Seed a document with one field per BSON type variant exercised in
+    /// `bson_to_cell` and assert every Postgres column reads back correctly.
+    #[pg_test]
+    fn mongodb_types_read() {
+        use bson::spec::BinarySubtype;
+        use std::str::FromStr;
+
+        let rt = create_async_runtime().unwrap();
+
+        rt.block_on(async {
+            let client = Client::with_uri_str(MONGO_URI).await.unwrap();
+            let db = client.database("testdb");
+            db.collection::<Document>("types_read").drop().await.ok();
+            let coll = db.collection::<Document>("types_read");
+
+            let doc = doc! {
+                "c_bool":        true,
+                "c_i2":          12345i32,
+                "c_i4":          12345i32,
+                "c_i8_from_i32": 12345i32,
+                "c_i8_from_i64": bson::Bson::Int64(9_000_000_000i64),
+                "c_f8":          3.14f64,
+                "c_f4":          1.25f64,           // exactly representable as f32
+                "c_num_dec":     bson::Bson::Decimal128(bson::Decimal128::from_str("123.456").unwrap()),
+                "c_num_dbl":     6.28f64,
+                "c_num_i64":     bson::Bson::Int64(42i64),
+                "c_str":         "hello",
+                "c_oid":         bson::oid::ObjectId::parse_str("507f1f77bcf86cd799439011").unwrap(),
+                // 1_700_000_000_000 ms  →  2023-11-14 22:13:20 UTC (whole second)
+                "c_dt":          bson::DateTime::from_millis(1_700_000_000_000i64),
+                "c_dt_tz":       bson::DateTime::from_millis(1_700_000_000_000i64),
+                "c_doc":         { "k": "v", "n": 7i32 },
+                "c_arr":         [1i32, 2i32, 3i32],
+                "c_bin":         bson::Bson::Binary(bson::Binary {
+                                     subtype: BinarySubtype::Generic,
+                                     bytes: vec![0x01u8, 0x02u8, 0xffu8],
+                                 }),
+            };
+
+            coll.insert_one(doc).await.unwrap();
+        });
+
+        Spi::connect_mut(|c| {
+            c.update(
+                r#"CREATE FOREIGN DATA WRAPPER mongodb_wrapper
+                    HANDLER mongodb_fdw_handler VALIDATOR mongodb_fdw_validator"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"CREATE SERVER mongo_server FOREIGN DATA WRAPPER mongodb_wrapper
+                   OPTIONS (conn_string 'mongodb://localhost:27017')"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"CREATE FOREIGN TABLE types_read (
+                     c_bool          bool,
+                     c_i2            int2,
+                     c_i4            int4,
+                     c_i8_from_i32   int8,
+                     c_i8_from_i64   int8,
+                     c_f8            float8,
+                     c_f4            float4,
+                     c_num_dec       numeric,
+                     c_num_dbl       numeric,
+                     c_num_i64       numeric,
+                     c_str           text,
+                     c_oid           text,
+                     c_dt            timestamp,
+                     c_dt_tz         timestamptz,
+                     c_doc           jsonb,
+                     c_arr           jsonb,
+                     c_bin           bytea
+                   )
+                   SERVER mongo_server
+                   OPTIONS (database 'testdb', collection 'types_read')"#,
+                None,
+                &[],
+            )
+            .unwrap();
+
+            // bool
+            let v: Option<bool> = c
+                .select("SELECT c_bool FROM types_read", None, &[])
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
+            assert_eq!(v, Some(true));
+
+            // int2 from BSON Int32
+            let v: Option<i16> = c
+                .select("SELECT c_i2 FROM types_read", None, &[])
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
+            assert_eq!(v, Some(12345i16));
+
+            // int4 from BSON Int32
+            let v: Option<i32> = c
+                .select("SELECT c_i4 FROM types_read", None, &[])
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
+            assert_eq!(v, Some(12345i32));
+
+            // int8 from BSON Int32
+            let v: Option<i64> = c
+                .select("SELECT c_i8_from_i32 FROM types_read", None, &[])
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
+            assert_eq!(v, Some(12345i64));
+
+            // int8 from BSON Int64
+            let v: Option<i64> = c
+                .select("SELECT c_i8_from_i64 FROM types_read", None, &[])
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
+            assert_eq!(v, Some(9_000_000_000i64));
+
+            // float8 from BSON Double
+            let v: Option<f64> = c
+                .select("SELECT c_f8 FROM types_read", None, &[])
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
+            assert!((v.unwrap() - 3.14f64).abs() < 1e-10, "c_f8 mismatch: {v:?}");
+
+            // float4 from BSON Double (use a value exact in f32: 1.25)
+            let v: Option<f32> = c
+                .select("SELECT c_f4 FROM types_read", None, &[])
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
+            assert_eq!(v, Some(1.25f32));
+
+            // numeric from Decimal128
+            let v: Option<String> = c
+                .select("SELECT c_num_dec::text FROM types_read", None, &[])
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
+            assert_eq!(v.as_deref(), Some("123.456"));
+
+            // numeric from Double
+            let v: Option<String> = c
+                .select("SELECT c_num_dbl::text FROM types_read", None, &[])
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
+            assert!(
+                v.as_deref().unwrap().starts_with("6.28"),
+                "c_num_dbl unexpected: {v:?}"
+            );
+
+            // numeric from Int64
+            let v: Option<String> = c
+                .select("SELECT c_num_i64::text FROM types_read", None, &[])
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
+            assert_eq!(v.as_deref(), Some("42"));
+
+            // text from BSON String
+            let v: Option<String> = c
+                .select("SELECT c_str FROM types_read", None, &[])
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
+            assert_eq!(v.as_deref(), Some("hello"));
+
+            // text from BSON ObjectId
+            let v: Option<String> = c
+                .select("SELECT c_oid FROM types_read", None, &[])
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
+            assert_eq!(v.as_deref(), Some("507f1f77bcf86cd799439011"));
+
+            // timestamp from BSON DateTime
+            let v: Option<bool> = c
+                .select(
+                    "SELECT c_dt = '2023-11-14 22:13:20'::timestamp FROM types_read",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
+            assert_eq!(v, Some(true), "c_dt mismatch");
+
+            // timestamptz from BSON DateTime
+            let v: Option<bool> = c
+                .select(
+                    "SELECT c_dt_tz = '2023-11-14 22:13:20+00'::timestamptz FROM types_read",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
+            assert_eq!(v, Some(true), "c_dt_tz mismatch");
+
+            // jsonb from BSON Document
+            let v: Option<String> = c
+                .select(
+                    "SELECT c_doc->>'k' FROM types_read",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
+            assert_eq!(v.as_deref(), Some("v"));
+
+            let v: Option<i32> = c
+                .select(
+                    "SELECT (c_doc->>'n')::int FROM types_read",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
+            assert_eq!(v, Some(7));
+
+            // jsonb from BSON Array
+            let v: Option<i32> = c
+                .select(
+                    "SELECT jsonb_array_length(c_arr) FROM types_read",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
+            assert_eq!(v, Some(3));
+
+            // bytea from BSON Binary — compare as hex
+            let v: Option<String> = c
+                .select(
+                    "SELECT encode(c_bin, 'hex') FROM types_read",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
+            assert_eq!(v.as_deref(), Some("0102ff"));
+        });
+    }
+
+    /// Round-trip test: INSERT via SQL (exercises cell_to_bson) then SELECT
+    /// back (exercises bson_to_cell) and assert every column matches.
+    #[pg_test]
+    fn mongodb_types_write() {
+        let rt = create_async_runtime().unwrap();
+
+        // Drop the collection for idempotency.
+        rt.block_on(async {
+            let client = Client::with_uri_str(MONGO_URI).await.unwrap();
+            client
+                .database("testdb")
+                .collection::<Document>("types_write")
+                .drop()
+                .await
+                .ok();
+        });
+
+        Spi::connect_mut(|c| {
+            c.update(
+                r#"CREATE FOREIGN DATA WRAPPER mongodb_wrapper
+                    HANDLER mongodb_fdw_handler VALIDATOR mongodb_fdw_validator"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"CREATE SERVER mongo_server FOREIGN DATA WRAPPER mongodb_wrapper
+                   OPTIONS (conn_string 'mongodb://localhost:27017')"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"CREATE FOREIGN TABLE types_write (
+                     _id     text,
+                     c_bool  bool,
+                     c_i2    int2,
+                     c_i4    int4,
+                     c_i8    int8,
+                     c_f4    float4,
+                     c_f8    float8,
+                     c_num   numeric,
+                     c_str   text,
+                     c_dt    timestamp,
+                     c_dt_tz timestamptz,
+                     c_doc   jsonb,
+                     c_arr   jsonb
+                   )
+                   SERVER mongo_server
+                   OPTIONS (database 'testdb', collection 'types_write', rowid_column '_id')"#,
+                None,
+                &[],
+            )
+            .unwrap();
+
+            c.update(
+                r#"INSERT INTO types_write (
+                     _id, c_bool, c_i2, c_i4, c_i8, c_f4, c_f8, c_num,
+                     c_str, c_dt, c_dt_tz, c_doc, c_arr
+                   ) VALUES (
+                     'w1',
+                     true,
+                     12345::int2,
+                     12345::int4,
+                     9000000000::int8,
+                     1.25::float4,
+                     3.14::float8,
+                     123.456::numeric,
+                     'hello',
+                     '2023-11-14 22:13:20'::timestamp,
+                     '2023-11-14 22:13:20+00'::timestamptz,
+                     '{"k":"v","n":7}'::jsonb,
+                     '[1,2,3]'::jsonb
+                   )"#,
+                None,
+                &[],
+            )
+            .unwrap();
+
+            // bool round-trip
+            let v: Option<bool> = c
+                .select("SELECT c_bool FROM types_write WHERE _id = 'w1'", None, &[])
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
+            assert_eq!(v, Some(true));
+
+            // int2 round-trip (cell_to_bson encodes I16 as BSON Int32)
+            let v: Option<i16> = c
+                .select("SELECT c_i2 FROM types_write WHERE _id = 'w1'", None, &[])
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
+            assert_eq!(v, Some(12345i16));
+
+            // int4 round-trip
+            let v: Option<i32> = c
+                .select("SELECT c_i4 FROM types_write WHERE _id = 'w1'", None, &[])
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
+            assert_eq!(v, Some(12345i32));
+
+            // int8 round-trip (cell_to_bson encodes I64 as BSON Int64)
+            let v: Option<i64> = c
+                .select("SELECT c_i8 FROM types_write WHERE _id = 'w1'", None, &[])
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
+            assert_eq!(v, Some(9_000_000_000i64));
+
+            // float4 round-trip (cell_to_bson encodes F32 as BSON Double)
+            let v: Option<f32> = c
+                .select("SELECT c_f4 FROM types_write WHERE _id = 'w1'", None, &[])
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
+            assert_eq!(v, Some(1.25f32));
+
+            // float8 round-trip
+            let v: Option<f64> = c
+                .select("SELECT c_f8 FROM types_write WHERE _id = 'w1'", None, &[])
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
+            assert!((v.unwrap() - 3.14f64).abs() < 1e-10, "c_f8 mismatch: {v:?}");
+
+            // numeric round-trip (cell_to_bson encodes as Decimal128)
+            let v: Option<String> = c
+                .select(
+                    "SELECT c_num::text FROM types_write WHERE _id = 'w1'",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
+            assert_eq!(v.as_deref(), Some("123.456"));
+
+            // text round-trip (non-_id: stays BSON String)
+            let v: Option<String> = c
+                .select("SELECT c_str FROM types_write WHERE _id = 'w1'", None, &[])
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
+            assert_eq!(v.as_deref(), Some("hello"));
+
+            // timestamp round-trip
+            let v: Option<bool> = c
+                .select(
+                    "SELECT c_dt = '2023-11-14 22:13:20'::timestamp \
+                     FROM types_write WHERE _id = 'w1'",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
+            assert_eq!(v, Some(true), "c_dt mismatch");
+
+            // timestamptz round-trip
+            let v: Option<bool> = c
+                .select(
+                    "SELECT c_dt_tz = '2023-11-14 22:13:20+00'::timestamptz \
+                     FROM types_write WHERE _id = 'w1'",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
+            assert_eq!(v, Some(true), "c_dt_tz mismatch");
+
+            // jsonb Document round-trip
+            let v: Option<String> = c
+                .select(
+                    "SELECT c_doc->>'k' FROM types_write WHERE _id = 'w1'",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
+            assert_eq!(v.as_deref(), Some("v"));
+
+            // jsonb Array round-trip
+            let v: Option<i32> = c
+                .select(
+                    "SELECT jsonb_array_length(c_arr) FROM types_write WHERE _id = 'w1'",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .first()
+                .get(1)
+                .unwrap();
+            assert_eq!(v, Some(3));
+        });
+    }
+
     #[pg_test]
     fn mongodb_objectid_roundtrip() {
         let rt = create_async_runtime().unwrap();
