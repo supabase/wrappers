@@ -173,20 +173,20 @@ Multiple `where` predicates are AND'd at the top level of the filter document. P
 
 ## Supported Data Types
 
-| BSON Type   | Postgres Type           | Notes                                                                                           |
-| ----------- | ----------------------- | ----------------------------------------------------------------------------------------------- |
-| Boolean     | bool                    |                                                                                                 |
-| Int32       | int2 / int4 / int8      |                                                                                                 |
-| Int64       | int8 / numeric          |                                                                                                 |
-| Double      | float8 / float4         |                                                                                                 |
-| Decimal128  | numeric                 |                                                                                                 |
-| String      | text / varchar          |                                                                                                 |
+| BSON Type   | Postgres Type           | Notes                    |
+| ----------- | ----------------------- | ------------------------ |
+| Boolean     | bool                    |                          |
+| Int32       | int2 / int4 / int8      |                          |
+| Int64       | int8 / numeric          |                          |
+| Double      | float8 / float4         |                          |
+| Decimal128  | numeric                 |                          |
+| String      | text / varchar          |                          |
 | ObjectId    | text                    | Returned as a 24-character lowercase hex string. A 24-char hex value in a qual is coerced back to `ObjectId` for the filter. |
-| DateTime    | timestamp / timestamptz |                                                                                                 |
-| Document    | jsonb                   |                                                                                                 |
-| Array       | jsonb                   |                                                                                                 |
-| Binary      | bytea                   |                                                                                                 |
-| Null / missing | any                  | Column is set to `NULL`                                                                         |
+| DateTime    | timestamp / timestamptz |                          |
+| Document    | jsonb                   |                          |
+| Array       | jsonb                   |                          |
+| Binary      | bytea                   |                          |
+| Null / missing | any                  | Column is set to `NULL`  |
 
 !!! note
 

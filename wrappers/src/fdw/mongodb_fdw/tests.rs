@@ -324,10 +324,10 @@ mod tests {
                 "c_i4":          12345i32,
                 "c_i8_from_i32": 12345i32,
                 "c_i8_from_i64": bson::Bson::Int64(9_000_000_000i64),
-                "c_f8":          3.14f64,
+                "c_f8":          3.24f64,
                 "c_f4":          1.25f64,           // exactly representable as f32
                 "c_num_dec":     bson::Bson::Decimal128(bson::Decimal128::from_str("123.456").unwrap()),
-                "c_num_dbl":     6.28f64,
+                "c_num_dbl":     6.38f64,
                 "c_num_i64":     bson::Bson::Int64(42i64),
                 "c_str":         "hello",
                 "c_oid":         bson::oid::ObjectId::parse_str("507f1f77bcf86cd799439011").unwrap(),
@@ -439,7 +439,7 @@ mod tests {
                 .first()
                 .get(1)
                 .unwrap();
-            assert!((v.unwrap() - 3.14f64).abs() < 1e-10, "c_f8 mismatch: {v:?}");
+            assert!((v.unwrap() - 3.24f64).abs() < 1e-10, "c_f8 mismatch: {v:?}");
 
             // float4 from BSON Double (use a value exact in f32: 1.25)
             let v: Option<f32> = c
@@ -467,7 +467,7 @@ mod tests {
                 .get(1)
                 .unwrap();
             assert!(
-                v.as_deref().unwrap().starts_with("6.28"),
+                v.as_deref().unwrap().starts_with("6.38"),
                 "c_num_dbl unexpected: {v:?}"
             );
 
@@ -526,11 +526,7 @@ mod tests {
 
             // jsonb from BSON Document
             let v: Option<String> = c
-                .select(
-                    "SELECT c_doc->>'k' FROM types_read",
-                    None,
-                    &[],
-                )
+                .select("SELECT c_doc->>'k' FROM types_read", None, &[])
                 .unwrap()
                 .first()
                 .get(1)
@@ -538,11 +534,7 @@ mod tests {
             assert_eq!(v.as_deref(), Some("v"));
 
             let v: Option<i32> = c
-                .select(
-                    "SELECT (c_doc->>'n')::int FROM types_read",
-                    None,
-                    &[],
-                )
+                .select("SELECT (c_doc->>'n')::int FROM types_read", None, &[])
                 .unwrap()
                 .first()
                 .get(1)
@@ -564,11 +556,7 @@ mod tests {
 
             // bytea from BSON Binary — compare as hex
             let v: Option<String> = c
-                .select(
-                    "SELECT encode(c_bin, 'hex') FROM types_read",
-                    None,
-                    &[],
-                )
+                .select("SELECT encode(c_bin, 'hex') FROM types_read", None, &[])
                 .unwrap()
                 .first()
                 .get(1)
@@ -643,7 +631,7 @@ mod tests {
                      12345::int4,
                      9000000000::int8,
                      1.25::float4,
-                     3.14::float8,
+                     3.24::float8,
                      123.456::numeric,
                      'hello',
                      '2023-11-14 22:13:20'::timestamp,
@@ -708,7 +696,7 @@ mod tests {
                 .first()
                 .get(1)
                 .unwrap();
-            assert!((v.unwrap() - 3.14f64).abs() < 1e-10, "c_f8 mismatch: {v:?}");
+            assert!((v.unwrap() - 3.24f64).abs() < 1e-10, "c_f8 mismatch: {v:?}");
 
             // numeric round-trip (cell_to_bson encodes as Decimal128)
             let v: Option<String> = c
