@@ -262,3 +262,14 @@ services:
       interval: 10s
       timeout: 5s
       retries: 20
+
+  mongodb:
+    image: mongo:7
+    container_name: mongo-local
+    ports:
+      - "27017:27017"
+    healthcheck:
+      test: ["CMD", "sh", "-c", "echo 'db.runCommand({ ping: 1 })' | mongosh --quiet"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
