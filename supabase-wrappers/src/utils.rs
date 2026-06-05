@@ -388,6 +388,25 @@ pub fn get_vault_secret(secret_id_or_name: &str) -> Option<String> {
     }
 }
 
+/// Read a PostgreSQL session configuration parameter by name.
+///
+/// Calls `current_setting(name, true)` — returns `None` if the setting is absent
+/// rather than raising an error. Useful for injecting per-transaction credentials
+/// (e.g., via `set_config`) without requiring a fallback value. An unexpected SPI
+/// error is reported and surfaced as `None` rather than silently swallowed.
+pub fn query_setting(name: &str) -> Option<String> {
+    match Spi::get_one_with_args::<String>("SELECT current_setting($1, true)", &[name.into()]) {
+        Ok(value) => value,
+        Err(err) => {
+            report_error(
+                PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                &format!("read session setting \"{name}\" failed: {err}"),
+            );
+            None
+        }
+    }
+}
+
 /// Get decrypted secret from Vault by secret name
 ///
 /// Get decrypted secret as string from Vault by secret name. Vault is an extension for storing

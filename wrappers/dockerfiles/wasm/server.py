@@ -377,8 +377,14 @@ class MockServer(BaseHTTPRequestHandler):
         elif fdw == "openapi":
             # Generic OpenAPI FDW test endpoints covering all features
 
+            # Auth reflection: echo the received Authorization header back in the
+            # response body, so the session-token injection test can assert on it.
+            if req_path == "/whoami" or req_path.startswith("/whoami?"):
+                body = json.dumps(
+                    {"data": [{"received_auth": self.headers.get("Authorization", "")}]}
+                )
             # Pattern 1: Simple list endpoint
-            if req_path == "/users" or req_path.startswith("/users?"):
+            elif req_path == "/users" or req_path.startswith("/users?"):
                 body = """
 {
   "data": [

@@ -9,6 +9,7 @@ use crate::bindings::supabase::wrappers::{
     types::{Cell, Context, FdwError, FdwResult, Qual, Value},
     utils,
 };
+use crate::config::ServerConfig;
 use crate::spec::OpenApiSpec;
 use crate::{FDW_NAME, OpenApiFdw};
 
@@ -435,10 +436,21 @@ impl OpenApiFdw {
     pub(crate) fn make_request(&mut self, ctx: &Context) -> FdwResult {
         let url = self.build_url(ctx)?;
 
+        let mut headers = self.config.headers.clone();
+        if let Some(ref setting_name) = self.config.auth_token_setting {
+            if let Some(token) = utils::query_setting(setting_name) {
+                ServerConfig::apply_session_token(
+                    &mut headers,
+                    &token,
+                    &self.config.auth_token_prefix,
+                );
+            }
+        }
+
         let req = http::Request {
             method: self.method,
             url,
-            headers: self.config.headers.clone(),
+            headers,
             body: self.request_body.clone(),
         };
 

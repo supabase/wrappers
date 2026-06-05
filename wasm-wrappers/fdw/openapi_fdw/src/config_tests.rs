@@ -1,5 +1,153 @@
 use super::{DEFAULT_MAX_PAGES, DEFAULT_MAX_RESPONSE_BYTES, ServerConfig};
 
+// --- apply_session_token ---
+
+#[test]
+fn test_session_token_default_none() {
+    let config = ServerConfig::default();
+    assert!(config.auth_token_setting.is_none());
+}
+
+#[test]
+fn test_session_token_prefix_default_empty() {
+    let config = ServerConfig::default();
+    // Struct Default gives an empty prefix; configure_auth applies the real
+    // "Bearer" default when the server option is absent.
+    assert_eq!(config.auth_token_prefix, "");
+}
+
+#[test]
+fn test_apply_session_token_adds_bearer_header() {
+    let mut headers = vec![];
+    ServerConfig::apply_session_token(&mut headers, "tok_abc123", "Bearer");
+    assert_eq!(headers.len(), 1);
+    assert_eq!(headers[0].0, "authorization");
+    assert_eq!(headers[0].1, "Bearer tok_abc123");
+}
+
+#[test]
+fn test_apply_session_token_custom_prefix() {
+    let mut headers = vec![];
+    ServerConfig::apply_session_token(&mut headers, "tok_xyz", "Token");
+    assert_eq!(headers[0].1, "Token tok_xyz");
+}
+
+#[test]
+fn test_apply_session_token_empty_prefix_no_prefix() {
+    // Empty prefix → raw token value, no leading space
+    let mut headers = vec![];
+    ServerConfig::apply_session_token(&mut headers, "rawtoken", "");
+    assert_eq!(headers[0].1, "rawtoken");
+}
+
+#[test]
+fn test_apply_session_token_replaces_existing_authorization() {
+    let mut headers = vec![("authorization".to_owned(), "Bearer old-token".to_owned())];
+    ServerConfig::apply_session_token(&mut headers, "new-token", "Bearer");
+    // Should replace, not append
+    assert_eq!(headers.len(), 1);
+    assert_eq!(headers[0].1, "Bearer new-token");
+}
+
+#[test]
+fn test_apply_session_token_replaces_existing_authorization_case_insensitive() {
+    // Existing header uses capital "Authorization" (e.g. from the headers option).
+    // Header names are case-insensitive, so it should be replaced, not duplicated.
+    let mut headers = vec![("Authorization".to_owned(), "Bearer old-token".to_owned())];
+    ServerConfig::apply_session_token(&mut headers, "new-token", "Bearer");
+    assert_eq!(headers.len(), 1);
+    assert_eq!(headers[0].1, "Bearer new-token");
+}
+
+#[test]
+fn test_apply_session_token_replaces_leaves_other_headers_intact() {
+    let mut headers = vec![
+        ("content-type".to_owned(), "application/json".to_owned()),
+        ("authorization".to_owned(), "Bearer old".to_owned()),
+        ("x-request-id".to_owned(), "req-123".to_owned()),
+    ];
+    ServerConfig::apply_session_token(&mut headers, "new", "Bearer");
+    assert_eq!(headers.len(), 3);
+    assert_eq!(headers[0].0, "content-type");
+    assert_eq!(headers[1].1, "Bearer new");
+    assert_eq!(headers[2].0, "x-request-id");
+}
+
+#[test]
+fn test_apply_session_token_appends_when_no_existing_authorization() {
+    let mut headers = vec![
+        ("content-type".to_owned(), "application/json".to_owned()),
+        ("user-agent".to_owned(), "Wrappers/1.0".to_owned()),
+    ];
+    ServerConfig::apply_session_token(&mut headers, "tok", "Bearer");
+    assert_eq!(headers.len(), 3);
+    assert_eq!(headers[2].0, "authorization");
+    assert_eq!(headers[2].1, "Bearer tok");
+}
+
+#[test]
+fn test_apply_session_token_empty_token_noop() {
+    let mut headers = vec![("authorization".to_owned(), "Bearer original".to_owned())];
+    ServerConfig::apply_session_token(&mut headers, "", "Bearer");
+    // Empty token → no change
+    assert_eq!(headers[0].1, "Bearer original");
+}
+
+#[test]
+fn test_apply_session_token_whitespace_token_noop() {
+    let mut headers = vec![("authorization".to_owned(), "Bearer original".to_owned())];
+    ServerConfig::apply_session_token(&mut headers, "   ", "Bearer");
+    assert_eq!(headers[0].1, "Bearer original");
+}
+
+#[test]
+fn test_apply_session_token_empty_token_does_not_append() {
+    let mut headers = vec![];
+    ServerConfig::apply_session_token(&mut headers, "", "Bearer");
+    assert!(headers.is_empty());
+}
+
+#[test]
+fn test_apply_session_token_overrides_static_bearer() {
+    // Simulate: static bearer_token set at init, session token injected at request time
+    let mut headers = vec![
+        ("content-type".to_owned(), "application/json".to_owned()),
+        ("authorization".to_owned(), "Bearer static-token".to_owned()),
+    ];
+    ServerConfig::apply_session_token(&mut headers, "per-user-token", "Bearer");
+    let auth = headers.iter().find(|h| h.0 == "authorization").unwrap();
+    assert_eq!(auth.1, "Bearer per-user-token");
+    // Static token not leaked
+    assert!(!auth.1.contains("static-token"));
+}
+
+#[test]
+fn test_apply_session_token_second_call_replaces_first() {
+    let mut headers = vec![];
+    ServerConfig::apply_session_token(&mut headers, "first", "Bearer");
+    ServerConfig::apply_session_token(&mut headers, "second", "Bearer");
+    assert_eq!(headers.len(), 1);
+    assert_eq!(headers[0].1, "Bearer second");
+}
+
+#[test]
+fn test_debug_shows_auth_token_setting_name() {
+    let config = ServerConfig {
+        auth_token_setting: Some("app.user_token".to_string()),
+        ..Default::default()
+    };
+    let debug_output = format!("{config:?}");
+    // Setting name is not sensitive — it should appear in debug output
+    assert!(debug_output.contains("app.user_token"));
+}
+
+#[test]
+fn test_debug_no_auth_token_setting_shows_none() {
+    let config = ServerConfig::default();
+    let debug_output = format!("{config:?}");
+    assert!(debug_output.contains("auth_token_setting: None"));
+}
+
 // --- Default values ---
 
 #[test]

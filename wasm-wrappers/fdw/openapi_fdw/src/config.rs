@@ -30,6 +30,10 @@ pub(crate) struct ServerConfig {
     pub(crate) max_response_bytes: usize,
     pub(crate) debug: bool,
 
+    // Dynamic auth: Postgres session variable that overrides static auth at request time
+    pub(crate) auth_token_setting: Option<String>,
+    pub(crate) auth_token_prefix: String,
+
     // Server-level defaults (saved after init, restored in begin_scan)
     pub(crate) default_page_size: usize,
     pub(crate) default_page_size_param: String,
@@ -65,6 +69,7 @@ impl std::fmt::Debug for ServerConfig {
             .field("max_pages", &self.max_pages)
             .field("max_response_bytes", &self.max_response_bytes)
             .field("debug", &self.debug)
+            .field("auth_token_setting", &self.auth_token_setting)
             .finish()
     }
 }
@@ -84,6 +89,8 @@ impl Default for ServerConfig {
             max_pages: DEFAULT_MAX_PAGES,
             max_response_bytes: DEFAULT_MAX_RESPONSE_BYTES,
             debug: false,
+            auth_token_setting: None,
+            auth_token_prefix: String::new(),
             default_page_size: 0,
             default_page_size_param: String::new(),
             default_cursor_param: String::new(),
@@ -213,6 +220,16 @@ impl ServerConfig {
             );
         }
 
+        // Treat an empty/whitespace-only setting name as unset, so the request
+        // path doesn't fire a pointless current_setting('') lookup per request.
+        self.auth_token_setting = opts
+            .get("auth_token_setting")
+            .filter(|s| !s.trim().is_empty());
+        self.auth_token_prefix = opts
+            .require_or("auth_token_prefix", "Bearer")
+            .trim()
+            .to_owned();
+
         Ok(())
     }
 
@@ -279,6 +296,38 @@ impl ServerConfig {
         }
 
         Ok(())
+    }
+
+    /// Apply a dynamically resolved token to a request headers list.
+    ///
+    /// Replaces an existing `authorization` header if present, otherwise appends one.
+    /// No-ops if `token` is empty or whitespace-only.
+    ///
+    /// Separated from the WASM-dependent `make_request` call path for testability.
+    pub(crate) fn apply_session_token(
+        headers: &mut Vec<(String, String)>,
+        token: &str,
+        prefix: &str,
+    ) {
+        if token.trim().is_empty() {
+            return;
+        }
+        let value = if prefix.is_empty() {
+            token.to_owned()
+        } else {
+            format!("{prefix} {token}")
+        };
+        // HTTP header names are case-insensitive: match any existing
+        // authorization header regardless of casing so we replace rather than
+        // append a duplicate (e.g. a static "Authorization" from the headers option).
+        if let Some(h) = headers
+            .iter_mut()
+            .find(|h| h.0.eq_ignore_ascii_case("authorization"))
+        {
+            h.1 = value;
+        } else {
+            headers.push(("authorization".to_owned(), value));
+        }
     }
 }
 
