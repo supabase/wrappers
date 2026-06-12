@@ -634,6 +634,10 @@ fn pushdown_quals(
     if obj != "balance" {
         url.query_pairs_mut()
             .append_pair("limit", &format!("{page_size}"));
+            // include all statuses for subscriptions (fixes sandbox simulation compatibility)
+    if obj == "subscriptions" {
+        url.query_pairs_mut().append_pair("status", "all");
+    }
         if let Some(cursor) = cursor {
             url.query_pairs_mut().append_pair("starting_after", cursor);
         }
