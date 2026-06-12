@@ -9,7 +9,11 @@ use std::ptr;
 
 use crate::interface::{Aggregate, AggregateKind, Column};
 use crate::prelude::ForeignDataWrapper;
-use crate::scan::FdwState;
+use crate::scan::{
+    FdwState, full_query_placeholder_from_planner, leak_state_in_current_context,
+    query_requires_full_query, remote_query_context_from_planner, remote_query_local_path_penalty,
+    target_columns_from_reltarget,
+};
 
 /// Helper to iterate over a pg_sys::List using raw pointer access.
 /// Returns an iterator over pointers to the list elements.
@@ -70,6 +74,9 @@ unsafe fn extract_column_from_var(
     var: *mut pg_sys::Var,
 ) -> Option<Column> {
     unsafe {
+        if root.is_null() || var.is_null() || (*var).varattno <= 0 {
+            return None;
+        }
         let relid = (*var).varno as pg_sys::Index;
         let attno = (*var).varattno;
         let rte = pg_sys::planner_rt_fetch(relid, root);
@@ -102,6 +109,9 @@ unsafe fn extract_aggregates(
     extra: *mut std::ffi::c_void,
 ) -> Option<Vec<Aggregate>> {
     unsafe {
+        if root.is_null() || output_rel.is_null() {
+            return None;
+        }
         if extra.is_null() {
             return None;
         }
@@ -126,6 +136,10 @@ unsafe fn extract_aggregates(
         let mut resno = 1;
 
         for expr in list_iter::<pg_sys::Node>(exprs) {
+            if expr.is_null() {
+                resno += 1;
+                continue;
+            }
             if (*expr).type_ == pg_sys::NodeTag::T_Aggref {
                 let aggref = expr as *mut pg_sys::Aggref;
 
@@ -170,7 +184,7 @@ unsafe fn extract_aggregates(
                     let target_entry = (*first_cell).ptr_value as *mut pg_sys::TargetEntry;
                     if !target_entry.is_null() {
                         let arg_expr = (*target_entry).expr as *mut pg_sys::Node;
-                        if (*arg_expr).type_ == pg_sys::NodeTag::T_Var {
+                        if !arg_expr.is_null() && (*arg_expr).type_ == pg_sys::NodeTag::T_Var {
                             extract_column_from_var(root, arg_expr as *mut pg_sys::Var)
                         } else {
                             None
@@ -228,6 +242,9 @@ unsafe fn extract_group_by_columns(
     _input_rel: *mut pg_sys::RelOptInfo,
 ) -> Option<Vec<Column>> {
     unsafe {
+        if root.is_null() {
+            return None;
+        }
         let mut group_by = Vec::new();
 
         let parse = (*root).parse;
@@ -246,13 +263,20 @@ unsafe fn extract_group_by_columns(
         }
 
         for sort_group_clause in list_iter::<pg_sys::SortGroupClause>(group_clause) {
+            if sort_group_clause.is_null() {
+                continue;
+            }
             let tle_resno = (*sort_group_clause).tleSortGroupRef;
             let mut found = false;
 
             for tle in list_iter::<pg_sys::TargetEntry>(target_list) {
+                if tle.is_null() {
+                    continue;
+                }
                 if (*tle).ressortgroupref == tle_resno {
                     let expr = (*tle).expr as *mut pg_sys::Node;
-                    if (*expr).type_ == pg_sys::NodeTag::T_Var
+                    if !expr.is_null()
+                        && (*expr).type_ == pg_sys::NodeTag::T_Var
                         && let Some(col) = extract_column_from_var(root, expr as *mut pg_sys::Var)
                     {
                         group_by.push(col);
@@ -288,6 +312,20 @@ pub(super) extern "C-unwind" fn get_foreign_upper_paths<
     extra: *mut std::ffi::c_void,
 ) {
     debug2!("---> get_foreign_upper_paths, stage: {stage:?}");
+
+    if input_rel.is_null() || output_rel.is_null() {
+        return;
+    }
+
+    unsafe {
+        if add_full_query_upper_path::<E, W>(root, stage, input_rel, output_rel) {
+            return;
+        }
+    }
+
+    if stage == pg_sys::UpperRelationKind::UPPERREL_FINAL {
+        return;
+    }
 
     // Only handle GROUP_AGG stage
     if stage != pg_sys::UpperRelationKind::UPPERREL_GROUP_AGG {
@@ -382,7 +420,8 @@ pub(super) extern "C-unwind" fn get_foreign_upper_paths<
         // get_foreign_plan can find it when building the plan for this path.
         // This is the critical fix: previously fdw_private was null, so aggregates
         // were extracted but never passed through to the executor.
-        (*output_rel).fdw_private = state.into_pg() as _;
+        (*output_rel).fdw_private = fdw_private;
+        let _ = state.into_pg();
 
         // Create the foreign upper path
         let path = pg_sys::create_foreign_upper_path(
@@ -408,5 +447,123 @@ pub(super) extern "C-unwind" fn get_foreign_upper_paths<
             aggregates.len(),
             group_by.len()
         );
+    }
+}
+
+unsafe fn add_full_query_upper_path<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
+    root: *mut pg_sys::PlannerInfo,
+    stage: pg_sys::UpperRelationKind::Type,
+    input_rel: *mut pg_sys::RelOptInfo,
+    output_rel: *mut pg_sys::RelOptInfo,
+) -> bool {
+    unsafe {
+        if root.is_null() || input_rel.is_null() || output_rel.is_null() {
+            debug2!("add_full_query_upper_path: missing planner relation state");
+            return false;
+        }
+        if !query_requires_full_query(root) {
+            debug2!("add_full_query_upper_path: query does not require full-query path");
+            return false;
+        }
+
+        let fdw_private = (*input_rel).fdw_private;
+        if fdw_private.is_null() {
+            debug2!("add_full_query_upper_path: input rel has no fdw_private");
+            return false;
+        }
+        debug2!("add_full_query_upper_path: input rel has fdw_private");
+
+        let input_state = PgBox::<FdwState<E, W>>::from_pg(fdw_private as _);
+        let mut remote_query_policy = input_state.remote_query_policy;
+        debug2!(
+            "add_full_query_upper_path: initial remote policy wants={}",
+            remote_query_policy.wants_remote_query()
+        );
+        if !remote_query_policy.wants_remote_query() {
+            let context = remote_query_context_from_planner(root, false);
+            debug2!(
+                "add_full_query_upper_path: recomputed context foreign_count={} upper={} multiple_base={}",
+                context.foreign_relation_count,
+                context.has_upper_operations,
+                context.has_multiple_base_relations
+            );
+            remote_query_policy = input_state
+                .instance
+                .as_ref()
+                .map(|instance| instance.remote_query_policy(&context))
+                .unwrap_or_default();
+        }
+        if !remote_query_policy.wants_remote_query() {
+            debug2!("add_full_query_upper_path: remote query policy does not want pushdown");
+            return false;
+        }
+
+        let columns = target_columns_from_reltarget(output_rel);
+        debug2!(
+            "add_full_query_upper_path: columns={} stage={:?}",
+            columns.len(),
+            stage
+        );
+        let Some(full_query) = full_query_placeholder_from_planner(root, columns.clone()) else {
+            debug2!("add_full_query_upper_path: could not build full query placeholder");
+            return false;
+        };
+        debug2!("add_full_query_upper_path: built full query placeholder");
+        let Some(first_relation) = full_query.relations.first() else {
+            debug2!("add_full_query_upper_path: full query has no relation");
+            return false;
+        };
+
+        let is_final = stage == pg_sys::UpperRelationKind::UPPERREL_FINAL;
+        debug2!("add_full_query_upper_path: is_final={is_final}");
+        let ctx_name = format!(
+            "Wrappers_full_query_upper_{}_{}",
+            first_relation.relid.to_u32(),
+            stage
+        );
+        let ctx = crate::memctx::create_wrappers_memctx(&ctx_name);
+        let mut state = FdwState::<E, W>::new(first_relation.relid, ctx);
+        state.tgts = columns;
+        state.opts = first_relation.options.clone();
+        state.full_query = Some(full_query);
+        state.requires_full_query = true;
+        state.full_query_upper_only = true;
+        state.full_query_executable = is_final;
+        state.remote_query_policy = remote_query_policy;
+
+        let rows = 1.0;
+        let startup_cost = state
+            .opts
+            .get("startup_cost")
+            .and_then(|c| c.parse::<f64>().ok())
+            .unwrap_or(0.0);
+        let total_cost = if is_final {
+            startup_cost
+        } else {
+            startup_cost + remote_query_local_path_penalty(remote_query_policy)
+        };
+
+        (*output_rel).rows = rows;
+        (*output_rel).fdw_private = leak_state_in_current_context(state) as _;
+
+        let path = pg_sys::create_foreign_upper_path(
+            root,
+            output_rel,
+            (*output_rel).reltarget,
+            rows,
+            #[cfg(feature = "pg18")]
+            0,
+            startup_cost,
+            total_cost,
+            ptr::null_mut(),
+            ptr::null_mut(),
+            #[cfg(any(feature = "pg17", feature = "pg18"))]
+            ptr::null_mut(),
+            ptr::null_mut(),
+        );
+
+        pg_sys::add_path(output_rel, &mut ((*path).path));
+        debug2!("Created full-query pushdown upper path");
+        true
     }
 }

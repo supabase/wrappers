@@ -8196,6 +8196,8 @@ version = "0.1.27"
 dependencies = [
  "pgrx",
  "pgrx-tests",
+ "serde 1.0.228",
+ "serde_json",
  "supabase-wrappers-macros",
  "thiserror 1.0.69",
  "tokio",

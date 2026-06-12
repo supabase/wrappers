@@ -551,8 +551,9 @@ pub(super) trait SerdeList {
                     && let Some(cst) = list.get(0)
                 {
                     let cst = *(*cst as *mut pg_sys::Const);
-                    let ptr = i64::from_datum(cst.constvalue, cst.constisnull).unwrap();
-                    return PgBox::<Self>::from_pg(ptr as _);
+                    if let Some(ptr) = i64::from_datum(cst.constvalue, cst.constisnull) {
+                        return PgBox::<Self>::from_pg(ptr as _);
+                    }
                 }
                 PgBox::<Self>::null()
             })

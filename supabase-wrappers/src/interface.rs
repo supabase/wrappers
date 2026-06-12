@@ -465,6 +465,144 @@ pub struct Column {
     pub type_oid: Oid,
 }
 
+/// A relation referenced by a full-query pushdown plan.
+///
+/// The relation exposes local PostgreSQL catalog identity plus the foreign
+/// table options. FDWs can use those options to map local foreign table names
+/// back to their remote table names before executing the pushed query.
+#[derive(Debug, Clone, Default)]
+pub struct FullQueryRelation {
+    /// local PostgreSQL relation OID
+    pub relid: Oid,
+
+    /// foreign server OID backing this relation
+    pub server_oid: Oid,
+
+    /// local PostgreSQL schema name
+    pub local_schema: String,
+
+    /// local PostgreSQL relation name
+    pub local_table: String,
+
+    /// foreign table options
+    pub options: HashMap<String, String>,
+}
+
+/// A runtime parameter referenced by a pushed remote SQL statement.
+#[derive(Debug, Clone)]
+pub struct RemoteQueryParameter {
+    /// parameter kind from PostgreSQL
+    pub kind: pg_sys::ParamKind::Type,
+
+    /// parameter id as it appears in PostgreSQL, e.g. `$1`
+    pub id: usize,
+
+    /// parameter type OID
+    pub type_oid: Oid,
+
+    /// evaluated parameter value for the current execution
+    pub value: Option<Value>,
+}
+
+/// Full SQL statement selected for remote execution.
+///
+/// This is used by FDWs that want PostgreSQL to act only as a bridge: Postgres
+/// still parses and plans enough to know the result shape, while the wrapper
+/// receives one full SQL statement plus relation metadata and returns the final
+/// rows from the foreign system.
+#[derive(Debug, Clone, Default)]
+pub struct FullQuery {
+    /// deparsed SQL statement from the PostgreSQL planner
+    pub sql: String,
+
+    /// output columns expected by PostgreSQL
+    pub columns: Vec<Column>,
+
+    /// foreign relations referenced by the statement
+    pub relations: Vec<FullQueryRelation>,
+
+    /// evaluated runtime parameters referenced by `sql`
+    pub parameters: Vec<RemoteQueryParameter>,
+}
+
+/// Alias for a SQL statement selected for remote execution.
+///
+/// `FullQuery` is kept for backward compatibility. New FDWs that want
+/// PostgreSQL to act only as a result renderer should implement
+/// [`ForeignDataWrapper::begin_remote_query`] and use this alias in their own
+/// code to make the execution contract explicit.
+pub type RemoteQuery = FullQuery;
+
+/// How strongly an FDW wants wrappers to use a remote-query path.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum RemoteQueryPolicy {
+    /// Do not create a remote-query path for this query shape.
+    #[default]
+    Optional,
+
+    /// Create and strongly prefer a remote-query path, but allow PostgreSQL to
+    /// pick a local plan if it still estimates that as cheaper.
+    Prefer,
+
+    /// Create a remote-query path and reject local execution if PostgreSQL does
+    /// not select it. This is intended for bridge FDWs where all query
+    /// execution must happen in the foreign system.
+    Require,
+}
+
+impl RemoteQueryPolicy {
+    /// Returns true when wrappers should attempt to build remote-query paths.
+    pub fn wants_remote_query(self) -> bool {
+        matches!(self, Self::Prefer | Self::Require)
+    }
+
+    /// Returns true when wrappers should reject local execution if the planner
+    /// does not choose a remote-query path.
+    pub fn requires_remote_query(self) -> bool {
+        matches!(self, Self::Require)
+    }
+}
+
+/// Planner context passed to [`ForeignDataWrapper::remote_query_policy`].
+#[derive(Debug, Clone, Default)]
+pub struct RemoteQueryContext {
+    /// The query contains upper operations such as aggregate, ORDER BY, LIMIT,
+    /// DISTINCT, window functions, or set operations.
+    pub has_upper_operations: bool,
+
+    /// The query references more than one base relation.
+    pub has_multiple_base_relations: bool,
+
+    /// The query contains inputs that are not plain relation references.
+    pub has_non_relation_inputs: bool,
+
+    /// The query target list contains expressions that cannot be represented as
+    /// a simple base table column scan.
+    pub has_non_var_targets: bool,
+
+    /// PostgreSQL has restriction clauses that wrappers could not extract as
+    /// FDW quals.
+    pub has_unpushed_quals: bool,
+
+    /// True when every relation referenced by the query is a foreign table.
+    pub all_referenced_relations_are_foreign: bool,
+
+    /// Number of foreign relations referenced by the query.
+    pub foreign_relation_count: usize,
+}
+
+impl RemoteQueryContext {
+    /// Returns true when a table-scan callback cannot faithfully represent the
+    /// final query result without PostgreSQL doing local work above the scan.
+    pub fn requires_remote_query_shape(&self) -> bool {
+        self.has_upper_operations
+            || self.has_multiple_base_relations
+            || self.has_non_relation_inputs
+            || self.has_non_var_targets
+            || self.has_unpushed_quals
+    }
+}
+
 /// A restiction value used in [`Qual`], either a [`Cell`] or an array of [`Cell`]
 #[derive(Debug, Clone)]
 pub enum Value {
@@ -920,6 +1058,60 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
         options: &HashMap<String, String>,
     ) -> Result<(), E>;
 
+    /// Whether the FDW can execute a whole PostgreSQL query remotely.
+    ///
+    /// If enabled, wrappers may add foreign join or upper paths that call
+    /// [`begin_full_query_scan`] instead of decomposing the query into base
+    /// scans, filters, joins, aggregates, and projections executed by Postgres.
+    fn supports_full_query_pushdown(&self) -> bool {
+        false
+    }
+
+    /// Choose whether wrappers should plan this query as a single remote SQL
+    /// statement instead of decomposing it into table scans and local
+    /// PostgreSQL plan nodes.
+    ///
+    /// The default preserves the older full-query API: FDWs that return `true`
+    /// from [`supports_full_query_pushdown`](Self::supports_full_query_pushdown)
+    /// will prefer remote-query paths for query shapes that cannot be expressed
+    /// as a plain table scan.
+    fn remote_query_policy(&self, context: &RemoteQueryContext) -> RemoteQueryPolicy {
+        if self.supports_full_query_pushdown() && context.requires_remote_query_shape() {
+            RemoteQueryPolicy::Prefer
+        } else {
+            RemoteQueryPolicy::Optional
+        }
+    }
+
+    /// Called when a selected plan pushes the whole SQL statement to the FDW.
+    ///
+    /// This is the preferred hook for bridge-style FDWs. The default delegates
+    /// to [`begin_full_query_scan`](Self::begin_full_query_scan) for backward
+    /// compatibility.
+    fn begin_remote_query(
+        &mut self,
+        query: &RemoteQuery,
+        options: &HashMap<String, String>,
+    ) -> Result<(), E> {
+        self.begin_full_query_scan(query, options)
+    }
+
+    /// Called when a selected plan pushes the full SQL statement to the FDW.
+    ///
+    /// The default implementation returns an FDW error. FDWs that return `true`
+    /// from [`supports_full_query_pushdown`] must override this method.
+    fn begin_full_query_scan(
+        &mut self,
+        _query: &FullQuery,
+        _options: &HashMap<String, String>,
+    ) -> Result<(), E> {
+        crate::utils::report_error(
+            pgrx::PgSqlErrorCode::ERRCODE_FDW_ERROR,
+            "full-query pushdown is not implemented by this FDW",
+        );
+        unreachable!("report_error(ERROR) should not return")
+    }
+
     /// Called when fetch one row from the foreign source
     ///
     /// FDW must save fetched foreign data into the [`Row`], or return `None` if no more rows to read.
@@ -1203,6 +1395,7 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
             // plan phase
             fdw_routine.GetForeignRelSize = Some(scan::get_foreign_rel_size::<E, Self>);
             fdw_routine.GetForeignPaths = Some(scan::get_foreign_paths::<E, Self>);
+            fdw_routine.GetForeignJoinPaths = Some(scan::get_foreign_join_paths::<E, Self>);
             fdw_routine.GetForeignPlan = Some(scan::get_foreign_plan::<E, Self>);
             fdw_routine.ExplainForeignScan = Some(scan::explain_foreign_scan::<E, Self>);
 
