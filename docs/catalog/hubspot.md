@@ -43,6 +43,7 @@ create foreign data wrapper wasm_wrapper
 ```
 
 !!! note "About Authentication"
+
     HubSpot deprecated their legacy API Keys in November 2022. The `api_key` option in this wrapper accepts a **Private App Access Token**, which is HubSpot's recommended authentication method. See [HubSpot Private Apps](https://developers.hubspot.com/docs/guides/apps/private-apps/overview) for setup instructions.
 
 ### Store your credentials (optional)
