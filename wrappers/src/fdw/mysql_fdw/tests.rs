@@ -138,8 +138,8 @@ mod tests {
                 r#"
                 CREATE FOREIGN TABLE mysql.users2 (
                     id bigint,
-                    name text,
-                    email text,
+                    name varchar(100),
+                    email varchar(200),
                     active boolean,
                     age integer,
                     balance numeric,
@@ -155,7 +155,6 @@ mod tests {
                 &[],
             )
             .expect("failed to create foreign table with custom query");
-
             let results = c
                 .select("SELECT * FROM mysql.users order by id", None, &[])
                 .unwrap()
@@ -169,6 +168,14 @@ mod tests {
                 .filter_map(|r| r.get_by_name::<&str, _>("name").unwrap())
                 .collect::<Vec<_>>();
             assert_eq!(results, vec!["Alice", "Bob", "Carol", "Dave"]);
+
+            let varchar_email = c
+                .select("SELECT email FROM mysql.users2 WHERE id = 1", None, &[])
+                .expect("failed to select varchar email")
+                .next()
+                .and_then(|r| r.get_by_name::<&str, _>("email").ok().flatten())
+                .map(str::to_string);
+            assert_eq!(varchar_email.as_deref(), Some("alice@example.com"));
 
             c.update(
                 r#"INSERT INTO mysql.users

@@ -42,7 +42,9 @@ fn field_to_cell(src_row: &MySqlRow, tgt_col: &Column) -> MysqlFdwResult<Option<
             .map(pgrx::AnyNumeric::try_from)
             .transpose()?
             .map(Cell::Numeric),
-        PgOid::BuiltIn(PgBuiltInOids::TEXTOID) => {
+        PgOid::BuiltIn(PgBuiltInOids::TEXTOID)
+        | PgOid::BuiltIn(PgBuiltInOids::VARCHAROID)
+        | PgOid::BuiltIn(PgBuiltInOids::BPCHAROID) => {
             get_col::<String>(src_row, col_name)?.map(Cell::String)
         }
         PgOid::BuiltIn(PgBuiltInOids::JSONBOID) => match get_col::<String>(src_row, col_name)? {
