@@ -6,7 +6,7 @@ use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::PgSqlErrorCode;
 use thiserror::Error;
 
-use supabase_wrappers::prelude::{CreateRuntimeError, OptionsError};
+use supabase_wrappers::prelude::{CreateRuntimeError, OptionsError, sanitize_error_message};
 
 #[derive(Error, Debug)]
 enum MysqlFdwError {
@@ -43,10 +43,10 @@ impl From<MysqlFdwError> for ErrorReport {
         match value {
             MysqlFdwError::CreateRuntimeError(e) => e.into(),
             MysqlFdwError::OptionsError(e) => e.into(),
-            MysqlFdwError::MysqlError(_) => ErrorReport::new(
+            MysqlFdwError::MysqlError(ref e) => ErrorReport::new(
                 PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                "mysql connection or query error".to_string(),
-                "check connection string and query syntax",
+                sanitize_error_message(&format!("mysql error: {e}")),
+                "",
             ),
             other => ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, format!("{other}"), ""),
         }
@@ -54,3 +54,18 @@ impl From<MysqlFdwError> for ErrorReport {
 }
 
 type MysqlFdwResult<T> = Result<T, MysqlFdwError>;
+
+#[cfg(test)]
+mod error_tests {
+    use supabase_wrappers::prelude::sanitize_error_message;
+
+    #[test]
+    fn mysql_error_message_is_sanitized() {
+        let message = sanitize_error_message(
+            "mysql error: connection failed with password='super-secret' for user root",
+        );
+
+        assert!(message.starts_with("mysql error: connection failed"));
+        assert!(!message.contains("super-secret"));
+    }
+}
