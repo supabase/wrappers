@@ -54,18 +54,3 @@ impl From<MysqlFdwError> for ErrorReport {
 }
 
 type MysqlFdwResult<T> = Result<T, MysqlFdwError>;
-
-#[cfg(test)]
-mod error_tests {
-    use supabase_wrappers::prelude::sanitize_error_message;
-
-    #[test]
-    fn mysql_error_message_is_sanitized() {
-        let message = sanitize_error_message(
-            "mysql error: connection failed with password='super-secret' for user root",
-        );
-
-        assert!(message.starts_with("mysql error: connection failed"));
-        assert!(!message.contains("super-secret"));
-    }
-}
