@@ -77,8 +77,16 @@ Some connection string examples:
 
 - `mongodb://root:secret@localhost:27017/`
 - `mongodb://app_user:password@db.example.com:27017/?tls=true`
-- `mongodb+srv://user:password@cluster.example.mongodb.net/?retryWrites=true`
 - `mongodb://user:pass@host1:27017,host2:27017/?replicaSet=rs0`
+- `mongodb+srv://user:password@cluster0.mcqtkst.mongodb.net/?appName=Cluster0`
+
+!!! warning "MongoDB Atlas IP Access List"
+
+    If you connect to MongoDB Atlas, you must allow network access from your Supabase database server in Atlas **Network Access / IP Access List**.
+
+    Supabase database server egress IP addresses are dynamic and there is no fixed IP range you can safelist. In practice, this often means allowing `0.0.0.0/0` in Atlas to make the connection work.
+
+    If you are concerned about this security risk, place a proxy or gateway with a fixed public IP between your Supabase database instance and MongoDB, and safelist only that proxy IP in Atlas.
 
 ### Create a schema
 
@@ -211,6 +219,7 @@ This section describes important limitations and considerations when using this 
 - Multi-document transactions and batched writes are not supported in v1
 - Change streams are not supported
 - Materialized views using foreign tables may fail during logical backups
+- For MongoDB Atlas, Supabase egress IPs are dynamic (no fixed range). You may need to allow `0.0.0.0/0` in Atlas IP Access List, or use a proxy/gateway with a fixed IP to avoid broad public access
 
 ## Examples
 
