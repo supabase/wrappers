@@ -236,6 +236,8 @@ Primary key columns are automatically detected and set as the `rowid_column` opt
 
     `decimal` and `numeric` columns with explicit precision and scale (e.g. `decimal(12,2)`) are imported as `numeric(p,s)` in Postgres.
 
+    `import foreign schema` always generates `text` for MySQL string types, but when defining a foreign table manually you may also declare these columns as `varchar(n)` or `char(n)`; all three Postgres types are read correctly.
+
 ## Limitations
 
 This section describes important limitations and considerations when using this FDW:
