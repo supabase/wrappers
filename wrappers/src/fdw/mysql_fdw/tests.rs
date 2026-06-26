@@ -31,6 +31,7 @@ mod tests {
                 id BIGINT PRIMARY KEY AUTO_INCREMENT,
                 name VARCHAR(100) NOT NULL,
                 email VARCHAR(200) NOT NULL,
+                country_code CHAR(2),
                 active BOOLEAN NOT NULL DEFAULT TRUE,
                 age INT,
                 score SMALLINT,
@@ -44,11 +45,11 @@ mod tests {
         );
         exec_mysql_query("TRUNCATE TABLE testdb.users");
         exec_mysql_query(
-            r#"INSERT INTO testdb.users (name, email, active, age, score, rating, salary, balance, birth_date, metadata, created_at) VALUES
-                ('Alice', 'alice@example.com', TRUE, 30, 85, 4.5, 75000.50, 120.50, '1995-03-15', '{\"role\": \"admin\", \"level\": 5}', '2026-03-01 10:00:00'),
-                ('Bob', 'bob@example.com', FALSE, 41, 72, 3.5, 52000.75, 88.25, '1984-07-22', '{\"role\": \"user\", \"level\": 2}', '2026-03-02 11:30:00'),
-                ('Carol', 'carol@example.com', TRUE, 27, 91, 5.0, 98000.00, 999.99, '1998-11-30', '{\"role\": \"editor\", \"level\": 3}', '2026-03-03 09:15:00'),
-                ('Dave', 'dave@example.com', TRUE, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-04 14:45:00')"#,
+            r#"INSERT INTO testdb.users (name, email, country_code, active, age, score, rating, salary, balance, birth_date, metadata, created_at) VALUES
+                ('Alice', 'alice@example.com', 'US', TRUE, 30, 85, 4.5, 75000.50, 120.50, '1995-03-15', '{\"role\": \"admin\", \"level\": 5}', '2026-03-01 10:00:00'),
+                ('Bob', 'bob@example.com', 'GB', FALSE, 41, 72, 3.5, 52000.75, 88.25, '1984-07-22', '{\"role\": \"user\", \"level\": 2}', '2026-03-02 11:30:00'),
+                ('Carol', 'carol@example.com', 'FR', TRUE, 27, 91, 5.0, 98000.00, 999.99, '1998-11-30', '{\"role\": \"editor\", \"level\": 3}', '2026-03-03 09:15:00'),
+                ('Dave', 'dave@example.com', NULL, TRUE, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-04 14:45:00')"#,
         );
     }
 
@@ -140,6 +141,7 @@ mod tests {
                     id bigint,
                     name varchar(100),
                     email varchar(200),
+                    country_code char(2),
                     active boolean,
                     age integer,
                     balance numeric,
@@ -147,7 +149,7 @@ mod tests {
                 )
                 SERVER mysql_server
                 OPTIONS (
-                    table '(select id,name,email,active,age,balance,created_at from testdb.users)',
+                    table '(select id,name,email,country_code,active,age,balance,created_at from testdb.users)',
                     rowid_column 'id'
                 );
             "#,
@@ -176,6 +178,30 @@ mod tests {
                 .and_then(|r| r.get_by_name::<&str, _>("email").ok().flatten())
                 .map(str::to_string);
             assert_eq!(varchar_email.as_deref(), Some("alice@example.com"));
+
+            let char_country = c
+                .select(
+                    "SELECT country_code::text AS country_code FROM mysql.users2 WHERE id = 1",
+                    None,
+                    &[],
+                )
+                .expect("failed to select char country_code")
+                .next()
+                .and_then(|r| r.get_by_name::<&str, _>("country_code").ok().flatten())
+                .map(str::to_string);
+            assert_eq!(char_country.as_deref(), Some("US"));
+
+            let null_country = c
+                .select(
+                    "SELECT country_code::text AS country_code FROM mysql.users2 WHERE id = 4",
+                    None,
+                    &[],
+                )
+                .expect("failed to select null char country_code")
+                .next()
+                .and_then(|r| r.get_by_name::<&str, _>("country_code").ok().flatten())
+                .map(str::to_string);
+            assert_eq!(null_country, None);
 
             c.update(
                 r#"INSERT INTO mysql.users

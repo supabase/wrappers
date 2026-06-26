@@ -218,7 +218,7 @@ impl CellFormatter for MysqlCellFormatter {
 }
 
 #[wrappers_fdw(
-    version = "0.1.1",
+    version = "0.1.2",
     author = "Wener",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/mysql_fdw",
     error_type = "MysqlFdwError"
