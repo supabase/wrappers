@@ -61,6 +61,7 @@ nav:
   - Contributing:
       - Building the Docs: "contributing/documentation.md"
       - Core Development: "contributing/core.md"
+      - Security Internals: "contributing/security.md"
       - Developing a Native Wrapper:
           - Quick Start: "contributing/native.md"
       - Developing a Wasm Wrapper:
