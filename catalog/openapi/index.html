@@ -476,6 +476,8 @@
       
         
       
+        
+      
     
     
     
@@ -793,6 +795,34 @@
     
   
     Logflare
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mongodb/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MongoDB
   
 
     
@@ -1773,6 +1803,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#per-request-credentials-session-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Per-request credentials (session variables)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#response-path-extraction" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2313,6 +2354,8 @@
       
         
       
+        
+      
     
     
     
@@ -2422,6 +2465,34 @@
   
   
   
+    <li class="md-nav__item">
+      <a href="../../contributing/security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security Internals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
     
     
       
@@ -2442,10 +2513,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_3" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_4" >
         
           
-          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="0">
             
   
   
@@ -2463,8 +2534,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_3">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_4">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2538,10 +2609,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_4" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_5" >
         
           
-          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4_5" id="__nav_4_5_label" tabindex="0">
             
   
   
@@ -2559,8 +2630,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_4">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_5">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -3068,6 +3139,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#per-request-credentials-session-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Per-request credentials (session variables)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#response-path-extraction" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3153,6 +3235,12 @@
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>0.2.1</td>
+<td><code>https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.2.1/openapi_fdw.wasm</code></td>
+<td><code>12c902f3089e18142a1d8d35c66b9ceb85c193224229687bd929aff6b44cddde</code></td>
+<td>&gt;=0.6.2</td>
+</tr>
 <tr>
 <td>0.2.0</td>
 <td><code>https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.2.0/openapi_fdw.wasm</code></td>
@@ -3309,6 +3397,16 @@
 <td><code>bearer_token_id</code></td>
 <td style="text-align: center;">No</td>
 <td>Vault secret key ID storing the bearer token.</td>
+</tr>
+<tr>
+<td><code>auth_token_setting</code></td>
+<td style="text-align: center;">No</td>
+<td>Name of a Postgres session variable (GUC) to read the auth token from at request time, e.g. <code>app.api_token</code>. When set and non-empty it overrides any static credential for that request. See <a href="#per-request-credentials-session-variables">Per-request credentials</a>.</td>
+</tr>
+<tr>
+<td><code>auth_token_prefix</code></td>
+<td style="text-align: center;">No</td>
+<td>Prefix for the <code>auth_token_setting</code> value in the Authorization header (default: <code>Bearer</code>). Set to an empty string to send the raw token.</td>
 </tr>
 <tr>
 <td><code>user_agent</code></td>
@@ -3802,7 +3900,7 @@
 <ul>
 <li><strong>Read-only</strong>: This FDW only supports SELECT operations. INSERT, UPDATE, and DELETE are not supported at this time.</li>
 <li><strong>No transactions</strong>: Each SQL statement results in immediate HTTP requests; there is no transactional grouping.</li>
-<li><strong>Authentication</strong>: Currently supports API Key and Bearer Token authentication. OAuth flows are not supported.</li>
+<li><strong>Authentication</strong>: Supports API Key and Bearer Token authentication, either static (server option or Vault) or resolved per request from a session variable (see <a href="#per-request-credentials-session-variables">Per-request credentials</a>). The FDW does not run OAuth flows itself, but a session variable lets you supply a token your application already obtained.</li>
 <li><strong>OpenAPI version</strong>: Only OpenAPI 3.0+ specifications are supported (not Swagger 2.0).</li>
 </ul>
 <h2 id="automatic-retries">Automatic Retries</h2>
@@ -3967,6 +4065,53 @@
 <span class="w">    </span><span class="n">api_key_location</span><span class="w"> </span><span class="s1">&#39;query&#39;</span><span class="w">  </span><span class="c1">-- sends as ?api_key=sk-... (uses api_key_header as param name)</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
+<h3 id="per-request-credentials-session-variables">Per-request credentials (session variables)</h3>
+<p>A server's credential is normally fixed when the server is created. To vary it per request (for example, per-user OAuth tokens in a multi-tenant app) set <code>auth_token_setting</code> to the name of a Postgres session variable, then resolve that variable per query with a <code>SECURITY DEFINER</code> function:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">per_user_api</span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/supabase/wrappers/releases/download/wasm_openapi_fdw_v0.2.0/openapi_fdw.wasm&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;supabase:openapi-fdw&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.2.0&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;f0d4d6e50f7c519a66363bd8bdbe1ea8086ca810ca14b43fb0ed18b64acdf6aa&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">base_url</span><span class="w"> </span><span class="s1">&#39;https://api.example.com&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">auth_token_setting</span><span class="w"> </span><span class="s1">&#39;app.api_token&#39;</span><span class="w">  </span><span class="c1">-- read the token from this session variable each request</span>
+<span class="w">  </span><span class="p">);</span>
+
+<span class="c1">-- Resolve the calling user&#39;s token (e.g. from an RLS-protected table keyed to</span>
+<span class="c1">-- auth.uid()) and pin it for the life of the transaction:</span>
+<span class="k">create</span><span class="w"> </span><span class="k">function</span><span class="w"> </span><span class="n">set_api_token</span><span class="p">()</span><span class="w"> </span><span class="k">returns</span><span class="w"> </span><span class="n">void</span>
+<span class="w">  </span><span class="k">language</span><span class="w"> </span><span class="k">sql</span><span class="w"> </span><span class="k">security</span><span class="w"> </span><span class="k">definer</span><span class="w"> </span><span class="k">set</span><span class="w"> </span><span class="n">search_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="err">$$</span>
+<span class="w">  </span><span class="k">select</span><span class="w"> </span><span class="n">set_config</span><span class="p">(</span><span class="s1">&#39;app.api_token&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="p">(</span><span class="k">select</span><span class="w"> </span><span class="n">access_token</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="k">public</span><span class="p">.</span><span class="n">user_tokens</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">user_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">auth</span><span class="p">.</span><span class="n">uid</span><span class="p">()),</span>
+<span class="w">    </span><span class="k">true</span><span class="p">);</span>
+<span class="err">$$</span><span class="p">;</span>
+
+<span class="k">select</span><span class="w"> </span><span class="n">set_api_token</span><span class="p">();</span>
+<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">some_foreign_table</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<p>On each request the FDW reads <code>app.api_token</code> and sends it as <code>Authorization: Bearer &lt;token&gt;</code>. If the variable is unset or empty no token is injected, and any static credential on the server still applies. Use <code>auth_token_prefix</code> to change the <code>Bearer</code> prefix, or set it to an empty string to send the raw token.</p>
 <h3 id="response-path-extraction">Response Path Extraction</h3>
 <p>For APIs that wrap data in a container object:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>

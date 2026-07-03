@@ -9,16 +9,16 @@
         <meta name="description" content="A PostgreSQL extension for connecting to external data sources">
       
       
-        <meta name="author" content="supabase">
+        <meta name="author" content="Supabase">
       
       
-        <link rel="canonical" href="https://supabase.github.io/wrappers/catalog/dynamodb/">
+        <link rel="canonical" href="https://supabase.github.io/wrappers/catalog/mongodb/">
       
       
-        <link rel="prev" href="../duckdb/">
+        <link rel="prev" href="../logflare/">
       
       
-        <link rel="next" href="../firebase/">
+        <link rel="next" href="../mysql/">
       
       
         
@@ -29,7 +29,7 @@
     
     
       
-        <title>DynamoDB - Wrappers</title>
+        <title>MongoDB - Wrappers</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#aws-dynamodb" class="md-skip">
+        <a href="#mongodb" class="md-skip">
           Skip to content
         </a>
       
@@ -115,7 +115,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              DynamoDB
+              MongoDB
             
           </span>
         </div>
@@ -700,37 +700,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    DynamoDB
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../dynamodb/" class="md-nav__link">
         
   
   
@@ -746,381 +719,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#preparation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Preparation
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Preparation">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#enable-wrappers" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Enable Wrappers
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#enable-the-dynamodb-wrapper" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Enable the DynamoDB Wrapper
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#store-your-credentials-optional" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Store your credentials (optional)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#connecting-to-dynamodb" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Connecting to DynamoDB
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Connecting to DynamoDB">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#additional-server-options" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Additional Server Options
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#create-a-schema" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Create a schema
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#options" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Options
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#entities" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Entities
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Entities">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#dynamodb-tables" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        DynamoDB Tables
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="DynamoDB Tables">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#operations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Operations
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Usage
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#notes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Notes
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#query-pushdown-support" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Query Pushdown Support
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Query Pushdown Support">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#query-efficient-uses-dynamodb-query-api" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Query (efficient — uses DynamoDB Query API)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#scan-full-table-uses-dynamodb-scan-api" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Scan (full table — uses DynamoDB Scan API)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#supported-operators" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Supported Operators
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#supported-data-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Supported Data Types
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#limitations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Limitations
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Examples
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Examples">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#basic-setup" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Basic setup
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#import-all-tables-automatically" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Import all tables automatically
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#create-a-foreign-table-manually" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Create a foreign table manually
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#query-with-partition-key-pushdown" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Query with partition key pushdown
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#query-with-filter-full-scan" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Query with filter (full scan)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#insert-a-new-item" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Insert a new item
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#update-specific-attributes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Update specific attributes
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#delete-an-item" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Delete an item
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#using-dynamodb-local-for-development" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Using DynamoDB Local for development
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1214,10 +812,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../mongodb/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MongoDB
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1233,6 +858,298 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#preparation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Preparation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Preparation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#enable-wrappers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enable Wrappers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#enable-the-mongodb-wrapper" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enable the MongoDB Wrapper
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#store-your-credentials-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Store your credentials (optional)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#connecting-to-mongodb" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Connecting to MongoDB
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#create-a-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Create a schema
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Options
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#entities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Entities
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Entities">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#collections" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Collections
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Collections">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Operations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#schema-mapping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schema Mapping
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#query-pushdown-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Query Pushdown Support
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Query Pushdown Support">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#supported-operators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supported Operators
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#supported-data-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supported Data Types
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#writes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Writes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Basic example
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#data-modification-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data modification example
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-vault-for-credentials" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using Vault for credentials
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -2679,10 +2596,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#enable-the-dynamodb-wrapper" class="md-nav__link">
+  <a href="#enable-the-mongodb-wrapper" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Enable the DynamoDB Wrapper
+        Enable the MongoDB Wrapper
       
     </span>
   </a>
@@ -2701,30 +2618,13 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#connecting-to-dynamodb" class="md-nav__link">
+  <a href="#connecting-to-mongodb" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Connecting to DynamoDB
+        Connecting to MongoDB
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Connecting to DynamoDB">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#additional-server-options" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Additional Server Options
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
@@ -2768,15 +2668,15 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#dynamodb-tables" class="md-nav__link">
+  <a href="#collections" class="md-nav__link">
     <span class="md-ellipsis">
       
-        DynamoDB Tables
+        Collections
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="DynamoDB Tables">
+    <nav class="md-nav" aria-label="Collections">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2823,6 +2723,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#schema-mapping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schema Mapping
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#query-pushdown-support" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2833,28 +2744,6 @@
   
     <nav class="md-nav" aria-label="Query Pushdown Support">
       <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#query-efficient-uses-dynamodb-query-api" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Query (efficient — uses DynamoDB Query API)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#scan-full-table-uses-dynamodb-scan-api" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Scan (full table — uses DynamoDB Scan API)
-      
-    </span>
-  </a>
-  
-</li>
         
           <li class="md-nav__item">
   <a href="#supported-operators" class="md-nav__link">
@@ -2877,6 +2766,17 @@
     <span class="md-ellipsis">
       
         Supported Data Types
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#writes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Writes
       
     </span>
   </a>
@@ -2907,10 +2807,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#basic-setup" class="md-nav__link">
+  <a href="#basic-example" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Basic setup
+        Basic example
       
     </span>
   </a>
@@ -2918,10 +2818,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#import-all-tables-automatically" class="md-nav__link">
+  <a href="#data-modification-example" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Import all tables automatically
+        Data modification example
       
     </span>
   </a>
@@ -2929,76 +2829,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#create-a-foreign-table-manually" class="md-nav__link">
+  <a href="#using-vault-for-credentials" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Create a foreign table manually
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#query-with-partition-key-pushdown" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Query with partition key pushdown
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#query-with-filter-full-scan" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Query with filter (full scan)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#insert-a-new-item" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Insert a new item
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#update-specific-attributes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Update specific attributes
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#delete-an-item" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Delete an item
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#using-dynamodb-local-for-development" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Using DynamoDB Local for development
+        Using Vault for credentials
       
     </span>
   </a>
@@ -3034,13 +2868,6 @@
         <a href="../../tags/#tag:native" class="md-tag">native</a>
       
     
-      
-      
-      
-      
-        <a href="../../tags/#tag:official" class="md-tag">official</a>
-      
-    
   </nav>
 
 
@@ -3048,78 +2875,50 @@
   
 
 
-<h1 id="aws-dynamodb">AWS DynamoDB</h1>
-<p><a href="https://aws.amazon.com/dynamodb/">AWS DynamoDB</a> is a fully managed, serverless, key-value NoSQL database designed to run high-performance applications at any scale.</p>
-<p>The DynamoDB Wrapper allows you to read and write DynamoDB table data within your Postgres database.</p>
+<h1 id="mongodb">MongoDB</h1>
+<p><a href="https://www.mongodb.com/">MongoDB</a> is a popular open-source document database that stores data as flexible BSON documents.</p>
+<p>The MongoDB Wrapper allows you to read and write data from MongoDB within your Postgres database. Top-level BSON fields are mapped to declared columns by exact name; missing fields surface as SQL <code>NULL</code>. A special <code>_doc jsonb</code> column receives the full document for nested and array access.</p>
 <h2 id="preparation">Preparation</h2>
-<p>Before you can query DynamoDB, you need to enable the Wrappers extension and store your credentials in Postgres.</p>
+<p>Before you can query MongoDB, you need to enable the Wrappers extension and store your credentials in Postgres.</p>
 <h3 id="enable-wrappers">Enable Wrappers</h3>
 <p>Make sure the <code>wrappers</code> extension is installed on your database:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">extension</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">wrappers</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">extensions</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
-<h3 id="enable-the-dynamodb-wrapper">Enable the DynamoDB Wrapper</h3>
-<p>Enable the <code>dynamodb_wrapper</code> FDW:</p>
+<h3 id="enable-the-mongodb-wrapper">Enable the MongoDB Wrapper</h3>
+<p>Enable the <code>mongodb_wrapper</code> FDW:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
-<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">dynamodb_wrapper</span>
-<span class="w">  </span><span class="k">handler</span><span class="w"> </span><span class="n">dynamo_db_fdw_handler</span>
-<span class="w">  </span><span class="k">validator</span><span class="w"> </span><span class="n">dynamo_db_fdw_validator</span><span class="p">;</span>
+<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">mongodb_wrapper</span>
+<span class="w">  </span><span class="k">handler</span><span class="w"> </span><span class="n">mongodb_fdw_handler</span>
+<span class="w">  </span><span class="k">validator</span><span class="w"> </span><span class="n">mongodb_fdw_validator</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 <h3 id="store-your-credentials-optional">Store your credentials (optional)</h3>
 <p>By default, Postgres stores FDW credentials inside <code>pg_catalog.pg_foreign_server</code> in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with <a href="https://supabase.com/docs/guides/database/vault">Vault</a>, which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span>
-<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Save your AWS access key ID in Vault</span>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Save your MongoDB connection string in Vault and retrieve the created `key_id`</span>
 <span class="k">select</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">create_secret</span><span class="p">(</span>
-<span class="w">  </span><span class="s1">&#39;&lt;access key id&gt;&#39;</span><span class="p">,</span>
-<span class="w">  </span><span class="s1">&#39;dynamodb_access_key_id&#39;</span><span class="p">,</span>
-<span class="w">  </span><span class="s1">&#39;AWS access key ID for DynamoDB Wrappers&#39;</span>
-<span class="p">);</span>
-
-<span class="c1">-- Save your AWS secret access key in Vault</span>
-<span class="k">select</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">create_secret</span><span class="p">(</span>
-<span class="w">  </span><span class="s1">&#39;&lt;secret access key&gt;&#39;</span><span class="p">,</span>
-<span class="w">  </span><span class="s1">&#39;dynamodb_secret_access_key&#39;</span><span class="p">,</span>
-<span class="w">  </span><span class="s1">&#39;AWS secret access key for DynamoDB Wrappers&#39;</span>
+<span class="w">  </span><span class="s1">&#39;mongodb://user:password@host:27017/?replicaSet=rs0&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="s1">&#39;mongodb&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="s1">&#39;MongoDB connection string for Wrappers&#39;</span>
 <span class="p">);</span>
 </code></pre></div></td></tr></table></div>
-<h3 id="connecting-to-dynamodb">Connecting to DynamoDB</h3>
-<p>We need to provide Postgres with the credentials to connect to DynamoDB. We can do this using the <code>create server</code> command.</p>
+<h3 id="connecting-to-mongodb">Connecting to MongoDB</h3>
+<p>We need to provide Postgres with the credentials to connect to MongoDB, and any additional options. We can do this using the <code>create server</code> command:</p>
 <div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">With Vault</label><label for="__tabbed_1_2">Without Vault</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">dynamodb_server</span>
-<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">dynamodb_wrapper</span>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">mongo_server</span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">mongodb_wrapper</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="c1">-- The key id saved in Vault from above</span>
-<span class="w">    </span><span class="n">vault_access_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;vault_key_id&gt;&#39;</span><span class="p">,</span>
-
-<span class="w">    </span><span class="c1">-- The secret id saved in Vault from above</span>
-<span class="w">    </span><span class="n">vault_secret_access_key</span><span class="w"> </span><span class="s1">&#39;&lt;vault_secret_id&gt;&#39;</span><span class="p">,</span>
-
-<span class="w">    </span><span class="c1">-- AWS region where your DynamoDB table(s) reside</span>
-<span class="w">    </span><span class="n">region</span><span class="w"> </span><span class="s1">&#39;us-east-1&#39;</span>
+<span class="w">    </span><span class="n">conn_string_id</span><span class="w"> </span><span class="s1">&#39;&lt;key_ID&gt;&#39;</span><span class="w"> </span><span class="c1">-- The Key ID from above.</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 </div>
@@ -3128,125 +2927,43 @@
 <span class="normal">2</span>
 <span class="normal">3</span>
 <span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span>
-<span class="normal">7</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">dynamodb_server</span>
-<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">dynamodb_wrapper</span>
+<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">mongo_server</span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">mongodb_wrapper</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">aws_access_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;your_access_key_id&gt;&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">aws_secret_access_key</span><span class="w"> </span><span class="s1">&#39;&lt;your_secret_access_key&gt;&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">region</span><span class="w"> </span><span class="s1">&#39;us-east-1&#39;</span>
+<span class="w">    </span><span class="n">conn_string</span><span class="w"> </span><span class="s1">&#39;mongodb://user:password@host:27017/?replicaSet=rs0&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 </div>
 </div>
 </div>
-<h4 id="additional-server-options">Additional Server Options</h4>
-<table>
-<thead>
-<tr>
-<th>Option</th>
-<th style="text-align: center;">Required</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>region</code></td>
-<td style="text-align: center;">Yes</td>
-<td>AWS region where your DynamoDB tables reside (e.g. <code>us-east-1</code>)</td>
-</tr>
-<tr>
-<td><code>endpoint_url</code></td>
-<td style="text-align: center;">No</td>
-<td>Custom endpoint URL, useful for local development with DynamoDB Local</td>
-</tr>
-</tbody>
-</table>
+<p>The connection string follows the standard MongoDB URI format and supports <code>mongodb://</code> and <code>mongodb+srv://</code> schemes. Credentials, TLS options, replica set names, and other driver options can all be encoded in the URI.</p>
+<p>Some connection string examples:</p>
+<ul>
+<li><code>mongodb://root:secret@localhost:27017/</code></li>
+<li><code>mongodb://app_user:password@db.example.com:27017/?tls=true</code></li>
+<li><code>mongodb://user:pass@host1:27017,host2:27017/?replicaSet=rs0</code></li>
+<li><code>mongodb+srv://user:password@cluster0.mcqtkst.mongodb.net/?appName=Cluster0</code></li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">MongoDB Atlas IP Access List</p>
+<p>If you connect to MongoDB Atlas, you must allow network access from your Supabase database server in Atlas <strong>Network Access / IP Access List</strong>.</p>
+<p>Supabase database server egress IP addresses are dynamic and there is no fixed IP range you can safelist. In practice, this often means allowing <code>0.0.0.0/0</code> in Atlas to make the connection work.</p>
+<p>If you are concerned about this security risk, place a proxy or gateway with a fixed public IP between your Supabase database instance and MongoDB, and safelist only that proxy IP in Atlas.</p>
+</div>
 <h3 id="create-a-schema">Create a schema</h3>
 <p>We recommend creating a schema to hold all the foreign tables:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">;</span>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">mongo</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 <h2 id="options">Options</h2>
-<p>The full list of foreign table options are below:</p>
-<table>
-<thead>
-<tr>
-<th>Option</th>
-<th style="text-align: center;">Required</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>table</code></td>
-<td style="text-align: center;">Yes</td>
-<td>The DynamoDB table name to query</td>
-</tr>
-<tr>
-<td><code>rowid_column</code></td>
-<td style="text-align: center;">No</td>
-<td>The column to use as the row identifier for <code>UPDATE</code> and <code>DELETE</code> operations. Must be the partition key column. Required for write operations.</td>
-</tr>
-</tbody>
-</table>
-<h2 id="entities">Entities</h2>
-<p>We can use SQL <a href="https://www.postgresql.org/docs/current/sql-importforeignschema.html">import foreign schema</a> to automatically create foreign table definitions from your DynamoDB tables.</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">dynamodb</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">dynamodb_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">;</span>
-</code></pre></div></td></tr></table></div>
-<p>This will call <code>ListTables</code> and <code>DescribeTable</code> for each table and generate a <code>CREATE FOREIGN TABLE</code> statement with:</p>
+<p>The following options are available when creating MongoDB foreign tables:</p>
 <ul>
-<li>Key columns (partition key and optional sort key) typed as <code>text</code></li>
-<li>A <code>_attrs jsonb</code> catch-all column that captures every non-key attribute as a JSON object</li>
+<li><code>database</code> - MongoDB database name, required</li>
+<li><code>collection</code> - MongoDB collection name, required</li>
+<li><code>rowid_column</code> - Column to use as the row identifier, optional for data scan, required for data modify. The conventional value is <code>_id</code>.</li>
 </ul>
-<p>For example, a DynamoDB table <code>users</code> with partition key <code>id</code> and attributes <code>name</code>, <code>age</code>, and <code>active</code> would produce:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">id</span><span class="w">    </span><span class="nb">text</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">null</span><span class="p">,</span>
-<span class="w">  </span><span class="n">_attrs</span><span class="w"> </span><span class="n">jsonb</span>
-<span class="p">)</span>
-<span class="n">server</span><span class="w"> </span><span class="n">dynamodb_server</span>
-<span class="k">options</span><span class="w"> </span><span class="p">(</span><span class="k">table</span><span class="w"> </span><span class="s1">&#39;users&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">rowid_column</span><span class="w"> </span><span class="s1">&#39;id&#39;</span><span class="p">);</span>
-</code></pre></div></td></tr></table></div>
-<p>You can then access individual attributes via standard JSON operators:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span>
-<span class="w">  </span><span class="n">id</span><span class="p">,</span>
-<span class="w">  </span><span class="n">_attrs</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;name&#39;</span><span class="w">           </span><span class="k">as</span><span class="w"> </span><span class="n">name</span><span class="p">,</span>
-<span class="w">  </span><span class="p">(</span><span class="n">_attrs</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;age&#39;</span><span class="p">)::</span><span class="nb">integer</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">age</span><span class="p">,</span>
-<span class="w">  </span><span class="p">(</span><span class="n">_attrs</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;active&#39;</span><span class="p">)::</span><span class="nb">boolean</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">active</span>
-<span class="k">from</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">.</span><span class="n">users</span><span class="p">;</span>
-</code></pre></div></td></tr></table></div>
-<p>The <code>_attrs</code> name was chosen to avoid conflicts with real DynamoDB attribute names. If you need typed columns or a different layout, create the foreign table manually instead (see <a href="#create-a-foreign-table-manually">Create a foreign table manually</a>).</p>
-<p>You can also limit the import to specific tables:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span>
-<span class="normal">7</span>
-<span class="normal">8</span>
-<span class="normal">9</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Import only specific tables</span>
-<span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">dynamodb</span>
-<span class="w">  </span><span class="k">limit</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="p">(</span><span class="n">users</span><span class="p">,</span><span class="w"> </span><span class="n">orders</span><span class="p">)</span>
-<span class="w">  </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">dynamodb_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">;</span>
-
-<span class="c1">-- Import all tables except specific ones</span>
-<span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">dynamodb</span>
-<span class="w">  </span><span class="k">except</span><span class="w"> </span><span class="p">(</span><span class="n">staging_table</span><span class="p">)</span>
-<span class="w">  </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">dynamodb_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">;</span>
-</code></pre></div></td></tr></table></div>
-<h3 id="dynamodb-tables">DynamoDB Tables</h3>
-<p>Each foreign table maps to one DynamoDB table.</p>
+<h2 id="entities">Entities</h2>
+<h3 id="collections">Collections</h3>
+<p>The MongoDB Wrapper supports data reads and writes from MongoDB collections.</p>
 <h4 id="operations">Operations</h4>
 <table>
 <thead>
@@ -3261,7 +2978,7 @@
 </thead>
 <tbody>
 <tr>
-<td>Table</td>
+<td>Collections</td>
 <td style="text-align: center;">✅</td>
 <td style="text-align: center;">✅</td>
 <td style="text-align: center;">✅</td>
@@ -3282,177 +2999,193 @@
 <span class="normal"> 9</span>
 <span class="normal">10</span>
 <span class="normal">11</span>
-<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">.</span><span class="n">users</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="normal">12</span>
+<span class="normal">13</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">mongo</span><span class="p">.</span><span class="n">users</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
 <span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">age</span><span class="w"> </span><span class="nb">bigint</span><span class="p">,</span>
-<span class="w">  </span><span class="n">active</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span>
-<span class="w">  </span><span class="n">metadata</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="w">  </span><span class="n">age</span><span class="w"> </span><span class="nb">int</span><span class="p">,</span>
+<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
+<span class="w">  </span><span class="n">_doc</span><span class="w"> </span><span class="n">jsonb</span>
 <span class="p">)</span>
-<span class="n">server</span><span class="w"> </span><span class="n">dynamodb_server</span>
-<span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="k">table</span><span class="w"> </span><span class="s1">&#39;users&#39;</span><span class="p">,</span>
-<span class="w">  </span><span class="n">rowid_column</span><span class="w"> </span><span class="s1">&#39;id&#39;</span>
-<span class="p">);</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">mongo_server</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">database</span><span class="w"> </span><span class="s1">&#39;app&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">collection</span><span class="w"> </span><span class="s1">&#39;users&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">rowid_column</span><span class="w"> </span><span class="s1">&#39;_id&#39;</span>
+<span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
 <h4 id="notes">Notes</h4>
 <ul>
-<li>Column names in the foreign table must match the DynamoDB attribute names exactly (case-sensitive).</li>
-<li>Any DynamoDB attribute not listed as a column is silently ignored during reads, <strong>except</strong> when a <code>jsonb</code> column has no matching DynamoDB attribute by name — in that case it acts as a catch-all and receives all attributes not covered by any other declared column. This is how the <code>_attrs</code> column generated by <code>import_foreign_schema</code> works.</li>
-<li><code>INSERT</code> uses DynamoDB's <code>PutItem</code> operation, which <strong>replaces the entire item</strong> if an item with the same key already exists. Use <code>UPDATE</code> for partial attribute changes.</li>
-<li><code>UPDATE</code> and <code>DELETE</code> require <code>rowid_column</code> to be set to the partition key column name.</li>
+<li>Supports <code>where</code>, <code>order by</code>, and <code>limit</code> clause pushdown</li>
+<li>Documents are streamed one at a time from MongoDB; no full buffering in memory</li>
+<li>A column named <code>_doc</code> of type <code>jsonb</code> receives the complete document and can be used with Postgres JSON operators (<code>-&gt;</code>, <code>-&gt;&gt;</code>) to access nested fields and arrays</li>
+<li>When <code>rowid_column</code> is set, INSERT, UPDATE, and DELETE are supported</li>
 </ul>
+<h2 id="schema-mapping">Schema Mapping</h2>
+<p>Each column declared on the foreign table maps to a top-level BSON field of the same name (exact match):</p>
+<ul>
+<li>If a document does not contain a field, the corresponding column is set to <code>NULL</code>.</li>
+<li>Dots in column names are treated as literal characters — they do not traverse embedded documents. Use the <code>_doc</code> column for nested field access.</li>
+<li>If a column named <code>_doc</code> of type <code>jsonb</code> is declared, it receives the full BSON document serialized as JSON. When <code>_doc</code> is declared, projection is disabled so that the complete document is returned from MongoDB.</li>
+</ul>
+<p>Example: access a nested <code>address.city</code> field via <code>_doc</code>:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="n">_doc</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;name&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">_doc</span><span class="o">-&gt;</span><span class="s1">&#39;address&#39;</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;city&#39;</span>
+<span class="k">from</span><span class="w"> </span><span class="n">mongo</span><span class="p">.</span><span class="n">users</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
 <h2 id="query-pushdown-support">Query Pushdown Support</h2>
-<p>The DynamoDB Wrapper supports two scan strategies depending on the <code>WHERE</code> clause:</p>
-<h3 id="query-efficient-uses-dynamodb-query-api">Query (efficient — uses DynamoDB <code>Query</code> API)</h3>
-<p>When a <code>WHERE</code> clause includes an <strong>equality filter on the partition key</strong>, the wrapper uses the DynamoDB <code>Query</code> API. This reads only the items matching the partition key, consuming far fewer read capacity units than a full scan.</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Uses Query API (efficient)</span>
-<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">.</span><span class="n">users</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;user123&#39;</span><span class="p">;</span>
-</code></pre></div></td></tr></table></div>
-<p>Additional conditions on the sort key (if the table has one) are also pushed down as key condition expressions:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Uses Query API with sort key condition</span>
-<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">.</span><span class="n">orders</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">customer_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;cust1&#39;</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">order_date</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="s1">&#39;2024-01-01&#39;</span><span class="p">;</span>
-</code></pre></div></td></tr></table></div>
-<h3 id="scan-full-table-uses-dynamodb-scan-api">Scan (full table — uses DynamoDB <code>Scan</code> API)</h3>
-<p>When no partition key equality filter is present, the wrapper performs a full <code>Scan</code>. Non-key column filters are sent as a <code>FilterExpression</code>, which reduces the data transferred over the network but <strong>does not reduce the read capacity units consumed</strong> — DynamoDB reads every item before applying the filter.</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Full Scan with FilterExpression (expensive on large tables)</span>
-<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">.</span><span class="n">users</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">age</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">30</span><span class="p">;</span>
-
-<span class="c1">-- Full Scan, no filter</span>
-<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">.</span><span class="n">users</span><span class="p">;</span>
-</code></pre></div></td></tr></table></div>
+<p>This FDW supports <code>where</code>, <code>order by</code>, and <code>limit</code> clause pushdown.</p>
 <h3 id="supported-operators">Supported Operators</h3>
+<p>The following SQL predicates are translated to MongoDB filter operators:</p>
 <table>
 <thead>
 <tr>
-<th>Operator</th>
-<th style="text-align: center;">Pushdown</th>
+<th>SQL predicate</th>
+<th>MongoDB filter</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>=</code></td>
-<td style="text-align: center;">✅</td>
+<td><code>{field: {$eq: v}}</code></td>
+</tr>
+<tr>
+<td><code>!=</code></td>
+<td><code>{field: {$ne: v}}</code></td>
 </tr>
 <tr>
 <td><code>&lt;</code></td>
-<td style="text-align: center;">✅</td>
+<td><code>{field: {$lt: v}}</code></td>
 </tr>
 <tr>
 <td><code>&lt;=</code></td>
-<td style="text-align: center;">✅</td>
+<td><code>{field: {$lte: v}}</code></td>
 </tr>
 <tr>
 <td><code>&gt;</code></td>
-<td style="text-align: center;">✅</td>
+<td><code>{field: {$gt: v}}</code></td>
 </tr>
 <tr>
 <td><code>&gt;=</code></td>
-<td style="text-align: center;">✅</td>
+<td><code>{field: {$gte: v}}</code></td>
 </tr>
 <tr>
-<td><code>&lt;&gt;</code></td>
-<td style="text-align: center;">✅</td>
+<td><code>IN (...)</code></td>
+<td><code>{field: {$in: [...]}}</code></td>
 </tr>
 <tr>
-<td><code>LIKE</code></td>
-<td style="text-align: center;">❌</td>
+<td><code>NOT IN (...)</code></td>
+<td><code>{field: {$nin: [...]}}</code></td>
 </tr>
 <tr>
-<td><code>IN</code></td>
-<td style="text-align: center;">❌</td>
+<td><code>IS NULL</code></td>
+<td><code>{field: {$eq: null}}</code></td>
+</tr>
+<tr>
+<td><code>IS NOT NULL</code></td>
+<td><code>{field: {$ne: null}}</code></td>
 </tr>
 </tbody>
 </table>
-<div class="admonition warning">
-<p class="admonition-title">Scan costs on large tables</p>
-<p>Full table scans on large DynamoDB tables consume significant read capacity and can be slow. Always include a partition key equality filter when querying large tables.</p>
-</div>
+<p>Multiple <code>where</code> predicates are AND'd at the top level of the filter document. Array-form predicates like <code>IN (...)</code> / <code>NOT IN (...)</code> (and the equivalent <code>= ANY(ARRAY[...])</code> / <code>&lt;&gt; ALL(ARRAY[...])</code>) are pushed down as <code>$in</code> / <code>$nin</code>. Arbitrary <code>OR</code> predicates between unrelated columns are not pushed down — they are re-checked by Postgres. Any predicate shape that is not supported is omitted from the MongoDB filter and re-checked by Postgres after the rows are returned, so the result is always correct.</p>
 <h2 id="supported-data-types">Supported Data Types</h2>
 <table>
 <thead>
 <tr>
+<th>BSON Type</th>
 <th>Postgres Type</th>
-<th>DynamoDB Attribute Type</th>
+<th>Notes</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>boolean</code></td>
-<td>Boolean (BOOL)</td>
+<td>Boolean</td>
+<td>bool</td>
+<td></td>
 </tr>
 <tr>
-<td><code>text</code></td>
-<td>String (S), Number (N as string), or default</td>
+<td>Int32</td>
+<td>int2 / int4 / int8</td>
+<td></td>
 </tr>
 <tr>
-<td><code>smallint</code></td>
-<td>Number (N)</td>
+<td>Int64</td>
+<td>int8 / numeric</td>
+<td></td>
 </tr>
 <tr>
-<td><code>integer</code></td>
-<td>Number (N)</td>
+<td>Double</td>
+<td>float8 / float4</td>
+<td></td>
 </tr>
 <tr>
-<td><code>bigint</code></td>
-<td>Number (N)</td>
+<td>Decimal128</td>
+<td>numeric</td>
+<td></td>
 </tr>
 <tr>
-<td><code>real</code></td>
-<td>Number (N)</td>
+<td>String</td>
+<td>text / varchar</td>
+<td></td>
 </tr>
 <tr>
-<td><code>double precision</code></td>
-<td>Number (N)</td>
+<td>ObjectId</td>
+<td>text</td>
+<td>Returned as a 24-character lowercase hex string. A 24-char hex value in a qual is coerced back to <code>ObjectId</code> for the filter.</td>
 </tr>
 <tr>
-<td><code>numeric</code></td>
-<td>Number (N)</td>
+<td>DateTime</td>
+<td>timestamp / timestamptz</td>
+<td></td>
 </tr>
 <tr>
-<td><code>date</code></td>
-<td>String (S, ISO 8601 format)</td>
+<td>Document</td>
+<td>jsonb</td>
+<td></td>
 </tr>
 <tr>
-<td><code>timestamp</code></td>
-<td>String (S, ISO 8601 format)</td>
+<td>Array</td>
+<td>jsonb</td>
+<td></td>
 </tr>
 <tr>
-<td><code>timestamptz</code></td>
-<td>String (S, ISO 8601 format)</td>
+<td>Binary</td>
+<td>bytea</td>
+<td></td>
 </tr>
 <tr>
-<td><code>bytea</code></td>
-<td>Binary (B)</td>
-</tr>
-<tr>
-<td><code>jsonb</code></td>
-<td>List (L), Map (M), String Set (SS), Number Set (NS), Binary Set (BS)</td>
+<td>Null / missing</td>
+<td>any</td>
+<td>Column is set to <code>NULL</code></td>
 </tr>
 </tbody>
 </table>
-<p>DynamoDB stores numbers as strings internally. The wrapper coerces them to the declared Postgres column type at read time. If no numeric type is declared, numbers are returned as <code>text</code>.</p>
-<p>Compound types (List, Map, String Set, Number Set, Binary Set) are always converted to <code>jsonb</code>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><code>_id</code> fields that are <code>ObjectId</code> values are returned as their 24-character hex representation. When querying by <code>_id</code> with a 24-character hex string, the value is automatically coerced back to an <code>ObjectId</code> for the filter — no explicit casting is required.</p>
+</div>
+<h2 id="writes">Writes</h2>
+<p>INSERT, UPDATE, and DELETE are enabled when <code>rowid_column</code> is set on the foreign table.</p>
+<ul>
+<li><strong>INSERT</strong>: Each non-null column is written as a top-level BSON field. Null columns are omitted entirely (not stored as explicit BSON nulls). If <code>_id</code> is not supplied, MongoDB generates an <code>ObjectId</code> automatically.</li>
+<li><strong>UPDATE</strong>: Non-null columns are passed to <code>$set</code>; null columns are passed to <code>$unset</code>, which removes the field from the document. The document is located by matching <code>rowid_column</code>.</li>
+<li><strong>DELETE</strong>: The document matching <code>rowid_column = rowid</code> is deleted via <code>delete_one</code>.</li>
+</ul>
 <h2 id="limitations">Limitations</h2>
 <p>This section describes important limitations and considerations when using this FDW:</p>
 <ul>
-<li><code>TRUNCATE</code> is not supported. Use <code>DELETE</code> without a <code>WHERE</code> clause to remove all rows (this performs a full scan and individual <code>DeleteItem</code> calls, so it is slow on large tables).</li>
-<li>Full table scans (<code>Scan</code> API) do not reduce read capacity unit consumption even when a <code>FilterExpression</code> is used.</li>
-<li><code>LIKE</code> and <code>IN</code> operators are not pushed down — filtering is done in Postgres after fetching rows.</li>
-<li><code>UPDATE</code> cannot change partition key or sort key values, as DynamoDB does not support key updates in place.</li>
-<li><code>INSERT</code> replaces the entire item if the key already exists (<code>PutItem</code> semantics). Use <code>UPDATE</code> to add or change individual attributes without replacing the whole item.</li>
-<li>Compound DynamoDB types (List, Map, sets) are read as <code>jsonb</code> and written as a JSON string (DynamoDB String attribute). To write native DynamoDB List or Map attributes, manage items directly through the AWS SDK.</li>
-<li>Materialized views using these foreign tables may fail during logical backups.</li>
-<li>DynamoDB transactions are not supported.</li>
+<li>Aggregate pushdown is not supported — <code>COUNT</code>, <code>SUM</code>, <code>AVG</code>, <code>MIN</code>, and <code>MAX</code> are computed in Postgres after fetching rows</li>
+<li><code>import foreign schema</code> is not supported; foreign table definitions must be declared manually</li>
+<li><code>LIKE</code> predicates are not pushed down to MongoDB <code>$regex</code>; pattern matching happens in Postgres</li>
+<li>Nested field path access (e.g., <code>address.city</code>) is not supported as column names — use the <code>_doc jsonb</code> column and Postgres JSON operators instead</li>
+<li>Multi-document transactions and batched writes are not supported in v1</li>
+<li>Change streams are not supported</li>
+<li>Materialized views using foreign tables may fail during logical backups</li>
+<li>For MongoDB Atlas, Supabase egress IPs are dynamic (no fixed range). You may need to allow <code>0.0.0.0/0</code> in Atlas IP Access List, or use a proxy/gateway with a fixed IP to avoid broad public access</li>
 </ul>
 <h2 id="examples">Examples</h2>
-<h3 id="basic-setup">Basic setup</h3>
+<h3 id="basic-example">Basic example</h3>
+<p>This example shows how to query a MongoDB collection from Postgres.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -3467,51 +3200,56 @@
 <span class="normal">12</span>
 <span class="normal">13</span>
 <span class="normal">14</span>
-<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">extension</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">wrappers</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">extensions</span><span class="p">;</span>
-
-<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">dynamodb_wrapper</span>
-<span class="w">  </span><span class="k">handler</span><span class="w"> </span><span class="n">dynamo_db_fdw_handler</span>
-<span class="w">  </span><span class="k">validator</span><span class="w"> </span><span class="n">dynamo_db_fdw_validator</span><span class="p">;</span>
-
-<span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">dynamodb_server</span>
-<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">dynamodb_wrapper</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Create the server</span>
+<span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">mongo_server</span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">mongodb_wrapper</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">aws_access_key_id</span><span class="w"> </span><span class="s1">&#39;&lt;aws_access_key&gt;&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">aws_secret_access_key</span><span class="w"> </span><span class="s1">&#39;&lt;aws_secret_key&gt;&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">region</span><span class="w"> </span><span class="s1">&#39;us-east-1&#39;</span>
+<span class="w">    </span><span class="n">conn_string</span><span class="w"> </span><span class="s1">&#39;mongodb://localhost:27017/&#39;</span>
 <span class="w">  </span><span class="p">);</span>
 
-<span class="k">create</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">;</span>
-</code></pre></div></td></tr></table></div>
-<h3 id="import-all-tables-automatically">Import all tables automatically</h3>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="n">import</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">dynamodb</span>
-<span class="w">  </span><span class="k">from</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">dynamodb_server</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">;</span>
-</code></pre></div></td></tr></table></div>
-<p>Each imported table has key columns plus <code>_attrs jsonb</code> for everything else:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
-<span class="normal"> 2</span>
-<span class="normal"> 3</span>
-<span class="normal"> 4</span>
-<span class="normal"> 5</span>
-<span class="normal"> 6</span>
-<span class="normal"> 7</span>
-<span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Access non-key attributes via JSON operators</span>
-<span class="k">select</span>
-<span class="w">  </span><span class="n">id</span><span class="p">,</span>
-<span class="w">  </span><span class="n">_attrs</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;name&#39;</span><span class="w">              </span><span class="k">as</span><span class="w"> </span><span class="n">name</span><span class="p">,</span>
-<span class="w">  </span><span class="p">(</span><span class="n">_attrs</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;age&#39;</span><span class="p">)::</span><span class="nb">integer</span><span class="w">    </span><span class="k">as</span><span class="w"> </span><span class="n">age</span><span class="p">,</span>
-<span class="w">  </span><span class="p">(</span><span class="n">_attrs</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;active&#39;</span><span class="p">)::</span><span class="nb">boolean</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">active</span><span class="p">,</span>
-<span class="w">  </span><span class="n">_attrs</span><span class="o">-&gt;</span><span class="s1">&#39;tags&#39;</span><span class="w">               </span><span class="k">as</span><span class="w"> </span><span class="n">tags</span><span class="w">   </span><span class="c1">-- nested Map</span>
-<span class="k">from</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">.</span><span class="n">users</span><span class="p">;</span>
+<span class="c1">-- Create the foreign table</span>
+<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">mongo</span><span class="p">.</span><span class="n">users</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">age</span><span class="w"> </span><span class="nb">int</span><span class="p">,</span>
+<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span><span class="p">,</span>
+<span class="w">  </span><span class="n">_doc</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="p">)</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">mongo_server</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">database</span><span class="w"> </span><span class="s1">&#39;app&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">collection</span><span class="w"> </span><span class="s1">&#39;users&#39;</span>
+<span class="w">  </span><span class="p">);</span>
 
-<span class="c1">-- Partition key pushdown still works on imported tables</span>
-<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">.</span><span class="n">orders</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">order_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;ord-001&#39;</span><span class="p">;</span>
+<span class="c1">-- Query all users</span>
+<span class="k">select</span><span class="w"> </span><span class="n">_id</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">age</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">mongo</span><span class="p">.</span><span class="n">users</span><span class="p">;</span>
+
+<span class="c1">-- Filter with pushdown</span>
+<span class="k">select</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">mongo</span><span class="p">.</span><span class="n">users</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">age</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">25</span><span class="p">;</span>
+
+<span class="c1">-- Access nested fields via _doc</span>
+<span class="k">select</span><span class="w"> </span><span class="n">_doc</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;email&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">_doc</span><span class="o">-&gt;</span><span class="s1">&#39;address&#39;</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;city&#39;</span>
+<span class="k">from</span><span class="w"> </span><span class="n">mongo</span><span class="p">.</span><span class="n">users</span>
+<span class="k">where</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;Alice&#39;</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
-<h3 id="create-a-foreign-table-manually">Create a foreign table manually</h3>
+<h3 id="data-modification-example">Data modification example</h3>
+<p>This example demonstrates INSERT, UPDATE, and DELETE on a foreign table. The <code>rowid_column</code> option is required for data modification:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -3523,62 +3261,123 @@
 <span class="normal"> 9</span>
 <span class="normal">10</span>
 <span class="normal">11</span>
-<span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">.</span><span class="n">products</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">product_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">mongo</span><span class="p">.</span><span class="n">users</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
+<span class="w">  </span><span class="n">age</span><span class="w"> </span><span class="nb">int</span><span class="p">,</span>
+<span class="w">  </span><span class="n">_doc</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="p">)</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">mongo_server</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="k">database</span><span class="w"> </span><span class="s1">&#39;app&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">collection</span><span class="w"> </span><span class="s1">&#39;users&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">rowid_column</span><span class="w"> </span><span class="s1">&#39;_id&#39;</span>
+<span class="w">  </span><span class="p">);</span>
+
+<span class="c1">-- Insert a new document (_id is generated by MongoDB if omitted)</span>
+<span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">mongo</span><span class="p">.</span><span class="n">users</span><span class="w"> </span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">age</span><span class="p">)</span>
+<span class="k">values</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;Alice&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">30</span><span class="p">);</span>
+
+<span class="c1">-- Update a document (null columns remove the field via $unset)</span>
+<span class="k">update</span><span class="w"> </span><span class="n">mongo</span><span class="p">.</span><span class="n">users</span>
+<span class="k">set</span><span class="w"> </span><span class="n">age</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">31</span>
+<span class="k">where</span><span class="w"> </span><span class="n">_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;507f1f77bcf86cd799439011&#39;</span><span class="p">;</span>
+
+<span class="c1">-- Remove a field by setting it to null</span>
+<span class="k">update</span><span class="w"> </span><span class="n">mongo</span><span class="p">.</span><span class="n">users</span>
+<span class="k">set</span><span class="w"> </span><span class="n">age</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">null</span>
+<span class="k">where</span><span class="w"> </span><span class="n">_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;507f1f77bcf86cd799439011&#39;</span><span class="p">;</span>
+
+<span class="c1">-- Delete a document</span>
+<span class="k">delete</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">mongo</span><span class="p">.</span><span class="n">users</span>
+<span class="k">where</span><span class="w"> </span><span class="n">_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;507f1f77bcf86cd799439011&#39;</span><span class="p">;</span>
+</code></pre></div></td></tr></table></div>
+<h3 id="using-vault-for-credentials">Using Vault for credentials</h3>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
+<span class="normal"> 2</span>
+<span class="normal"> 3</span>
+<span class="normal"> 4</span>
+<span class="normal"> 5</span>
+<span class="normal"> 6</span>
+<span class="normal"> 7</span>
+<span class="normal"> 8</span>
+<span class="normal"> 9</span>
+<span class="normal">10</span>
+<span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Store the connection string in Vault</span>
+<span class="k">select</span><span class="w"> </span><span class="n">vault</span><span class="p">.</span><span class="n">create_secret</span><span class="p">(</span>
+<span class="w">  </span><span class="s1">&#39;mongodb+srv://user:password@cluster.example.mongodb.net/&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="s1">&#39;mongodb_atlas&#39;</span><span class="p">,</span>
+<span class="w">  </span><span class="s1">&#39;MongoDB Atlas connection string&#39;</span>
+<span class="p">);</span>
+
+<span class="c1">-- Create the server using the Vault secret ID</span>
+<span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">mongo_atlas_server</span>
+<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">mongodb_wrapper</span>
+<span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">conn_string_id</span><span class="w"> </span><span class="s1">&#39;&lt;key_ID&gt;&#39;</span>
+<span class="w">  </span><span class="p">);</span>
+
+<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">mongo</span><span class="p">.</span><span class="n">products</span><span class="w"> </span><span class="p">(</span>
+<span class="w">  </span><span class="n">_id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
 <span class="w">  </span><span class="n">name</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
 <span class="w">  </span><span class="n">price</span><span class="w"> </span><span class="nb">numeric</span><span class="p">,</span>
-<span class="w">  </span><span class="n">in_stock</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span>
-<span class="w">  </span><span class="n">tags</span><span class="w"> </span><span class="n">jsonb</span>
+<span class="w">  </span><span class="n">in_stock</span><span class="w"> </span><span class="n">bool</span>
 <span class="p">)</span>
-<span class="n">server</span><span class="w"> </span><span class="n">dynamodb_server</span>
-<span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="k">table</span><span class="w"> </span><span class="s1">&#39;products&#39;</span><span class="p">,</span>
-<span class="w">  </span><span class="n">rowid_column</span><span class="w"> </span><span class="s1">&#39;product_id&#39;</span>
-<span class="p">);</span>
-</code></pre></div></td></tr></table></div>
-<h3 id="query-with-partition-key-pushdown">Query with partition key pushdown</h3>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Efficient: uses DynamoDB Query API</span>
-<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">.</span><span class="n">products</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">product_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;prod-001&#39;</span><span class="p">;</span>
-</code></pre></div></td></tr></table></div>
-<h3 id="query-with-filter-full-scan">Query with filter (full scan)</h3>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Full scan with server-side FilterExpression</span>
-<span class="k">select</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">.</span><span class="n">products</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">price</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">50</span><span class="p">;</span>
-</code></pre></div></td></tr></table></div>
-<h3 id="insert-a-new-item">Insert a new item</h3>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">insert</span><span class="w"> </span><span class="k">into</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">.</span><span class="n">products</span><span class="w"> </span><span class="p">(</span><span class="n">product_id</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">price</span><span class="p">,</span><span class="w"> </span><span class="n">in_stock</span><span class="p">)</span>
-<span class="k">values</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;prod-999&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Widget&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">9</span><span class="p">.</span><span class="mi">99</span><span class="p">,</span><span class="w"> </span><span class="k">true</span><span class="p">);</span>
-</code></pre></div></td></tr></table></div>
-<h3 id="update-specific-attributes">Update specific attributes</h3>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- Only updates &#39;price&#39; and &#39;in_stock&#39;; other attributes are preserved</span>
-<span class="k">update</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">.</span><span class="n">products</span>
-<span class="k">set</span><span class="w"> </span><span class="n">price</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">12</span><span class="p">.</span><span class="mi">99</span><span class="p">,</span><span class="w"> </span><span class="n">in_stock</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">false</span>
-<span class="k">where</span><span class="w"> </span><span class="n">product_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;prod-999&#39;</span><span class="p">;</span>
-</code></pre></div></td></tr></table></div>
-<h3 id="delete-an-item">Delete an item</h3>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">delete</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">dynamodb</span><span class="p">.</span><span class="n">products</span><span class="w"> </span><span class="k">where</span><span class="w"> </span><span class="n">product_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;prod-999&#39;</span><span class="p">;</span>
-</code></pre></div></td></tr></table></div>
-<h3 id="using-dynamodb-local-for-development">Using DynamoDB Local for development</h3>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span>
-<span class="normal">7</span>
-<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">dynamodb_local_server</span>
-<span class="w">  </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">dynamodb_wrapper</span>
+<span class="w">  </span><span class="n">server</span><span class="w"> </span><span class="n">mongo_atlas_server</span>
 <span class="w">  </span><span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">aws_access_key_id</span><span class="w"> </span><span class="s1">&#39;test&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">aws_secret_access_key</span><span class="w"> </span><span class="s1">&#39;test&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">region</span><span class="w"> </span><span class="s1">&#39;us-east-1&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">endpoint_url</span><span class="w"> </span><span class="s1">&#39;http://localhost:8000&#39;</span>
+<span class="w">    </span><span class="k">database</span><span class="w"> </span><span class="s1">&#39;shop&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">collection</span><span class="w"> </span><span class="s1">&#39;products&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">rowid_column</span><span class="w"> </span><span class="s1">&#39;_id&#39;</span>
 <span class="w">  </span><span class="p">);</span>
+
+<span class="c1">-- Query with multiple pushed-down predicates</span>
+<span class="k">select</span><span class="w"> </span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">price</span>
+<span class="k">from</span><span class="w"> </span><span class="n">mongo</span><span class="p">.</span><span class="n">products</span>
+<span class="k">where</span><span class="w"> </span><span class="n">in_stock</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">true</span>
+<span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="n">price</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">100</span>
+<span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">price</span>
+<span class="k">limit</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span>
 </code></pre></div></td></tr></table></div>
 
 
@@ -3612,7 +3411,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../duckdb/" class="md-footer__link md-footer__link--prev" aria-label="Previous: DuckDB">
+          <a href="../logflare/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Logflare">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -3622,20 +3421,20 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                DuckDB
+                Logflare
               </div>
             </div>
           </a>
         
         
           
-          <a href="../firebase/" class="md-footer__link md-footer__link--next" aria-label="Next: Firebase">
+          <a href="../mysql/" class="md-footer__link md-footer__link--next" aria-label="Next: MySQL">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Firebase
+                MySQL
               </div>
             </div>
             <div class="md-footer__button md-icon">

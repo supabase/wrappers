@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://supabase.github.io/wrappers/guides/create-wasm-wrapper/">
+        <link rel="canonical" href="https://supabase.github.io/wrappers/contributing/security/">
       
       
-        <link rel="prev" href="../../contributing/native/">
+        <link rel="prev" href="../core/">
       
       
-        <link rel="next" href="../wasm-advanced/">
+        <link rel="next" href="../native/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Quick Start - Wrappers</title>
+        <title>Security Internals - Wrappers</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#developing-a-wasm-wrapper" class="md-skip">
+        <a href="#wrappers-platform-security" class="md-skip">
           Skip to content
         </a>
       
@@ -113,7 +113,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Quick Start
+              Security Internals
             
           </span>
         </div>
@@ -198,7 +198,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../native-wasm/" class="md-tabs__link">
+        <a href="../../guides/native-wasm/" class="md-tabs__link">
           
   
   
@@ -222,7 +222,7 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../../contributing/documentation/" class="md-tabs__link">
+        <a href="../documentation/" class="md-tabs__link">
           
   
   
@@ -1589,7 +1589,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../native-wasm/" class="md-nav__link">
+      <a href="../../guides/native-wasm/" class="md-nav__link">
         
   
   
@@ -1617,7 +1617,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../query-pushdown/" class="md-nav__link">
+      <a href="../../guides/query-pushdown/" class="md-nav__link">
         
   
   
@@ -1645,7 +1645,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../remote-subqueries/" class="md-nav__link">
+      <a href="../../guides/remote-subqueries/" class="md-nav__link">
         
   
   
@@ -1673,7 +1673,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../security/" class="md-nav__link">
+      <a href="../../guides/security/" class="md-nav__link">
         
   
   
@@ -1701,7 +1701,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../usage-statistics/" class="md-nav__link">
+      <a href="../../guides/usage-statistics/" class="md-nav__link">
         
   
   
@@ -1729,7 +1729,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../installation/" class="md-nav__link">
+      <a href="../../guides/installation/" class="md-nav__link">
         
   
   
@@ -1757,7 +1757,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../updating-wrappers/" class="md-nav__link">
+      <a href="../../guides/updating-wrappers/" class="md-nav__link">
         
   
   
@@ -1785,7 +1785,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../removing-wrappers/" class="md-nav__link">
+      <a href="../../guides/removing-wrappers/" class="md-nav__link">
         
   
   
@@ -1813,7 +1813,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../limitations/" class="md-nav__link">
+      <a href="../../guides/limitations/" class="md-nav__link">
         
   
   
@@ -1917,7 +1917,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../contributing/documentation/" class="md-nav__link">
+      <a href="../documentation/" class="md-nav__link">
         
   
   
@@ -1945,7 +1945,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../contributing/core/" class="md-nav__link">
+      <a href="../core/" class="md-nav__link">
         
   
   
@@ -1970,10 +1970,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../contributing/security/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security Internals
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1989,6 +2016,314 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-supply-chain-security-wasm-package-verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Supply Chain Security - WASM Package Verification
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Supply Chain Security - WASM Package Verification">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#protection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Protection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#calculating-checksums" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Calculating Checksums
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-credential-masking-in-error-messages" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Credential Masking in Error Messages
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Credential Masking in Error Messages">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#protection_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Protection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sensitive-patterns-detected" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sensitive Patterns Detected
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#implementation_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage-in-custom-fdws" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage in Custom FDWs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-response-size-limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Response Size Limits
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Response Size Limits">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#protection_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Protection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#default-value" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Default Value
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#supported-fdws" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supported FDWs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#error-behavior" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Error Behavior
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#implementation_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#known-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Known Limitations
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-option-value-security" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Option Value Security
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Option Value Security">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#protection_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Protection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#implementation_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#security-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security Status
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fdw-specific-security" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FDW-Specific Security
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reporting-security-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reporting Security Issues
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -2062,7 +2397,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../contributing/native/" class="md-nav__link">
+      <a href="../native/" class="md-nav__link">
         
   
   
@@ -2095,8 +2430,6 @@
                 
   
   
-    
-  
   
   
     
@@ -2118,11 +2451,13 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_5" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_5" >
         
           
           <label class="md-nav__link" for="__nav_4_5" id="__nav_4_5_label" tabindex="">
@@ -2143,7 +2478,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_5_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_5_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -2158,37 +2493,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Quick Start
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../guides/create-wasm-wrapper/" class="md-nav__link">
         
   
   
@@ -2204,131 +2512,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#install-pre-requisites" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Install pre-requisites
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#fork-the-wasm-fdw-template" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Fork the Wasm FDW Template
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#rename-and-create-a-new-version" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Rename and create a new version
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#release-the-wasm-fdw-package" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Release the Wasm FDW package
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#install-your-fdw" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Install your FDW
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Install your FDW">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#enable-wrappers" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Enable Wrappers
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#install-your-wrapper-from-github" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Install your Wrapper from GitHub
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#query-your-wrapper" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Query your wrapper
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#clean-up" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Clean up
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -2341,7 +2524,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../wasm-advanced/" class="md-nav__link">
+      <a href="../../guides/wasm-advanced/" class="md-nav__link">
         
   
   
@@ -2404,66 +2587,22 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#install-pre-requisites" class="md-nav__link">
+  <a href="#1-supply-chain-security-wasm-package-verification" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Install pre-requisites
+        1. Supply Chain Security - WASM Package Verification
       
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#fork-the-wasm-fdw-template" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Fork the Wasm FDW Template
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#rename-and-create-a-new-version" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Rename and create a new version
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#release-the-wasm-fdw-package" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Release the Wasm FDW package
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#install-your-fdw" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Install your FDW
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Install your FDW">
+    <nav class="md-nav" aria-label="1. Supply Chain Security - WASM Package Verification">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#enable-wrappers" class="md-nav__link">
+  <a href="#protection" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Enable Wrappers
+        Protection
       
     </span>
   </a>
@@ -2471,10 +2610,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#install-your-wrapper-from-github" class="md-nav__link">
+  <a href="#implementation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Install your Wrapper from GitHub
+        Implementation
       
     </span>
   </a>
@@ -2482,10 +2621,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#query-your-wrapper" class="md-nav__link">
+  <a href="#calculating-checksums" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Query your wrapper
+        Calculating Checksums
       
     </span>
   </a>
@@ -2498,10 +2637,237 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#clean-up" class="md-nav__link">
+  <a href="#2-credential-masking-in-error-messages" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Clean up
+        2. Credential Masking in Error Messages
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Credential Masking in Error Messages">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#protection_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Protection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sensitive-patterns-detected" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sensitive Patterns Detected
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#implementation_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage-in-custom-fdws" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage in Custom FDWs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-response-size-limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Response Size Limits
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Response Size Limits">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#protection_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Protection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#default-value" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Default Value
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#supported-fdws" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supported FDWs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#error-behavior" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Error Behavior
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#implementation_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#known-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Known Limitations
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-option-value-security" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Option Value Security
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Option Value Security">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#protection_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Protection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#implementation_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#security-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security Status
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fdw-specific-security" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FDW-Specific Security
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reporting-security-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reporting Security Issues
       
     </span>
   </a>
@@ -2528,111 +2894,15 @@
   
 
 
-<h1 id="developing-a-wasm-wrapper">Developing a Wasm Wrapper</h1>
-<p>This guide will create a GitHub FDW which you can use to query the <a href="https://api.github.com/events">GitHub Events API</a> using Postgres.</p>
-<h2 id="install-pre-requisites">Install pre-requisites</h2>
-<p>The template uses <a href="https://component-model.bytecodealliance.org/">The WebAssembly Component Model</a> to build the WebAssembly package, so we need to install various dependencies.</p>
-<ul>
-<li>Install the <a href="https://www.rust-lang.org/tools/install">Rust Toolchain</a> if it is not already installed on your machine.</li>
-<li>Add <code>wasm32-unknown-unknown</code> target:
-  <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code>rustup<span class="w"> </span>target<span class="w"> </span>add<span class="w"> </span>wasm32-unknown-unknown
-</code></pre></div></td></tr></table></div></li>
-<li>Install the <a href="https://github.com/bytecodealliance/cargo-component">WebAssembly Component Model subcommand</a>:
-  <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code>cargo<span class="w"> </span>install<span class="w"> </span>cargo-component<span class="w"> </span>--locked<span class="w"> </span>--version<span class="w"> </span><span class="m">0</span>.13.2
-</code></pre></div></td></tr></table></div></li>
-</ul>
-<h2 id="fork-the-wasm-fdw-template">Fork the Wasm FDW Template</h2>
-<p>Our quickstart template will allow you to create a new Wasm Wrapper that can query the GitHub Events API. To get started:</p>
-<ol>
-<li>Go to <a href="https://github.com/supabase-community/postgres-wasm-fdw">github.com/supabase-community/postgres-wasm-fdw</a></li>
-<li>Fork the repo to your own GitHub account by by clicking the <code>Use this template</code> button on top right of this page</li>
-<li>Clone the repo to your local machine.</li>
-</ol>
-<h2 id="rename-and-create-a-new-version">Rename and create a new version</h2>
-<p>Open <code>Cargo.toml</code> and update the following lines to any name and version you want:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">[package]</span>
-<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;wasm_fdw_example&quot;</span><span class="w"> </span><span class="c1"># The name of your wrapper. Must be Postgres compatible.</span>
-<span class="n">version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;0.1.0&quot;</span><span class="w"> </span><span class="c1"># The version number.</span>
-
-<span class="k">[package.metadata.component]</span>
-<span class="n">package</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;my-company:example-fdw&quot;</span><span class="w"> </span><span class="c1"># A namespaced identifier</span>
-</code></pre></div></td></tr></table></div>
-<p>In our example, we're going to update it to these credentials:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span>
-<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">[package]</span>
-<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;github_fdw_quickstart&quot;</span><span class="w"> </span><span class="c1"># The name of your wrapper. Must be Postgres compatible.</span>
-<span class="n">version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;0.2.0&quot;</span><span class="w"> </span><span class="c1"># The version number.</span>
-
-<span class="k">[package.metadata.component]</span>
-<span class="n">package</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;my-company:github-fdw-quickstart&quot;</span><span class="w"> </span><span class="c1"># A namespaced identifier</span>
-</code></pre></div></td></tr></table></div>
-<p>Open <code>wit/world.wit</code> and update the package name and version:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code>package my-company:github-fdw-quickstart@0.2.0;
-</code></pre></div></td></tr></table></div>
-<p>Save and commit your code:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code>git add .
-git commit -m &#39;rename package&#39;
-git push
-</code></pre></div></td></tr></table></div>
-<h2 id="release-the-wasm-fdw-package">Release the Wasm FDW package</h2>
-<p>To create a release of the Wasm FDW package, create a version tag and then push it.</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code>git<span class="w"> </span>tag<span class="w"> </span>v0.2.0
-git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>v0.2.0
-</code></pre></div></td></tr></table></div>
-<p>This will trigger a GitHub workflow to build the package and create a release on your repo. It may take a few minutes:</p>
-<p><img alt="GitHub Build" src="../../assets/wasm-build.png" /></p>
-<p>After the GitHub action has completed, expand the <code>Create README.txt</code> step, which will have your installation instructions at the bottom - something like:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code>env:
-    PROJECT: github_fdw_quickstart
-    PACKAGE: my-company:github-fdw-quickstart
-    VERSION: 0.2.0
-    CHECKSUM: 338674c4c983aa6dbc2b6e63659076fe86d847ca0da6d57a61372b44e0fe4ac9
-</code></pre></div></td></tr></table></div>
-<h2 id="install-your-fdw">Install your FDW</h2>
-<p>You can install the FDW on any Postgres <a href="../../#supported-platforms">platform that supports</a> Wrappers <code>&gt;=0.4.1</code>.</p>
-<details>
-
-<summary>Check compatibility</summary>
-
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="o">*</span>
-<span class="k">from</span><span class="w"> </span><span class="n">pg_available_extension_versions</span>
-<span class="k">where</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;wrappers&#39;</span><span class="p">;</span>
-</code></pre></div></td></tr></table></div>
-
-</details>
-
-<h3 id="enable-wrappers">Enable Wrappers</h3>
-<p>Enable the Wrappers extension and initialize the Wasm FDW on any platform that <a href="../../#supported-platforms">supports Wrappers</a>:</p>
-<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span>
-<span class="normal">3</span>
-<span class="normal">4</span>
-<span class="normal">5</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">extension</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="n">wrappers</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">extensions</span><span class="p">;</span>
-
-<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
-<span class="w">  </span><span class="k">handler</span><span class="w"> </span><span class="n">wasm_fdw_handler</span>
-<span class="w">  </span><span class="k">validator</span><span class="w"> </span><span class="n">wasm_fdw_validator</span><span class="p">;</span>
-</code></pre></div></td></tr></table></div>
-<h3 id="install-your-wrapper-from-github">Install your Wrapper from GitHub</h3>
-<p>Create foreign server and foreign table like below. You will need to update the <code>options</code> to match your release above.</p>
+<h1 id="wrappers-platform-security">Wrappers Platform Security</h1>
+<blockquote>
+<p><strong>Security Disclosure</strong>: If you discover a security vulnerability, please report it via https://supabase.com/.well-known/security.txt</p>
+</blockquote>
+<p>This document covers security measures implemented across the entire Wrappers platform. For FDW-specific security concerns, see the individual FDW documentation.</p>
+<hr />
+<h2 id="1-supply-chain-security-wasm-package-verification">1. Supply Chain Security - WASM Package Verification</h2>
+<h3 id="protection">Protection</h3>
+<p>WASM FDW servers with remote package URLs <strong>require</strong> the <code>fdw_package_checksum</code> option to prevent supply chain attacks. Local <code>file://</code> URLs are exempt since they reference locally-built packages.</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 1</span>
 <span class="normal"> 2</span>
 <span class="normal"> 3</span>
@@ -2651,46 +2921,60 @@ git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </
 <span class="normal">16</span>
 <span class="normal">17</span>
 <span class="normal">18</span>
-<span class="normal">19</span>
-<span class="normal">20</span>
-<span class="normal">21</span>
-<span class="normal">22</span>
-<span class="normal">23</span>
-<span class="normal">24</span>
-<span class="normal">25</span>
-<span class="normal">26</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">create</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">github_api</span>
-<span class="k">foreign</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">wrapper</span><span class="w"> </span><span class="n">wasm_wrapper</span>
-<span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://github.com/&lt;ORG&gt;/&lt;REPO&gt;/releases/download/v0.2.0/github_fdw_quickstart.wasm&#39;</span><span class="p">,</span>
-<span class="w">  </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;my-company:github-fdw-quickstart&#39;</span><span class="p">,</span>
-<span class="w">  </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;0.2.0&#39;</span><span class="p">,</span>
-<span class="w">  </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;338674c4c983aa6dbc2b6e63659076fe86d847ca0da6d57a61372b44e0fe4ac9&#39;</span><span class="p">,</span>
-<span class="w">  </span><span class="n">api_url</span><span class="w"> </span><span class="s1">&#39;https://api.github.com&#39;</span>
-<span class="p">);</span>
+<span class="normal">19</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">-- This will FAIL - checksum is required</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="n">SERVER</span><span class="w"> </span><span class="n">my_server</span>
+<span class="w">  </span><span class="k">FOREIGN</span><span class="w"> </span><span class="k">DATA</span><span class="w"> </span><span class="n">WRAPPER</span><span class="w"> </span><span class="n">wasm_wrapper</span>
+<span class="w">  </span><span class="k">OPTIONS</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://example.com/my_fdw.wasm&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;my-fdw&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;1.0.0&#39;</span>
+<span class="w">    </span><span class="c1">-- Missing fdw_package_checksum!</span>
+<span class="w">  </span><span class="p">);</span>
 
-<span class="k">create</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">github</span><span class="p">;</span>
-
-<span class="k">create</span><span class="w"> </span><span class="k">foreign</span><span class="w"> </span><span class="k">table</span><span class="w"> </span><span class="n">github</span><span class="p">.</span><span class="n">events</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="n">id</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="k">type</span><span class="w"> </span><span class="nb">text</span><span class="p">,</span>
-<span class="w">  </span><span class="n">actor</span><span class="w"> </span><span class="n">jsonb</span><span class="p">,</span>
-<span class="w">  </span><span class="n">repo</span><span class="w"> </span><span class="n">jsonb</span><span class="p">,</span>
-<span class="w">  </span><span class="n">payload</span><span class="w"> </span><span class="n">jsonb</span><span class="p">,</span>
-<span class="w">  </span><span class="k">public</span><span class="w"> </span><span class="nb">boolean</span><span class="p">,</span>
-<span class="w">  </span><span class="n">created_at</span><span class="w"> </span><span class="k">timestamp</span>
-<span class="p">)</span>
-<span class="n">server</span><span class="w"> </span><span class="n">github_api</span>
-<span class="k">options</span><span class="w"> </span><span class="p">(</span>
-<span class="w">  </span><span class="k">object</span><span class="w"> </span><span class="s1">&#39;events&#39;</span><span class="p">,</span>
-<span class="w">  </span><span class="n">rowid_column</span><span class="w"> </span><span class="s1">&#39;id&#39;</span>
-<span class="p">);</span>
+<span class="c1">-- This will work</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="n">SERVER</span><span class="w"> </span><span class="n">my_server</span>
+<span class="w">  </span><span class="k">FOREIGN</span><span class="w"> </span><span class="k">DATA</span><span class="w"> </span><span class="n">WRAPPER</span><span class="w"> </span><span class="n">wasm_wrapper</span>
+<span class="w">  </span><span class="k">OPTIONS</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">fdw_package_url</span><span class="w"> </span><span class="s1">&#39;https://example.com/my_fdw.wasm&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_name</span><span class="w"> </span><span class="s1">&#39;my-fdw&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_version</span><span class="w"> </span><span class="s1">&#39;1.0.0&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">fdw_package_checksum</span><span class="w"> </span><span class="s1">&#39;sha256:abc123...&#39;</span><span class="w">  </span><span class="c1">-- Required!</span>
+<span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
-<div class="admonition tip">
-<p class="admonition-title">Tip</p>
-<p>You can copy the DDL from released <code>README.txt</code> file, which can be downloaded from the release page like: <code>https://github.com/&lt;ORG&gt;/&lt;REPO&gt;/releases/tag/v0.2.0</code></p>
-</div>
-<h3 id="query-your-wrapper">Query your wrapper</h3>
-<p>Query the foreign table to see what's happening on GitHub:</p>
+<h3 id="implementation">Implementation</h3>
+<ul>
+<li>Enforced in <code>wrappers/src/fdw/wasm_fdw/wasm_fdw.rs</code> validator function</li>
+<li>Checksum is verified when the WASM package is loaded</li>
+<li>Mismatch causes the query to fail</li>
+</ul>
+<h3 id="calculating-checksums">Calculating Checksums</h3>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code>sha256sum<span class="w"> </span>my_fdw.wasm<span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print &quot;sha256:&quot; $1}&#39;</span>
+</code></pre></div></td></tr></table></div>
+<hr />
+<h2 id="2-credential-masking-in-error-messages">2. Credential Masking in Error Messages</h2>
+<h3 id="protection_1">Protection</h3>
+<p>All FDW error messages are sanitized to prevent credential leakage using the <code>sanitize_error_message()</code> utility.</p>
+<h3 id="sensitive-patterns-detected">Sensitive Patterns Detected</h3>
+<p>The following option names are automatically masked:
+- Generic: <code>password</code>, <code>secret</code>, <code>token</code>, <code>api_key</code>, <code>credentials</code>
+- AWS: <code>aws_secret_access_key</code>, <code>aws_session_token</code>
+- GCP: <code>service_account_key</code>
+- Azure: <code>client_secret</code>, <code>storage_key</code>, <code>connection_string</code>
+- Database: <code>conn_string</code>, <code>db_password</code>
+- Service-specific: <code>stripe_api_key</code>, <code>firebase_credentials</code>, <code>motherduck_token</code></p>
+<h3 id="example">Example</h3>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code>Before: &quot;Error: aws_secret_access_key = &#39;wJalrXUtnFEMI/K7MDENG&#39; is invalid&quot;
+After:  &quot;Error: aws_secret_access_key = &#39;wJal***&#39; is invalid&quot;
+</code></pre></div></td></tr></table></div>
+<h3 id="implementation_1">Implementation</h3>
+<ul>
+<li>Core utility in <code>supabase-wrappers/src/utils.rs</code></li>
+<li>Applied to error handlers in all FDWs:</li>
+<li>DuckDB FDW (SQL with embedded credentials)</li>
+<li>Airtable, Auth0, Firebase, Stripe, Logflare, Cognito FDWs</li>
+</ul>
+<h3 id="usage-in-custom-fdws">Usage in Custom FDWs</h3>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span>
 <span class="normal">3</span>
@@ -2698,25 +2982,155 @@ git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </
 <span class="normal">5</span>
 <span class="normal">6</span>
 <span class="normal">7</span>
-<span class="normal">8</span>
-<span class="normal">9</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span>
-<span class="w">  </span><span class="n">id</span><span class="p">,</span>
-<span class="w">  </span><span class="k">type</span><span class="p">,</span>
-<span class="w">  </span><span class="n">actor</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;login&#39;</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">login</span><span class="p">,</span>
-<span class="w">  </span><span class="n">repo</span><span class="o">-&gt;&gt;</span><span class="s1">&#39;name&#39;</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">repo</span><span class="p">,</span>
-<span class="w">  </span><span class="n">created_at</span>
-<span class="k">from</span>
-<span class="w">  </span><span class="n">github</span><span class="p">.</span><span class="n">events</span>
-<span class="k">limit</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span>
+<span class="normal">8</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">use</span><span class="w"> </span><span class="n">supabase_wrappers</span><span class="p">::</span><span class="n">prelude</span><span class="p">::</span><span class="n">sanitize_error_message</span><span class="p">;</span>
+
+<span class="k">impl</span><span class="w"> </span><span class="nb">From</span><span class="o">&lt;</span><span class="n">MyFdwError</span><span class="o">&gt;</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">ErrorReport</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">fn</span><span class="w"> </span><span class="nf">from</span><span class="p">(</span><span class="n">value</span><span class="p">:</span><span class="w"> </span><span class="nc">MyFdwError</span><span class="p">)</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nc">Self</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="kd">let</span><span class="w"> </span><span class="n">error_message</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sanitize_error_message</span><span class="p">(</span><span class="o">&amp;</span><span class="fm">format!</span><span class="p">(</span><span class="s">&quot;{value}&quot;</span><span class="p">));</span>
+<span class="w">        </span><span class="n">ErrorReport</span><span class="p">::</span><span class="n">new</span><span class="p">(</span><span class="n">PgSqlErrorCode</span><span class="p">::</span><span class="n">ERRCODE_FDW_ERROR</span><span class="p">,</span><span class="w"> </span><span class="n">error_message</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="p">)</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
 </code></pre></div></td></tr></table></div>
-<p><img width="812" alt="image" src="https://github.com/user-attachments/assets/53e963cb-6e8f-44f8-9f2e-f0edc73ddf3a"></p>
-<p>👏 👏 Congratulations! You have built your first Wasm FDW.</p>
-<h2 id="clean-up">Clean up</h2>
-<p>Run the following code to remove the FDW:</p>
+<hr />
+<h2 id="3-response-size-limits">3. Response Size Limits</h2>
+<h3 id="protection_2">Protection</h3>
+<p>HTTP-based FDWs enforce configurable response size limits to prevent denial-of-service attacks via maliciously large responses. Responses exceeding the limit are rejected before JSON parsing.</p>
+<h3 id="configuration">Configuration</h3>
+<p>Set <code>max_response_size</code> (in bytes) as a server option:</p>
 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">drop</span><span class="w"> </span><span class="k">schema</span><span class="w"> </span><span class="n">github</span><span class="w"> </span><span class="k">cascade</span><span class="p">;</span>
-<span class="k">drop</span><span class="w"> </span><span class="n">server</span><span class="w"> </span><span class="n">github_api</span><span class="p">;</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span>
+<span class="normal">5</span>
+<span class="normal">6</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">CREATE</span><span class="w"> </span><span class="n">SERVER</span><span class="w"> </span><span class="n">stripe_server</span>
+<span class="w">  </span><span class="k">FOREIGN</span><span class="w"> </span><span class="k">DATA</span><span class="w"> </span><span class="n">WRAPPER</span><span class="w"> </span><span class="n">stripe_wrapper</span>
+<span class="w">  </span><span class="k">OPTIONS</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">api_key_id</span><span class="w"> </span><span class="s1">&#39;your-vault-secret-id&#39;</span><span class="p">,</span>
+<span class="w">    </span><span class="n">max_response_size</span><span class="w"> </span><span class="s1">&#39;5242880&#39;</span><span class="w">  </span><span class="c1">-- 5 MB limit</span>
+<span class="w">  </span><span class="p">);</span>
 </code></pre></div></td></tr></table></div>
+<h3 id="default-value">Default Value</h3>
+<p>All supported FDWs default to <strong>10 MB</strong> (10,485,760 bytes) if not specified.</p>
+<h3 id="supported-fdws">Supported FDWs</h3>
+<table>
+<thead>
+<tr>
+<th>FDW</th>
+<th>Support</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Stripe</td>
+<td>✅</td>
+<td>Full implementation</td>
+</tr>
+<tr>
+<td>Airtable</td>
+<td>✅</td>
+<td>Full implementation</td>
+</tr>
+<tr>
+<td>Firebase</td>
+<td>✅</td>
+<td>Full implementation</td>
+</tr>
+<tr>
+<td>Logflare</td>
+<td>✅</td>
+<td>Full implementation</td>
+</tr>
+<tr>
+<td>Auth0</td>
+<td>❌</td>
+<td>Uses SDK architecture</td>
+</tr>
+<tr>
+<td>Cognito</td>
+<td>❌</td>
+<td>Uses AWS SDK</td>
+</tr>
+<tr>
+<td>DuckDB</td>
+<td>❌</td>
+<td>Not HTTP-based</td>
+</tr>
+<tr>
+<td>WASM FDWs</td>
+<td>Per-FDW</td>
+<td>Implemented individually</td>
+</tr>
+</tbody>
+</table>
+<h3 id="error-behavior">Error Behavior</h3>
+<p>When a response exceeds the limit:
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code>ERROR: response too large (15728640 bytes). Maximum allowed: 10485760 bytes
+</code></pre></div></td></tr></table></div></p>
+<h3 id="implementation_2">Implementation</h3>
+<ul>
+<li>Each FDW has a <code>ResponseTooLarge</code> error variant</li>
+<li>Response body is read as text and size-checked before JSON parsing</li>
+<li>Example in <code>wrappers/src/fdw/stripe_fdw/stripe_fdw.rs</code></li>
+</ul>
+<h3 id="known-limitations">Known Limitations</h3>
+<p>The size check occurs <strong>after</strong> the response body is read into memory. This means:
+- An extremely large response could temporarily consume memory before being rejected
+- This protects against storing/parsing oversized data, but not against memory exhaustion during the HTTP read phase
+- For stronger protection, consider network-level controls (e.g., reverse proxy response size limits)</p>
+<p>Future improvement: Implement streaming reads with size checking during the read phase.</p>
+<hr />
+<h2 id="4-option-value-security">4. Option Value Security</h2>
+<h3 id="protection_3">Protection</h3>
+<p>Option values that fail UTF-8 validation do not include the raw bytes in error messages, preventing binary credential leakage.</p>
+<h3 id="implementation_3">Implementation</h3>
+<ul>
+<li><code>supabase-wrappers/src/options.rs</code> - <code>OptionsError::OptionValueIsInvalidUtf8</code> only includes option name, not value</li>
+</ul>
+<hr />
+<h2 id="security-status">Security Status</h2>
+<table>
+<thead>
+<tr>
+<th>Protection</th>
+<th>Status</th>
+<th>Location</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>WASM checksum required</td>
+<td>✓ Implemented</td>
+<td><code>wasm_fdw.rs</code> validator</td>
+</tr>
+<tr>
+<td>Credential masking</td>
+<td>✓ Implemented</td>
+<td><code>utils.rs</code>, all FDW error handlers</td>
+</tr>
+<tr>
+<td>Response size limits</td>
+<td>✓ Implemented</td>
+<td>Stripe, Airtable, Firebase, Logflare FDWs</td>
+</tr>
+<tr>
+<td>Option value protection</td>
+<td>✓ Implemented</td>
+<td><code>options.rs</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="fdw-specific-security">FDW-Specific Security</h2>
+<p>Each FDW may have additional security considerations:</p>
+<ul>
+<li><strong>AWS FDW</strong>: SSRF protection for <code>endpoint_url</code> - see <code>wasm-wrappers/fdw/aws_fdw/SECURITY.md</code></li>
+<li><strong>DuckDB FDW</strong>: SQL injection via server type options</li>
+<li><strong>HTTP-based FDWs</strong>: Request/response validation</li>
+</ul>
+<hr />
+<h2 id="reporting-security-issues">Reporting Security Issues</h2>
+<p>Please report security vulnerabilities to the Supabase security team rather than opening public issues.</p>
 
 
 
@@ -2746,7 +3160,7 @@ git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../../contributing/native/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Quick Start">
+          <a href="../core/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Core Development">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -2756,20 +3170,20 @@ git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </
                 Previous
               </span>
               <div class="md-ellipsis">
-                Quick Start
+                Core Development
               </div>
             </div>
           </a>
         
         
           
-          <a href="../wasm-advanced/" class="md-footer__link md-footer__link--next" aria-label="Next: Advanced guide">
+          <a href="../native/" class="md-footer__link md-footer__link--next" aria-label="Next: Quick Start">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Advanced guide
+                Quick Start
               </div>
             </div>
             <div class="md-footer__button md-icon">

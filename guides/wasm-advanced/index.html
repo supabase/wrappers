@@ -469,6 +469,8 @@
       
         
       
+        
+      
     
     
     
@@ -783,6 +785,34 @@
     
   
     Logflare
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../catalog/mongodb/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MongoDB
   
 
     
@@ -1828,6 +1858,8 @@
       
         
       
+        
+      
     
     
     
@@ -1938,6 +1970,34 @@
   
   
   
+    <li class="md-nav__item">
+      <a href="../../contributing/security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security Internals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
     
     
       
@@ -1961,10 +2021,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_3" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_4" >
         
           
-          <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="">
+          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="">
             
   
   
@@ -1982,8 +2042,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4_3">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_4">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2060,10 +2120,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_4" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_5" checked>
         
           
-          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="">
+          <label class="md-nav__link" for="__nav_4_5" id="__nav_4_5_label" tabindex="">
             
   
   
@@ -2081,8 +2141,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_4_4">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4_5">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2227,6 +2287,34 @@
       
     </span>
   </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#host-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Host functions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Host functions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#reading-session-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading session settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2465,6 +2553,34 @@
       
     </span>
   </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#host-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Host functions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Host functions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#reading-session-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading session settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -2888,6 +3004,48 @@
 <span class="w">    </span><span class="nb">Ok</span><span class="p">(</span><span class="nb">Some</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
 <span class="p">}</span>
 </code></pre></div></td></tr></table></div>
+<h2 id="host-functions">Host functions</h2>
+<p>The host (the Wrappers Wasm runtime) exposes a small set of functions to the guest Wasm FDW through the <code>utils</code> interface.</p>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>utils::report_info</code> / <code>report_notice</code> / <code>report_warning</code> / <code>report_error</code></td>
+<td>Emit a PostgreSQL log message (visible in <code>psql</code>), handy for debugging.</td>
+</tr>
+<tr>
+<td><code>utils::cell_to_string(cell)</code></td>
+<td>Format a <code>Cell</code> value as a string.</td>
+</tr>
+<tr>
+<td><code>utils::get_vault_secret(id)</code> / <code>get_vault_secret_by_name(name)</code></td>
+<td>Read a decrypted secret from <a href="https://supabase.com/docs/guides/database/vault">Vault</a>. Use for static credentials.</td>
+</tr>
+<tr>
+<td><code>utils::query_setting(name)</code></td>
+<td>Read a PostgreSQL session setting (GUC) at request time. Returns <code>None</code> if unset.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="reading-session-settings">Reading session settings</h3>
+<p><code>utils::query_setting(name)</code> wraps <code>current_setting(name, true)</code>, so it returns the current value of a session GUC, or <code>None</code> when it isn't set. This is useful when an FDW needs a value that varies per request, per user, or per transaction rather than a static server option.</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
+<span class="normal">2</span>
+<span class="normal">3</span>
+<span class="normal">4</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="c1">// inside your FDW, read a value set earlier in the same transaction</span>
+<span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">token</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">utils</span><span class="p">::</span><span class="n">query_setting</span><span class="p">(</span><span class="s">&quot;app.api_token&quot;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// use the token for this request</span>
+<span class="p">}</span>
+</code></pre></div></td></tr></table></div>
+<p>The value is supplied from SQL with <code>set_config</code>, typically from a <code>SECURITY DEFINER</code> function that resolves it for the calling user and scopes it to the transaction:</p>
+<div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">select</span><span class="w"> </span><span class="n">set_config</span><span class="p">(</span><span class="s1">&#39;app.api_token&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&lt;resolved-token&gt;&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">true</span><span class="p">);</span><span class="w">  </span><span class="c1">-- true = transaction-local</span>
+</code></pre></div></td></tr></table></div>
+<p>For example, the OpenAPI FDW's <a href="../../catalog/openapi/#server-options"><code>auth_token_setting</code></a> option reads a named session setting per request and uses it as the Authorization token.</p>
 <h2 id="developing-locally">Developing locally</h2>
 <p>We'll use the CLI to develop locally. This will be faster than the GitHub release workflow.</p>
 <h3 id="start-supabase">Start Supabase</h3>
