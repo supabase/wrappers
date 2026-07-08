@@ -28,6 +28,7 @@ Each FDW documentation includes a detailed "Limitations" section that describes 
 | Infura        |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ✅     |
 | Iceberg       |   ✅   |   ✅   |   ❌   |   ❌   |    ❌    |    ❌     |
 | Logflare      |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
+| MongoDB       |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |    ✅     |
 | MySQL         |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |    ✅     |
 | Notion        |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
 | OpenAPI       |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
