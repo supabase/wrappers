@@ -1649,7 +1649,10 @@ unsafe fn assign_parameter_value<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>
 
                 match param.eval_value.lock() {
                     Ok(mut eval_value) => *eval_value = current_value,
-                    Err(_) => debug2!("parameter evaluation cache lock was poisoned"),
+                    Err(poisoned) => {
+                        debug2!("parameter evaluation cache lock was poisoned; recovering");
+                        *poisoned.into_inner() = current_value;
+                    }
                 }
             }
         }
@@ -1707,9 +1710,9 @@ unsafe fn assign_remote_query_parameters<E: Into<ErrorReport>, W: ForeignDataWra
             };
             let value = match param.eval_value.lock() {
                 Ok(value) => value.clone(),
-                Err(_) => {
-                    debug2!("remote-query parameter cache lock was poisoned");
-                    None
+                Err(poisoned) => {
+                    debug2!("remote-query parameter cache lock was poisoned; recovering");
+                    (*poisoned.into_inner()).clone()
                 }
             };
             upsert_remote_query_parameter(
@@ -1753,7 +1756,10 @@ fn compute_param_fingerprint<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
             qual.param.as_ref().map(|param| {
                 let eval_value = match param.eval_value.lock() {
                     Ok(value) => format!("{:?}", *value),
-                    Err(_) => "lock_error".to_string(),
+                    Err(poisoned) => {
+                        debug2!("parameter fingerprint cache lock was poisoned; recovering");
+                        format!("{:?}", *poisoned.into_inner())
+                    }
                 };
                 format!(
                     "{}|{}|{}|{}|{}|{}|{}",

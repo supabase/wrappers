@@ -1061,8 +1061,9 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     /// Whether the FDW can execute a whole PostgreSQL query remotely.
     ///
     /// If enabled, wrappers may add foreign join or upper paths that call
-    /// [`begin_full_query_scan`] instead of decomposing the query into base
-    /// scans, filters, joins, aggregates, and projections executed by Postgres.
+    /// [`begin_remote_query`](Self::begin_remote_query) instead of decomposing
+    /// the query into base scans, filters, joins, aggregates, and projections
+    /// executed by Postgres.
     fn supports_full_query_pushdown(&self) -> bool {
         false
     }
