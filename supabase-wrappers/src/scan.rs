@@ -32,6 +32,22 @@ use crate::utils::{self, ReportableError, SerdeList, report_error};
 pub(crate) const FULL_QUERY_PARTIAL_PATH_PENALTY: f64 = 1_000_000_000.0;
 pub(crate) const REQUIRED_REMOTE_QUERY_LOCAL_PATH_PENALTY: f64 = 1_000_000_000_000.0;
 
+// Full-query pushdown threads one logical query through three PostgreSQL phases:
+//
+// 1. Planner relation state: RelOptInfo.fdw_private carries a mutable FdwState
+//    between GetForeignRelSize/GetForeignPaths/GetForeignPlan and upper/join path
+//    callbacks. That state lives only as long as the planner memory context.
+// 2. Plan state: get_foreign_plan must store a plan-owned representation in
+//    ForeignScan.fdw_private. Prepared statements can reuse this plan later, so
+//    the plan representation cannot depend on transient planner objects.
+// 3. Executor state: begin_foreign_scan builds a fresh FdwState for one execution
+//    and end_foreign_scan drops it. This keeps FDW instances, parameter values,
+//    result buffers, and per-execution memory contexts out of cached plans.
+//
+// The split is deliberate. Planner state can be pointer-based because PostgreSQL
+// owns the planner context. Full-query plans use JSON snapshots so prepared plans
+// do not retain planner pointers. The legacy scan path still serializes a
+// plan-owned template pointer, then clones that template per execution.
 // Fdw private state for scan
 pub(crate) struct FdwState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
     // foreign table oid used to create fresh execution instances from a cached plan
@@ -59,7 +75,11 @@ pub(crate) struct FdwState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
     pub(crate) aggregates: Vec<Aggregate>,
     pub(crate) group_by: Vec<Column>,
 
-    // full-query pushdown
+    // Full-query pushdown metadata. `full_query` means this path should send one
+    // complete SQL statement to the FDW instead of decomposing the scan into
+    // quals/sorts/limits. `requires_full_query` records the wrapper policy, while
+    // `full_query_upper_only` and `full_query_executable` describe where the
+    // PostgreSQL planner currently is in the join/upper path pipeline.
     pub(crate) full_query: Option<FullQuery>,
     pub(crate) requires_full_query: bool,
     pub(crate) full_query_upper_only: bool,
@@ -107,6 +127,9 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwState<E, W> {
 
     pub(crate) unsafe fn clone_for_execution(&self) -> Self {
         unsafe {
+            // A ForeignScan plan can execute multiple times, especially for
+            // prepared statements. Clone only immutable plan data and create a
+            // fresh FDW instance/memory context for this execution.
             let ctx_name = format!(
                 "Wrappers_scan_exec_{}_{}",
                 self.foreigntableid.to_u32(),
@@ -132,6 +155,9 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwState<E, W> {
 
     pub(crate) unsafe fn clone_for_plan_template(&self) -> Self {
         unsafe {
+            // The plan template is kept in the plan memory context and cloned by
+            // begin_foreign_scan. It intentionally has no live FDW instance:
+            // instances own execution resources and must be recreated per run.
             let ctx_name = format!(
                 "Wrappers_scan_plan_{}_{}",
                 self.foreigntableid.to_u32(),
@@ -297,9 +323,16 @@ pub(crate) unsafe fn leak_state_in_current_context<
     state: FdwState<E, W>,
 ) -> *mut FdwState<E, W> {
     let mut context = PgMemoryContexts::CurrentMemoryContext;
+    // PostgreSQL callback APIs store opaque raw pointers. We leak the Rust value
+    // into the active Postgres memory context and ask pgrx to drop it when that
+    // context is reset/deleted. This gives the pointer the same lifetime as the
+    // RelOptInfo/Plan node that references it.
     context.leak_and_drop_on_delete(state)
 }
 
+// Serializable plan state for full-query pushdown. It intentionally contains
+// only owned Rust data and OIDs, never planner pointers or a live FDW instance.
+// The executor rebuilds a fresh FdwState from this snapshot for each execution.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct PlanStateSnapshot {
     foreigntableid: u32,
@@ -473,6 +506,10 @@ unsafe fn serialize_plan_template<E: Into<ErrorReport>, W: ForeignDataWrapper<E>
     state: &FdwState<E, W>,
 ) -> *mut pg_sys::List {
     unsafe {
+        // Prefer the JSON snapshot for full-query plans. It survives prepared
+        // statement caching without carrying a Rust pointer through PostgreSQL's
+        // plan cache. Non-full-query scans still use the existing wrappers
+        // pointer-template format for compatibility with the legacy scan path.
         if let Some(snapshot) = PlanStateSnapshot::from_state(state) {
             return serialize_plan_snapshot(&snapshot);
         }
@@ -538,6 +575,10 @@ pub(crate) unsafe fn full_query_placeholder_from_planner(
     columns: Vec<Column>,
 ) -> Option<FullQuery> {
     unsafe {
+        // Join and upper path callbacks often run before PostgreSQL has a final,
+        // safely deparseable query tree. Store only the stable parts here; the SQL
+        // text is filled in get_foreign_plan once the planner selects an
+        // executable path.
         let (_, relations) = query_foreign_relations(root)?;
         Some(FullQuery {
             sql: String::new(),
@@ -554,6 +595,10 @@ unsafe fn full_query_sql_from_planner(root: *mut pg_sys::PlannerInfo) -> Option<
             return None;
         }
 
+        // pg_get_querydef is useful for simple query trees, but it has been
+        // fragile around partially-normalized multi-relation trees. For joins,
+        // CTE-like inputs, and other non-relation RTEs, prefer the original
+        // statement text sliced from debug_query_string.
         if query_has_multiple_base_relations(root) || query_has_non_relation_inputs(root) {
             return current_statement_sql_from_debug_query_string(root);
         }
@@ -772,6 +817,10 @@ unsafe fn query_foreign_relations(
 
             match (*rte).rtekind {
                 pg_sys::RTEKind::RTE_RELATION => {
+                    // A full remote query is only valid when every base relation
+                    // referenced by the query is a foreign table owned by this FDW.
+                    // PostgreSQL may add RTE_JOIN entries for planned joins; those
+                    // are derived from base RTE_RELATION entries and are ignored.
                     if (*rte).relkind as u8 != pg_sys::RELKIND_FOREIGN_TABLE {
                         return None;
                     }
@@ -854,6 +903,10 @@ pub(crate) unsafe fn remote_query_context_from_planner(
     has_unpushed_quals: bool,
 ) -> RemoteQueryContext {
     unsafe {
+        // FDWs decide whether full-query pushdown is optional, preferred, or
+        // required from this summary. Keep it conservative: if any referenced
+        // base relation is not a compatible foreign table, the FDW must not claim
+        // ownership of the whole SQL statement.
         let foreign_relations = query_foreign_relations(root).map(|(_, relations)| relations);
         RemoteQueryContext {
             has_upper_operations: query_has_upper_operations(root),
@@ -870,6 +923,10 @@ pub(crate) unsafe fn remote_query_context_from_planner(
 pub(crate) fn remote_query_local_path_penalty(policy: RemoteQueryPolicy) -> f64 {
     match policy {
         RemoteQueryPolicy::Optional => 0.0,
+        // Prefer/Require do not force PostgreSQL's planner by themselves; they
+        // make partial local paths expensive so the full-query path wins when it
+        // is available. `Require` still has runtime guards in get_foreign_plan in
+        // case PostgreSQL cannot build a valid full-query path.
         RemoteQueryPolicy::Prefer => FULL_QUERY_PARTIAL_PATH_PENALTY,
         RemoteQueryPolicy::Require => REQUIRED_REMOTE_QUERY_LOCAL_PATH_PENALTY,
     }
@@ -996,6 +1053,10 @@ pub(super) extern "C-unwind" fn get_foreign_join_paths<
 ) {
     debug2!("---> get_foreign_join_paths");
     unsafe {
+        // Build a remote join path only when this joinrel covers the complete set
+        // of foreign base relations in the query. A partial join path would let
+        // PostgreSQL perform some of the query locally, which breaks wrappers
+        // that require full remote execution.
         let Some((query_relids, relations)) = query_foreign_relations(root) else {
             debug2!("get_foreign_join_paths: query has non-foreign inputs");
             return;
@@ -1043,6 +1104,9 @@ pub(super) extern "C-unwind" fn get_foreign_join_paths<
             debug2!("get_foreign_join_paths: could not build full-query placeholder");
             return;
         };
+        // If the original query also has GROUP BY/ORDER BY/LIMIT/etc., this join
+        // path is only an intermediate carrier. The final upper path must own the
+        // executable SQL so those upper operations are remote as well.
         let upper_only = context.has_upper_operations;
 
         state.tgts = columns;
@@ -1212,6 +1276,10 @@ pub(super) extern "C-unwind" fn get_foreign_paths<
         } else {
             0.0
         };
+        // Keep the base foreign scan available as a fallback, but make it costly
+        // when the FDW asked for full-query pushdown. This nudges PostgreSQL
+        // toward join/upper full-query paths without removing the base path that
+        // some planner shapes still require.
         let startup_cost = startup_cost + partial_path_penalty;
         let total_cost = startup_cost + (*baserel).rows + partial_path_penalty;
 
@@ -1285,6 +1353,10 @@ pub(super) extern "C-unwind" fn get_foreign_plan<E: Into<ErrorReport>, W: Foreig
         // must NOT treat this as an aggregate scan.
         let is_agg = (*baserel).reloptkind == pg_sys::RelOptKind::RELOPT_UPPER_REL
             && state.is_aggregate_scan();
+        // A full-query scan is executable only when PostgreSQL selected the join
+        // or final upper relation that owns the complete SQL statement. If the
+        // planner picked the base relation instead, local plan nodes would run in
+        // PostgreSQL, so required full-query FDWs reject that shape below.
         let is_full_query = state.is_full_query_scan()
             && ((*baserel).reloptkind == pg_sys::RelOptKind::RELOPT_JOINREL
                 || (*baserel).reloptkind == pg_sys::RelOptKind::RELOPT_UPPER_REL);
@@ -1410,6 +1482,9 @@ pub(super) extern "C-unwind" fn get_foreign_plan<E: Into<ErrorReport>, W: Foreig
                 final_tlist = pg_sys::list_copy_deep((*(*root).parse).targetList);
             }
 
+            // The remote query returns final output rows, not base-table rows.
+            // Build the ForeignScan descriptor from the selected target list so
+            // heap_form_tuple sees the same shape that iter_scan will produce.
             let mut output_columns = target_columns_from_tlist(final_tlist);
             if output_columns.is_empty() {
                 output_columns = target_columns_from_reltarget(baserel);
@@ -1596,6 +1671,10 @@ unsafe fn assign_remote_query_parameters<E: Into<ErrorReport>, W: ForeignDataWra
 
         let mut parameters = Vec::new();
 
+        // Full-query pushdown receives the SQL string, so quals are no longer the
+        // only place parameters can appear. Capture both external parameters
+        // ($1-style bind values) and evaluated PARAM_EXEC values referenced by
+        // pushed quals, then attach them to FullQuery before begin_remote_query.
         let estate = (*node).ss.ps.state;
         let plist_info = if estate.is_null() {
             ptr::null_mut()
@@ -1728,6 +1807,9 @@ pub(super) extern "C-unwind" fn begin_foreign_scan<
             );
             return;
         }
+        // Full-query plans deserialize from JSON snapshots. Legacy plans
+        // deserialize a plan-template pointer and clone it. Either way, execution
+        // gets a fresh FdwState that end_foreign_scan owns and drops.
         let mut state = if let Some(snapshot_state) =
             deserialize_plan_snapshot::<E, W>((*plan).fdw_private as _)
         {
