@@ -95,6 +95,74 @@ mod tests {
                 .collect::<Vec<_>>();
             assert_eq!(results, vec!["test@test.com"]);
 
+            // Paddle: single-object id pushdown for subscriptions
+            let results = c
+                .select(
+                    "SELECT * FROM paddle.subscriptions WHERE id = 'sub_01hv959anj4zrw503h2acawb3p'",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("status").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(results, vec!["active"]);
+
+            // Paddle: multi-column + date-range filter pushdown for transactions.
+            // The mock only returns the row when `customer_id` reaches the request
+            // url, so this asserts the qual was actually pushed down.
+            let results = c
+                .select(
+                    "SELECT * FROM paddle.transactions \
+                     WHERE customer_id = 'ctm_01hymwgpkx639a6mkvg99563sp' \
+                       AND created_at >= '2024-01-01'",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("id").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(results, vec!["txn_01hv8xxw3etar07vaxsqbyqasy"]);
+
+            // Paddle: adjustments list + filter pushdown (refunds/chargebacks)
+            let results = c
+                .select(
+                    "SELECT * FROM paddle.adjustments WHERE action = 'refund'",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("id").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(results, vec!["adj_01h8b7k0a1b2c3d4e5f6g7h8"]);
+
+            // Paddle: adjustments `id` is pushed as a list filter (no single-object
+            // endpoint); the mock returns nothing for a path GET, so this proves
+            // the list route (`?id=...`) is used rather than `/adjustments/{id}`.
+            let results = c
+                .select(
+                    "SELECT * FROM paddle.adjustments WHERE id = 'adj_regression_test'",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("id").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(results, vec!["adj_regression_test"]);
+
+            // Paddle: IN (...) list pushdown becomes a comma-separated value; the
+            // mock tags the comma-joined request with a distinct id to prove it.
+            let results = c
+                .select(
+                    "SELECT * FROM paddle.transactions \
+                     WHERE customer_id IN ('ctm_01hymwgpkx639a6mkvg99563sp', 'ctm_zzz')",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("id").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(results, vec!["txn_from_in_list"]);
+
             // Notion FDW test
             c.update(
                 r#"CREATE SERVER notion_server

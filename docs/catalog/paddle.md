@@ -9,7 +9,7 @@ tags:
 
 # Paddle
 
-[Paddle](https://www.paddle.com) is a merchant of record that acts to provide a payment infrastructure to thousands of software companies around the world.
+[Paddle](https://developer.paddle.com/) is a merchant of record platform built for modern SaaS, mobile app, AI, and digital product businesses. It manages your payments, taxes, and subscriptions in a single integration.
 
 The Paddle Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you to read and write data from Paddle within your Postgres database.
 
@@ -17,6 +17,7 @@ The Paddle Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you 
 
 | Version | Wasm Package URL                                                                                    | Checksum                                                           | Required Wrappers Version |
 | ------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------- |
+| 0.3.0   | `https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.3.0/paddle_fdw.wasm`     | `<checksum added when the v0.3.0 artifact is released>`            | >=0.5.0                   |
 | 0.2.0   | `https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.2.0/paddle_fdw.wasm`     | `e788b29ae46c158643e1e1f229d94b28a9af8edbd3233f59c5a79053c25da213` | >=0.5.0                   |
 | 0.1.1   | `https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.1.1/paddle_fdw.wasm`     | `c5ac70bb2eef33693787b7d4efce9a83cde8d4fa40889d2037403a51263ba657` | >=0.4.0                   |
 | 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.1.0/paddle_fdw.wasm`     | `7d0b902440ac2ef1af85d09807145247f14d1d8fd4d700227e5a4d84c8145409` | >=0.4.0                   |
@@ -66,10 +67,10 @@ We need to provide Postgres with the credentials to access Paddle, and any addit
     create server paddle_server
       foreign data wrapper wasm_wrapper
       options (
-        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.2.0/paddle_fdw.wasm',
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.3.0/paddle_fdw.wasm',
         fdw_package_name 'supabase:paddle-fdw',
-        fdw_package_version '0.2.0',
-        fdw_package_checksum 'e788b29ae46c158643e1e1f229d94b28a9af8edbd3233f59c5a79053c25da213',
+        fdw_package_version '0.3.0',
+        fdw_package_checksum '<checksum added when the v0.3.0 artifact is released>',
         api_url 'https://sandbox-api.paddle.com', -- Use https://api.paddle.com for live account
         api_key_id '<key_ID>' -- The Key ID from above.
       );
@@ -81,10 +82,10 @@ We need to provide Postgres with the credentials to access Paddle, and any addit
     create server paddle_server
       foreign data wrapper wasm_wrapper
       options (
-        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.2.0/paddle_fdw.wasm',
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.3.0/paddle_fdw.wasm',
         fdw_package_name 'supabase:paddle-fdw',
-        fdw_package_version '0.2.0',
-        fdw_package_checksum 'e788b29ae46c158643e1e1f229d94b28a9af8edbd3233f59c5a79053c25da213',
+        fdw_package_version '0.3.0',
+        fdw_package_checksum '<checksum added when the v0.3.0 artifact is released>',
         api_url 'https://sandbox-api.paddle.com', -- Use https://api.paddle.com for live account
         api_key 'bb4e69088ea07a98a90565ac610c63654423f8f1e2d48b39b5'
       );
@@ -113,8 +114,11 @@ Supported objects are listed below:
 | products              |
 | prices                |
 | discounts             |
+| discount-groups       |
 | customers             |
+| subscriptions         |
 | transactions          |
+| adjustments           |
 | reports               |
 | notification-settings |
 | notifications         |
@@ -125,7 +129,11 @@ Supported objects are listed below:
 
 We can use SQL [import foreign schema](https://www.postgresql.org/docs/current/sql-importforeignschema.html) to import foreign table definitions from Paddle.
 
-For example, using below SQL can automatically create foreign tables in the `paddle` schema.
+`import foreign schema` creates typed foreign tables for the following objects:
+`customers`, `products`, `prices`, `subscriptions`, `transactions`, `discounts`,
+and `adjustments`. Each table exposes the object's commonly-used fields as
+columns plus a catch-all `attrs jsonb` column for everything else. The
+`limit to` / `except` clauses are honored.
 
 ```sql
 -- create all the foreign tables
@@ -141,6 +149,10 @@ import foreign schema paddle
    except ("customers")
    from server paddle_server into paddle;
 ```
+
+You can also create foreign tables for other objects (`discount-groups`,
+`reports`, `notification-settings`, `notifications`) by hand, setting the
+`object` table option accordingly.
 
 ### Products
 
@@ -160,11 +172,14 @@ Ref: [Paddle API docs](https://developer.paddle.com/api-reference/about/data-typ
 create foreign table paddle.products (
   id text,
   name text,
+  description text,
+  type text,
   tax_category text,
   status text,
-  description text,
-  created_at timestamp,
-  updated_at timestamp,
+  image_url text,
+  custom_data jsonb,
+  created_at timestamptz,
+  updated_at timestamptz,
   attrs jsonb
 )
   server paddle_server
@@ -177,8 +192,48 @@ create foreign table paddle.products (
 #### Notes
 
 - Requires `rowid_column` option for data modification operations
-- Query pushdown supported for `id` column
-- Product type can be extracted using: `attrs->>'type'`
+- Pushed-down filters: `id`, `status`, `tax_category`, `type`
+
+### Prices
+
+This is an object representing Paddle Prices.
+
+Ref: [Paddle API docs](https://developer.paddle.com/api-reference/about/data-types)
+
+#### Operations
+
+| Object | Select | Insert | Update | Delete | Truncate |
+| ------ | :----: | :----: | :----: | :----: | :------: |
+| Prices |   ✅    |   ✅    |   ✅    |   ❌    |    ❌     |
+
+#### Usage
+
+```sql
+create foreign table paddle.prices (
+  id text,
+  product_id text,
+  description text,
+  type text,
+  name text,
+  tax_mode text,
+  status text,
+  custom_data jsonb,
+  created_at timestamptz,
+  updated_at timestamptz,
+  attrs jsonb
+)
+  server paddle_server
+  options (
+    object 'prices',
+    rowid_column 'id'
+  );
+```
+
+#### Notes
+
+- Requires `rowid_column` option for data modification operations
+- Pushed-down filters: `id`, `product_id`, `status`, `type`
+- Unit price can be extracted using: `attrs->'unit_price'`
 
 ### Customers
 
@@ -200,9 +255,11 @@ create foreign table paddle.customers (
   name text,
   email text,
   status text,
+  marketing_consent boolean,
+  locale text,
   custom_data jsonb,
-  created_at timestamp,
-  updated_at timestamp,
+  created_at timestamptz,
+  updated_at timestamptz,
   attrs jsonb
 )
   server paddle_server
@@ -215,7 +272,7 @@ create foreign table paddle.customers (
 #### Notes
 
 - Requires `rowid_column` option for data modification operations
-- Query pushdown supported for `id` column
+- Pushed-down filters: `id`, `status`, `email`
 - Custom data stored in dedicated `custom_data` column
 
 ### Subscriptions
@@ -228,7 +285,10 @@ Ref: [Paddle API docs](https://developer.paddle.com/api-reference/about/data-typ
 
 | Object        | Select | Insert | Update | Delete | Truncate |
 | ------------- | :----: | :----: | :----: | :----: | :------: |
-| Subscriptions |   ✅    |   ✅    |   ✅    |   ❌    |    ❌     |
+| Subscriptions |   ✅    |   ❌    |   ✅    |   ❌    |    ❌     |
+
+Paddle has no create-subscription endpoint — subscriptions are created through
+checkout or transactions — so `insert` is not supported.
 
 #### Usage
 
@@ -236,8 +296,19 @@ Ref: [Paddle API docs](https://developer.paddle.com/api-reference/about/data-typ
 create foreign table paddle.subscriptions (
   id text,
   status text,
-  created_at timestamp,
-  updated_at timestamp,
+  customer_id text,
+  address_id text,
+  business_id text,
+  currency_code text,
+  collection_mode text,
+  started_at timestamptz,
+  first_billed_at timestamptz,
+  next_billed_at timestamptz,
+  paused_at timestamptz,
+  canceled_at timestamptz,
+  created_at timestamptz,
+  updated_at timestamptz,
+  custom_data jsonb,
   attrs jsonb
 )
   server paddle_server
@@ -250,15 +321,182 @@ create foreign table paddle.subscriptions (
 #### Notes
 
 - Requires `rowid_column` option for data modification operations
-- Query pushdown supported for `id` column
-- Subscription items status can be extracted using: `attrs#>'{items,status}'`
+- Pushed-down filters: `id`, `customer_id`, `status`, `price_id`, `address_id`, `collection_mode`, `scheduled_change_action`
+- Subscription items can be extracted using: `attrs->'items'`
+
+### Transactions
+
+This is an object representing Paddle Transactions.
+
+Ref: [Paddle API docs](https://developer.paddle.com/api-reference/about/data-types)
+
+#### Operations
+
+| Object       | Select | Insert | Update | Delete | Truncate |
+| ------------ | :----: | :----: | :----: | :----: | :------: |
+| Transactions |   ✅    |   ✅    |   ✅    |   ❌    |    ❌     |
+
+#### Usage
+
+```sql
+create foreign table paddle.transactions (
+  id text,
+  status text,
+  customer_id text,
+  address_id text,
+  business_id text,
+  subscription_id text,
+  invoice_id text,
+  invoice_number text,
+  collection_mode text,
+  discount_id text,
+  origin text,
+  currency_code text,
+  custom_data jsonb,
+  billed_at timestamptz,
+  revised_at timestamptz,
+  created_at timestamptz,
+  updated_at timestamptz,
+  attrs jsonb
+)
+  server paddle_server
+  options (
+    object 'transactions',
+    rowid_column 'id'
+  );
+```
+
+#### Notes
+
+- Requires `rowid_column` option for data modification operations
+- Pushed-down filters: `id`, `customer_id`, `subscription_id`, `status`, `collection_mode`, `origin`, `invoice_number`
+- Date-range pushdown is supported for `created_at`, `updated_at`, and `billed_at` using `<`, `<=`, `>`, `>=` operators (see [Query Pushdown Support](#query-pushdown-support))
+- Line items and totals can be extracted using: `attrs->'details'`
+
+### Adjustments
+
+This is an object representing Paddle Adjustments (refunds, credits, and chargebacks).
+
+Ref: [Paddle API docs](https://developer.paddle.com/api-reference/about/data-types)
+
+#### Operations
+
+| Object      | Select | Insert | Update | Delete | Truncate |
+| ----------- | :----: | :----: | :----: | :----: | :------: |
+| Adjustments |   ✅    |   ✅    |   ❌    |   ❌    |    ❌     |
+
+#### Usage
+
+```sql
+create foreign table paddle.adjustments (
+  id text,
+  action text,
+  type text,
+  transaction_id text,
+  subscription_id text,
+  customer_id text,
+  reason text,
+  currency_code text,
+  status text,
+  credit_applied_to_balance boolean,
+  created_at timestamptz,
+  updated_at timestamptz,
+  attrs jsonb
+)
+  server paddle_server
+  options (
+    object 'adjustments',
+    rowid_column 'id'
+  );
+```
+
+#### Notes
+
+- Requires `rowid_column` option for data modification operations
+- `id` is pushed down as a list filter (Paddle has no single-object adjustment endpoint)
+- Pushed-down filters: `id`, `customer_id`, `subscription_id`, `transaction_id`, `status`, `action`
+- Adjustment items and totals can be extracted using: `attrs->'totals'`
+
+### Discounts
+
+This is an object representing Paddle Discounts.
+
+Ref: [Paddle API docs](https://developer.paddle.com/api-reference/about/data-types)
+
+#### Operations
+
+| Object    | Select | Insert | Update | Delete | Truncate |
+| --------- | :----: | :----: | :----: | :----: | :------: |
+| Discounts |   ✅    |   ✅    |   ✅    |   ❌    |    ❌     |
+
+#### Usage
+
+```sql
+create foreign table paddle.discounts (
+  id text,
+  status text,
+  description text,
+  code text,
+  type text,
+  mode text,
+  amount text,
+  currency_code text,
+  recur boolean,
+  times_used integer,
+  enabled_for_checkout boolean,
+  discount_group_id text,
+  expires_at timestamptz,
+  created_at timestamptz,
+  updated_at timestamptz,
+  custom_data jsonb,
+  attrs jsonb
+)
+  server paddle_server
+  options (
+    object 'discounts',
+    rowid_column 'id'
+  );
+```
+
+#### Notes
+
+- Requires `rowid_column` option for data modification operations
+- Pushed-down filters: `id`, `code`, `status`, `mode`, `discount_group_id`
 
 ## Query Pushdown Support
 
-This FDW supports `where` clause pushdown with `id` as the filter. For example,
+This FDW pushes `where` clause filters down to the Paddle API so that filtering
+happens at the source instead of after a full table scan. Two kinds of pushdown
+are supported:
+
+**Single-object lookup.** For objects that expose a `GET /{object}/{id}`
+endpoint, `where id = '...'` is turned into a direct single-object request:
 
 ```sql
 select * from paddle.customers where id = 'ctm_01hymwgpkx639a6mkvg99563sp';
+```
+
+**List filters.** Equality filters on supported columns are pushed down as query
+parameters (see each entity's Notes for the exact list). Multiple filters are
+combined, and `in (...)` lists are pushed as comma-separated values:
+
+```sql
+-- server-side filtered instead of a full scan
+select * from paddle.transactions
+where customer_id = 'ctm_01hymwgpkx639a6mkvg99563sp'
+  and status = 'completed';
+
+select * from paddle.subscriptions where status = 'active';
+```
+
+**Date-range filters (transactions only).** Paddle supports range operators on
+the transactions list endpoint, so `<`, `<=`, `>`, `>=` on `created_at`,
+`updated_at`, and `billed_at` are pushed down as `[LT]`/`[LTE]`/`[GT]`/`[GTE]`
+filters:
+
+```sql
+select * from paddle.transactions
+where created_at >= '2024-01-01' and created_at < '2024-02-01';
 ```
 
 ## Supported Data Types
@@ -283,8 +521,11 @@ The Paddle API uses JSON formatted data, please refer to [Paddle docs](https://d
 
 This section describes important limitations and considerations when using this FDW:
 
-- Query pushdown is only supported for the `id` column, resulting in full table scans for other filters
+- Query pushdown is supported for `id` and the per-object filters listed in each entity's Notes; filtering on other columns falls back to a full table scan
+- Date-range pushdown (`<`, `<=`, `>`, `>=`) is only available for `transactions` (`created_at`, `updated_at`, `billed_at`)
+- Paddle's list endpoints for `products`, `prices`, `customers`, and `discounts` default to returning only `active` (non-archived) entities. Unless you filter on `status` explicitly, archived rows are not returned — keep this in mind for reconciliation, and add `where status = 'archived'` to see archived entities
 - Large result sets may experience slower performance due to full data transfer requirement
+- This is a read-mostly wrapper that queries Paddle over HTTP on demand; it is not a replacement for webhook-driven fulfilment. Do not put a live FDW query on a latency-critical path (e.g. per-request access checks) — use it for reporting, reconciliation, and backfill instead
 - Materialized views using these foreign tables may fail during logical backups
 
 ## Examples
@@ -300,8 +541,8 @@ create foreign table paddle.customers (
   email text,
   status text,
   custom_data jsonb,
-  created_at timestamp,
-  updated_at timestamp,
+  created_at timestamptz,
+  updated_at timestamptz,
   attrs jsonb
 )
   server paddle_server
@@ -324,8 +565,8 @@ create foreign table paddle.products (
   tax_category text,
   status text,
   description text,
-  created_at timestamp,
-  updated_at timestamp,
+  created_at timestamptz,
+  updated_at timestamptz,
   attrs jsonb
 )
   server paddle_server
@@ -341,8 +582,9 @@ from paddle.products where id = 'pro_01hymwj50rfavry9kqsf2vk6sy';
 create foreign table paddle.subscriptions (
   id text,
   status text,
-  created_at timestamp,
-  updated_at timestamp,
+  customer_id text,
+  created_at timestamptz,
+  updated_at timestamptz,
   attrs jsonb
 )
   server paddle_server
@@ -351,10 +593,43 @@ create foreign table paddle.subscriptions (
     rowid_column 'id'
   );
 
--- extract subscription items for a subscription
-select id, attrs#>'{items,status}' as item_status
+-- extract the subscription items array (items is a JSON array, not an object)
+select id, attrs->'items' as items
 from paddle.subscriptions where id = 'sub_01hv959anj4zrw503h2acawb3p';
 ```
+
+### Reconciliation and Reporting
+
+Because filters are pushed down to Paddle, the wrapper works well for
+reporting and for reconciling Paddle against your own tables — for example, a
+periodic job that pulls only recently-changed transactions, or a per-customer
+subscription lookup. Assumes the foreign tables were created via
+`import foreign schema` (see [Entities](#entities)).
+
+```sql
+-- incremental pull: only transactions updated since the last sync
+-- (updated_at range is pushed down, so this is a targeted request, not a full scan)
+select id, status, customer_id, currency_code, billed_at, updated_at
+from paddle.transactions
+where updated_at >= '2024-06-01T00:00:00';
+
+-- a customer's active subscriptions (customer_id + status pushed down)
+select id, status, next_billed_at
+from paddle.subscriptions
+where customer_id = 'ctm_01hymwgpkx639a6mkvg99563sp'
+  and status = 'active';
+
+-- refunds and chargebacks for reporting (adjustments)
+select id, action, transaction_id, customer_id, currency_code, created_at
+from paddle.adjustments
+where action = 'refund';
+```
+
+For real-time provisioning (granting/revoking access as subscriptions change),
+use Paddle webhooks to keep your own tables up to date, and use this wrapper for
+the reporting and reconciliation queries above. See Paddle's
+[Provision access and handle subscription state](https://developer.paddle.com/build/subscriptions/provision-access-webhooks)
+guide.
 
 ### Data Modify Example
 
