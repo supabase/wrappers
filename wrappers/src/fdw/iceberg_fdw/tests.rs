@@ -446,16 +446,17 @@ mod tests {
                 &[],
             )
             .unwrap();
-            // 10.255.255.1 is a non-routable address commonly used to simulate
-            // an unreachable host; short timeouts here must bound the failure
-            // rather than letting it hang indefinitely.
+            // 192.0.2.1 is an RFC 5737 TEST-NET-1 address, guaranteed
+            // non-routable, used to simulate an unreachable host; short
+            // timeouts here must bound the failure rather than letting it
+            // hang indefinitely.
             c.update(
                 r#"CREATE SERVER iceberg_timeout_server
                      FOREIGN DATA WRAPPER iceberg_wrapper
                      OPTIONS (
                        aws_access_key_id 'admin',
                        aws_secret_access_key 'password',
-                       catalog_uri 'http://10.255.255.1:1',
+                       catalog_uri 'http://192.0.2.1:1',
                        warehouse 'warehouse',
                        "s3.endpoint" 'http://localhost:8000',
                        connect_timeout_ms '500',

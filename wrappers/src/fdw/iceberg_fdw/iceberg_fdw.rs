@@ -458,14 +458,12 @@ impl ForeignDataWrapper<IcebergFdwError> for IcebergFdw {
                 props.insert(REST_CATALOG_PROP_URI.to_string(), catalog_uri);
                 props.insert(REST_CATALOG_PROP_WAREHOUSE.to_string(), warehouse);
 
-                let request_timeout_ms =
-                    require_option_or("request_timeout_ms", &server.options, "30000")
-                        .parse::<u64>()
-                        .unwrap_or(30000);
-                let connect_timeout_ms =
-                    require_option_or("connect_timeout_ms", &server.options, "10000")
-                        .parse::<u64>()
-                        .unwrap_or(10000);
+                let request_timeout_ms = require_option_or("request_timeout_ms", &props, "30000")
+                    .parse::<u64>()
+                    .unwrap_or(30000);
+                let connect_timeout_ms = require_option_or("connect_timeout_ms", &props, "10000")
+                    .parse::<u64>()
+                    .unwrap_or(10000);
                 let client = reqwest::Client::builder()
                     .timeout(Duration::from_millis(request_timeout_ms))
                     .connect_timeout(Duration::from_millis(connect_timeout_ms))
