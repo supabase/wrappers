@@ -22,6 +22,7 @@ use parquet::file::properties::WriterProperties;
 use pgrx::pg_sys;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
+use std::time::Duration;
 
 use supabase_wrappers::prelude::*;
 
@@ -456,7 +457,28 @@ impl ForeignDataWrapper<IcebergFdwError> for IcebergFdw {
                 let warehouse = require_option_or("warehouse", &props, "warehouse").to_string();
                 props.insert(REST_CATALOG_PROP_URI.to_string(), catalog_uri);
                 props.insert(REST_CATALOG_PROP_WAREHOUSE.to_string(), warehouse);
-                Box::new(rt.block_on(RestCatalogBuilder::default().load("rest", props))?)
+
+                let request_timeout_ms =
+                    require_option_or("request_timeout_ms", &server.options, "30000")
+                        .parse::<u64>()
+                        .unwrap_or(30000);
+                let connect_timeout_ms =
+                    require_option_or("connect_timeout_ms", &server.options, "10000")
+                        .parse::<u64>()
+                        .unwrap_or(10000);
+                let client = reqwest::Client::builder()
+                    .timeout(Duration::from_millis(request_timeout_ms))
+                    .connect_timeout(Duration::from_millis(connect_timeout_ms))
+                    .build()
+                    .map_err(IcebergFdwError::ReqwestError)?;
+
+                Box::new(
+                    rt.block_on(
+                        RestCatalogBuilder::default()
+                            .with_client(client)
+                            .load("rest", props),
+                    )?,
+                )
             };
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);

@@ -435,4 +435,65 @@ mod tests {
             assert_eq!(names, vec!["dave"]);
         });
     }
+
+    #[pg_test]
+    fn iceberg_rest_catalog_timeout() {
+        Spi::connect_mut(|c| {
+            c.update(
+                r#"CREATE FOREIGN DATA WRAPPER iceberg_wrapper
+                     HANDLER iceberg_fdw_handler VALIDATOR iceberg_fdw_validator"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            // 10.255.255.1 is a non-routable address commonly used to simulate
+            // an unreachable host; short timeouts here must bound the failure
+            // rather than letting it hang indefinitely.
+            c.update(
+                r#"CREATE SERVER iceberg_timeout_server
+                     FOREIGN DATA WRAPPER iceberg_wrapper
+                     OPTIONS (
+                       aws_access_key_id 'admin',
+                       aws_secret_access_key 'password',
+                       catalog_uri 'http://10.255.255.1:1',
+                       warehouse 'warehouse',
+                       "s3.endpoint" 'http://localhost:8000',
+                       connect_timeout_ms '500',
+                       request_timeout_ms '500'
+                     )"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"CREATE FOREIGN TABLE iceberg_timeout_test (id bigint)
+                     SERVER iceberg_timeout_server
+                     OPTIONS ("table" 'docs_example.bids')"#,
+                None,
+                &[],
+            )
+            .unwrap();
+        });
+
+        // the foreign scan raises a real Postgres ERROR, which unwinds as a
+        // panic through SPI, so it must be caught rather than matched on a
+        // Result
+        let start = std::time::Instant::now();
+        let result = std::panic::catch_unwind(|| {
+            Spi::connect(|c| {
+                c.select("SELECT * FROM iceberg_timeout_test", None, &[])
+                    .is_err()
+            })
+        });
+        let elapsed = start.elapsed();
+
+        assert!(
+            result.is_err(),
+            "expected foreign scan against an unroutable catalog_uri to fail"
+        );
+        assert!(
+            elapsed < std::time::Duration::from_secs(5),
+            "expected connect_timeout_ms/request_timeout_ms to bound the failure, took {elapsed:?}"
+        );
+    }
 }
