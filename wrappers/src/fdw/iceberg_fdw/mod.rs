@@ -74,6 +74,9 @@ enum IcebergFdwError {
 
     #[error("{0}")]
     IoError(#[from] std::io::Error),
+
+    #[error("reqwest error: {0}")]
+    ReqwestError(#[from] reqwest::Error),
 }
 
 impl From<IcebergFdwError> for ErrorReport {

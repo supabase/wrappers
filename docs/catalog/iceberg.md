@@ -126,7 +126,13 @@ For any server options need to be stored in Vault, you can add a prefix `vault_`
         warehouse 'warehouse',
 
         -- AWS S3 endpoint URL, optional
-        "s3.endpoint" 'https://alternative-s3-storage:8000'
+        "s3.endpoint" 'https://alternative-s3-storage:8000',
+
+        -- REST catalog request timeout in milliseconds, optional (default: 30000)
+        request_timeout_ms '30000',
+
+        -- REST catalog connect timeout in milliseconds, optional (default: 10000)
+        connect_timeout_ms '10000'
       );
     ```
 
@@ -152,7 +158,13 @@ For any server options need to be stored in Vault, you can add a prefix `vault_`
         warehouse 'warehouse',
 
         -- AWS S3 endpoint URL, optional
-        "s3.endpoint" 'https://alternative-s3-storage:8000'
+        "s3.endpoint" 'https://alternative-s3-storage:8000',
+
+        -- REST catalog request timeout in milliseconds, optional (default: 30000)
+        request_timeout_ms '30000',
+
+        -- REST catalog connect timeout in milliseconds, optional (default: 10000)
+        connect_timeout_ms '10000'
       );
     ```
 
@@ -163,6 +175,8 @@ For any server options need to be stored in Vault, you can add a prefix `vault_`
 #### Additional Server Options
 
 - `batch_size` - Controls the batch size of records read from Iceberg (value range: 1 - 65536, default: 8192)
+- `request_timeout_ms` - REST catalog HTTP request timeout in milliseconds. Only applies to the REST catalog connection type (default: 30000)
+- `connect_timeout_ms` - REST catalog HTTP connect timeout in milliseconds. Only applies to the REST catalog connection type (default: 10000)
 
 ### Create a schema
 
