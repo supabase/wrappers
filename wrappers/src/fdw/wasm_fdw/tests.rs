@@ -107,6 +107,20 @@ mod tests {
                 .collect::<Vec<_>>();
             assert_eq!(results, vec!["active"]);
 
+            // Paddle: scheduled_change_action is pushed down AND populated from the
+            // nested scheduled_change.action, so the row survives Postgres's local
+            // recheck (a NULL column would make `= 'cancel'` drop every row).
+            let results = c
+                .select(
+                    "SELECT * FROM paddle.subscriptions WHERE scheduled_change_action = 'cancel'",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("scheduled_change_action").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(results, vec!["cancel"]);
+
             // Paddle: multi-column + date-range filter pushdown for transactions.
             // The mock only returns the row when `customer_id` reaches the request
             // url, so this asserts the qual was actually pushed down.

@@ -57,7 +57,37 @@ class MockServer(BaseHTTPRequestHandler):
 }
             """
             elif req_path.startswith("/subscriptions"):
-                body = '{"data": [], "meta": {"request_id": "req-sub", "pagination": {"per_page": 200, "next": "", "has_more": false, "estimated_total": 0}}}'
+                # list endpoint: return a sub with a pending cancel only when the
+                # scheduled_change_action filter was pushed down, so the test proves
+                # the qual reached the url AND that the column is populated from the
+                # nested scheduled_change.action (else the local recheck drops it).
+                if "scheduled_change_action=cancel" in req_path:
+                    body = """
+{
+    "data": [{
+        "id": "sub_01hv959anj4zrw503h2acawb3p",
+        "status": "active",
+        "customer_id": "ctm_01hymwgpkx639a6mkvg99563sp",
+        "address_id": "add_01hv8gq3318ktkfengj2r75gfx",
+        "business_id": null,
+        "currency_code": "USD",
+        "collection_mode": "automatic",
+        "scheduled_change": {"action": "cancel", "effective_at": "2024-06-01T00:00:00Z"},
+        "started_at": "2024-04-12T10:33:00Z",
+        "first_billed_at": "2024-04-12T10:33:00Z",
+        "next_billed_at": "2024-05-12T10:33:00Z",
+        "paused_at": null,
+        "canceled_at": null,
+        "created_at": "2024-04-12T10:33:00Z",
+        "updated_at": "2024-04-12T10:33:00Z",
+        "custom_data": null,
+        "items": [{"status": "active", "price": {"id": "pri_01gsz8x8sawmvhz1pv30nge1ke"}}]
+    }],
+    "meta": {"request_id": "req-sub", "pagination": {"per_page": 200, "next": "", "has_more": false, "estimated_total": 1}}
+}
+            """
+                else:
+                    body = '{"data": [], "meta": {"request_id": "req-sub", "pagination": {"per_page": 200, "next": "", "has_more": false, "estimated_total": 0}}}'
             elif req_path.startswith("/transactions"):
                 # return a row only when customer_id was pushed down (proves the
                 # qual reached the url); a comma in the value means an IN(...) list

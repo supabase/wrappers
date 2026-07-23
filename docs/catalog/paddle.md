@@ -299,7 +299,6 @@ create foreign table paddle.subscriptions (
   customer_id text,
   address_id text,
   business_id text,
-  price_id text,
   currency_code text,
   collection_mode text,
   scheduled_change_action text,
@@ -323,9 +322,9 @@ create foreign table paddle.subscriptions (
 #### Notes
 
 - Requires `rowid_column` option for data modification operations
-- Pushed-down filters: `id`, `customer_id`, `status`, `price_id`, `address_id`, `collection_mode`, `scheduled_change_action`
-- `price_id` and `scheduled_change_action` are filter-oriented columns: Paddle nests the underlying values, so the columns themselves read as `null` — the actual data is available via `attrs->'items'` and `attrs->'scheduled_change'`
-- Subscription items can be extracted using: `attrs->'items'`
+- Pushed-down filters: `id`, `customer_id`, `status`, `address_id`, `collection_mode`, `scheduled_change_action`
+- `scheduled_change_action` reflects the nested `scheduled_change.action` and is `none` when the subscription has no pending change, so you can filter by subscriptions scheduled to `cancel`, `pause`, `resume`, or `none`
+- Filtering by price is not supported on subscriptions (a subscription can have multiple items/prices); subscription items and their prices can be extracted from `attrs->'items'`
 
 ### Transactions
 

@@ -96,7 +96,6 @@ impl PaddleFdw {
                     "id",
                     "customer_id",
                     "status",
-                    "price_id",
                     "address_id",
                     "collection_mode",
                     "scheduled_change_action",
@@ -219,17 +218,24 @@ impl PaddleFdw {
 
     // add supported qual filters to the query string
     fn add_pushdown(&self, qs: &mut Vec<String>, quals: &[Qual]) -> Result<(), FdwError> {
+        // Paddle list filters that accept only a single value (not a
+        // comma-separated list). An `IN (...)` on these can't be represented, so
+        // it isn't pushed — it falls back to a full scan + local recheck rather
+        // than sending a comma list Paddle would reject.
+        const SINGLE_VALUE_FILTERS: &[&str] = &["collection_mode", "type", "mode"];
+
         let (filter_fields, date_fields) = self.pushdown_fields();
         for qual in quals {
             let field = qual.field();
             let op = qual.operator();
             if qual.use_or() {
                 // the only OR'ed qual we can represent is an `IN (...)` list on a
-                // filter field (operator '=', array value), which maps directly
+                // list-typed filter field (operator '=', array value), which maps
                 // onto Paddle's comma-separated list syntax. Anything else can't
                 // be pushed as ANDed query params, so skip it.
                 if op == "="
                     && filter_fields.contains(&field.as_str())
+                    && !SINGLE_VALUE_FILTERS.contains(&field.as_str())
                     && matches!(qual.value(), Value::Array(_))
                 {
                     Self::push_filter(qs, &field, &qual.value());
@@ -347,6 +353,21 @@ impl PaddleFdw {
         // put all properties into 'attrs' JSON column
         if &tgt_col_name == "attrs" {
             return Ok(Some(Cell::Json(src_row.to_string())));
+        }
+
+        // `scheduled_change_action` mirrors the subscriptions list filter of the
+        // same name. Its value lives in the nested `scheduled_change.action`, and
+        // a subscription with no pending change maps to 'none' (matching the
+        // filter's enum). Populating it (rather than leaving it NULL) is what
+        // lets the pushed-down filter survive Postgres's local qual recheck.
+        // Gated to `subscriptions` so a same-named column on any other object
+        // isn't fabricated.
+        if self.object == "subscriptions" && &tgt_col_name == "scheduled_change_action" {
+            let action = src_row
+                .pointer("/scheduled_change/action")
+                .and_then(|v| v.as_str())
+                .unwrap_or("none");
+            return Ok(Some(Cell::String(action.to_owned())));
         }
 
         // a column defined in the foreign table but absent from the Paddle
@@ -597,7 +618,7 @@ impl Guest for PaddleFdw {
             (
                 "subscriptions",
                 "status text, customer_id text, address_id text, business_id text, \
-                 price_id text, currency_code text, collection_mode text, \
+                 currency_code text, collection_mode text, \
                  scheduled_change_action text, started_at timestamptz, \
                  first_billed_at timestamptz, next_billed_at timestamptz, paused_at timestamptz, \
                  canceled_at timestamptz, created_at timestamptz, updated_at timestamptz, \
