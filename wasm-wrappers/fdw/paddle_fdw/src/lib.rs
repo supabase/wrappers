@@ -597,7 +597,8 @@ impl Guest for PaddleFdw {
             (
                 "subscriptions",
                 "status text, customer_id text, address_id text, business_id text, \
-                 currency_code text, collection_mode text, started_at timestamptz, \
+                 price_id text, currency_code text, collection_mode text, \
+                 scheduled_change_action text, started_at timestamptz, \
                  first_billed_at timestamptz, next_billed_at timestamptz, paused_at timestamptz, \
                  canceled_at timestamptz, created_at timestamptz, updated_at timestamptz, \
                  custom_data jsonb",

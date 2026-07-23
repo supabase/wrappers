@@ -299,8 +299,10 @@ create foreign table paddle.subscriptions (
   customer_id text,
   address_id text,
   business_id text,
+  price_id text,
   currency_code text,
   collection_mode text,
+  scheduled_change_action text,
   started_at timestamptz,
   first_billed_at timestamptz,
   next_billed_at timestamptz,
@@ -322,6 +324,7 @@ create foreign table paddle.subscriptions (
 
 - Requires `rowid_column` option for data modification operations
 - Pushed-down filters: `id`, `customer_id`, `status`, `price_id`, `address_id`, `collection_mode`, `scheduled_change_action`
+- `price_id` and `scheduled_change_action` are filter-oriented columns: Paddle nests the underlying values, so the columns themselves read as `null` — the actual data is available via `attrs->'items'` and `attrs->'scheduled_change'`
 - Subscription items can be extracted using: `attrs->'items'`
 
 ### Transactions
