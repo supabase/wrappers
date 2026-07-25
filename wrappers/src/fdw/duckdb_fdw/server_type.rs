@@ -212,11 +212,13 @@ impl ServerType {
                 let warehouse = require_option("warehouse", svr_opts)?;
                 let catalog_uri = require_option("catalog_uri", svr_opts)?;
                 let db_name = self.as_str();
+                let access_delegation_mode = require_option_or("accessDelegationMode", svr_opts,"vended_credentials");
                 format!(
                     "
                     attach '{warehouse}' as {db_name} (
                         type iceberg,
-                        endpoint '{catalog_uri}'
+                        endpoint '{catalog_uri}',
+                        accessDelegationMode '{access_delegation_mode}'
                     );"
                 )
             }
