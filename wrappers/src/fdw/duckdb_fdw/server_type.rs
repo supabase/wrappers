@@ -218,7 +218,7 @@ impl ServerType {
                     attach '{warehouse}' as {db_name} (
                         type iceberg,
                         endpoint '{catalog_uri}',
-                        accessDelegationMode '{access_delegation_mode}'
+                        access_delegation_mode '{access_delegation_mode}'
                     );"
                 )
             }
