@@ -340,6 +340,7 @@ fn create_table_config() -> TableConfig {
                     ("currency", "text"),
                     ("current_period_start", "timestamp"),
                     ("current_period_end", "timestamp"),
+                    ("status", "text"),
                 ],
             ),
         ),

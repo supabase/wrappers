@@ -1010,6 +1010,7 @@ create foreign table stripe.subscriptions (
   currency text,
   current_period_start timestamp,
   current_period_end timestamp,
+  status text,
   attrs jsonb
 )
   server stripe_server
