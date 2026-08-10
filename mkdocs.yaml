@@ -41,6 +41,7 @@ nav:
           - Gravatar: "catalog/gravatar.md"
           - HubSpot: "catalog/hubspot.md"
           - Infura: "catalog/infura.md"
+          - Langfuse: "catalog/langfuse.md"
           - Notion: "catalog/notion.md"
           - OpenAPI: "catalog/openapi.md"
           - Orb: "catalog/orb.md"
