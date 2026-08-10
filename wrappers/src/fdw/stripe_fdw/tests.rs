@@ -392,16 +392,20 @@ mod tests {
                                 .unwrap(),
                         )
                         .zip(r.get_by_name::<Timestamp, _>("current_period_end").unwrap())
+                        .zip(r.get_by_name::<&str, _>("status").unwrap())
                 })
                 .collect::<Vec<_>>();
             assert_eq!(
                 results,
                 vec![(
                     (
-                        ("cus_QXg1o8vcGmoR32", "usd"),
+                        (
+                            ("cus_QXg1o8vcGmoR32", "usd"),
+                            Timestamp::try_from(287883090000000i64).unwrap()
+                        ),
                         Timestamp::try_from(287883090000000i64).unwrap()
                     ),
-                    Timestamp::try_from(287883090000000i64).unwrap()
+                    "active"
                 )]
             );
 
