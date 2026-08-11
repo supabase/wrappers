@@ -59,13 +59,13 @@ impl LangfuseFdw {
     // Resolves one credential from `<name>_name`, `<name>_id`, or `<name>` in that order.
     // Vault is preferred; the plaintext form is a convenience for local development.
     fn read_key(opts: &Options, name: &str) -> Result<String, FdwError> {
-        if let Some(secret_name) = opts.get(&format!("{}_name", name)) {
+        if let Some(secret_name) = opts.get(&format!("{name}_name")) {
             return utils::get_vault_secret_by_name(&secret_name)
-                .ok_or(format!("secret '{}' not found in Vault", secret_name));
+                .ok_or(format!("secret '{secret_name}' not found in Vault"));
         }
-        if let Some(secret_id) = opts.get(&format!("{}_id", name)) {
+        if let Some(secret_id) = opts.get(&format!("{name}_id")) {
             return utils::get_vault_secret(&secret_id)
-                .ok_or(format!("secret id '{}' not found in Vault", secret_id));
+                .ok_or(format!("secret id '{secret_id}' not found in Vault"));
         }
         opts.require(name)
     }
@@ -153,7 +153,7 @@ impl LangfuseFdw {
         // API — the difference between a pushdown working and Postgres quietly filtering
         // a full scan is otherwise invisible.
         if self.verbose {
-            utils::report_info(&format!("langfuse_fdw: GET {}", url));
+            utils::report_info(&format!("langfuse_fdw: GET {url}"));
         }
 
         let headers: Vec<(String, String)> = vec![
@@ -235,7 +235,7 @@ fn url_encode(s: &str) -> String {
             b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
                 out.push(*b as char)
             }
-            _ => out.push_str(&format!("%{:02X}", b)),
+            _ => out.push_str(&format!("%{b:02X}")),
         }
     }
     out
@@ -309,7 +309,7 @@ impl Guest for LangfuseFdw {
         this.page_size = opts
             .require_or("page_size", "100".to_owned().as_str())
             .parse::<i64>()
-            .map_err(|e| format!("invalid page_size: {}", e))?;
+            .map_err(|e| format!("invalid page_size: {e}"))?;
         this.verbose = opts.require_or("verbose", "false") == "true";
 
         // Keys live in Vault so they never appear in `create server` DDL or pg_dump
@@ -320,7 +320,7 @@ impl Guest for LangfuseFdw {
 
         this.auth_header = format!(
             "Basic {}",
-            BASE64.encode(format!("{}:{}", public_key, secret_key))
+            BASE64.encode(format!("{public_key}:{secret_key}"))
         );
 
         Ok(())
@@ -412,10 +412,7 @@ impl Guest for LangfuseFdw {
                     other => Some(Cell::Json(other.to_string())),
                 },
                 _ => {
-                    return Err(format!(
-                        "column {} data type is not supported",
-                        tgt_col_name
-                    ));
+                    return Err(format!("column {tgt_col_name} data type is not supported"));
                 }
             };
 
