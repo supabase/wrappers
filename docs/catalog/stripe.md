@@ -1030,7 +1030,6 @@ create foreign table stripe.subscriptions (
 - While any column is allowed in a where clause, it is most efficient to filter by:
       - id
       - customer
-      - price
       - status
 
 ### Tokens
