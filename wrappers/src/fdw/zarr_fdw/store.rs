@@ -9,7 +9,6 @@ use aws_config::BehaviorVersion;
 use aws_sdk_s3 as s3;
 use http::Uri;
 use std::collections::HashMap;
-use std::env;
 use tokio::io::AsyncReadExt;
 
 use supabase_wrappers::prelude::*;
@@ -33,10 +32,33 @@ impl StoreUrl {
             return Err(ZarrFdwError::InvalidStoreUrl(s.to_string()));
         }
         let bucket = uri.host().expect("host checked above").to_owned();
-        // exclude 1st "/" char in the path as s3 object path doesn't like it
-        let prefix = uri.path()[1..].to_string();
+        let prefix = uri.path().trim_matches('/').to_string();
         Ok(Self { bucket, prefix })
     }
+
+    fn object_key(&self, key: &str) -> String {
+        join_key(&self.prefix, key)
+    }
+}
+
+/// Join two S3 object-key fragments without introducing or duplicating `/`.
+pub(crate) fn join_key(prefix: &str, key: &str) -> String {
+    let prefix = prefix.trim_matches('/');
+    let key = key.trim_matches('/');
+    match (prefix.is_empty(), key.is_empty()) {
+        (true, _) => key.to_string(),
+        (_, true) => prefix.to_string(),
+        (false, false) => format!("{prefix}/{key}"),
+    }
+}
+
+enum ClientAuth {
+    Anonymous,
+    Static {
+        access_key: String,
+        secret_key: String,
+    },
+    ProviderChain,
 }
 
 /// Object store client.
@@ -57,6 +79,9 @@ impl ZarrStore {
         let url = StoreUrl::parse(store_url)?;
 
         let client = match &server.options {
+            opts if opts.get("anonymous").map(String::as_str) == Some("true") => {
+                Some(Self::build_client(&rt, opts, ClientAuth::Anonymous))
+            }
             opts if opts.contains_key("vault_access_key_id") => {
                 let vault_access_key_id = require_option("vault_access_key_id", opts)?.to_string();
                 let vault_secret_access_key =
@@ -64,36 +89,49 @@ impl ZarrStore {
                 let access_key = get_vault_secret(&vault_access_key_id);
                 let secret_key = get_vault_secret(&vault_secret_access_key);
                 match (access_key, secret_key) {
-                    (Some(k), Some(s)) => Some(Self::build_client(&rt, opts, k, s)),
+                    (Some(k), Some(s)) => Some(Self::build_client(
+                        &rt,
+                        opts,
+                        ClientAuth::Static {
+                            access_key: k,
+                            secret_key: s,
+                        },
+                    )),
                     _ => None,
                 }
             }
             opts if opts.contains_key("aws_access_key_id") => {
                 let access_key = require_option("aws_access_key_id", opts)?.to_string();
                 let secret_key = require_option("aws_secret_access_key", opts)?.to_string();
-                Some(Self::build_client(&rt, opts, access_key, secret_key))
+                Some(Self::build_client(
+                    &rt,
+                    opts,
+                    ClientAuth::Static {
+                        access_key,
+                        secret_key,
+                    },
+                ))
             }
-            _ => None, // provider chain: env, IMDS, etc.
+            opts => Some(Self::build_client(&rt, opts, ClientAuth::ProviderChain)),
         };
 
         Ok(Self { rt, client, url })
     }
 
-    fn build_client(
-        rt: &Runtime,
-        opts: &HashMap<String, String>,
-        aws_access_key_id: String,
-        aws_secret_access_key: String,
-    ) -> s3::Client {
-        // set AWS environment variables and create shared config from them
-        unsafe {
-            env::set_var("AWS_ACCESS_KEY_ID", aws_access_key_id);
-            env::set_var("AWS_SECRET_ACCESS_KEY", aws_secret_access_key);
-        }
+    fn build_client(rt: &Runtime, opts: &HashMap<String, String>, auth: ClientAuth) -> s3::Client {
         let region = require_option_or("aws_region", opts, "us-east-1");
-        unsafe { env::set_var("AWS_REGION", region) };
-
-        let mut config_loader = aws_config::defaults(BehaviorVersion::latest());
+        let mut config_loader = aws_config::defaults(BehaviorVersion::latest())
+            .region(s3::config::Region::new(region.to_string()));
+        config_loader = match auth {
+            ClientAuth::Anonymous => config_loader.no_credentials(),
+            ClientAuth::Static {
+                access_key,
+                secret_key,
+            } => config_loader.credentials_provider(s3::config::Credentials::new(
+                access_key, secret_key, None, None, "zarr_fdw",
+            )),
+            ClientAuth::ProviderChain => config_loader,
+        };
         // endpoint_url not supported as env var in rust https://github.com/awslabs/aws-sdk-rust/issues/932
         if let Some(endpoint_url) = opts.get("endpoint_url") {
             if endpoint_url.ends_with('/') {
@@ -112,11 +150,7 @@ impl ZarrStore {
 
     /// Fetch a full object by key (relative to the store prefix).
     pub async fn get_object(&self, key: &str) -> ZarrFdwResult<Vec<u8>> {
-        let full_key = if self.url.prefix.is_empty() {
-            key.to_string()
-        } else {
-            format!("{}/{}", self.url.prefix, key.trim_start_matches('/'))
-        };
+        let full_key = self.url.object_key(key);
 
         match &self.client {
             Some(client) => {
@@ -163,13 +197,36 @@ mod tests {
     }
 
     #[test]
+    fn parse_store_url_without_slash() {
+        let u = StoreUrl::parse("s3://cinecube").unwrap();
+        assert_eq!(u.bucket, "cinecube");
+        assert_eq!(u.prefix, "");
+    }
+
+    #[test]
     fn reject_non_s3() {
         assert!(StoreUrl::parse("https://example.com/x").is_err());
     }
 
     #[test]
     fn parse_store_url_trailing_slash() {
-        let u = StoreUrl::parse("s3://bucket/k.alt").unwrap();
+        let u = StoreUrl::parse("s3://bucket/k.alt/").unwrap();
         assert_eq!(u.prefix, "k.alt");
+    }
+
+    #[test]
+    fn joins_object_key_prefix_once() {
+        let u = StoreUrl::parse("s3://bucket/grid/data.zarr").unwrap();
+        assert_eq!(
+            u.object_key("longitude/.zarray"),
+            "grid/data.zarr/longitude/.zarray"
+        );
+        assert_eq!(u.object_key("/x/0/"), "grid/data.zarr/x/0");
+    }
+
+    #[test]
+    fn joins_root_object_key_without_leading_slash() {
+        let u = StoreUrl::parse("s3://bucket/").unwrap();
+        assert_eq!(u.object_key("/.zarray"), ".zarray");
     }
 }

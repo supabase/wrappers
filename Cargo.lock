@@ -1487,6 +1487,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "bindgen"
+version = "0.72.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "993776b509cfb49c750f11b8f07a46fa23e0a1386ffc01fb1e7d343efc387895"
+dependencies = [
+ "bitflags 2.10.0",
+ "cexpr",
+ "clang-sys",
+ "itertools 0.13.0",
+ "log",
+ "prettyplease",
+ "proc-macro2",
+ "quote",
+ "regex",
+ "rustc-hash",
+ "shlex",
+ "syn 2.0.108",
+]
+
+[[package]]
 name = "binstring"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1574,6 +1594,25 @@ dependencies = [
  "futures-io",
  "futures-lite 2.6.1",
  "piper",
+]
+
+[[package]]
+name = "blosc-rs"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a9d194effa695b1fdfb156c517b4fb66a6fa1adabf33d19749bd34a483d564f9"
+dependencies = [
+ "blosc-rs-sys",
+]
+
+[[package]]
+name = "blosc-rs-sys"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0f2fa86b14bf873f98a075591d212309121642929d812aa759fec348758c8c42"
+dependencies = [
+ "bindgen 0.72.1",
+ "cmake",
 ]
 
 [[package]]
@@ -6154,7 +6193,7 @@ version = "0.19.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "81cd392ab2e05995ebecf15bd562d7eb666a1ced11b3e39ef910212d6b67f2a9"
 dependencies = [
- "bindgen",
+ "bindgen 0.71.1",
  "cc",
  "clang-sys",
  "eyre",
@@ -10633,6 +10672,7 @@ dependencies = [
  "aws-sdk-s3vectors",
  "aws-smithy-async",
  "aws-smithy-types",
+ "blosc-rs",
  "bson",
  "bytes",
  "chrono",

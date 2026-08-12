@@ -206,6 +206,7 @@ dynamodb_fdw = [
 zarr_fdw = [
     "aws-config",
     "aws-sdk-s3",
+    "blosc-rs",
     "tokio",
     "tokio-util",
     "async-compression",
@@ -283,6 +284,9 @@ aws-config = { version = "1.8.6", features = [
 
 # for s3_fdw
 aws-sdk-s3 = { version = "1.86.0", optional = true }
+
+# for zarr_fdw
+blosc-rs = { version = "0.4.0", features = ["lz4"], optional = true }
 
 # for s3vectors_fdw
 aws-sdk-s3vectors = { version = "1.14.0", optional = true }

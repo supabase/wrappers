@@ -33,7 +33,7 @@ use super::chunk::{
 };
 use super::decode::{Codec, DType, coord_bytes_to_f64};
 use super::meta::ArrayMeta;
-use super::store::ZarrStore;
+use super::store::{ZarrStore, join_key};
 use super::{ZarrFdwError, ZarrFdwResult};
 
 const FDW_NAME: &str = "ZarrFdw";
@@ -156,7 +156,7 @@ pub(crate) struct ZarrFdw {
 
     // --- scan state, (re)built in begin_scan ------------------------------
     tgt_cols: Vec<Column>,
-    // object-key prefix of the cube array (store prefix + array_group)
+    // object-key path of the cube array, relative to the store prefix
     array_dir: String,
     // dimension names in array order, e.g. ["time", "y", "x"] or ["y", "x"]
     axes: Vec<String>,
@@ -182,6 +182,10 @@ pub(crate) struct ZarrFdw {
 
     time_spec: TimeSpec,
     rows_out: i64,
+}
+
+fn zeroed_scan_cursors(rank: usize) -> [Vec<usize>; 3] {
+    std::array::from_fn(|_| vec![0; rank])
 }
 
 impl ZarrFdw {
@@ -212,11 +216,15 @@ impl ZarrFdw {
         let dt = self.dtype.expect("dtype set in begin_scan");
         let codec = self.codec.as_ref().expect("codec set in begin_scan");
         let ci = &self.chunks[self.chunk_pos];
+        debug_assert_eq!(self.sub_lo.len(), self.rank);
+        debug_assert_eq!(self.sub_hi.len(), self.rank);
+        debug_assert_eq!(self.sub_idx.len(), self.rank);
 
         // fetch + decompress
         let key = chunk_key(&meta.dimension_separator, ci);
-        let dir = &self.array_dir;
-        let raw = self.store.get_object_sync(&format!("{dir}/{key}"))?;
+        let raw = self
+            .store
+            .get_object_sync(&join_key(&self.array_dir, &key))?;
         let decoded = self.store.rt.block_on(codec.decompress(&raw))?;
         stats::inc_stats(FDW_NAME, stats::Metric::BytesIn, decoded.len() as i64);
 
@@ -229,16 +237,19 @@ impl ZarrFdw {
             eff.push((dim as usize - start).min(chunk_len));
         }
 
-        // zarr stores edge chunks unpadded, so the byte length must be the
-        // product of the effective shape times the item size
-        let expected = eff.iter().product::<usize>() * dt.itemsize();
-        if expected == 0 {
+        if eff.contains(&0) {
             // zero-length dimension: yield nothing from this chunk
             self.sub_lo = (0..self.rank).map(|_| 1).collect();
             self.sub_hi = vec![0; self.rank];
             self.chunk_bytes.clear();
             return Ok(());
         }
+
+        // Zarr v2 edge chunks retain the declared chunk shape. Use that full
+        // shape for byte validation and C-order strides; `eff` ignores the
+        // out-of-array region when deciding which cells to emit.
+        let storage_shape = meta.chunks.iter().map(|&n| n as usize).collect::<Vec<_>>();
+        let expected = storage_shape.iter().product::<usize>() * dt.itemsize();
         if decoded.len() < expected {
             return Err(ZarrFdwError::ReadError(std::io::Error::other(format!(
                 "chunk '{key}' decoded to {} bytes, expected at least {expected}",
@@ -246,7 +257,7 @@ impl ZarrFdw {
             ))));
         }
         self.chunk_bytes = decoded[..expected].to_vec();
-        self.chunk_shape = eff.clone();
+        self.chunk_shape = storage_shape;
 
         // within-chunk index window for this chunk
         for d in 0..self.rank {
@@ -422,9 +433,22 @@ fn read_coordinate_array(store: &ZarrStore, prefix: &str, name: &str) -> ZarrFdw
     let mut values = Vec::new();
     for ci in enumerate_chunks(&ranges) {
         let chunk = chunk_key(&meta.dimension_separator, &ci);
-        let raw = store.get_object_sync(&format!("{dir}/{chunk}"))?;
+        let raw = store.get_object_sync(&join_key(&dir, &chunk))?;
         let decoded = store.rt.block_on(codec.decompress(&raw))?;
-        values.extend(coord_bytes_to_f64(&meta.dtype, &decoded)?);
+        let decoded_values = coord_bytes_to_f64(&meta.dtype, &decoded)?;
+        let chunk_len = meta.chunks[0] as usize;
+        let start = ci[0] as usize * chunk_len;
+        let effective_len = (meta.shape[0] as usize - start).min(chunk_len);
+        if decoded_values.len() < effective_len {
+            return Err(ZarrFdwError::CoordinateReadError {
+                axis: name.to_string(),
+                error: format!(
+                    "chunk '{chunk}' decoded to {} values, expected at least {effective_len}",
+                    decoded_values.len()
+                ),
+            });
+        }
+        values.extend_from_slice(&decoded_values[..effective_len]);
     }
     Ok(values)
 }
@@ -483,18 +507,11 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
 
         // the array_group option scopes which Zarr array in the store this
         // foreign table reads; the default is the store root itself
-        let prefix = self.store.url.prefix.trim_end_matches('/');
         let array_group = options
             .get(OPT_ARRAY_GROUP)
             .map(|s| s.trim_matches('/').to_string())
             .unwrap_or_default();
-        self.array_dir = if array_group.is_empty() {
-            prefix.to_string()
-        } else if prefix.is_empty() {
-            array_group
-        } else {
-            format!("{prefix}/{array_group}")
-        };
+        self.array_dir = array_group;
 
         // single-band MVP: at most one non-coordinate (value) column allowed
         let value_cols = columns
@@ -520,7 +537,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
         // load array metadata
         let meta_bytes = self
             .store
-            .get_object_sync(&format!("{}/.zarray", self.array_dir))?;
+            .get_object_sync(&join_key(&self.array_dir, ".zarray"))?;
         let meta = ArrayMeta::from_bytes(&meta_bytes)?;
         let rank = meta.shape.len();
         self.axes = if rank == 3 {
@@ -540,7 +557,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
         // load coordinate arrays
         let mut coords = Vec::with_capacity(rank);
         for axis in &self.axes {
-            coords.push(read_coordinate_array(&self.store, prefix, axis)?);
+            coords.push(read_coordinate_array(&self.store, "", axis)?);
         }
         for (d, axis) in self.axes.iter().enumerate() {
             if coords[d].len() as u64 != meta.shape[d] {
@@ -601,6 +618,8 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
         };
         self.chunk_pos = 0;
         self.chunk_bytes.clear();
+        self.chunk_shape.clear();
+        [self.sub_lo, self.sub_hi, self.sub_idx] = zeroed_scan_cursors(rank);
         self.pending = false;
         self.rows_out = 0;
         Ok(())
@@ -615,6 +634,10 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
                 return Ok(Some(()));
             }
             if self.chunk_pos >= self.chunks.len() {
+                if self.rows_out > 0 {
+                    stats::inc_stats(FDW_NAME, stats::Metric::RowsOut, self.rows_out);
+                    self.rows_out = 0;
+                }
                 return Ok(None);
             }
             self.load_chunk()?;
@@ -635,7 +658,6 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
     }
 
     fn end_scan(&mut self) -> ZarrFdwResult<()> {
-        stats::inc_stats(FDW_NAME, stats::Metric::RowsOut, self.rows_out);
         self.chunk_bytes.clear();
         self.chunks.clear();
         self.coords.clear();
@@ -649,6 +671,14 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
             match oid {
                 FOREIGN_SERVER_RELATION_ID => {
                     check_options_contain(&options, "store_url")?;
+                    if let Some(v) = option_value(&options, "anonymous") {
+                        if v != "true" && v != "false" {
+                            return Err(ZarrFdwError::InvalidOptionValue {
+                                option: "anonymous".to_string(),
+                                message: "must be 'true' or 'false'".to_string(),
+                            });
+                        }
+                    }
                 }
                 FOREIGN_TABLE_RELATION_ID => {
                     if let Some(v) = option_value(&options, OPT_TIME_UNIT) {
@@ -685,5 +715,18 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
             }
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod unit_tests {
+    use super::zeroed_scan_cursors;
+
+    #[test]
+    fn scan_cursors_are_sized_to_the_array_rank() {
+        let [lo, hi, idx] = zeroed_scan_cursors(3);
+        assert_eq!(lo, vec![0; 3]);
+        assert_eq!(hi, vec![0; 3]);
+        assert_eq!(idx, vec![0; 3]);
     }
 }

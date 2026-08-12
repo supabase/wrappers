@@ -1,11 +1,11 @@
 //! Chunk decoding: dtype parsing, decompression, and raw chunk bytes -> cells.
 //!
 //! MVP codec coverage:
-//! - compression: `null`/raw, `gzip`, `zlib`
+//! - compression: `null`/raw, `gzip`, `zlib`, Blosc/LZ4
 //! - dtypes: `f4`, `f8`, `i1`, `i2`, `i4`, `i8` (signed little/big endian)
 //! - byte order: `<` little-endian, `>` big-endian
 //!
-//! Blosc / zstd and more exotic dtypes are left as explicit errors so the gap
+//! Zstd and more exotic dtypes are left as explicit errors so the gap
 //! is visible rather than silently wrong.
 
 use super::{ZarrFdwError, ZarrFdwResult};
@@ -18,6 +18,7 @@ pub enum Codec {
     Raw,
     Gzip,
     Zlib,
+    Blosc,
     Unsupported(String),
 }
 
@@ -35,6 +36,7 @@ impl Codec {
                     "" => Codec::Raw,
                     "gzip" => Codec::Gzip,
                     "zlib" => Codec::Zlib,
+                    "blosc" => Codec::Blosc,
                     other => Codec::Unsupported(other.to_string()),
                 }
             }
@@ -56,6 +58,18 @@ impl Codec {
                 let mut dec = BufReader::new(ZlibDecoder::new(BufReader::new(Cursor::new(data))));
                 dec.read_to_end(&mut decoded).await?;
                 Ok(decoded)
+            }
+            Codec::Blosc => {
+                let decoder = blosc_rs::Decoder::new(data).map_err(|e| {
+                    ZarrFdwError::ReadError(std::io::Error::other(format!(
+                        "invalid Blosc chunk: {e}"
+                    )))
+                })?;
+                decoder.decompress(1).map_err(|e| {
+                    ZarrFdwError::ReadError(std::io::Error::other(format!(
+                        "failed to decompress Blosc chunk: {e}"
+                    )))
+                })
             }
             Codec::Unsupported(id) => Err(ZarrFdwError::UnsupportedCompressor(id.clone())),
         }
@@ -291,5 +305,20 @@ mod tests {
     #[test]
     fn coord_f64_rejects_unknown_kind() {
         assert!(coord_bytes_to_f64("|S10", b"hello").is_err());
+    }
+
+    #[test]
+    fn decompresses_blosc_lz4() {
+        use blosc_rs::{CompressAlgo, Encoder};
+
+        let raw = (0..64u64).flat_map(u64::to_le_bytes).collect::<Vec<_>>();
+        let compressed = Encoder::default()
+            .compressor(CompressAlgo::Lz4)
+            .typesize(8.try_into().unwrap())
+            .compress(&raw)
+            .unwrap();
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let decoded = rt.block_on(Codec::Blosc.decompress(&compressed)).unwrap();
+        assert_eq!(decoded, raw);
     }
 }

@@ -1,6 +1,6 @@
 # pgrx + PG15 test container for the wrappers crate
 #
-# Debian bookworm (rust:1.88) with PostgreSQL 15, clang and cargo-pgrx 0.16.1,
+# Debian bookworm (rust:1.88) with PostgreSQL 15, clang, CMake and cargo-pgrx 0.16.1,
 # so native FDWs can be compiled and tested against the PG version the repo's
 # CI targets (see .github/workflows/test_wrappers.yml). This is useful because
 # some local Postgres installs (e.g. Arch `postgresql` = PG 18.x) are NOT
@@ -17,7 +17,7 @@
 #     extension as root (CARGO_PGRX_TEST_RUNAS=builder).
 #
 # Build (from repo root):
-#   docker build -t wrappers-pgrx-pg15 -f wrappers/.ci/pgrx-15.Dockerfile wrappers
+#   podman build -t wrappers-pgrx-pg15 -f wrappers/.ci/pgrx-15.Dockerfile wrappers
 #
 # Keep a persistent target dir for incremental repeats. IMPORTANT: put it on
 # real disk, NOT under /tmp — /tmp is a tmpfs (typically ~8 GiB) and the full
@@ -29,21 +29,21 @@
 #   -v /home/<you>/pgrx-target:/target
 #
 # Compile check:
-#   docker run --rm \
+#   podman run --rm \
 #     -e CARGO_TARGET_DIR=/target -e TMPDIR=/target/tmp \
 #     -v /home/<you>/pgrx-target:/target \
 #     -v "$PWD":/work -w /work wrappers-pgrx-pg15 \
 #     cargo check -p wrappers --no-default-features --features zarr_fdw,pg15
 #
 # Unit tests (pure #[test] modules):
-#   docker run --rm \
+#   podman run --rm \
 #     -e CARGO_TARGET_DIR=/tmp/target -v /tmp/pgrx-target:/tmp/target \
 #     -v "$PWD":/work -w /work wrappers-pgrx-pg15 \
 #     cargo test -p wrappers --no-default-features --features zarr_fdw,pg15 \
 #       --lib -- --skip pg_zarr
 #
 # #[pg_test] DDL tests (throws up a throwaway PG15 serving the extension):
-#   docker run --rm \
+#   podman run --rm \
 #     -e CARGO_TARGET_DIR=/tmp/target -e CARGO_PGRX_TEST_RUNAS=builder \
 #     -v /tmp/pgrx-target:/tmp/target -v "$PWD":/work -w /work wrappers-pgrx-pg15 \
 #     cargo test -p wrappers --no-default-features --features zarr_fdw,pg15 \
@@ -63,6 +63,7 @@ FROM rust:1.88
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       clang \
+      cmake \
       postgresql-15 \
       postgresql-server-dev-15 \
       sudo \
