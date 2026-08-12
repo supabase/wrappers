@@ -486,6 +486,105 @@ class MockServer(BaseHTTPRequestHandler):
   }
 }
             """
+        elif fdw == "langfuse":
+            # Both endpoints report page/totalPages rather than a cursor, which is what
+            # the older Langfuse read APIs do. `page=1` of `totalPages=2` means a
+            # regression that stops following pages would return only the first row.
+            qs = parse_qs(urlparse(req_path).query)
+            page = int(qs.get("page", ["1"])[0])
+
+            if req_path.startswith("/api/public/traces"):
+                # A userId filter is pushed down as a query param. Returning nothing for
+                # a non-matching value keeps the pushdown assertion honest: were the
+                # filter dropped, the unfiltered rows below would still come back.
+                if qs.get("userId", [None])[0] not in (None, "user-alice"):
+                    body = json.dumps(
+                        {"data": [], "meta": {"page": 1, "totalPages": 1}}
+                    )
+                elif page == 1:
+                    body = """
+{
+  "data": [
+    {
+      "id": "trace-1",
+      "name": "summarize-doc",
+      "userId": "user-alice",
+      "sessionId": "session-0",
+      "environment": "default",
+      "totalCost": 0.0435,
+      "latency": 4.2,
+      "timestamp": "2026-08-09T02:46:41.286Z",
+      "tags": ["seed"],
+      "metadata": {"seeded": true}
+    }
+  ],
+  "meta": {"page": 1, "limit": 1, "totalItems": 2, "totalPages": 2}
+}
+                    """
+                else:
+                    body = """
+{
+  "data": [
+    {
+      "id": "trace-2",
+      "name": "chat-turn",
+      "userId": "user-alice",
+      "sessionId": "session-1",
+      "environment": "default",
+      "totalCost": 0.0196,
+      "latency": 6.1,
+      "timestamp": "2026-08-09T01:11:41.286Z",
+      "tags": ["seed"],
+      "metadata": {"seeded": true}
+    }
+  ],
+  "meta": {"page": 2, "limit": 1, "totalItems": 2, "totalPages": 2}
+}
+                    """
+            else:
+                # Deliberately mixes the two shapes the API uses for usage and cost:
+                # the first row nests them under usageDetails/costDetails, the second
+                # only has the flat calculated*/promptTokens spellings. Both must map to
+                # the same columns, so a missing fallback shows up as a NULL here.
+                body = """
+{
+  "data": [
+    {
+      "id": "obs-1",
+      "traceId": "trace-1",
+      "type": "GENERATION",
+      "name": "summarize-doc",
+      "level": "DEFAULT",
+      "model": "claude-opus-5",
+      "usageDetails": {"input": 1200, "output": 340, "total": 1540},
+      "costDetails": {"input": 0.018, "output": 0.0255, "total": 0.0435},
+      "latency": 4.2,
+      "startTime": "2026-08-09T02:46:41.286Z",
+      "endTime": "2026-08-09T02:46:45.486Z",
+      "metadata": {"seeded": true}
+    },
+    {
+      "id": "obs-2",
+      "traceId": "trace-2",
+      "type": "GENERATION",
+      "name": "chat-turn",
+      "level": "DEFAULT",
+      "model": "claude-sonnet-5",
+      "promptTokens": 4300,
+      "completionTokens": 1100,
+      "totalTokens": 5400,
+      "calculatedInputCost": 0.0129,
+      "calculatedOutputCost": 0.0165,
+      "calculatedTotalCost": 0.0294,
+      "latency": 6.1,
+      "startTime": "2026-08-09T01:11:41.286Z",
+      "endTime": "2026-08-09T01:11:47.386Z",
+      "metadata": {"seeded": true}
+    }
+  ],
+  "meta": {"page": 1, "limit": 50, "totalItems": 2, "totalPages": 1}
+}
+                """
         elif fdw == "openapi":
             # Generic OpenAPI FDW test endpoints covering all features
 
