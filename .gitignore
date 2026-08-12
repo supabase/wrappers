@@ -17,3 +17,8 @@ results/
 wrappers/results/
 wrappers/regression.*
 .venv/
+
+# Local research and generated non-code artifacts
+research/**
+outputs/
+.tickets/
