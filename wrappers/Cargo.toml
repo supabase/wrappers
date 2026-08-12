@@ -203,6 +203,17 @@ dynamodb_fdw = [
     "thiserror",
     "tokio",
 ]
+zarr_fdw = [
+    "aws-config",
+    "aws-sdk-s3",
+    "tokio",
+    "tokio-util",
+    "async-compression",
+    "serde",
+    "serde_json",
+    "thiserror",
+    "http",
+]
 # Does not include helloworld_fdw because of its general uselessness
 native_fdws = [
     "airtable_fdw",
@@ -222,6 +233,7 @@ native_fdws = [
     "iceberg_fdw",
     "duckdb_fdw",
     "dynamodb_fdw",
+    "zarr_fdw",
 ]
 all_fdws = ["native_fdws", "wasm_fdw"]
 [dependencies]
