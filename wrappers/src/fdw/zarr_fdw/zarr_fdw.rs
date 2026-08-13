@@ -31,6 +31,7 @@ use supabase_wrappers::prelude::*;
 use super::chunk::{
     IndexBounds, axis_chunk_ranges, chunk_key, enumerate_chunks, index_bounds_from_value_range,
 };
+use super::dataset::{Dataset, DimensionRole, legacy_array_dataset};
 use super::decode::{
     Codec, DType, coord_bytes_to_f64, coord_fill_value_to_f64, coordinate_itemsize,
     fill_value_bytes,
@@ -176,6 +177,8 @@ pub(crate) struct ZarrFdw {
     array_dir: String,
     // dimension names in array order, e.g. ["time", "y", "x"] or ["y", "x"]
     axes: Vec<String>,
+    // scientific meaning assigned by the metadata adapter, in array order
+    axis_roles: Vec<DimensionRole>,
     rank: usize,
     axis_meta: Option<ArrayMeta>,
     dtype: Option<DType>,
@@ -204,13 +207,6 @@ pub(crate) struct ZarrFdw {
 
 fn zeroed_scan_cursors(rank: usize) -> [Vec<usize>; 3] {
     std::array::from_fn(|_| vec![0; rank])
-}
-
-fn array_parent_path(array_dir: &str) -> &str {
-    array_dir
-        .rsplit_once('/')
-        .map(|(parent, _)| parent)
-        .unwrap_or_default()
 }
 
 fn checked_chunk_layout(
@@ -399,20 +395,23 @@ fn validate_fixed_coordinate_column_types(columns: &[Column]) -> ZarrFdwResult<(
     Ok(())
 }
 
-fn validate_column_types(columns: &[Column], rank: usize, dtype: DType) -> ZarrFdwResult<()> {
-    validate_fixed_coordinate_column_types(columns)?;
+fn validate_column_types(columns: &[Column], dataset: &Dataset, dtype: DType) -> ZarrFdwResult<()> {
     let (value_oid, value_name) = expected_value_pg_type(dtype);
     for column in columns {
-        match column.name.as_str() {
-            AXIS_X | AXIS_Y => {}
-            AXIS_TIME if rank == 3 => {}
-            AXIS_TIME => {
+        match dataset.dimension(&column.name) {
+            Some(dimension) if dimension.semantic_role() == DimensionRole::Time => {
+                require_column_type(column, pg_sys::TIMESTAMPTZOID, "timestamp with time zone")?;
+            }
+            Some(_) => {
+                require_column_type(column, pg_sys::FLOAT8OID, "double precision")?;
+            }
+            None if column.name == AXIS_TIME => {
                 return Err(ZarrFdwError::InvalidCoordinateColumn {
                     column: column.name.clone(),
-                    rank,
+                    rank: dataset.dimensions().len(),
                 });
             }
-            _ => require_column_type(column, value_oid, value_name)?,
+            None => require_column_type(column, value_oid, value_name)?,
         }
     }
     Ok(())
@@ -633,7 +632,7 @@ impl ZarrFdw {
                             self.coords[d].len()
                         ))
                     })?;
-                    if self.axes[d] == AXIS_TIME {
+                    if self.axis_roles[d] == DimensionRole::Time {
                         let micros = self.time_spec.raw_to_pg_micros(coord);
                         let ts = TimestampWithTimeZone::try_from(micros)
                             .map_err(|_| ZarrFdwError::TimeOutOfRange(coord))?;
@@ -855,11 +854,6 @@ fn option_value(options: &[Option<String>], name: &str) -> Option<String> {
         .find_map(|kv| kv.strip_prefix(&prefix).map(|v| v.to_string()))
 }
 
-/// True when a foreign table column name is one of the coordinate columns.
-fn is_coordinate_col(name: &str) -> bool {
-    matches!(name, AXIS_X | AXIS_Y | AXIS_TIME)
-}
-
 impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
     fn new(server: ForeignServer) -> ZarrFdwResult<Self> {
         let store = ZarrStore::new(&server)?;
@@ -869,6 +863,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
             tgt_cols: Vec::new(),
             array_dir: String::new(),
             axes: Vec::new(),
+            axis_roles: Vec::new(),
             rank: 0,
             axis_meta: None,
             dtype: None,
@@ -924,10 +919,31 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
             .unwrap_or_default();
         self.array_dir = array_group;
 
-        // single-band MVP: at most one non-coordinate (value) column allowed
+        // load array metadata
+        let meta_bytes = self.store.get_object_sync(
+            &join_key(&self.array_dir, ".zarray"),
+            MAX_METADATA_OBJECT_BYTES,
+        )?;
+        let meta = ArrayMeta::from_bytes(&meta_bytes)?;
+        let dataset = legacy_array_dataset(&self.array_dir, &meta)?;
+        let variable = dataset.variable();
+        self.array_dir = variable.path().to_string();
+        self.axes = dataset.axis_names();
+        debug_assert_eq!(variable.dimensions(), self.axes.as_slice());
+        self.axis_roles = dataset
+            .dimensions()
+            .iter()
+            .map(|dimension| dimension.semantic_role())
+            .collect();
+        let rank = dataset.dimensions().len();
+        self.rank = rank;
+        let dtype = DType::parse(variable.dtype())?;
+        validate_column_types(columns, &dataset, dtype)?;
+
+        // single-array MVP: at most one non-dimension (value) column allowed
         let value_cols = columns
             .iter()
-            .filter(|c| !is_coordinate_col(&c.name))
+            .filter(|column| !dataset.is_dimension(&column.name))
             .count();
         if value_cols > 1 {
             return Err(ZarrFdwError::InvalidOptionValue {
@@ -937,49 +953,33 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
                 ),
             });
         }
-
-        // load array metadata
-        let meta_bytes = self.store.get_object_sync(
-            &join_key(&self.array_dir, ".zarray"),
-            MAX_METADATA_OBJECT_BYTES,
-        )?;
-        let meta = ArrayMeta::from_bytes(&meta_bytes)?;
-        let rank = meta.shape.len();
-        self.axes = if rank == 3 {
-            vec![
-                AXIS_TIME.to_string(),
-                AXIS_Y.to_string(),
-                AXIS_X.to_string(),
-            ]
-        } else {
-            vec![AXIS_Y.to_string(), AXIS_X.to_string()]
-        };
-        self.rank = rank;
-        let dtype = DType::parse(&meta.dtype)?;
-        validate_column_types(columns, rank, dtype)?;
         self.axis_meta = Some(meta.clone());
         self.dtype = Some(dtype);
         self.codec = Some(Codec::from_compressor_json(&meta.compressor)?);
         self.fill_bytes = fill_value_bytes(dtype, &meta.fill_value)?;
 
         // load coordinate arrays
-        let coordinate_prefix = array_parent_path(&self.array_dir);
         let mut coords = Vec::with_capacity(rank);
-        for axis in &self.axes {
-            coords.push(read_coordinate_array(&self.store, coordinate_prefix, axis)?);
+        for dimension in dataset.dimensions() {
+            let coordinate = dimension.coordinate();
+            coords.push(read_coordinate_array(
+                &self.store,
+                coordinate.parent(),
+                coordinate.name(),
+            )?);
         }
-        for (d, axis) in self.axes.iter().enumerate() {
-            if coords[d].len() as u64 != meta.shape[d] {
+        for (d, dimension) in dataset.dimensions().iter().enumerate() {
+            if coords[d].len() as u64 != dimension.length() {
                 return Err(ZarrFdwError::CoordinateReadError {
-                    axis: axis.clone(),
+                    axis: dimension.name().to_string(),
                     error: format!(
                         "coordinate array has {} values but the axis has shape {}",
                         coords[d].len(),
-                        meta.shape[d]
+                        dimension.length()
                     ),
                 });
             }
-            validate_coordinate_values(axis, &coords[d])?;
+            validate_coordinate_values(dimension.name(), &coords[d])?;
         }
         self.coords = coords;
 
@@ -989,7 +989,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
             let Some(axis) = self.axes.iter().position(|a| a == &q.field) else {
                 continue;
             };
-            let is_time = self.axes[axis] == AXIS_TIME;
+            let is_time = self.axis_roles[axis] == DimensionRole::Time;
             let Some((lo, hi)) = qual_to_range(q, is_time, self.time_spec)? else {
                 continue;
             };
@@ -1072,6 +1072,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
         self.chunks.clear();
         self.coords.clear();
         self.bounds.clear();
+        self.axis_roles.clear();
         self.fill_bytes = None;
         self.rows_out = 0;
         Ok(())
@@ -1160,14 +1161,6 @@ mod unit_tests {
         assert_eq!(lo, vec![0; 3]);
         assert_eq!(hi, vec![0; 3]);
         assert_eq!(idx, vec![0; 3]);
-    }
-
-    #[test]
-    fn coordinate_path_is_the_array_parent() {
-        assert_eq!(array_parent_path(""), "");
-        assert_eq!(array_parent_path("raw"), "");
-        assert_eq!(array_parent_path("nested/raw"), "nested");
-        assert_eq!(array_parent_path("a/b/raw"), "a/b");
     }
 
     #[test]
@@ -1275,24 +1268,27 @@ mod unit_tests {
 
     #[test]
     fn accepts_exact_coordinate_and_value_column_types() {
+        let dataset =
+            legacy_array_dataset("value", &array_meta(vec![2, 5, 6], vec![1, 5, 3])).unwrap();
         let columns = vec![
             column(AXIS_TIME, pg_sys::TIMESTAMPTZOID),
             column(AXIS_Y, pg_sys::FLOAT8OID),
             column(AXIS_X, pg_sys::FLOAT8OID),
             column("value", pg_sys::FLOAT4OID),
         ];
-        validate_column_types(&columns, 3, DType::F32).unwrap();
+        validate_column_types(&columns, &dataset, DType::F32).unwrap();
     }
 
     #[test]
     fn coordinates_do_not_need_to_be_projected() {
-        validate_column_types(&[column("value", pg_sys::FLOAT4OID)], 2, DType::F32).unwrap();
+        let dataset = legacy_array_dataset("value", &array_meta(vec![5, 6], vec![5, 3])).unwrap();
+        validate_column_types(&[column("value", pg_sys::FLOAT4OID)], &dataset, DType::F32).unwrap();
         validate_column_types(
             &[
                 column(AXIS_X, pg_sys::FLOAT8OID),
                 column("value", pg_sys::FLOAT4OID),
             ],
-            2,
+            &dataset,
             DType::F32,
         )
         .unwrap();
@@ -1318,9 +1314,10 @@ mod unit_tests {
 
     #[test]
     fn rejects_time_column_for_rank_two_array() {
+        let dataset = legacy_array_dataset("value", &array_meta(vec![5, 6], vec![5, 3])).unwrap();
         let columns = vec![column(AXIS_TIME, pg_sys::TIMESTAMPTZOID)];
         assert!(matches!(
-            validate_column_types(&columns, 2, DType::F64),
+            validate_column_types(&columns, &dataset, DType::F64),
             Err(ZarrFdwError::InvalidCoordinateColumn { column, rank: 2 })
                 if column == AXIS_TIME
         ));

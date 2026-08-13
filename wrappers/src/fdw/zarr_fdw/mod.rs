@@ -3,6 +3,7 @@ mod tests;
 mod zarr_fdw;
 
 mod chunk;
+mod dataset;
 mod decode;
 mod meta;
 mod store;
