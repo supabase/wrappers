@@ -19,44 +19,75 @@ pub enum Codec {
     Gzip,
     Zlib,
     Blosc,
-    Unsupported(String),
 }
 
 impl Codec {
-    pub fn from_compressor_json(c: &Option<serde_json::Value>) -> Self {
+    pub fn from_compressor_json(c: &Option<serde_json::Value>) -> ZarrFdwResult<Self> {
         match c {
-            None => Codec::Raw,
+            None => Ok(Codec::Raw),
             Some(json) => {
                 let id = json
+                    .as_object()
+                    .ok_or_else(|| {
+                        ZarrFdwError::InvalidMetadata(
+                            "compressor must be null or a JSON object with a string 'id'"
+                                .to_string(),
+                        )
+                    })?
                     .get("id")
                     .and_then(|v| v.as_str())
-                    .unwrap_or_default()
-                    .to_string();
-                match id.as_str() {
-                    "" => Codec::Raw,
-                    "gzip" => Codec::Gzip,
-                    "zlib" => Codec::Zlib,
-                    "blosc" => Codec::Blosc,
-                    other => Codec::Unsupported(other.to_string()),
+                    .filter(|id| !id.is_empty())
+                    .ok_or_else(|| {
+                        ZarrFdwError::InvalidMetadata(
+                            "compressor object must contain a non-empty string 'id'".to_string(),
+                        )
+                    })?;
+                match id {
+                    "gzip" => Ok(Codec::Gzip),
+                    "zlib" => Ok(Codec::Zlib),
+                    "blosc" => Ok(Codec::Blosc),
+                    other => Err(ZarrFdwError::UnsupportedCompressor(other.to_string())),
                 }
             }
         }
     }
 
-    pub async fn decompress(&self, data: &[u8]) -> ZarrFdwResult<Vec<u8>> {
+    /// Maximum encoded object length worth downloading for a chunk with the
+    /// declared decoded length. The supported formats have small bounded
+    /// framing overhead; the generous 1 MiB gzip/zlib allowance avoids
+    /// rejecting incompressible data without permitting an arbitrary object.
+    pub fn encoded_read_limit(&self, expected: usize) -> ZarrFdwResult<usize> {
+        let overhead = match self {
+            Codec::Raw => 0,
+            Codec::Blosc => 16,
+            Codec::Gzip | Codec::Zlib => 1024 * 1024,
+        };
+        expected.checked_add(overhead).ok_or_else(|| {
+            ZarrFdwError::InvalidMetadata(
+                "encoded chunk read limit exceeds this platform's index capacity".to_string(),
+            )
+        })
+    }
+
+    pub async fn decompress(&self, data: Vec<u8>, expected: usize) -> ZarrFdwResult<Vec<u8>> {
         use async_compression::tokio::bufread::{GzipDecoder, ZlibDecoder};
         match self {
-            Codec::Raw => Ok(data.to_vec()),
+            Codec::Raw => {
+                if data.len() != expected {
+                    return Err(decoded_length_error(data.len(), expected));
+                }
+                Ok(data)
+            }
             Codec::Gzip => {
                 let mut decoded = Vec::new();
                 let mut dec = BufReader::new(GzipDecoder::new(BufReader::new(Cursor::new(data))));
-                dec.read_to_end(&mut decoded).await?;
+                read_exact_bounded(&mut dec, &mut decoded, expected).await?;
                 Ok(decoded)
             }
             Codec::Zlib => {
                 let mut decoded = Vec::new();
                 let mut dec = BufReader::new(ZlibDecoder::new(BufReader::new(Cursor::new(data))));
-                dec.read_to_end(&mut decoded).await?;
+                read_exact_bounded(&mut dec, &mut decoded, expected).await?;
                 Ok(decoded)
             }
             Codec::Blosc => {
@@ -65,15 +96,57 @@ impl Codec {
                         "invalid Blosc chunk: {e}"
                     )))
                 })?;
-                decoder.decompress(1).map_err(|e| {
+                if decoder.nbytes() != expected {
+                    return Err(decoded_length_error(decoder.nbytes(), expected));
+                }
+                let decoded = decoder.decompress(1).map_err(|e| {
                     ZarrFdwError::ReadError(std::io::Error::other(format!(
                         "failed to decompress Blosc chunk: {e}"
                     )))
-                })
+                })?;
+                if decoded.len() != expected {
+                    return Err(decoded_length_error(decoded.len(), expected));
+                }
+                Ok(decoded)
             }
-            Codec::Unsupported(id) => Err(ZarrFdwError::UnsupportedCompressor(id.clone())),
         }
     }
+}
+
+fn decoded_length_error(actual: usize, expected: usize) -> ZarrFdwError {
+    ZarrFdwError::ReadError(std::io::Error::other(format!(
+        "decoded chunk has {actual} bytes, expected exactly {expected}"
+    )))
+}
+
+async fn read_exact_bounded<R>(
+    reader: &mut R,
+    decoded: &mut Vec<u8>,
+    expected: usize,
+) -> ZarrFdwResult<()>
+where
+    R: tokio::io::AsyncRead + Unpin,
+{
+    decoded.try_reserve_exact(expected).map_err(|_| {
+        ZarrFdwError::InvalidMetadata(format!(
+            "could not allocate a decoded chunk of {expected} bytes"
+        ))
+    })?;
+    let mut limited = reader.take(u64::try_from(expected).map_err(|_| {
+        ZarrFdwError::InvalidMetadata("decoded chunk limit exceeds the supported range".to_string())
+    })?);
+    limited.read_to_end(decoded).await?;
+    if decoded.len() < expected {
+        return Err(decoded_length_error(decoded.len(), expected));
+    }
+    // Probe one byte beyond the declared output without permitting the result
+    // Vec to grow past `expected`.
+    let mut extra = [0u8; 1];
+    let extra_count = limited.into_inner().read(&mut extra).await?;
+    if extra_count != 0 {
+        return Err(decoded_length_error(expected + extra_count, expected));
+    }
+    Ok(())
 }
 
 /// Parsed numpy-style dtype string, e.g. `<f4`.
@@ -89,32 +162,17 @@ pub enum DType {
 
 impl DType {
     pub fn parse(dtype: &str) -> ZarrFdwResult<Self> {
-        if dtype.len() < 2 {
-            return Err(ZarrFdwError::UnsupportedDataType(dtype.to_string()));
-        }
         // numpy dtype: [byteorder]<type><size>, e.g. "<f4", "|u1", ">i2"
-        let (byte_order, rest) = dtype.split_at(1);
-        let ty = &rest[0..1];
-        let size: usize = rest[1..]
-            .chars()
-            .filter(|c| c.is_ascii_digit())
-            .collect::<String>()
-            .parse()
-            .map_err(|_| ZarrFdwError::UnsupportedDataType(dtype.to_string()))?;
-        if byte_order == "=" || byte_order == "|" || byte_order == "<" || byte_order == ">" {
-            // MVP only supports native-ish and explicit-endian numeric types
-        } else {
-            return Err(ZarrFdwError::UnsupportedDataType(dtype.to_string()));
-        }
+        let (byte_order, ty, size) = numeric_dtype_parts(dtype)?;
         // For 1-byte types byte order is irrelevant.
-        let big_endian = byte_order == ">";
+        let big_endian = byte_order == '>';
         let dt = match (ty, size) {
-            ("f", 4) => DType::F32,
-            ("f", 8) => DType::F64,
-            ("i", 1) => DType::I8,
-            ("i", 2) => DType::I16,
-            ("i", 4) => DType::I32,
-            ("i", 8) => DType::I64,
+            ('f', 4) => DType::F32,
+            ('f', 8) => DType::F64,
+            ('i', 1) => DType::I8,
+            ('i', 2) => DType::I16,
+            ('i', 4) => DType::I32,
+            ('i', 8) => DType::I64,
             _ => return Err(ZarrFdwError::UnsupportedDataType(dtype.to_string())),
         };
         if big_endian && dt != DType::I8 {
@@ -134,6 +192,210 @@ impl DType {
             DType::I16 => 2,
         }
     }
+
+    fn name(self) -> &'static str {
+        match self {
+            DType::F32 => "f4",
+            DType::F64 => "f8",
+            DType::I8 => "i1",
+            DType::I16 => "i2",
+            DType::I32 => "i4",
+            DType::I64 => "i8",
+        }
+    }
+}
+
+fn invalid_fill(dtype: &str, reason: impl Into<String>) -> ZarrFdwError {
+    ZarrFdwError::InvalidMetadata(format!(
+        "fill_value is invalid for dtype '{dtype}': {}",
+        reason.into()
+    ))
+}
+
+fn float_fill(dtype: &str, value: &serde_json::Value) -> ZarrFdwResult<f64> {
+    match value {
+        serde_json::Value::Number(number) => number
+            .as_f64()
+            .ok_or_else(|| invalid_fill(dtype, "expected a numeric value")),
+        serde_json::Value::String(value) => match value.as_str() {
+            "NaN" => Ok(f64::NAN),
+            "Infinity" => Ok(f64::INFINITY),
+            "-Infinity" => Ok(f64::NEG_INFINITY),
+            _ => Err(invalid_fill(
+                dtype,
+                "expected a number, 'NaN', 'Infinity', or '-Infinity'",
+            )),
+        },
+        _ => Err(invalid_fill(
+            dtype,
+            "expected a number, 'NaN', 'Infinity', or '-Infinity'",
+        )),
+    }
+}
+
+fn signed_integer_fill(
+    dtype: &str,
+    value: &serde_json::Value,
+    min: i64,
+    max: i64,
+) -> ZarrFdwResult<i64> {
+    let serde_json::Value::Number(number) = value else {
+        return Err(invalid_fill(dtype, "expected an integer"));
+    };
+    let parsed = if let Some(value) = number.as_i64() {
+        value
+    } else if let Some(value) = number.as_u64() {
+        i64::try_from(value).map_err(|_| invalid_fill(dtype, "integer is out of range"))?
+    } else {
+        let value = number
+            .as_f64()
+            .ok_or_else(|| invalid_fill(dtype, "expected an integer"))?;
+        // The exclusive upper bound avoids accepting 2^63 after an imprecise
+        // f64 conversion. Plain JSON integers at i64::MAX take the as_i64 path.
+        const I64_EXCLUSIVE_UPPER: f64 = 9_223_372_036_854_775_808.0;
+        if !value.is_finite()
+            || value.fract() != 0.0
+            || value < i64::MIN as f64
+            || value >= I64_EXCLUSIVE_UPPER
+        {
+            return Err(invalid_fill(dtype, "expected an in-range integer"));
+        }
+        value as i64
+    };
+    if parsed < min || parsed > max {
+        return Err(invalid_fill(dtype, "integer is out of range"));
+    }
+    Ok(parsed)
+}
+
+fn unsigned_integer_fill(dtype: &str, value: &serde_json::Value, max: u64) -> ZarrFdwResult<u64> {
+    let serde_json::Value::Number(number) = value else {
+        return Err(invalid_fill(dtype, "expected a non-negative integer"));
+    };
+    let parsed = if let Some(value) = number.as_u64() {
+        value
+    } else if let Some(value) = number.as_i64() {
+        u64::try_from(value).map_err(|_| invalid_fill(dtype, "expected a non-negative integer"))?
+    } else {
+        let value = number
+            .as_f64()
+            .ok_or_else(|| invalid_fill(dtype, "expected a non-negative integer"))?;
+        // As above, plain u64::MAX JSON integers use the exact as_u64 path.
+        const U64_EXCLUSIVE_UPPER: f64 = 18_446_744_073_709_551_616.0;
+        if !value.is_finite()
+            || value.fract() != 0.0
+            || !(0.0..U64_EXCLUSIVE_UPPER).contains(&value)
+        {
+            return Err(invalid_fill(
+                dtype,
+                "expected an in-range non-negative integer",
+            ));
+        }
+        value as u64
+    };
+    if parsed > max {
+        return Err(invalid_fill(dtype, "integer is out of range"));
+    }
+    Ok(parsed)
+}
+
+/// Parse a cube array's scalar fill into its decoded little-endian bytes.
+/// `None` preserves Zarr's explicit-null/undefined missing-chunk semantics.
+pub fn fill_value_bytes(dtype: DType, value: &serde_json::Value) -> ZarrFdwResult<Option<Vec<u8>>> {
+    if value.is_null() {
+        return Ok(None);
+    }
+    let bytes = match dtype {
+        DType::F32 => {
+            let value = float_fill(dtype.name(), value)?;
+            let narrowed = value as f32;
+            if value.is_finite() && !narrowed.is_finite() {
+                return Err(invalid_fill(dtype.name(), "number is out of range"));
+            }
+            narrowed.to_le_bytes().to_vec()
+        }
+        DType::F64 => float_fill(dtype.name(), value)?.to_le_bytes().to_vec(),
+        DType::I8 => (signed_integer_fill(dtype.name(), value, i8::MIN as i64, i8::MAX as i64)?
+            as i8)
+            .to_le_bytes()
+            .to_vec(),
+        DType::I16 => (signed_integer_fill(dtype.name(), value, i16::MIN as i64, i16::MAX as i64)?
+            as i16)
+            .to_le_bytes()
+            .to_vec(),
+        DType::I32 => (signed_integer_fill(dtype.name(), value, i32::MIN as i64, i32::MAX as i64)?
+            as i32)
+            .to_le_bytes()
+            .to_vec(),
+        DType::I64 => signed_integer_fill(dtype.name(), value, i64::MIN, i64::MAX)?
+            .to_le_bytes()
+            .to_vec(),
+    };
+    Ok(Some(bytes))
+}
+
+fn numeric_dtype_parts(dtype: &str) -> ZarrFdwResult<(char, char, usize)> {
+    let mut chars = dtype.chars();
+    let byte_order = chars
+        .next()
+        .ok_or_else(|| ZarrFdwError::UnsupportedDataType(dtype.to_string()))?;
+    if !matches!(byte_order, '=' | '|' | '<' | '>') {
+        return Err(ZarrFdwError::UnsupportedDataType(dtype.to_string()));
+    }
+    let kind = chars
+        .next()
+        .ok_or_else(|| ZarrFdwError::UnsupportedDataType(dtype.to_string()))?;
+    let size_text = chars.collect::<String>();
+    if size_text.is_empty() || !size_text.chars().all(|c| c.is_ascii_digit()) {
+        return Err(ZarrFdwError::UnsupportedDataType(dtype.to_string()));
+    }
+    let size = size_text
+        .parse()
+        .map_err(|_| ZarrFdwError::UnsupportedDataType(dtype.to_string()))?;
+    Ok((byte_order, kind, size))
+}
+
+/// Decoded byte width of a supported coordinate scalar.
+pub fn coordinate_itemsize(dtype: &str) -> ZarrFdwResult<usize> {
+    let (_, kind, size) = numeric_dtype_parts(dtype)?;
+    match (kind, size) {
+        ('f', 4 | 8) | ('i' | 'u', 1 | 2 | 4 | 8) => Ok(size),
+        _ => Err(ZarrFdwError::UnsupportedDataType(dtype.to_string())),
+    }
+}
+
+/// Parse a coordinate array's scalar fill into the f64 representation used by
+/// the scan. Coordinate dtypes retain the broader signed/unsigned and endian
+/// coverage of [`coord_bytes_to_f64`].
+pub fn coord_fill_value_to_f64(
+    dtype: &str,
+    value: &serde_json::Value,
+) -> ZarrFdwResult<Option<f64>> {
+    if value.is_null() {
+        return Ok(None);
+    }
+    let (_, kind, size) = numeric_dtype_parts(dtype)?;
+    let parsed = match (kind, size) {
+        ('f', 4) => {
+            let value = float_fill(dtype, value)?;
+            let narrowed = value as f32;
+            if value.is_finite() && !narrowed.is_finite() {
+                return Err(invalid_fill(dtype, "number is out of range"));
+            }
+            narrowed as f64
+        }
+        ('f', 8) => float_fill(dtype, value)?,
+        ('i', 1) => signed_integer_fill(dtype, value, i8::MIN as i64, i8::MAX as i64)? as f64,
+        ('i', 2) => signed_integer_fill(dtype, value, i16::MIN as i64, i16::MAX as i64)? as f64,
+        ('i', 4) => signed_integer_fill(dtype, value, i32::MIN as i64, i32::MAX as i64)? as f64,
+        ('i', 8) => signed_integer_fill(dtype, value, i64::MIN, i64::MAX)? as f64,
+        ('u', 1) => unsigned_integer_fill(dtype, value, u8::MAX as u64)? as f64,
+        ('u', 2) => unsigned_integer_fill(dtype, value, u16::MAX as u64)? as f64,
+        ('u', 4) => unsigned_integer_fill(dtype, value, u32::MAX as u64)? as f64,
+        ('u', 8) => unsigned_integer_fill(dtype, value, u64::MAX)? as f64,
+        _ => return Err(ZarrFdwError::UnsupportedDataType(dtype.to_string())),
+    };
+    Ok(Some(parsed))
 }
 
 /// Interpret raw `data` bytes as coordinate values (`f64`) using the numpy
@@ -147,13 +409,7 @@ pub fn coord_bytes_to_f64(dtype: &str, data: &[u8]) -> ZarrFdwResult<Vec<f64>> {
     if data.is_empty() {
         return Ok(Vec::new());
     }
-    let mut chars = dtype.chars();
-    let byte_order = chars.next().unwrap_or('<');
-    let kind = chars.next().unwrap_or('f');
-    let size: usize = chars
-        .collect::<String>()
-        .parse()
-        .map_err(|_| ZarrFdwError::UnsupportedDataType(dtype.to_string()))?;
+    let (byte_order, kind, size) = numeric_dtype_parts(dtype)?;
 
     let read = |b: &[u8]| -> f64 {
         match (kind, size) {
@@ -171,7 +427,7 @@ pub fn coord_bytes_to_f64(dtype: &str, data: &[u8]) -> ZarrFdwResult<Vec<f64>> {
         }
     };
 
-    let item = size.max(1);
+    let item = coordinate_itemsize(dtype)?;
     if data.len() % item != 0 {
         return Err(ZarrFdwError::InvalidMetadata(format!(
             "coordinate data length {} is not a multiple of dtype item size {item}",
@@ -275,6 +531,91 @@ mod tests {
     }
 
     #[test]
+    fn parses_floating_fill_values() {
+        let finite = fill_value_bytes(DType::F32, &serde_json::json!(-7.5))
+            .unwrap()
+            .unwrap();
+        assert_eq!(f32::from_le_bytes(finite.try_into().unwrap()), -7.5);
+
+        for (text, expected) in [
+            ("NaN", f64::NAN),
+            ("Infinity", f64::INFINITY),
+            ("-Infinity", f64::NEG_INFINITY),
+        ] {
+            let bytes = fill_value_bytes(DType::F64, &serde_json::json!(text))
+                .unwrap()
+                .unwrap();
+            let actual = f64::from_le_bytes(bytes.try_into().unwrap());
+            if expected.is_nan() {
+                assert!(actual.is_nan());
+            } else {
+                assert_eq!(actual, expected);
+            }
+        }
+        assert_eq!(
+            fill_value_bytes(DType::F64, &serde_json::Value::Null).unwrap(),
+            None
+        );
+    }
+
+    #[test]
+    fn parses_exact_range_signed_integer_fills() {
+        let cases = [
+            (
+                DType::I8,
+                serde_json::json!(i8::MIN),
+                i8::MIN.to_le_bytes().to_vec(),
+            ),
+            (
+                DType::I16,
+                serde_json::json!(i16::MAX),
+                i16::MAX.to_le_bytes().to_vec(),
+            ),
+            (
+                DType::I32,
+                serde_json::json!(i32::MIN),
+                i32::MIN.to_le_bytes().to_vec(),
+            ),
+            (
+                DType::I64,
+                serde_json::json!(i64::MAX),
+                i64::MAX.to_le_bytes().to_vec(),
+            ),
+        ];
+        for (dtype, fill, expected) in cases {
+            assert_eq!(fill_value_bytes(dtype, &fill).unwrap(), Some(expected));
+        }
+    }
+
+    #[test]
+    fn rejects_invalid_or_out_of_range_fills() {
+        assert!(fill_value_bytes(DType::I8, &serde_json::json!(128)).is_err());
+        assert!(fill_value_bytes(DType::I16, &serde_json::json!(1.5)).is_err());
+        assert!(fill_value_bytes(DType::I32, &serde_json::json!("1")).is_err());
+        assert!(fill_value_bytes(DType::F32, &serde_json::json!(1e100)).is_err());
+        assert!(fill_value_bytes(DType::F64, &serde_json::json!("nan")).is_err());
+    }
+
+    #[test]
+    fn parses_coordinate_fills_for_supported_numeric_dtypes() {
+        assert_eq!(
+            coord_fill_value_to_f64(">i2", &serde_json::json!(-12)).unwrap(),
+            Some(-12.0)
+        );
+        assert_eq!(
+            coord_fill_value_to_f64("<u2", &serde_json::json!(65535)).unwrap(),
+            Some(65535.0)
+        );
+        assert!(
+            coord_fill_value_to_f64("<f8", &serde_json::json!("NaN"))
+                .unwrap()
+                .unwrap()
+                .is_nan()
+        );
+        assert!(coord_fill_value_to_f64("<u1", &serde_json::json!(-1)).is_err());
+    }
+
+    #[test]
     fn coord_f64_floats() {
         let data = 1.5f32.to_le_bytes();
         assert_eq!(coord_bytes_to_f64("<f4", &data).unwrap(), vec![1.5]);
@@ -318,7 +659,55 @@ mod tests {
             .compress(&raw)
             .unwrap();
         let rt = tokio::runtime::Runtime::new().unwrap();
-        let decoded = rt.block_on(Codec::Blosc.decompress(&compressed)).unwrap();
+        let decoded = rt
+            .block_on(Codec::Blosc.decompress(compressed, raw.len()))
+            .unwrap();
         assert_eq!(decoded, raw);
+    }
+
+    #[test]
+    fn raw_and_gzip_decoding_are_bounded_by_declared_length() {
+        use async_compression::tokio::write::GzipEncoder;
+        use tokio::io::AsyncWriteExt;
+
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(async {
+            assert_eq!(
+                Codec::Raw.decompress(b"1234".to_vec(), 4).await.unwrap(),
+                b"1234"
+            );
+            assert!(Codec::Raw.decompress(b"12345".to_vec(), 4).await.is_err());
+
+            let raw = vec![7u8; 64];
+            let mut encoder = GzipEncoder::new(Vec::new());
+            encoder.write_all(&raw).await.unwrap();
+            encoder.shutdown().await.unwrap();
+            let compressed = encoder.into_inner();
+            assert_eq!(
+                Codec::Gzip
+                    .decompress(compressed.clone(), raw.len())
+                    .await
+                    .unwrap(),
+                raw
+            );
+            assert!(Codec::Gzip.decompress(compressed, 32).await.is_err());
+        });
+    }
+
+    #[test]
+    fn compressor_metadata_must_have_a_valid_id() {
+        assert!(matches!(
+            Codec::from_compressor_json(&Some(serde_json::json!({}))),
+            Err(ZarrFdwError::InvalidMetadata(_))
+        ));
+        assert!(matches!(
+            Codec::from_compressor_json(&Some(serde_json::json!(true))),
+            Err(ZarrFdwError::InvalidMetadata(_))
+        ));
+        assert!(matches!(
+            Codec::from_compressor_json(&Some(serde_json::json!({"id": "unknown"}))),
+            Err(ZarrFdwError::UnsupportedCompressor(id)) if id == "unknown"
+        ));
+        assert!(matches!(Codec::from_compressor_json(&None), Ok(Codec::Raw)));
     }
 }

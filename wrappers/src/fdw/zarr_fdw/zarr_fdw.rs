@@ -31,9 +31,12 @@ use supabase_wrappers::prelude::*;
 use super::chunk::{
     IndexBounds, axis_chunk_ranges, chunk_key, enumerate_chunks, index_bounds_from_value_range,
 };
-use super::decode::{Codec, DType, coord_bytes_to_f64};
+use super::decode::{
+    Codec, DType, coord_bytes_to_f64, coord_fill_value_to_f64, coordinate_itemsize,
+    fill_value_bytes,
+};
 use super::meta::ArrayMeta;
-use super::store::{ZarrStore, join_key};
+use super::store::{MAX_METADATA_OBJECT_BYTES, ZarrStore, join_key, validate_auth_options};
 use super::{ZarrFdwError, ZarrFdwResult};
 
 const FDW_NAME: &str = "ZarrFdw";
@@ -52,6 +55,19 @@ const OPT_TIME_ORIGIN: &str = "time_origin";
 const AXIS_TIME: &str = "time";
 const AXIS_Y: &str = "y";
 const AXIS_X: &str = "x";
+
+// Planning must stay deterministic and network-free. Until metadata-backed or
+// configured estimates are available, use a deliberately non-zero cardinality
+// for remote arrays so PostgreSQL does not price every scan at startup cost.
+const DEFAULT_PLANNER_ROWS: i64 = 1_000_000;
+const DEFAULT_EMPTY_PROJECTION_WIDTH: i32 = 8;
+const DEFAULT_UNKNOWN_TYPE_WIDTH: i32 = 32;
+
+// The MVP eagerly decodes one data chunk, all coordinate vectors, and the
+// selected chunk-coordinate list in a PostgreSQL backend. Keep those remote-
+// metadata-driven allocations bounded until the executor becomes streaming.
+const MAX_DECODED_CHUNK_BYTES: usize = 256 * 1024 * 1024;
+const MAX_COORDINATE_VALUES: usize = 16 * 1024 * 1024;
 
 /// Unit of the raw `time` coordinate values, used to convert them into
 /// timestamps and back. Mirrors the CF `units: "X since ..."` time encoding
@@ -164,6 +180,8 @@ pub(crate) struct ZarrFdw {
     axis_meta: Option<ArrayMeta>,
     dtype: Option<DType>,
     codec: Option<Codec>,
+    // one decoded scalar, repeated when a data chunk is absent
+    fill_bytes: Option<Vec<u8>>,
     // coordinate values per axis (raw, as given by the store)
     coords: Vec<Vec<f64>>,
     // per-axis global index bounds from pushed-down quals
@@ -186,6 +204,262 @@ pub(crate) struct ZarrFdw {
 
 fn zeroed_scan_cursors(rank: usize) -> [Vec<usize>; 3] {
     std::array::from_fn(|_| vec![0; rank])
+}
+
+fn array_parent_path(array_dir: &str) -> &str {
+    array_dir
+        .rsplit_once('/')
+        .map(|(parent, _)| parent)
+        .unwrap_or_default()
+}
+
+fn checked_chunk_layout(
+    meta: &ArrayMeta,
+    itemsize: usize,
+) -> ZarrFdwResult<(Vec<usize>, usize, usize)> {
+    let storage_shape = (0..meta.chunks.len())
+        .map(|axis| meta.chunk_extent(axis))
+        .collect::<ZarrFdwResult<Vec<_>>>()?;
+    let storage_cells = meta.chunk_cell_count()?;
+    let decoded_bytes = storage_cells.checked_mul(itemsize).ok_or_else(|| {
+        ZarrFdwError::InvalidMetadata(
+            "declared chunk byte length exceeds this platform's index capacity".to_string(),
+        )
+    })?;
+    if decoded_bytes > MAX_DECODED_CHUNK_BYTES {
+        return Err(ZarrFdwError::InvalidMetadata(format!(
+            "declared chunk decodes to {decoded_bytes} bytes, exceeding the safety limit of {MAX_DECODED_CHUNK_BYTES}"
+        )));
+    }
+    Ok((storage_shape, storage_cells, decoded_bytes))
+}
+
+fn checked_flat_offset(indices: &[usize], shape: &[usize]) -> ZarrFdwResult<usize> {
+    if indices.len() != shape.len() {
+        return Err(ZarrFdwError::InvalidMetadata(
+            "chunk index rank does not match the declared chunk shape".to_string(),
+        ));
+    }
+    let mut offset = 0usize;
+    let mut stride = 1usize;
+    for axis in (0..shape.len()).rev() {
+        if indices[axis] >= shape[axis] {
+            return Err(ZarrFdwError::InvalidMetadata(format!(
+                "within-chunk index {} is outside dimension {axis} with extent {}",
+                indices[axis], shape[axis]
+            )));
+        }
+        let contribution = indices[axis].checked_mul(stride).ok_or_else(|| {
+            ZarrFdwError::InvalidMetadata("chunk cell offset overflow".to_string())
+        })?;
+        offset = offset.checked_add(contribution).ok_or_else(|| {
+            ZarrFdwError::InvalidMetadata("chunk cell offset overflow".to_string())
+        })?;
+        stride = stride
+            .checked_mul(shape[axis])
+            .ok_or_else(|| ZarrFdwError::InvalidMetadata("chunk stride overflow".to_string()))?;
+    }
+    Ok(offset)
+}
+
+fn checked_chunk_byte_range(
+    cell_offset: usize,
+    itemsize: usize,
+    available: usize,
+) -> ZarrFdwResult<std::ops::Range<usize>> {
+    let start = cell_offset
+        .checked_mul(itemsize)
+        .ok_or_else(|| ZarrFdwError::InvalidMetadata("chunk byte offset overflow".to_string()))?;
+    let end = start
+        .checked_add(itemsize)
+        .ok_or_else(|| ZarrFdwError::InvalidMetadata("chunk byte range overflow".to_string()))?;
+    if end > available {
+        return Err(ZarrFdwError::ReadError(std::io::Error::other(format!(
+            "chunk cell byte range {start}..{end} exceeds decoded length {available}"
+        ))));
+    }
+    Ok(start..end)
+}
+
+fn require_exact_decoded_len(key: &str, actual: usize, expected: usize) -> ZarrFdwResult<()> {
+    if actual != expected {
+        return Err(ZarrFdwError::ReadError(std::io::Error::other(format!(
+            "chunk '{key}' decoded to {actual} bytes, expected exactly {expected}"
+        ))));
+    }
+    Ok(())
+}
+
+fn filled_chunk_bytes(
+    fill_bytes: Option<&[u8]>,
+    cell_count: usize,
+    key: &str,
+) -> ZarrFdwResult<Vec<u8>> {
+    let fill_bytes = fill_bytes.ok_or_else(|| ZarrFdwError::MissingChunkWithoutFillValue {
+        key: key.to_string(),
+    })?;
+    if fill_bytes.is_empty() {
+        return Err(ZarrFdwError::InvalidMetadata(
+            "decoded fill value must contain at least one byte".to_string(),
+        ));
+    }
+    let byte_count = fill_bytes.len().checked_mul(cell_count).ok_or_else(|| {
+        ZarrFdwError::InvalidMetadata(
+            "filled chunk byte length exceeds this platform's index capacity".to_string(),
+        )
+    })?;
+    if byte_count > MAX_DECODED_CHUNK_BYTES {
+        return Err(ZarrFdwError::InvalidMetadata(format!(
+            "filled chunk requires {byte_count} bytes, exceeding the safety limit of {MAX_DECODED_CHUNK_BYTES}"
+        )));
+    }
+    let mut bytes = Vec::new();
+    bytes.try_reserve_exact(byte_count).map_err(|_| {
+        ZarrFdwError::InvalidMetadata(format!(
+            "could not allocate a filled chunk of {byte_count} bytes"
+        ))
+    })?;
+    for _ in 0..cell_count {
+        bytes.extend_from_slice(fill_bytes);
+    }
+    Ok(bytes)
+}
+
+fn filled_coordinate_values(
+    fill_value: Option<f64>,
+    cell_count: usize,
+    key: &str,
+    axis: &str,
+) -> ZarrFdwResult<Vec<f64>> {
+    let fill_value = fill_value.ok_or_else(|| ZarrFdwError::CoordinateReadError {
+        axis: axis.to_string(),
+        error: ZarrFdwError::MissingChunkWithoutFillValue {
+            key: key.to_string(),
+        }
+        .to_string(),
+    })?;
+    if cell_count > MAX_COORDINATE_VALUES {
+        return Err(ZarrFdwError::CoordinateReadError {
+            axis: axis.to_string(),
+            error: format!(
+                "coordinate chunk has {cell_count} values, exceeding the safety limit of {MAX_COORDINATE_VALUES}"
+            ),
+        });
+    }
+    let mut values = Vec::new();
+    values
+        .try_reserve_exact(cell_count)
+        .map_err(|_| ZarrFdwError::CoordinateReadError {
+            axis: axis.to_string(),
+            error: format!("could not allocate a coordinate chunk of {cell_count} values"),
+        })?;
+    values.resize(cell_count, fill_value);
+    Ok(values)
+}
+
+fn expected_value_pg_type(dtype: DType) -> (pg_sys::Oid, &'static str) {
+    match dtype {
+        DType::F32 => (pg_sys::FLOAT4OID, "real"),
+        DType::F64 => (pg_sys::FLOAT8OID, "double precision"),
+        DType::I8 => (pg_sys::CHAROID, r#""char""#),
+        DType::I16 => (pg_sys::INT2OID, "smallint"),
+        DType::I32 => (pg_sys::INT4OID, "integer"),
+        DType::I64 => (pg_sys::INT8OID, "bigint"),
+    }
+}
+
+fn require_column_type(
+    column: &Column,
+    expected_oid: pg_sys::Oid,
+    expected_name: &'static str,
+) -> ZarrFdwResult<()> {
+    if column.type_oid != expected_oid {
+        return Err(ZarrFdwError::ColumnTypeMismatch {
+            column: column.name.clone(),
+            actual: column.type_oid.to_u32(),
+            expected: expected_name,
+            expected_oid: expected_oid.to_u32(),
+        });
+    }
+    Ok(())
+}
+
+fn validate_fixed_coordinate_column_types(columns: &[Column]) -> ZarrFdwResult<()> {
+    for column in columns {
+        match column.name.as_str() {
+            AXIS_X | AXIS_Y => {
+                require_column_type(column, pg_sys::FLOAT8OID, "double precision")?;
+            }
+            AXIS_TIME => {
+                require_column_type(column, pg_sys::TIMESTAMPTZOID, "timestamp with time zone")?;
+            }
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
+fn validate_column_types(columns: &[Column], rank: usize, dtype: DType) -> ZarrFdwResult<()> {
+    validate_fixed_coordinate_column_types(columns)?;
+    let (value_oid, value_name) = expected_value_pg_type(dtype);
+    for column in columns {
+        match column.name.as_str() {
+            AXIS_X | AXIS_Y => {}
+            AXIS_TIME if rank == 3 => {}
+            AXIS_TIME => {
+                return Err(ZarrFdwError::InvalidCoordinateColumn {
+                    column: column.name.clone(),
+                    rank,
+                });
+            }
+            _ => require_column_type(column, value_oid, value_name)?,
+        }
+    }
+    Ok(())
+}
+
+fn validate_coordinate_values(axis: &str, values: &[f64]) -> ZarrFdwResult<()> {
+    if let Some((index, value)) = values
+        .iter()
+        .enumerate()
+        .find(|(_, value)| !value.is_finite())
+    {
+        return Err(ZarrFdwError::CoordinateReadError {
+            axis: axis.to_string(),
+            error: format!("coordinate value at index {index} is not finite ({value})"),
+        });
+    }
+
+    let nondecreasing = values.windows(2).all(|pair| pair[0] <= pair[1]);
+    let nonincreasing = values.windows(2).all(|pair| pair[0] >= pair[1]);
+    if !nondecreasing && !nonincreasing {
+        return Err(ZarrFdwError::CoordinateReadError {
+            axis: axis.to_string(),
+            error: "coordinate values must be monotonic".to_string(),
+        });
+    }
+    Ok(())
+}
+
+fn estimated_pg_type_width(type_oid: pg_sys::Oid) -> i32 {
+    match type_oid {
+        pg_sys::CHAROID => 1,
+        pg_sys::INT2OID => 2,
+        pg_sys::FLOAT4OID | pg_sys::INT4OID => 4,
+        pg_sys::FLOAT8OID | pg_sys::INT8OID | pg_sys::TIMESTAMPTZOID => 8,
+        _ => DEFAULT_UNKNOWN_TYPE_WIDTH,
+    }
+}
+
+fn conservative_rel_size(columns: &[Column]) -> (i64, i32) {
+    let width = if columns.is_empty() {
+        DEFAULT_EMPTY_PROJECTION_WIDTH
+    } else {
+        columns.iter().fold(0_i32, |sum, column| {
+            sum.saturating_add(estimated_pg_type_width(column.type_oid))
+        })
+    };
+    (DEFAULT_PLANNER_ROWS, width)
 }
 
 impl ZarrFdw {
@@ -220,21 +494,38 @@ impl ZarrFdw {
         debug_assert_eq!(self.sub_hi.len(), self.rank);
         debug_assert_eq!(self.sub_idx.len(), self.rank);
 
-        // fetch + decompress
+        // Effective (edge) chunk shape. Zarr v2 still stores the full declared
+        // chunk shape; `eff` only controls which logical cells are emitted.
         let key = chunk_key(&meta.dimension_separator, ci);
-        let raw = self
-            .store
-            .get_object_sync(&join_key(&self.array_dir, &key))?;
-        let decoded = self.store.rt.block_on(codec.decompress(&raw))?;
-        stats::inc_stats(FDW_NAME, stats::Metric::BytesIn, decoded.len() as i64);
-
-        // effective (edge) chunk shape
+        if ci.len() != self.rank {
+            return Err(ZarrFdwError::InvalidMetadata(
+                "chunk index rank does not match the array rank".to_string(),
+            ));
+        }
+        let (storage_shape, storage_cells, expected) = checked_chunk_layout(meta, dt.itemsize())?;
         let mut eff = Vec::with_capacity(self.rank);
-        for ((&dim, &chunk_len), &ci_d) in meta.shape.iter().zip(meta.chunks.iter()).zip(ci.iter())
-        {
-            let chunk_len = chunk_len as usize;
-            let start = ci_d as usize * chunk_len;
-            eff.push((dim as usize - start).min(chunk_len));
+        for (axis, &ci_d) in ci.iter().enumerate() {
+            let dim = meta.shape_extent(axis)?;
+            let chunk_len = storage_shape[axis];
+            let chunk_index = usize::try_from(ci_d).map_err(|_| {
+                ZarrFdwError::InvalidMetadata(format!(
+                    "chunk index for axis {axis} exceeds this platform's index capacity"
+                ))
+            })?;
+            let start = chunk_index.checked_mul(chunk_len).ok_or_else(|| {
+                ZarrFdwError::InvalidMetadata(format!("chunk start offset overflow on axis {axis}"))
+            })?;
+            if start >= dim {
+                return Err(ZarrFdwError::InvalidMetadata(format!(
+                    "chunk index {ci_d} starts outside array dimension {axis} with extent {dim}"
+                )));
+            }
+            let remaining = dim.checked_sub(start).ok_or_else(|| {
+                ZarrFdwError::InvalidMetadata(format!(
+                    "chunk start offset exceeds array dimension {axis}"
+                ))
+            })?;
+            eff.push(remaining.min(chunk_len));
         }
 
         if eff.contains(&0) {
@@ -248,21 +539,45 @@ impl ZarrFdw {
         // Zarr v2 edge chunks retain the declared chunk shape. Use that full
         // shape for byte validation and C-order strides; `eff` ignores the
         // out-of-array region when deciding which cells to emit.
-        let storage_shape = meta.chunks.iter().map(|&n| n as usize).collect::<Vec<_>>();
-        let expected = storage_shape.iter().product::<usize>() * dt.itemsize();
-        if decoded.len() < expected {
-            return Err(ZarrFdwError::ReadError(std::io::Error::other(format!(
-                "chunk '{key}' decoded to {} bytes, expected at least {expected}",
-                decoded.len()
-            ))));
-        }
-        self.chunk_bytes = decoded[..expected].to_vec();
+        let object_key = join_key(&self.array_dir, &key);
+        let encoded_limit = codec.encoded_read_limit(expected)?;
+        let decoded = match self
+            .store
+            .get_object_optional_sync(&object_key, encoded_limit)?
+        {
+            Some(raw) => {
+                let decoded = self.store.rt.block_on(codec.decompress(raw, expected))?;
+                let bytes_in = i64::try_from(decoded.len()).map_err(|_| {
+                    ZarrFdwError::InvalidMetadata(
+                        "decoded chunk length exceeds statistics capacity".to_string(),
+                    )
+                })?;
+                stats::inc_stats(FDW_NAME, stats::Metric::BytesIn, bytes_in);
+                decoded
+            }
+            None => filled_chunk_bytes(self.fill_bytes.as_deref(), storage_cells, &object_key)?,
+        };
+        require_exact_decoded_len(&key, decoded.len(), expected)?;
+        self.chunk_bytes.clear();
+        self.chunk_bytes.try_reserve_exact(expected).map_err(|_| {
+            ZarrFdwError::InvalidMetadata(format!(
+                "could not allocate a decoded chunk of {expected} bytes"
+            ))
+        })?;
+        self.chunk_bytes.extend_from_slice(&decoded[..expected]);
         self.chunk_shape = storage_shape;
 
         // within-chunk index window for this chunk
         for d in 0..self.rank {
-            let chunk_len = meta.chunks[d] as usize;
-            let base = ci[d] as usize * chunk_len;
+            let chunk_len = self.chunk_shape[d];
+            let chunk_index = usize::try_from(ci[d]).map_err(|_| {
+                ZarrFdwError::InvalidMetadata(format!(
+                    "chunk index for axis {d} exceeds this platform's index capacity"
+                ))
+            })?;
+            let base = chunk_index.checked_mul(chunk_len).ok_or_else(|| {
+                ZarrFdwError::InvalidMetadata(format!("chunk start offset overflow on axis {d}"))
+            })?;
             let hi_def = eff[d].saturating_sub(1);
             match &self.bounds[d] {
                 Some(b) => {
@@ -290,22 +605,34 @@ impl ZarrFdw {
         let ci = &self.chunks[self.chunk_pos];
 
         // flat offset within the chunk (C order)
-        let mut off = 0usize;
-        let mut stride = 1usize;
-        for d in (0..self.rank).rev() {
-            off += self.sub_idx[d] * stride;
-            stride *= self.chunk_shape[d];
-        }
-
+        let off = checked_flat_offset(&self.sub_idx, &self.chunk_shape)?;
         let item = dt.itemsize();
-        let start = off * item;
-        let value_cell = Self::value_cell(dt, &self.chunk_bytes[start..start + item])?;
+        let byte_range = checked_chunk_byte_range(off, item, self.chunk_bytes.len())?;
+        let value_cell = Self::value_cell(dt, &self.chunk_bytes[byte_range])?;
 
         for col in &self.tgt_cols {
             match self.axes.iter().position(|a| a == &col.name) {
                 Some(d) => {
-                    let global = ci[d] as usize * meta.chunks[d] as usize + self.sub_idx[d];
-                    let coord = self.coords[d][global];
+                    let chunk_index = usize::try_from(ci[d]).map_err(|_| {
+                        ZarrFdwError::InvalidMetadata(format!(
+                            "chunk index for axis {d} exceeds this platform's index capacity"
+                        ))
+                    })?;
+                    let chunk_len = meta.chunk_extent(d)?;
+                    let global = chunk_index
+                        .checked_mul(chunk_len)
+                        .and_then(|base| base.checked_add(self.sub_idx[d]))
+                        .ok_or_else(|| {
+                            ZarrFdwError::InvalidMetadata(format!(
+                                "coordinate index overflow on axis {d}"
+                            ))
+                        })?;
+                    let coord = *self.coords[d].get(global).ok_or_else(|| {
+                        ZarrFdwError::InvalidMetadata(format!(
+                            "coordinate index {global} is outside axis {d} length {}",
+                            self.coords[d].len()
+                        ))
+                    })?;
                     if self.axes[d] == AXIS_TIME {
                         let micros = self.time_spec.raw_to_pg_micros(coord);
                         let ts = TimestampWithTimeZone::try_from(micros)
@@ -412,7 +739,7 @@ fn read_coordinate_array(store: &ZarrStore, prefix: &str, name: &str) -> ZarrFdw
     } else {
         format!("{prefix}/{name}")
     };
-    let meta_bytes = store.get_object_sync(&format!("{dir}/.zarray"))?;
+    let meta_bytes = store.get_object_sync(&format!("{dir}/.zarray"), MAX_METADATA_OBJECT_BYTES)?;
     let meta = ArrayMeta::parse(&meta_bytes).map_err(|e| ZarrFdwError::CoordinateReadError {
         axis: name.to_string(),
         error: format!("coordinate array metadata: {e}"),
@@ -423,31 +750,98 @@ fn read_coordinate_array(store: &ZarrStore, prefix: &str, name: &str) -> ZarrFdw
             error: e.to_string(),
         })?;
 
-    let codec = Codec::from_compressor_json(&meta.compressor);
-    let per_axis = meta.chunks_per_axis();
-    let mut ranges = Vec::with_capacity(per_axis.len());
-    for n in &per_axis {
-        ranges.push((0usize, n.saturating_sub(1) as usize));
+    let fill_value = coord_fill_value_to_f64(&meta.dtype, &meta.fill_value).map_err(|e| {
+        ZarrFdwError::CoordinateReadError {
+            axis: name.to_string(),
+            error: e.to_string(),
+        }
+    })?;
+
+    let coordinate_len = meta
+        .shape_extent(0)
+        .map_err(|e| ZarrFdwError::CoordinateReadError {
+            axis: name.to_string(),
+            error: e.to_string(),
+        })?;
+    if coordinate_len > MAX_COORDINATE_VALUES {
+        return Err(ZarrFdwError::CoordinateReadError {
+            axis: name.to_string(),
+            error: format!(
+                "coordinate array has {coordinate_len} values, exceeding the safety limit of {MAX_COORDINATE_VALUES}"
+            ),
+        });
+    }
+    let itemsize =
+        coordinate_itemsize(&meta.dtype).map_err(|e| ZarrFdwError::CoordinateReadError {
+            axis: name.to_string(),
+            error: e.to_string(),
+        })?;
+    let (storage_shape, _, expected_bytes) =
+        checked_chunk_layout(&meta, itemsize).map_err(|e| ZarrFdwError::CoordinateReadError {
+            axis: name.to_string(),
+            error: e.to_string(),
+        })?;
+    let chunk_len = storage_shape[0];
+    if chunk_len > MAX_COORDINATE_VALUES {
+        return Err(ZarrFdwError::CoordinateReadError {
+            axis: name.to_string(),
+            error: format!(
+                "coordinate chunk has {chunk_len} values, exceeding the safety limit of {MAX_COORDINATE_VALUES}"
+            ),
+        });
     }
 
+    let codec = Codec::from_compressor_json(&meta.compressor)?;
+    let per_axis = meta.chunks_per_axis();
+    let chunk_count =
+        usize::try_from(per_axis[0]).map_err(|_| ZarrFdwError::CoordinateReadError {
+            axis: name.to_string(),
+            error: "coordinate chunk count exceeds this platform's index capacity".to_string(),
+        })?;
     let mut values = Vec::new();
-    for ci in enumerate_chunks(&ranges) {
-        let chunk = chunk_key(&meta.dimension_separator, &ci);
-        let raw = store.get_object_sync(&join_key(&dir, &chunk))?;
-        let decoded = store.rt.block_on(codec.decompress(&raw))?;
-        let decoded_values = coord_bytes_to_f64(&meta.dtype, &decoded)?;
-        let chunk_len = meta.chunks[0] as usize;
-        let start = ci[0] as usize * chunk_len;
-        let effective_len = (meta.shape[0] as usize - start).min(chunk_len);
-        if decoded_values.len() < effective_len {
-            return Err(ZarrFdwError::CoordinateReadError {
+    values
+        .try_reserve_exact(coordinate_len)
+        .map_err(|_| ZarrFdwError::CoordinateReadError {
+            axis: name.to_string(),
+            error: format!("could not allocate {coordinate_len} coordinate values"),
+        })?;
+    for chunk_index in 0..chunk_count {
+        let ci = u64::try_from(chunk_index).map_err(|_| ZarrFdwError::CoordinateReadError {
+            axis: name.to_string(),
+            error: "coordinate chunk index exceeds the Zarr v2 u64 index capacity".to_string(),
+        })?;
+        let chunk = chunk_key(&meta.dimension_separator, &[ci]);
+        let object_key = join_key(&dir, &chunk);
+        let encoded_limit = codec.encoded_read_limit(expected_bytes)?;
+        let decoded_values = match store.get_object_optional_sync(&object_key, encoded_limit)? {
+            Some(raw) => {
+                let decoded = store
+                    .rt
+                    .block_on(codec.decompress(raw, expected_bytes))
+                    .map_err(|e| ZarrFdwError::CoordinateReadError {
+                        axis: name.to_string(),
+                        error: e.to_string(),
+                    })?;
+                coord_bytes_to_f64(&meta.dtype, &decoded[..expected_bytes])?
+            }
+            None => filled_coordinate_values(fill_value, chunk_len, &object_key, name)?,
+        };
+        let start = chunk_index.checked_mul(chunk_len).ok_or_else(|| {
+            ZarrFdwError::CoordinateReadError {
                 axis: name.to_string(),
-                error: format!(
-                    "chunk '{chunk}' decoded to {} values, expected at least {effective_len}",
-                    decoded_values.len()
-                ),
-            });
-        }
+                error: "coordinate chunk start offset overflow".to_string(),
+            }
+        })?;
+        let remaining =
+            coordinate_len
+                .checked_sub(start)
+                .ok_or_else(|| ZarrFdwError::CoordinateReadError {
+                    axis: name.to_string(),
+                    error: format!(
+                        "coordinate chunk '{chunk}' starts beyond the declared array length"
+                    ),
+                })?;
+        let effective_len = remaining.min(chunk_len);
         values.extend_from_slice(&decoded_values[..effective_len]);
     }
     Ok(values)
@@ -479,6 +873,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
             axis_meta: None,
             dtype: None,
             codec: None,
+            fill_bytes: None,
             coords: Vec::new(),
             bounds: Vec::new(),
             chunks: Vec::new(),
@@ -494,6 +889,19 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
         })
     }
 
+    fn get_rel_size(
+        &mut self,
+        _quals: &[Qual],
+        columns: &[Column],
+        _sorts: &[Sort],
+        _limit: &Option<Limit>,
+        _options: &HashMap<String, String>,
+    ) -> ZarrFdwResult<(i64, i32)> {
+        // Do not fetch `.zarray` here: this callback also runs for plain
+        // EXPLAIN, where remote latency/auth failures would be surprising.
+        Ok(conservative_rel_size(columns))
+    }
+
     fn begin_scan(
         &mut self,
         quals: &[Qual],
@@ -504,6 +912,9 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
     ) -> ZarrFdwResult<()> {
         self.tgt_cols = columns.to_vec();
         self.time_spec = TimeSpec::from_options(options)?;
+        // These fixed output Cells are known before fetching remote metadata.
+        // Reject unsafe mappings before any network request.
+        validate_fixed_coordinate_column_types(columns)?;
 
         // the array_group option scopes which Zarr array in the store this
         // foreign table reads; the default is the store root itself
@@ -527,17 +938,11 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
             });
         }
 
-        // rows are keyed by their (x, y) coordinates, so both must be projected
-        let has_x = columns.iter().any(|c| c.name == AXIS_X);
-        let has_y = columns.iter().any(|c| c.name == AXIS_Y);
-        if !has_x || !has_y {
-            return Err(ZarrFdwError::MissingCoordinateColumn);
-        }
-
         // load array metadata
-        let meta_bytes = self
-            .store
-            .get_object_sync(&join_key(&self.array_dir, ".zarray"))?;
+        let meta_bytes = self.store.get_object_sync(
+            &join_key(&self.array_dir, ".zarray"),
+            MAX_METADATA_OBJECT_BYTES,
+        )?;
         let meta = ArrayMeta::from_bytes(&meta_bytes)?;
         let rank = meta.shape.len();
         self.axes = if rank == 3 {
@@ -550,14 +955,18 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
             vec![AXIS_Y.to_string(), AXIS_X.to_string()]
         };
         self.rank = rank;
+        let dtype = DType::parse(&meta.dtype)?;
+        validate_column_types(columns, rank, dtype)?;
         self.axis_meta = Some(meta.clone());
-        self.dtype = Some(DType::parse(&meta.dtype)?);
-        self.codec = Some(Codec::from_compressor_json(&meta.compressor));
+        self.dtype = Some(dtype);
+        self.codec = Some(Codec::from_compressor_json(&meta.compressor)?);
+        self.fill_bytes = fill_value_bytes(dtype, &meta.fill_value)?;
 
         // load coordinate arrays
+        let coordinate_prefix = array_parent_path(&self.array_dir);
         let mut coords = Vec::with_capacity(rank);
         for axis in &self.axes {
-            coords.push(read_coordinate_array(&self.store, "", axis)?);
+            coords.push(read_coordinate_array(&self.store, coordinate_prefix, axis)?);
         }
         for (d, axis) in self.axes.iter().enumerate() {
             if coords[d].len() as u64 != meta.shape[d] {
@@ -570,6 +979,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
                     ),
                 });
             }
+            validate_coordinate_values(axis, &coords[d])?;
         }
         self.coords = coords;
 
@@ -613,8 +1023,8 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
         self.chunks = if no_rows {
             Vec::new()
         } else {
-            let chunk_ranges = axis_chunk_ranges(&meta, &self.bounds);
-            enumerate_chunks(&chunk_ranges)
+            let chunk_ranges = axis_chunk_ranges(&meta, &self.bounds)?;
+            enumerate_chunks(&chunk_ranges)?
         };
         self.chunk_pos = 0;
         self.chunk_bytes.clear();
@@ -662,6 +1072,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
         self.chunks.clear();
         self.coords.clear();
         self.bounds.clear();
+        self.fill_bytes = None;
         self.rows_out = 0;
         Ok(())
     }
@@ -671,14 +1082,13 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
             match oid {
                 FOREIGN_SERVER_RELATION_ID => {
                     check_options_contain(&options, "store_url")?;
-                    if let Some(v) = option_value(&options, "anonymous") {
-                        if v != "true" && v != "false" {
-                            return Err(ZarrFdwError::InvalidOptionValue {
-                                option: "anonymous".to_string(),
-                                message: "must be 'true' or 'false'".to_string(),
-                            });
-                        }
-                    }
+                    let server_options = options
+                        .iter()
+                        .flatten()
+                        .filter_map(|option| option.split_once('='))
+                        .map(|(name, value)| (name.to_string(), value.to_string()))
+                        .collect::<HashMap<_, _>>();
+                    validate_auth_options(&server_options)?;
                 }
                 FOREIGN_TABLE_RELATION_ID => {
                     if let Some(v) = option_value(&options, OPT_TIME_UNIT) {
@@ -720,7 +1130,29 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
 
 #[cfg(test)]
 mod unit_tests {
-    use super::zeroed_scan_cursors;
+    use super::*;
+
+    fn column(name: &str, type_oid: pg_sys::Oid) -> Column {
+        Column {
+            name: name.to_string(),
+            num: 1,
+            type_oid,
+        }
+    }
+
+    fn array_meta(shape: Vec<u64>, chunks: Vec<u64>) -> ArrayMeta {
+        ArrayMeta {
+            zarr_format: 2,
+            shape,
+            chunks,
+            dtype: "<f4".to_string(),
+            fill_value: serde_json::Value::from(0),
+            compressor: None,
+            dimension_separator: ".".to_string(),
+            order: 'C',
+            filters: None,
+        }
+    }
 
     #[test]
     fn scan_cursors_are_sized_to_the_array_rank() {
@@ -728,5 +1160,190 @@ mod unit_tests {
         assert_eq!(lo, vec![0; 3]);
         assert_eq!(hi, vec![0; 3]);
         assert_eq!(idx, vec![0; 3]);
+    }
+
+    #[test]
+    fn coordinate_path_is_the_array_parent() {
+        assert_eq!(array_parent_path(""), "");
+        assert_eq!(array_parent_path("raw"), "");
+        assert_eq!(array_parent_path("nested/raw"), "nested");
+        assert_eq!(array_parent_path("a/b/raw"), "a/b");
+    }
+
+    #[test]
+    fn missing_chunk_repeats_typed_fill_or_rejects_null() {
+        assert_eq!(
+            filled_chunk_bytes(Some(&[0x00, 0x40]), 3, "nested/raw/0.0").unwrap(),
+            vec![0x00, 0x40, 0x00, 0x40, 0x00, 0x40]
+        );
+        assert!(matches!(
+            filled_chunk_bytes(None, 3, "nested/raw/0.0"),
+            Err(ZarrFdwError::MissingChunkWithoutFillValue { key })
+                if key == "nested/raw/0.0"
+        ));
+    }
+
+    #[test]
+    fn missing_coordinate_chunk_uses_fill_or_rejects_null() {
+        assert_eq!(
+            filled_coordinate_values(Some(4.5), 3, "nested/x/0", AXIS_X).unwrap(),
+            vec![4.5; 3]
+        );
+        let err = filled_coordinate_values(None, 3, "nested/x/0", AXIS_X).unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "failed to read coordinate 'x': zarr chunk 'nested/x/0' is absent and fill_value is null, so its contents are undefined"
+        );
+
+        let non_finite = filled_coordinate_values(Some(f64::NAN), 2, "nested/x/0", AXIS_X).unwrap();
+        assert!(validate_coordinate_values(AXIS_X, &non_finite).is_err());
+    }
+
+    #[test]
+    fn chunk_layout_uses_checked_bounded_arithmetic() {
+        let normal = array_meta(vec![2, 3, 4], vec![2, 3, 4]);
+        let (shape, cells, bytes) = checked_chunk_layout(&normal, 4).unwrap();
+        assert_eq!(shape, vec![2, 3, 4]);
+        assert_eq!(cells, 24);
+        assert_eq!(bytes, 96);
+
+        let too_large = array_meta(
+            vec![(MAX_DECODED_CHUNK_BYTES / 8 + 1) as u64, 1],
+            vec![(MAX_DECODED_CHUNK_BYTES / 8 + 1) as u64, 1],
+        );
+        assert!(matches!(
+            checked_chunk_layout(&too_large, 8),
+            Err(ZarrFdwError::InvalidMetadata(message))
+                if message.contains("exceeding the safety limit")
+        ));
+        assert!(filled_chunk_bytes(Some(&[0]), MAX_DECODED_CHUNK_BYTES + 1, "oversized").is_err());
+        assert!(
+            filled_coordinate_values(Some(0.0), MAX_COORDINATE_VALUES + 1, "x/0", AXIS_X).is_err()
+        );
+    }
+
+    #[test]
+    fn flat_chunk_offsets_and_byte_ranges_are_checked() {
+        assert_eq!(checked_flat_offset(&[1, 2, 3], &[2, 3, 4]).unwrap(), 23);
+        assert!(checked_flat_offset(&[2, 0, 0], &[2, 3, 4]).is_err());
+        assert!(checked_flat_offset(&[0, 0], &[usize::MAX, 2]).is_err());
+        assert_eq!(checked_chunk_byte_range(23, 4, 96).unwrap(), 92..96);
+        assert!(checked_chunk_byte_range(24, 4, 96).is_err());
+        assert!(checked_chunk_byte_range(usize::MAX, 8, usize::MAX).is_err());
+    }
+
+    #[test]
+    fn decoded_chunks_must_have_exact_declared_length() {
+        require_exact_decoded_len("0.0", 96, 96).unwrap();
+        for actual in [95, 97] {
+            assert!(matches!(
+                require_exact_decoded_len("0.0", actual, 96),
+                Err(ZarrFdwError::ReadError(_))
+            ));
+        }
+    }
+
+    #[test]
+    fn value_dtypes_map_to_exact_postgres_types() {
+        let cases = [
+            (DType::F32, pg_sys::FLOAT4OID, "real"),
+            (DType::F64, pg_sys::FLOAT8OID, "double precision"),
+            (DType::I8, pg_sys::CHAROID, r#""char""#),
+            (DType::I16, pg_sys::INT2OID, "smallint"),
+            (DType::I32, pg_sys::INT4OID, "integer"),
+            (DType::I64, pg_sys::INT8OID, "bigint"),
+        ];
+        for (dtype, oid, name) in cases {
+            assert_eq!(expected_value_pg_type(dtype), (oid, name));
+        }
+    }
+
+    #[test]
+    fn planner_estimate_is_positive_bounded_and_uses_projected_types() {
+        let columns = vec![
+            column(AXIS_TIME, pg_sys::TIMESTAMPTZOID),
+            column(AXIS_X, pg_sys::FLOAT8OID),
+            column("value", pg_sys::FLOAT4OID),
+        ];
+        assert_eq!(conservative_rel_size(&columns), (1_000_000, 20));
+        assert_eq!(conservative_rel_size(&[]), (1_000_000, 8));
+        assert_eq!(
+            conservative_rel_size(&[column("unknown", pg_sys::TEXTOID)]),
+            (1_000_000, 32)
+        );
+    }
+
+    #[test]
+    fn accepts_exact_coordinate_and_value_column_types() {
+        let columns = vec![
+            column(AXIS_TIME, pg_sys::TIMESTAMPTZOID),
+            column(AXIS_Y, pg_sys::FLOAT8OID),
+            column(AXIS_X, pg_sys::FLOAT8OID),
+            column("value", pg_sys::FLOAT4OID),
+        ];
+        validate_column_types(&columns, 3, DType::F32).unwrap();
+    }
+
+    #[test]
+    fn coordinates_do_not_need_to_be_projected() {
+        validate_column_types(&[column("value", pg_sys::FLOAT4OID)], 2, DType::F32).unwrap();
+        validate_column_types(
+            &[
+                column(AXIS_X, pg_sys::FLOAT8OID),
+                column("value", pg_sys::FLOAT4OID),
+            ],
+            2,
+            DType::F32,
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn rejects_incompatible_column_type() {
+        let columns = vec![column(AXIS_X, pg_sys::INT4OID)];
+        assert!(matches!(
+            validate_fixed_coordinate_column_types(&columns),
+            Err(ZarrFdwError::ColumnTypeMismatch { column, .. }) if column == AXIS_X
+        ));
+    }
+
+    #[test]
+    fn rejects_incompatible_time_type_before_metadata() {
+        let columns = vec![column(AXIS_TIME, pg_sys::TIMESTAMPOID)];
+        assert!(matches!(
+            validate_fixed_coordinate_column_types(&columns),
+            Err(ZarrFdwError::ColumnTypeMismatch { column, .. }) if column == AXIS_TIME
+        ));
+    }
+
+    #[test]
+    fn rejects_time_column_for_rank_two_array() {
+        let columns = vec![column(AXIS_TIME, pg_sys::TIMESTAMPTZOID)];
+        assert!(matches!(
+            validate_column_types(&columns, 2, DType::F64),
+            Err(ZarrFdwError::InvalidCoordinateColumn { column, rank: 2 })
+                if column == AXIS_TIME
+        ));
+    }
+
+    #[test]
+    fn coordinate_values_must_be_finite_and_monotonic() {
+        for valid in [
+            vec![0.0, 1.0, 2.0],
+            vec![2.0, 1.0, 0.0],
+            vec![1.0, 1.0, 2.0],
+            vec![1.0, 1.0, 1.0],
+        ] {
+            validate_coordinate_values("x", &valid).unwrap();
+        }
+
+        for invalid in [
+            vec![0.0, f64::NAN],
+            vec![0.0, f64::INFINITY],
+            vec![0.0, f64::NEG_INFINITY],
+            vec![0.0, 2.0, 1.0],
+        ] {
+            assert!(validate_coordinate_values("x", &invalid).is_err());
+        }
     }
 }

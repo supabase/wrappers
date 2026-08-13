@@ -33,17 +33,39 @@ enum ZarrFdwError {
     #[error("invalid value for option '{option}': {message}")]
     InvalidOptionValue { option: String, message: String },
 
+    #[error("invalid authentication options: {0}")]
+    InvalidAuthenticationOptions(String),
+
+    #[error("Vault secret referenced by option '{option}' was not found")]
+    VaultSecretNotFound { option: String },
+
     #[error("data type '{0}' is not supported")]
     UnsupportedDataType(String),
 
     #[error("compressor '{0}' is not supported yet")]
     UnsupportedCompressor(String),
 
-    #[error("columns must include an 'x' and 'y' column, and optionally a 'time' column")]
-    MissingCoordinateColumn,
+    #[error(
+        "column '{column}' has incompatible PostgreSQL type OID {actual}; expected {expected} (OID {expected_oid})"
+    )]
+    ColumnTypeMismatch {
+        column: String,
+        actual: u32,
+        expected: &'static str,
+        expected_oid: u32,
+    },
+
+    #[error("coordinate column '{column}' is not available for a rank-{rank} Zarr array")]
+    InvalidCoordinateColumn { column: String, rank: usize },
 
     #[error("failed to read coordinate '{axis}': {error}")]
     CoordinateReadError { axis: String, error: String },
+
+    #[error("required zarr object '{key}' does not exist")]
+    ObjectNotFound { key: String },
+
+    #[error("zarr chunk '{key}' is absent and fill_value is null, so its contents are undefined")]
+    MissingChunkWithoutFillValue { key: String },
 
     #[error("{0}")]
     OptionsError(#[from] OptionsError),

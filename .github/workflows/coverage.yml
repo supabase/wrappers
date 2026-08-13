@@ -40,7 +40,7 @@ jobs:
 
       - run: |
           sudo apt remove -y postgres*
-          sudo apt -y install curl ca-certificates build-essential pkg-config libssl-dev
+          sudo apt -y install curl ca-certificates build-essential cmake pkg-config libssl-dev
           sudo install -d /usr/share/postgresql-common/pgdg
           sudo curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
           . /etc/os-release
@@ -53,9 +53,11 @@ jobs:
       - run: cargo install --locked cargo-pgrx --version 0.19.2
       - run: cargo pgrx init --pg15 /usr/lib/postgresql/15/bin/pg_config
 
-      - name: Build docker images
+      - name: Start test services and wait for fixtures
         run: |
           docker compose -f wrappers/.ci/docker-compose-native.yaml up -d
+          docker compose -f wrappers/.ci/docker-compose-native.yaml wait s3-init
+          test "$(docker inspect -f '{{.State.ExitCode}}' s3-init)" = "0"
 
       - name: Generate code coverage
         id: coverage

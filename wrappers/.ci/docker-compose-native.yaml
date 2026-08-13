@@ -154,11 +154,20 @@ services:
       - ../dockerfiles/s3/iceberg_seed.py:/iceberg_seed.py
     entrypoint: |
       /bin/sh -c "
+      set -eu;
       until (/mc alias set s3 http://s3:8000 admin password) do echo '...waiting...' && sleep 1; done;
-      /mc rm -r --force s3/warehouse;
-      /mc mb s3/warehouse;
+      /mc rm -r --force s3/warehouse || true;
+      /mc mb --ignore-existing s3/warehouse;
       /mc policy set public s3/warehouse;
       /mc cp --recursive /test_data/* s3/warehouse;
+      /mc stat s3/warehouse/zarr/e2e.zarr/.zgroup;
+      /mc stat s3/warehouse/zarr/e2e.zarr/nested/raw/.zarray;
+      /mc stat s3/warehouse/zarr/e2e.zarr/nested/raw/0.0.0;
+      /mc stat s3/warehouse/zarr/e2e.zarr/nested/blosc/0.1.1;
+      if /mc stat s3/warehouse/zarr/e2e.zarr/nested/raw/0.1.1; then
+        echo 'unexpected raw chunk 0.1.1 in sparse Zarr fixture';
+        exit 1;
+      fi;
       python /iceberg_seed.py
       "
 

@@ -163,7 +163,7 @@ jobs:
           # Add postgres package repo and install requested postgres version
           sudo apt update
           sudo apt remove -y postgres*
-          sudo apt -y install curl ca-certificates pkg-config libssl-dev
+          sudo apt -y install curl ca-certificates cmake pkg-config libssl-dev
           sudo install -d /usr/share/postgresql-common/pgdg
           sudo curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
           . /etc/os-release
