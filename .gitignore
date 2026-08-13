@@ -22,3 +22,5 @@ wrappers/regression.*
 research/**
 outputs/
 .tickets/
+.aura/
+graphify-out/
