@@ -81,7 +81,7 @@ The function returns these fields:
 | `fill_value` | Raw `.zarray` fill value |
 | `units`, `calendar` | Common scientific attributes when they are strings |
 | `scale_factor`, `add_offset` | Finite numeric scientific attributes |
-| `crs` | Best-effort projection of `crs`, `spatial_ref`, `crs_wkt`, or `grid_mapping` |
+| `crs` | Best-effort CRS metadata from direct `crs`, `spatial_ref`, or `crs_wkt`, or from a resolved sibling `grid_mapping` reference |
 | `attributes` | Complete `.zattrs` JSON object |
 | `warnings` | Non-fatal metadata issues, such as malformed named dimensions |
 
@@ -89,6 +89,17 @@ The inspection surface exposes scientific metadata. Scans can opt into the
 CF-style value and time-coordinate decoding described below; physical-unit and
 CRS transformations are not applied yet. The complete `attributes` value remains
 authoritative because scientific metadata conventions vary between datasets.
+
+For CRS metadata, `zarr_inspect` keeps the raw `.zattrs` object in
+`attributes` and fills `crs` as a convenience projection. Direct CRS metadata on
+the current node wins in this order: `crs`, `spatial_ref`, then `crs_wkt`. If an
+array has no direct CRS metadata but has a simple `grid_mapping` string, the
+inspector attempts to resolve that name to a sibling array in the same group and
+uses the sibling's direct CRS value. If that reference cannot be resolved, the
+raw `grid_mapping` value remains visible in `crs` and a warning is emitted.
+CRS strings, WKT, EPSG labels, and GeoTransform attributes are exposed as
+metadata only; the wrapper does not validate them, assign SRIDs, transform
+coordinates, or apply PostGIS spatial behavior during scans.
 
 ## Query an array
 

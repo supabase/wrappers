@@ -729,6 +729,7 @@ mod tests {
                     "nested",
                     "nested/blosc",
                     "nested/raw",
+                    "nested/spatial_ref",
                     "nested/time",
                     "nested/x",
                     "nested/y",
@@ -834,6 +835,13 @@ mod tests {
             );
             assert_eq!(
                 raw.get_by_name::<JsonB, _>("crs").unwrap().unwrap().0,
+                serde_json::json!("PROJCRS[\"WGS 84 / Pseudo-Mercator\"]")
+            );
+            assert_eq!(
+                raw.get_by_name::<JsonB, _>("attributes")
+                    .unwrap()
+                    .unwrap()
+                    .0["grid_mapping"],
                 serde_json::json!("spatial_ref")
             );
             assert_eq!(
@@ -855,6 +863,91 @@ mod tests {
             assert_eq!(
                 blosc.get_by_name::<JsonB, _>("codecs").unwrap().unwrap().0["compressor"]["id"],
                 "blosc"
+            );
+
+            let spatial_ref = c
+                .select(
+                    r#"SELECT kind, group_path, variable, dimensions, dtype,
+                              crs, attributes, warnings
+                         FROM zarr_inspect('zarr_e2e_server')
+                        WHERE path = 'nested/spatial_ref'"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(
+                spatial_ref
+                    .get_by_name::<String, _>("kind")
+                    .unwrap()
+                    .unwrap(),
+                "array"
+            );
+            assert_eq!(
+                spatial_ref
+                    .get_by_name::<String, _>("group_path")
+                    .unwrap()
+                    .unwrap(),
+                "nested"
+            );
+            assert_eq!(
+                spatial_ref
+                    .get_by_name::<String, _>("variable")
+                    .unwrap()
+                    .unwrap(),
+                "spatial_ref"
+            );
+            assert_eq!(
+                spatial_ref
+                    .get_by_name::<Vec<String>, _>("dimensions")
+                    .unwrap()
+                    .unwrap(),
+                Vec::<String>::new()
+            );
+            assert_eq!(
+                spatial_ref
+                    .get_by_name::<String, _>("dtype")
+                    .unwrap()
+                    .unwrap(),
+                "|i1"
+            );
+            let spatial_ref_crs = spatial_ref
+                .get_by_name::<JsonB, _>("crs")
+                .unwrap()
+                .unwrap()
+                .0;
+            assert_eq!(
+                spatial_ref_crs,
+                serde_json::json!("PROJCRS[\"WGS 84 / Pseudo-Mercator\"]")
+            );
+            let spatial_ref_attrs = spatial_ref
+                .get_by_name::<JsonB, _>("attributes")
+                .unwrap()
+                .unwrap()
+                .0;
+            assert_eq!(
+                spatial_ref_attrs["grid_mapping_name"],
+                serde_json::json!("mercator")
+            );
+            assert_eq!(
+                spatial_ref_attrs["epsg_code"],
+                serde_json::json!("EPSG:3857")
+            );
+            assert_eq!(
+                spatial_ref_attrs["crs_wkt"],
+                serde_json::json!("PROJCRS[\"WGS 84 / Pseudo-Mercator\"]")
+            );
+            assert_eq!(
+                spatial_ref_attrs["GeoTransform"],
+                serde_json::json!("100 10 0 50 0 -10")
+            );
+            assert_eq!(
+                spatial_ref
+                    .get_by_name::<Vec<String>, _>("warnings")
+                    .unwrap()
+                    .unwrap(),
+                Vec::<String>::new()
             );
 
             let time = c
@@ -882,6 +975,42 @@ mod tests {
                 time.get_by_name::<String, _>("calendar").unwrap().unwrap(),
                 "proleptic_gregorian"
             );
+
+            let projected_axes = c
+                .select(
+                    r#"SELECT path, attributes
+                         FROM zarr_inspect('zarr_e2e_server')
+                        WHERE path IN ('nested/x', 'nested/y')
+                        ORDER BY path"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .map(|row| {
+                    (
+                        row.get_by_name::<String, _>("path").unwrap().unwrap(),
+                        row.get_by_name::<JsonB, _>("attributes")
+                            .unwrap()
+                            .unwrap()
+                            .0,
+                    )
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(projected_axes.len(), 2);
+            assert_eq!(projected_axes[0].0, "nested/x");
+            assert_eq!(projected_axes[0].1["axis"], serde_json::json!("X"));
+            assert_eq!(
+                projected_axes[0].1["standard_name"],
+                serde_json::json!("projection_x_coordinate")
+            );
+            assert_eq!(projected_axes[0].1["units"], serde_json::json!("m"));
+            assert_eq!(projected_axes[1].0, "nested/y");
+            assert_eq!(projected_axes[1].1["axis"], serde_json::json!("Y"));
+            assert_eq!(
+                projected_axes[1].1["standard_name"],
+                serde_json::json!("projection_y_coordinate")
+            );
+            assert_eq!(projected_axes[1].1["units"], serde_json::json!("m"));
         });
     }
 

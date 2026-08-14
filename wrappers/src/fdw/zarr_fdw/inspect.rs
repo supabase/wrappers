@@ -19,6 +19,7 @@ const MAX_INSPECTION_DEPTH: usize = 32;
 const MAX_INSPECTION_NODES: usize = 10_000;
 const MAX_INSPECTION_LIST_PAGES: usize = 1_000;
 const MAX_INSPECTION_METADATA_BYTES: usize = 64 * 1024 * 1024;
+const MAX_INSPECTION_DERIVED_CRS_BYTES: usize = MAX_INSPECTION_METADATA_BYTES;
 
 #[derive(Debug, Deserialize)]
 struct GroupMeta {
@@ -279,6 +280,7 @@ fn inspect_store(store: &ZarrStore) -> ZarrFdwResult<Vec<InspectionRow>> {
     }
 
     rows.sort_by(|left, right| left.path.cmp(&right.path));
+    resolve_crs_references(&mut rows);
     Ok(rows)
 }
 
@@ -386,9 +388,113 @@ fn group_row(
 }
 
 fn crs_attribute(attrs: &Map<String, Value>) -> Option<Value> {
-    ["crs", "spatial_ref", "crs_wkt", "grid_mapping"]
+    direct_crs_attribute(attrs).or_else(|| attrs.get("grid_mapping").cloned())
+}
+
+fn direct_crs_attribute(attrs: &Map<String, Value>) -> Option<Value> {
+    ["crs", "spatial_ref", "crs_wkt"]
         .iter()
         .find_map(|key| attrs.get(*key).cloned())
+}
+
+fn resolve_crs_references(rows: &mut [InspectionRow]) {
+    resolve_crs_references_with_limit(rows, MAX_INSPECTION_DERIVED_CRS_BYTES);
+}
+
+fn resolve_crs_references_with_limit(rows: &mut [InspectionRow], max_derived_bytes: usize) {
+    let mut kinds_by_path = HashMap::new();
+    let mut direct_crs_by_array_path = HashMap::new();
+    for row in rows.iter() {
+        kinds_by_path.insert(row.path.clone(), row.kind.clone());
+        if row.kind == "array" {
+            if let Some(crs) = row.attributes.as_object().and_then(direct_crs_attribute) {
+                direct_crs_by_array_path.insert(row.path.clone(), crs);
+            }
+        }
+    }
+
+    let mut derived_crs_bytes = 0usize;
+    for row in rows.iter_mut() {
+        if row.kind != "array" {
+            continue;
+        }
+        let Some(grid_mapping) = row.attributes.as_object().and_then(|attrs| {
+            if direct_crs_attribute(attrs).is_some() {
+                return None;
+            }
+            attrs.get("grid_mapping").cloned()
+        }) else {
+            continue;
+        };
+        let Some(reference) = grid_mapping_reference(&grid_mapping, &mut row.warnings) else {
+            continue;
+        };
+        let sibling_path = same_group_sibling_path(row.group_path.as_deref(), reference);
+        match kinds_by_path.get(&sibling_path).map(String::as_str) {
+            Some("array") => {
+                let Some(crs) = direct_crs_by_array_path.get(&sibling_path) else {
+                    row.warnings.push(format!(
+                        "grid_mapping reference '{reference}' resolves to a sibling array without direct CRS metadata"
+                    ));
+                    continue;
+                };
+                let Ok(bytes) = serde_json::to_vec(crs) else {
+                    row.warnings.push(format!(
+                        "grid_mapping reference '{reference}' CRS metadata could not be measured"
+                    ));
+                    continue;
+                };
+                let Some(next_bytes) = derived_crs_bytes.checked_add(bytes.len()) else {
+                    row.warnings.push(format!(
+                        "grid_mapping reference '{reference}' exceeds the derived CRS byte limit of {max_derived_bytes} bytes"
+                    ));
+                    continue;
+                };
+                if next_bytes > max_derived_bytes {
+                    row.warnings.push(format!(
+                        "grid_mapping reference '{reference}' exceeds the derived CRS byte limit of {max_derived_bytes} bytes"
+                    ));
+                    continue;
+                }
+                derived_crs_bytes = next_bytes;
+                row.crs = Some(crs.clone());
+            }
+            _ => row.warnings.push(format!(
+                "grid_mapping reference '{reference}' does not resolve to a sibling array"
+            )),
+        }
+    }
+}
+
+fn grid_mapping_reference<'a>(value: &'a Value, warnings: &mut Vec<String>) -> Option<&'a str> {
+    let Some(reference) = value.as_str() else {
+        warnings.push("grid_mapping reference must be a string".to_string());
+        return None;
+    };
+    if reference.trim().is_empty() {
+        warnings.push("grid_mapping reference must not be empty".to_string());
+        return None;
+    }
+    if reference.trim() != reference
+        || reference.chars().any(char::is_whitespace)
+        || reference.contains('/')
+        || reference.contains('\\')
+        || reference == "."
+        || reference == ".."
+    {
+        warnings.push(format!(
+            "grid_mapping reference '{reference}' must be a same-group array name"
+        ));
+        return None;
+    }
+    Some(reference)
+}
+
+fn same_group_sibling_path(group_path: Option<&str>, reference: &str) -> String {
+    match group_path {
+        Some("/") | None => reference.to_string(),
+        Some(group_path) => format!("{group_path}/{reference}"),
+    }
 }
 
 fn named_dimensions(
@@ -548,6 +654,220 @@ mod tests {
             json!(["lat", "lat", "lon"])
         );
         assert_eq!(row.warnings, vec!["_ARRAY_DIMENSIONS names must be unique"]);
+    }
+
+    #[test]
+    fn crs_resolution_preserves_direct_precedence() {
+        let value_attrs = serde_json::from_value::<Map<String, Value>>(json!({
+            "crs": "EPSG:4326",
+            "grid_mapping": "spatial_ref"
+        }))
+        .unwrap();
+        let ref_attrs = serde_json::from_value::<Map<String, Value>>(json!({
+            "spatial_ref": "EPSG:3857"
+        }))
+        .unwrap();
+        let mut rows = vec![
+            array_row("nested/raw", array_meta(), value_attrs),
+            array_row("nested/spatial_ref", array_meta(), ref_attrs),
+        ];
+
+        resolve_crs_references(&mut rows);
+
+        let raw = rows.iter().find(|row| row.path == "nested/raw").unwrap();
+        assert_eq!(raw.crs, Some(json!("EPSG:4326")));
+        assert!(raw.warnings.is_empty());
+    }
+
+    #[test]
+    fn crs_resolution_uses_same_group_sibling_array_direct_crs() {
+        let value_attrs = serde_json::from_value::<Map<String, Value>>(json!({
+            "grid_mapping": "spatial_ref"
+        }))
+        .unwrap();
+        let ref_attrs = serde_json::from_value::<Map<String, Value>>(json!({
+            "spatial_ref": {"type": "ProjectedCRS", "name": "EPSG:3857"}
+        }))
+        .unwrap();
+        let mut rows = vec![
+            array_row("nested/raw", array_meta(), value_attrs),
+            array_row("nested/spatial_ref", array_meta(), ref_attrs),
+        ];
+
+        resolve_crs_references(&mut rows);
+
+        let raw = rows.iter().find(|row| row.path == "nested/raw").unwrap();
+        assert_eq!(
+            raw.crs,
+            Some(json!({"type": "ProjectedCRS", "name": "EPSG:3857"}))
+        );
+        assert_eq!(raw.attributes["grid_mapping"], json!("spatial_ref"));
+        assert!(raw.warnings.is_empty());
+    }
+
+    #[test]
+    fn crs_resolution_warns_for_missing_non_array_and_crs_less_references() {
+        let missing_attrs = serde_json::from_value::<Map<String, Value>>(json!({
+            "grid_mapping": "missing"
+        }))
+        .unwrap();
+        let non_array_attrs = serde_json::from_value::<Map<String, Value>>(json!({
+            "grid_mapping": "group_ref"
+        }))
+        .unwrap();
+        let crs_less_attrs = serde_json::from_value::<Map<String, Value>>(json!({
+            "grid_mapping": "no_crs"
+        }))
+        .unwrap();
+        let group_attrs = serde_json::from_value::<Map<String, Value>>(json!({
+            "grid_mapping": "no_crs"
+        }))
+        .unwrap();
+        let mut rows = vec![
+            array_row("nested/missing_raw", array_meta(), missing_attrs),
+            array_row("nested/non_array_raw", array_meta(), non_array_attrs),
+            array_row("nested/crs_less_raw", array_meta(), crs_less_attrs),
+            group_row(
+                "nested/group_ref",
+                Some(2),
+                Value::Object(Map::new()),
+                vec![],
+            ),
+            group_row(
+                "nested/source_group",
+                Some(2),
+                Value::Object(group_attrs),
+                vec![],
+            ),
+            array_row("nested/no_crs", array_meta(), Map::new()),
+        ];
+
+        resolve_crs_references(&mut rows);
+
+        let missing = rows
+            .iter()
+            .find(|row| row.path == "nested/missing_raw")
+            .unwrap();
+        assert_eq!(missing.crs, Some(json!("missing")));
+        assert_eq!(
+            missing.warnings,
+            vec!["grid_mapping reference 'missing' does not resolve to a sibling array"]
+        );
+        let non_array = rows
+            .iter()
+            .find(|row| row.path == "nested/non_array_raw")
+            .unwrap();
+        assert_eq!(non_array.crs, Some(json!("group_ref")));
+        assert_eq!(
+            non_array.warnings,
+            vec!["grid_mapping reference 'group_ref' does not resolve to a sibling array"]
+        );
+        let crs_less = rows
+            .iter()
+            .find(|row| row.path == "nested/crs_less_raw")
+            .unwrap();
+        assert_eq!(crs_less.crs, Some(json!("no_crs")));
+        assert_eq!(
+            crs_less.warnings,
+            vec![
+                "grid_mapping reference 'no_crs' resolves to a sibling array without direct CRS metadata"
+            ]
+        );
+        let source_group = rows
+            .iter()
+            .find(|row| row.path == "nested/source_group")
+            .unwrap();
+        assert_eq!(source_group.crs, Some(json!("no_crs")));
+        assert!(source_group.warnings.is_empty());
+    }
+
+    #[test]
+    fn crs_resolution_warns_for_invalid_references() {
+        let non_string_attrs = serde_json::from_value::<Map<String, Value>>(json!({
+            "grid_mapping": 7
+        }))
+        .unwrap();
+        let empty_attrs = serde_json::from_value::<Map<String, Value>>(json!({
+            "grid_mapping": ""
+        }))
+        .unwrap();
+        let path_like_attrs = serde_json::from_value::<Map<String, Value>>(json!({
+            "grid_mapping": "../spatial_ref"
+        }))
+        .unwrap();
+        let multi_token_attrs = serde_json::from_value::<Map<String, Value>>(json!({
+            "grid_mapping": "spatial ref"
+        }))
+        .unwrap();
+        let mut rows = vec![
+            array_row("nested/non_string", array_meta(), non_string_attrs),
+            array_row("nested/empty", array_meta(), empty_attrs),
+            array_row("nested/path_like", array_meta(), path_like_attrs),
+            array_row("nested/multi_token", array_meta(), multi_token_attrs),
+        ];
+
+        resolve_crs_references(&mut rows);
+
+        let non_string = rows
+            .iter()
+            .find(|row| row.path == "nested/non_string")
+            .unwrap();
+        assert_eq!(non_string.crs, Some(json!(7)));
+        assert_eq!(
+            non_string.warnings,
+            vec!["grid_mapping reference must be a string"]
+        );
+        let empty = rows.iter().find(|row| row.path == "nested/empty").unwrap();
+        assert_eq!(empty.crs, Some(json!("")));
+        assert_eq!(
+            empty.warnings,
+            vec!["grid_mapping reference must not be empty"]
+        );
+        let path_like = rows
+            .iter()
+            .find(|row| row.path == "nested/path_like")
+            .unwrap();
+        assert_eq!(path_like.crs, Some(json!("../spatial_ref")));
+        assert_eq!(
+            path_like.warnings,
+            vec!["grid_mapping reference '../spatial_ref' must be a same-group array name"]
+        );
+        let multi_token = rows
+            .iter()
+            .find(|row| row.path == "nested/multi_token")
+            .unwrap();
+        assert_eq!(multi_token.crs, Some(json!("spatial ref")));
+        assert_eq!(
+            multi_token.warnings,
+            vec!["grid_mapping reference 'spatial ref' must be a same-group array name"]
+        );
+    }
+
+    #[test]
+    fn crs_resolution_enforces_derived_output_byte_cap() {
+        let value_attrs = serde_json::from_value::<Map<String, Value>>(json!({
+            "grid_mapping": "spatial_ref"
+        }))
+        .unwrap();
+        let ref_attrs = serde_json::from_value::<Map<String, Value>>(json!({
+            "spatial_ref": "EPSG:3857"
+        }))
+        .unwrap();
+        let mut rows = vec![
+            array_row("nested/raw", array_meta(), value_attrs),
+            array_row("nested/spatial_ref", array_meta(), ref_attrs),
+        ];
+
+        resolve_crs_references_with_limit(&mut rows, 4);
+
+        let raw = rows.iter().find(|row| row.path == "nested/raw").unwrap();
+        assert_eq!(raw.crs, Some(json!("spatial_ref")));
+        assert_eq!(
+            raw.warnings,
+            vec![
+                "grid_mapping reference 'spatial_ref' exceeds the derived CRS byte limit of 4 bytes"
+            ]
+        );
     }
 
     #[test]
