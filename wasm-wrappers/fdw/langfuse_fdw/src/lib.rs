@@ -310,6 +310,9 @@ impl Guest for LangfuseFdw {
             .require_or("page_size", "100".to_owned().as_str())
             .parse::<i64>()
             .map_err(|e| format!("invalid page_size: {e}"))?;
+        if !(1..=1000).contains(&this.page_size) {
+            return Err("invalid page_size: must be between 1 and 1000".to_owned());
+        }
         this.verbose = opts.require_or("verbose", "false") == "true";
 
         // Keys live in Vault so they never appear in `create server` DDL or pg_dump
