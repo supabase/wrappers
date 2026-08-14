@@ -5,12 +5,14 @@ mod zarr_fdw;
 mod chunk;
 mod dataset;
 mod decode;
+mod inspect;
 mod meta;
 mod store;
 
 use aws_sdk_s3::config::http::HttpResponse;
 use aws_sdk_s3::error::SdkError;
 use aws_sdk_s3::operation::get_object::GetObjectError;
+use aws_sdk_s3::operation::list_objects_v2::ListObjectsV2Error;
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::PgSqlErrorCode;
 use thiserror::Error;
@@ -65,6 +67,9 @@ enum ZarrFdwError {
     #[error("required zarr object '{key}' does not exist")]
     ObjectNotFound { key: String },
 
+    #[error("foreign server '{server}' does not exist or is not accessible")]
+    ServerUnavailable { server: String },
+
     #[error("zarr chunk '{key}' is absent and fill_value is null, so its contents are undefined")]
     MissingChunkWithoutFillValue { key: String },
 
@@ -76,6 +81,12 @@ enum ZarrFdwError {
 
     #[error("request failed: {0}")]
     RequestError(#[from] Box<SdkError<GetObjectError, HttpResponse>>),
+
+    #[error("list request failed: {0}")]
+    ListRequestError(#[from] Box<SdkError<ListObjectsV2Error, HttpResponse>>),
+
+    #[error("PostgreSQL catalog query failed: {0}")]
+    SpiError(#[from] pgrx::spi::Error),
 
     #[error("parse JSON response failed: {0}")]
     JsonParseError(#[from] serde_json::Error),
@@ -99,6 +110,12 @@ impl From<ZarrFdwError> for ErrorReport {
 impl From<SdkError<GetObjectError, HttpResponse>> for ZarrFdwError {
     fn from(value: SdkError<GetObjectError, HttpResponse>) -> Self {
         Self::RequestError(value.into())
+    }
+}
+
+impl From<SdkError<ListObjectsV2Error, HttpResponse>> for ZarrFdwError {
+    fn from(value: SdkError<ListObjectsV2Error, HttpResponse>) -> Self {
+        Self::ListRequestError(value.into())
     }
 }
 

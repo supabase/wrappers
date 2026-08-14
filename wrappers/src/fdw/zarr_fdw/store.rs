@@ -19,6 +19,16 @@ use super::{ZarrFdwError, ZarrFdwResult};
 /// limit derived from their declared decoded layout.
 pub(crate) const MAX_METADATA_OBJECT_BYTES: usize = 1024 * 1024;
 
+/// One bounded page of immediate child prefixes below a Zarr group.
+///
+/// S3's delimiter keeps discovery at the metadata hierarchy level. Array
+/// nodes are identified with an exact `.zarray` GET before listing, so slash-
+/// separated chunk keys are never traversed as groups.
+pub(crate) struct DirectoryPage {
+    pub child_prefixes: Vec<String>,
+    pub next_continuation_token: Option<String>,
+}
+
 /// A parsed S3 `s3://bucket/prefix` location.
 #[derive(Debug, Clone)]
 pub(crate) struct StoreUrl {
@@ -42,6 +52,18 @@ impl StoreUrl {
 
     fn object_key(&self, key: &str) -> String {
         join_key(&self.prefix, key)
+    }
+
+    fn relative_key(&self, key: &str) -> Option<String> {
+        let key = key.trim_matches('/');
+        if self.prefix.is_empty() {
+            return Some(key.to_string());
+        }
+        if key == self.prefix {
+            return Some(String::new());
+        }
+        key.strip_prefix(&format!("{}/", self.prefix))
+            .map(str::to_string)
     }
 }
 
@@ -321,6 +343,70 @@ impl ZarrStore {
     ) -> ZarrFdwResult<Option<Vec<u8>>> {
         self.rt.block_on(self.get_object_optional(key, max_bytes))
     }
+
+    /// List one bounded page of immediate child prefixes below `path`.
+    ///
+    /// The caller owns pagination and global discovery limits. Only common
+    /// prefixes are returned; ordinary objects (including dot-separated chunk
+    /// keys) are deliberately ignored.
+    pub async fn list_directory_page(
+        &self,
+        path: &str,
+        continuation_token: Option<String>,
+    ) -> ZarrFdwResult<DirectoryPage> {
+        let key = self.url.object_key(path);
+        let prefix = if key.is_empty() {
+            String::new()
+        } else {
+            format!("{}/", key.trim_end_matches('/'))
+        };
+        let response = self
+            .client
+            .list_objects_v2()
+            .bucket(&self.url.bucket)
+            .prefix(prefix)
+            .delimiter("/")
+            .max_keys(1000)
+            .set_continuation_token(continuation_token)
+            .send()
+            .await?;
+
+        let mut child_prefixes = response
+            .common_prefixes
+            .unwrap_or_default()
+            .into_iter()
+            .filter_map(|entry| entry.prefix)
+            .filter_map(|entry| self.url.relative_key(&entry))
+            .map(|entry| entry.trim_matches('/').to_string())
+            .collect::<Vec<_>>();
+        child_prefixes.sort();
+        child_prefixes.dedup();
+
+        let next_continuation_token = if response.is_truncated.unwrap_or(false) {
+            response.next_continuation_token
+        } else {
+            None
+        };
+        if response.is_truncated.unwrap_or(false) && next_continuation_token.is_none() {
+            return Err(ZarrFdwError::InvalidMetadata(
+                "S3 returned a truncated listing without a continuation token".to_string(),
+            ));
+        }
+
+        Ok(DirectoryPage {
+            child_prefixes,
+            next_continuation_token,
+        })
+    }
+
+    pub fn list_directory_page_sync(
+        &self,
+        path: &str,
+        continuation_token: Option<String>,
+    ) -> ZarrFdwResult<DirectoryPage> {
+        self.rt
+            .block_on(self.list_directory_page(path, continuation_token))
+    }
 }
 
 async fn read_bounded_object<R>(
@@ -441,6 +527,18 @@ mod tests {
     fn joins_root_object_key_without_leading_slash() {
         let u = StoreUrl::parse("s3://bucket/").unwrap();
         assert_eq!(u.object_key("/.zarray"), ".zarray");
+    }
+
+    #[test]
+    fn converts_list_prefixes_back_to_store_relative_paths() {
+        let url = StoreUrl::parse("s3://warehouse/zarr/e2e.zarr").unwrap();
+
+        assert_eq!(
+            url.relative_key("zarr/e2e.zarr/nested/raw/"),
+            Some("nested/raw".to_string())
+        );
+        assert_eq!(url.relative_key("zarr/e2e.zarr"), Some(String::new()));
+        assert_eq!(url.relative_key("other/prefix"), None);
     }
 
     #[test]

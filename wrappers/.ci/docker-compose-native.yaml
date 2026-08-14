@@ -161,7 +161,9 @@ services:
       /mc policy set public s3/warehouse;
       /mc cp --recursive /test_data/* s3/warehouse;
       /mc stat s3/warehouse/zarr/e2e.zarr/.zgroup;
+      /mc stat s3/warehouse/zarr/e2e.zarr/.zattrs;
       /mc stat s3/warehouse/zarr/e2e.zarr/nested/raw/.zarray;
+      /mc stat s3/warehouse/zarr/e2e.zarr/nested/raw/.zattrs;
       /mc stat s3/warehouse/zarr/e2e.zarr/nested/raw/0.0.0;
       /mc stat s3/warehouse/zarr/e2e.zarr/nested/blosc/0.1.1;
       if /mc stat s3/warehouse/zarr/e2e.zarr/nested/raw/0.1.1; then

@@ -1,10 +1,11 @@
 #[cfg(any(test, feature = "pg_test"))]
 #[pgrx::pg_schema]
 mod tests {
+    use pgrx::JsonB;
     use pgrx::pg_test;
     use pgrx::prelude::*;
 
-    fn create_minio_e2e_table(table: &str, array_group: &str, value_type: &str) {
+    fn create_minio_e2e_server() {
         Spi::connect_mut(|c| {
             c.update(
                 r#"CREATE FOREIGN DATA WRAPPER zarr_e2e_wrapper
@@ -28,6 +29,12 @@ mod tests {
                 &[],
             )
             .unwrap();
+        });
+    }
+
+    fn create_minio_e2e_table(table: &str, array_group: &str, value_type: &str) {
+        create_minio_e2e_server();
+        Spi::connect_mut(|c| {
             c.update(
                 &format!(
                     r#"CREATE FOREIGN TABLE {table} (
@@ -422,6 +429,222 @@ mod tests {
         Spi::connect_mut(|c| {
             c.select("SELECT value FROM zarr_e2e_bad_value_type", None, &[])
                 .unwrap();
+        });
+    }
+
+    #[pg_test]
+    fn zarr_inspect_minio_metadata_e2e() {
+        create_minio_e2e_server();
+
+        Spi::connect(|c| {
+            let paths = c
+                .select(
+                    "SELECT path FROM zarr_inspect('zarr_e2e_server') ORDER BY path",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|row| row.get_by_name::<String, _>("path").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(
+                paths,
+                vec![
+                    "/",
+                    "nested",
+                    "nested/blosc",
+                    "nested/raw",
+                    "nested/time",
+                    "nested/x",
+                    "nested/y",
+                ]
+            );
+
+            let root = c
+                .select(
+                    "SELECT kind, attributes FROM zarr_inspect('zarr_e2e_server') WHERE path = '/'",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(
+                root.get_by_name::<String, _>("kind").unwrap().unwrap(),
+                "group"
+            );
+            assert_eq!(
+                root.get_by_name::<JsonB, _>("attributes")
+                    .unwrap()
+                    .unwrap()
+                    .0["title"],
+                "Deterministic Zarr inspection fixture"
+            );
+
+            let group = c
+                .select(
+                    "SELECT crs FROM zarr_inspect('zarr_e2e_server') WHERE path = 'nested'",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(
+                group.get_by_name::<JsonB, _>("crs").unwrap().unwrap().0["properties"]["name"],
+                "EPSG:3857"
+            );
+
+            let raw = c
+                .select(
+                    r#"SELECT kind, group_path, variable, shape, dimensions, dtype,
+                              chunks, codecs, units, fill_value, scale_factor,
+                              add_offset, crs, attributes, warnings
+                         FROM zarr_inspect('zarr_e2e_server')
+                        WHERE path = 'nested/raw'"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(
+                raw.get_by_name::<String, _>("kind").unwrap().unwrap(),
+                "array"
+            );
+            assert_eq!(
+                raw.get_by_name::<String, _>("group_path").unwrap().unwrap(),
+                "nested"
+            );
+            assert_eq!(
+                raw.get_by_name::<String, _>("variable").unwrap().unwrap(),
+                "raw"
+            );
+            assert_eq!(
+                raw.get_by_name::<JsonB, _>("shape").unwrap().unwrap().0,
+                serde_json::json!([2, 5, 6])
+            );
+            assert_eq!(
+                raw.get_by_name::<Vec<String>, _>("dimensions")
+                    .unwrap()
+                    .unwrap(),
+                vec!["time", "y", "x"]
+            );
+            assert_eq!(
+                raw.get_by_name::<String, _>("dtype").unwrap().unwrap(),
+                "<f4"
+            );
+            assert_eq!(
+                raw.get_by_name::<JsonB, _>("chunks").unwrap().unwrap().0,
+                serde_json::json!([2, 3, 4])
+            );
+            assert!(
+                raw.get_by_name::<JsonB, _>("codecs").unwrap().unwrap().0["compressor"].is_null()
+            );
+            assert_eq!(raw.get_by_name::<String, _>("units").unwrap().unwrap(), "K");
+            assert_eq!(
+                raw.get_by_name::<JsonB, _>("fill_value")
+                    .unwrap()
+                    .unwrap()
+                    .0,
+                serde_json::json!(-7.5)
+            );
+            assert_eq!(
+                raw.get_by_name::<f64, _>("scale_factor").unwrap().unwrap(),
+                0.01
+            );
+            assert_eq!(
+                raw.get_by_name::<f64, _>("add_offset").unwrap().unwrap(),
+                273.15
+            );
+            assert_eq!(
+                raw.get_by_name::<JsonB, _>("crs").unwrap().unwrap().0,
+                serde_json::json!("spatial_ref")
+            );
+            assert_eq!(
+                raw.get_by_name::<Vec<String>, _>("warnings")
+                    .unwrap()
+                    .unwrap(),
+                Vec::<String>::new()
+            );
+
+            let blosc = c
+                .select(
+                    "SELECT codecs FROM zarr_inspect('zarr_e2e_server') WHERE path = 'nested/blosc'",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(
+                blosc.get_by_name::<JsonB, _>("codecs").unwrap().unwrap().0["compressor"]["id"],
+                "blosc"
+            );
+
+            let time = c
+                .select(
+                    r#"SELECT dimensions, units, calendar
+                         FROM zarr_inspect('zarr_e2e_server')
+                        WHERE path = 'nested/time'"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(
+                time.get_by_name::<Vec<String>, _>("dimensions")
+                    .unwrap()
+                    .unwrap(),
+                vec!["time"]
+            );
+            assert_eq!(
+                time.get_by_name::<String, _>("units").unwrap().unwrap(),
+                "seconds since 1970-01-01 00:00:00"
+            );
+            assert_eq!(
+                time.get_by_name::<String, _>("calendar").unwrap().unwrap(),
+                "proleptic_gregorian"
+            );
+        });
+    }
+
+    #[pg_test(error = "foreign server 'missing_zarr_server' does not exist or is not accessible")]
+    fn zarr_inspect_rejects_missing_server() {
+        Spi::run("SELECT * FROM zarr_inspect('missing_zarr_server')").unwrap();
+    }
+
+    #[pg_test(error = "foreign server 'zarr_private_server' does not exist or is not accessible")]
+    fn zarr_inspect_requires_server_usage() {
+        Spi::connect_mut(|c| {
+            c.update(
+                r#"CREATE FOREIGN DATA WRAPPER zarr_private_wrapper
+                     HANDLER zarr_fdw_handler VALIDATOR zarr_fdw_validator"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"CREATE SERVER zarr_private_server
+                     FOREIGN DATA WRAPPER zarr_private_wrapper
+                     OPTIONS (
+                       store_url 's3://warehouse/zarr/e2e.zarr',
+                       anonymous 'true'
+                     )"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update("CREATE ROLE zarr_inspect_no_usage", None, &[])
+                .unwrap();
+            c.update("SET ROLE zarr_inspect_no_usage", None, &[])
+                .unwrap();
+            c.select(
+                "SELECT * FROM zarr_inspect('zarr_private_server')",
+                None,
+                &[],
+            )
+            .unwrap();
         });
     }
 
