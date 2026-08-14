@@ -31,7 +31,7 @@ enum ZarrFdwError {
     #[error("zarr {version:?} format is not supported yet")]
     UnsupportedZarrFormat { version: u32 },
 
-    #[error("zarr array rank {rank}, only 2D and 3D cubes ([time, y, x] or [y, x]) are supported")]
+    #[error("zarr array rank {rank} is not supported; scan rank must be between 1 and 64")]
     UnsupportedRank { rank: usize },
 
     #[error("invalid value for option '{option}': {message}")]
@@ -58,9 +58,6 @@ enum ZarrFdwError {
         expected: &'static str,
         expected_oid: u32,
     },
-
-    #[error("coordinate column '{column}' is not available for a rank-{rank} Zarr array")]
-    InvalidCoordinateColumn { column: String, rank: usize },
 
     #[error("failed to read coordinate '{axis}': {error}")]
     CoordinateReadError { axis: String, error: String },

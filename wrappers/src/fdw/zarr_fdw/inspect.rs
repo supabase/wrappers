@@ -11,6 +11,7 @@ use serde::Deserialize;
 use serde_json::{Map, Value, json};
 use supabase_wrappers::prelude::ForeignServer;
 
+use super::dataset::parse_named_dimensions;
 use super::meta::ArrayMeta;
 use super::store::{MAX_METADATA_OBJECT_BYTES, ZarrStore, join_key};
 use super::{ZarrFdwError, ZarrFdwResult};
@@ -502,33 +503,13 @@ fn named_dimensions(
     rank: usize,
     warnings: &mut Vec<String>,
 ) -> Option<Vec<String>> {
-    let value = attrs.get("_ARRAY_DIMENSIONS")?;
-    let Some(values) = value.as_array() else {
-        warnings.push("_ARRAY_DIMENSIONS must be an array of strings".to_string());
-        return None;
-    };
-    let dimensions = values.iter().map(Value::as_str).collect::<Option<Vec<_>>>();
-    let Some(dimensions) = dimensions else {
-        warnings.push("_ARRAY_DIMENSIONS must contain only strings".to_string());
-        return None;
-    };
-    if dimensions.len() != rank {
-        warnings.push(format!(
-            "_ARRAY_DIMENSIONS has {} names but the array rank is {rank}",
-            dimensions.len()
-        ));
-        return None;
+    match parse_named_dimensions(attrs, rank) {
+        Ok(dimensions) => dimensions,
+        Err(message) => {
+            warnings.push(message);
+            None
+        }
     }
-    if dimensions.iter().any(|name| name.trim().is_empty()) {
-        warnings.push("_ARRAY_DIMENSIONS names must not be empty".to_string());
-        return None;
-    }
-    let unique = dimensions.iter().copied().collect::<HashSet<_>>();
-    if unique.len() != dimensions.len() {
-        warnings.push("_ARRAY_DIMENSIONS names must be unique".to_string());
-        return None;
-    }
-    Some(dimensions.into_iter().map(str::to_string).collect())
 }
 
 fn string_attribute(

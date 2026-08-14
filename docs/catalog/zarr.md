@@ -10,8 +10,8 @@ tags:
 # Zarr
 
 The Zarr Wrapper provides read-only access to Zarr v2 arrays in S3-compatible
-object storage. The current scan profile supports one rank-2 `[y, x]` or
-rank-3 `[time, y, x]` value array with sibling coordinate arrays.
+object storage. A scan reads one rank-1 through rank-64 value array whose named
+dimensions resolve to sibling coordinate arrays.
 
 ## Enable the wrapper
 
@@ -128,20 +128,45 @@ where time >= timestamptz '2025-01-01 00:00:00+00'
   and x between -8 and -7;
 ```
 
+The selected value array must have a `_ARRAY_DIMENSIONS` attribute containing
+one unique, safe name for every array dimension, in array order. Each name must
+resolve to a same-group, same-name Zarr v2 coordinate array whose shape is one
+dimensional and whose length matches the value-array extent. If a coordinate
+array declares `_ARRAY_DIMENSIONS`, it must contain only its own name. Missing
+or malformed dimension metadata fails instead of falling back to an inferred
+`[y, x]` or `[time, y, x]` layout.
+
+Dimension names are preserved for PostgreSQL column matching. Coordinate
+metadata can classify dimensions as spatial X/Y, latitude/longitude, vertical,
+time, band, channel, or unknown; roles do not rename dimensions. Recognized
+`standard_name`, `axis`, and unambiguous units take precedence over conservative
+name aliases. Incompatible recognized signals fail instead of being guessed.
+Names such as `depth`, `height`, `altitude`, `level`, `lev`, and `z` are vertical
+aliases, while band and channel remain distinct roles.
+
 Supported value mappings are `<f4` to `real`, `<f8` to `double precision`,
 `|i1`/`<i1` to PostgreSQL internal `"char"`, `<i2` to `smallint`, `<i4` to
-`integer`, and `<i8` to `bigint`. Coordinate columns `x` and `y` must be
-`double precision`; `time` must be `timestamptz`.
+`integer`, and `<i8` to `bigint`. A coordinate classified as time must be
+declared `timestamptz`; every other currently supported numeric coordinate must
+be `double precision`. Dimension columns do not need to be projected. The
+wrapper reads coordinate metadata for every dimension but downloads coordinate
+chunk values only for dimensions used by the query target or restrictions.
+
+Finite monotonic coordinate values enable conservative chunk pruning. Finite
+unordered coordinates remain projectable and filterable, but pruning is skipped
+for that axis and PostgreSQL rechecks the original predicate. Integer coordinate
+values must convert to `double precision` exactly; values that would lose
+identity fail explicitly.
 
 ## Decode time coordinates from attributes
 
-By default, scan execution preserves the legacy time behavior: raw `time`
-coordinate values are interpreted from the manual table options
+By default, raw values from the one coordinate classified as time are
+interpreted from the manual table options
 `time_unit` and `time_origin`, or as `seconds` since the Unix epoch when those
 options are omitted.
 
 Set `time_from_attrs 'true'` to derive the time conversion from the sibling
-`time/.zattrs` metadata instead:
+coordinate's `.zattrs` metadata instead:
 
 ```sql
 create foreign table climate_temperature_from_attrs (
@@ -158,8 +183,8 @@ options (
 ```
 
 This mode is intentionally opt-in and cannot be combined with `time_unit` or
-`time_origin`. It requires a rank-3 `[time, y, x]` scan profile with a sibling
-`time` coordinate whose `.zattrs` contains:
+`time_origin`. It works at any supported rank and with any dimension name, but
+requires exactly one coordinate classified as time whose `.zattrs` contains:
 
 - `units` as `<unit> since <origin>`;
 - `calendar` as `proleptic_gregorian`.
@@ -222,11 +247,23 @@ coordinate arrays.
 ## Current limitations
 
 - Read-only Zarr v2 on S3-compatible storage.
-- Scans support rank 2 `[y, x]` and rank 3 `[time, y, x]` arrays only.
+- Scans support one value array with rank 1 through 64 and mandatory
+  `_ARRAY_DIMENSIONS`; scalar arrays remain unsupported.
+- Every dimension currently requires a same-group, same-name, rank-1 numeric
+  coordinate array. Synthesized ordinal coordinates, auxiliary or cross-group
+  coordinates, curvilinear/multidimensional coordinates, and string or
+  categorical band/channel coordinates are not supported.
+- Coordinate packing, masks, valid ranges, and scale/offset are not decoded. If
+  a coordinate used by a query declares those attributes, the scan fails rather
+  than silently ignoring them.
+- One temporal dimension is supported. Multiple temporal dimensions and
+  per-axis calendars are not supported.
+- A foreign-table scan still represents one value array and at most one queried
+  non-dimension value column. Multi-variable scans and functional `bands`
+  execution are not supported.
 - Raw, gzip, zlib, and Blosc/LZ4 chunk compression is supported.
 - Non-empty Zarr filters, Fortran order, Zarr v3, consolidated metadata,
-  sharding, writes, and arbitrary-dimensional scan execution are not yet
-  supported.
+  sharding, writes, and OME-Zarr are not supported.
 - Zarr v3 is a separate storage-format implementation, not an alternate value
   decoder: it uses `zarr.json`, a chunk-grid and chunk-key encoding, and an
   ordered codec pipeline instead of the v2 `.zarray` layout. The dataset and
@@ -234,5 +271,10 @@ coordinate arrays.
   current scans and inspection remain explicitly v2-only.
 - `LIMIT` alone does not prevent coordinate metadata loading or matching-chunk
   enumeration; use selective coordinate predicates for large arrays.
+- Scan execution limits each loaded coordinate and all loaded coordinates
+  together to 16,777,216 values. It also limits an eager selection to one
+  million chunk coordinates and 64 MiB of rank-sized chunk-index allocation;
+  decoded chunks retain their existing 256 MiB limit. These are safety bounds,
+  not Zarr format limits.
 - Inspection has hard depth, node, list-page, object-size, and total metadata
   limits and fails explicitly rather than returning a truncated hierarchy.

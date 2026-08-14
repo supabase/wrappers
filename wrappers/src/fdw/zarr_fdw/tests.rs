@@ -85,6 +85,31 @@ mod tests {
         });
     }
 
+    fn create_minio_generic4d_table(table: &str, band_type: &str) {
+        create_minio_e2e_server();
+        Spi::connect_mut(|c| {
+            c.update(
+                &format!(
+                    r#"CREATE FOREIGN TABLE {table} (
+                         forecast_time timestamp with time zone,
+                         level double precision,
+                         band {band_type},
+                         channel double precision,
+                         measurement real
+                       )
+                       SERVER zarr_e2e_server
+                       OPTIONS (
+                         array_group 'nested/generic4d',
+                         time_from_attrs 'true'
+                       )"#
+                ),
+                None,
+                &[],
+            )
+            .unwrap();
+        });
+    }
+
     // DDL-only smoke test. The MinIO-backed cases below cover actual scans
     // against the fixture seeded by .ci/docker-compose-native.yaml.
     #[pg_test]
@@ -370,50 +395,6 @@ mod tests {
                        aws_access_key_id 'test-key',
                        aws_secret_access_key 'test-secret'
                      )"#,
-                None,
-                &[],
-            )
-            .unwrap();
-        });
-    }
-
-    #[pg_test(
-        error = "column 'x' has incompatible PostgreSQL type OID 23; expected double precision (OID 701)"
-    )]
-    fn zarr_scan_rejects_qual_only_coordinate_type_before_s3() {
-        Spi::connect_mut(|c| {
-            c.update(
-                r#"CREATE FOREIGN DATA WRAPPER zarr_wrapper
-                     HANDLER zarr_fdw_handler VALIDATOR zarr_fdw_validator"#,
-                None,
-                &[],
-            )
-            .unwrap();
-            c.update(
-                r#"CREATE SERVER zarr_type_server
-                     FOREIGN DATA WRAPPER zarr_wrapper
-                     OPTIONS (
-                       store_url 's3://zarr-test/does-not-exist.zarr',
-                       anonymous 'true'
-                     )"#,
-                None,
-                &[],
-            )
-            .unwrap();
-            c.update(
-                r#"CREATE FOREIGN TABLE zarr_bad_coordinate_type (
-                       x integer,
-                       y double precision,
-                       value real
-                     )
-                     SERVER zarr_type_server
-                     OPTIONS (array_group 'value')"#,
-                None,
-                &[],
-            )
-            .unwrap();
-            c.select(
-                "SELECT y FROM zarr_bad_coordinate_type WHERE x = 1",
                 None,
                 &[],
             )
@@ -709,6 +690,143 @@ mod tests {
     }
 
     #[pg_test]
+    fn zarr_minio_generic_dimensions_scan_e2e() {
+        create_minio_generic4d_table("zarr_e2e_generic4d", "double precision");
+
+        Spi::connect(|c| {
+            // No dimension is projected or restricted. The executor must still
+            // return the complete logical value array without requiring any
+            // coordinate chunk values.
+            let summary = c
+                .select(
+                    r#"SELECT count(measurement) AS row_count,
+                              sum(measurement)::double precision AS value_sum,
+                              min(measurement)::double precision AS value_min,
+                              max(measurement)::double precision AS value_max
+                         FROM zarr_e2e_generic4d"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(
+                summary.get_by_name::<i64, _>("row_count").unwrap().unwrap(),
+                60
+            );
+            assert_eq!(
+                summary.get_by_name::<f64, _>("value_sum").unwrap().unwrap(),
+                3574.0
+            );
+            assert_eq!(
+                summary.get_by_name::<f64, _>("value_min").unwrap().unwrap(),
+                -7.5
+            );
+            assert_eq!(
+                summary.get_by_name::<f64, _>("value_max").unwrap().unwrap(),
+                143.0
+            );
+
+            let fill_count = c
+                .select(
+                    "SELECT count(*) AS fill_count FROM zarr_e2e_generic4d WHERE measurement = -7.5",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap()
+                .get_by_name::<i64, _>("fill_count")
+                .unwrap()
+                .unwrap();
+            assert_eq!(fill_count, 8);
+
+            let boundary = c
+                .select(
+                    r#"SELECT to_char(
+                                forecast_time AT TIME ZONE 'UTC',
+                                'YYYY-MM-DD HH24:MI:SS.MS'
+                              ) AS forecast_time,
+                              level,
+                              band,
+                              channel,
+                              measurement
+                         FROM zarr_e2e_generic4d
+                        WHERE forecast_time = '1970-01-01 00:00:03.6+00'::timestamptz
+                          AND level = 50
+                          AND band = 130
+                          AND channel = 7"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(
+                boundary
+                    .get_by_name::<String, _>("forecast_time")
+                    .unwrap()
+                    .unwrap(),
+                "1970-01-01 00:00:03.600"
+            );
+            assert_eq!(
+                boundary.get_by_name::<f64, _>("level").unwrap().unwrap(),
+                50.0
+            );
+            assert_eq!(
+                boundary.get_by_name::<f64, _>("band").unwrap().unwrap(),
+                130.0
+            );
+            assert_eq!(
+                boundary.get_by_name::<f64, _>("channel").unwrap().unwrap(),
+                7.0
+            );
+            assert_eq!(
+                boundary
+                    .get_by_name::<f32, _>("measurement")
+                    .unwrap()
+                    .unwrap(),
+                143.0
+            );
+
+            let missing_boundary = c
+                .select(
+                    r#"SELECT measurement
+                         FROM zarr_e2e_generic4d
+                        WHERE forecast_time = '1970-01-01 00:00:03.6+00'::timestamptz
+                          AND level = 50
+                          AND band = 150
+                          AND channel = 7"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap()
+                .get_by_name::<f32, _>("measurement")
+                .unwrap()
+                .unwrap();
+            assert_eq!(missing_boundary, -7.5);
+        });
+    }
+
+    #[pg_test(
+        error = "column 'band' has incompatible PostgreSQL type OID 23; expected double precision (OID 701)"
+    )]
+    fn zarr_minio_generic_dimension_rejects_wrong_type() {
+        create_minio_generic4d_table("zarr_e2e_bad_generic_dimension", "integer");
+
+        Spi::connect(|c| {
+            c.select(
+                "SELECT measurement FROM zarr_e2e_bad_generic_dimension WHERE band = 130",
+                None,
+                &[],
+            )
+            .unwrap();
+        });
+    }
+
+    #[pg_test]
     fn zarr_inspect_minio_metadata_e2e() {
         create_minio_e2e_server();
 
@@ -727,7 +845,12 @@ mod tests {
                 vec![
                     "/",
                     "nested",
+                    "nested/band",
                     "nested/blosc",
+                    "nested/channel",
+                    "nested/forecast_time",
+                    "nested/generic4d",
+                    "nested/level",
                     "nested/raw",
                     "nested/spatial_ref",
                     "nested/time",

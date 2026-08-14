@@ -13,6 +13,7 @@ use super::{ZarrFdwError, ZarrFdwResult};
 /// hostile or accidentally enormous metadata from exhausting a PostgreSQL
 /// backend before any object is read.
 const MAX_SELECTED_CHUNKS: usize = 1_000_000;
+const MAX_SELECTED_CHUNK_BYTES: usize = 64 * 1024 * 1024;
 
 /// Inclusive 1-based? No — plain 0-based inclusive index bounds `(start, end)`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -137,6 +138,38 @@ pub fn chunk_key(sep: &str, indices: &[u64]) -> String {
         .join(sep)
 }
 
+fn validate_selected_chunk_budget(
+    chunk_count: usize,
+    rank: usize,
+    max_bytes: usize,
+) -> ZarrFdwResult<()> {
+    let payload_bytes = rank
+        .checked_mul(std::mem::size_of::<u64>())
+        .ok_or_else(|| {
+            ZarrFdwError::InvalidMetadata(
+                "selected chunk index size exceeds this platform's capacity".to_string(),
+            )
+        })?;
+    let bytes_per_chunk = std::mem::size_of::<Vec<u64>>()
+        .checked_add(payload_bytes)
+        .ok_or_else(|| {
+            ZarrFdwError::InvalidMetadata(
+                "selected chunk index size exceeds this platform's capacity".to_string(),
+            )
+        })?;
+    let allocation_bytes = chunk_count.checked_mul(bytes_per_chunk).ok_or_else(|| {
+        ZarrFdwError::InvalidMetadata(
+            "selected chunk index allocation exceeds this platform's capacity".to_string(),
+        )
+    })?;
+    if allocation_bytes > max_bytes {
+        return Err(ZarrFdwError::InvalidMetadata(format!(
+            "query's eager chunk index list requires {allocation_bytes} bytes for {chunk_count} rank-{rank} entries, exceeding the safety limit of {max_bytes} bytes"
+        )));
+    }
+    Ok(())
+}
+
 /// Cartesian product of per-axis chunk index ranges.
 ///
 /// `axis_chunk_ranges` is one `(start, end)` inclusive pair per dimension, in
@@ -194,6 +227,7 @@ pub fn enumerate_chunks(axis_chunk_ranges: &[(usize, usize)]) -> ZarrFdwResult<V
             "query selects {total} chunks, exceeding the safety limit of {MAX_SELECTED_CHUNKS}"
         )));
     }
+    validate_selected_chunk_budget(total, n, MAX_SELECTED_CHUNK_BYTES)?;
     out.try_reserve_exact(total).map_err(|_| {
         ZarrFdwError::InvalidMetadata(format!(
             "could not allocate the selected chunk list ({total} entries)"
@@ -345,5 +379,17 @@ mod tests {
             Err(ZarrFdwError::InvalidMetadata(message))
                 if message.contains("exceeding the safety limit")
         ));
+    }
+
+    #[test]
+    fn selected_chunk_budget_accounts_for_rank_sized_payloads() {
+        let one_entry = std::mem::size_of::<Vec<u64>>() + 4 * std::mem::size_of::<u64>();
+        validate_selected_chunk_budget(1, 4, one_entry).unwrap();
+        assert!(matches!(
+            validate_selected_chunk_budget(2, 4, one_entry),
+            Err(ZarrFdwError::InvalidMetadata(message))
+                if message.contains("eager chunk index list")
+        ));
+        assert!(validate_selected_chunk_budget(usize::MAX, 64, usize::MAX).is_err());
     }
 }

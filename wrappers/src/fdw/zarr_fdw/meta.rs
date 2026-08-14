@@ -1,14 +1,14 @@
 //! Zarr array metadata abstraction.
 //!
-//! MVP scope: Zarr **v2** arrays (`.zarray` JSON, chunk keys with a `.` or `/`
-//! dimension separator). Zarr v3 (`zarr.json`) is explicitly out of scope for
-//! the MVP — the enum below reserves the wrapper so v3 support slots in later.
+//! Scope: Zarr **v2** arrays (`.zarray` JSON, chunk keys with a `.` or `/`
+//! dimension separator). Zarr v3 (`zarr.json`) is explicitly out of scope.
 
 use super::{ZarrFdwError, ZarrFdwResult};
 use serde::Deserialize;
 
 /// Highest supported Zarr format version.
 const SUPPORTED_ZARR_FORMAT: u32 = 2;
+const MAX_SCAN_RANK: usize = 64;
 
 /// Parsed Zarr v2 `.zarray` metadata.
 #[derive(Debug, Clone, Deserialize)]
@@ -54,8 +54,8 @@ fn default_order() -> char {
 }
 
 impl ArrayMeta {
-    /// Parse `.zarray` JSON content into `ArrayMeta`, then run full validation
-    /// (Zarr v2, rank 2D/3D cube array, C order, no filters).
+    /// Parse `.zarray` JSON content into `ArrayMeta`, then run full scan
+    /// validation (Zarr v2, bounded positive rank, C order, no filters).
     pub fn from_bytes(bytes: &[u8]) -> ZarrFdwResult<Self> {
         let meta = Self::parse(bytes)?;
         meta.validate()?;
@@ -74,7 +74,7 @@ impl ArrayMeta {
                 version: self.zarr_format,
             });
         }
-        if self.shape.len() != 2 && self.shape.len() != 3 {
+        if !(1..=MAX_SCAN_RANK).contains(&self.shape.len()) {
             return Err(ZarrFdwError::UnsupportedRank {
                 rank: self.shape.len(),
             });
@@ -253,19 +253,20 @@ mod tests {
     }
 
     #[test]
-    fn reject_rank() {
-        let json = br#"{
-            "zarr_format": 2,
-            "shape": [10],
-            "chunks": [5],
-            "dtype": "<f4",
-            "fill_value": null,
-            "compressor": null
-        }"#;
-        assert!(matches!(
-            ArrayMeta::from_bytes(json),
-            Err(ZarrFdwError::UnsupportedRank { rank: 1 })
-        ));
+    fn accepts_arbitrary_positive_rank_within_limit() {
+        for rank in [1, 4, MAX_SCAN_RANK] {
+            meta(vec![1; rank], vec![1; rank]).validate().unwrap();
+        }
+    }
+
+    #[test]
+    fn rejects_rank_outside_scan_limit() {
+        for rank in [0, MAX_SCAN_RANK + 1] {
+            assert!(matches!(
+                meta(vec![1; rank], vec![1; rank]).validate(),
+                Err(ZarrFdwError::UnsupportedRank { rank: actual }) if actual == rank
+            ));
+        }
     }
 
     #[test]

@@ -113,7 +113,13 @@ impl CoordinateRef {
 pub(crate) enum DimensionRole {
     SpatialX,
     SpatialY,
+    Latitude,
+    Longitude,
+    Vertical,
     Time,
+    Band,
+    Channel,
+    Unknown,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -375,6 +375,26 @@ fn numeric_dtype_parts(dtype: &str) -> ZarrFdwResult<(char, char, usize)> {
     Ok((byte_order, kind, size))
 }
 
+fn exact_i64_coordinate(dtype: &str, value: i64) -> ZarrFdwResult<f64> {
+    let converted = value as f64;
+    if converted as i128 != value as i128 {
+        return Err(ZarrFdwError::InvalidMetadata(format!(
+            "coordinate integer {value} for dtype '{dtype}' cannot be represented exactly as double precision"
+        )));
+    }
+    Ok(converted)
+}
+
+fn exact_u64_coordinate(dtype: &str, value: u64) -> ZarrFdwResult<f64> {
+    let converted = value as f64;
+    if converted as u128 != value as u128 {
+        return Err(ZarrFdwError::InvalidMetadata(format!(
+            "coordinate integer {value} for dtype '{dtype}' cannot be represented exactly as double precision"
+        )));
+    }
+    Ok(converted)
+}
+
 /// Decoded byte width of a supported coordinate scalar.
 pub fn coordinate_itemsize(dtype: &str) -> ZarrFdwResult<usize> {
     let (_, kind, size) = numeric_dtype_parts(dtype)?;
@@ -405,14 +425,32 @@ pub fn coord_fill_value_to_f64(
             narrowed as f64
         }
         ('f', 8) => float_fill(dtype, value)?,
-        ('i', 1) => signed_integer_fill(dtype, value, i8::MIN as i64, i8::MAX as i64)? as f64,
-        ('i', 2) => signed_integer_fill(dtype, value, i16::MIN as i64, i16::MAX as i64)? as f64,
-        ('i', 4) => signed_integer_fill(dtype, value, i32::MIN as i64, i32::MAX as i64)? as f64,
-        ('i', 8) => signed_integer_fill(dtype, value, i64::MIN, i64::MAX)? as f64,
-        ('u', 1) => unsigned_integer_fill(dtype, value, u8::MAX as u64)? as f64,
-        ('u', 2) => unsigned_integer_fill(dtype, value, u16::MAX as u64)? as f64,
-        ('u', 4) => unsigned_integer_fill(dtype, value, u32::MAX as u64)? as f64,
-        ('u', 8) => unsigned_integer_fill(dtype, value, u64::MAX)? as f64,
+        ('i', 1) => exact_i64_coordinate(
+            dtype,
+            signed_integer_fill(dtype, value, i8::MIN as i64, i8::MAX as i64)?,
+        )?,
+        ('i', 2) => exact_i64_coordinate(
+            dtype,
+            signed_integer_fill(dtype, value, i16::MIN as i64, i16::MAX as i64)?,
+        )?,
+        ('i', 4) => exact_i64_coordinate(
+            dtype,
+            signed_integer_fill(dtype, value, i32::MIN as i64, i32::MAX as i64)?,
+        )?,
+        ('i', 8) => exact_i64_coordinate(
+            dtype,
+            signed_integer_fill(dtype, value, i64::MIN, i64::MAX)?,
+        )?,
+        ('u', 1) => {
+            exact_u64_coordinate(dtype, unsigned_integer_fill(dtype, value, u8::MAX as u64)?)?
+        }
+        ('u', 2) => {
+            exact_u64_coordinate(dtype, unsigned_integer_fill(dtype, value, u16::MAX as u64)?)?
+        }
+        ('u', 4) => {
+            exact_u64_coordinate(dtype, unsigned_integer_fill(dtype, value, u32::MAX as u64)?)?
+        }
+        ('u', 8) => exact_u64_coordinate(dtype, unsigned_integer_fill(dtype, value, u64::MAX)?)?,
         _ => return Err(ZarrFdwError::UnsupportedDataType(dtype.to_string())),
     };
     Ok(Some(parsed))
@@ -421,33 +459,32 @@ pub fn coord_fill_value_to_f64(
 /// Interpret raw `data` bytes as coordinate values (`f64`) using the numpy
 /// style `dtype` string of a coordinate array (e.g. `<f8`, `>i4`, `|u2`).
 ///
-/// Lenient by design: coordinates can be stored as floats or (un)signed ints,
-/// in either byte order — anything numeric is read as `f64` for pushdown and
-/// output. Errors are surfaced as [`ZarrFdwError::UnsupportedDataType`] when
-/// the dtype is not a recognized numeric one.
+/// Coordinates can be stored as floats or (un)signed ints in either byte
+/// order. Integer values must be exactly representable as `f64`, because the
+/// resulting value is used for both identity and predicate pruning.
 pub fn coord_bytes_to_f64(dtype: &str, data: &[u8]) -> ZarrFdwResult<Vec<f64>> {
     if data.is_empty() {
         return Ok(Vec::new());
     }
     let (byte_order, kind, size) = numeric_dtype_parts(dtype)?;
+    let item = coordinate_itemsize(dtype)?;
 
-    let read = |b: &[u8]| -> f64 {
+    let read = |b: &[u8]| -> ZarrFdwResult<f64> {
         match (kind, size) {
-            ('f', 4) => f32_bytes(b, byte_order) as f64,
-            ('f', 8) => f64_bytes(b, byte_order),
-            ('i', 1) => b[0] as i8 as f64,
-            ('i', 2) => i16_bytes(b, byte_order) as f64,
-            ('i', 4) => i32_bytes(b, byte_order) as f64,
-            ('i', 8) => i64_bytes(b, byte_order) as f64,
-            ('u', 1) => b[0] as f64,
-            ('u', 2) => u16_bytes(b, byte_order) as f64,
-            ('u', 4) => u32_bytes(b, byte_order) as f64,
-            ('u', 8) => u64_bytes(b, byte_order) as f64,
-            _ => f64::NAN,
+            ('f', 4) => Ok(f32_bytes(b, byte_order) as f64),
+            ('f', 8) => Ok(f64_bytes(b, byte_order)),
+            ('i', 1) => exact_i64_coordinate(dtype, b[0] as i8 as i64),
+            ('i', 2) => exact_i64_coordinate(dtype, i16_bytes(b, byte_order) as i64),
+            ('i', 4) => exact_i64_coordinate(dtype, i32_bytes(b, byte_order) as i64),
+            ('i', 8) => exact_i64_coordinate(dtype, i64_bytes(b, byte_order)),
+            ('u', 1) => exact_u64_coordinate(dtype, b[0] as u64),
+            ('u', 2) => exact_u64_coordinate(dtype, u16_bytes(b, byte_order) as u64),
+            ('u', 4) => exact_u64_coordinate(dtype, u32_bytes(b, byte_order) as u64),
+            ('u', 8) => exact_u64_coordinate(dtype, u64_bytes(b, byte_order)),
+            _ => Err(ZarrFdwError::UnsupportedDataType(dtype.to_string())),
         }
     };
 
-    let item = coordinate_itemsize(dtype)?;
     if data.len() % item != 0 {
         return Err(ZarrFdwError::InvalidMetadata(format!(
             "coordinate data length {} is not a multiple of dtype item size {item}",
@@ -456,11 +493,7 @@ pub fn coord_bytes_to_f64(dtype: &str, data: &[u8]) -> ZarrFdwResult<Vec<f64>> {
     }
     let mut out = Vec::with_capacity(data.len() / item);
     for b in data.chunks(item) {
-        let v = read(b);
-        if v.is_nan() && !(kind == 'f' && (size == 4 || size == 8)) {
-            return Err(ZarrFdwError::UnsupportedDataType(dtype.to_string()));
-        }
-        out.push(v);
+        out.push(read(b)?);
     }
     Ok(out)
 }
@@ -636,6 +669,17 @@ mod tests {
     }
 
     #[test]
+    fn coordinate_integer_fills_must_be_exact_in_double_precision() {
+        let exact = 1u64 << 63;
+        assert_eq!(
+            coord_fill_value_to_f64("<u8", &serde_json::json!(exact)).unwrap(),
+            Some(exact as f64)
+        );
+        assert!(coord_fill_value_to_f64("<i8", &serde_json::json!((1i64 << 53) + 1)).is_err());
+        assert!(coord_fill_value_to_f64("<u8", &serde_json::json!(u64::MAX)).is_err());
+    }
+
+    #[test]
     fn coord_f64_floats() {
         let data = 1.5f32.to_le_bytes();
         assert_eq!(coord_bytes_to_f64("<f4", &data).unwrap(), vec![1.5]);
@@ -661,6 +705,20 @@ mod tests {
         assert_eq!(coord_bytes_to_f64("|i1", &data).unwrap(), vec![0.0, -1.0]);
         let data = (-400000i32).to_le_bytes();
         assert_eq!(coord_bytes_to_f64("<i4", &data).unwrap(), vec![-400000.0]);
+    }
+
+    #[test]
+    fn coordinate_integer_values_must_be_exact_in_double_precision() {
+        let exact = (1i64 << 53).to_le_bytes();
+        assert_eq!(
+            coord_bytes_to_f64("<i8", &exact).unwrap(),
+            vec![(1i64 << 53) as f64]
+        );
+
+        let lossy_signed = ((1i64 << 53) + 1).to_le_bytes();
+        assert!(coord_bytes_to_f64("<i8", &lossy_signed).is_err());
+        let lossy_unsigned = u64::MAX.to_le_bytes();
+        assert!(coord_bytes_to_f64("<u8", &lossy_unsigned).is_err());
     }
 
     #[test]
