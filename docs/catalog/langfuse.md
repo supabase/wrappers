@@ -1,10 +1,10 @@
 ---
 source:
 documentation:
-author: supabase
+author: distanceqo(https://github.com/distanceqo)
 tags:
   - wasm
-  - official
+  - community
 ---
 
 # Langfuse
