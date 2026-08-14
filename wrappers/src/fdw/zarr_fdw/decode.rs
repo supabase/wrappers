@@ -205,6 +205,26 @@ impl DType {
     }
 }
 
+/// Decode one supported primitive value into the `f64` domain used by CF
+/// scale/offset processing. Raw scans keep their exact PostgreSQL primitive
+/// type; this conversion is only used when scientific decoding is enabled.
+pub fn value_bytes_to_f64(dtype: DType, bytes: &[u8]) -> ZarrFdwResult<f64> {
+    let too_short = |needed: usize| {
+        ZarrFdwError::ReadError(std::io::Error::other(format!(
+            "chunk cell data has {} bytes, expected exactly {needed}",
+            bytes.len()
+        )))
+    };
+    Ok(match dtype {
+        DType::F32 => f32::from_le_bytes(bytes.try_into().map_err(|_| too_short(4))?) as f64,
+        DType::F64 => f64::from_le_bytes(bytes.try_into().map_err(|_| too_short(8))?),
+        DType::I8 => bytes.first().copied().ok_or_else(|| too_short(1))? as i8 as f64,
+        DType::I16 => i16::from_le_bytes(bytes.try_into().map_err(|_| too_short(2))?) as f64,
+        DType::I32 => i32::from_le_bytes(bytes.try_into().map_err(|_| too_short(4))?) as f64,
+        DType::I64 => i64::from_le_bytes(bytes.try_into().map_err(|_| too_short(8))?) as f64,
+    })
+}
+
 fn invalid_fill(dtype: &str, reason: impl Into<String>) -> ZarrFdwError {
     ZarrFdwError::InvalidMetadata(format!(
         "fill_value is invalid for dtype '{dtype}': {}",

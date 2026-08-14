@@ -33,7 +33,21 @@ mod tests {
     }
 
     fn create_minio_e2e_table(table: &str, array_group: &str, value_type: &str) {
+        create_minio_e2e_table_with_cf(table, array_group, value_type, false);
+    }
+
+    fn create_minio_e2e_table_with_cf(
+        table: &str,
+        array_group: &str,
+        value_type: &str,
+        decode_cf: bool,
+    ) {
         create_minio_e2e_server();
+        let decode_option = if decode_cf {
+            ",\n                         decode_cf 'true'"
+        } else {
+            ""
+        };
         Spi::connect_mut(|c| {
             c.update(
                 &format!(
@@ -47,7 +61,7 @@ mod tests {
                        OPTIONS (
                          array_group '{array_group}',
                          time_unit 'seconds',
-                         time_origin 'unix'
+                         time_origin 'unix'{decode_option}
                        )"#
                 ),
                 None,
@@ -159,6 +173,39 @@ mod tests {
                 SERVER zarr_test_server
                 OPTIONS (time_unit 'fortnights')
              "#,
+                None,
+                &[],
+            )
+            .unwrap();
+        });
+    }
+
+    #[pg_test(error = "invalid value for option 'decode_cf': must be 'true' or 'false'")]
+    fn zarr_validator_rejects_bad_cf_decode_boolean() {
+        Spi::connect_mut(|c| {
+            c.update(
+                r#"CREATE FOREIGN DATA WRAPPER zarr_wrapper
+                     HANDLER zarr_fdw_handler VALIDATOR zarr_fdw_validator"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"CREATE SERVER zarr_cf_server
+                     FOREIGN DATA WRAPPER zarr_wrapper
+                     OPTIONS (store_url 's3://zarr-test/x.zarr')"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"CREATE FOREIGN TABLE zarr_bad_cf_option (
+                       x double precision,
+                       y double precision,
+                       value double precision
+                     )
+                     SERVER zarr_cf_server
+                     OPTIONS (array_group 'value', decode_cf 'yes')"#,
                 None,
                 &[],
             )
@@ -429,6 +476,99 @@ mod tests {
         Spi::connect_mut(|c| {
             c.select("SELECT value FROM zarr_e2e_bad_value_type", None, &[])
                 .unwrap();
+        });
+    }
+
+    #[pg_test(
+        error = "column 'value' has incompatible PostgreSQL type OID 700; expected double precision (OID 701)"
+    )]
+    fn zarr_minio_cf_decode_rejects_non_float8_value_type() {
+        create_minio_e2e_table_with_cf("zarr_e2e_bad_cf_type", "nested/raw", "real", true);
+
+        Spi::connect_mut(|c| {
+            c.select("SELECT value FROM zarr_e2e_bad_cf_type", None, &[])
+                .unwrap();
+        });
+    }
+
+    #[pg_test]
+    fn zarr_minio_cf_value_decode_e2e() {
+        create_minio_e2e_table_with_cf(
+            "zarr_e2e_cf_decoded",
+            "nested/raw",
+            "double precision",
+            true,
+        );
+
+        Spi::connect(|c| {
+            let summary = c
+                .select(
+                    r#"SELECT count(*) AS total_count,
+                              count(value) AS valid_count,
+                              sum(value) AS value_sum,
+                              min(value) AS value_min,
+                              max(value) AS value_max
+                         FROM zarr_e2e_cf_decoded"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(
+                summary
+                    .get_by_name::<i64, _>("total_count")
+                    .unwrap()
+                    .unwrap(),
+                60
+            );
+            assert_eq!(
+                summary
+                    .get_by_name::<i64, _>("valid_count")
+                    .unwrap()
+                    .unwrap(),
+                48
+            );
+            let value_sum = summary.get_by_name::<f64, _>("value_sum").unwrap().unwrap();
+            let value_min = summary.get_by_name::<f64, _>("value_min").unwrap().unwrap();
+            let value_max = summary.get_by_name::<f64, _>("value_max").unwrap().unwrap();
+            assert!((value_sum - 13_142.86).abs() < 1e-8);
+            assert!((value_min - 273.15).abs() < 1e-10);
+            assert!((value_max - 274.55).abs() < 1e-10);
+
+            for predicate in [
+                "time = '1970-01-01 00:00:00+00'::timestamptz AND y = 50 AND x = 120",
+                "time = '1970-01-01 01:00:00+00'::timestamptz AND y = 50 AND x = 110",
+                "time = '1970-01-01 01:00:00+00'::timestamptz AND y = 50 AND x = 150",
+            ] {
+                let sql = format!("SELECT value FROM zarr_e2e_cf_decoded WHERE {predicate}");
+                let value = c
+                    .select(&sql, None, &[])
+                    .unwrap()
+                    .next()
+                    .unwrap()
+                    .get_by_name::<f64, _>("value")
+                    .unwrap();
+                assert_eq!(value, None);
+            }
+
+            let valid_boundary = c
+                .select(
+                    r#"SELECT value
+                         FROM zarr_e2e_cf_decoded
+                        WHERE time = '1970-01-01 01:00:00+00'::timestamptz
+                          AND y = 50
+                          AND x = 100"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap()
+                .get_by_name::<f64, _>("value")
+                .unwrap()
+                .unwrap();
+            assert!((valid_boundary - 274.55).abs() < 1e-10);
         });
     }
 

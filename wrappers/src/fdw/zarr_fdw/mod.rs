@@ -7,6 +7,7 @@ mod dataset;
 mod decode;
 mod inspect;
 mod meta;
+mod scientific;
 mod store;
 
 use aws_sdk_s3::config::http::HttpResponse;

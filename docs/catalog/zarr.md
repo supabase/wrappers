@@ -85,10 +85,10 @@ The function returns these fields:
 | `attributes` | Complete `.zattrs` JSON object |
 | `warnings` | Non-fatal metadata issues, such as malformed named dimensions |
 
-The inspection surface exposes scientific metadata but does not apply
-scale/offset, calendar, units, or CRS transformations to scan results yet.
-The complete `attributes` value remains authoritative because scientific
-metadata conventions vary between datasets.
+The inspection surface exposes scientific metadata. Scans can opt into the
+CF-style value decoding described below; time/calendar, physical-unit, and CRS
+transformations are not applied yet. The complete `attributes` value remains
+authoritative because scientific metadata conventions vary between datasets.
 
 ## Query an array
 
@@ -122,6 +122,49 @@ Supported value mappings are `<f4` to `real`, `<f8` to `double precision`,
 `integer`, and `<i8` to `bigint`. Coordinate columns `x` and `y` must be
 `double precision`; `time` must be `timestamptz`.
 
+## Decode packed scientific values
+
+Set `decode_cf 'true'` on a foreign table to apply common CF-style missing-data
+and packed-value attributes from the selected value array's `.zattrs`:
+
+```sql
+create foreign table decoded_temperature (
+  time timestamptz,
+  y double precision,
+  x double precision,
+  temperature double precision
+)
+server public_zarr_server
+options (
+  array_group 'climate/packed_temperature',
+  time_unit 'seconds',
+  time_origin 'unix',
+  decode_cf 'true'
+);
+```
+
+Decoded mode applies this order:
+
+1. Decode the stored primitive value.
+2. Map `_FillValue`, `missing_value`, and values outside `valid_range` or
+   `valid_min`/`valid_max` to SQL `NULL`.
+3. Return `raw * scale_factor + add_offset` as `double precision`.
+
+Masking and valid-range checks happen before scale/offset, in the packed/raw
+domain. A missing Zarr chunk is first materialized with the `.zarray`
+`fill_value`; it becomes SQL `NULL` only when that raw value also matches the
+scientific missing/validity metadata. The option defaults to `false`, which
+preserves the raw dtype mappings above.
+
+For floating-point arrays, the Zarr JSON spellings `"NaN"`, `"Infinity"`, and
+`"-Infinity"` are accepted as missing sentinels. Declaring `"NaN"` masks every
+NaN payload; an undeclared non-finite value remains a PostgreSQL non-finite
+`double precision` value.
+
+This initial scientific-decoding slice does not convert physical units, infer
+time units/calendars for coordinate pruning, transform a CRS, or apply packing
+attributes to coordinate arrays.
+
 ## Current limitations
 
 - Read-only Zarr v2 on S3-compatible storage.
@@ -130,6 +173,11 @@ Supported value mappings are `<f4` to `real`, `<f8` to `double precision`,
 - Non-empty Zarr filters, Fortran order, Zarr v3, consolidated metadata,
   sharding, writes, and arbitrary-dimensional scan execution are not yet
   supported.
+- Zarr v3 is a separate storage-format implementation, not an alternate value
+  decoder: it uses `zarr.json`, a chunk-grid and chunk-key encoding, and an
+  ordered codec pipeline instead of the v2 `.zarray` layout. The dataset and
+  scientific-semantics models are intended to accept a future v3 adapter, but
+  current scans and inspection remain explicitly v2-only.
 - `LIMIT` alone does not prevent coordinate metadata loading or matching-chunk
   enumeration; use selective coordinate predicates for large arrays.
 - Inspection has hard depth, node, list-page, object-size, and total metadata

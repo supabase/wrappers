@@ -24,6 +24,7 @@
 use crate::stats;
 use pgrx::datum::TimestampWithTimeZone;
 use pgrx::pg_sys;
+use serde_json::{Map, Value as JsonValue};
 use std::collections::HashMap;
 
 use supabase_wrappers::prelude::*;
@@ -37,6 +38,7 @@ use super::decode::{
     fill_value_bytes,
 };
 use super::meta::ArrayMeta;
+use super::scientific::ScientificValueDecoder;
 use super::store::{MAX_METADATA_OBJECT_BYTES, ZarrStore, join_key, validate_auth_options};
 use super::{ZarrFdwError, ZarrFdwResult};
 
@@ -51,6 +53,7 @@ const OPT_ARRAY_GROUP: &str = "array_group";
 const OPT_BANDS: &str = "bands";
 const OPT_TIME_UNIT: &str = "time_unit";
 const OPT_TIME_ORIGIN: &str = "time_origin";
+const OPT_DECODE_CF: &str = "decode_cf";
 
 // Coordinate column/axis names.
 const AXIS_TIME: &str = "time";
@@ -183,6 +186,7 @@ pub(crate) struct ZarrFdw {
     axis_meta: Option<ArrayMeta>,
     dtype: Option<DType>,
     codec: Option<Codec>,
+    scientific_decoder: Option<ScientificValueDecoder>,
     // one decoded scalar, repeated when a data chunk is absent
     fill_bytes: Option<Vec<u8>>,
     // coordinate values per axis (raw, as given by the store)
@@ -353,7 +357,10 @@ fn filled_coordinate_values(
     Ok(values)
 }
 
-fn expected_value_pg_type(dtype: DType) -> (pg_sys::Oid, &'static str) {
+fn expected_value_pg_type(dtype: DType, decode_cf: bool) -> (pg_sys::Oid, &'static str) {
+    if decode_cf {
+        return (pg_sys::FLOAT8OID, "double precision");
+    }
     match dtype {
         DType::F32 => (pg_sys::FLOAT4OID, "real"),
         DType::F64 => (pg_sys::FLOAT8OID, "double precision"),
@@ -395,8 +402,13 @@ fn validate_fixed_coordinate_column_types(columns: &[Column]) -> ZarrFdwResult<(
     Ok(())
 }
 
-fn validate_column_types(columns: &[Column], dataset: &Dataset, dtype: DType) -> ZarrFdwResult<()> {
-    let (value_oid, value_name) = expected_value_pg_type(dtype);
+fn validate_column_types(
+    columns: &[Column],
+    dataset: &Dataset,
+    dtype: DType,
+    decode_cf: bool,
+) -> ZarrFdwResult<()> {
+    let (value_oid, value_name) = expected_value_pg_type(dtype, decode_cf);
     for column in columns {
         match dataset.dimension(&column.name) {
             Some(dimension) if dimension.semantic_role() == DimensionRole::Time => {
@@ -607,7 +619,11 @@ impl ZarrFdw {
         let off = checked_flat_offset(&self.sub_idx, &self.chunk_shape)?;
         let item = dt.itemsize();
         let byte_range = checked_chunk_byte_range(off, item, self.chunk_bytes.len())?;
-        let value_cell = Self::value_cell(dt, &self.chunk_bytes[byte_range])?;
+        let raw_value = &self.chunk_bytes[byte_range];
+        let value_cell = match &self.scientific_decoder {
+            Some(decoder) => decoder.decode(raw_value)?.map(Cell::F64),
+            None => Some(Self::value_cell(dt, raw_value)?),
+        };
 
         for col in &self.tgt_cols {
             match self.axes.iter().position(|a| a == &col.name) {
@@ -642,7 +658,7 @@ impl ZarrFdw {
                     }
                 }
                 None => {
-                    row.push(col.name.as_str(), Some(value_cell.clone()));
+                    row.push(col.name.as_str(), value_cell.clone());
                 }
             }
         }
@@ -846,6 +862,42 @@ fn read_coordinate_array(store: &ZarrStore, prefix: &str, name: &str) -> ZarrFdw
     Ok(values)
 }
 
+fn read_value_attributes(
+    store: &ZarrStore,
+    array_dir: &str,
+) -> ZarrFdwResult<Map<String, JsonValue>> {
+    let key = join_key(array_dir, ".zattrs");
+    let Some(bytes) = store.get_object_optional_sync(&key, MAX_METADATA_OBJECT_BYTES)? else {
+        return Ok(Map::new());
+    };
+    let value = serde_json::from_slice::<JsonValue>(&bytes).map_err(|error| {
+        ZarrFdwError::InvalidMetadata(format!("could not parse '{key}': {error}"))
+    })?;
+    value
+        .as_object()
+        .cloned()
+        .ok_or_else(|| ZarrFdwError::InvalidMetadata(format!("'{key}' must contain a JSON object")))
+}
+
+fn parse_boolean_option(name: &str, value: &str) -> ZarrFdwResult<bool> {
+    match value {
+        "true" => Ok(true),
+        "false" => Ok(false),
+        _ => Err(ZarrFdwError::InvalidOptionValue {
+            option: name.to_string(),
+            message: "must be 'true' or 'false'".to_string(),
+        }),
+    }
+}
+
+fn boolean_table_option(options: &HashMap<String, String>, name: &str) -> ZarrFdwResult<bool> {
+    options
+        .get(name)
+        .map(|value| parse_boolean_option(name, value))
+        .transpose()
+        .map(|value| value.unwrap_or(false))
+}
+
 fn option_value(options: &[Option<String>], name: &str) -> Option<String> {
     let prefix = format!("{name}=");
     options
@@ -868,6 +920,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
             axis_meta: None,
             dtype: None,
             codec: None,
+            scientific_decoder: None,
             fill_bytes: None,
             coords: Vec::new(),
             bounds: Vec::new(),
@@ -907,6 +960,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
     ) -> ZarrFdwResult<()> {
         self.tgt_cols = columns.to_vec();
         self.time_spec = TimeSpec::from_options(options)?;
+        let decode_cf = boolean_table_option(options, OPT_DECODE_CF)?;
         // These fixed output Cells are known before fetching remote metadata.
         // Reject unsafe mappings before any network request.
         validate_fixed_coordinate_column_types(columns)?;
@@ -938,7 +992,13 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
         let rank = dataset.dimensions().len();
         self.rank = rank;
         let dtype = DType::parse(variable.dtype())?;
-        validate_column_types(columns, &dataset, dtype)?;
+        let scientific_decoder = if decode_cf {
+            let attributes = read_value_attributes(&self.store, variable.path())?;
+            Some(ScientificValueDecoder::from_attributes(dtype, &attributes)?)
+        } else {
+            None
+        };
+        validate_column_types(columns, &dataset, dtype, decode_cf)?;
 
         // single-array MVP: at most one non-dimension (value) column allowed
         let value_cols = columns
@@ -956,6 +1016,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
         self.axis_meta = Some(meta.clone());
         self.dtype = Some(dtype);
         self.codec = Some(Codec::from_compressor_json(&meta.compressor)?);
+        self.scientific_decoder = scientific_decoder;
         self.fill_bytes = fill_value_bytes(dtype, &meta.fill_value)?;
 
         // load coordinate arrays
@@ -1073,6 +1134,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
         self.coords.clear();
         self.bounds.clear();
         self.axis_roles.clear();
+        self.scientific_decoder = None;
         self.fill_bytes = None;
         self.rows_out = 0;
         Ok(())
@@ -1102,6 +1164,9 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
                                 message: "must be 'unix' or 'postgres'".to_string(),
                             });
                         }
+                    }
+                    if let Some(v) = option_value(&options, OPT_DECODE_CF) {
+                        parse_boolean_option(OPT_DECODE_CF, &v)?;
                     }
                     if let Some(v) = option_value(&options, OPT_ARRAY_GROUP) {
                         if v.trim_matches('/').is_empty() || v.contains("..") {
@@ -1247,7 +1312,11 @@ mod unit_tests {
             (DType::I64, pg_sys::INT8OID, "bigint"),
         ];
         for (dtype, oid, name) in cases {
-            assert_eq!(expected_value_pg_type(dtype), (oid, name));
+            assert_eq!(expected_value_pg_type(dtype, false), (oid, name));
+            assert_eq!(
+                expected_value_pg_type(dtype, true),
+                (pg_sys::FLOAT8OID, "double precision")
+            );
         }
     }
 
@@ -1276,13 +1345,19 @@ mod unit_tests {
             column(AXIS_X, pg_sys::FLOAT8OID),
             column("value", pg_sys::FLOAT4OID),
         ];
-        validate_column_types(&columns, &dataset, DType::F32).unwrap();
+        validate_column_types(&columns, &dataset, DType::F32, false).unwrap();
     }
 
     #[test]
     fn coordinates_do_not_need_to_be_projected() {
         let dataset = legacy_array_dataset("value", &array_meta(vec![5, 6], vec![5, 3])).unwrap();
-        validate_column_types(&[column("value", pg_sys::FLOAT4OID)], &dataset, DType::F32).unwrap();
+        validate_column_types(
+            &[column("value", pg_sys::FLOAT4OID)],
+            &dataset,
+            DType::F32,
+            false,
+        )
+        .unwrap();
         validate_column_types(
             &[
                 column(AXIS_X, pg_sys::FLOAT8OID),
@@ -1290,6 +1365,7 @@ mod unit_tests {
             ],
             &dataset,
             DType::F32,
+            false,
         )
         .unwrap();
     }
@@ -1317,9 +1393,30 @@ mod unit_tests {
         let dataset = legacy_array_dataset("value", &array_meta(vec![5, 6], vec![5, 3])).unwrap();
         let columns = vec![column(AXIS_TIME, pg_sys::TIMESTAMPTZOID)];
         assert!(matches!(
-            validate_column_types(&columns, &dataset, DType::F64),
+            validate_column_types(&columns, &dataset, DType::F64, false),
             Err(ZarrFdwError::InvalidCoordinateColumn { column, rank: 2 })
                 if column == AXIS_TIME
+        ));
+    }
+
+    #[test]
+    fn cf_decoding_requires_double_precision_value_columns() {
+        let dataset = legacy_array_dataset("value", &array_meta(vec![5, 6], vec![5, 3])).unwrap();
+        validate_column_types(
+            &[column("value", pg_sys::FLOAT8OID)],
+            &dataset,
+            DType::F32,
+            true,
+        )
+        .unwrap();
+        assert!(matches!(
+            validate_column_types(
+                &[column("value", pg_sys::FLOAT4OID)],
+                &dataset,
+                DType::F32,
+                true,
+            ),
+            Err(ZarrFdwError::ColumnTypeMismatch { column, .. }) if column == "value"
         ));
     }
 
