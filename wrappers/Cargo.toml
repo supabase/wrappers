@@ -207,6 +207,7 @@ zarr_fdw = [
     "aws-config",
     "aws-sdk-s3",
     "blosc-rs",
+    "chrono",
     "tokio",
     "tokio-util",
     "async-compression",

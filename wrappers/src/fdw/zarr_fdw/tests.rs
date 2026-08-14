@@ -42,12 +42,28 @@ mod tests {
         value_type: &str,
         decode_cf: bool,
     ) {
-        create_minio_e2e_server();
         let decode_option = if decode_cf {
             ",\n                         decode_cf 'true'"
         } else {
             ""
         };
+        create_minio_e2e_table_with_options(
+            table,
+            array_group,
+            value_type,
+            &format!(
+                ",\n                         time_unit 'seconds',\n                         time_origin 'unix'{decode_option}"
+            ),
+        );
+    }
+
+    fn create_minio_e2e_table_with_options(
+        table: &str,
+        array_group: &str,
+        value_type: &str,
+        options: &str,
+    ) {
+        create_minio_e2e_server();
         Spi::connect_mut(|c| {
             c.update(
                 &format!(
@@ -59,9 +75,7 @@ mod tests {
                        )
                        SERVER zarr_e2e_server
                        OPTIONS (
-                         array_group '{array_group}',
-                         time_unit 'seconds',
-                         time_origin 'unix'{decode_option}
+                         array_group '{array_group}'{options}
                        )"#
                 ),
                 None,
@@ -144,7 +158,7 @@ mod tests {
 
     // Invalid time_unit values must be rejected at CREATE FOREIGN TABLE time.
     #[pg_test(
-        error = "invalid value for option 'fortnights': must be one of: seconds, milliseconds, nanoseconds, hours, days"
+        error = "invalid value for option 'fortnights': must be one of: seconds, milliseconds, microseconds, nanoseconds, minutes, hours, days"
     )]
     fn zarr_validator_rejects_bad_time_unit() {
         Spi::connect_mut(|c| {
@@ -206,6 +220,80 @@ mod tests {
                      )
                      SERVER zarr_cf_server
                      OPTIONS (array_group 'value', decode_cf 'yes')"#,
+                None,
+                &[],
+            )
+            .unwrap();
+        });
+    }
+
+    #[pg_test(error = "invalid value for option 'time_from_attrs': must be 'true' or 'false'")]
+    fn zarr_validator_rejects_bad_time_from_attrs_boolean() {
+        Spi::connect_mut(|c| {
+            c.update(
+                r#"CREATE FOREIGN DATA WRAPPER zarr_wrapper
+                     HANDLER zarr_fdw_handler VALIDATOR zarr_fdw_validator"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"CREATE SERVER zarr_time_attrs_server
+                     FOREIGN DATA WRAPPER zarr_wrapper
+                     OPTIONS (store_url 's3://zarr-test/x.zarr')"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"CREATE FOREIGN TABLE zarr_bad_time_attrs_option (
+                       x double precision,
+                       y double precision,
+                       time timestamptz,
+                       value real
+                     )
+                     SERVER zarr_time_attrs_server
+                     OPTIONS (array_group 'value', time_from_attrs 'yes')"#,
+                None,
+                &[],
+            )
+            .unwrap();
+        });
+    }
+
+    #[pg_test(
+        error = "invalid value for option 'time_from_attrs': cannot be combined with 'time_unit' or 'time_origin'"
+    )]
+    fn zarr_validator_rejects_time_from_attrs_with_manual_time_options() {
+        Spi::connect_mut(|c| {
+            c.update(
+                r#"CREATE FOREIGN DATA WRAPPER zarr_wrapper
+                     HANDLER zarr_fdw_handler VALIDATOR zarr_fdw_validator"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"CREATE SERVER zarr_time_attrs_conflict_server
+                     FOREIGN DATA WRAPPER zarr_wrapper
+                     OPTIONS (store_url 's3://zarr-test/x.zarr')"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"CREATE FOREIGN TABLE zarr_bad_time_attrs_conflict (
+                       x double precision,
+                       y double precision,
+                       time timestamptz,
+                       value real
+                     )
+                     SERVER zarr_time_attrs_conflict_server
+                     OPTIONS (
+                       array_group 'value',
+                       time_from_attrs 'true',
+                       time_unit 'seconds'
+                     )"#,
                 None,
                 &[],
             )
@@ -573,6 +661,54 @@ mod tests {
     }
 
     #[pg_test]
+    fn zarr_minio_time_from_attrs_e2e() {
+        create_minio_e2e_table_with_options(
+            "zarr_e2e_time_from_attrs",
+            "nested/raw",
+            "real",
+            ",\n                         time_from_attrs 'true'",
+        );
+
+        Spi::connect(|c| {
+            let times = c
+                .select(
+                    r#"SELECT string_agg(ts, ',' ORDER BY ts) AS times
+                         FROM (
+                           SELECT DISTINCT to_char(
+                                    time AT TIME ZONE 'UTC',
+                                    'YYYY-MM-DD HH24:MI:SS.MS'
+                                  ) AS ts
+                             FROM zarr_e2e_time_from_attrs
+                         ) t"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap()
+                .get_by_name::<String, _>("times")
+                .unwrap()
+                .unwrap();
+            assert_eq!(times, "1970-01-01 00:00:00.000,1970-01-01 00:00:03.600");
+
+            let selected = c
+                .select(
+                    r#"SELECT value
+                         FROM zarr_e2e_time_from_attrs
+                        WHERE time = '1970-01-01 00:00:03.6+00'::timestamptz
+                          AND y = 50
+                          AND x = 100"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|row| row.get_by_name::<f32, _>("value").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(selected, vec![140.0]);
+        });
+    }
+
+    #[pg_test]
     fn zarr_inspect_minio_metadata_e2e() {
         create_minio_e2e_server();
 
@@ -740,7 +876,7 @@ mod tests {
             );
             assert_eq!(
                 time.get_by_name::<String, _>("units").unwrap().unwrap(),
-                "seconds since 1970-01-01 00:00:00"
+                "milliseconds since 1970-01-01 00:00:00"
             );
             assert_eq!(
                 time.get_by_name::<String, _>("calendar").unwrap().unwrap(),

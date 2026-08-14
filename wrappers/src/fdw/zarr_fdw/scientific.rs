@@ -4,6 +4,8 @@
 //! stored. A future v3 metadata adapter can supply the same attribute map and
 //! reuse this decoder unchanged.
 
+pub(crate) mod time;
+
 use serde_json::{Map, Value};
 
 use super::decode::{DType, fill_value_bytes, value_bytes_to_f64};

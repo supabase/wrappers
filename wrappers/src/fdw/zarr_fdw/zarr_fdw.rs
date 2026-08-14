@@ -12,9 +12,9 @@
 //!
 //! Pushdown: any `[x|y|time] <op> <const>` qual is converted into an index
 //! range over the dimension's coordinate vector, which prunes the chunk list
-//! before any chunk is fetched. A time qual is interpreted via the `time_unit`
-//! and `time_origin` table options, which describe how the raw `time`
-//! coordinate values map to instants.
+//! before any chunk is fetched. A time qual is interpreted via either the
+//! `time_unit`/`time_origin` table options or, when `time_from_attrs` is true,
+//! the sibling time coordinate's CF `units`/`calendar` attributes.
 //!
 //! Spatial PostGIS predicates (`ST_Intersects`, `geom && box`) do *not* reach
 //! this code as `Qual`s — the framework only extracts simple Var-op-Const
@@ -38,21 +38,18 @@ use super::decode::{
     fill_value_bytes,
 };
 use super::meta::ArrayMeta;
-use super::scientific::ScientificValueDecoder;
+use super::scientific::{ScientificValueDecoder, time::TimeSpec};
 use super::store::{MAX_METADATA_OBJECT_BYTES, ZarrStore, join_key, validate_auth_options};
 use super::{ZarrFdwError, ZarrFdwResult};
 
 const FDW_NAME: &str = "ZarrFdw";
-
-// PG epoch (2000-01-01 00:00:00 UTC) in microseconds since 1970-01-01.
-const PG_EPOCH_MICROS: i64 = 946_684_800_000_000;
-const PG_EPOCH_SECONDS: i64 = 946_684_800;
 
 // Table option names.
 const OPT_ARRAY_GROUP: &str = "array_group";
 const OPT_BANDS: &str = "bands";
 const OPT_TIME_UNIT: &str = "time_unit";
 const OPT_TIME_ORIGIN: &str = "time_origin";
+const OPT_TIME_FROM_ATTRS: &str = "time_from_attrs";
 const OPT_DECODE_CF: &str = "decode_cf";
 
 // Coordinate column/axis names.
@@ -72,98 +69,6 @@ const DEFAULT_UNKNOWN_TYPE_WIDTH: i32 = 32;
 // metadata-driven allocations bounded until the executor becomes streaming.
 const MAX_DECODED_CHUNK_BYTES: usize = 256 * 1024 * 1024;
 const MAX_COORDINATE_VALUES: usize = 16 * 1024 * 1024;
-
-/// Unit of the raw `time` coordinate values, used to convert them into
-/// timestamps and back. Mirrors the CF `units: "X since ..."` time encoding
-/// for the small set of units we support.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum TimeUnit {
-    Seconds,
-    Milliseconds,
-    Nanoseconds,
-    Hours,
-    Days,
-}
-
-impl TimeUnit {
-    fn parse(s: &str) -> ZarrFdwResult<Self> {
-        match s {
-            "seconds" => Ok(Self::Seconds),
-            "milliseconds" => Ok(Self::Milliseconds),
-            "nanoseconds" => Ok(Self::Nanoseconds),
-            "hours" => Ok(Self::Hours),
-            "days" => Ok(Self::Days),
-            _ => Err(ZarrFdwError::InvalidOptionValue {
-                option: s.to_string(),
-                message: "must be one of: seconds, milliseconds, nanoseconds, hours, days"
-                    .to_string(),
-            }),
-        }
-    }
-
-    /// Factor converting a raw coordinate value into seconds.
-    fn to_seconds_factor(self) -> f64 {
-        match self {
-            Self::Seconds => 1.0,
-            Self::Milliseconds => 1e-3,
-            Self::Nanoseconds => 1e-9,
-            Self::Hours => 3600.0,
-            Self::Days => 86400.0,
-        }
-    }
-}
-
-/// Describes how raw `time` coordinate values map to instants.
-#[derive(Debug, Clone, Copy)]
-struct TimeSpec {
-    unit: TimeUnit,
-    /// Seconds after 1970-01-01 corresponding to a raw coordinate value of 0.
-    origin_epoch_seconds: f64,
-}
-
-impl TimeSpec {
-    fn default() -> Self {
-        Self {
-            unit: TimeUnit::Seconds,
-            origin_epoch_seconds: 0.0,
-        }
-    }
-
-    fn from_options(options: &HashMap<String, String>) -> ZarrFdwResult<Self> {
-        let unit = match options.get(OPT_TIME_UNIT) {
-            Some(u) => TimeUnit::parse(u)?,
-            None => TimeUnit::Seconds,
-        };
-        let origin_epoch_seconds = match options.get(OPT_TIME_ORIGIN).map(String::as_str) {
-            Some("unix") => 0.0,
-            Some("postgres") => PG_EPOCH_SECONDS as f64,
-            Some(other) => {
-                return Err(ZarrFdwError::InvalidOptionValue {
-                    option: other.to_string(),
-                    message: "must be 'unix' or 'postgres'".to_string(),
-                });
-            }
-            None => 0.0,
-        };
-        Ok(Self {
-            unit,
-            origin_epoch_seconds,
-        })
-    }
-
-    /// Convert a raw coordinate value into PG-epoch microseconds.
-    fn raw_to_pg_micros(&self, raw: f64) -> i64 {
-        ((raw * self.unit.to_seconds_factor() + self.origin_epoch_seconds) * 1.0e6
-            - PG_EPOCH_MICROS as f64)
-            .round() as i64
-    }
-
-    /// Convert PG-epoch microseconds into a raw coordinate value.
-    fn pg_micros_to_raw(&self, pg_micros: i64) -> f64 {
-        ((pg_micros as f64 + PG_EPOCH_MICROS as f64) / 1.0e6 - self.origin_epoch_seconds)
-            / self.unit.to_seconds_factor()
-    }
-}
 
 #[wrappers_fdw(
     version = "0.0.1",
@@ -649,7 +554,7 @@ impl ZarrFdw {
                         ))
                     })?;
                     if self.axis_roles[d] == DimensionRole::Time {
-                        let micros = self.time_spec.raw_to_pg_micros(coord);
+                        let micros = self.time_spec.raw_to_pg_micros(coord)?;
                         let ts = TimestampWithTimeZone::try_from(micros)
                             .map_err(|_| ZarrFdwError::TimeOutOfRange(coord))?;
                         row.push(col.name.as_str(), Some(Cell::Timestamptz(ts)));
@@ -678,15 +583,15 @@ impl ZarrFdw {
     }
 }
 
-fn cell_to_f64(cell: &Cell, is_time: bool, spec: TimeSpec) -> Option<f64> {
+fn cell_to_f64_bounds(cell: &Cell, is_time: bool, spec: TimeSpec) -> Option<(f64, f64)> {
     if is_time {
         match cell {
-            Cell::Timestamptz(v) => Some(spec.pg_micros_to_raw((*v).into_inner())),
-            Cell::Timestamp(v) => Some(spec.pg_micros_to_raw((*v).into_inner())),
+            Cell::Timestamptz(v) => spec.pg_micros_to_raw_bounds((*v).into_inner()),
+            Cell::Timestamp(v) => spec.pg_micros_to_raw_bounds((*v).into_inner()),
             _ => None,
         }
     } else {
-        match cell {
+        let value = match cell {
             Cell::F64(v) => Some(*v),
             Cell::F32(v) => Some(*v as f64),
             Cell::I64(v) => Some(*v as f64),
@@ -694,7 +599,8 @@ fn cell_to_f64(cell: &Cell, is_time: bool, spec: TimeSpec) -> Option<f64> {
             Cell::I16(v) => Some(*v as f64),
             Cell::I8(v) => Some(*v as f64),
             _ => None,
-        }
+        }?;
+        Some((value, value))
     }
 }
 
@@ -715,9 +621,9 @@ fn qual_to_range(
         let mut hi = f64::NEG_INFINITY;
         let mut found = false;
         for c in cells {
-            if let Some(v) = cell_to_f64(c, is_time, spec) {
-                lo = lo.min(v);
-                hi = hi.max(v);
+            if let Some((value_lo, value_hi)) = cell_to_f64_bounds(c, is_time, spec) {
+                lo = lo.min(value_lo);
+                hi = hi.max(value_hi);
                 found = true;
             }
         }
@@ -731,15 +637,15 @@ fn qual_to_range(
     let Value::Cell(cell) = &q.value else {
         return Ok(None);
     };
-    let Some(v) = cell_to_f64(cell, is_time, spec) else {
+    let Some((value_lo, value_hi)) = cell_to_f64_bounds(cell, is_time, spec) else {
         return Ok(None);
     };
     let r = match q.operator.as_str() {
-        "=" => (Some(v), Some(v)),
-        ">" => (Some(v), None),
-        ">=" => (Some(v), None),
-        "<" => (None, Some(v)),
-        "<=" => (None, Some(v)),
+        "=" => (Some(value_lo), Some(value_hi)),
+        ">" => (Some(value_hi), None),
+        ">=" => (Some(value_lo), None),
+        "<" => (None, Some(value_lo)),
+        "<=" => (None, Some(value_hi)),
         // `<>`/LIKE/etc. cannot prune this axis
         _ => return Ok(None),
     };
@@ -862,21 +768,21 @@ fn read_coordinate_array(store: &ZarrStore, prefix: &str, name: &str) -> ZarrFdw
     Ok(values)
 }
 
-fn read_value_attributes(
+fn read_array_attributes_optional(
     store: &ZarrStore,
     array_dir: &str,
-) -> ZarrFdwResult<Map<String, JsonValue>> {
+) -> ZarrFdwResult<Option<Map<String, JsonValue>>> {
     let key = join_key(array_dir, ".zattrs");
     let Some(bytes) = store.get_object_optional_sync(&key, MAX_METADATA_OBJECT_BYTES)? else {
-        return Ok(Map::new());
+        return Ok(None);
     };
     let value = serde_json::from_slice::<JsonValue>(&bytes).map_err(|error| {
         ZarrFdwError::InvalidMetadata(format!("could not parse '{key}': {error}"))
     })?;
-    value
-        .as_object()
-        .cloned()
-        .ok_or_else(|| ZarrFdwError::InvalidMetadata(format!("'{key}' must contain a JSON object")))
+    let attributes = value.as_object().cloned().ok_or_else(|| {
+        ZarrFdwError::InvalidMetadata(format!("'{key}' must contain a JSON object"))
+    })?;
+    Ok(Some(attributes))
 }
 
 fn parse_boolean_option(name: &str, value: &str) -> ZarrFdwResult<bool> {
@@ -896,6 +802,20 @@ fn boolean_table_option(options: &HashMap<String, String>, name: &str) -> ZarrFd
         .map(|value| parse_boolean_option(name, value))
         .transpose()
         .map(|value| value.unwrap_or(false))
+}
+
+fn validate_time_from_attrs_options(
+    time_from_attrs: bool,
+    has_time_unit: bool,
+    has_time_origin: bool,
+) -> ZarrFdwResult<()> {
+    if time_from_attrs && (has_time_unit || has_time_origin) {
+        return Err(ZarrFdwError::InvalidOptionValue {
+            option: OPT_TIME_FROM_ATTRS.to_string(),
+            message: format!("cannot be combined with '{OPT_TIME_UNIT}' or '{OPT_TIME_ORIGIN}'"),
+        });
+    }
+    Ok(())
 }
 
 fn option_value(options: &[Option<String>], name: &str) -> Option<String> {
@@ -959,7 +879,12 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
         options: &HashMap<String, String>,
     ) -> ZarrFdwResult<()> {
         self.tgt_cols = columns.to_vec();
-        self.time_spec = TimeSpec::from_options(options)?;
+        let time_from_attrs = boolean_table_option(options, OPT_TIME_FROM_ATTRS)?;
+        validate_time_from_attrs_options(
+            time_from_attrs,
+            options.contains_key(OPT_TIME_UNIT),
+            options.contains_key(OPT_TIME_ORIGIN),
+        )?;
         let decode_cf = boolean_table_option(options, OPT_DECODE_CF)?;
         // These fixed output Cells are known before fetching remote metadata.
         // Reject unsafe mappings before any network request.
@@ -992,8 +917,33 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
         let rank = dataset.dimensions().len();
         self.rank = rank;
         let dtype = DType::parse(variable.dtype())?;
+        let time_spec = if time_from_attrs {
+            let time_dimension = dataset
+                .dimensions()
+                .iter()
+                .find(|dimension| dimension.semantic_role() == DimensionRole::Time)
+                .ok_or_else(|| ZarrFdwError::InvalidOptionValue {
+                    option: OPT_TIME_FROM_ATTRS.to_string(),
+                    message: "requires a rank-3 Zarr array with a time dimension".to_string(),
+                })?;
+            let coordinate = time_dimension.coordinate();
+            let time_path = join_key(coordinate.parent(), coordinate.name());
+            let attributes =
+                read_array_attributes_optional(&self.store, &time_path)?.ok_or_else(|| {
+                    ZarrFdwError::InvalidMetadata(format!(
+                        "required time coordinate attributes '{time_path}/.zattrs' do not exist"
+                    ))
+                })?;
+            TimeSpec::from_cf_attributes(&attributes)?
+        } else {
+            TimeSpec::from_legacy_options(
+                options.get(OPT_TIME_UNIT).map(String::as_str),
+                options.get(OPT_TIME_ORIGIN).map(String::as_str),
+            )?
+        };
         let scientific_decoder = if decode_cf {
-            let attributes = read_value_attributes(&self.store, variable.path())?;
+            let attributes = read_array_attributes_optional(&self.store, variable.path())?
+                .unwrap_or_else(Map::new);
             Some(ScientificValueDecoder::from_attributes(dtype, &attributes)?)
         } else {
             None
@@ -1018,6 +968,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
         self.codec = Some(Codec::from_compressor_json(&meta.compressor)?);
         self.scientific_decoder = scientific_decoder;
         self.fill_bytes = fill_value_bytes(dtype, &meta.fill_value)?;
+        self.time_spec = time_spec;
 
         // load coordinate arrays
         let mut coords = Vec::with_capacity(rank);
@@ -1155,15 +1106,18 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
                 }
                 FOREIGN_TABLE_RELATION_ID => {
                     if let Some(v) = option_value(&options, OPT_TIME_UNIT) {
-                        TimeUnit::parse(&v)?;
+                        TimeSpec::from_legacy_options(Some(&v), None)?;
                     }
                     if let Some(v) = option_value(&options, OPT_TIME_ORIGIN) {
-                        if v != "unix" && v != "postgres" {
-                            return Err(ZarrFdwError::InvalidOptionValue {
-                                option: OPT_TIME_ORIGIN.to_string(),
-                                message: "must be 'unix' or 'postgres'".to_string(),
-                            });
-                        }
+                        TimeSpec::from_legacy_options(None, Some(&v))?;
+                    }
+                    if let Some(v) = option_value(&options, OPT_TIME_FROM_ATTRS) {
+                        let time_from_attrs = parse_boolean_option(OPT_TIME_FROM_ATTRS, &v)?;
+                        validate_time_from_attrs_options(
+                            time_from_attrs,
+                            option_value(&options, OPT_TIME_UNIT).is_some(),
+                            option_value(&options, OPT_TIME_ORIGIN).is_some(),
+                        )?;
                     }
                     if let Some(v) = option_value(&options, OPT_DECODE_CF) {
                         parse_boolean_option(OPT_DECODE_CF, &v)?;

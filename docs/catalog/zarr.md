@@ -86,8 +86,8 @@ The function returns these fields:
 | `warnings` | Non-fatal metadata issues, such as malformed named dimensions |
 
 The inspection surface exposes scientific metadata. Scans can opt into the
-CF-style value decoding described below; time/calendar, physical-unit, and CRS
-transformations are not applied yet. The complete `attributes` value remains
+CF-style value and time-coordinate decoding described below; physical-unit and
+CRS transformations are not applied yet. The complete `attributes` value remains
 authoritative because scientific metadata conventions vary between datasets.
 
 ## Query an array
@@ -121,6 +121,49 @@ Supported value mappings are `<f4` to `real`, `<f8` to `double precision`,
 `|i1`/`<i1` to PostgreSQL internal `"char"`, `<i2` to `smallint`, `<i4` to
 `integer`, and `<i8` to `bigint`. Coordinate columns `x` and `y` must be
 `double precision`; `time` must be `timestamptz`.
+
+## Decode time coordinates from attributes
+
+By default, scan execution preserves the legacy time behavior: raw `time`
+coordinate values are interpreted from the manual table options
+`time_unit` and `time_origin`, or as `seconds` since the Unix epoch when those
+options are omitted.
+
+Set `time_from_attrs 'true'` to derive the time conversion from the sibling
+`time/.zattrs` metadata instead:
+
+```sql
+create foreign table climate_temperature_from_attrs (
+  time timestamptz,
+  y double precision,
+  x double precision,
+  temperature real
+)
+server public_zarr_server
+options (
+  array_group 'climate/temperature',
+  time_from_attrs 'true'
+);
+```
+
+This mode is intentionally opt-in and cannot be combined with `time_unit` or
+`time_origin`. It requires a rank-3 `[time, y, x]` scan profile with a sibling
+`time` coordinate whose `.zattrs` contains:
+
+- `units` as `<unit> since <origin>`;
+- `calendar` as `proleptic_gregorian`.
+
+Supported constant-duration units are `seconds`, `milliseconds`,
+`microseconds`, `nanoseconds`, `minutes`, `hours`, and `days`. The origin may
+be a representable Gregorian date, date-time, or RFC 3339 date-time; an origin
+without an explicit timezone is interpreted as UTC. Unsupported calendars,
+malformed units, missing metadata, and out-of-range conversions fail clearly.
+
+The resolved time conversion is used for both emitted `timestamptz` values and
+timestamp predicate pruning. For sub-microsecond units, pruning conservatively
+covers every raw value that can round to the PostgreSQL timestamp; PostgreSQL
+still rechecks the exact predicate. The FDW performs no remote metadata I/O
+during planning; metadata is read only when a scan starts.
 
 ## Decode packed scientific values
 
@@ -161,9 +204,9 @@ For floating-point arrays, the Zarr JSON spellings `"NaN"`, `"Infinity"`, and
 NaN payload; an undeclared non-finite value remains a PostgreSQL non-finite
 `double precision` value.
 
-This initial scientific-decoding slice does not convert physical units, infer
-time units/calendars for coordinate pruning, transform a CRS, or apply packing
-attributes to coordinate arrays.
+This value-decoding mode is independent from `time_from_attrs`. It does not
+convert physical units, transform a CRS, or apply packing attributes to
+coordinate arrays.
 
 ## Current limitations
 
