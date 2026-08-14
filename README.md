@@ -22,6 +22,7 @@
 | [HelloWorld](./wrappers/src/fdw/helloworld_fdw) | A demo FDW to show how to develop a basic FDW.                                |      |        |
 | [HubSpot](./wasm-wrappers/fdw/hubspot_fdw)      | A Wasm FDW for [HubSpot](https://www.hubspot.com/)                            | ✅   | ❌     |
 | [Infura](./wasm-wrappers/fdw/infura_fdw)        | A Wasm FDW for [Infura](https://www.infura.io/) blockchain data               | ✅   | ❌     |
+| [Langfuse](./wasm-wrappers/fdw/langfuse_fdw)    | A Wasm FDW for [Langfuse](https://langfuse.com/)                              | ✅   | ❌     |
 | [Logflare](./wrappers/src/fdw/logflare_fdw)     | A FDW for [Logflare](https://logflare.app/)                                   | ✅   | ❌     |
 | [MongoDB](./wrappers/src/fdw/mongodb_fdw)       | A FDW for [MongoDB](https://www.mongodb.com/)                                 | ✅   | ✅     |
 | [MySQL](./wrappers/src/fdw/mysql_fdw)           | A FDW for [MySQL](https://www.mysql.com/)                                     | ✅   | ✅     |

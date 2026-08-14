@@ -27,6 +27,7 @@ Each FDW documentation includes a detailed "Limitations" section that describes 
 | HubSpot       |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
 | Infura        |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ✅     |
 | Iceberg       |   ✅   |   ✅   |   ❌   |   ❌   |    ❌    |    ❌     |
+| Langfuse      |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ✅     |
 | Logflare      |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
 | MongoDB       |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |    ✅     |
 | MySQL         |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |    ✅     |
@@ -57,6 +58,7 @@ See [Developing a Wasm Wrapper](../guides/create-wasm-wrapper.md) for instructio
 | Gravatar      | [Automattic](https://automattic.com) | [Link](gravatar.md)  | [Link](https://github.com/Automattic/gravatar-wasm-fdw)  |
 | HubSpot       | [Supabase](https://supabase.com) | [Link](hubspot.md)   | [Link](https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/hubspot_fdw)   |
 | Infura        | [Supabase](https://supabase.com) | [Link](infura.md)    | [Link](https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/infura_fdw)    |
+| Langfuse      | [Supabase](https://supabase.com) | [Link](langfuse.md)  | [Link](https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/langfuse_fdw)  |
 | Notion        | [Supabase](https://supabase.com) | [Link](notion.md)    | [Link](https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/notion_fdw)    |
 | OpenAPI       | [Cody Bromley](https://github.com/codybrom) | [Link](openapi.md)       | [Link](https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/openapi_fdw)  |
 | Orb           | [Supabase](https://supabase.com) | [Link](orb.md)       | [Link](https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/orb_fdw)  |
