@@ -158,12 +158,12 @@ impl CalFdw {
                 }
             }
 
+            // check for errors
+            http::error_for_status(&resp).map_err(|err| format!("{}: {}", err, resp.body))?;
+
             // transform response to json
             let resp_json: JsonValue =
                 serde_json::from_str(&resp.body).map_err(|e| e.to_string())?;
-
-            // check for errors
-            http::error_for_status(&resp).map_err(|err| format!("{}: {}", err, resp.body))?;
 
             // unify response object to array and save source rows
             let resp_data = resp_json
