@@ -2,6 +2,7 @@
 mod tests;
 mod zarr_fdw;
 
+mod aggregate;
 mod chunk;
 mod dataset;
 mod decode;

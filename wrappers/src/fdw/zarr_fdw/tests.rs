@@ -110,6 +110,43 @@ mod tests {
         });
     }
 
+    fn explain_lines(sql: &str) -> Vec<String> {
+        Spi::connect(|c| {
+            c.select(&format!("EXPLAIN {sql}"), None, &[])
+                .unwrap()
+                .filter_map(|row| row.get::<&str>(1).unwrap().map(str::to_string))
+                .collect()
+        })
+    }
+
+    fn assert_aggregate_pushed_down(sql: &str) {
+        let plan = explain_lines(sql);
+        assert!(
+            plan.iter().any(|line| line.contains("Foreign Scan")),
+            "expected a Foreign Scan in plan: {plan:?}"
+        );
+        assert!(
+            !plan
+                .iter()
+                .any(|line| line.contains("Aggregate") && line.contains("(cost=")),
+            "expected no local Aggregate plan node: {plan:?}"
+        );
+        assert!(
+            plan.iter()
+                .any(|line| line.contains("Wrappers") && line.contains("aggregates =")),
+            "expected aggregate details on the Foreign Scan: {plan:?}"
+        );
+    }
+
+    fn assert_aggregate_falls_back(sql: &str) {
+        let plan = explain_lines(sql);
+        assert!(
+            plan.iter()
+                .any(|line| line.contains("Aggregate") && line.contains("(cost=")),
+            "expected a local Aggregate plan node: {plan:?}"
+        );
+    }
+
     // DDL-only smoke test. The MinIO-backed cases below cover actual scans
     // against the fixture seeded by .ci/docker-compose-native.yaml.
     #[pg_test]
@@ -492,14 +529,582 @@ mod tests {
     }
 
     #[pg_test]
+    fn zarr_minio_scalar_aggregate_pushdown_e2e() {
+        create_minio_e2e_table("zarr_e2e_aggregate", "nested/raw", "real");
+
+        let whole_array_sql = r#"SELECT count(*) AS total_count,
+                                        count(value) AS value_count,
+                                        sum(value) AS value_sum,
+                                        avg(value) AS value_avg,
+                                        min(value) AS value_min,
+                                        max(value) AS value_max
+                                   FROM zarr_e2e_aggregate"#;
+        assert_aggregate_pushed_down(whole_array_sql);
+        assert_aggregate_pushed_down("SELECT count(*) FROM zarr_e2e_aggregate WHERE 120 < x");
+        for operator in ["<", "<=", "=", ">", ">="] {
+            assert_aggregate_pushed_down(&format!(
+                "SELECT count(*) FROM zarr_e2e_aggregate WHERE x {operator} 'NaN'::double precision"
+            ));
+        }
+        assert_aggregate_pushed_down(
+            "SELECT count(*) FROM zarr_e2e_aggregate WHERE x IN ('NaN'::double precision, 110)",
+        );
+
+        Spi::connect_mut(|c| {
+            let whole = c
+                .select(whole_array_sql, None, &[])
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(
+                whole.get_by_name::<i64, _>("total_count").unwrap().unwrap(),
+                60
+            );
+            assert_eq!(
+                whole.get_by_name::<i64, _>("value_count").unwrap().unwrap(),
+                60
+            );
+            assert_eq!(
+                whole.get_by_name::<f32, _>("value_sum").unwrap().unwrap(),
+                3574.0
+            );
+            assert!(
+                (whole.get_by_name::<f64, _>("value_avg").unwrap().unwrap()
+                    - 59.566_666_666_666_67)
+                    .abs()
+                    < 1e-12
+            );
+            assert_eq!(
+                whole.get_by_name::<f32, _>("value_min").unwrap().unwrap(),
+                -7.5
+            );
+            assert_eq!(
+                whole.get_by_name::<f32, _>("value_max").unwrap().unwrap(),
+                143.0
+            );
+
+            let strict = c
+                .select(
+                    r#"SELECT count(*) AS total_count,
+                              count(value) AS value_count,
+                              sum(value) AS value_sum,
+                              avg(value) AS value_avg,
+                              min(value) AS value_min,
+                              max(value) AS value_max
+                         FROM zarr_e2e_aggregate
+                        WHERE x > 120"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(
+                strict
+                    .get_by_name::<i64, _>("total_count")
+                    .unwrap()
+                    .unwrap(),
+                30
+            );
+            assert_eq!(
+                strict
+                    .get_by_name::<i64, _>("value_count")
+                    .unwrap()
+                    .unwrap(),
+                30
+            );
+            assert_eq!(
+                strict.get_by_name::<f32, _>("value_sum").unwrap().unwrap(),
+                1444.0
+            );
+            assert!(
+                (strict.get_by_name::<f64, _>("value_avg").unwrap().unwrap()
+                    - 48.133_333_333_333_33)
+                    .abs()
+                    < 1e-12
+            );
+            assert_eq!(
+                strict.get_by_name::<f32, _>("value_min").unwrap().unwrap(),
+                -7.5
+            );
+            assert_eq!(
+                strict.get_by_name::<f32, _>("value_max").unwrap().unwrap(),
+                143.0
+            );
+
+            let reversed_operand = c
+                .select(
+                    "SELECT count(*) FROM zarr_e2e_aggregate WHERE 120 < x",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap()
+                .get::<i64>(1)
+                .unwrap()
+                .unwrap();
+            assert_eq!(reversed_operand, 30);
+
+            let coordinate_aggregates = c
+                .select(
+                    r#"SELECT count(x) AS x_count,
+                              sum(x) AS x_sum,
+                              avg(x) AS x_avg,
+                              min(x) AS x_min,
+                              max(x) AS x_max
+                         FROM zarr_e2e_aggregate"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(
+                coordinate_aggregates
+                    .get_by_name::<i64, _>("x_count")
+                    .unwrap()
+                    .unwrap(),
+                60
+            );
+            assert_eq!(
+                coordinate_aggregates
+                    .get_by_name::<f64, _>("x_sum")
+                    .unwrap()
+                    .unwrap(),
+                7500.0
+            );
+            assert_eq!(
+                coordinate_aggregates
+                    .get_by_name::<f64, _>("x_avg")
+                    .unwrap()
+                    .unwrap(),
+                125.0
+            );
+            assert_eq!(
+                coordinate_aggregates
+                    .get_by_name::<f64, _>("x_min")
+                    .unwrap()
+                    .unwrap(),
+                100.0
+            );
+            assert_eq!(
+                coordinate_aggregates
+                    .get_by_name::<f64, _>("x_max")
+                    .unwrap()
+                    .unwrap(),
+                150.0
+            );
+
+            let sparse = c
+                .select(
+                    r#"SELECT count(*) AS total_count,
+                              count(value) AS value_count,
+                              sum(value) AS value_sum,
+                              avg(value) AS value_avg,
+                              min(value) AS value_min,
+                              max(value) AS value_max
+                         FROM zarr_e2e_aggregate
+                        WHERE y >= 40 AND x >= 140"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(
+                sparse
+                    .get_by_name::<i64, _>("total_count")
+                    .unwrap()
+                    .unwrap(),
+                8
+            );
+            assert_eq!(
+                sparse
+                    .get_by_name::<i64, _>("value_count")
+                    .unwrap()
+                    .unwrap(),
+                8
+            );
+            assert_eq!(
+                sparse.get_by_name::<f32, _>("value_sum").unwrap().unwrap(),
+                -60.0
+            );
+            assert_eq!(
+                sparse.get_by_name::<f64, _>("value_avg").unwrap().unwrap(),
+                -7.5
+            );
+            assert_eq!(
+                sparse.get_by_name::<f32, _>("value_min").unwrap().unwrap(),
+                -7.5
+            );
+            assert_eq!(
+                sparse.get_by_name::<f32, _>("value_max").unwrap().unwrap(),
+                -7.5
+            );
+
+            let membership = c
+                .select(
+                    r#"SELECT count(*) AS total_count,
+                              sum(value) AS value_sum,
+                              min(value) AS value_min,
+                              max(value) AS value_max
+                         FROM zarr_e2e_aggregate
+                        WHERE x IN (110, 150)"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(
+                membership
+                    .get_by_name::<i64, _>("total_count")
+                    .unwrap()
+                    .unwrap(),
+                20
+            );
+            assert_eq!(
+                membership
+                    .get_by_name::<f32, _>("value_sum")
+                    .unwrap()
+                    .unwrap(),
+                1070.0
+            );
+            assert_eq!(
+                membership
+                    .get_by_name::<f32, _>("value_min")
+                    .unwrap()
+                    .unwrap(),
+                -7.5
+            );
+            assert_eq!(
+                membership
+                    .get_by_name::<f32, _>("value_max")
+                    .unwrap()
+                    .unwrap(),
+                141.0
+            );
+
+            let value_qual = c
+                .select(
+                    r#"SELECT count(*) AS total_count, sum(value) AS value_sum
+                         FROM zarr_e2e_aggregate
+                        WHERE value = -7.5"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(
+                value_qual
+                    .get_by_name::<i64, _>("total_count")
+                    .unwrap()
+                    .unwrap(),
+                8
+            );
+            assert_eq!(
+                value_qual
+                    .get_by_name::<f32, _>("value_sum")
+                    .unwrap()
+                    .unwrap(),
+                -60.0
+            );
+
+            let empty = c
+                .select(
+                    r#"SELECT count(*) AS total_count,
+                              count(value) AS value_count,
+                              sum(value) AS value_sum,
+                              avg(value) AS value_avg,
+                              min(value) AS value_min,
+                              max(value) AS value_max
+                         FROM zarr_e2e_aggregate
+                        WHERE x > 999"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(
+                empty.get_by_name::<i64, _>("total_count").unwrap().unwrap(),
+                0
+            );
+            assert_eq!(
+                empty.get_by_name::<i64, _>("value_count").unwrap().unwrap(),
+                0
+            );
+            assert_eq!(empty.get_by_name::<f32, _>("value_sum").unwrap(), None);
+            assert_eq!(empty.get_by_name::<f64, _>("value_avg").unwrap(), None);
+            assert_eq!(empty.get_by_name::<f32, _>("value_min").unwrap(), None);
+            assert_eq!(empty.get_by_name::<f32, _>("value_max").unwrap(), None);
+
+            for (operator, expected) in [("<", 60), ("<=", 60), ("=", 0), (">", 0), (">=", 0)] {
+                let count = c
+                    .select(
+                        &format!(
+                            "SELECT count(*) FROM zarr_e2e_aggregate WHERE x {operator} 'NaN'::double precision"
+                        ),
+                        None,
+                        &[],
+                    )
+                    .unwrap()
+                    .next()
+                    .unwrap()
+                    .get::<i64>(1)
+                    .unwrap()
+                    .unwrap();
+                assert_eq!(count, expected, "unexpected result for x {operator} NaN");
+            }
+            assert_eq!(
+                c.select(
+                    "SELECT count(*) FROM zarr_e2e_aggregate WHERE x IN ('NaN'::double precision, 110)",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap()
+                .get::<i64>(1)
+                .unwrap(),
+                Some(10)
+            );
+
+            let rescans = c
+                .select(
+                    r#"SELECT ordinal, threshold,
+                              (SELECT count(*)
+                                 FROM zarr_e2e_aggregate
+                                WHERE x > threshold) AS selected
+                         FROM (VALUES (1, 120.0::double precision),
+                                      (2, NULL::double precision),
+                                      (3, 140.0::double precision)) AS limits(ordinal, threshold)
+                        ORDER BY ordinal"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .map(|row| {
+                    (
+                        row.get_by_name::<f64, _>("threshold").unwrap(),
+                        row.get_by_name::<i64, _>("selected").unwrap().unwrap(),
+                    )
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                rescans,
+                vec![(Some(120.0), 30), (None, 0), (Some(140.0), 10)]
+            );
+
+            c.update("SET LOCAL plan_cache_mode = force_generic_plan", None, &[])
+                .unwrap();
+            c.update(
+                "PREPARE zarr_aggregate_threshold(double precision) AS SELECT count(*) FROM zarr_e2e_aggregate WHERE x > $1",
+                None,
+                &[],
+            )
+            .unwrap();
+            for (argument, expected) in [("120", 30), ("NULL", 0), ("140", 10)] {
+                let count = c
+                    .select(
+                        &format!("EXECUTE zarr_aggregate_threshold({argument})"),
+                        None,
+                        &[],
+                    )
+                    .unwrap()
+                    .next()
+                    .unwrap()
+                    .get::<i64>(1)
+                    .unwrap()
+                    .unwrap();
+                assert_eq!(count, expected, "unexpected prepared result for {argument}");
+            }
+            c.update("DEALLOCATE zarr_aggregate_threshold", None, &[])
+                .unwrap();
+        });
+    }
+
+    #[pg_test]
+    fn zarr_scalar_aggregate_unsupported_shapes_fall_back() {
+        create_minio_e2e_table("zarr_e2e_aggregate_fallback", "nested/raw", "real");
+        Spi::connect_mut(|c| {
+            c.update("CREATE SCHEMA zarr_aggregate_custom", None, &[])
+                .unwrap();
+            c.update(
+                r#"CREATE FUNCTION zarr_aggregate_custom.add_hundred(real, real)
+                     RETURNS real
+                     LANGUAGE sql IMMUTABLE STRICT
+                     AS 'SELECT $1 + 100::real'"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"CREATE AGGREGATE zarr_aggregate_custom.sum(real) (
+                     SFUNC = zarr_aggregate_custom.add_hundred,
+                     STYPE = real,
+                     INITCOND = '0'
+                   )"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"CREATE FUNCTION zarr_aggregate_custom.always_true(double precision, double precision)
+                     RETURNS boolean
+                     LANGUAGE plpgsql IMMUTABLE
+                     AS $$ BEGIN RETURN true; END $$"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"CREATE OPERATOR zarr_aggregate_custom.= (
+                     LEFTARG = double precision,
+                     RIGHTARG = double precision,
+                     FUNCTION = zarr_aggregate_custom.always_true
+                   )"#,
+                None,
+                &[],
+            )
+            .unwrap();
+        });
+
+        let cases = [
+            "SELECT count(DISTINCT value) FROM zarr_e2e_aggregate_fallback",
+            "SELECT sum(value + 1) FROM zarr_e2e_aggregate_fallback",
+            "SELECT count(*) FILTER (WHERE value = -7.5) FROM zarr_e2e_aggregate_fallback",
+            "SELECT sum(value ORDER BY x) FROM zarr_e2e_aggregate_fallback",
+            "SELECT count(*) FROM zarr_e2e_aggregate_fallback WHERE value + 1 > 0",
+            "SELECT time, count(*) FROM zarr_e2e_aggregate_fallback GROUP BY time",
+            "SELECT count(*), 1 FROM zarr_e2e_aggregate_fallback",
+            "SELECT count(*) FROM zarr_e2e_aggregate_fallback HAVING count(*) > 0",
+            "SELECT zarr_aggregate_custom.sum(value) FROM zarr_e2e_aggregate_fallback",
+            "SELECT count(*) FROM zarr_e2e_aggregate_fallback WHERE x OPERATOR(zarr_aggregate_custom.=) 999::double precision",
+            "SELECT count(*) FROM zarr_e2e_aggregate_fallback GROUP BY GROUPING SETS ((), ())",
+        ];
+        for sql in cases {
+            assert_aggregate_falls_back(sql);
+        }
+
+        Spi::connect(|c| {
+            assert_eq!(
+                c.select(
+                    "SELECT count(DISTINCT value) FROM zarr_e2e_aggregate_fallback",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap()
+                .get::<i64>(1)
+                .unwrap(),
+                Some(53)
+            );
+            assert_eq!(
+                c.select(
+                    "SELECT sum(value + 1) FROM zarr_e2e_aggregate_fallback",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap()
+                .get::<f64>(1)
+                .unwrap(),
+                Some(3634.0)
+            );
+            assert_eq!(
+                c.select(
+                    "SELECT count(*) FILTER (WHERE value = -7.5) FROM zarr_e2e_aggregate_fallback",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap()
+                .get::<i64>(1)
+                .unwrap(),
+                Some(8)
+            );
+            assert_eq!(
+                c.select(
+                    "SELECT count(*) FROM zarr_e2e_aggregate_fallback WHERE value + 1 > 0",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap()
+                .get::<i64>(1)
+                .unwrap(),
+                Some(52)
+            );
+            assert_eq!(
+                c.select(
+                    "SELECT zarr_aggregate_custom.sum(value) FROM zarr_e2e_aggregate_fallback",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap()
+                .get::<f32>(1)
+                .unwrap(),
+                Some(6000.0)
+            );
+            assert_eq!(
+                c.select(
+                    "SELECT count(*) FROM zarr_e2e_aggregate_fallback WHERE x OPERATOR(zarr_aggregate_custom.=) 999::double precision",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap()
+                .get::<i64>(1)
+                .unwrap(),
+                Some(60)
+            );
+            let grouping_sets = c
+                .select(
+                    "SELECT count(*) FROM zarr_e2e_aggregate_fallback GROUP BY GROUPING SETS ((), ())",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .map(|row| row.get::<i64>(1).unwrap().unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(grouping_sets, vec![60, 60]);
+        });
+    }
+
+    #[pg_test]
     fn zarr_minio_blosc_scan_e2e() {
         create_minio_e2e_table("zarr_e2e_blosc", "nested/blosc", "real");
+
+        assert_aggregate_pushed_down(
+            r#"SELECT count(*) AS total_count,
+                      sum(value) AS value_sum,
+                      avg(value) AS value_avg,
+                      min(value) AS value_min,
+                      max(value) AS value_max
+                 FROM zarr_e2e_blosc
+                WHERE time = '1970-01-01 01:00:00+00'::timestamptz
+                  AND y >= 40
+                  AND x BETWEEN 130 AND 150"#,
+        );
 
         Spi::connect_mut(|c| {
             let summary = c
                 .select(
                     r#"SELECT count(value) AS row_count,
-                              sum(value)::double precision AS value_sum
+                              sum(value)::double precision AS value_sum,
+                              avg(value) AS value_avg,
+                              min(value) AS value_min,
+                              max(value) AS value_max
                        FROM zarr_e2e_blosc
                        WHERE time = '1970-01-01 01:00:00+00'::timestamptz
                          AND y >= 40
@@ -517,6 +1122,18 @@ mod tests {
             assert_eq!(
                 summary.get_by_name::<f64, _>("value_sum").unwrap().unwrap(),
                 834.0
+            );
+            assert_eq!(
+                summary.get_by_name::<f64, _>("value_avg").unwrap().unwrap(),
+                139.0
+            );
+            assert_eq!(
+                summary.get_by_name::<f32, _>("value_min").unwrap().unwrap(),
+                133.0
+            );
+            assert_eq!(
+                summary.get_by_name::<f32, _>("value_max").unwrap().unwrap(),
+                145.0
             );
 
             let boundary = c
@@ -569,12 +1186,23 @@ mod tests {
             true,
         );
 
+        assert_aggregate_pushed_down(
+            r#"SELECT count(*) AS total_count,
+                      count(value) AS valid_count,
+                      sum(value) AS value_sum,
+                      avg(value) AS value_avg,
+                      min(value) AS value_min,
+                      max(value) AS value_max
+                 FROM zarr_e2e_cf_decoded"#,
+        );
+
         Spi::connect(|c| {
             let summary = c
                 .select(
                     r#"SELECT count(*) AS total_count,
                               count(value) AS valid_count,
                               sum(value) AS value_sum,
+                              avg(value) AS value_avg,
                               min(value) AS value_min,
                               max(value) AS value_max
                          FROM zarr_e2e_cf_decoded"#,
@@ -599,11 +1227,62 @@ mod tests {
                 48
             );
             let value_sum = summary.get_by_name::<f64, _>("value_sum").unwrap().unwrap();
+            let value_avg = summary.get_by_name::<f64, _>("value_avg").unwrap().unwrap();
             let value_min = summary.get_by_name::<f64, _>("value_min").unwrap().unwrap();
             let value_max = summary.get_by_name::<f64, _>("value_max").unwrap().unwrap();
             assert!((value_sum - 13_142.86).abs() < 1e-8);
+            assert!((value_avg - 273.809_583_333_333_36).abs() < 1e-10);
             assert!((value_min - 273.15).abs() < 1e-10);
             assert!((value_max - 274.55).abs() < 1e-10);
+
+            let sparse = c
+                .select(
+                    r#"SELECT count(*) AS total_count,
+                              count(value) AS valid_count,
+                              sum(value) AS value_sum,
+                              avg(value) AS value_avg,
+                              min(value) AS value_min,
+                              max(value) AS value_max
+                         FROM zarr_e2e_cf_decoded
+                        WHERE y >= 40 AND x >= 140"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(
+                sparse
+                    .get_by_name::<i64, _>("total_count")
+                    .unwrap()
+                    .unwrap(),
+                8
+            );
+            assert_eq!(
+                sparse
+                    .get_by_name::<i64, _>("valid_count")
+                    .unwrap()
+                    .unwrap(),
+                0
+            );
+            assert_eq!(sparse.get_by_name::<f64, _>("value_sum").unwrap(), None);
+            assert_eq!(sparse.get_by_name::<f64, _>("value_avg").unwrap(), None);
+            assert_eq!(sparse.get_by_name::<f64, _>("value_min").unwrap(), None);
+            assert_eq!(sparse.get_by_name::<f64, _>("value_max").unwrap(), None);
+
+            let decoded_nulls = c
+                .select(
+                    "SELECT count(*) FROM zarr_e2e_cf_decoded WHERE value IS NULL",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap()
+                .get::<i64>(1)
+                .unwrap()
+                .unwrap();
+            assert_eq!(decoded_nulls, 12);
 
             for predicate in [
                 "time = '1970-01-01 00:00:00+00'::timestamptz AND y = 50 AND x = 120",
@@ -692,6 +1371,18 @@ mod tests {
     #[pg_test]
     fn zarr_minio_generic_dimensions_scan_e2e() {
         create_minio_generic4d_table("zarr_e2e_generic4d", "double precision");
+
+        let generic_aggregate_sql = r#"SELECT count(*) AS total_count,
+                      sum(measurement) AS value_sum,
+                      avg(measurement) AS value_avg,
+                      min(measurement) AS value_min,
+                      max(measurement) AS value_max
+                 FROM zarr_e2e_generic4d
+                WHERE forecast_time = '1970-01-01 00:00:03.6+00'::timestamptz
+                  AND level >= 40
+                  AND band > 120
+                  AND channel = 7"#;
+        assert_aggregate_pushed_down(generic_aggregate_sql);
 
         Spi::connect(|c| {
             // No dimension is projected or restricted. The executor must still
@@ -807,6 +1498,47 @@ mod tests {
                 .unwrap()
                 .unwrap();
             assert_eq!(missing_boundary, -7.5);
+
+            let aggregate = c
+                .select(generic_aggregate_sql, None, &[])
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(
+                aggregate
+                    .get_by_name::<i64, _>("total_count")
+                    .unwrap()
+                    .unwrap(),
+                6
+            );
+            assert_eq!(
+                aggregate
+                    .get_by_name::<f32, _>("value_sum")
+                    .unwrap()
+                    .unwrap(),
+                246.0
+            );
+            assert_eq!(
+                aggregate
+                    .get_by_name::<f64, _>("value_avg")
+                    .unwrap()
+                    .unwrap(),
+                41.0
+            );
+            assert_eq!(
+                aggregate
+                    .get_by_name::<f32, _>("value_min")
+                    .unwrap()
+                    .unwrap(),
+                -7.5
+            );
+            assert_eq!(
+                aggregate
+                    .get_by_name::<f32, _>("value_max")
+                    .unwrap()
+                    .unwrap(),
+                143.0
+            );
         });
     }
 

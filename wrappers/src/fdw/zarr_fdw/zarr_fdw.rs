@@ -28,6 +28,9 @@ use std::collections::HashMap;
 
 use supabase_wrappers::prelude::*;
 
+use super::aggregate::{
+    AggregateReducer, aggregate_signature_supported, qual_matches, qual_shape_supported,
+};
 use super::chunk::{
     IndexBounds, axis_chunk_ranges, chunk_key, enumerate_chunks, index_bounds_from_value_range,
 };
@@ -118,6 +121,12 @@ pub(crate) struct ZarrFdw {
     sub_hi: Vec<usize>,
     sub_idx: Vec<usize>,
     pending: bool,
+
+    // --- scalar aggregate execution state -------------------------------
+    aggregate_defs: Vec<Aggregate>,
+    aggregate_quals: Vec<Qual>,
+    aggregate_reducer: Option<AggregateReducer>,
+    aggregate_emitted: bool,
 
     time_spec: TimeSpec,
     rows_out: i64,
@@ -427,6 +436,81 @@ impl ZarrFdw {
         })
     }
 
+    fn value_cell_at_cursor(&self) -> ZarrFdwResult<Option<Cell>> {
+        let dt = self.dtype.expect("dtype set in begin_scan");
+        let offset = checked_flat_offset(&self.sub_idx, &self.chunk_shape)?;
+        let byte_range = checked_chunk_byte_range(offset, dt.itemsize(), self.chunk_bytes.len())?;
+        let raw_value = &self.chunk_bytes[byte_range];
+        match &self.scientific_decoder {
+            Some(decoder) => Ok(decoder.decode(raw_value)?.map(Cell::F64)),
+            None => Ok(Some(Self::value_cell(dt, raw_value)?)),
+        }
+    }
+
+    fn coordinate_cell_at_cursor(&self, axis: usize) -> ZarrFdwResult<Cell> {
+        let meta = self
+            .axis_meta
+            .as_ref()
+            .expect("begin_scan must be called before iter_scan");
+        let chunk_indices = &self.chunks[self.chunk_pos];
+        let chunk_index = usize::try_from(chunk_indices[axis]).map_err(|_| {
+            ZarrFdwError::InvalidMetadata(format!(
+                "chunk index for axis {axis} exceeds this platform's index capacity"
+            ))
+        })?;
+        let chunk_len = meta.chunk_extent(axis)?;
+        let global = chunk_index
+            .checked_mul(chunk_len)
+            .and_then(|base| base.checked_add(self.sub_idx[axis]))
+            .ok_or_else(|| {
+                ZarrFdwError::InvalidMetadata(format!("coordinate index overflow on axis {axis}"))
+            })?;
+        let coords = self.coords[axis].as_deref().ok_or_else(|| {
+            ZarrFdwError::InvalidMetadata(format!(
+                "coordinate '{}' is required for row output or predicate evaluation but was not loaded",
+                self.axes[axis]
+            ))
+        })?;
+        let coord = *coords.get(global).ok_or_else(|| {
+            ZarrFdwError::InvalidMetadata(format!(
+                "coordinate index {global} is outside axis {axis} length {}",
+                coords.len()
+            ))
+        })?;
+        if self.axis_roles[axis] == DimensionRole::Time {
+            let micros = self.time_spec.raw_to_pg_micros(coord)?;
+            let timestamp = TimestampWithTimeZone::try_from(micros)
+                .map_err(|_| ZarrFdwError::TimeOutOfRange(coord))?;
+            Ok(Cell::Timestamptz(timestamp))
+        } else {
+            Ok(Cell::F64(coord))
+        }
+    }
+
+    fn column_cell_at_cursor(
+        &self,
+        column_name: &str,
+        value_cell: Option<&Cell>,
+    ) -> ZarrFdwResult<Option<Cell>> {
+        match self.axes.iter().position(|axis| axis == column_name) {
+            Some(axis) => self.coordinate_cell_at_cursor(axis).map(Some),
+            None => Ok(value_cell.cloned()),
+        }
+    }
+
+    fn advance_cursor(&mut self) {
+        // Advance in C order (last axis varies fastest).
+        for axis in (0..self.rank).rev() {
+            if self.sub_idx[axis] < self.sub_hi[axis] {
+                self.sub_idx[axis] += 1;
+                return;
+            }
+            self.sub_idx[axis] = self.sub_lo[axis];
+        }
+        self.chunk_pos += 1;
+        self.pending = false;
+    }
+
     /// Fetch and decode the chunk at `self.chunk_pos`, priming the within-chunk
     /// index window from `self.bounds`.
     fn load_chunk(&mut self) -> ZarrFdwResult<()> {
@@ -544,79 +628,89 @@ impl ZarrFdw {
     /// Emit the row at the current `sub_idx`, then advance to the next cell.
     /// Returns `Ok(())`; the row should be consumed regardless.
     fn emit_and_advance(&mut self, row: &mut Row) -> ZarrFdwResult<()> {
-        let meta = self
-            .axis_meta
-            .as_ref()
-            .expect("begin_scan must be called before iter_scan");
-        let dt = self.dtype.expect("dtype set in begin_scan");
-        let ci = &self.chunks[self.chunk_pos];
-
-        // flat offset within the chunk (C order)
-        let off = checked_flat_offset(&self.sub_idx, &self.chunk_shape)?;
-        let item = dt.itemsize();
-        let byte_range = checked_chunk_byte_range(off, item, self.chunk_bytes.len())?;
-        let raw_value = &self.chunk_bytes[byte_range];
-        let value_cell = match &self.scientific_decoder {
-            Some(decoder) => decoder.decode(raw_value)?.map(Cell::F64),
-            None => Some(Self::value_cell(dt, raw_value)?),
-        };
+        let value_cell = self.value_cell_at_cursor()?;
 
         for col in &self.tgt_cols {
-            match self.axes.iter().position(|a| a == &col.name) {
-                Some(d) => {
-                    let chunk_index = usize::try_from(ci[d]).map_err(|_| {
-                        ZarrFdwError::InvalidMetadata(format!(
-                            "chunk index for axis {d} exceeds this platform's index capacity"
-                        ))
-                    })?;
-                    let chunk_len = meta.chunk_extent(d)?;
-                    let global = chunk_index
-                        .checked_mul(chunk_len)
-                        .and_then(|base| base.checked_add(self.sub_idx[d]))
-                        .ok_or_else(|| {
-                            ZarrFdwError::InvalidMetadata(format!(
-                                "coordinate index overflow on axis {d}"
-                            ))
-                        })?;
-                    let coords = self.coords[d].as_deref().ok_or_else(|| {
-                        ZarrFdwError::InvalidMetadata(format!(
-                            "coordinate '{}' is required for row output but was not loaded",
-                            self.axes[d]
-                        ))
-                    })?;
-                    let coord = *coords.get(global).ok_or_else(|| {
-                        ZarrFdwError::InvalidMetadata(format!(
-                            "coordinate index {global} is outside axis {d} length {}",
-                            coords.len()
-                        ))
-                    })?;
-                    if self.axis_roles[d] == DimensionRole::Time {
-                        let micros = self.time_spec.raw_to_pg_micros(coord)?;
-                        let ts = TimestampWithTimeZone::try_from(micros)
-                            .map_err(|_| ZarrFdwError::TimeOutOfRange(coord))?;
-                        row.push(col.name.as_str(), Some(Cell::Timestamptz(ts)));
-                    } else {
-                        row.push(col.name.as_str(), Some(Cell::F64(coord)));
-                    }
-                }
-                None => {
-                    row.push(col.name.as_str(), value_cell.clone());
-                }
-            }
+            let cell = self.column_cell_at_cursor(&col.name, value_cell.as_ref())?;
+            row.push(col.name.as_str(), cell);
         }
 
-        // advance in C order (last axis varies fastest)
-        for d in (0..self.rank).rev() {
-            if self.sub_idx[d] < self.sub_hi[d] {
-                self.sub_idx[d] += 1;
-                return Ok(());
-            }
-            self.sub_idx[d] = self.sub_lo[d];
-        }
-        // chunk exhausted
-        self.chunk_pos += 1;
-        self.pending = false;
+        self.advance_cursor();
         Ok(())
+    }
+
+    fn reduce_current_cell(&mut self) -> ZarrFdwResult<()> {
+        let value_cell = self.value_cell_at_cursor()?;
+        let mut matches = true;
+        for qual in &self.aggregate_quals {
+            let cell = self.column_cell_at_cursor(&qual.field, value_cell.as_ref())?;
+            if !qual_matches(qual, cell.as_ref())? {
+                matches = false;
+                break;
+            }
+        }
+        if !matches {
+            self.advance_cursor();
+            return Ok(());
+        }
+
+        let values = self
+            .aggregate_defs
+            .iter()
+            .map(|aggregate| {
+                aggregate
+                    .column
+                    .as_ref()
+                    .map(|column| self.column_cell_at_cursor(&column.name, value_cell.as_ref()))
+                    .transpose()
+                    .map(Option::flatten)
+            })
+            .collect::<ZarrFdwResult<Vec<_>>>()?;
+        let value_refs = values.iter().map(Option::as_ref).collect::<Vec<_>>();
+        self.aggregate_reducer
+            .as_mut()
+            .expect("aggregate reducer set in begin_aggregate_scan")
+            .observe(&value_refs)?;
+        self.advance_cursor();
+        Ok(())
+    }
+
+    fn iter_aggregate_scan(&mut self, row: &mut Row) -> ZarrFdwResult<Option<()>> {
+        if self.aggregate_emitted {
+            if self.rows_out > 0 {
+                stats::inc_stats(FDW_NAME, stats::Metric::RowsOut, self.rows_out);
+                self.rows_out = 0;
+            }
+            return Ok(None);
+        }
+
+        loop {
+            if self.pending {
+                self.reduce_current_cell()?;
+                continue;
+            }
+            if self.chunk_pos >= self.chunks.len() {
+                let results = self
+                    .aggregate_reducer
+                    .take()
+                    .expect("aggregate reducer set in begin_aggregate_scan")
+                    .finish()?;
+                row.clear();
+                for (alias, cell) in results {
+                    row.push(&alias, cell);
+                }
+                self.aggregate_emitted = true;
+                self.rows_out = 1;
+                return Ok(Some(()));
+            }
+            self.load_chunk()?;
+            let empty_window = (0..self.rank).any(|axis| self.sub_lo[axis] > self.sub_hi[axis]);
+            if empty_window {
+                self.chunk_pos += 1;
+                continue;
+            }
+            self.pending = true;
+        }
     }
 }
 
@@ -637,6 +731,14 @@ fn cell_to_f64_bounds(cell: &Cell, is_time: bool, spec: TimeSpec) -> Option<(f64
             Cell::I8(v) => Some(*v as f64),
             _ => None,
         }?;
+        // Coordinate vectors are finite, while PostgreSQL gives NaN a total
+        // ordering above every non-NaN float. Binary-search range math uses
+        // ordinary IEEE comparisons, so a NaN bound could narrow the scan
+        // incorrectly (for example, every finite x satisfies x < NaN in
+        // PostgreSQL). Disable pruning and let the exact/local qual decide.
+        if value.is_nan() {
+            return None;
+        }
         Some((value, value))
     }
 }
@@ -649,9 +751,18 @@ fn qual_to_range(
     is_time: bool,
     spec: TimeSpec,
 ) -> ZarrFdwResult<Option<(Option<f64>, Option<f64>)>> {
+    let evaluated_value = q.param.as_ref().map(|_| q.evaluated_value());
+    let value = match evaluated_value.as_ref() {
+        None => &q.value,
+        Some(ParamValue::Value(value)) => value,
+        // NULL comparisons cannot select a row, but a full scan is the safe
+        // pruning choice for normal scans whose clauses PostgreSQL rechecks.
+        Some(ParamValue::Null | ParamValue::Unevaluated) => return Ok(None),
+    };
+
     if q.use_or {
         // `IN (...)` -> bounding box over the values (over-approximated)
-        let Value::Array(cells) = &q.value else {
+        let Value::Array(cells) = value else {
             return Ok(None);
         };
         let mut lo = f64::INFINITY;
@@ -671,7 +782,7 @@ fn qual_to_range(
         };
     }
 
-    let Value::Cell(cell) = &q.value else {
+    let Value::Cell(cell) = value else {
         return Ok(None);
     };
     let Some((value_lo, value_hi)) = cell_to_f64_bounds(cell, is_time, spec) else {
@@ -959,9 +1070,70 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
             sub_hi: Vec::new(),
             sub_idx: Vec::new(),
             pending: false,
+            aggregate_defs: Vec::new(),
+            aggregate_quals: Vec::new(),
+            aggregate_reducer: None,
+            aggregate_emitted: false,
             time_spec: TimeSpec::default(),
             rows_out: 0,
         })
+    }
+
+    fn supported_aggregates(&self) -> Vec<AggregateKind> {
+        vec![
+            AggregateKind::Count,
+            AggregateKind::CountColumn,
+            AggregateKind::Sum,
+            AggregateKind::Avg,
+            AggregateKind::Min,
+            AggregateKind::Max,
+        ]
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn can_pushdown_aggregate(
+        &mut self,
+        aggregates: &[Aggregate],
+        group_by: &[Column],
+        quals: &[Qual],
+        base_columns: &[Column],
+        all_base_quals_extracted: bool,
+        _options: &HashMap<String, String>,
+    ) -> ZarrFdwResult<bool> {
+        if aggregates.is_empty() || !group_by.is_empty() || !all_base_quals_extracted {
+            return Ok(false);
+        }
+        if aggregates.iter().any(|aggregate| {
+            !aggregate_signature_supported(aggregate)
+                || aggregate.column.as_ref().is_some_and(|column| {
+                    !base_columns
+                        .iter()
+                        .any(|base| base.name == column.name && base.type_oid == column.type_oid)
+                })
+        }) {
+            return Ok(false);
+        }
+        if quals.iter().any(|qual| {
+            !qual_shape_supported(qual)
+                || !base_columns.iter().any(|column| column.name == qual.field)
+        }) {
+            return Ok(false);
+        }
+        Ok(true)
+    }
+
+    fn get_aggregate_rel_size(
+        &mut self,
+        aggregates: &[Aggregate],
+        group_by: &[Column],
+        _quals: &[Qual],
+        _options: &HashMap<String, String>,
+    ) -> ZarrFdwResult<(i64, i32)> {
+        debug_assert!(group_by.is_empty());
+        let width = aggregates.iter().fold(0_i32, |sum, aggregate| {
+            sum.saturating_add(estimated_pg_type_width(aggregate.type_oid))
+        });
+        Ok((1, width.max(DEFAULT_EMPTY_PROJECTION_WIDTH)))
     }
 
     fn get_rel_size(
@@ -985,6 +1157,10 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
         _limit: &Option<Limit>,
         options: &HashMap<String, String>,
     ) -> ZarrFdwResult<()> {
+        self.aggregate_defs.clear();
+        self.aggregate_quals.clear();
+        self.aggregate_reducer = None;
+        self.aggregate_emitted = false;
         self.tgt_cols = columns.to_vec();
         let time_from_attrs = boolean_table_option(options, OPT_TIME_FROM_ATTRS)?;
         validate_time_from_attrs_options(
@@ -1203,7 +1379,35 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
         Ok(())
     }
 
+    fn begin_aggregate_scan_with_base_columns(
+        &mut self,
+        aggregates: &[Aggregate],
+        group_by: &[Column],
+        quals: &[Qual],
+        base_columns: &[Column],
+        options: &HashMap<String, String>,
+    ) -> ZarrFdwResult<()> {
+        debug_assert!(!aggregates.is_empty());
+        debug_assert!(group_by.is_empty());
+        <Self as ForeignDataWrapper<ZarrFdwError>>::begin_scan(
+            self,
+            quals,
+            base_columns,
+            &[],
+            &None,
+            options,
+        )?;
+        self.aggregate_defs = aggregates.to_vec();
+        self.aggregate_quals = quals.to_vec();
+        self.aggregate_reducer = Some(AggregateReducer::new(aggregates)?);
+        self.aggregate_emitted = false;
+        Ok(())
+    }
+
     fn iter_scan(&mut self, row: &mut Row) -> ZarrFdwResult<Option<()>> {
+        if !self.aggregate_defs.is_empty() {
+            return self.iter_aggregate_scan(row);
+        }
         loop {
             if self.pending {
                 row.clear();
@@ -1235,6 +1439,10 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
         [self.sub_lo, self.sub_hi, self.sub_idx] = zeroed_scan_cursors(self.rank);
         self.pending = false;
         self.rows_out = 0;
+        if !self.aggregate_defs.is_empty() {
+            self.aggregate_reducer = Some(AggregateReducer::new(&self.aggregate_defs)?);
+            self.aggregate_emitted = false;
+        }
         Ok(())
     }
 
@@ -1258,6 +1466,10 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
         self.scientific_decoder = None;
         self.fill_bytes = None;
         self.pending = false;
+        self.aggregate_defs.clear();
+        self.aggregate_quals.clear();
+        self.aggregate_reducer = None;
+        self.aggregate_emitted = false;
         self.time_spec = TimeSpec::default();
         self.rows_out = 0;
         Ok(())
@@ -1606,6 +1818,35 @@ mod unit_tests {
         ] {
             assert!(validate_coordinate_values("x", &invalid).is_err());
         }
+    }
+
+    #[test]
+    fn coordinate_nan_qualifiers_never_narrow_chunk_ranges() {
+        for operator in ["=", "<", "<=", ">", ">="] {
+            let qual = Qual {
+                field: "x".to_string(),
+                operator: operator.to_string(),
+                value: Value::Cell(Cell::F64(f64::NAN)),
+                use_or: false,
+                param: None,
+            };
+            assert_eq!(
+                qual_to_range(&qual, false, TimeSpec::default()).unwrap(),
+                None
+            );
+        }
+
+        let finite_and_nan = Qual {
+            field: "x".to_string(),
+            operator: "=".to_string(),
+            value: Value::Array(vec![Cell::F64(f64::NAN), Cell::F64(5.0)]),
+            use_or: true,
+            param: None,
+        };
+        assert_eq!(
+            qual_to_range(&finite_and_nan, false, TimeSpec::default()).unwrap(),
+            Some((Some(5.0), Some(5.0)))
+        );
     }
 
     #[test]

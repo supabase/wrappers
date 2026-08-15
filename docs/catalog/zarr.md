@@ -244,6 +244,41 @@ This value-decoding mode is independent from `time_from_attrs`. It does not
 convert physical units, transform a CRS, or apply packing attributes to
 coordinate arrays.
 
+## Aggregate pushdown
+
+The wrapper reduces ungrouped `count`, `sum`, `avg`, `min`, and `max` queries
+inside the Zarr chunk scan and returns one result row to PostgreSQL. This avoids
+creating one PostgreSQL tuple for every selected array cell:
+
+```sql
+select count(*) as selected_cells,
+       count(temperature) as valid_cells,
+       min(temperature),
+       max(temperature),
+       sum(temperature),
+       avg(temperature)
+from decoded_temperature
+where time >= timestamptz '2025-01-01 00:00:00+00'
+  and time <  timestamptz '2025-02-01 00:00:00+00'
+  and y between 30 and 31
+  and x in (-8.0, -7.5, -7.0);
+```
+
+Chunk ranges are still selected conservatively, but aggregate mode evaluates
+each accepted predicate exactly before updating the reducer. This preserves
+strict inequalities, non-contiguous `IN` membership, unordered coordinates,
+value-column predicates, missing chunks, edge chunks, and decoded NULL
+semantics. `count(*)` includes matching logical cells whose value is NULL;
+`count(column)`, `sum`, `avg`, `min`, and `max` ignore NULL. Non-count
+aggregates return NULL for an empty or all-NULL selection.
+
+Pushdown currently applies only to scalar aggregates over plain columns. A
+query with `GROUP BY`, `DISTINCT`, an aggregate `FILTER` or `HAVING` clause, an
+aggregate expression such as `sum(temperature + 1)`, or a predicate the wrapper
+cannot evaluate exactly remains a normal foreign scan with PostgreSQL doing
+the aggregation. Use `EXPLAIN` to confirm whether a query is represented by a
+single Foreign Scan or retains a local Aggregate node.
+
 ## Current limitations
 
 - Read-only Zarr v2 on S3-compatible storage.
@@ -261,6 +296,9 @@ coordinate arrays.
 - A foreign-table scan still represents one value array and at most one queried
   non-dimension value column. Multi-variable scans and functional `bands`
   execution are not supported.
+- Aggregate pushdown is limited to ungrouped `count`, `sum`, `avg`, `min`, and
+  `max` over plain columns. Grouped, distinct, filtered, ordered, expression,
+  and user-defined aggregates are computed by PostgreSQL.
 - Raw, gzip, zlib, and Blosc/LZ4 chunk compression is supported.
 - Non-empty Zarr filters, Fortran order, Zarr v3, consolidated metadata,
   sharding, writes, and OME-Zarr are not supported.
