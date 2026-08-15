@@ -3,11 +3,14 @@ mod tests;
 mod zarr_fdw;
 
 mod aggregate;
+mod cache;
 mod chunk;
 mod dataset;
 mod decode;
 mod inspect;
 mod meta;
+mod metrics;
+mod prefetch;
 mod scientific;
 mod store;
 

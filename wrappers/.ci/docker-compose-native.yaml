@@ -166,6 +166,7 @@ services:
       /mc stat s3/warehouse/zarr/e2e.zarr/nested/raw/.zattrs;
       /mc stat s3/warehouse/zarr/e2e.zarr/nested/raw/0.0.0;
       /mc stat s3/warehouse/zarr/e2e.zarr/nested/blosc/0.1.1;
+      /mc stat s3/warehouse/zarr/e2e.zarr/nested/lazy1m/.zarray;
       if /mc stat s3/warehouse/zarr/e2e.zarr/nested/raw/0.1.1; then
         echo 'unexpected raw chunk 0.1.1 in sparse Zarr fixture';
         exit 1;

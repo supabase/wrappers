@@ -9,12 +9,6 @@
 use super::meta::ArrayMeta;
 use super::{ZarrFdwError, ZarrFdwResult};
 
-/// Bound the eager chunk-coordinate list used by the MVP executor. This keeps
-/// hostile or accidentally enormous metadata from exhausting a PostgreSQL
-/// backend before any object is read.
-const MAX_SELECTED_CHUNKS: usize = 1_000_000;
-const MAX_SELECTED_CHUNK_BYTES: usize = 64 * 1024 * 1024;
-
 /// Inclusive 1-based? No — plain 0-based inclusive index bounds `(start, end)`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct IndexBounds {
@@ -138,121 +132,82 @@ pub fn chunk_key(sep: &str, indices: &[u64]) -> String {
         .join(sep)
 }
 
-fn validate_selected_chunk_budget(
-    chunk_count: usize,
-    rank: usize,
-    max_bytes: usize,
-) -> ZarrFdwResult<()> {
-    let payload_bytes = rank
-        .checked_mul(std::mem::size_of::<u64>())
-        .ok_or_else(|| {
-            ZarrFdwError::InvalidMetadata(
-                "selected chunk index size exceeds this platform's capacity".to_string(),
-            )
-        })?;
-    let bytes_per_chunk = std::mem::size_of::<Vec<u64>>()
-        .checked_add(payload_bytes)
-        .ok_or_else(|| {
-            ZarrFdwError::InvalidMetadata(
-                "selected chunk index size exceeds this platform's capacity".to_string(),
-            )
-        })?;
-    let allocation_bytes = chunk_count.checked_mul(bytes_per_chunk).ok_or_else(|| {
-        ZarrFdwError::InvalidMetadata(
-            "selected chunk index allocation exceeds this platform's capacity".to_string(),
-        )
-    })?;
-    if allocation_bytes > max_bytes {
-        return Err(ZarrFdwError::InvalidMetadata(format!(
-            "query's eager chunk index list requires {allocation_bytes} bytes for {chunk_count} rank-{rank} entries, exceeding the safety limit of {max_bytes} bytes"
-        )));
-    }
-    Ok(())
+/// Lazy Cartesian product of per-axis chunk index ranges.
+///
+/// The cursor stores only rank-sized state. `next_into` reuses a caller-owned
+/// output vector and visits chunks in row-major (C) order, with the last axis
+/// varying fastest.
+#[derive(Debug, Default)]
+pub struct ChunkIndexCursor {
+    starts: Vec<u64>,
+    ends: Vec<u64>,
+    next: Vec<u64>,
+    has_next: bool,
 }
 
-/// Cartesian product of per-axis chunk index ranges.
-///
-/// `axis_chunk_ranges` is one `(start, end)` inclusive pair per dimension, in
-/// array dimension order. Returns the list of chunk index vectors, in
-/// row-major (C order) iteration: last axis varies fastest, matching both the
-/// byte layout of the unfiltered cube and Zarr chunk naming.
-pub fn enumerate_chunks(axis_chunk_ranges: &[(usize, usize)]) -> ZarrFdwResult<Vec<Vec<u64>>> {
-    let mut out = Vec::new();
-    let n = axis_chunk_ranges.len();
-    if n == 0 {
-        return Ok(out);
-    }
-    if axis_chunk_ranges.iter().any(|&(start, end)| start > end) {
-        return Ok(out);
-    }
-    let mut idx = axis_chunk_ranges
-        .iter()
-        .map(|&(start, _)| {
-            u64::try_from(start).map_err(|_| {
-                ZarrFdwError::InvalidMetadata(
-                    "chunk index exceeds the Zarr v2 u64 index capacity".to_string(),
-                )
-            })
-        })
-        .collect::<ZarrFdwResult<Vec<_>>>()?;
-    let ends = axis_chunk_ranges
-        .iter()
-        .map(|&(_, end)| {
-            u64::try_from(end).map_err(|_| {
-                ZarrFdwError::InvalidMetadata(
-                    "chunk index exceeds the Zarr v2 u64 index capacity".to_string(),
-                )
-            })
-        })
-        .collect::<ZarrFdwResult<Vec<_>>>()?;
-    let total = axis_chunk_ranges
-        .iter()
-        .try_fold(1usize, |total, &(start, end)| {
-            let count = end
-                .checked_sub(start)
-                .and_then(|span| span.checked_add(1))
-                .ok_or_else(|| {
-                    ZarrFdwError::InvalidMetadata(
-                        "selected chunk count exceeds this platform's index capacity".to_string(),
-                    )
-                })?;
-            total.checked_mul(count).ok_or_else(|| {
-                ZarrFdwError::InvalidMetadata(
-                    "selected chunk count exceeds this platform's index capacity".to_string(),
-                )
-            })
-        })?;
-    if total > MAX_SELECTED_CHUNKS {
-        return Err(ZarrFdwError::InvalidMetadata(format!(
-            "query selects {total} chunks, exceeding the safety limit of {MAX_SELECTED_CHUNKS}"
-        )));
-    }
-    validate_selected_chunk_budget(total, n, MAX_SELECTED_CHUNK_BYTES)?;
-    out.try_reserve_exact(total).map_err(|_| {
-        ZarrFdwError::InvalidMetadata(format!(
-            "could not allocate the selected chunk list ({total} entries)"
-        ))
-    })?;
-    for _ in 0..total {
-        out.push(idx.clone());
-        // increment in row-major order
-        let mut d = n;
-        while d > 0 {
-            d -= 1;
-            idx[d] = idx[d]
-                .checked_add(1)
-                .ok_or_else(|| ZarrFdwError::InvalidMetadata("chunk index overflow".to_string()))?;
-            if idx[d] <= ends[d] {
-                break;
-            }
-            idx[d] = u64::try_from(axis_chunk_ranges[d].0).map_err(|_| {
-                ZarrFdwError::InvalidMetadata(
-                    "chunk index exceeds the Zarr v2 u64 index capacity".to_string(),
-                )
-            })?;
+impl ChunkIndexCursor {
+    pub fn new(axis_chunk_ranges: &[(usize, usize)]) -> ZarrFdwResult<Self> {
+        if axis_chunk_ranges.is_empty() || axis_chunk_ranges.iter().any(|&(start, end)| start > end)
+        {
+            return Ok(Self::default());
         }
+
+        let starts = axis_chunk_ranges
+            .iter()
+            .map(|&(start, _)| {
+                u64::try_from(start).map_err(|_| {
+                    ZarrFdwError::InvalidMetadata(
+                        "chunk index exceeds the Zarr v2 u64 index capacity".to_string(),
+                    )
+                })
+            })
+            .collect::<ZarrFdwResult<Vec<_>>>()?;
+        let ends = axis_chunk_ranges
+            .iter()
+            .map(|&(_, end)| {
+                u64::try_from(end).map_err(|_| {
+                    ZarrFdwError::InvalidMetadata(
+                        "chunk index exceeds the Zarr v2 u64 index capacity".to_string(),
+                    )
+                })
+            })
+            .collect::<ZarrFdwResult<Vec<_>>>()?;
+        let next = starts.clone();
+
+        Ok(Self {
+            starts,
+            ends,
+            next,
+            has_next: true,
+        })
     }
-    Ok(out)
+
+    /// Copy the next chunk index into `destination`, reusing its allocation.
+    /// Returns `false` after the cursor is exhausted and clears `destination`
+    /// so callers cannot accidentally reuse a stale chunk index.
+    pub fn next_into(&mut self, destination: &mut Vec<u64>) -> bool {
+        if !self.has_next {
+            destination.clear();
+            return false;
+        }
+
+        destination.clone_from(&self.next);
+        for axis in (0..self.next.len()).rev() {
+            if self.next[axis] < self.ends[axis] {
+                self.next[axis] += 1;
+                return true;
+            }
+            self.next[axis] = self.starts[axis];
+        }
+
+        self.has_next = false;
+        true
+    }
+
+    pub fn reset(&mut self) {
+        self.next.clone_from(&self.starts);
+        self.has_next = !self.starts.is_empty();
+    }
 }
 
 /// Compute the per-axis chunk ranges for a cube given per-axis index bounds.
@@ -349,10 +304,20 @@ mod tests {
         assert_eq!(chunk_key("/", &[3, 14, 22]), "3/14/22");
     }
 
+    fn collect_chunks(cursor: &mut ChunkIndexCursor) -> Vec<Vec<u64>> {
+        let mut chunks = Vec::new();
+        let mut current = Vec::new();
+        while cursor.next_into(&mut current) {
+            chunks.push(current.clone());
+        }
+        chunks
+    }
+
     #[test]
-    fn test_enumerate_chunks_row_major() {
+    fn chunk_cursor_is_row_major() {
         let ranges = vec![(0, 1), (1, 2), (0, 0)];
-        let out = enumerate_chunks(&ranges).unwrap();
+        let mut cursor = ChunkIndexCursor::new(&ranges).unwrap();
+        let out = collect_chunks(&mut cursor);
         let keys: Vec<String> = out.iter().map(|i| chunk_key(".", i)).collect();
         assert_eq!(keys, vec!["0.1.0", "0.2.0", "1.1.0", "1.2.0"]);
     }
@@ -372,24 +337,68 @@ mod tests {
     }
 
     #[test]
-    fn reject_chunk_enumeration_overflow_or_excess() {
-        assert!(enumerate_chunks(&[(0, usize::MAX)]).is_err());
-        assert!(matches!(
-            enumerate_chunks(&[(0, 1_000), (0, 1_000)]),
-            Err(ZarrFdwError::InvalidMetadata(message))
-                if message.contains("exceeding the safety limit")
-        ));
+    fn empty_and_inverted_ranges_are_exhausted() {
+        for ranges in [vec![], vec![(2, 1)], vec![(0, 1), (3, 2)]] {
+            let mut cursor = ChunkIndexCursor::new(&ranges).unwrap();
+            let mut current = vec![99];
+            assert!(!cursor.next_into(&mut current));
+            assert!(current.is_empty());
+            cursor.reset();
+            assert!(!cursor.next_into(&mut current));
+        }
     }
 
     #[test]
-    fn selected_chunk_budget_accounts_for_rank_sized_payloads() {
-        let one_entry = std::mem::size_of::<Vec<u64>>() + 4 * std::mem::size_of::<u64>();
-        validate_selected_chunk_budget(1, 4, one_entry).unwrap();
-        assert!(matches!(
-            validate_selected_chunk_budget(2, 4, one_entry),
-            Err(ZarrFdwError::InvalidMetadata(message))
-                if message.contains("eager chunk index list")
-        ));
-        assert!(validate_selected_chunk_budget(usize::MAX, 64, usize::MAX).is_err());
+    fn cursor_reset_replays_partial_and_exhausted_ranges() {
+        let mut cursor = ChunkIndexCursor::new(&[(0, 1), (4, 5)]).unwrap();
+        let mut current = Vec::new();
+        assert!(cursor.next_into(&mut current));
+        assert_eq!(current, vec![0, 4]);
+        assert!(cursor.next_into(&mut current));
+        assert_eq!(current, vec![0, 5]);
+
+        cursor.reset();
+        assert_eq!(
+            collect_chunks(&mut cursor),
+            vec![vec![0, 4], vec![0, 5], vec![1, 4], vec![1, 5]]
+        );
+
+        cursor.reset();
+        assert_eq!(collect_chunks(&mut cursor).len(), 4);
+    }
+
+    #[test]
+    fn cursor_accepts_more_than_one_million_chunks_without_enumerating_them() {
+        let mut cursor = ChunkIndexCursor::new(&[(0, 1_000_000)]).unwrap();
+        let mut current = Vec::new();
+        assert!(cursor.next_into(&mut current));
+        assert_eq!(current, vec![0]);
+        assert!(cursor.next_into(&mut current));
+        assert_eq!(current, vec![1]);
+    }
+
+    #[test]
+    fn cursor_supports_rank_64_with_rank_sized_state() {
+        let ranges = vec![(0, 0); 64];
+        let mut cursor = ChunkIndexCursor::new(&ranges).unwrap();
+        let mut current = Vec::new();
+        assert!(cursor.next_into(&mut current));
+        assert_eq!(current, vec![0; 64]);
+        assert!(!cursor.next_into(&mut current));
+        assert!(current.is_empty());
+
+        cursor.reset();
+        assert!(cursor.next_into(&mut current));
+        assert_eq!(current, vec![0; 64]);
+    }
+
+    #[test]
+    fn cursor_exhausts_at_the_platform_maximum_without_overflow() {
+        let mut cursor = ChunkIndexCursor::new(&[(usize::MAX, usize::MAX)]).unwrap();
+        let mut current = Vec::new();
+        assert!(cursor.next_into(&mut current));
+        assert_eq!(current, vec![u64::try_from(usize::MAX).unwrap()]);
+        assert!(!cursor.next_into(&mut current));
+        assert!(current.is_empty());
     }
 }

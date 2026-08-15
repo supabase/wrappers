@@ -16,8 +16,8 @@ use std::ptr;
 
 use crate::instance;
 use crate::interface::{
-    Aggregate, AggregateKind, Cell, Column, ExprEval, Limit, Param, ParamValue, Qual, Row, Sort,
-    Value,
+    Aggregate, AggregateKind, Cell, Column, ExplainProperty, ExplainValue, ExprEval, Limit, Param,
+    ParamValue, Qual, Row, Sort, Value,
 };
 use crate::limit::*;
 use crate::memctx;
@@ -1124,6 +1124,53 @@ pub(super) extern "C-unwind" fn explain_foreign_scan<
 
             let value = ctx.pstrdup(&format!("group_by = {:?}", state.group_by));
             pg_sys::ExplainPropertyText(label, value, es);
+        }
+
+        if let Some(instance) = state.instance.as_ref() {
+            for property in instance.explain() {
+                emit_explain_property(&ctx, property, es);
+            }
+        }
+    }
+}
+
+unsafe fn emit_explain_property(
+    ctx: &PgMemoryContexts,
+    property: ExplainProperty,
+    es: *mut pg_sys::ExplainState,
+) {
+    unsafe {
+        let label = ctx.pstrdup(&property.label);
+        match property.value {
+            ExplainValue::Text(value) => {
+                let value = ctx.pstrdup(&value);
+                pg_sys::ExplainPropertyText(label, value, es);
+            }
+            ExplainValue::Integer { value, unit } => {
+                let unit = unit
+                    .as_deref()
+                    .map_or(ptr::null_mut(), |unit| ctx.pstrdup(unit));
+                pg_sys::ExplainPropertyInteger(label, unit, value, es);
+            }
+            ExplainValue::Unsigned { value, unit } => {
+                let unit = unit
+                    .as_deref()
+                    .map_or(ptr::null_mut(), |unit| ctx.pstrdup(unit));
+                pg_sys::ExplainPropertyUInteger(label, unit, value, es);
+            }
+            ExplainValue::Float {
+                value,
+                unit,
+                digits,
+            } => {
+                let unit = unit
+                    .as_deref()
+                    .map_or(ptr::null_mut(), |unit| ctx.pstrdup(unit));
+                pg_sys::ExplainPropertyFloat(label, unit, value, digits, es);
+            }
+            ExplainValue::Boolean(value) => {
+                pg_sys::ExplainPropertyBool(label, value, es);
+            }
         }
     }
 }

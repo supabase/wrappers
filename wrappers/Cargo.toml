@@ -208,6 +208,8 @@ zarr_fdw = [
     "aws-sdk-s3",
     "blosc-rs",
     "chrono",
+    "futures-util",
+    "lru",
     "tokio",
     "tokio-util",
     "async-compression",
@@ -288,6 +290,7 @@ aws-sdk-s3 = { version = "1.86.0", optional = true }
 
 # for zarr_fdw
 blosc-rs = { version = "0.4.0", features = ["lz4"], optional = true }
+lru = { version = "0.12.5", optional = true }
 
 # for s3vectors_fdw
 aws-sdk-s3vectors = { version = "1.14.0", optional = true }

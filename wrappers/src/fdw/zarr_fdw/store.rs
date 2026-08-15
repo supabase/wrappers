@@ -8,8 +8,12 @@
 use aws_config::BehaviorVersion;
 use aws_sdk_s3 as s3;
 use http::Uri;
+use pgrx::pg_sys;
 use std::collections::HashMap;
+use std::future::Future;
+use std::time::Duration;
 use tokio::io::AsyncReadExt;
+use tokio::time::{MissedTickBehavior, interval};
 
 use supabase_wrappers::prelude::*;
 
@@ -18,6 +22,51 @@ use super::{ZarrFdwError, ZarrFdwResult};
 /// Metadata objects are tiny JSON documents. Chunk callers provide a tighter
 /// limit derived from their declared decoded layout.
 pub(crate) const MAX_METADATA_OBJECT_BYTES: usize = 1024 * 1024;
+const INTERRUPT_POLL_INTERVAL: Duration = Duration::from_millis(25);
+
+enum Interruptible<T> {
+    Ready(T),
+    Interrupted,
+}
+
+fn postgres_interrupt_pending() -> bool {
+    // PostgreSQL declares this as volatile sig_atomic_t because signal
+    // handlers update it asynchronously.
+    unsafe { std::ptr::read_volatile(&raw const pg_sys::InterruptPending) != 0 }
+}
+
+fn process_postgres_interrupts() {
+    unsafe {
+        if postgres_interrupt_pending() {
+            pg_sys::ProcessInterrupts();
+        }
+    }
+}
+
+async fn await_interruptibly<F>(future: F) -> Interruptible<F::Output>
+where
+    F: Future,
+{
+    tokio::pin!(future);
+    if postgres_interrupt_pending() {
+        return Interruptible::Interrupted;
+    }
+
+    let mut ticker = interval(INTERRUPT_POLL_INTERVAL);
+    ticker.set_missed_tick_behavior(MissedTickBehavior::Skip);
+    ticker.tick().await;
+    loop {
+        tokio::select! {
+            biased;
+            _ = ticker.tick() => {
+                if postgres_interrupt_pending() {
+                    return Interruptible::Interrupted;
+                }
+            }
+            result = &mut future => return Interruptible::Ready(result),
+        }
+    }
+}
 
 /// One bounded page of immediate child prefixes below a Zarr group.
 ///
@@ -186,6 +235,23 @@ pub(crate) struct ZarrStore {
 }
 
 impl ZarrStore {
+    fn block_on_interruptibly<T, F>(&self, future: F) -> ZarrFdwResult<T>
+    where
+        F: Future<Output = ZarrFdwResult<T>>,
+    {
+        match self.rt.block_on(await_interruptibly(future)) {
+            Interruptible::Ready(result) => result,
+            Interruptible::Interrupted => {
+                // `await_interruptibly` and its owned SDK future have been
+                // dropped before PostgreSQL is allowed to raise ERROR.
+                process_postgres_interrupts();
+                Err(ZarrFdwError::InvalidMetadata(
+                    "query interruption was requested".to_string(),
+                ))
+            }
+        }
+    }
+
     /// Build an S3-backed store from `CREATE SERVER` options.
     pub fn new(server: &ForeignServer) -> ZarrFdwResult<Self> {
         // Cannot use create_async_runtime() as the runtime needs multiple threads
@@ -279,45 +345,19 @@ impl ZarrStore {
         key: &str,
         max_bytes: usize,
     ) -> ZarrFdwResult<Option<Vec<u8>>> {
-        let full_key = self.url.object_key(key);
-
-        let resp = match self
-            .client
-            .get_object()
-            .bucket(&self.url.bucket)
-            .key(&full_key)
-            .send()
+        self.get_object_optional_owned(key.to_string(), max_bytes)
             .await
-        {
-            Ok(response) => response,
-            Err(error) => {
-                let modeled_no_such_key = error
-                    .as_service_error()
-                    .is_some_and(|error| error.is_no_such_key());
-                let status = error
-                    .raw_response()
-                    .map(|response| response.status().as_u16());
-                if is_missing_object_response(modeled_no_such_key, status) {
-                    return Ok(None);
-                }
-                return Err(error.into());
-            }
-        };
-        if let Some(content_length) = resp.content_length {
-            let content_length = usize::try_from(content_length).map_err(|_| {
-                ZarrFdwError::InvalidMetadata(format!(
-                    "object '{full_key}' length exceeds this platform's index capacity"
-                ))
-            })?;
-            if content_length > max_bytes {
-                return Err(ZarrFdwError::InvalidMetadata(format!(
-                    "object '{full_key}' is {content_length} bytes, exceeding the read limit of {max_bytes}"
-                )));
-            }
-        }
-        Ok(Some(
-            read_bounded_object(resp.body.into_async_read(), max_bytes, &full_key).await?,
-        ))
+    }
+
+    /// Create an owned object fetch future suitable for the foreground
+    /// prefetch window. The future owns cloned SDK/url state and therefore
+    /// never borrows the PostgreSQL scan object while it is queued.
+    pub fn get_object_optional_owned(
+        &self,
+        key: String,
+        max_bytes: usize,
+    ) -> impl Future<Output = ZarrFdwResult<Option<Vec<u8>>>> + 'static {
+        get_object_optional_owned(self.client.clone(), self.url.clone(), key, max_bytes)
     }
 
     /// Fetch an object that is required rather than a sparse Zarr chunk.
@@ -332,7 +372,7 @@ impl ZarrStore {
     /// Synchronous fetch used from `begin_scan`/`iter_scan` (FDW callbacks are
     /// not async).
     pub fn get_object_sync(&self, key: &str, max_bytes: usize) -> ZarrFdwResult<Vec<u8>> {
-        self.rt.block_on(self.get_object(key, max_bytes))
+        self.block_on_interruptibly(self.get_object(key, max_bytes))
     }
 
     /// Synchronous optional fetch used for sparse Zarr chunks.
@@ -341,7 +381,7 @@ impl ZarrStore {
         key: &str,
         max_bytes: usize,
     ) -> ZarrFdwResult<Option<Vec<u8>>> {
-        self.rt.block_on(self.get_object_optional(key, max_bytes))
+        self.block_on_interruptibly(self.get_object_optional(key, max_bytes))
     }
 
     /// List one bounded page of immediate child prefixes below `path`.
@@ -404,9 +444,54 @@ impl ZarrStore {
         path: &str,
         continuation_token: Option<String>,
     ) -> ZarrFdwResult<DirectoryPage> {
-        self.rt
-            .block_on(self.list_directory_page(path, continuation_token))
+        self.block_on_interruptibly(self.list_directory_page(path, continuation_token))
     }
+}
+
+async fn get_object_optional_owned(
+    client: s3::Client,
+    url: StoreUrl,
+    key: String,
+    max_bytes: usize,
+) -> ZarrFdwResult<Option<Vec<u8>>> {
+    let full_key = url.object_key(&key);
+
+    let resp = match client
+        .get_object()
+        .bucket(&url.bucket)
+        .key(&full_key)
+        .send()
+        .await
+    {
+        Ok(response) => response,
+        Err(error) => {
+            let modeled_no_such_key = error
+                .as_service_error()
+                .is_some_and(|error| error.is_no_such_key());
+            let status = error
+                .raw_response()
+                .map(|response| response.status().as_u16());
+            if is_missing_object_response(modeled_no_such_key, status) {
+                return Ok(None);
+            }
+            return Err(error.into());
+        }
+    };
+    if let Some(content_length) = resp.content_length {
+        let content_length = usize::try_from(content_length).map_err(|_| {
+            ZarrFdwError::InvalidMetadata(format!(
+                "object '{full_key}' length exceeds this platform's index capacity"
+            ))
+        })?;
+        if content_length > max_bytes {
+            return Err(ZarrFdwError::InvalidMetadata(format!(
+                "object '{full_key}' is {content_length} bytes, exceeding the read limit of {max_bytes}"
+            )));
+        }
+    }
+    Ok(Some(
+        read_bounded_object(resp.body.into_async_read(), max_bytes, &full_key).await?,
+    ))
 }
 
 async fn read_bounded_object<R>(

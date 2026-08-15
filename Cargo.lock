@@ -10692,6 +10692,7 @@ dependencies = [
  "iceberg-catalog-rest",
  "iceberg-catalog-s3tables",
  "jwt-simple",
+ "lru 0.12.5",
  "mongodb",
  "mysql_async",
  "num-traits 0.2.19",

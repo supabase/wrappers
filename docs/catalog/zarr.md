@@ -40,6 +40,19 @@ required, `path_style_url 'true'`. Authentication can use the AWS provider
 chain, `anonymous 'true'`, a complete direct key pair, or a complete Vault key
 pair. Authentication modes cannot be combined.
 
+Remote chunk execution is bounded by three optional server settings:
+
+| Option | Default | Range |
+| --- | ---: | ---: |
+| `max_concurrent_reads` | `4` | `1`–`32` |
+| `max_inflight_bytes` | `269484032` | 1 MiB–1 GiB |
+| `compressed_cache_bytes` | `67108864` | `0`–1 GiB; `0` disables caching |
+
+Reads are prefetched in deterministic chunk order without background tasks.
+The compressed cache belongs to one query execution, so bytes never cross
+roles, credentials, server changes, or queries. A rescan within the same query
+can reuse cached chunks.
+
 Inspection requires `s3:ListBucket` and `s3:GetObject`. Scanning requires
 `s3:GetObject`.
 
@@ -127,6 +140,23 @@ where time >= timestamptz '2025-01-01 00:00:00+00'
   and y between 30 and 31
   and x between -8 and -7;
 ```
+
+Chunk indexes are generated lazily in C order. Their memory is proportional to
+array rank rather than the number of selected chunks. PostgreSQL `LIMIT` can
+therefore stop later chunk requests naturally, but it does not bypass metadata
+reads or the bounded coordinate vectors required for projection and pruning.
+
+`EXPLAIN ANALYZE` reports actual shape/chunk selection, request and byte counts,
+cache activity, synthesized fill bytes, decoded cells, tuple counts, timings,
+and aggregate mode. Plain `EXPLAIN` remains network-free, so runtime metadata is
+not fabricated or fetched during planning. Chunk-statistic pruning is reported
+as disabled until the separately validated statistics catalog is implemented.
+The query-local EXPLAIN counters include work initiated before an early `LIMIT`.
+Errors and cancellations clean up queued reads safely but do not return an
+`EXPLAIN ANALYZE` plan. The older persistent `wrappers_fdw_stats` counters are
+flushed only when the iterator reaches EOF; like other Wrappers FDWs, an executor
+that stops early may not persist the final delta because SPI is not safe from
+`EndForeignScan`.
 
 The selected value array must have a `_ARRAY_DIMENSIONS` attribute containing
 one unique, safe name for every array dimension, in array order. Each name must
@@ -307,12 +337,12 @@ single Foreign Scan or retains a local Aggregate node.
   ordered codec pipeline instead of the v2 `.zarray` layout. The dataset and
   scientific-semantics models are intended to accept a future v3 adapter, but
   current scans and inspection remain explicitly v2-only.
-- `LIMIT` alone does not prevent coordinate metadata loading or matching-chunk
-  enumeration; use selective coordinate predicates for large arrays.
+- `LIMIT` alone does not prevent coordinate metadata loading; use selective
+  coordinate predicates for large arrays. It does stop later lazy data-chunk
+  reads after PostgreSQL has accepted enough rows.
 - Scan execution limits each loaded coordinate and all loaded coordinates
-  together to 16,777,216 values. It also limits an eager selection to one
-  million chunk coordinates and 64 MiB of rank-sized chunk-index allocation;
-  decoded chunks retain their existing 256 MiB limit. These are safety bounds,
-  not Zarr format limits.
+  together to 16,777,216 values. Chunk-index iteration is O(rank); decoded
+  chunks retain their 256 MiB limit and remote concurrency/cache use the server
+  byte limits above. These are safety bounds, not Zarr format limits.
 - Inspection has hard depth, node, list-page, object-size, and total metadata
   limits and fails explicitly rather than returning a truncated hierarchy.

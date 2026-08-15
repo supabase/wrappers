@@ -931,6 +931,121 @@ impl Aggregate {
     }
 }
 
+/// A typed value emitted by an FDW's runtime [`EXPLAIN`](ForeignDataWrapper::explain) hook.
+///
+/// Keeping values typed preserves numbers and booleans in structured EXPLAIN
+/// formats instead of forcing every FDW-specific property through text.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ExplainValue {
+    Text(String),
+    Integer {
+        value: i64,
+        unit: Option<String>,
+    },
+    Unsigned {
+        value: u64,
+        unit: Option<String>,
+    },
+    Float {
+        value: f64,
+        unit: Option<String>,
+        digits: i32,
+    },
+    Boolean(bool),
+}
+
+/// One FDW-specific property to append to `EXPLAIN ANALYZE` output.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExplainProperty {
+    pub label: String,
+    pub value: ExplainValue,
+}
+
+impl ExplainProperty {
+    pub fn text(label: impl Into<String>, value: impl Into<String>) -> Self {
+        Self {
+            label: label.into(),
+            value: ExplainValue::Text(value.into()),
+        }
+    }
+
+    pub fn integer(label: impl Into<String>, value: i64) -> Self {
+        Self {
+            label: label.into(),
+            value: ExplainValue::Integer { value, unit: None },
+        }
+    }
+
+    pub fn integer_with_unit(
+        label: impl Into<String>,
+        value: i64,
+        unit: impl Into<String>,
+    ) -> Self {
+        Self {
+            label: label.into(),
+            value: ExplainValue::Integer {
+                value,
+                unit: Some(unit.into()),
+            },
+        }
+    }
+
+    pub fn unsigned(label: impl Into<String>, value: u64) -> Self {
+        Self {
+            label: label.into(),
+            value: ExplainValue::Unsigned { value, unit: None },
+        }
+    }
+
+    pub fn unsigned_with_unit(
+        label: impl Into<String>,
+        value: u64,
+        unit: impl Into<String>,
+    ) -> Self {
+        Self {
+            label: label.into(),
+            value: ExplainValue::Unsigned {
+                value,
+                unit: Some(unit.into()),
+            },
+        }
+    }
+
+    pub fn float(label: impl Into<String>, value: f64, digits: i32) -> Self {
+        Self {
+            label: label.into(),
+            value: ExplainValue::Float {
+                value,
+                unit: None,
+                digits,
+            },
+        }
+    }
+
+    pub fn float_with_unit(
+        label: impl Into<String>,
+        value: f64,
+        unit: impl Into<String>,
+        digits: i32,
+    ) -> Self {
+        Self {
+            label: label.into(),
+            value: ExplainValue::Float {
+                value,
+                unit: Some(unit.into()),
+                digits,
+            },
+        }
+    }
+
+    pub fn boolean(label: impl Into<String>, value: bool) -> Self {
+        Self {
+            label: label.into(),
+            value: ExplainValue::Boolean(value),
+        }
+    }
+}
+
 /// The Foreign Data Wrapper trait
 ///
 /// This is the main interface for your foreign data wrapper. Required functions
@@ -1018,6 +1133,15 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     ///
     /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-SCAN).
     fn end_scan(&mut self) -> Result<(), E>;
+
+    /// Return FDW-specific properties for a live scan's `EXPLAIN ANALYZE` output.
+    ///
+    /// The framework calls this only when execution constructed an FDW
+    /// instance. Plain `EXPLAIN` remains planning-only and never creates a
+    /// remote client for this hook. The default keeps existing FDWs unchanged.
+    fn explain(&self) -> Vec<ExplainProperty> {
+        Vec::new()
+    }
 
     /// Called when begin executing a foreign table modification operation.
     ///

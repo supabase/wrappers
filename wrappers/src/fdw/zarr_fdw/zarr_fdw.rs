@@ -1,7 +1,7 @@
 //! Main `zarr_fdw` implementation.
 //!
 //! Given a query plan's pushed-down quals (WHERE) and target columns, this FDW
-//! translates them into a *chunk fetch list* against S3, decompresses the
+//! translates them into a lazy *chunk fetch stream* against S3, decompresses the
 //! chunks and streams flat rows back to Postgres. Data model (MVP):
 //!
 //! - a single named-dimension Zarr v2 array in C order,
@@ -25,14 +25,21 @@ use pgrx::datum::TimestampWithTimeZone;
 use pgrx::pg_sys;
 use serde_json::{Map, Value as JsonValue};
 use std::collections::HashMap;
+use std::future::Future;
+use std::sync::{
+    Arc,
+    atomic::{AtomicU64, Ordering},
+};
+use std::time::{Duration, Instant};
 
 use supabase_wrappers::prelude::*;
 
 use super::aggregate::{
     AggregateReducer, aggregate_signature_supported, qual_matches, qual_shape_supported,
 };
+use super::cache::{CachedObject, CompressedChunkCache};
 use super::chunk::{
-    IndexBounds, axis_chunk_ranges, chunk_key, enumerate_chunks, index_bounds_from_value_range,
+    ChunkIndexCursor, IndexBounds, axis_chunk_ranges, chunk_key, index_bounds_from_value_range,
 };
 use super::dataset::{Dataset, DimensionRole, named_array_dataset, named_dimensions};
 use super::decode::{
@@ -40,6 +47,10 @@ use super::decode::{
     fill_value_bytes,
 };
 use super::meta::ArrayMeta;
+use super::metrics::{ReadKind, ZarrExplainContext, ZarrScanMetrics};
+use super::prefetch::{
+    OrderedPrefetch, PrefetchNext, PrefetchRequest, PrefetchSource, ScheduleError,
+};
 use super::scientific::{ScientificValueDecoder, time::TimeSpec};
 use super::store::{MAX_METADATA_OBJECT_BYTES, ZarrStore, join_key, validate_auth_options};
 use super::{ZarrFdwError, ZarrFdwResult};
@@ -53,6 +64,19 @@ const OPT_TIME_UNIT: &str = "time_unit";
 const OPT_TIME_ORIGIN: &str = "time_origin";
 const OPT_TIME_FROM_ATTRS: &str = "time_from_attrs";
 const OPT_DECODE_CF: &str = "decode_cf";
+const OPT_MAX_CONCURRENT_READS: &str = "max_concurrent_reads";
+const OPT_MAX_INFLIGHT_BYTES: &str = "max_inflight_bytes";
+const OPT_COMPRESSED_CACHE_BYTES: &str = "compressed_cache_bytes";
+
+const DEFAULT_MAX_CONCURRENT_READS: usize = 4;
+const MAX_CONCURRENT_READS: usize = 32;
+const DEFAULT_MAX_INFLIGHT_BYTES: usize = 257 * 1024 * 1024;
+const MIN_MAX_INFLIGHT_BYTES: usize = 1024 * 1024;
+const MAX_MAX_INFLIGHT_BYTES: usize = 1024 * 1024 * 1024;
+const DEFAULT_COMPRESSED_CACHE_BYTES: usize = 64 * 1024 * 1024;
+const MAX_COMPRESSED_CACHE_BYTES: usize = 1024 * 1024 * 1024;
+const MAX_COMPRESSED_CACHE_ENTRIES: usize = 4096;
+const INTERRUPT_POLL_INTERVAL: Duration = Duration::from_millis(25);
 
 // Planning must stay deterministic and network-free. Until metadata-backed or
 // configured estimates are available, use a deliberately non-zero cardinality
@@ -61,9 +85,9 @@ const DEFAULT_PLANNER_ROWS: i64 = 1_000_000;
 const DEFAULT_EMPTY_PROJECTION_WIDTH: i32 = 8;
 const DEFAULT_UNKNOWN_TYPE_WIDTH: i32 = 32;
 
-// The MVP eagerly decodes one data chunk, every required coordinate vector,
-// and the selected chunk-coordinate list in a PostgreSQL backend. Keep those
-// remote-metadata-driven allocations bounded until the executor becomes streaming.
+// The executor decodes one data chunk and every required coordinate vector in
+// a PostgreSQL backend. Chunk coordinates themselves are streamed lazily.
+// Keep the remaining remote-metadata-driven allocations bounded.
 const MAX_DECODED_CHUNK_BYTES: usize = 256 * 1024 * 1024;
 const MAX_COORDINATE_VALUES: usize = 16 * 1024 * 1024;
 const MAX_TOTAL_COORDINATE_VALUES: usize = MAX_COORDINATE_VALUES;
@@ -110,11 +134,23 @@ pub(crate) struct ZarrFdw {
     coords: Vec<Option<Vec<f64>>>,
     // per-axis global index bounds from pushed-down quals
     bounds: Vec<Option<IndexBounds>>,
-    // chunk index vectors to read, in row-major order
-    chunks: Vec<Vec<u64>>,
+    // lazy chunk indexes to read, in row-major order
+    chunk_cursor: ChunkIndexCursor,
+    current_chunk: Vec<u64>,
+    deferred_prefetch: Option<PrefetchRequest<Vec<u64>>>,
+    prefetch: OrderedPrefetch<Vec<u64>, ZarrFdwError>,
+    compressed_cache: CompressedChunkCache,
+    max_concurrent_reads: usize,
+    max_inflight_bytes: usize,
+    compressed_cache_bytes: usize,
+    metrics: ZarrScanMetrics,
+    remote_data_get_calls: Arc<AtomicU64>,
+    remote_data_encoded_bytes: Arc<AtomicU64>,
+    flushed_encoded_bytes: u64,
+    flushed_cells: u64,
+    flushed_tuples: u64,
 
     // --- per-chunk iteration state ---------------------------------------
-    chunk_pos: usize,
     chunk_bytes: Vec<u8>,
     chunk_shape: Vec<usize>,
     sub_lo: Vec<usize>,
@@ -136,6 +172,47 @@ fn zeroed_scan_cursors(rank: usize) -> [Vec<usize>; 3] {
     std::array::from_fn(|_| vec![0; rank])
 }
 
+fn postgres_interrupt_pending() -> bool {
+    // PostgreSQL's signal handlers update this `volatile sig_atomic_t`
+    // asynchronously. Preserve the C macro's volatile-read semantics here.
+    unsafe { std::ptr::read_volatile(&raw const pg_sys::InterruptPending) != 0 }
+}
+
+fn process_postgres_interrupts() {
+    unsafe {
+        if std::ptr::read_volatile(&raw const pg_sys::InterruptPending) != 0 {
+            pg_sys::ProcessInterrupts();
+        }
+    }
+}
+
+fn atomic_saturating_add(counter: &AtomicU64, value: u64) {
+    let _ = counter.fetch_update(Ordering::Relaxed, Ordering::Relaxed, |current| {
+        Some(current.saturating_add(value))
+    });
+}
+
+async fn observe_data_fetch<F>(
+    future: F,
+    remote_get_calls: Arc<AtomicU64>,
+    remote_encoded_bytes: Arc<AtomicU64>,
+) -> ZarrFdwResult<Option<Vec<u8>>>
+where
+    F: Future<Output = ZarrFdwResult<Option<Vec<u8>>>>,
+{
+    // The async body is lazy: this is an initiated GET, not merely a future
+    // placed behind an earlier request in FuturesOrdered.
+    atomic_saturating_add(&remote_get_calls, 1);
+    let result = future.await;
+    if let Ok(Some(bytes)) = &result {
+        atomic_saturating_add(
+            &remote_encoded_bytes,
+            u64::try_from(bytes.len()).unwrap_or(u64::MAX),
+        );
+    }
+    result
+}
+
 fn checked_chunk_layout(
     meta: &ArrayMeta,
     itemsize: usize,
@@ -155,6 +232,23 @@ fn checked_chunk_layout(
         )));
     }
     Ok((storage_shape, storage_cells, decoded_bytes))
+}
+
+fn saturating_chunk_count(extents: impl IntoIterator<Item = u64>) -> u64 {
+    extents
+        .into_iter()
+        .fold(1u64, |total, extent| total.saturating_mul(extent))
+}
+
+fn saturating_selected_chunk_count(ranges: &[(usize, usize)]) -> u64 {
+    ranges.iter().fold(1u64, |total, &(start, end)| {
+        let extent = end
+            .checked_sub(start)
+            .and_then(|span| span.checked_add(1))
+            .and_then(|count| u64::try_from(count).ok())
+            .unwrap_or(u64::MAX);
+        total.saturating_mul(extent)
+    })
 }
 
 fn checked_flat_offset(indices: &[usize], shape: &[usize]) -> ZarrFdwResult<usize> {
@@ -452,7 +546,7 @@ impl ZarrFdw {
             .axis_meta
             .as_ref()
             .expect("begin_scan must be called before iter_scan");
-        let chunk_indices = &self.chunks[self.chunk_pos];
+        let chunk_indices = &self.current_chunk;
         let chunk_index = usize::try_from(chunk_indices[axis]).map_err(|_| {
             ZarrFdwError::InvalidMetadata(format!(
                 "chunk index for axis {axis} exceeds this platform's index capacity"
@@ -507,27 +601,160 @@ impl ZarrFdw {
             }
             self.sub_idx[axis] = self.sub_lo[axis];
         }
-        self.chunk_pos += 1;
         self.pending = false;
     }
 
-    /// Fetch and decode the chunk at `self.chunk_pos`, priming the within-chunk
+    fn chunk_request(&self, indices: Vec<u64>) -> ZarrFdwResult<PrefetchRequest<Vec<u64>>> {
+        let meta = self
+            .axis_meta
+            .as_ref()
+            .expect("begin_scan must be called before iter_scan");
+        let dtype = self.dtype.expect("dtype set in begin_scan");
+        let codec = self.codec.as_ref().expect("codec set in begin_scan");
+        let (_, _, expected) = checked_chunk_layout(meta, dtype.itemsize())?;
+        let max_bytes = codec.encoded_read_limit(expected)?;
+        if max_bytes > self.max_inflight_bytes {
+            return Err(ZarrFdwError::InvalidMetadata(format!(
+                "encoded chunk read limit {max_bytes} exceeds max_inflight_bytes {}",
+                self.max_inflight_bytes
+            )));
+        }
+        let key = join_key(
+            &self.array_dir,
+            &chunk_key(&meta.dimension_separator, &indices),
+        );
+        Ok(PrefetchRequest {
+            context: indices,
+            key,
+            max_bytes,
+        })
+    }
+
+    fn fill_prefetch_window(&mut self) -> ZarrFdwResult<()> {
+        loop {
+            let request = if let Some(request) = self.deferred_prefetch.take() {
+                request
+            } else {
+                let mut indices = Vec::new();
+                if !self.chunk_cursor.next_into(&mut indices) {
+                    break;
+                }
+                self.chunk_request(indices)?
+            };
+
+            let store = &self.store;
+            let remote_get_calls = Arc::clone(&self.remote_data_get_calls);
+            let remote_encoded_bytes = Arc::clone(&self.remote_data_encoded_bytes);
+            match self.prefetch.try_schedule(
+                request,
+                &mut self.compressed_cache,
+                move |key, max_bytes| {
+                    let fetch = store.get_object_optional_owned(key, max_bytes);
+                    observe_data_fetch(fetch, remote_get_calls, remote_encoded_bytes)
+                },
+            ) {
+                Ok(source) => {
+                    self.metrics.record_chunk_request();
+                    let cache_hit = source == PrefetchSource::Cache;
+                    self.metrics.record_cache_lookup(cache_hit);
+                }
+                Err(ScheduleError::WindowFull(request)) => {
+                    self.deferred_prefetch = Some(request);
+                    break;
+                }
+                Err(ScheduleError::RequestTooLarge {
+                    request,
+                    max_inflight_bytes,
+                }) => {
+                    return Err(ZarrFdwError::InvalidMetadata(format!(
+                        "object '{}' read limit {} exceeds max_inflight_bytes {max_inflight_bytes}",
+                        request.key, request.max_bytes
+                    )));
+                }
+                Err(ScheduleError::CachedObjectTooLarge {
+                    request,
+                    actual_bytes,
+                }) => {
+                    return Err(ZarrFdwError::InvalidMetadata(format!(
+                        "cached object '{}' is {actual_bytes} bytes, exceeding its read limit of {}",
+                        request.key, request.max_bytes
+                    )));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn process_pending_interrupt(&mut self) -> ZarrFdwResult<()> {
+        if postgres_interrupt_pending() {
+            // No Rust future may remain owned by scan state when PostgreSQL's
+            // cancellation path raises ERROR through the backend stack.
+            self.prefetch.clear();
+            self.deferred_prefetch = None;
+            process_postgres_interrupts();
+            // PostgreSQL can defer interrupts while they are held. Never
+            // continue after dropping an already-advanced prefetch window.
+            return Err(ZarrFdwError::InvalidMetadata(
+                "query interruption was requested".to_string(),
+            ));
+        }
+        Ok(())
+    }
+
+    fn next_prefetched_chunk(&mut self) -> ZarrFdwResult<Option<CachedObject>> {
+        self.fill_prefetch_window()?;
+        let evictions_before = self.compressed_cache.evictions();
+        let outcome = {
+            let runtime = &self.store.rt;
+            let prefetch = &mut self.prefetch;
+            let cache = &mut self.compressed_cache;
+            runtime.block_on(prefetch.next_interruptible(cache, postgres_interrupt_pending))
+        };
+        self.metrics.record_cache_evictions(
+            self.compressed_cache
+                .evictions()
+                .saturating_sub(evictions_before),
+        );
+
+        match outcome {
+            PrefetchNext::Ready(result) => {
+                self.current_chunk = result.request.context;
+                self.metrics
+                    .record_chunk_result(matches!(&result.object, CachedObject::Present(_)));
+                Ok(Some(result.object))
+            }
+            PrefetchNext::FetchError { error, .. } => Err(error),
+            PrefetchNext::Interrupted => {
+                // All queued Rust futures have been dropped. Raise PostgreSQL's
+                // canonical cancellation only after leaving Runtime::block_on.
+                self.deferred_prefetch = None;
+                self.process_pending_interrupt()?;
+                Err(ZarrFdwError::InvalidMetadata(
+                    "query interruption was requested".to_string(),
+                ))
+            }
+            PrefetchNext::Empty => Ok(None),
+        }
+    }
+
+    /// Decode `self.current_chunk`, priming the within-chunk
     /// index window from `self.bounds`.
-    fn load_chunk(&mut self) -> ZarrFdwResult<()> {
+    fn load_chunk(&mut self, encoded: CachedObject) -> ZarrFdwResult<()> {
+        self.process_pending_interrupt()?;
         let meta = self
             .axis_meta
             .as_ref()
             .expect("begin_scan must be called before iter_scan");
         let dt = self.dtype.expect("dtype set in begin_scan");
         let codec = self.codec.as_ref().expect("codec set in begin_scan");
-        let ci = &self.chunks[self.chunk_pos];
+        let ci = self.current_chunk.clone();
         debug_assert_eq!(self.sub_lo.len(), self.rank);
         debug_assert_eq!(self.sub_hi.len(), self.rank);
         debug_assert_eq!(self.sub_idx.len(), self.rank);
 
         // Effective (edge) chunk shape. Zarr v2 still stores the full declared
         // chunk shape; `eff` only controls which logical cells are emitted.
-        let key = chunk_key(&meta.dimension_separator, ci);
+        let key = chunk_key(&meta.dimension_separator, &ci);
         if ci.len() != self.rank {
             return Err(ZarrFdwError::InvalidMetadata(
                 "chunk index rank does not match the array rank".to_string(),
@@ -571,24 +798,25 @@ impl ZarrFdw {
         // shape for byte validation and C-order strides; `eff` ignores the
         // out-of-array region when deciding which cells to emit.
         let object_key = join_key(&self.array_dir, &key);
-        let encoded_limit = codec.encoded_read_limit(expected)?;
-        let decoded = match self
-            .store
-            .get_object_optional_sync(&object_key, encoded_limit)?
-        {
-            Some(raw) => {
-                let decoded = self.store.rt.block_on(codec.decompress(raw, expected))?;
-                let bytes_in = i64::try_from(decoded.len()).map_err(|_| {
-                    ZarrFdwError::InvalidMetadata(
-                        "decoded chunk length exceeds statistics capacity".to_string(),
-                    )
-                })?;
-                stats::inc_stats(FDW_NAME, stats::Metric::BytesIn, bytes_in);
-                decoded
+        let (decoded, synthesized_fill) = match encoded {
+            CachedObject::Present(raw) => {
+                let started = Instant::now();
+                let decoded = self
+                    .store
+                    .rt
+                    .block_on(codec.decompress(raw.as_ref().to_vec(), expected))?;
+                self.metrics.record_decompression_time(started.elapsed());
+                self.process_pending_interrupt()?;
+                (decoded, false)
             }
-            None => filled_chunk_bytes(self.fill_bytes.as_deref(), storage_cells, &object_key)?,
+            CachedObject::Missing => (
+                filled_chunk_bytes(self.fill_bytes.as_deref(), storage_cells, &object_key)?,
+                true,
+            ),
         };
         require_exact_decoded_len(&key, decoded.len(), expected)?;
+        self.metrics
+            .record_decoded_bytes(ReadKind::Data, decoded.len(), synthesized_fill);
         self.chunk_bytes.clear();
         self.chunk_bytes.try_reserve_exact(expected).map_err(|_| {
             ZarrFdwError::InvalidMetadata(format!(
@@ -628,19 +856,26 @@ impl ZarrFdw {
     /// Emit the row at the current `sub_idx`, then advance to the next cell.
     /// Returns `Ok(())`; the row should be consumed regardless.
     fn emit_and_advance(&mut self, row: &mut Row) -> ZarrFdwResult<()> {
+        let decode_started = Instant::now();
         let value_cell = self.value_cell_at_cursor()?;
+        self.metrics.record_decoding_time(decode_started.elapsed());
 
         for col in &self.tgt_cols {
             let cell = self.column_cell_at_cursor(&col.name, value_cell.as_ref())?;
             row.push(col.name.as_str(), cell);
         }
 
+        self.metrics.record_cells(1, None);
+        self.metrics.record_tuple_emitted();
         self.advance_cursor();
         Ok(())
     }
 
     fn reduce_current_cell(&mut self) -> ZarrFdwResult<()> {
+        let aggregate_started = Instant::now();
+        let decode_started = Instant::now();
         let value_cell = self.value_cell_at_cursor()?;
+        self.metrics.record_decoding_time(decode_started.elapsed());
         let mut matches = true;
         for qual in &self.aggregate_quals {
             let cell = self.column_cell_at_cursor(&qual.field, value_cell.as_ref())?;
@@ -650,6 +885,9 @@ impl ZarrFdw {
             }
         }
         if !matches {
+            self.metrics.record_cells(1, Some(0));
+            self.metrics
+                .record_aggregate_time(aggregate_started.elapsed());
             self.advance_cursor();
             return Ok(());
         }
@@ -671,16 +909,48 @@ impl ZarrFdw {
             .as_mut()
             .expect("aggregate reducer set in begin_aggregate_scan")
             .observe(&value_refs)?;
+        self.metrics.record_cells(1, Some(1));
+        self.metrics
+            .record_aggregate_time(aggregate_started.elapsed());
         self.advance_cursor();
         Ok(())
     }
 
+    fn flush_persistent_stats_at_eof(&mut self) {
+        let metrics = self.metrics_snapshot();
+        let encoded = metrics
+            .total_encoded_bytes()
+            .saturating_sub(self.flushed_encoded_bytes);
+        let cells = metrics
+            .logical_cells_examined
+            .saturating_sub(self.flushed_cells);
+        let tuples = metrics.tuples_emitted.saturating_sub(self.flushed_tuples);
+        let as_i64 = |value: u64| i64::try_from(value).unwrap_or(i64::MAX);
+        if encoded > 0 {
+            stats::inc_stats(FDW_NAME, stats::Metric::BytesIn, as_i64(encoded));
+        }
+        if cells > 0 {
+            stats::inc_stats(FDW_NAME, stats::Metric::RowsIn, as_i64(cells));
+        }
+        if tuples > 0 {
+            stats::inc_stats(FDW_NAME, stats::Metric::RowsOut, as_i64(tuples));
+        }
+        self.flushed_encoded_bytes = metrics.total_encoded_bytes();
+        self.flushed_cells = metrics.logical_cells_examined;
+        self.flushed_tuples = metrics.tuples_emitted;
+        self.rows_out = 0;
+    }
+
+    fn metrics_snapshot(&self) -> ZarrScanMetrics {
+        let mut metrics = self.metrics.clone();
+        metrics.data_get_calls = self.remote_data_get_calls.load(Ordering::Relaxed);
+        metrics.data_encoded_bytes = self.remote_data_encoded_bytes.load(Ordering::Relaxed);
+        metrics
+    }
+
     fn iter_aggregate_scan(&mut self, row: &mut Row) -> ZarrFdwResult<Option<()>> {
         if self.aggregate_emitted {
-            if self.rows_out > 0 {
-                stats::inc_stats(FDW_NAME, stats::Metric::RowsOut, self.rows_out);
-                self.rows_out = 0;
-            }
+            self.flush_persistent_stats_at_eof();
             return Ok(None);
         }
 
@@ -689,7 +959,7 @@ impl ZarrFdw {
                 self.reduce_current_cell()?;
                 continue;
             }
-            if self.chunk_pos >= self.chunks.len() {
+            let Some(encoded) = self.next_prefetched_chunk()? else {
                 let results = self
                     .aggregate_reducer
                     .take()
@@ -701,12 +971,33 @@ impl ZarrFdw {
                 }
                 self.aggregate_emitted = true;
                 self.rows_out = 1;
+                self.metrics.record_tuple_emitted();
                 return Ok(Some(()));
-            }
-            self.load_chunk()?;
+            };
+            self.load_chunk(encoded)?;
             let empty_window = (0..self.rank).any(|axis| self.sub_lo[axis] > self.sub_hi[axis]);
             if empty_window {
-                self.chunk_pos += 1;
+                continue;
+            }
+            self.pending = true;
+        }
+    }
+
+    fn iter_scalar_scan(&mut self, row: &mut Row) -> ZarrFdwResult<Option<()>> {
+        loop {
+            if self.pending {
+                row.clear();
+                self.emit_and_advance(row)?;
+                self.rows_out += 1;
+                return Ok(Some(()));
+            }
+            let Some(encoded) = self.next_prefetched_chunk()? else {
+                self.flush_persistent_stats_at_eof();
+                return Ok(None);
+            };
+            self.load_chunk(encoded)?;
+            let empty_window = (0..self.rank).any(|d| self.sub_lo[d] > self.sub_hi[d]);
+            if empty_window {
                 continue;
             }
             self.pending = true;
@@ -809,12 +1100,14 @@ fn array_parent_path(array_path: &str) -> &str {
 
 fn read_coordinate_metadata(
     store: &ZarrStore,
+    metrics: &mut ZarrScanMetrics,
     prefix: &str,
     name: &str,
     expected_length: u64,
 ) -> ZarrFdwResult<(CoordinateMetadata, Map<String, JsonValue>)> {
     let dir = join_key(prefix, name);
     let meta_bytes = store.get_object_sync(&format!("{dir}/.zarray"), MAX_METADATA_OBJECT_BYTES)?;
+    metrics.record_remote_get(ReadKind::Metadata, Some(meta_bytes.len()));
     let meta = ArrayMeta::parse(&meta_bytes).map_err(|e| ZarrFdwError::CoordinateReadError {
         axis: name.to_string(),
         error: format!("coordinate array metadata: {e}"),
@@ -880,13 +1173,14 @@ fn read_coordinate_metadata(
             ),
         });
     }
-    let attributes = read_array_attributes_optional(store, &dir)?.unwrap_or_default();
+    let attributes = read_array_attributes_optional(store, metrics, &dir)?.unwrap_or_default();
     Ok((CoordinateMetadata { meta, fill_value }, attributes))
 }
 
 /// Read a validated 1D numeric coordinate array and return its values as `f64`.
 fn read_coordinate_values(
     store: &ZarrStore,
+    metrics: &mut ZarrScanMetrics,
     prefix: &str,
     name: &str,
     coordinate: &CoordinateMetadata,
@@ -954,6 +1248,8 @@ fn read_coordinate_values(
         let encoded_limit = codec.encoded_read_limit(expected_bytes)?;
         let decoded_values = match store.get_object_optional_sync(&object_key, encoded_limit)? {
             Some(raw) => {
+                metrics.record_remote_get(ReadKind::Coordinate, Some(raw.len()));
+                let started = Instant::now();
                 let decoded = store
                     .rt
                     .block_on(codec.decompress(raw, expected_bytes))
@@ -961,9 +1257,15 @@ fn read_coordinate_values(
                         axis: name.to_string(),
                         error: e.to_string(),
                     })?;
+                metrics.record_decompression_time(started.elapsed());
+                metrics.record_decoded_bytes(ReadKind::Coordinate, decoded.len(), false);
                 coord_bytes_to_f64(&meta.dtype, &decoded[..expected_bytes])?
             }
-            None => filled_coordinate_values(fill_value, chunk_len, &object_key, name)?,
+            None => {
+                metrics.record_remote_get(ReadKind::Coordinate, None);
+                metrics.record_decoded_bytes(ReadKind::Coordinate, expected_bytes, true);
+                filled_coordinate_values(fill_value, chunk_len, &object_key, name)?
+            }
         };
         let start = chunk_index.checked_mul(chunk_len).ok_or_else(|| {
             ZarrFdwError::CoordinateReadError {
@@ -988,12 +1290,15 @@ fn read_coordinate_values(
 
 fn read_array_attributes_optional(
     store: &ZarrStore,
+    metrics: &mut ZarrScanMetrics,
     array_dir: &str,
 ) -> ZarrFdwResult<Option<Map<String, JsonValue>>> {
     let key = join_key(array_dir, ".zattrs");
     let Some(bytes) = store.get_object_optional_sync(&key, MAX_METADATA_OBJECT_BYTES)? else {
+        metrics.record_remote_get(ReadKind::Metadata, None);
         return Ok(None);
     };
+    metrics.record_remote_get(ReadKind::Metadata, Some(bytes.len()));
     let value = serde_json::from_slice::<JsonValue>(&bytes).map_err(|error| {
         ZarrFdwError::InvalidMetadata(format!("could not parse '{key}': {error}"))
     })?;
@@ -1022,6 +1327,72 @@ fn boolean_table_option(options: &HashMap<String, String>, name: &str) -> ZarrFd
         .map(|value| value.unwrap_or(false))
 }
 
+fn bounded_server_usize_option(
+    options: &HashMap<String, String>,
+    name: &str,
+    default: usize,
+    min: usize,
+    max: usize,
+) -> ZarrFdwResult<usize> {
+    let Some(raw) = options.get(name) else {
+        return Ok(default);
+    };
+    let value = raw
+        .parse::<usize>()
+        .map_err(|_| ZarrFdwError::InvalidOptionValue {
+            option: name.to_string(),
+            message: format!("must be an integer between {min} and {max}"),
+        })?;
+    if !(min..=max).contains(&value) {
+        return Err(ZarrFdwError::InvalidOptionValue {
+            option: name.to_string(),
+            message: format!("must be between {min} and {max}"),
+        });
+    }
+    Ok(value)
+}
+
+fn compressed_cache_bytes_option(options: &HashMap<String, String>) -> ZarrFdwResult<usize> {
+    let Some(raw) = options.get(OPT_COMPRESSED_CACHE_BYTES) else {
+        return Ok(DEFAULT_COMPRESSED_CACHE_BYTES);
+    };
+    let value = raw
+        .parse::<usize>()
+        .map_err(|_| ZarrFdwError::InvalidOptionValue {
+            option: OPT_COMPRESSED_CACHE_BYTES.to_string(),
+            message: format!("must be an integer between 0 and {MAX_COMPRESSED_CACHE_BYTES}"),
+        })?;
+    if value > MAX_COMPRESSED_CACHE_BYTES {
+        return Err(ZarrFdwError::InvalidOptionValue {
+            option: OPT_COMPRESSED_CACHE_BYTES.to_string(),
+            message: format!("must be between 0 and {MAX_COMPRESSED_CACHE_BYTES}"),
+        });
+    }
+    Ok(value)
+}
+
+fn scalable_execution_options(
+    options: &HashMap<String, String>,
+) -> ZarrFdwResult<(usize, usize, usize)> {
+    Ok((
+        bounded_server_usize_option(
+            options,
+            OPT_MAX_CONCURRENT_READS,
+            DEFAULT_MAX_CONCURRENT_READS,
+            1,
+            MAX_CONCURRENT_READS,
+        )?,
+        bounded_server_usize_option(
+            options,
+            OPT_MAX_INFLIGHT_BYTES,
+            DEFAULT_MAX_INFLIGHT_BYTES,
+            MIN_MAX_INFLIGHT_BYTES,
+            MAX_MAX_INFLIGHT_BYTES,
+        )?,
+        compressed_cache_bytes_option(options)?,
+    ))
+}
+
 fn validate_time_from_attrs_options(
     time_from_attrs: bool,
     has_time_unit: bool,
@@ -1046,6 +1417,17 @@ fn option_value(options: &[Option<String>], name: &str) -> Option<String> {
 
 impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
     fn new(server: ForeignServer) -> ZarrFdwResult<Self> {
+        let (max_concurrent_reads, max_inflight_bytes, compressed_cache_bytes) =
+            scalable_execution_options(&server.options)?;
+        let prefetch = OrderedPrefetch::new(
+            max_concurrent_reads,
+            max_inflight_bytes,
+            INTERRUPT_POLL_INTERVAL,
+        )
+        .map_err(|error| ZarrFdwError::InvalidOptionValue {
+            option: OPT_MAX_CONCURRENT_READS.to_string(),
+            message: error.to_string(),
+        })?;
         let store = ZarrStore::new(&server)?;
         stats::inc_stats(FDW_NAME, stats::Metric::CreateTimes, 1);
         Ok(Self {
@@ -1062,8 +1444,23 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
             fill_bytes: None,
             coords: Vec::new(),
             bounds: Vec::new(),
-            chunks: Vec::new(),
-            chunk_pos: 0,
+            chunk_cursor: ChunkIndexCursor::default(),
+            current_chunk: Vec::new(),
+            deferred_prefetch: None,
+            prefetch,
+            compressed_cache: CompressedChunkCache::new(
+                compressed_cache_bytes,
+                MAX_COMPRESSED_CACHE_ENTRIES,
+            ),
+            max_concurrent_reads,
+            max_inflight_bytes,
+            compressed_cache_bytes,
+            metrics: ZarrScanMetrics::default(),
+            remote_data_get_calls: Arc::new(AtomicU64::new(0)),
+            remote_data_encoded_bytes: Arc::new(AtomicU64::new(0)),
+            flushed_encoded_bytes: 0,
+            flushed_cells: 0,
+            flushed_tuples: 0,
             chunk_bytes: Vec::new(),
             chunk_shape: Vec::new(),
             sub_lo: Vec::new(),
@@ -1088,6 +1485,52 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
             AggregateKind::Min,
             AggregateKind::Max,
         ]
+    }
+
+    fn explain(&self) -> Vec<ExplainProperty> {
+        let Some(meta) = self.axis_meta.as_ref() else {
+            return Vec::new();
+        };
+        let chunk_shape = meta
+            .chunks
+            .iter()
+            .map(|&extent| usize::try_from(extent).unwrap_or(usize::MAX))
+            .collect::<Vec<_>>();
+        let dtype = self
+            .dtype
+            .map(|dtype| format!("{dtype:?}"))
+            .unwrap_or_else(|| meta.dtype.clone());
+        let codec = match self.codec.as_ref() {
+            Some(Codec::Raw) => "raw",
+            Some(Codec::Gzip) => "gzip",
+            Some(Codec::Zlib) => "zlib",
+            Some(Codec::Blosc) => "blosc",
+            None => "unknown",
+        };
+        let aggregate_mode = if self.aggregate_defs.is_empty() {
+            "none".to_string()
+        } else {
+            self.aggregate_defs
+                .iter()
+                .map(|aggregate| aggregate.kind.sql_name())
+                .collect::<Vec<_>>()
+                .join(", ")
+        };
+        self.metrics_snapshot()
+            .explain_properties(ZarrExplainContext {
+                array: &self.array_dir,
+                dimensions: &self.axes,
+                shape: &meta.shape,
+                chunk_shape: &chunk_shape,
+                dtype: &dtype,
+                codec,
+                aggregate_mode: &aggregate_mode,
+                max_concurrent_reads: self.max_concurrent_reads,
+                max_inflight_bytes: self.max_inflight_bytes,
+                compressed_cache_bytes: self.compressed_cache_bytes,
+                cache_entries: self.compressed_cache.len(),
+                cache_resident_bytes: self.compressed_cache.resident_bytes(),
+            })
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -1183,17 +1626,25 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
             &join_key(&self.array_dir, ".zarray"),
             MAX_METADATA_OBJECT_BYTES,
         )?;
+        self.metrics
+            .record_remote_get(ReadKind::Metadata, Some(meta_bytes.len()));
         let meta = ArrayMeta::from_bytes(&meta_bytes)?;
         let value_attributes =
-            read_array_attributes_optional(&self.store, &self.array_dir)?.unwrap_or_default();
+            read_array_attributes_optional(&self.store, &mut self.metrics, &self.array_dir)?
+                .unwrap_or_default();
         let dimension_names =
             named_dimensions(&value_attributes, meta.shape.len(), &self.array_dir)?;
         let coordinate_parent = array_parent_path(&self.array_dir);
         let mut coordinate_metadata = Vec::with_capacity(dimension_names.len());
         let mut coordinate_attributes = Vec::with_capacity(dimension_names.len());
         for (name, &length) in dimension_names.iter().zip(meta.shape.iter()) {
-            let (coordinate, attributes) =
-                read_coordinate_metadata(&self.store, coordinate_parent, name, length)?;
+            let (coordinate, attributes) = read_coordinate_metadata(
+                &self.store,
+                &mut self.metrics,
+                coordinate_parent,
+                name,
+                length,
+            )?;
             coordinate_metadata.push(coordinate);
             coordinate_attributes.push(attributes);
         }
@@ -1304,6 +1755,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
             let coordinate = dimension.coordinate();
             let values = read_coordinate_values(
                 &self.store,
+                &mut self.metrics,
                 coordinate.parent(),
                 coordinate.name(),
                 &coordinate_metadata[axis],
@@ -1338,7 +1790,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
             }
         }
 
-        // value ranges -> per-axis index bounds -> chunk list
+        // value ranges -> per-axis index bounds -> lazy chunk cursor
         let mut bounds: Vec<Option<IndexBounds>> = Vec::with_capacity(rank);
         let mut no_rows = false;
         for (axis, &(lo, hi)) in ranges.iter().enumerate() {
@@ -1364,13 +1816,23 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
         }
         self.bounds = bounds;
 
-        self.chunks = if no_rows {
+        let chunks_total = saturating_chunk_count(meta.chunks_per_axis());
+        let chunk_ranges = if no_rows {
             Vec::new()
         } else {
-            let chunk_ranges = axis_chunk_ranges(&meta, &self.bounds)?;
-            enumerate_chunks(&chunk_ranges)?
+            axis_chunk_ranges(&meta, &self.bounds)?
         };
-        self.chunk_pos = 0;
+        let chunks_selected = if no_rows {
+            0
+        } else {
+            saturating_selected_chunk_count(&chunk_ranges)
+        };
+        self.metrics
+            .set_chunk_selection(chunks_total, chunks_selected);
+        self.chunk_cursor = ChunkIndexCursor::new(&chunk_ranges)?;
+        self.current_chunk.clear();
+        self.prefetch.clear();
+        self.deferred_prefetch = None;
         self.chunk_bytes.clear();
         self.chunk_shape.clear();
         [self.sub_lo, self.sub_hi, self.sub_idx] = zeroed_scan_cursors(rank);
@@ -1405,35 +1867,26 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
     }
 
     fn iter_scan(&mut self, row: &mut Row) -> ZarrFdwResult<Option<()>> {
-        if !self.aggregate_defs.is_empty() {
-            return self.iter_aggregate_scan(row);
+        let result = if !self.aggregate_defs.is_empty() {
+            self.iter_aggregate_scan(row)
+        } else {
+            self.iter_scalar_scan(row)
+        };
+        if result.is_err() {
+            // PostgreSQL may unwind immediately after receiving the error.
+            // Drop all owned I/O futures before leaving the callback.
+            self.prefetch.clear();
+            self.deferred_prefetch = None;
         }
-        loop {
-            if self.pending {
-                row.clear();
-                self.emit_and_advance(row)?;
-                self.rows_out += 1;
-                return Ok(Some(()));
-            }
-            if self.chunk_pos >= self.chunks.len() {
-                if self.rows_out > 0 {
-                    stats::inc_stats(FDW_NAME, stats::Metric::RowsOut, self.rows_out);
-                    self.rows_out = 0;
-                }
-                return Ok(None);
-            }
-            self.load_chunk()?;
-            let empty_window = (0..self.rank).any(|d| self.sub_lo[d] > self.sub_hi[d]);
-            if empty_window {
-                self.chunk_pos += 1;
-                continue;
-            }
-            self.pending = true;
-        }
+        result
     }
 
     fn re_scan(&mut self) -> ZarrFdwResult<()> {
-        self.chunk_pos = 0;
+        self.chunk_cursor.reset();
+        self.current_chunk.clear();
+        self.prefetch.clear();
+        self.deferred_prefetch = None;
+        self.metrics.record_rescan();
         self.chunk_bytes.clear();
         self.chunk_shape.clear();
         [self.sub_lo, self.sub_hi, self.sub_idx] = zeroed_scan_cursors(self.rank);
@@ -1447,12 +1900,15 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
     }
 
     fn end_scan(&mut self) -> ZarrFdwResult<()> {
+        self.prefetch.clear();
+        self.deferred_prefetch = None;
         self.tgt_cols.clear();
         self.array_dir.clear();
         self.axes.clear();
         self.chunk_bytes.clear();
         self.chunk_shape.clear();
-        self.chunks.clear();
+        self.chunk_cursor = ChunkIndexCursor::default();
+        self.current_chunk.clear();
         self.coords.clear();
         self.bounds.clear();
         self.axis_roles.clear();
@@ -1487,6 +1943,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
                         .map(|(name, value)| (name.to_string(), value.to_string()))
                         .collect::<HashMap<_, _>>();
                     validate_auth_options(&server_options)?;
+                    scalable_execution_options(&server_options)?;
                 }
                 FOREIGN_TABLE_RELATION_ID => {
                     if let Some(v) = option_value(&options, OPT_TIME_UNIT) {
@@ -1867,5 +2324,72 @@ mod unit_tests {
             assert!(validate_coordinate_decoding_attributes("level", &attributes).is_err());
         }
         validate_coordinate_decoding_attributes("level", &Map::new()).unwrap();
+    }
+
+    #[test]
+    fn scalable_execution_options_are_bounded_and_cache_can_be_disabled() {
+        assert_eq!(
+            scalable_execution_options(&HashMap::new()).unwrap(),
+            (
+                DEFAULT_MAX_CONCURRENT_READS,
+                DEFAULT_MAX_INFLIGHT_BYTES,
+                DEFAULT_COMPRESSED_CACHE_BYTES,
+            )
+        );
+        let valid = HashMap::from([
+            (OPT_MAX_CONCURRENT_READS.to_string(), "32".to_string()),
+            (
+                OPT_MAX_INFLIGHT_BYTES.to_string(),
+                MIN_MAX_INFLIGHT_BYTES.to_string(),
+            ),
+            (OPT_COMPRESSED_CACHE_BYTES.to_string(), "0".to_string()),
+        ]);
+        assert_eq!(
+            scalable_execution_options(&valid).unwrap(),
+            (32, MIN_MAX_INFLIGHT_BYTES, 0)
+        );
+
+        for invalid in [
+            HashMap::from([(OPT_MAX_CONCURRENT_READS.to_string(), "0".to_string())]),
+            HashMap::from([(
+                OPT_MAX_INFLIGHT_BYTES.to_string(),
+                (MIN_MAX_INFLIGHT_BYTES - 1).to_string(),
+            )]),
+            HashMap::from([(
+                OPT_COMPRESSED_CACHE_BYTES.to_string(),
+                (MAX_COMPRESSED_CACHE_BYTES + 1).to_string(),
+            )]),
+        ] {
+            assert!(scalable_execution_options(&invalid).is_err());
+        }
+    }
+
+    #[test]
+    fn remote_io_metrics_count_polled_and_completed_work_only() {
+        let calls = Arc::new(AtomicU64::new(0));
+        let bytes = Arc::new(AtomicU64::new(0));
+        let unpolled = observe_data_fetch(
+            async { Ok::<_, ZarrFdwError>(Some(vec![1, 2, 3])) },
+            Arc::clone(&calls),
+            Arc::clone(&bytes),
+        );
+        drop(unpolled);
+        assert_eq!(calls.load(Ordering::Relaxed), 0);
+        assert_eq!(bytes.load(Ordering::Relaxed), 0);
+
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        let object = runtime
+            .block_on(observe_data_fetch(
+                async { Ok::<_, ZarrFdwError>(Some(vec![1, 2, 3, 4])) },
+                Arc::clone(&calls),
+                Arc::clone(&bytes),
+            ))
+            .unwrap();
+        assert_eq!(object, Some(vec![1, 2, 3, 4]));
+        assert_eq!(calls.load(Ordering::Relaxed), 1);
+        assert_eq!(bytes.load(Ordering::Relaxed), 4);
     }
 }

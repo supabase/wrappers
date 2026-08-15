@@ -529,6 +529,93 @@ mod tests {
     }
 
     #[pg_test]
+    fn zarr_minio_lazy_chunk_cursor_starts_large_selection() {
+        create_minio_e2e_server();
+        Spi::connect_mut(|c| {
+            c.update(
+                r#"CREATE FOREIGN TABLE zarr_e2e_lazy1m (value real)
+                   SERVER zarr_e2e_server
+                   OPTIONS (array_group 'nested/lazy1m')"#,
+                None,
+                &[],
+            )
+            .unwrap();
+
+            let values = c
+                .select("SELECT value FROM zarr_e2e_lazy1m LIMIT 1", None, &[])
+                .unwrap()
+                .filter_map(|row| row.get_by_name::<f32, _>("value").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(values, vec![42.0]);
+        });
+    }
+
+    #[pg_test]
+    fn zarr_minio_execution_metrics_are_explained() {
+        create_minio_e2e_table("zarr_e2e_explain_runtime", "nested/raw", "real");
+        Spi::connect(|c| {
+            let plan = c
+                .select(
+                    r#"EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+                       SELECT count(*) AS cells, sum(value) AS total
+                         FROM zarr_e2e_explain_runtime"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|row| row.get::<&str>(1).unwrap().map(str::to_string))
+                .collect::<Vec<_>>();
+            let has = |text: &str| plan.iter().any(|line| line.contains(text));
+            assert!(has("Zarr Chunks Total: 4"), "plan: {plan:?}");
+            assert!(has("Zarr Chunks Selected: 4"), "plan: {plan:?}");
+            assert!(has("Zarr Chunks Requested: 4"), "plan: {plan:?}");
+            assert!(has("Zarr Chunks Present: 3"), "plan: {plan:?}");
+            assert!(has("Zarr Chunks Missing: 1"), "plan: {plan:?}");
+            assert!(has("Zarr Data GET Calls: 4"), "plan: {plan:?}");
+            assert!(has("Zarr Cache Misses: 4"), "plan: {plan:?}");
+            assert!(has("Zarr Data Encoded Bytes: 288 bytes"), "plan: {plan:?}");
+            assert!(has("Zarr Data Decoded Bytes: 384 bytes"), "plan: {plan:?}");
+            assert!(
+                has("Zarr Fill Bytes Synthesized: 96 bytes"),
+                "plan: {plan:?}"
+            );
+            assert!(has("Zarr Logical Cells Examined: 60"), "plan: {plan:?}");
+            assert!(has("Zarr Logical Cells Matched: 60"), "plan: {plan:?}");
+            assert!(has("Zarr Tuples Emitted: 1"), "plan: {plan:?}");
+            assert!(has("Zarr Max Concurrent Reads: 4"), "plan: {plan:?}");
+            assert!(has("Zarr Chunk-Stat Pruning: disabled"), "plan: {plan:?}");
+        });
+    }
+
+    #[pg_test]
+    fn zarr_minio_rescan_reuses_compressed_chunk_cache() {
+        create_minio_e2e_table("zarr_e2e_cache_rescan", "nested/raw", "real");
+        Spi::connect(|c| {
+            let plan = c
+                .select(
+                    r#"EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+                       SELECT ordinal,
+                              (SELECT count(*)
+                                 FROM zarr_e2e_cache_rescan
+                                WHERE x > threshold) AS selected
+                         FROM (VALUES (1, 120.0::double precision),
+                                      (2, NULL::double precision),
+                                      (3, 140.0::double precision)) AS limits(ordinal, threshold)
+                        ORDER BY ordinal"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|row| row.get::<&str>(1).unwrap().map(str::to_string))
+                .collect::<Vec<_>>();
+            let has = |text: &str| plan.iter().any(|line| line.contains(text));
+            assert!(has("Zarr Data GET Calls: 4"), "plan: {plan:?}");
+            assert!(has("Zarr Cache Misses: 4"), "plan: {plan:?}");
+            assert!(has("Zarr Cache Hits: 6"), "plan: {plan:?}");
+        });
+    }
+
+    #[pg_test]
     fn zarr_minio_scalar_aggregate_pushdown_e2e() {
         create_minio_e2e_table("zarr_e2e_aggregate", "nested/raw", "real");
 
@@ -1582,8 +1669,10 @@ mod tests {
                     "nested/channel",
                     "nested/forecast_time",
                     "nested/generic4d",
+                    "nested/lazy1m",
                     "nested/level",
                     "nested/raw",
+                    "nested/sample",
                     "nested/spatial_ref",
                     "nested/time",
                     "nested/x",
