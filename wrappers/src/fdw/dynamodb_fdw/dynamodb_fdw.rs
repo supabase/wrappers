@@ -381,10 +381,10 @@ impl ForeignDataWrapper<DynamoDbFdwError> for DynamoDbFdw {
 
     fn iter_scan(&mut self, row: &mut Row) -> DynamoDbFdwResult<Option<()>> {
         // Check limit
-        if let Some(ref lim) = self.limit.clone() {
-            if self.row_cnt >= lim.count + lim.offset {
-                return Ok(None);
-            }
+        if let Some(ref lim) = self.limit.clone()
+            && self.row_cnt >= lim.count + lim.offset
+        {
+            return Ok(None);
         }
 
         loop {
@@ -394,10 +394,10 @@ impl ForeignDataWrapper<DynamoDbFdwError> for DynamoDbFdw {
 
                 // Skip offset rows
                 self.row_cnt += 1;
-                if let Some(ref lim) = self.limit.clone() {
-                    if self.row_cnt <= lim.offset {
-                        continue;
-                    }
+                if let Some(ref lim) = self.limit.clone()
+                    && self.row_cnt <= lim.offset
+                {
+                    continue;
                 }
 
                 row.replace_with(new_row);

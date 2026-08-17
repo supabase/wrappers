@@ -150,7 +150,7 @@ impl MssqlFdw {
                 .join(", ")
         };
 
-        let mut sql = format!("select {} from {} as _wrappers_tbl", tgts, &self.table);
+        let mut sql = format!("select {} from {} as _wrappers_tbl", tgts, self.table);
 
         if !quals.is_empty() {
             let cond = quals
@@ -255,7 +255,7 @@ impl MssqlFdw {
         let mut sql = format!(
             "select {} from {} as _wrappers_tbl",
             select_items.join(", "),
-            &self.table
+            self.table
         );
 
         // WHERE — same boolean-test handling as deparse()

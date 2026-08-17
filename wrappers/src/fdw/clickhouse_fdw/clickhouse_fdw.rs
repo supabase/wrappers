@@ -453,7 +453,7 @@ impl ClickHouseFdw {
                 .join(", ")
         };
 
-        let mut sql = format!("select {} from {}", tgts, &table);
+        let mut sql = format!("select {} from {}", tgts, table);
 
         if !quals.is_empty() {
             let mut formatter = Formatter {};
@@ -536,7 +536,7 @@ impl ClickHouseFdw {
         for agg in aggregates {
             select_items.push(agg.deparse_with_alias());
         }
-        let mut sql = format!("select {} from {}", select_items.join(", "), &table);
+        let mut sql = format!("select {} from {}", select_items.join(", "), table);
 
         // WHERE: same filtering as deparse() — skip params and array-valued quals
         if !quals.is_empty() {
