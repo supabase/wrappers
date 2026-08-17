@@ -8338,7 +8338,6 @@ name = "supabase-wrappers"
 version = "0.1.28"
 dependencies = [
  "pgrx",
- "pgrx-tests",
  "supabase-wrappers-macros",
  "thiserror 1.0.69",
  "tokio",
