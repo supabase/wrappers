@@ -300,6 +300,9 @@ arrow-schema = { version = "57.3.0", optional = true }
 arrow-json = { version = "57.3.0", optional = true }
 
 # for mysql_fdw
+# NOTE: pulls in proc-macro-error2 v2.0.1 (via mysql_common -> mysql-common-derive),
+# which triggers a `future-incompatible` warning (E0365, private `extern crate`
+# re-export). No fixed release exists upstream yet: https://github.com/GnomedDev/proc-macro-error-2
 mysql_async = { version = "0.36.1", optional = true, default-features = false, features = [
     "default-rustls",
 ] }
