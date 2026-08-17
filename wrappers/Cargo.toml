@@ -8,14 +8,7 @@ edition = { workspace = true }
 rust-version = { workspace = true }
 
 [lib]
-crate-type = ["cdylib", "lib"]
-
-[[bin]]
-name = "pgrx_embed_wrappers"
-path = "./src/bin/pgrx_embed.rs"
-
-[lints.rust]
-unexpected_cfgs = { level = "warn", check-cfg = ['cfg(pgrx_embed)'] }
+crate-type = ["cdylib"]
 
 [features]
 default = ["pg15"]
@@ -136,13 +129,7 @@ auth0_fdw = [
     "url",
     "thiserror",
 ]
-mssql_fdw = [
-    "tiberius",
-    "tokio",
-    "tokio-util",
-    "num-traits",
-    "thiserror",
-]
+mssql_fdw = ["tiberius", "tokio", "tokio-util", "num-traits", "thiserror"]
 mysql_fdw = [
     "mysql_async",
     "chrono",
@@ -161,11 +148,7 @@ mongodb_fdw = [
     "mongodb/bson-2",
     "mongodb/compat-3-3-0",
 ]
-redis_fdw = [
-    "redis",
-    "serde_json",
-    "thiserror",
-]
+redis_fdw = ["redis", "serde_json", "thiserror"]
 wasm_fdw = [
     "wasmtime",
     "warg-client",
@@ -240,12 +223,9 @@ native_fdws = [
     "duckdb_fdw",
     "dynamodb_fdw",
 ]
-all_fdws = [
-    "native_fdws",
-    "wasm_fdw",
-]
+all_fdws = ["native_fdws", "wasm_fdw"]
 [dependencies]
-pgrx = { version = "=0.16.1" }
+pgrx = { version = "=0.19.2" }
 #supabase-wrappers = "0.1"
 supabase-wrappers = { path = "../supabase-wrappers", default-features = false }
 
@@ -285,7 +265,9 @@ regex = { version = "1", optional = true }
 url = { version = "2.3", optional = true }
 
 # for s3_fdw and s3vectors_fdw
-aws-config = { version = "1.8.6", features = ["behavior-version-latest"], optional = true }
+aws-config = { version = "1.8.6", features = [
+    "behavior-version-latest",
+], optional = true }
 
 # for s3_fdw
 aws-sdk-s3 = { version = "1.86.0", optional = true }
@@ -296,7 +278,7 @@ aws-smithy-types = { version = "1.3.2", optional = true }
 aws-smithy-async = { version = "1.2.5", optional = true }
 
 # for cognito fdw
-aws-sdk-cognitoidentityprovider = { version ="1.103.0", optional = true }
+aws-sdk-cognitoidentityprovider = { version = "1.103.0", optional = true }
 
 # for dynamodb_fdw
 aws-sdk-dynamodb = { version = "1.60.0", optional = true }
@@ -318,10 +300,15 @@ arrow-schema = { version = "57.3.0", optional = true }
 arrow-json = { version = "57.3.0", optional = true }
 
 # for mysql_fdw
-mysql_async = { version = "0.36.1", optional = true, default-features = false, features = ["default-rustls"] }
+mysql_async = { version = "0.36.1", optional = true, default-features = false, features = [
+    "default-rustls",
+] }
 
 # for mongodb_fdw
-mongodb = { version = "3.2", optional = true, default-features = false, features = ["rustls-tls", "dns-resolver"] }
+mongodb = { version = "3.2", optional = true, default-features = false, features = [
+    "rustls-tls",
+    "dns-resolver",
+] }
 bson = { version = "2.13", optional = true, features = ["chrono-0_4"] }
 
 # for mssql_fdw
@@ -334,7 +321,11 @@ tiberius = { version = "0.12.2", features = [
 num-traits = { version = "0.2.17", optional = true }
 
 # for redis_fdw
-redis = { version = "0.27.5", features = ["streams", "tls-rustls", "tls-rustls-insecure"], optional = true }
+redis = { version = "0.27.5", features = [
+    "streams",
+    "tls-rustls",
+    "tls-rustls-insecure",
+], optional = true }
 
 # for wasm_fdw
 wasmtime = { version = "36.0.7", features = [
@@ -346,14 +337,14 @@ warg-client = { version = "0.7.0", optional = true }
 warg-protocol = { version = "0.7.0", optional = true }
 semver = { version = "1.0.23", optional = true }
 jwt-simple = { version = "0.12.9", default-features = false, features = [
-    "pure-rust"
+    "pure-rust",
 ], optional = true }
 dirs = { version = "5.0.1", optional = true }
 sha2 = { version = "0.10.8", optional = true }
 hex = { version = "0.4.3", optional = true }
 bytes = { version = "1.11.1", optional = true }
 thiserror = { version = "1.0.48", optional = true }
-anyhow  = { version = "1.0.81", optional = true }
+anyhow = { version = "1.0.81", optional = true }
 uuid = { version = "1.18.0", features = ["v7"], optional = true }
 
 # for iceberg_fdw
@@ -372,4 +363,4 @@ arrow-json-compat = { package = "arrow-json", version = "55", optional = true }
 arrow-schema-compat = { package = "arrow-schema", version = "55", optional = true }
 
 [dev-dependencies]
-pgrx-tests = "=0.16.1"
+pgrx-tests = "=0.19.2"

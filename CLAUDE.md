@@ -27,7 +27,7 @@ The project uses Cargo workspaces with the following structure:
 - **Wasm workspace** (`wasm-wrappers/fdw/Cargo.toml`): Separate workspace for Wasm FDWs (excluded from main)
 
 **Rust version**: 1.88.0 (specified in `workspace.package`)
-**pgrx version**: 0.16.1 (PostgreSQL extension framework)
+**pgrx version**: 0.19.2 (PostgreSQL extension framework)
 
 ## Key Components
 
@@ -127,7 +127,7 @@ rustup install 1.88.0
 rustup default 1.88.0
 
 # Install pgrx
-cargo install --locked cargo-pgrx --version 0.16.1
+cargo install --locked cargo-pgrx --version 0.19.2
 
 # Initialize pgrx with PostgreSQL
 cargo pgrx init --pg15 /usr/lib/postgresql/15/bin/pg_config

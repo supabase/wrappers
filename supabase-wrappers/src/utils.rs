@@ -242,7 +242,7 @@ pub fn report_info(msg: &str) {
     ereport!(
         PgLogLevel::INFO,
         PgSqlErrorCode::ERRCODE_SUCCESSFUL_COMPLETION,
-        msg,
+        msg.to_string(),
         "Wrappers"
     );
 }
@@ -262,7 +262,7 @@ pub fn report_notice(msg: &str) {
     ereport!(
         PgLogLevel::NOTICE,
         PgSqlErrorCode::ERRCODE_SUCCESSFUL_COMPLETION,
-        msg,
+        msg.to_string(),
         "Wrappers"
     );
 }
@@ -282,7 +282,7 @@ pub fn report_warning(msg: &str) {
     ereport!(
         PgLogLevel::WARNING,
         PgSqlErrorCode::ERRCODE_WARNING,
-        msg,
+        msg.to_string(),
         "Wrappers"
     );
 }
@@ -305,7 +305,7 @@ pub fn report_warning(msg: &str) {
 /// ```
 #[inline]
 pub fn report_error(code: PgSqlErrorCode, msg: &str) {
-    ereport!(PgLogLevel::ERROR, code, msg, "Wrappers");
+    ereport!(PgLogLevel::ERROR, code, msg.to_string(), "Wrappers");
 }
 
 #[derive(Error, Debug)]
