@@ -143,10 +143,10 @@ impl InfuraFdw {
 
         let json = self.make_json_rpc_request("eth_getBlockByNumber", params)?;
 
-        if let Some(result) = json.get("result") {
-            if !result.is_null() {
-                self.src_rows.push(result.clone());
-            }
+        if let Some(result) = json.get("result")
+            && !result.is_null()
+        {
+            self.src_rows.push(result.clone());
         }
 
         stats::inc_stats(FDW_NAME, stats::Metric::RowsIn, self.src_rows.len() as i64);
@@ -162,10 +162,10 @@ impl InfuraFdw {
         let params = serde_json::json!([tx_hash]);
         let json = self.make_json_rpc_request("eth_getTransactionByHash", params)?;
 
-        if let Some(result) = json.get("result") {
-            if !result.is_null() {
-                self.src_rows.push(result.clone());
-            }
+        if let Some(result) = json.get("result")
+            && !result.is_null()
+        {
+            self.src_rows.push(result.clone());
         }
 
         stats::inc_stats(FDW_NAME, stats::Metric::RowsIn, self.src_rows.len() as i64);
@@ -213,11 +213,11 @@ impl InfuraFdw {
         let params = serde_json::json!([filter]);
         let json = self.make_json_rpc_request("eth_getLogs", params)?;
 
-        if let Some(result) = json.get("result") {
-            if let Some(logs) = result.as_array() {
-                for log in logs {
-                    self.src_rows.push(log.clone());
-                }
+        if let Some(result) = json.get("result")
+            && let Some(logs) = result.as_array()
+        {
+            for log in logs {
+                self.src_rows.push(log.clone());
             }
         }
 

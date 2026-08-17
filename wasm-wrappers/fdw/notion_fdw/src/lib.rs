@@ -237,12 +237,12 @@ impl NotionFdw {
 
             // idle for a while for retry when got rate limited error
             // ref: https://developers.notion.com/reference/request-limits
-            if resp.status_code == 429 {
-                if let Some(retry) = resp.headers.iter().find(|h| h.0 == "retry-after") {
-                    let delay = retry.1.parse::<u64>().map_err(|e| e.to_string())?;
-                    time::sleep(delay * 1000);
-                    continue;
-                }
+            if resp.status_code == 429
+                && let Some(retry) = resp.headers.iter().find(|h| h.0 == "retry-after")
+            {
+                let delay = retry.1.parse::<u64>().map_err(|e| e.to_string())?;
+                time::sleep(delay * 1000);
+                continue;
             }
 
             // transform response to json
@@ -302,11 +302,11 @@ impl NotionFdw {
                 .pointer("/has_children")
                 .and_then(|v| v.as_bool())
                 .unwrap_or_default();
-            if has_children {
-                if let Some(id) = child.pointer("/id").and_then(|v| v.as_str()) {
-                    let child_blocks = self.request_blocks(id, ctx)?;
-                    ret.extend(child_blocks);
-                }
+            if has_children
+                && let Some(id) = child.pointer("/id").and_then(|v| v.as_str())
+            {
+                let child_blocks = self.request_blocks(id, ctx)?;
+                ret.extend(child_blocks);
             }
         }
 

@@ -114,12 +114,9 @@ impl HubspotFdw {
 
         // set request url, it is in `<objects>/<id>` form if `id = <string>` qual is specified
         let url = if let Some(q) = quals.iter().find(|q| {
-            if (q.field() == "id") && (q.operator() == "=") {
-                if let Value::Cell(Cell::String(_)) = q.value() {
-                    return true;
-                }
-            }
-            false
+            q.field() == "id"
+                && q.operator() == "="
+                && matches!(q.value(), Value::Cell(Cell::String(_)))
         }) {
             // push down `id = <string>` clause
             match q.value() {

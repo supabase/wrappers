@@ -234,14 +234,12 @@ impl Cfd1Fdw {
             http::error_for_status(&resp).map_err(|err| format!("{}: {}", err, resp.body))?;
 
             // check for API request errors
-            if let Some(success) = resp_json["success"].as_bool() {
-                if !success {
-                    if let Some(errors) = resp_json["errors"].as_array() {
-                        if !errors.is_empty() {
-                            return Err(format!("API request failed with error {errors:?}"));
-                        }
-                    }
-                }
+            if let Some(success) = resp_json["success"].as_bool()
+                && !success
+                && let Some(errors) = resp_json["errors"].as_array()
+                && !errors.is_empty()
+            {
+                return Err(format!("API request failed with error {errors:?}"));
             }
 
             // unify response object to array and save source rows

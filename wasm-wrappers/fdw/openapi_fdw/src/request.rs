@@ -96,11 +96,11 @@ impl OpenApiFdw {
             let spec = OpenApiSpec::from_json(spec_json)?;
 
             // Use base_url from spec if not explicitly set
-            if self.config.base_url.is_empty() {
-                if let Some(url) = spec.base_url() {
-                    self.config.base_url = url.trim_end_matches('/').to_string();
-                    crate::validate_url(&self.config.base_url, "base_url (from spec servers)")?;
-                }
+            if self.config.base_url.is_empty()
+                && let Some(url) = spec.base_url()
+            {
+                self.config.base_url = url.trim_end_matches('/').to_string();
+                crate::validate_url(&self.config.base_url, "base_url (from spec servers)")?;
             }
 
             self.spec = Some(spec);
@@ -119,11 +119,11 @@ impl OpenApiFdw {
                 serde_json::from_str(raw_json).map_err(|e| format!("Invalid spec_json: {e}"))?;
             let spec = OpenApiSpec::from_json(spec_json)?;
 
-            if self.config.base_url.is_empty() {
-                if let Some(url) = spec.base_url() {
-                    self.config.base_url = url.trim_end_matches('/').to_string();
-                    crate::validate_url(&self.config.base_url, "base_url (from spec servers)")?;
-                }
+            if self.config.base_url.is_empty()
+                && let Some(url) = spec.base_url()
+            {
+                self.config.base_url = url.trim_end_matches('/').to_string();
+                crate::validate_url(&self.config.base_url, "base_url (from spec servers)")?;
             }
 
             self.spec = Some(spec);
@@ -399,22 +399,20 @@ impl OpenApiFdw {
 
         // Check for rowid pushdown for single-resource access
         // Only if endpoint doesn't already have path params and rowid qual exists
-        if path_params_used.is_empty() {
-            if let Some(id_qual) = quals
+        if path_params_used.is_empty()
+            && let Some(id_qual) = quals
                 .iter()
                 .find(|q| q.field().to_lowercase() == self.rowid_col && q.operator() == "=")
-            {
-                if let Some(id) = Self::qual_value_to_string(id_qual) {
-                    self.injected_params
-                        .insert(self.rowid_col.clone(), id.clone());
-                    return Ok(format!(
-                        "{}{}/{}",
-                        self.config.base_url,
-                        endpoint,
-                        urlencoding::encode(&id)
-                    ));
-                }
-            }
+            && let Some(id) = Self::qual_value_to_string(id_qual)
+        {
+            self.injected_params
+                .insert(self.rowid_col.clone(), id.clone());
+            return Ok(format!(
+                "{}{}/{}",
+                self.config.base_url,
+                endpoint,
+                urlencoding::encode(&id)
+            ));
         }
 
         // Build query parameters
@@ -437,14 +435,14 @@ impl OpenApiFdw {
         let url = self.build_url(ctx)?;
 
         let mut headers = self.config.headers.clone();
-        if let Some(ref setting_name) = self.config.auth_token_setting {
-            if let Some(token) = utils::query_setting(setting_name) {
-                ServerConfig::apply_session_token(
-                    &mut headers,
-                    &token,
-                    &self.config.auth_token_prefix,
-                );
-            }
+        if let Some(ref setting_name) = self.config.auth_token_setting
+            && let Some(token) = utils::query_setting(setting_name)
+        {
+            ServerConfig::apply_session_token(
+                &mut headers,
+                &token,
+                &self.config.auth_token_prefix,
+            );
         }
 
         let req = http::Request {
@@ -559,17 +557,15 @@ impl OpenApiFdw {
         self.build_column_key_map();
 
         // Debug: warn once if object_path doesn't match response structure
-        if self.config.debug {
-            if let Some(ref path) = self.object_path {
-                if let Some(first_row) = self.src_rows.first() {
-                    if first_row.pointer(path).is_none() {
-                        utils::report_info(&format!(
-                            "[openapi_fdw] object_path '{path}' not found in response. \
-                             Falling back to full row object."
-                        ));
-                    }
-                }
-            }
+        if self.config.debug
+            && let Some(ref path) = self.object_path
+            && let Some(first_row) = self.src_rows.first()
+            && first_row.pointer(path).is_none()
+        {
+            utils::report_info(&format!(
+                "[openapi_fdw] object_path '{path}' not found in response. \
+                 Falling back to full row object."
+            ));
         }
 
         Ok(())

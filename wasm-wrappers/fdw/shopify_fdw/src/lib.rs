@@ -166,10 +166,12 @@ impl ShopifyFdw {
 
         // get id filter from quals
         let id_filter = quals.iter().find_map(|qual| {
-            if qual.operator().as_str() == "=" && !qual.use_or() && qual.field().as_str() == "id" {
-                if let Value::Cell(Cell::String(id)) = qual.value() {
-                    return Some(id.clone());
-                }
+            if qual.operator().as_str() == "="
+                && !qual.use_or()
+                && qual.field().as_str() == "id"
+                && let Value::Cell(Cell::String(id)) = qual.value()
+            {
+                return Some(id.clone());
             }
             None
         });
