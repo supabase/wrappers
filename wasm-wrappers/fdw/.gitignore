@@ -1,1 +1,5 @@
 **/src/bindings.rs
+
+# per-crate lockfiles are dead weight now that these crates are members of
+# the root workspace — only the root Cargo.lock is ever consulted by cargo
+*/Cargo.lock

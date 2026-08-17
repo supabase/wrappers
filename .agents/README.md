@@ -9,7 +9,7 @@ wrappers/                    # Native FDWs (pgrx-based)
   src/fdw/                   # Individual FDW implementations
 supabase-wrappers/           # Core FDW framework library
 supabase-wrappers-macros/    # Proc macros for FDW development
-wasm-wrappers/               # WASM-based FDWs (separate from workspace)
+wasm-wrappers/               # WASM-based FDWs (members of the root workspace)
   fdw/                       # Individual WASM FDW implementations
   wit/                       # WebAssembly Interface Types
 ```
