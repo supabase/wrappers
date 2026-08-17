@@ -57,7 +57,7 @@ jobs:
           method: sha256
           output: wasm-wrappers/fdw/${{ steps.extract_info.outputs.PROJECT }}/checksum.txt
           patterns: |
-            ./wasm-wrappers/fdw/target/wasm32-unknown-unknown/release/${{ steps.extract_info.outputs.PROJECT }}.wasm
+            ./target/wasm32-unknown-unknown/release/${{ steps.extract_info.outputs.PROJECT }}.wasm
 
       - name: Extract package info
         id: extract
@@ -116,4 +116,4 @@ jobs:
           files: |
             ./wasm-wrappers/fdw/${{ steps.extract_info.outputs.PROJECT }}/README.txt
             ./wasm-wrappers/fdw/${{ steps.extract_info.outputs.PROJECT }}/checksum.txt
-            ./wasm-wrappers/fdw/target/wasm32-unknown-unknown/release/${{ steps.extract_info.outputs.PROJECT }}.wasm
+            ./target/wasm32-unknown-unknown/release/${{ steps.extract_info.outputs.PROJECT }}.wasm
