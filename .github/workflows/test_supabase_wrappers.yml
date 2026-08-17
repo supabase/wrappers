@@ -55,10 +55,5 @@ jobs:
 
       - name: Run tests
         env:
-          # --gc-sections strips code unreachable from the unit tests, which is
-          # required here: this crate has no #[pg_test]s, only plain #[test]s
-          # run as a standalone binary (not inside postgres), so any linked-in
-          # code referencing real Postgres globals (e.g. CurrentMemoryContext)
-          # would otherwise fail to resolve at process start.
-          RUSTFLAGS: "-D warnings -Clink-arg=-Wl,--unresolved-symbols=ignore-all -Clink-arg=-Wl,--gc-sections"
+          RUSTFLAGS: "-D warnings -Clink-arg=-Wl,--unresolved-symbols=ignore-all"
         run: cargo test -p supabase-wrappers --no-default-features --features pg15 --lib

@@ -502,13 +502,11 @@ pub(crate) unsafe fn extract_quals(
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "pg_test"))]
 mod tests {
     use super::*;
-    #[cfg(feature = "pg_test")]
     use pgrx::IntoDatum;
 
-    #[cfg(feature = "pg_test")]
     #[test]
     fn test_form_array_from_datum_int4_array() {
         let values = vec![1_i32, 2_i32, 3_i32];
@@ -531,7 +529,6 @@ mod tests {
         assert!(result.is_none());
     }
 
-    #[cfg(feature = "pg_test")]
     #[test]
     fn test_form_array_from_datum_unsupported_oid_returns_none() {
         let values = vec![1_i32, 2_i32];

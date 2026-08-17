@@ -8,11 +8,5 @@
 rustflags = ["-Clink-arg=-Wl,-undefined,dynamic_lookup"]
 
 [target.'cfg(target_os="linux")']
-# Postgres symbols won't be available until runtime. Also strip unreachable
-# dead code at link time (--gc-sections): without it, `cargo test --lib`
-# links in library code that references real Postgres globals (e.g.
-# CurrentMemoryContext) which only exist inside a running postgres process.
-# Those are data-symbol relocations, resolved eagerly regardless of any lazy-
-# binding flag, so the standalone test binary fails to even start unless the
-# unreached code referencing them is gc'd away.
-rustflags = ["-Clink-arg=-Wl,--unresolved-symbols=ignore-all", "-Clink-arg=-Wl,--gc-sections"]
+# Postgres symbols won't be available until runtime
+rustflags = ["-Clink-arg=-Wl,--unresolved-symbols=ignore-all"]
