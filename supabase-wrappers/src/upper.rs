@@ -123,9 +123,8 @@ unsafe fn extract_aggregates(
         }
 
         let mut aggregates = Vec::new();
-        let mut resno = 1;
 
-        for expr in list_iter::<pg_sys::Node>(exprs) {
+        for (resno, expr) in list_iter::<pg_sys::Node>(exprs).enumerate() {
             if (*expr).type_ == pg_sys::NodeTag::T_Aggref {
                 let aggref = expr as *mut pg_sys::Aggref;
 
@@ -194,12 +193,10 @@ unsafe fn extract_aggregates(
                     kind,
                     column,
                     distinct: !(*aggref).aggdistinct.is_null(),
-                    alias: format!("agg_{resno}"),
+                    alias: format!("agg_{}", resno + 1),
                     type_oid: (*aggref).aggtype,
                 });
             }
-
-            resno += 1;
         }
 
         if aggregates.is_empty() {
