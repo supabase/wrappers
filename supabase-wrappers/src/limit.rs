@@ -25,15 +25,12 @@ pub(crate) unsafe fn extract_limit(
 
         let mut limit = Limit::default();
 
-        if let Some(count) = i64::from_polymorphic_datum(
+        let count = i64::from_polymorphic_datum(
             (*limit_count).constvalue,
             (*limit_count).constisnull,
             (*limit_count).consttype,
-        ) {
-            limit.count = count;
-        } else {
-            return None;
-        }
+        )?;
+        limit.count = count;
 
         // only consider OFFSETS that are non-NULL constants
         let limit_offset = (*parse).limitOffset as *mut pg_sys::Const;
