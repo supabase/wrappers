@@ -294,6 +294,7 @@
 
 pub mod interface;
 pub mod options;
+pub mod qual;
 pub mod utils;
 
 /// The prelude includes all necessary imports to make Wrappers work
@@ -316,7 +317,6 @@ mod limit;
 mod memctx;
 mod modify;
 mod polyfill;
-mod qual;
 mod scan;
 mod sort;
 
