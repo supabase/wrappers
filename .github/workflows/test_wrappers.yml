@@ -56,7 +56,7 @@ jobs:
         with:
           key: ""
           prefix: true
-          
+
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
@@ -66,7 +66,7 @@ jobs:
 
       - uses: actions-rust-lang/setup-rust-toolchain@150fca883cd4034361b621bd4e6a9d34e5143606 # v1.15.4
         with:
-          toolchain: 1.88.0
+          toolchain: 1.97.1
           components: rustfmt, clippy
 
       - run: |
@@ -114,7 +114,7 @@ jobs:
 
       - uses: actions-rust-lang/setup-rust-toolchain@150fca883cd4034361b621bd4e6a9d34e5143606 # v1.15.4
         with:
-          toolchain: 1.88.0
+          toolchain: 1.97.1
           components: rustfmt, clippy
 
       - run: |
@@ -168,7 +168,7 @@ jobs:
 
       - uses: actions-rust-lang/setup-rust-toolchain@150fca883cd4034361b621bd4e6a9d34e5143606 # v1.15.4
         with:
-          toolchain: 1.88.0
+          toolchain: 1.97.1
 
       - name: Install PostgreSQL 15
         run: |

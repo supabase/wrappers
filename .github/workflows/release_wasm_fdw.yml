@@ -3,7 +3,7 @@ name: Wasm FDW Release
 on:
   push:
     tags:
-      - 'wasm_*_fdw_v[0-9]+.[0-9]+.[0-9]+' # Push events to matching wasm fdw tag, i.e. wasm_snowflake_fdw_v1.0.2
+      - "wasm_*_fdw_v[0-9]+.[0-9]+.[0-9]+" # Push events to matching wasm fdw tag, i.e. wasm_snowflake_fdw_v1.0.2
 
 permissions:
   contents: write
@@ -29,7 +29,7 @@ jobs:
       - name: Set up Rust
         run: |
           # install Rust
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile minimal --default-toolchain 1.88.0 && \
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile minimal --default-toolchain 1.97.1 && \
             rustup --version && \
             rustc --version && \
             cargo --version
@@ -117,4 +117,3 @@ jobs:
             ./wasm-wrappers/fdw/${{ steps.extract_info.outputs.PROJECT }}/README.txt
             ./wasm-wrappers/fdw/${{ steps.extract_info.outputs.PROJECT }}/checksum.txt
             ./wasm-wrappers/fdw/target/wasm32-unknown-unknown/release/${{ steps.extract_info.outputs.PROJECT }}.wasm
-
