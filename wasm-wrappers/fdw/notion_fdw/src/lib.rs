@@ -302,9 +302,7 @@ impl NotionFdw {
                 .pointer("/has_children")
                 .and_then(|v| v.as_bool())
                 .unwrap_or_default();
-            if has_children
-                && let Some(id) = child.pointer("/id").and_then(|v| v.as_str())
-            {
+            if has_children && let Some(id) = child.pointer("/id").and_then(|v| v.as_str()) {
                 let child_blocks = self.request_blocks(id, ctx)?;
                 ret.extend(child_blocks);
             }

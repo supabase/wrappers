@@ -438,11 +438,7 @@ impl OpenApiFdw {
         if let Some(ref setting_name) = self.config.auth_token_setting
             && let Some(token) = utils::query_setting(setting_name)
         {
-            ServerConfig::apply_session_token(
-                &mut headers,
-                &token,
-                &self.config.auth_token_prefix,
-            );
+            ServerConfig::apply_session_token(&mut headers, &token, &self.config.auth_token_prefix);
         }
 
         let req = http::Request {
