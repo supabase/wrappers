@@ -238,11 +238,11 @@ pub fn log_debug1(msg: &str) {
 /// report_info(&format!("this is an info"));
 /// ```
 #[inline]
-pub fn report_info(msg: &str) {
+pub fn report_info(msg: impl Into<String>) {
     ereport!(
         PgLogLevel::INFO,
         PgSqlErrorCode::ERRCODE_SUCCESSFUL_COMPLETION,
-        msg.to_string(),
+        msg.into(),
         "Wrappers"
     );
 }
@@ -258,11 +258,11 @@ pub fn report_info(msg: &str) {
 /// report_notice(&format!("this is a notice"));
 /// ```
 #[inline]
-pub fn report_notice(msg: &str) {
+pub fn report_notice(msg: impl Into<String>) {
     ereport!(
         PgLogLevel::NOTICE,
         PgSqlErrorCode::ERRCODE_SUCCESSFUL_COMPLETION,
-        msg.to_string(),
+        msg.into(),
         "Wrappers"
     );
 }
@@ -278,11 +278,11 @@ pub fn report_notice(msg: &str) {
 /// report_warning(&format!("this is a warning"));
 /// ```
 #[inline]
-pub fn report_warning(msg: &str) {
+pub fn report_warning(msg: impl Into<String>) {
     ereport!(
         PgLogLevel::WARNING,
         PgSqlErrorCode::ERRCODE_WARNING,
-        msg.to_string(),
+        msg.into(),
         "Wrappers"
     );
 }
@@ -304,8 +304,8 @@ pub fn report_warning(msg: &str) {
 /// );
 /// ```
 #[inline]
-pub fn report_error(code: PgSqlErrorCode, msg: &str) {
-    ereport!(PgLogLevel::ERROR, code, msg.to_string(), "Wrappers");
+pub fn report_error(code: PgSqlErrorCode, msg: impl Into<String>) {
+    ereport!(PgLogLevel::ERROR, code, msg.into(), "Wrappers");
 }
 
 #[derive(Error, Debug)]
@@ -378,7 +378,7 @@ pub fn get_vault_secret(secret_id_or_name: &str) -> Option<String> {
                 Err(err) => {
                     report_error(
                         PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                        &format!("query vault failed \"{secret_id_or_name}\": {err}"),
+                        format!("query vault failed \"{secret_id_or_name}\": {err}"),
                     );
                     None
                 }
@@ -400,7 +400,7 @@ pub fn query_setting(name: &str) -> Option<String> {
         Err(err) => {
             report_error(
                 PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                &format!("read session setting \"{name}\" failed: {err}"),
+                format!("read session setting \"{name}\" failed: {err}"),
             );
             None
         }
@@ -420,7 +420,7 @@ pub fn get_vault_secret_by_name(secret_name: &str) -> Option<String> {
         Err(err) => {
             report_error(
                 PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                &format!("query vault failed \"{secret_name}\": {err}"),
+                format!("query vault failed \"{secret_name}\": {err}"),
             );
             None
         }

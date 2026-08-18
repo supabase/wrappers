@@ -254,7 +254,7 @@ pub(crate) unsafe fn extract_from_op_expr(
                 }
 
                 if let Some(stm) = pgrx::nodes::node_to_string(expr as _) {
-                    report_warning(&format!("unsupported operator expression in qual: {stm}",));
+                    report_warning(format!("unsupported operator expression in qual: {stm}",));
                 }
             }
 
@@ -345,7 +345,7 @@ pub(crate) unsafe fn extract_from_scalar_array_op_expr(
                 }
 
                 if let Some(stm) = pgrx::nodes::node_to_string(expr as _) {
-                    report_warning(&format!("only support const scalar array in qual: {stm}",));
+                    report_warning(format!("only support const scalar array in qual: {stm}",));
                 }
             }
 
@@ -486,7 +486,7 @@ pub(crate) unsafe fn extract_quals(
                         extract_from_boolean_test(baserel_id, expr as _)
                     } else {
                         if let Some(stm) = pgrx::nodes::node_to_string(expr) {
-                            report_warning(&format!("unsupported qual: {stm}",));
+                            report_warning(format!("unsupported qual: {stm}",));
                         }
                         None
                     };

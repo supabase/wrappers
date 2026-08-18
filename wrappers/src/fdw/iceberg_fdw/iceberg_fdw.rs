@@ -158,7 +158,7 @@ impl IcebergFdw {
                 let mut scan_files = self.rt.block_on(scan.plan_files())?;
                 while let Some(sf) = self.rt.block_on(scan_files.next()) {
                     let sf = sf.unwrap();
-                    report_info(&format!(
+                    report_info(format!(
                         "file scan: {:?}, {}",
                         sf.record_count, sf.data_file_path
                     ));
@@ -308,7 +308,7 @@ impl IcebergFdw {
 
         if cfg!(debug_assertions) {
             for data_file in &data_files {
-                report_info(&format!(
+                report_info(format!(
                     "Data file: {}, records: {}, size: {} bytes",
                     data_file.file_path(),
                     data_file.record_count(),
