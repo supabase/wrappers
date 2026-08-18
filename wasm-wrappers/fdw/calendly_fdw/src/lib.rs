@@ -142,12 +142,12 @@ impl CalendlyFdw {
 
             // idle for a while for retry when got rate limited error
             // ref: https://developer.calendly.com/api-docs/edca8074633f8-upcoming-changes
-            if resp.status_code == 429 {
-                if let Some(retry) = resp.headers.iter().find(|h| h.0 == "x-ratelimit-reset") {
-                    let delay_secs = retry.1.parse::<u64>().map_err(|e| e.to_string())?;
-                    time::sleep(delay_secs * 1000);
-                    continue;
-                }
+            if resp.status_code == 429
+                && let Some(retry) = resp.headers.iter().find(|h| h.0 == "x-ratelimit-reset")
+            {
+                let delay_secs = retry.1.parse::<u64>().map_err(|e| e.to_string())?;
+                time::sleep(delay_secs * 1000);
+                continue;
             }
 
             // transform response to json

@@ -56,15 +56,15 @@ impl OrbFdw {
         }
 
         match self.object.as_ref() {
-            "credits" | "credits/ledger" => {
-                // for credits endpoint, the customer_id and external_customer_id
-                // columns are in nested properties, we need to extract them
-                if tgt_col_name == "customer_id" || tgt_col_name == "external_customer_id" {
-                    if self.sub_obj == tgt_col_name {
-                        return Ok(Some(Cell::String(self.sub_obj_value.to_owned())));
-                    } else {
-                        return Ok(None);
-                    }
+            // for credits endpoint, the customer_id and external_customer_id
+            // columns are in nested properties, we need to extract them
+            "credits" | "credits/ledger"
+                if tgt_col_name == "customer_id" || tgt_col_name == "external_customer_id" =>
+            {
+                if self.sub_obj == tgt_col_name {
+                    return Ok(Some(Cell::String(self.sub_obj_value.to_owned())));
+                } else {
+                    return Ok(None);
                 }
             }
             _ => {}
@@ -272,12 +272,9 @@ impl OrbFdw {
 
         // set request url, it is in `<objects>/<id>` form if `id = <string>` qual is specified
         let mut url = if let Some(q) = quals.iter().find(|q| {
-            if (q.field() == "id") && (q.operator() == "=") {
-                if let Value::Cell(Cell::String(_)) = q.value() {
-                    return true;
-                }
-            }
-            false
+            q.field() == "id"
+                && q.operator() == "="
+                && matches!(q.value(), Value::Cell(Cell::String(_)))
         }) {
             match q.value() {
                 Value::Cell(Cell::String(id)) => {

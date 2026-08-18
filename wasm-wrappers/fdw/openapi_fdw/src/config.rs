@@ -189,19 +189,19 @@ impl ServerConfig {
         });
 
         // Warn on empty credentials (likely vault misconfiguration)
-        if let Some(ref key) = api_key {
-            if key.trim().is_empty() {
-                utils::report_warning(
-                    "[openapi_fdw] api_key is empty. Requests may fail authentication.",
-                );
-            }
+        if let Some(ref key) = api_key
+            && key.trim().is_empty()
+        {
+            utils::report_warning(
+                "[openapi_fdw] api_key is empty. Requests may fail authentication.",
+            );
         }
-        if let Some(ref token) = bearer_token {
-            if token.trim().is_empty() {
-                utils::report_warning(
-                    "[openapi_fdw] bearer_token is empty. Requests may fail authentication.",
-                );
-            }
+        if let Some(ref token) = bearer_token
+            && token.trim().is_empty()
+        {
+            utils::report_warning(
+                "[openapi_fdw] bearer_token is empty. Requests may fail authentication.",
+            );
         }
 
         let location = opts.require_or("api_key_location", "header");

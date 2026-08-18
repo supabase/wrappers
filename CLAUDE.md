@@ -26,8 +26,8 @@ The project uses Cargo workspaces with the following structure:
 - **Main workspace** (`Cargo.toml`): Contains `supabase-wrappers`, `supabase-wrappers-macros`, and `wrappers`
 - **Wasm workspace** (`wasm-wrappers/fdw/Cargo.toml`): Separate workspace for Wasm FDWs (excluded from main)
 
-**Rust version**: 1.88.0 (specified in `workspace.package`)
-**pgrx version**: 0.16.1 (PostgreSQL extension framework)
+**Rust version**: 1.97.1 (specified in `workspace.package`)
+**pgrx version**: 0.19.2 (PostgreSQL extension framework)
 
 ## Key Components
 
@@ -75,11 +75,13 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
 ### supabase-wrappers-macros
 
 Provides the `#[wrappers_fdw]` attribute macro that generates:
+
 - `<name>_fdw_handler()` - FDW handler entry point
 - `<name>_fdw_validator()` - Option validation function
 - `<name>_fdw_meta()` - Metadata function
 
 Usage:
+
 ```rust
 #[wrappers_fdw(
     version = "0.1.0",
@@ -94,24 +96,24 @@ pub struct MyFdw { ... }
 
 ### Native FDWs (wrappers/src/fdw/)
 
-| FDW | Feature Flag | Supports Write | Aggregate Pushdown |
-|-----|--------------|----------------|--------------------|
-| BigQuery | `bigquery_fdw` | Yes | Yes |
-| ClickHouse | `clickhouse_fdw` | Yes | Yes |
-| MySQL | `mysql_fdw` | Yes | Yes |
-| Stripe | `stripe_fdw` | Yes | No |
-| S3 Vectors | `s3vectors_fdw` | Yes | No |
-| S3 | `s3_fdw` | No | No |
-| Firebase | `firebase_fdw` | No | No |
-| Airtable | `airtable_fdw` | No | No |
-| Auth0 | `auth0_fdw` | No | No |
-| AWS Cognito | `cognito_fdw` | No | No |
-| DuckDB | `duckdb_fdw` | No | No |
-| Apache Iceberg | `iceberg_fdw` | No | No |
-| Logflare | `logflare_fdw` | No | No |
-| Redis | `redis_fdw` | No | No |
-| SQL Server | `mssql_fdw` | No | Yes |
-| HelloWorld | `helloworld_fdw` | No (demo) | No |
+| FDW            | Feature Flag     | Supports Write | Aggregate Pushdown |
+| -------------- | ---------------- | -------------- | ------------------ |
+| BigQuery       | `bigquery_fdw`   | Yes            | Yes                |
+| ClickHouse     | `clickhouse_fdw` | Yes            | Yes                |
+| MySQL          | `mysql_fdw`      | Yes            | Yes                |
+| Stripe         | `stripe_fdw`     | Yes            | No                 |
+| S3 Vectors     | `s3vectors_fdw`  | Yes            | No                 |
+| S3             | `s3_fdw`         | No             | No                 |
+| Firebase       | `firebase_fdw`   | No             | No                 |
+| Airtable       | `airtable_fdw`   | No             | No                 |
+| Auth0          | `auth0_fdw`      | No             | No                 |
+| AWS Cognito    | `cognito_fdw`    | No             | No                 |
+| DuckDB         | `duckdb_fdw`     | No             | No                 |
+| Apache Iceberg | `iceberg_fdw`    | No             | No                 |
+| Logflare       | `logflare_fdw`   | No             | No                 |
+| Redis          | `redis_fdw`      | No             | No                 |
+| SQL Server     | `mssql_fdw`      | No             | Yes                |
+| HelloWorld     | `helloworld_fdw` | No (demo)      | No                 |
 
 ### Wasm FDWs (wasm-wrappers/fdw/)
 
@@ -123,11 +125,11 @@ Cal.com, Calendly, Clerk, Cloudflare D1, HubSpot, Infura, Notion, Orb, Paddle, S
 
 ```bash
 # Install Rust toolchain
-rustup install 1.88.0
-rustup default 1.88.0
+rustup install 1.97.1
+rustup default 1.97.1
 
 # Install pgrx
-cargo install --locked cargo-pgrx --version 0.16.1
+cargo install --locked cargo-pgrx --version 0.19.2
 
 # Initialize pgrx with PostgreSQL
 cargo pgrx init --pg15 /usr/lib/postgresql/15/bin/pg_config
@@ -160,6 +162,7 @@ cargo pgrx run pg15 --features stripe_fdw
 ```
 
 Then in psql:
+
 ```sql
 create extension if not exists wrappers;
 create foreign data wrapper stripe_wrapper
@@ -282,6 +285,7 @@ impl ForeignDataWrapper<MyFdwError> for MyFdw {
 ### File Organization for FDWs
 
 Each native FDW follows this structure:
+
 ```
 wrappers/src/fdw/<name>_fdw/
 ├── mod.rs           # Error types and module exports
@@ -292,6 +296,7 @@ wrappers/src/fdw/<name>_fdw/
 ### Query Pushdown
 
 FDWs receive pushdown hints through `begin_scan`:
+
 - `quals`: WHERE predicates to filter at source
 - `sorts`: ORDER BY to sort at source
 - `limit`: LIMIT/OFFSET to limit at source
@@ -330,6 +335,7 @@ fn begin_aggregate_scan(
 ```
 
 Key types from `supabase_wrappers::prelude`:
+
 - `AggregateKind`: enum of `Count | CountColumn | Sum | Avg | Min | Max`
 - `Aggregate`: holds `kind`, `column: Option<Column>`, `distinct: bool`, `alias: String`, `type_oid`
 - `Aggregate::deparse_with_alias()` renders `FUNC(col) AS alias` (no remote quoting — apply your own if needed)
@@ -345,6 +351,7 @@ Supported via feature flags: `pg13`, `pg14`, `pg15` (default), `pg16`, `pg17`, `
 ## CI/CD
 
 GitHub Actions workflows in `.github/workflows/`:
+
 - `test_wrappers.yml`: Tests native and Wasm FDWs
 - `test_supabase_wrappers.yml`: Tests core framework
 - `release.yml`: Releases native FDWs
@@ -366,6 +373,7 @@ GitHub Actions workflows in `.github/workflows/`:
 ### Debugging
 
 Use pgrx `notice!` macro for debug output:
+
 ```rust
 use pgrx::notice;
 notice!("Debug: {:?}", value);
@@ -374,6 +382,7 @@ notice!("Debug: {:?}", value);
 ### Working with Options
 
 Options come from `CREATE SERVER` and `CREATE FOREIGN TABLE`:
+
 ```rust
 fn begin_scan(&mut self, ..., options: &HashMap<String, String>) {
     let table_name = options.get("table").unwrap_or(&"default".to_string());

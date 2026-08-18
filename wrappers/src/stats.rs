@@ -73,7 +73,7 @@ pub(crate) fn inc_stats(fdw_name: &str, metric: Metric, inc: i64) {
     let stats_table = match get_stats_table() {
         Ok(table) => table,
         Err(e) => {
-            report_warning(&format!("Failed to get stats table: {e}"));
+            report_warning(format!("Failed to get stats table: {e}"));
             return;
         }
     };
@@ -87,7 +87,7 @@ pub(crate) fn inc_stats(fdw_name: &str, metric: Metric, inc: i64) {
     );
 
     if let Err(e) = Spi::run_with_args(&sql, &[fdw_name.into(), inc.into()]) {
-        report_warning(&format!("Failed to increment stats: {e}"));
+        report_warning(format!("Failed to increment stats: {e}"));
     }
 }
 
@@ -103,7 +103,7 @@ pub(crate) fn get_metadata(fdw_name: &str) -> Option<JsonB> {
     let stats_table = match get_stats_table() {
         Ok(table) => table,
         Err(e) => {
-            report_warning(&format!("Failed to get stats table: {e}"));
+            report_warning(format!("Failed to get stats table: {e}"));
             return None;
         }
     };
@@ -113,7 +113,7 @@ pub(crate) fn get_metadata(fdw_name: &str) -> Option<JsonB> {
     match Spi::get_one_with_args(&sql, &[fdw_name.into()]) {
         Ok(metadata) => metadata,
         Err(e) => {
-            report_warning(&format!("Failed to get metadata: {e}"));
+            report_warning(format!("Failed to get metadata: {e}"));
             None
         }
     }
@@ -136,7 +136,7 @@ pub(crate) fn set_metadata(fdw_name: &str, metadata: Option<JsonB>) {
     let stats_table = match get_stats_table() {
         Ok(table) => table,
         Err(e) => {
-            report_warning(&format!("Failed to get stats table: {e}"));
+            report_warning(format!("Failed to get stats table: {e}"));
             return;
         }
     };
@@ -150,6 +150,6 @@ pub(crate) fn set_metadata(fdw_name: &str, metadata: Option<JsonB>) {
     );
 
     if let Err(err) = Spi::run_with_args(&sql, &[fdw_name.into(), metadata.into()]) {
-        report_warning(&format!("Failed to set metadata: {err}"));
+        report_warning(format!("Failed to set metadata: {err}"));
     }
 }

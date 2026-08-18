@@ -162,7 +162,7 @@ impl BigQueryFdw {
                 Ok(t) => timeout = t,
                 Err(_) => report_error(
                     PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                    &format!("invalid timeout value: {timeout_str}"),
+                    format!("invalid timeout value: {timeout_str}"),
                 ),
             }
         }
@@ -177,7 +177,7 @@ impl BigQueryFdw {
                     if resp.job_complete == Some(false) {
                         report_error(
                             PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                            &format!("query timeout {timeout}ms expired"),
+                            format!("query timeout {timeout}ms expired"),
                         );
                     } else {
                         let rows_in = resp
@@ -204,7 +204,7 @@ impl BigQueryFdw {
                     self.scan_result = None;
                     report_error(
                         PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                        &format!("query failed: {err}"),
+                        format!("query failed: {err}"),
                     );
                 }
             }
@@ -334,7 +334,7 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
             Err(err) => {
                 report_error(
                     PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                    &format!("parse service account key JSON failed: {err}"),
+                    format!("parse service account key JSON failed: {err}"),
                 );
                 return Ok(ret);
             }
@@ -349,7 +349,7 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
             Err(err) => {
                 report_error(
                     PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                    &format!("create client failed: {err}"),
+                    format!("create client failed: {err}"),
                 );
                 None
             }
@@ -427,7 +427,7 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
                         self.scan_result = None;
                         report_error(
                             PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                            &format!("fetch query result failed: {err}"),
+                            format!("fetch query result failed: {err}"),
                         );
                     }
                 }
@@ -490,7 +490,7 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
             if let Some(errors) = resp.insert_errors {
                 report_error(
                     PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                    &format!("insert failed: {errors:?}"),
+                    format!("insert failed: {errors:?}"),
                 );
             }
         }
@@ -530,7 +530,7 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
             if let Err(err) = self.rt.block_on(query_job) {
                 report_error(
                     PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                    &format!("update failed: {err}"),
+                    format!("update failed: {err}"),
                 );
             }
         }
@@ -550,7 +550,7 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
             if let Err(err) = self.rt.block_on(query_job) {
                 report_error(
                     PgSqlErrorCode::ERRCODE_FDW_ERROR,
-                    &format!("update failed: {err}"),
+                    format!("update failed: {err}"),
                 );
             }
         }

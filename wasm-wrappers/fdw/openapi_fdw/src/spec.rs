@@ -355,48 +355,48 @@ impl OpenApiSpec {
         }
 
         // First resolve any $ref
-        if let Some(ref reference) = schema.reference {
-            if let Some(resolved) = self.resolve_ref(reference) {
-                let mut result = self.resolve_schema_internal(resolved, depth + 1, call_count);
-                // Merge non-default siblings (OpenAPI 3.1 $ref with siblings)
-                if schema.nullable {
-                    result.nullable = true;
-                }
-                if schema.write_only {
-                    result.write_only = true;
-                }
-                for (name, prop) in &schema.properties {
-                    result.properties.insert(name.clone(), prop.clone());
-                }
-                if !schema.required.is_empty() {
-                    result.required.extend(schema.required.iter().cloned());
-                    result.required.sort();
-                    result.required.dedup();
-                }
-                // OpenAPI 3.1: $ref can coexist with composition keywords
-                if !schema.all_of.is_empty() {
-                    let allof = self.merge_allof_schemas(&schema.all_of, depth + 1, call_count);
-                    for (name, prop) in allof.properties {
-                        result.properties.insert(name, prop);
-                    }
-                    result.required.extend(allof.required);
-                    result.required.sort();
-                    result.required.dedup();
-                }
-                if !schema.one_of.is_empty() {
-                    let oneof = self.merge_union_schemas(&schema.one_of, depth + 1, call_count);
-                    for (name, prop) in oneof.properties {
-                        result.properties.entry(name).or_insert(prop);
-                    }
-                }
-                if !schema.any_of.is_empty() {
-                    let anyof = self.merge_union_schemas(&schema.any_of, depth + 1, call_count);
-                    for (name, prop) in anyof.properties {
-                        result.properties.entry(name).or_insert(prop);
-                    }
-                }
-                return result;
+        if let Some(ref reference) = schema.reference
+            && let Some(resolved) = self.resolve_ref(reference)
+        {
+            let mut result = self.resolve_schema_internal(resolved, depth + 1, call_count);
+            // Merge non-default siblings (OpenAPI 3.1 $ref with siblings)
+            if schema.nullable {
+                result.nullable = true;
             }
+            if schema.write_only {
+                result.write_only = true;
+            }
+            for (name, prop) in &schema.properties {
+                result.properties.insert(name.clone(), prop.clone());
+            }
+            if !schema.required.is_empty() {
+                result.required.extend(schema.required.iter().cloned());
+                result.required.sort();
+                result.required.dedup();
+            }
+            // OpenAPI 3.1: $ref can coexist with composition keywords
+            if !schema.all_of.is_empty() {
+                let allof = self.merge_allof_schemas(&schema.all_of, depth + 1, call_count);
+                for (name, prop) in allof.properties {
+                    result.properties.insert(name, prop);
+                }
+                result.required.extend(allof.required);
+                result.required.sort();
+                result.required.dedup();
+            }
+            if !schema.one_of.is_empty() {
+                let oneof = self.merge_union_schemas(&schema.one_of, depth + 1, call_count);
+                for (name, prop) in oneof.properties {
+                    result.properties.entry(name).or_insert(prop);
+                }
+            }
+            if !schema.any_of.is_empty() {
+                let anyof = self.merge_union_schemas(&schema.any_of, depth + 1, call_count);
+                for (name, prop) in anyof.properties {
+                    result.properties.entry(name).or_insert(prop);
+                }
+            }
+            return result;
         }
 
         // Handle allOf by merging all properties (intersection - all schemas apply)

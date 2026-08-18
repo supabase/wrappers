@@ -52,9 +52,9 @@ impl AirtableFdw {
         match view_id {
             Some(view_id) => format!(
                 "{}/{}/{}?view={}",
-                &self.base_url, base_id, table_id, view_id
+                self.base_url, base_id, table_id, view_id
             ),
-            None => format!("{}/{}/{}", &self.base_url, base_id, table_id),
+            None => format!("{}/{}/{}", self.base_url, base_id, table_id),
         }
     }
 

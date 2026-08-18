@@ -63,7 +63,7 @@ impl DuckdbFdw {
                 .join(", ")
         };
 
-        let mut sql = format!("select {} from {} as _wrappers_tbl", tgts, &self.table);
+        let mut sql = format!("select {} from {} as _wrappers_tbl", tgts, self.table);
 
         if !quals.is_empty() {
             let cond = quals

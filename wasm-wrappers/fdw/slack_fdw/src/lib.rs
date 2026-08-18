@@ -505,12 +505,12 @@ impl SlackFdw {
             };
 
             // Handle rate limiting
-            if resp.status_code == 429 {
-                if let Some(retry) = resp.headers.iter().find(|h| h.0 == "retry-after") {
-                    let delay_secs = retry.1.parse::<u64>().map_err(|e| e.to_string())?;
-                    time::sleep(delay_secs * 1000);
-                    continue;
-                }
+            if resp.status_code == 429
+                && let Some(retry) = resp.headers.iter().find(|h| h.0 == "retry-after")
+            {
+                let delay_secs = retry.1.parse::<u64>().map_err(|e| e.to_string())?;
+                time::sleep(delay_secs * 1000);
+                continue;
             }
 
             // Check for errors
@@ -523,14 +523,14 @@ impl SlackFdw {
             stats::inc_stats(FDW_NAME, stats::Metric::BytesIn, resp.body.len() as i64);
 
             // Check for Slack API errors
-            if let Some(ok) = resp_json.get("ok") {
-                if !ok.as_bool().unwrap_or(false) {
-                    let error = resp_json
-                        .get("error")
-                        .and_then(|e| e.as_str())
-                        .unwrap_or("Unknown error");
-                    return Err(format!("Slack API error: {error}"));
-                }
+            if let Some(ok) = resp_json.get("ok")
+                && !ok.as_bool().unwrap_or(false)
+            {
+                let error = resp_json
+                    .get("error")
+                    .and_then(|e| e.as_str())
+                    .unwrap_or("Unknown error");
+                return Err(format!("Slack API error: {error}"));
             }
 
             return Ok(resp_json);
@@ -804,10 +804,9 @@ impl SlackFdw {
                 if qual.operator().as_str() == "="
                     && !qual.use_or()
                     && qual.field().as_str() == "types"
+                    && let Value::Cell(Cell::String(types)) = qual.value()
                 {
-                    if let Value::Cell(Cell::String(types)) = qual.value() {
-                        params.push(("types".to_string(), types.clone()));
-                    }
+                    params.push(("types".to_string(), types.clone()));
                 }
             }
         }
@@ -1175,11 +1174,11 @@ impl Guest for SlackFdw {
                     // If there's a next cursor and we don't have a limit or haven't reached it yet, fetch the next batch
                     if this.next_cursor.is_some() {
                         // If we have a limit, check if we've already reached it
-                        if let Some(limit) = &this.limit {
-                            if this.users.len() >= limit.count() as usize {
-                                // We've already met our limit, don't fetch more
-                                return Ok(None);
-                            }
+                        if let Some(limit) = &this.limit
+                            && this.users.len() >= limit.count() as usize
+                        {
+                            // We've already met our limit, don't fetch more
+                            return Ok(None);
                         }
 
                         this.fetch_users(ctx)?;

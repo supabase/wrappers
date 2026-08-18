@@ -952,7 +952,7 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
 
             let json: JsonValue = serde_json::from_str(&body)?;
             if let Some(id) = json.get("id").and_then(|v| v.as_str()) {
-                report_info(&format!("inserted {} {}", self.obj, id));
+                report_info(format!("inserted {} {}", self.obj, id));
             }
 
             set_stats_metadata(stats_metadata);
@@ -1001,7 +1001,7 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
 
                     let json: JsonValue = serde_json::from_str(&body)?;
                     if let Some(id) = json.get("id").and_then(|v| v.as_str()) {
-                        report_info(&format!("updated {} {}", self.obj, id));
+                        report_info(format!("updated {} {}", self.obj, id));
                     }
                 }
                 _ => unreachable!(),
@@ -1049,7 +1049,7 @@ impl ForeignDataWrapper<StripeFdwError> for StripeFdw {
 
                     let json: JsonValue = serde_json::from_str(&body)?;
                     if let Some(id) = json.get("id").and_then(|v| v.as_str()) {
-                        report_info(&format!("deleted {} {}", self.obj, id));
+                        report_info(format!("deleted {} {}", self.obj, id));
                     }
                 }
                 _ => unreachable!(),

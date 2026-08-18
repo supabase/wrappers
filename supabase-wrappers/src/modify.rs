@@ -426,7 +426,7 @@ pub(super) extern "C-unwind" fn plan_foreign_modify<
 
         report_error(
             PgSqlErrorCode::ERRCODE_FDW_ERROR,
-            &format!("rowid_column attribute {rowid_name:?} does not exist",),
+            format!("rowid_column attribute {rowid_name:?} does not exist",),
         );
 
         ptr::null_mut()

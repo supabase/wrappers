@@ -72,13 +72,11 @@ impl ClerkFdw {
                     return Ok(None);
                 }
             }
-            "billing/statement" | "billing/payment_attempts" => {
-                if tgt_col_name == "statement_id" {
-                    if self.sub_obj == "statement_id" {
-                        return Ok(Some(Cell::String(self.sub_obj_value.clone())));
-                    }
-                    return Ok(None);
+            "billing/statement" | "billing/payment_attempts" if tgt_col_name == "statement_id" => {
+                if self.sub_obj == "statement_id" {
+                    return Ok(Some(Cell::String(self.sub_obj_value.clone())));
                 }
+                return Ok(None);
             }
             _ => {}
         }
@@ -138,12 +136,9 @@ impl ClerkFdw {
         // For standard endpoints, check if we should fetch a single item by ID
         let mut url = if !is_parameterized {
             if let Some(q) = quals.iter().find(|q| {
-                if (q.field() == "id") && (q.operator() == "=") {
-                    if let Value::Cell(Cell::String(_)) = q.value() {
-                        return true;
-                    }
-                }
-                false
+                q.field() == "id"
+                    && q.operator() == "="
+                    && matches!(q.value(), Value::Cell(Cell::String(_)))
             }) {
                 match q.value() {
                     Value::Cell(Cell::String(id)) => {
@@ -294,12 +289,12 @@ impl ClerkFdw {
 
             // idle for a while for retry when got rate limited error
             // ref: https://clerk.com/docs/backend-requests/resources/rate-limits#errors
-            if resp.status_code == 429 {
-                if let Some(retry) = resp.headers.iter().find(|h| h.0 == "retry-after") {
-                    let delay_secs = retry.1.parse::<u64>().map_err(|e| e.to_string())?;
-                    time::sleep(delay_secs * 1000);
-                    continue;
-                }
+            if resp.status_code == 429
+                && let Some(retry) = resp.headers.iter().find(|h| h.0 == "retry-after")
+            {
+                let delay_secs = retry.1.parse::<u64>().map_err(|e| e.to_string())?;
+                time::sleep(delay_secs * 1000);
+                continue;
             }
 
             // if encounter the 404 error, we should take it as empty result rather than an error

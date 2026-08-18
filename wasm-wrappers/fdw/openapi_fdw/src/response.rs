@@ -43,13 +43,13 @@ impl OpenApiFdw {
     /// Extract the data array from the response, taking ownership to avoid cloning
     pub(crate) fn extract_data(&self, resp: &mut JsonValue) -> Result<Vec<JsonValue>, FdwError> {
         // If response_path is specified, use it
-        if let Some(ref path) = self.response_path {
-            if let Some(data) = resp.pointer_mut(path).map(JsonValue::take) {
-                return Self::json_to_rows(data);
-            }
-            // response_path not found — fall through to auto-detection
-            // (common when rowid lookup returns single object instead of collection)
+        if let Some(ref path) = self.response_path
+            && let Some(data) = resp.pointer_mut(path).map(JsonValue::take)
+        {
+            return Self::json_to_rows(data);
         }
+        // response_path not found (or not specified) — fall through to auto-detection
+        // (common when rowid lookup returns single object instead of collection)
 
         // Direct array response
         if resp.is_array() {
@@ -116,15 +116,15 @@ impl OpenApiFdw {
         self.pagination.clear_next();
 
         // 1. Try configured cursor path first (explicit user config wins)
-        if !self.cursor_path.is_empty() {
-            if let Some(value) = Self::extract_non_empty_string(resp, &self.cursor_path) {
-                if value.starts_with("http://") || value.starts_with("https://") {
-                    self.pagination.next = Some(PaginationToken::Url(value));
-                } else {
-                    self.pagination.next = Some(PaginationToken::Cursor(value));
-                }
-                return;
+        if !self.cursor_path.is_empty()
+            && let Some(value) = Self::extract_non_empty_string(resp, &self.cursor_path)
+        {
+            if value.starts_with("http://") || value.starts_with("https://") {
+                self.pagination.next = Some(PaginationToken::Url(value));
+            } else {
+                self.pagination.next = Some(PaginationToken::Cursor(value));
             }
+            return;
         }
 
         // 2. RFC 8288 Link header with rel="next" (cross-origin protection

@@ -1307,6 +1307,7 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
 mod tests {
     use super::*;
 
+    #[cfg(feature = "pg_test")]
     fn assert_cell_clone(cell: Cell) {
         let cell_clone = cell.clone();
 
@@ -1333,12 +1334,14 @@ mod tests {
     // ==========================================================================
     // Tests for Cell
     // ==========================================================================
+    #[cfg(feature = "pg_test")]
     #[test]
     fn test_cell_clone() {
         let cell = Cell::String("hello".to_string());
         assert_cell_clone(cell);
     }
 
+    #[cfg(feature = "pg_test")]
     #[test]
     fn test_cell_clone_primitives() {
         let cases = vec![
@@ -1357,6 +1360,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "pg_test")]
     #[test]
     fn test_cell_clone_array_variants() {
         let cases = vec![
@@ -1376,6 +1380,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "pg_test")]
     #[test]
     fn test_cell_clone_deep_copy_for_owned_types() {
         let mut string_cell = Cell::String("hello".to_string());
@@ -1418,6 +1423,7 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "pg_test")]
     #[test]
     fn test_cell_display_primitives_and_string() {
         assert_eq!(format!("{}", Cell::Bool(true)), "true");
@@ -1430,6 +1436,7 @@ mod tests {
         assert_eq!(format!("{}", Cell::String("hello".to_string())), "'hello'");
     }
 
+    #[cfg(feature = "pg_test")]
     #[test]
     fn test_cell_display_arrays_with_nulls() {
         assert_eq!(
@@ -1449,6 +1456,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "pg_test")]
     #[test]
     fn test_cell_display_empty_arrays() {
         assert_eq!(format!("{}", Cell::BoolArray(vec![])), "[]");
@@ -1460,7 +1468,7 @@ mod tests {
         assert_eq!(format!("{}", Cell::StringArray(vec![])), "[]");
     }
 
-    #[cfg(all(feature = "pg_test", pgrx_embed))]
+    #[cfg(feature = "pg_test")]
     #[test]
     fn test_cell_into_datum_scalars_round_trip() {
         let bool_datum = Cell::Bool(true).into_datum().expect("bool should convert");
@@ -1484,7 +1492,7 @@ mod tests {
         assert_eq!(string_value, "hello");
     }
 
-    #[cfg(all(feature = "pg_test", pgrx_embed))]
+    #[cfg(feature = "pg_test")]
     #[test]
     fn test_cell_into_datum_arrays_round_trip() {
         let bool_array_datum = Cell::BoolArray(vec![Some(true), None, Some(false)])

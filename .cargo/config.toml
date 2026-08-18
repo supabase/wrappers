@@ -1,5 +1,10 @@
 [target.'cfg(target_os="macos")']
 # Postgres symbols won't be available until runtime
+# TODO: building with a large feature set (e.g. `--features native_fdws`) on macOS
+# trips Xcode's newer linker's 16MB compact-unwind table limit, producing a
+# "__eh_frame section too large" warning. Workaround is `-Wl,-ld_classic`, but
+# that linker is itself deprecated and slated for removal, so leaving as-is for
+# now rather than swapping one warning for another (https://developer.apple.com/forums/thread/737707).
 rustflags = ["-Clink-arg=-Wl,-undefined,dynamic_lookup"]
 
 [target.'cfg(target_os="linux")']

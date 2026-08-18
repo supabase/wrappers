@@ -1,17 +1,11 @@
 [workspace]
-members = [
-    "supabase-wrappers",
-    "supabase-wrappers-macros",
-    "wrappers",
-]
-exclude = [
-    "wasm-wrappers",
-]
+members = ["supabase-wrappers", "supabase-wrappers-macros", "wrappers"]
+exclude = ["wasm-wrappers"]
 resolver = "2"
 
 [workspace.package]
 edition = "2024"
-rust-version = "1.88.0"
+rust-version = "1.97.1"
 homepage = "https://github.com/supabase/wrappers"
 repository = "https://github.com/supabase/wrappers"
 
@@ -24,4 +18,3 @@ panic = "unwind"
 opt-level = 3
 lto = "fat"
 codegen-units = 1
-
