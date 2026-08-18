@@ -19,6 +19,8 @@ use crate::interface::Param;
 /// Parses a Postgres array `Datum` (given its element/array type OID) into a `Vec<Cell>`.
 ///
 /// Returns `None` if `is_null` is set or if `typoid` isn't one of the supported array types.
+/// NULL array elements are skipped, so the resulting `Vec` does not preserve positional
+/// correspondence with the source array.
 ///
 /// # Safety
 ///
