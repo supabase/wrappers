@@ -37,3 +37,48 @@ panic = "unwind"
 opt-level = 3
 lto = "fat"
 codegen-units = 16
+
+[profile.release.package.cal_fdw]
+strip = "debuginfo"
+
+[profile.release.package.calendly_fdw]
+strip = "debuginfo"
+
+[profile.release.package.cfd1_fdw]
+strip = "debuginfo"
+
+[profile.release.package.clerk_fdw]
+strip = "debuginfo"
+
+[profile.release.package.helloworld_fdw]
+strip = "debuginfo"
+
+[profile.release.package.hubspot_fdw]
+strip = "debuginfo"
+
+[profile.release.package.infura_fdw]
+strip = "debuginfo"
+
+[profile.release.package.langfuse_fdw]
+strip = "debuginfo"
+
+[profile.release.package.notion_fdw]
+strip = "debuginfo"
+
+[profile.release.package.openapi_fdw]
+strip = "debuginfo"
+
+[profile.release.package.orb_fdw]
+strip = "debuginfo"
+
+[profile.release.package.paddle_fdw]
+strip = "debuginfo"
+
+[profile.release.package.shopify_fdw]
+strip = "debuginfo"
+
+[profile.release.package.slack_fdw]
+strip = "debuginfo"
+
+[profile.release.package.snowflake_fdw]
+strip = "debuginfo"
