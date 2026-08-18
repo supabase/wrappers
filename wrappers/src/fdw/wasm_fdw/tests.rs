@@ -19,7 +19,7 @@ mod tests {
                 r#"CREATE SERVER snowflake_server
                      FOREIGN DATA WRAPPER wasm_wrapper
                      OPTIONS (
-                       fdw_package_url 'file://../../../wasm-wrappers/fdw/target/wasm32-unknown-unknown/release/snowflake_fdw.wasm',
+                       fdw_package_url 'file://../../../target/wasm32-unknown-unknown/release/snowflake_fdw.wasm',
                        fdw_package_name 'supabase:snowflake-fdw',
                        fdw_package_version '>=0.1.0',
                        api_url 'http://localhost:8096/snowflake/{}',
@@ -65,7 +65,7 @@ mod tests {
                 r#"CREATE SERVER paddle_server
                      FOREIGN DATA WRAPPER wasm_wrapper
                      OPTIONS (
-                       fdw_package_url 'file://../../../wasm-wrappers/fdw/target/wasm32-unknown-unknown/release/paddle_fdw.wasm',
+                       fdw_package_url 'file://../../../target/wasm32-unknown-unknown/release/paddle_fdw.wasm',
                        fdw_package_name 'supabase:paddle-fdw',
                        fdw_package_version '>=0.1.0',
                        api_url 'http://localhost:8096/paddle',
@@ -182,7 +182,7 @@ mod tests {
                 r#"CREATE SERVER notion_server
                      FOREIGN DATA WRAPPER wasm_wrapper
                      OPTIONS (
-                       fdw_package_url 'file://../../../wasm-wrappers/fdw/target/wasm32-unknown-unknown/release/notion_fdw.wasm',
+                       fdw_package_url 'file://../../../target/wasm32-unknown-unknown/release/notion_fdw.wasm',
                        fdw_package_name 'supabase:notion-fdw',
                        fdw_package_version '>=0.1.0',
                        api_url 'http://localhost:8096/notion',
@@ -231,7 +231,7 @@ mod tests {
                 r#"CREATE SERVER calendly_server
                      FOREIGN DATA WRAPPER wasm_wrapper
                      OPTIONS (
-                       fdw_package_url 'file://../../../wasm-wrappers/fdw/target/wasm32-unknown-unknown/release/calendly_fdw.wasm',
+                       fdw_package_url 'file://../../../target/wasm32-unknown-unknown/release/calendly_fdw.wasm',
                        fdw_package_name 'supabase:calendly-fdw',
                        fdw_package_version '>=0.1.0',
                        organization 'https://api.calendly.com/organizations/xxx',
@@ -275,7 +275,7 @@ mod tests {
                 r#"CREATE SERVER cal_server
                      FOREIGN DATA WRAPPER wasm_wrapper
                      OPTIONS (
-                       fdw_package_url 'file://../../../wasm-wrappers/fdw/target/wasm32-unknown-unknown/release/cal_fdw.wasm',
+                       fdw_package_url 'file://../../../target/wasm32-unknown-unknown/release/cal_fdw.wasm',
                        fdw_package_name 'supabase:cal-fdw',
                        fdw_package_version '>=0.1.0',
                        api_url 'http://localhost:8096/cal',
@@ -315,7 +315,7 @@ mod tests {
                 r#"CREATE SERVER cfd1_server
                      FOREIGN DATA WRAPPER wasm_wrapper
                      OPTIONS (
-                       fdw_package_url 'file://../../../wasm-wrappers/fdw/target/wasm32-unknown-unknown/release/cfd1_fdw.wasm',
+                       fdw_package_url 'file://../../../target/wasm32-unknown-unknown/release/cfd1_fdw.wasm',
                        fdw_package_name 'supabase:cfd1-fdw',
                        fdw_package_version '>=0.1.0',
                        api_url 'http://localhost:8096/cfd1',
@@ -356,7 +356,7 @@ mod tests {
                 r#"CREATE SERVER clerk_server
                      FOREIGN DATA WRAPPER wasm_wrapper
                      OPTIONS (
-                       fdw_package_url 'file://../../../wasm-wrappers/fdw/target/wasm32-unknown-unknown/release/clerk_fdw.wasm',
+                       fdw_package_url 'file://../../../target/wasm32-unknown-unknown/release/clerk_fdw.wasm',
                        fdw_package_name 'supabase:clerk-fdw',
                        fdw_package_version '>=0.1.0',
                        api_url 'http://localhost:8096/clerk',
@@ -400,7 +400,7 @@ mod tests {
                 r#"CREATE SERVER orb_server
                      FOREIGN DATA WRAPPER wasm_wrapper
                      OPTIONS (
-                       fdw_package_url 'file://../../../wasm-wrappers/fdw/target/wasm32-unknown-unknown/release/orb_fdw.wasm',
+                       fdw_package_url 'file://../../../target/wasm32-unknown-unknown/release/orb_fdw.wasm',
                        fdw_package_name 'supabase:orb-fdw',
                        fdw_package_version '>=0.1.0',
                        api_url 'http://localhost:8096/orb',
@@ -442,7 +442,7 @@ mod tests {
                 r#"CREATE SERVER hubspot_server
                      FOREIGN DATA WRAPPER wasm_wrapper
                      OPTIONS (
-                       fdw_package_url 'file://../../../wasm-wrappers/fdw/target/wasm32-unknown-unknown/release/hubspot_fdw.wasm',
+                       fdw_package_url 'file://../../../target/wasm32-unknown-unknown/release/hubspot_fdw.wasm',
                        fdw_package_name 'supabase:hubspot-fdw',
                        fdw_package_version '>=0.1.0',
                        api_url 'http://localhost:8096/hubspot',
@@ -522,7 +522,7 @@ mod tests {
                 r#"CREATE SERVER shopify_server
                      FOREIGN DATA WRAPPER wasm_wrapper
                      OPTIONS (
-                       fdw_package_url 'file://../../../wasm-wrappers/fdw/target/wasm32-unknown-unknown/release/shopify_fdw.wasm',
+                       fdw_package_url 'file://../../../target/wasm32-unknown-unknown/release/shopify_fdw.wasm',
                        fdw_package_name 'supabase:shopify-fdw',
                        fdw_package_version '>=0.1.0',
                        api_url 'http://localhost:8096/shopify',
@@ -560,7 +560,7 @@ mod tests {
                 r#"CREATE SERVER infura_server
                      FOREIGN DATA WRAPPER wasm_wrapper
                      OPTIONS (
-                       fdw_package_url 'file://../../../wasm-wrappers/fdw/target/wasm32-unknown-unknown/release/infura_fdw.wasm',
+                       fdw_package_url 'file://../../../target/wasm32-unknown-unknown/release/infura_fdw.wasm',
                        fdw_package_name 'supabase:infura-fdw',
                        fdw_package_version '>=0.1.0',
                        api_url 'http://localhost:8096/infura',
@@ -610,7 +610,7 @@ mod tests {
                 r#"CREATE SERVER openapi_server
                      FOREIGN DATA WRAPPER wasm_wrapper
                      OPTIONS (
-                       fdw_package_url 'file://../../../wasm-wrappers/fdw/target/wasm32-unknown-unknown/release/openapi_fdw.wasm',
+                       fdw_package_url 'file://../../../target/wasm32-unknown-unknown/release/openapi_fdw.wasm',
                        fdw_package_name 'supabase:openapi-fdw',
                        fdw_package_version '>=0.1.0',
                        base_url 'http://localhost:8096/openapi',
@@ -866,7 +866,7 @@ mod tests {
                 r#"CREATE SERVER openapi_auth_server
                      FOREIGN DATA WRAPPER wasm_wrapper
                      OPTIONS (
-                       fdw_package_url 'file://../../../wasm-wrappers/fdw/target/wasm32-unknown-unknown/release/openapi_fdw.wasm',
+                       fdw_package_url 'file://../../../target/wasm32-unknown-unknown/release/openapi_fdw.wasm',
                        fdw_package_name 'supabase:openapi-fdw',
                        fdw_package_version '>=0.1.0',
                        base_url 'http://localhost:8096/openapi',
@@ -923,7 +923,7 @@ mod tests {
                 r#"CREATE SERVER langfuse_server
                      FOREIGN DATA WRAPPER wasm_wrapper
                      OPTIONS (
-                       fdw_package_url 'file://../../../wasm-wrappers/fdw/target/wasm32-unknown-unknown/release/langfuse_fdw.wasm',
+                       fdw_package_url 'file://../../../target/wasm32-unknown-unknown/release/langfuse_fdw.wasm',
                        fdw_package_name 'supabase:langfuse-fdw',
                        fdw_package_version '>=0.1.0',
                        api_url 'http://localhost:8096/langfuse',

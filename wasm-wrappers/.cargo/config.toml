@@ -1,6 +1,2 @@
 [build]
 target = "wasm32-unknown-unknown"
-
-[profile.release]
-strip = "debuginfo"
-lto = true

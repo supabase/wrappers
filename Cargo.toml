@@ -1,7 +1,26 @@
 [workspace]
-members = ["supabase-wrappers", "supabase-wrappers-macros", "wrappers"]
-exclude = ["wasm-wrappers"]
-resolver = "2"
+members = [
+    "supabase-wrappers",
+    "supabase-wrappers-macros",
+    "wrappers",
+    "wasm-wrappers/fdw/cal_fdw",
+    "wasm-wrappers/fdw/calendly_fdw",
+    "wasm-wrappers/fdw/cfd1_fdw",
+    "wasm-wrappers/fdw/clerk_fdw",
+    "wasm-wrappers/fdw/helloworld_fdw",
+    "wasm-wrappers/fdw/hubspot_fdw",
+    "wasm-wrappers/fdw/infura_fdw",
+    "wasm-wrappers/fdw/langfuse_fdw",
+    "wasm-wrappers/fdw/notion_fdw",
+    "wasm-wrappers/fdw/openapi_fdw",
+    "wasm-wrappers/fdw/orb_fdw",
+    "wasm-wrappers/fdw/paddle_fdw",
+    "wasm-wrappers/fdw/shopify_fdw",
+    "wasm-wrappers/fdw/slack_fdw",
+    "wasm-wrappers/fdw/snowflake_fdw",
+]
+default-members = ["supabase-wrappers", "supabase-wrappers-macros", "wrappers"]
+resolver = "3"
 
 [workspace.package]
 edition = "2024"
@@ -17,4 +36,49 @@ lto = "thin"
 panic = "unwind"
 opt-level = 3
 lto = "fat"
-codegen-units = 1
+codegen-units = 16
+
+[profile.release.package.cal_fdw]
+strip = "debuginfo"
+
+[profile.release.package.calendly_fdw]
+strip = "debuginfo"
+
+[profile.release.package.cfd1_fdw]
+strip = "debuginfo"
+
+[profile.release.package.clerk_fdw]
+strip = "debuginfo"
+
+[profile.release.package.helloworld_fdw]
+strip = "debuginfo"
+
+[profile.release.package.hubspot_fdw]
+strip = "debuginfo"
+
+[profile.release.package.infura_fdw]
+strip = "debuginfo"
+
+[profile.release.package.langfuse_fdw]
+strip = "debuginfo"
+
+[profile.release.package.notion_fdw]
+strip = "debuginfo"
+
+[profile.release.package.openapi_fdw]
+strip = "debuginfo"
+
+[profile.release.package.orb_fdw]
+strip = "debuginfo"
+
+[profile.release.package.paddle_fdw]
+strip = "debuginfo"
+
+[profile.release.package.shopify_fdw]
+strip = "debuginfo"
+
+[profile.release.package.slack_fdw]
+strip = "debuginfo"
+
+[profile.release.package.snowflake_fdw]
+strip = "debuginfo"

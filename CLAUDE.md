@@ -14,19 +14,21 @@ wrappers/
 ├── supabase-wrappers-macros/    # Procedural macros (#[wrappers_fdw])
 ├── wrappers/                    # Native FDW implementations (PostgreSQL extension)
 │   └── src/fdw/                 # Individual FDW implementations
-├── wasm-wrappers/               # WebAssembly-based FDW implementations (separate workspace)
+├── wasm-wrappers/               # WebAssembly-based FDW implementations
 │   └── fdw/                     # Individual Wasm FDW crates
 └── docs/                        # MkDocs documentation site
 ```
 
 ## Workspace Configuration
 
-The project uses Cargo workspaces with the following structure:
+The project uses a single root Cargo workspace (`Cargo.toml`) containing `supabase-wrappers`,
+`supabase-wrappers-macros`, `wrappers`, and every crate under `wasm-wrappers/fdw/`. All members
+share one `Cargo.lock` and one MSRV. `default-members` is scoped to the native crates so a bare
+`cargo build`/`cargo test` run at the repo root behaves like before the wasm crates were folded in;
+building or testing the wasm crates requires explicit `-p <crate>` selection (or `--workspace` with
+`--exclude` for the native crates), since `wasm-wrappers/fdw` is no longer its own workspace root.
 
-- **Main workspace** (`Cargo.toml`): Contains `supabase-wrappers`, `supabase-wrappers-macros`, and `wrappers`
-- **Wasm workspace** (`wasm-wrappers/fdw/Cargo.toml`): Separate workspace for Wasm FDWs (excluded from main)
-
-**Rust version**: 1.97.1 (specified in `workspace.package`)
+**Rust version**: 1.97.1 (specified in `workspace.package`, applies to every member)
 **pgrx version**: 0.19.2 (PostgreSQL extension framework)
 
 ## Key Components
@@ -149,9 +151,17 @@ cargo build --features "native_fdws pg15"
 # Build specific FDW
 cargo build --features "stripe_fdw pg15"
 
-# Build Wasm FDWs
-cd wasm-wrappers/fdw
+# Build a specific Wasm FDW
+cd wasm-wrappers/fdw/<name>_fdw
 cargo component build --release --target wasm32-unknown-unknown
+
+# Build all Wasm FDWs (wasm-wrappers/fdw is no longer its own workspace root,
+# so a bare `cargo component build` from there requires explicit package selection)
+cd wasm-wrappers/fdw
+cargo component build --release --target wasm32-unknown-unknown \
+  -p cal_fdw -p calendly_fdw -p cfd1_fdw -p clerk_fdw -p helloworld_fdw \
+  -p hubspot_fdw -p infura_fdw -p langfuse_fdw -p notion_fdw -p openapi_fdw \
+  -p orb_fdw -p paddle_fdw -p shopify_fdw -p slack_fdw -p snowflake_fdw
 ```
 
 ### Running Interactive Development
