@@ -34,6 +34,8 @@ pub mod fdw;
 /// Statistics collection and reporting utilities
 pub mod stats;
 
+mod supabase_wrappers_tests;
+
 #[cfg(test)]
 pub mod pg_test {
     pub fn setup(_options: Vec<&str>) {

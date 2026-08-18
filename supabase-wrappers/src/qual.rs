@@ -16,8 +16,17 @@ use std::sync::Mutex;
 
 use crate::interface::Param;
 
-// create array of Cell from constant datum array
-pub(crate) unsafe fn form_array_from_datum(
+/// Parses a Postgres array `Datum` (given its element/array type OID) into a `Vec<Cell>`.
+///
+/// Returns `None` if `is_null` is set or if `typoid` isn't one of the supported array types.
+/// NULL array elements are skipped, so the resulting `Vec` does not preserve positional
+/// correspondence with the source array.
+///
+/// # Safety
+///
+/// `datum` must be a valid array `Datum` of the Postgres type identified by `typoid`, or
+/// `is_null` must be `true`.
+pub unsafe fn form_array_from_datum(
     datum: Datum,
     is_null: bool,
     typoid: pg_sys::Oid,
@@ -499,44 +508,5 @@ pub(crate) unsafe fn extract_quals(
 
             quals
         })
-    }
-}
-
-#[cfg(all(test, feature = "pg_test"))]
-mod tests {
-    use super::*;
-    use pgrx::IntoDatum;
-
-    #[test]
-    fn test_form_array_from_datum_int4_array() {
-        let values = vec![1_i32, 2_i32, 3_i32];
-        let datum = values
-            .into_datum()
-            .expect("int4 array datum should be created");
-
-        let result = unsafe { form_array_from_datum(datum, false, pg_sys::INT4ARRAYOID) };
-        let result = result.expect("int4 array should be parsed");
-
-        assert_eq!(result.len(), 3);
-        assert!(matches!(result[0], Cell::I32(1)));
-        assert!(matches!(result[1], Cell::I32(2)));
-        assert!(matches!(result[2], Cell::I32(3)));
-    }
-
-    #[test]
-    fn test_form_array_from_datum_null_datum_returns_none() {
-        let result = unsafe { form_array_from_datum(0.into(), true, pg_sys::INT4ARRAYOID) };
-        assert!(result.is_none());
-    }
-
-    #[test]
-    fn test_form_array_from_datum_unsupported_oid_returns_none() {
-        let values = vec![1_i32, 2_i32];
-        let datum = values
-            .into_datum()
-            .expect("int4 array datum should be created");
-
-        let result = unsafe { form_array_from_datum(datum, false, pg_sys::UUIDARRAYOID) };
-        assert!(result.is_none());
     }
 }
