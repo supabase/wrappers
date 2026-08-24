@@ -110,6 +110,49 @@ mod tests {
         });
     }
 
+    fn create_minio_spatial2d_table(table: &str) {
+        create_minio_e2e_server();
+        Spi::connect_mut(|c| {
+            c.update(
+                &format!(
+                    r#"CREATE FOREIGN TABLE {table} (
+                         y double precision,
+                         x double precision,
+                         value real
+                       )
+                       SERVER zarr_e2e_server
+                       OPTIONS (array_group 'nested/spatial2d')"#
+                ),
+                None,
+                &[],
+            )
+            .unwrap();
+        });
+    }
+
+    fn create_minio_spatial2d_coordinate_only_table(table: &str) {
+        create_minio_e2e_server();
+        Spi::connect_mut(|c| {
+            c.update(
+                &format!(
+                    r#"CREATE FOREIGN TABLE {table} (
+                         y double precision,
+                         x double precision
+                       )
+                       SERVER zarr_e2e_server
+                       OPTIONS (array_group 'nested/spatial2d')"#
+                ),
+                None,
+                &[],
+            )
+            .unwrap();
+        });
+    }
+
+    fn install_postgis_in_test_schema() {
+        Spi::run("CREATE SCHEMA zarr_gis; CREATE EXTENSION postgis WITH SCHEMA zarr_gis").unwrap();
+    }
+
     fn explain_lines(sql: &str) -> Vec<String> {
         Spi::connect(|c| {
             c.select(&format!("EXPLAIN {sql}"), None, &[])
@@ -1646,6 +1689,372 @@ mod tests {
     }
 
     #[pg_test]
+    fn zarr_postgis_point_sample_exact_and_transformed_nearest() {
+        install_postgis_in_test_schema();
+        create_minio_spatial2d_table("zarr_e2e_spatial2d");
+
+        Spi::connect(|c| {
+            c.select(
+                "SELECT pg_catalog.set_config('search_path', 'zarr_gis, public, pg_catalog', true)",
+                Some(1),
+                &[],
+            )
+            .unwrap()
+            .next()
+            .unwrap();
+            let exact = c
+                .select(
+                    r#"SELECT sample.*
+                         FROM zarr_sample(
+                           'zarr_e2e_spatial2d',
+                           zarr_gis.ST_AsEWKB(
+                             zarr_gis.ST_SetSRID(zarr_gis.ST_Point(110, 20), 3857)
+                           ),
+                           'exact'
+                         ) AS sample"#,
+                    Some(1),
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(exact.get_by_name::<f64, _>("x").unwrap(), Some(110.0));
+            assert_eq!(exact.get_by_name::<f64, _>("y").unwrap(), Some(20.0));
+            assert_eq!(exact.get_by_name::<f64, _>("value").unwrap(), Some(42.0));
+            assert_eq!(exact.get_by_name::<i64, _>("x_index").unwrap(), Some(1));
+            assert_eq!(exact.get_by_name::<i64, _>("y_index").unwrap(), Some(1));
+            assert_eq!(
+                exact.get_by_name::<f64, _>("coordinate_distance").unwrap(),
+                Some(0.0)
+            );
+            assert_eq!(exact.get_by_name::<i32, _>("srid").unwrap(), Some(3857));
+
+            let transformed = c
+                .select(
+                    r#"SELECT sample.*
+                         FROM zarr_sample(
+                           'zarr_e2e_spatial2d',
+                           zarr_gis.ST_AsEWKB(
+                             zarr_gis.ST_SetSRID(
+                               zarr_gis.ST_Point(
+                                 0.000988146812531,
+                                 0.000179663056824
+                               ),
+                               4326
+                             )
+                           ),
+                           'nearest'
+                         ) AS sample"#,
+                    Some(1),
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(transformed.get_by_name::<f64, _>("x").unwrap(), Some(110.0));
+            assert_eq!(transformed.get_by_name::<f64, _>("y").unwrap(), Some(20.0));
+            assert_eq!(
+                transformed.get_by_name::<f64, _>("value").unwrap(),
+                Some(42.0)
+            );
+
+            let misses = c
+                .select(
+                    r#"SELECT count(*)::bigint AS count
+                         FROM zarr_sample(
+                           'zarr_e2e_spatial2d',
+                           zarr_gis.ST_AsEWKB(
+                             zarr_gis.ST_SetSRID(zarr_gis.ST_Point(111, 20), 3857)
+                           ),
+                           'exact'
+                         )"#,
+                    Some(1),
+                    &[],
+                )
+                .unwrap()
+                .first()
+                .get_by_name::<i64, _>("count")
+                .unwrap();
+            assert_eq!(misses, Some(0));
+        });
+    }
+
+    #[pg_test(
+        error = "invalid PostGIS geometry: point sampling method must be 'exact' or 'nearest', got 'bilinear'"
+    )]
+    fn zarr_postgis_point_sample_rejects_unknown_method() {
+        install_postgis_in_test_schema();
+        create_minio_spatial2d_table("zarr_e2e_spatial2d_bad_method");
+        Spi::run(
+            r#"SELECT *
+                 FROM zarr_sample(
+                   'zarr_e2e_spatial2d_bad_method',
+                   zarr_gis.ST_AsEWKB(
+                     zarr_gis.ST_SetSRID(zarr_gis.ST_Point(110, 20), 3857)
+                   ),
+                   'bilinear'
+                 )"#,
+        )
+        .unwrap();
+    }
+
+    #[pg_test(
+        error = "zarr array metadata missing or invalid: spatial operations require exactly one value column"
+    )]
+    fn zarr_postgis_point_exact_miss_still_validates_value_column() {
+        install_postgis_in_test_schema();
+        create_minio_spatial2d_coordinate_only_table("zarr_e2e_spatial2d_point_no_value");
+        Spi::run(
+            r#"SELECT *
+                 FROM zarr_sample(
+                   'zarr_e2e_spatial2d_point_no_value',
+                   zarr_gis.ST_AsEWKB(
+                     zarr_gis.ST_SetSRID(zarr_gis.ST_Point(111, 20), 3857)
+                   ),
+                   'exact'
+                 )"#,
+        )
+        .unwrap();
+    }
+
+    #[pg_test]
+    fn zarr_postgis_cells_include_boundary_and_transform_region_crs() {
+        install_postgis_in_test_schema();
+        create_minio_spatial2d_table("zarr_e2e_spatial2d_cells");
+
+        let rows = Spi::connect(|c| {
+            c.select(
+                "SELECT pg_catalog.set_config('search_path', 'zarr_gis, public, pg_catalog', true)",
+                Some(1),
+                &[],
+            )
+            .unwrap()
+            .next()
+            .unwrap();
+            c.select(
+                r#"WITH regions(label, region_ewkb) AS (
+                       VALUES
+                         (
+                           'boundary',
+                           zarr_gis.ST_AsEWKB(
+                             zarr_gis.ST_MakeEnvelope(110, 20, 130, 40, 3857)
+                           )
+                         ),
+                         (
+                           'transformed',
+                           zarr_gis.ST_AsEWKB(
+                             zarr_gis.ST_MakeEnvelope(
+                               0.000943231048325,
+                               0.000134747292628,
+                               0.001212725633561,
+                               0.000404241877857,
+                               4326
+                             )
+                           )
+                         )
+                     )
+                     SELECT regions.label, cells.*
+                       FROM regions
+                       CROSS JOIN LATERAL zarr_cells(
+                         'zarr_e2e_spatial2d_cells',
+                         regions.region_ewkb
+                       ) AS cells
+                      ORDER BY regions.label, cells.y_index, cells.x_index"#,
+                None,
+                &[],
+            )
+            .unwrap()
+            .map(|row| {
+                (
+                    row.get_by_name::<String, _>("label").unwrap().unwrap(),
+                    row.get_by_name::<f64, _>("x").unwrap().unwrap(),
+                    row.get_by_name::<f64, _>("y").unwrap().unwrap(),
+                    row.get_by_name::<f64, _>("value").unwrap(),
+                    row.get_by_name::<i64, _>("x_index").unwrap().unwrap(),
+                    row.get_by_name::<i64, _>("y_index").unwrap().unwrap(),
+                    row.get_by_name::<i32, _>("srid").unwrap().unwrap(),
+                )
+            })
+            .collect::<Vec<_>>()
+        });
+
+        let mut expected = Vec::new();
+        for label in ["boundary", "transformed"] {
+            for y_index in 1_i64..=3 {
+                for x_index in 1_i64..=3 {
+                    expected.push((
+                        label.to_string(),
+                        100.0 + 10.0 * x_index as f64,
+                        10.0 + 10.0 * y_index as f64,
+                        Some(42.0),
+                        x_index,
+                        y_index,
+                        3857,
+                    ));
+                }
+            }
+        }
+        assert_eq!(rows, expected);
+    }
+
+    #[pg_test]
+    fn zarr_postgis_zonal_stats_preserve_fill_value_semantics() {
+        install_postgis_in_test_schema();
+        create_minio_spatial2d_table("zarr_e2e_spatial2d_zonal");
+
+        Spi::connect(|c| {
+            c.select(
+                "SELECT pg_catalog.set_config('search_path', 'zarr_gis, public, pg_catalog', true)",
+                Some(1),
+                &[],
+            )
+            .unwrap()
+            .next()
+            .unwrap();
+            let stats = c
+                .select(
+                    r#"SELECT stats.*
+                         FROM zarr_zonal_stats(
+                           'zarr_e2e_spatial2d_zonal',
+                           zarr_gis.ST_AsEWKB(
+                             zarr_gis.ST_MakeEnvelope(110, 20, 130, 40, 3857)
+                           )
+                         ) AS stats"#,
+                    Some(1),
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(stats.get_by_name::<i64, _>("count").unwrap(), Some(9));
+            assert_eq!(stats.get_by_name::<i64, _>("valid_count").unwrap(), Some(9));
+            assert_eq!(stats.get_by_name::<f64, _>("min").unwrap(), Some(42.0));
+            assert_eq!(stats.get_by_name::<f64, _>("max").unwrap(), Some(42.0));
+            assert_eq!(stats.get_by_name::<f64, _>("sum").unwrap(), Some(378.0));
+            assert_eq!(stats.get_by_name::<f64, _>("avg").unwrap(), Some(42.0));
+            assert_eq!(stats.get_by_name::<i32, _>("srid").unwrap(), Some(3857));
+        });
+    }
+
+    #[pg_test]
+    fn zarr_postgis_cells_reject_non_polygon_geometry() {
+        install_postgis_in_test_schema();
+        create_minio_spatial2d_table("zarr_e2e_spatial2d_bad_region");
+        Spi::run(
+            "SELECT pg_catalog.set_config('search_path', 'zarr_gis, public, pg_catalog', true)",
+        )
+        .unwrap();
+
+        let result = std::panic::catch_unwind(|| {
+            Spi::run(
+                r#"SELECT *
+                     FROM zarr_cells(
+                       'zarr_e2e_spatial2d_bad_region',
+                       zarr_gis.ST_AsEWKB(
+                         zarr_gis.ST_SetSRID(zarr_gis.ST_Point(110, 20), 3857)
+                       )
+                     )"#,
+            )
+        });
+        let failed = match result {
+            Ok(result) => result.is_err(),
+            Err(_) => true,
+        };
+        assert!(failed, "expected zarr_cells to reject a Point region");
+    }
+
+    #[pg_test(
+        error = "zarr array metadata missing or invalid: spatial operations require exactly one value column"
+    )]
+    fn zarr_postgis_nonoverlap_still_validates_value_column() {
+        install_postgis_in_test_schema();
+        create_minio_spatial2d_coordinate_only_table("zarr_e2e_spatial2d_region_no_value");
+        Spi::run(
+            r#"SELECT *
+                 FROM zarr_cells(
+                   'zarr_e2e_spatial2d_region_no_value',
+                   zarr_gis.ST_AsEWKB(
+                     zarr_gis.ST_MakeEnvelope(1000, 1000, 1010, 1010, 3857)
+                   )
+                 )"#,
+        )
+        .unwrap();
+    }
+
+    #[pg_test(
+        error = "invalid CRS metadata for zarr array 'nested/spatial2d': EPSG:999999 is not present in the installed PostGIS spatial_ref_sys"
+    )]
+    fn zarr_postgis_cells_reject_unknown_source_srid() {
+        install_postgis_in_test_schema();
+        create_minio_spatial2d_table("zarr_e2e_spatial2d_unknown_srid");
+        Spi::run(
+            r#"SELECT *
+                 FROM zarr_cells(
+                   'zarr_e2e_spatial2d_unknown_srid',
+                   zarr_gis.ST_AsEWKB(
+                     zarr_gis.ST_SetSRID(
+                       zarr_gis.ST_MakeEnvelope(110, 20, 130, 40, 3857),
+                       999999
+                     )
+                   )
+                 )"#,
+        )
+        .unwrap();
+    }
+
+    #[pg_test(
+        error = "invalid PostGIS geometry: PostGIS could not parse or transform the supplied polygon"
+    )]
+    fn zarr_postgis_cells_normalize_malformed_ewkb_error() {
+        install_postgis_in_test_schema();
+        create_minio_spatial2d_table("zarr_e2e_spatial2d_malformed_ewkb");
+        Spi::run(
+            r#"SELECT *
+                 FROM zarr_cells(
+                   'zarr_e2e_spatial2d_malformed_ewkb',
+                   '\x0102'::bytea
+                 )"#,
+        )
+        .unwrap();
+    }
+
+    #[pg_test(
+        error = "PostGIS is unavailable for zarr spatial operations: the postgis extension is not installed"
+    )]
+    fn zarr_postgis_cells_fail_cleanly_without_postgis() {
+        create_minio_spatial2d_table("zarr_e2e_spatial2d_no_postgis");
+        Spi::run(
+            r#"SELECT *
+                 FROM zarr_cells(
+                   'zarr_e2e_spatial2d_no_postgis',
+                   '\x'::bytea
+                 )"#,
+        )
+        .unwrap();
+    }
+
+    #[pg_test(
+        error = "zarr array metadata missing or invalid: foreign table 'zarr_e2e_spatial2d_private' does not exist or is not accessible"
+    )]
+    fn zarr_postgis_cells_enforce_foreign_table_privileges() {
+        install_postgis_in_test_schema();
+        create_minio_spatial2d_table("zarr_e2e_spatial2d_private");
+        Spi::run(
+            r#"CREATE ROLE zarr_spatial_no_access;
+               GRANT USAGE ON SCHEMA zarr_gis TO zarr_spatial_no_access;
+               SET ROLE zarr_spatial_no_access;
+               SELECT *
+                 FROM zarr_cells(
+                   'zarr_e2e_spatial2d_private',
+                   zarr_gis.ST_AsEWKB(
+                     zarr_gis.ST_MakeEnvelope(110, 20, 130, 40, 3857)
+                   )
+                 )"#,
+        )
+        .unwrap();
+    }
+
+    #[pg_test]
     fn zarr_inspect_minio_metadata_e2e() {
         create_minio_e2e_server();
 
@@ -1673,6 +2082,7 @@ mod tests {
                     "nested/level",
                     "nested/raw",
                     "nested/sample",
+                    "nested/spatial2d",
                     "nested/spatial_ref",
                     "nested/time",
                     "nested/x",

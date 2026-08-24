@@ -148,7 +148,7 @@ fn compare_f32(left: f32, right: f32) -> Ordering {
     }
 }
 
-fn compare_f64(left: f64, right: f64) -> Ordering {
+pub(crate) fn compare_f64(left: f64, right: f64) -> Ordering {
     match (left.is_nan(), right.is_nan()) {
         (true, true) => Ordering::Equal,
         (true, false) => Ordering::Greater,
@@ -521,7 +521,7 @@ fn checked_float_add_f32(left: f32, right: f32) -> ZarrFdwResult<f32> {
     }
 }
 
-fn checked_float_add_f64(left: f64, right: f64) -> ZarrFdwResult<f64> {
+pub(crate) fn checked_float_add_f64(left: f64, right: f64) -> ZarrFdwResult<f64> {
     let sum = left + right;
     if left.is_finite() && right.is_finite() && sum.is_infinite() {
         Err(aggregate_error(

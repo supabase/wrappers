@@ -167,6 +167,17 @@ services:
       /mc stat s3/warehouse/zarr/e2e.zarr/nested/raw/0.0.0;
       /mc stat s3/warehouse/zarr/e2e.zarr/nested/blosc/0.1.1;
       /mc stat s3/warehouse/zarr/e2e.zarr/nested/lazy1m/.zarray;
+      /mc stat s3/warehouse/zarr/e2e.zarr/nested/spatial2d/.zarray;
+      /mc stat s3/warehouse/zarr/e2e.zarr/nested/spatial2d/.zattrs;
+      /mc stat s3/warehouse/zarr/e2e.zarr/nested/spatial_ref/.zattrs;
+      /mc stat s3/warehouse/zarr/e2e.zarr/nested/x/.zarray;
+      /mc stat s3/warehouse/zarr/e2e.zarr/nested/x/0;
+      /mc stat s3/warehouse/zarr/e2e.zarr/nested/y/.zarray;
+      /mc stat s3/warehouse/zarr/e2e.zarr/nested/y/0;
+      if /mc stat s3/warehouse/zarr/e2e.zarr/nested/spatial2d/0.0; then
+        echo 'unexpected data chunk 0.0 in fill-only spatial Zarr fixture';
+        exit 1;
+      fi;
       if /mc stat s3/warehouse/zarr/e2e.zarr/nested/raw/0.1.1; then
         echo 'unexpected raw chunk 0.1.1 in sparse Zarr fixture';
         exit 1;

@@ -110,9 +110,10 @@ array has no direct CRS metadata but has a simple `grid_mapping` string, the
 inspector attempts to resolve that name to a sibling array in the same group and
 uses the sibling's direct CRS value. If that reference cannot be resolved, the
 raw `grid_mapping` value remains visible in `crs` and a warning is emitted.
-CRS strings, WKT, EPSG labels, and GeoTransform attributes are exposed as
-metadata only; the wrapper does not validate them, assign SRIDs, transform
-coordinates, or apply PostGIS spatial behavior during scans.
+CRS strings, WKT, EPSG labels, and GeoTransform attributes remain visible as
+metadata. Ordinary foreign-table scans do not assign SRIDs, transform
+coordinates, or accept PostGIS predicates. The point-sampling function below
+uses supported EPSG metadata from the selected array's resolved grid mapping.
 
 ## Query an array
 
@@ -187,6 +188,150 @@ unordered coordinates remain projectable and filterable, but pruning is skipped
 for that axis and PostgreSQL rechecks the original predicate. Integer coordinate
 values must convert to `double precision` exactly; values that would lose
 identity fail explicitly.
+
+## Sample a spatial point
+
+`zarr_sample` performs a read-only point lookup on a rank-2 rectilinear array.
+PostGIS is optional for ordinary Zarr inspection and scans, but must be installed
+to construct or transform the EWKB point used by this function:
+
+```sql
+create schema if not exists gis;
+create extension if not exists postgis with schema gis;
+
+create foreign table spatial_temperature (
+  y double precision,
+  x double precision,
+  temperature real
+)
+server public_zarr_server
+options (
+  array_group 'climate/spatial_temperature'
+);
+
+select *
+from zarr_sample(
+  foreign_table => 'public.spatial_temperature',
+  point_ewkb    => gis.ST_AsEWKB(
+                     gis.ST_SetSRID(gis.ST_MakePoint(110, 20), 3857)
+                   ),
+  method        => 'nearest'
+);
+```
+
+The function signature is:
+
+```sql
+zarr_sample(
+  foreign_table text,
+  point_ewkb bytea,
+  method text default 'nearest'
+)
+returns table (
+  x double precision,
+  y double precision,
+  value double precision,
+  x_index bigint,
+  y_index bigint,
+  coordinate_distance double precision,
+  srid integer
+)
+```
+
+Use a schema-qualified foreign-table name. The caller must have `SELECT` on the
+foreign table and `USAGE` on its foreign server. The table must select one Zarr
+value array with exactly two discovered, one-dimensional horizontal coordinate
+axes and a supported, unambiguous EPSG CRS. EWKB must contain a nonzero SRID;
+the point is transformed into the array CRS before coordinate lookup.
+
+`nearest` independently selects the closest stored x and y coordinate. A tie is
+resolved to the lower logical array index, including on descending axes.
+`exact` returns a sample only when the transformed point exactly matches both
+stored coordinate values. `coordinate_distance` is zero for an exact match and
+otherwise is Euclidean distance in the array CRS units; it is not a geodesic
+distance. Neither method interpolates values. Point lookup currently supports
+rectilinear cell centers only, not curvilinear coordinates, cell footprints, or
+rotated affine grids.
+
+The scalar result is widened to `double precision`. The function uses the
+foreign table's scientific decoding options, so `decode_cf`, fill/missing
+values, valid ranges, and scale/offset have the same meaning as an ordinary
+scan. A scientifically missing value is returned as SQL `NULL`.
+
+## Select polygon cells and calculate zonal statistics
+
+`zarr_cells` returns the cell centers covered by a PostGIS Polygon or
+MultiPolygon, while `zarr_zonal_stats` reduces the same selected values inside
+the Zarr executor:
+
+```sql
+with region as (
+  select gis.ST_AsEWKB(
+           gis.ST_MakeEnvelope(110, 20, 130, 40, 3857)
+         ) as ewkb
+)
+select cells.*
+from region
+cross join lateral zarr_cells(
+  foreign_table => 'public.spatial_temperature',
+  region_ewkb   => region.ewkb
+) as cells
+order by cells.y_index, cells.x_index;
+
+with region as (
+  select gis.ST_AsEWKB(
+           gis.ST_MakeEnvelope(110, 20, 130, 40, 3857)
+         ) as ewkb
+)
+select stats.*
+from region
+cross join lateral zarr_zonal_stats(
+  foreign_table => 'public.spatial_temperature',
+  region_ewkb   => region.ewkb
+) as stats;
+```
+
+The function signatures are:
+
+```sql
+zarr_cells(foreign_table text, region_ewkb bytea)
+returns table (
+  x double precision,
+  y double precision,
+  value double precision,
+  x_index bigint,
+  y_index bigint,
+  srid integer
+);
+
+zarr_zonal_stats(foreign_table text, region_ewkb bytea)
+returns table (
+  count bigint,
+  valid_count bigint,
+  min double precision,
+  max double precision,
+  sum double precision,
+  avg double precision,
+  srid integer
+);
+```
+
+Both functions apply the same foreign-table privilege, rectilinear-grid, CRS,
+and scientific-decoding rules as `zarr_sample`. Region EWKB must contain a
+valid, non-empty, two-dimensional Polygon or MultiPolygon with a positive SRID.
+The geometry is transformed into the array CRS, and its envelope is used only
+for conservative coordinate and chunk pruning.
+
+Exact inclusion uses PostGIS `ST_Covers(region, cell_center)` semantics. A cell
+center on the polygon boundary is therefore included. The returned cells are
+center samples, not pixel footprints, and no partial-cell area weighting is
+performed. Function output order is unspecified; add an `ORDER BY` when stable
+ordering is required.
+
+`count` is the number of covered logical cells, including cells whose decoded
+value is SQL `NULL`. `valid_count`, `min`, `max`, `sum`, and `avg` ignore decoded
+NULL values. With no valid values, `valid_count` is zero and the numeric
+aggregates are NULL. Values and aggregates are widened to `double precision`.
 
 ## Decode time coordinates from attributes
 
@@ -326,6 +471,11 @@ single Foreign Scan or retains a local Aggregate node.
 - A foreign-table scan still represents one value array and at most one queried
   non-dimension value column. Multi-variable scans and functional `bands`
   execution are not supported.
+- Spatial functions are limited to rank-2 rectilinear arrays with one discovered
+  horizontal x/longitude axis and one y/latitude axis. Polygon operations use
+  center coverage only. They do not implement cell-footprint or area-weighted
+  statistics, geographic distance, interpolation, curvilinear coordinates,
+  rotated grids, or topology repair.
 - Aggregate pushdown is limited to ungrouped `count`, `sum`, `avg`, `min`, and
   `max` over plain columns. Grouped, distinct, filtered, ordered, expression,
   and user-defined aggregates are computed by PostgreSQL.

@@ -65,6 +65,8 @@ RUN apt-get update \
       clang \
       cmake \
       postgresql-15 \
+      postgresql-15-postgis-3 \
+      postgresql-15-postgis-3-scripts \
       postgresql-server-dev-15 \
       sudo \
  && rm -rf /var/lib/apt/lists/*

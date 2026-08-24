@@ -12,6 +12,7 @@ mod meta;
 mod metrics;
 mod prefetch;
 mod scientific;
+mod spatial;
 mod store;
 
 use aws_sdk_s3::config::http::HttpResponse;
@@ -99,13 +100,29 @@ enum ZarrFdwError {
     #[error("coordinate value {0} is out of range for pg timestamptz")]
     TimeOutOfRange(f64),
 
+    #[error("invalid CRS metadata for zarr array '{array}': {message}")]
+    InvalidCrs { array: String, message: String },
+
+    #[error("PostGIS is unavailable for zarr spatial operations: {0}")]
+    PostgisUnavailable(String),
+
+    #[error("invalid PostGIS geometry: {0}")]
+    InvalidGeometry(String),
+
     #[error("{0}")]
     NumericConversionError(#[from] pgrx::numeric::Error),
 }
 
 impl From<ZarrFdwError> for ErrorReport {
     fn from(value: ZarrFdwError) -> Self {
-        ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, format!("{value}"), "")
+        let code = match &value {
+            ZarrFdwError::InvalidCrs { .. } | ZarrFdwError::InvalidGeometry(_) => {
+                PgSqlErrorCode::ERRCODE_INVALID_PARAMETER_VALUE
+            }
+            ZarrFdwError::PostgisUnavailable(_) => PgSqlErrorCode::ERRCODE_FEATURE_NOT_SUPPORTED,
+            _ => PgSqlErrorCode::ERRCODE_FDW_ERROR,
+        };
+        ErrorReport::new(code, format!("{value}"), "")
     }
 }
 

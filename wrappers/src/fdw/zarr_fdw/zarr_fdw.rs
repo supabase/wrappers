@@ -52,6 +52,12 @@ use super::prefetch::{
     OrderedPrefetch, PrefetchNext, PrefetchRequest, PrefetchSource, ScheduleError,
 };
 use super::scientific::{ScientificValueDecoder, time::TimeSpec};
+use super::spatial::crs::{
+    GridMappingMetadata, ResolvedCrs, grid_mapping_sibling_path, resolve_crs,
+};
+use super::spatial::grid::{
+    GridCell, HorizontalAxes, RectilinearGrid, discover_horizontal_axes_from_roles,
+};
 use super::store::{MAX_METADATA_OBJECT_BYTES, ZarrStore, join_key, validate_auth_options};
 use super::{ZarrFdwError, ZarrFdwResult};
 
@@ -121,6 +127,9 @@ pub(crate) struct ZarrFdw {
     array_dir: String,
     // discovered dimension names in array order
     axes: Vec<String>,
+    // selected value array attributes retained for operation-layer metadata
+    // such as strict CRS resolution
+    array_attributes: Map<String, JsonValue>,
     // scientific meaning assigned by the metadata adapter, in array order
     axis_roles: Vec<DimensionRole>,
     rank: usize,
@@ -156,6 +165,8 @@ pub(crate) struct ZarrFdw {
     sub_lo: Vec<usize>,
     sub_hi: Vec<usize>,
     sub_idx: Vec<usize>,
+    capture_spatial_indices: bool,
+    last_emitted_indices: Option<[usize; 2]>,
     pending: bool,
 
     // --- scalar aggregate execution state -------------------------------
@@ -530,6 +541,233 @@ impl ZarrFdw {
         })
     }
 
+    /// Borrow the fully decoded horizontal coordinate grid prepared by
+    /// `begin_scan`. Spatial operations use this view to choose cells without
+    /// creating a second storage or metadata path.
+    pub(super) fn rectilinear_grid(&self) -> ZarrFdwResult<RectilinearGrid<'_>> {
+        if self.rank != 2 {
+            return Err(ZarrFdwError::InvalidMetadata(format!(
+                "point sampling requires a rank-2 array, found rank {}",
+                self.rank
+            )));
+        }
+        let axes = discover_horizontal_axes_from_roles(self.axis_roles.iter().copied())?;
+        let x = self
+            .coords
+            .get(axes.x)
+            .and_then(Option::as_deref)
+            .ok_or_else(|| {
+                ZarrFdwError::InvalidMetadata(format!(
+                    "spatial coordinate '{}' was not loaded",
+                    self.axes.get(axes.x).map_or("x", String::as_str)
+                ))
+            })?;
+        let y = self
+            .coords
+            .get(axes.y)
+            .and_then(Option::as_deref)
+            .ok_or_else(|| {
+                ZarrFdwError::InvalidMetadata(format!(
+                    "spatial coordinate '{}' was not loaded",
+                    self.axes.get(axes.y).map_or("y", String::as_str)
+                ))
+            })?;
+        RectilinearGrid::new(axes, x, y)
+    }
+
+    /// Strictly resolve the selected array's operation-time CRS. The
+    /// inspection surface remains permissive; spatial execution requires an
+    /// explicit, conflict-free EPSG identifier.
+    pub(super) fn resolved_spatial_crs(&mut self) -> ZarrFdwResult<ResolvedCrs> {
+        if self.axis_meta.is_none() {
+            return Err(ZarrFdwError::InvalidMetadata(
+                "spatial CRS resolution requires an initialized array scan".to_string(),
+            ));
+        }
+        let array_path = self.array_dir.clone();
+        let array_attributes = self.array_attributes.clone();
+        let group_path = array_parent_path(&array_path).to_string();
+        let group_attributes =
+            read_array_attributes_optional(&self.store, &mut self.metrics, &group_path)?;
+        let mapping_path = grid_mapping_sibling_path(&array_path, &array_attributes)?;
+        let mapping_attributes = match mapping_path.as_deref() {
+            Some(path) => read_array_attributes_optional(&self.store, &mut self.metrics, path)?,
+            None => None,
+        };
+        resolve_crs(
+            &array_path,
+            &array_attributes,
+            group_attributes.as_ref(),
+            mapping_path
+                .as_deref()
+                .zip(mapping_attributes.as_ref())
+                .map(|(path, attributes)| GridMappingMetadata { path, attributes }),
+        )
+    }
+
+    /// Return the one non-dimension column selected by the foreign table.
+    pub(super) fn spatial_value_column(&self) -> ZarrFdwResult<&str> {
+        let mut values = self
+            .tgt_cols
+            .iter()
+            .filter(|column| !self.axes.iter().any(|axis| axis == &column.name));
+        let value = values.next().ok_or_else(|| {
+            ZarrFdwError::InvalidMetadata(
+                "spatial operations require exactly one value column".to_string(),
+            )
+        })?;
+        if values.next().is_some() {
+            return Err(ZarrFdwError::InvalidMetadata(
+                "spatial operations require exactly one value column".to_string(),
+            ));
+        }
+        Ok(&value.name)
+    }
+
+    pub(super) fn spatial_array_path(&self) -> &str {
+        &self.array_dir
+    }
+
+    /// Global array indexes for the row most recently returned by
+    /// `iter_scan`. This avoids reconstructing indexes from coordinate values,
+    /// which would be ambiguous for repeated coordinate centers.
+    pub(super) fn spatial_last_emitted_indices(&self) -> ZarrFdwResult<[usize; 2]> {
+        self.last_emitted_indices.ok_or_else(|| {
+            ZarrFdwError::InvalidMetadata(
+                "spatial row indexes are unavailable before a rank-2 row is emitted".to_string(),
+            )
+        })
+    }
+
+    /// Resolve the most recently emitted rank-2 row to one cell in constant
+    /// time. The coordinate vectors and horizontal axes were already fully
+    /// validated when the spatial window was prepared, so polygon execution
+    /// must not rebuild and revalidate the complete grid for every row.
+    pub(super) fn spatial_last_emitted_cell(
+        &self,
+        axes: HorizontalAxes,
+    ) -> ZarrFdwResult<GridCell> {
+        let array_indices = self.spatial_last_emitted_indices()?;
+        let x_index = *array_indices.get(axes.x).ok_or_else(|| {
+            ZarrFdwError::InvalidMetadata(format!(
+                "spatial x axis {} is outside rank-2 array indexes",
+                axes.x
+            ))
+        })?;
+        let y_index = *array_indices.get(axes.y).ok_or_else(|| {
+            ZarrFdwError::InvalidMetadata(format!(
+                "spatial y axis {} is outside rank-2 array indexes",
+                axes.y
+            ))
+        })?;
+        let x_values = self
+            .coords
+            .get(axes.x)
+            .and_then(Option::as_deref)
+            .ok_or_else(|| {
+                ZarrFdwError::InvalidMetadata("spatial x coordinate was not loaded".to_string())
+            })?;
+        let y_values = self
+            .coords
+            .get(axes.y)
+            .and_then(Option::as_deref)
+            .ok_or_else(|| {
+                ZarrFdwError::InvalidMetadata("spatial y coordinate was not loaded".to_string())
+            })?;
+        let x = *x_values.get(x_index).ok_or_else(|| {
+            ZarrFdwError::InvalidMetadata(format!(
+                "spatial x index {x_index} is outside coordinate length {}",
+                x_values.len()
+            ))
+        })?;
+        let y = *y_values.get(y_index).ok_or_else(|| {
+            ZarrFdwError::InvalidMetadata(format!(
+                "spatial y index {y_index} is outside coordinate length {}",
+                y_values.len()
+            ))
+        })?;
+        Ok(GridCell {
+            array_indices,
+            x_index,
+            y_index,
+            x,
+            y,
+            distance: 0.0,
+        })
+    }
+
+    /// Poll PostgreSQL cancellation while a spatial SRF is consuming many
+    /// rows from one decoded chunk. This preserves the prefetch cleanup
+    /// invariant enforced by the ordinary scan path.
+    pub(super) fn spatial_check_for_interrupt(&mut self) -> ZarrFdwResult<()> {
+        self.process_pending_interrupt()
+    }
+
+    /// Narrow an already-prepared rank-2 scan to one global array cell. This
+    /// preserves the existing chunk loader, missing-chunk semantics, cache,
+    /// cancellation, metrics, and scientific decoder.
+    pub(super) fn restrict_to_spatial_cell(
+        &mut self,
+        array_indices: [usize; 2],
+    ) -> ZarrFdwResult<()> {
+        let array_bounds = array_indices.map(|index| IndexBounds {
+            start: index,
+            end: index,
+        });
+        self.restrict_to_spatial_bounds(array_bounds)
+    }
+
+    /// Narrow an already-prepared rank-2 scan to inclusive global array-index
+    /// bounds. Spatial polygon operations derive these bounds from the
+    /// transformed geometry envelope, then apply an exact PostGIS mask to the
+    /// candidate cell centers.
+    pub(super) fn restrict_to_spatial_bounds(
+        &mut self,
+        array_bounds: [IndexBounds; 2],
+    ) -> ZarrFdwResult<()> {
+        let meta = self.axis_meta.as_ref().ok_or_else(|| {
+            ZarrFdwError::InvalidMetadata("spatial scan was not initialized".to_string())
+        })?;
+        if self.rank != 2 || meta.shape.len() != 2 {
+            return Err(ZarrFdwError::InvalidMetadata(format!(
+                "spatial execution requires a rank-2 array, found rank {}",
+                self.rank
+            )));
+        }
+        for (axis, (bounds, &length)) in array_bounds.iter().zip(meta.shape.iter()).enumerate() {
+            let length = usize::try_from(length).map_err(|_| {
+                ZarrFdwError::InvalidMetadata(format!(
+                    "array dimension {axis} exceeds this platform's index capacity"
+                ))
+            })?;
+            if bounds.start > bounds.end || bounds.end >= length {
+                return Err(ZarrFdwError::InvalidMetadata(format!(
+                    "spatial index bounds {}..={} are invalid for dimension {axis} length {length}",
+                    bounds.start, bounds.end
+                )));
+            }
+        }
+
+        self.bounds = array_bounds.into_iter().map(Some).collect();
+        let chunk_ranges = axis_chunk_ranges(meta, &self.bounds)?;
+        self.metrics.set_chunk_selection(
+            saturating_chunk_count(meta.chunks_per_axis()),
+            saturating_selected_chunk_count(&chunk_ranges),
+        );
+        self.chunk_cursor = ChunkIndexCursor::new(&chunk_ranges)?;
+        self.current_chunk.clear();
+        self.prefetch.clear();
+        self.deferred_prefetch = None;
+        self.chunk_bytes.clear();
+        self.chunk_shape.clear();
+        [self.sub_lo, self.sub_hi, self.sub_idx] = zeroed_scan_cursors(self.rank);
+        self.capture_spatial_indices = true;
+        self.last_emitted_indices = None;
+        self.pending = false;
+        self.rows_out = 0;
+        Ok(())
+    }
+
     fn value_cell_at_cursor(&self) -> ZarrFdwResult<Option<Cell>> {
         let dt = self.dtype.expect("dtype set in begin_scan");
         let offset = checked_flat_offset(&self.sub_idx, &self.chunk_shape)?;
@@ -579,6 +817,32 @@ impl ZarrFdw {
         } else {
             Ok(Cell::F64(coord))
         }
+    }
+
+    fn global_index_at_cursor(&self, axis: usize) -> ZarrFdwResult<usize> {
+        let meta = self
+            .axis_meta
+            .as_ref()
+            .expect("begin_scan must be called before iter_scan");
+        if self.current_chunk.len() != self.rank || self.sub_idx.len() != self.rank {
+            return Err(ZarrFdwError::InvalidMetadata(
+                "scan cursor rank does not match array rank".to_string(),
+            ));
+        }
+        let chunk_index = usize::try_from(self.current_chunk[axis]).map_err(|_| {
+            ZarrFdwError::InvalidMetadata(format!(
+                "chunk index for axis {axis} exceeds this platform's index capacity"
+            ))
+        })?;
+        let chunk_len = meta.chunk_extent(axis)?;
+        chunk_index
+            .checked_mul(chunk_len)
+            .and_then(|base| base.checked_add(self.sub_idx[axis]))
+            .ok_or_else(|| {
+                ZarrFdwError::InvalidMetadata(format!(
+                    "global coordinate index overflow on axis {axis}"
+                ))
+            })
     }
 
     fn column_cell_at_cursor(
@@ -859,6 +1123,12 @@ impl ZarrFdw {
         let decode_started = Instant::now();
         let value_cell = self.value_cell_at_cursor()?;
         self.metrics.record_decoding_time(decode_started.elapsed());
+        if self.capture_spatial_indices {
+            self.last_emitted_indices = Some([
+                self.global_index_at_cursor(0)?,
+                self.global_index_at_cursor(1)?,
+            ]);
+        }
 
         for col in &self.tgt_cols {
             let cell = self.column_cell_at_cursor(&col.name, value_cell.as_ref())?;
@@ -1435,6 +1705,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
             tgt_cols: Vec::new(),
             array_dir: String::new(),
             axes: Vec::new(),
+            array_attributes: Map::new(),
             axis_roles: Vec::new(),
             rank: 0,
             axis_meta: None,
@@ -1466,6 +1737,8 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
             sub_lo: Vec::new(),
             sub_hi: Vec::new(),
             sub_idx: Vec::new(),
+            capture_spatial_indices: false,
+            last_emitted_indices: None,
             pending: false,
             aggregate_defs: Vec::new(),
             aggregate_quals: Vec::new(),
@@ -1721,6 +1994,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
             });
         }
         self.axis_meta = Some(meta.clone());
+        self.array_attributes = value_attributes.clone();
         self.dtype = Some(dtype);
         self.codec = Some(Codec::from_compressor_json(&meta.compressor)?);
         self.scientific_decoder = scientific_decoder;
@@ -1836,6 +2110,8 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
         self.chunk_bytes.clear();
         self.chunk_shape.clear();
         [self.sub_lo, self.sub_hi, self.sub_idx] = zeroed_scan_cursors(rank);
+        self.capture_spatial_indices = false;
+        self.last_emitted_indices = None;
         self.pending = false;
         self.rows_out = 0;
         Ok(())
@@ -1890,6 +2166,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
         self.chunk_bytes.clear();
         self.chunk_shape.clear();
         [self.sub_lo, self.sub_hi, self.sub_idx] = zeroed_scan_cursors(self.rank);
+        self.last_emitted_indices = None;
         self.pending = false;
         self.rows_out = 0;
         if !self.aggregate_defs.is_empty() {
@@ -1905,6 +2182,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
         self.tgt_cols.clear();
         self.array_dir.clear();
         self.axes.clear();
+        self.array_attributes.clear();
         self.chunk_bytes.clear();
         self.chunk_shape.clear();
         self.chunk_cursor = ChunkIndexCursor::default();
@@ -1915,6 +2193,8 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
         self.sub_lo.clear();
         self.sub_hi.clear();
         self.sub_idx.clear();
+        self.capture_spatial_indices = false;
+        self.last_emitted_indices = None;
         self.rank = 0;
         self.axis_meta = None;
         self.dtype = None;
