@@ -6,7 +6,7 @@
 //! are fetched from the object store. All functions here are pure and unit
 //! testable without any object store.
 
-use super::meta::ArrayMeta;
+use super::meta::{ArrayMeta, ChunkKeyEncoding};
 use super::{ZarrFdwError, ZarrFdwResult};
 
 /// Inclusive 1-based? No — plain 0-based inclusive index bounds `(start, end)`.
@@ -119,17 +119,22 @@ impl IndexBounds {
     }
 }
 
-/// Build a chunk key for one chunk, given the full chunk coordinate indices
-/// across dims and the array's dimension separator.
-///
-/// Zarr v2 default is `.` (e.g. `4.0.0`); stores configured with `/` produce
-/// `4/0/0`. Zarr v3 uses `c/4/0/0` but that is out of MVP scope (v2 only).
-pub fn chunk_key(sep: &str, indices: &[u64]) -> String {
-    indices
+/// Build the storage key for one logical chunk coordinate.
+pub fn chunk_key(encoding: &ChunkKeyEncoding, indices: &[u64]) -> String {
+    let separator = match encoding {
+        ChunkKeyEncoding::Default { separator } | ChunkKeyEncoding::V2 { separator } => separator,
+    };
+    let coordinates = indices
         .iter()
         .map(|i| i.to_string())
         .collect::<Vec<_>>()
-        .join(sep)
+        .join(&separator.to_string());
+    match encoding {
+        ChunkKeyEncoding::Default { .. } if coordinates.is_empty() => "c".to_string(),
+        ChunkKeyEncoding::Default { .. } => format!("c{separator}{coordinates}"),
+        ChunkKeyEncoding::V2 { .. } if coordinates.is_empty() => "0".to_string(),
+        ChunkKeyEncoding::V2 { .. } => coordinates,
+    }
 }
 
 /// Lazy Cartesian product of per-axis chunk index ranges.
@@ -251,7 +256,7 @@ mod tests {
             dtype: "<f4".to_string(),
             compressor: None,
             fill_value: serde_json::Value::Null,
-            dimension_separator: ".".to_string(),
+            chunk_key_encoding: ChunkKeyEncoding::V2 { separator: '.' },
             order: 'C',
             filters: None,
         }
@@ -300,8 +305,30 @@ mod tests {
 
     #[test]
     fn test_chunk_key() {
-        assert_eq!(chunk_key(".", &[3, 14, 22]), "3.14.22");
-        assert_eq!(chunk_key("/", &[3, 14, 22]), "3/14/22");
+        assert_eq!(
+            chunk_key(&ChunkKeyEncoding::V2 { separator: '.' }, &[3, 14, 22]),
+            "3.14.22"
+        );
+        assert_eq!(
+            chunk_key(&ChunkKeyEncoding::V2 { separator: '/' }, &[3, 14, 22]),
+            "3/14/22"
+        );
+        assert_eq!(
+            chunk_key(&ChunkKeyEncoding::Default { separator: '/' }, &[3, 14, 22]),
+            "c/3/14/22"
+        );
+        assert_eq!(
+            chunk_key(&ChunkKeyEncoding::Default { separator: '.' }, &[3, 14, 22]),
+            "c.3.14.22"
+        );
+        assert_eq!(
+            chunk_key(&ChunkKeyEncoding::Default { separator: '/' }, &[]),
+            "c"
+        );
+        assert_eq!(
+            chunk_key(&ChunkKeyEncoding::V2 { separator: '.' }, &[]),
+            "0"
+        );
     }
 
     fn collect_chunks(cursor: &mut ChunkIndexCursor) -> Vec<Vec<u64>> {
@@ -318,7 +345,10 @@ mod tests {
         let ranges = vec![(0, 1), (1, 2), (0, 0)];
         let mut cursor = ChunkIndexCursor::new(&ranges).unwrap();
         let out = collect_chunks(&mut cursor);
-        let keys: Vec<String> = out.iter().map(|i| chunk_key(".", i)).collect();
+        let keys: Vec<String> = out
+            .iter()
+            .map(|i| chunk_key(&ChunkKeyEncoding::V2 { separator: '.' }, i))
+            .collect();
         assert_eq!(keys, vec!["0.1.0", "0.2.0", "1.1.0", "1.2.0"]);
     }
 

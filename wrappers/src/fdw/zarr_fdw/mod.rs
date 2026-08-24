@@ -67,9 +67,6 @@ enum ZarrFdwError {
     #[error("failed to read coordinate '{axis}': {error}")]
     CoordinateReadError { axis: String, error: String },
 
-    #[error("required zarr object '{key}' does not exist")]
-    ObjectNotFound { key: String },
-
     #[error("foreign server '{server}' does not exist or is not accessible")]
     ServerUnavailable { server: String },
 

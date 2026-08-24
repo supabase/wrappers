@@ -4,7 +4,7 @@
 //! translates them into a lazy *chunk fetch stream* against S3, decompresses the
 //! chunks and streams flat rows back to Postgres. Data model (MVP):
 //!
-//! - a single named-dimension Zarr v2 array in C order,
+//! - a single normalized named-dimension Zarr v2 or direct v3 array in C order,
 //! - one same-group, same-name 1D numeric coordinate array per dimension,
 //! - flat row output where every non-dimension target column receives the
 //!   selected array's scalar value.
@@ -46,7 +46,9 @@ use super::decode::{
     Codec, DType, coord_bytes_to_f64, coord_fill_value_to_f64, coordinate_itemsize,
     fill_value_bytes,
 };
-use super::meta::ArrayMeta;
+use super::meta::{
+    ArrayMeta, ArrayNode, NodeMeta, ZarrFormat, parse_v2_array, parse_v2_group, parse_v3_node,
+};
 use super::metrics::{ReadKind, ZarrExplainContext, ZarrScanMetrics};
 use super::prefetch::{
     OrderedPrefetch, PrefetchNext, PrefetchRequest, PrefetchSource, ScheduleError,
@@ -109,9 +111,9 @@ const UNSUPPORTED_COORDINATE_DECODING_ATTRIBUTES: [&str; 7] = [
     "add_offset",
 ];
 
-struct CoordinateMetadata {
-    meta: ArrayMeta,
-    fill_value: Option<f64>,
+enum ArrayMetadataDocument {
+    V2(Vec<u8>),
+    V3(Vec<u8>),
 }
 
 /// Array-axis positions required by a spatial-time operation.
@@ -1233,7 +1235,7 @@ impl ZarrFdw {
         }
         let key = join_key(
             &self.array_dir,
-            &chunk_key(&meta.dimension_separator, &indices),
+            &chunk_key(&meta.chunk_key_encoding, &indices),
         );
         Ok(PrefetchRequest {
             context: indices,
@@ -1364,9 +1366,9 @@ impl ZarrFdw {
         debug_assert_eq!(self.sub_hi.len(), self.rank);
         debug_assert_eq!(self.sub_idx.len(), self.rank);
 
-        // Effective (edge) chunk shape. Zarr v2 still stores the full declared
-        // chunk shape; `eff` only controls which logical cells are emitted.
-        let key = chunk_key(&meta.dimension_separator, &ci);
+        // Effective (edge) chunk shape. Regular Zarr chunks retain the full
+        // declared shape; `eff` only controls which logical cells are emitted.
+        let key = chunk_key(&meta.chunk_key_encoding, &ci);
         if ci.len() != self.rank {
             return Err(ZarrFdwError::InvalidMetadata(
                 "chunk index rank does not match the array rank".to_string(),
@@ -1406,7 +1408,7 @@ impl ZarrFdw {
             return Ok(());
         }
 
-        // Zarr v2 edge chunks retain the declared chunk shape. Use that full
+        // Regular edge chunks retain the declared chunk shape. Use that full
         // shape for byte validation and C-order strides; `eff` ignores the
         // out-of-array region when deciding which cells to emit.
         let object_key = join_key(&self.array_dir, &key);
@@ -1724,20 +1726,149 @@ fn array_parent_path(array_path: &str) -> &str {
         .unwrap_or_default()
 }
 
+fn select_array_metadata_document(
+    array_path: &str,
+    v3: Option<Vec<u8>>,
+    v2: Option<Vec<u8>>,
+) -> ZarrFdwResult<ArrayMetadataDocument> {
+    match (v3, v2) {
+        (Some(_), Some(_)) => Err(ZarrFdwError::InvalidMetadata(format!(
+            "array '{array_path}' contains both zarr.json and .zarray metadata"
+        ))),
+        (Some(bytes), None) => Ok(ArrayMetadataDocument::V3(bytes)),
+        (None, Some(bytes)) => Ok(ArrayMetadataDocument::V2(bytes)),
+        (None, None) => Err(ZarrFdwError::InvalidMetadata(format!(
+            "array '{array_path}' contains neither zarr.json nor .zarray metadata"
+        ))),
+    }
+}
+
+fn read_optional_metadata_object(
+    store: &ZarrStore,
+    metrics: &mut ZarrScanMetrics,
+    key: &str,
+) -> ZarrFdwResult<Option<Vec<u8>>> {
+    let bytes = store.get_object_optional_sync(key, MAX_METADATA_OBJECT_BYTES)?;
+    metrics.record_remote_get(ReadKind::Metadata, bytes.as_ref().map(Vec::len));
+    Ok(bytes)
+}
+
+/// Read and normalize exactly one array node without exposing format-specific
+/// metadata to the scan executor.
+fn read_array_node(
+    store: &ZarrStore,
+    metrics: &mut ZarrScanMetrics,
+    array_path: &str,
+) -> ZarrFdwResult<ArrayNode> {
+    let v3_key = join_key(array_path, "zarr.json");
+    let v2_key = join_key(array_path, ".zarray");
+    let v3 = read_optional_metadata_object(store, metrics, &v3_key)?;
+    let v2 = read_optional_metadata_object(store, metrics, &v2_key)?;
+
+    let node = match select_array_metadata_document(array_path, v3, v2)? {
+        ArrayMetadataDocument::V3(bytes) => match parse_v3_node(&bytes)? {
+            NodeMeta::Array(node) => Ok(*node),
+            NodeMeta::Group(_) => Err(ZarrFdwError::InvalidMetadata(format!(
+                "node '{array_path}' is a Zarr v3 group, expected an array"
+            ))),
+        },
+        ArrayMetadataDocument::V2(bytes) => {
+            let attributes =
+                read_array_attributes_optional(store, metrics, array_path)?.unwrap_or_default();
+            parse_v2_array(&bytes, attributes)
+        }
+    }?;
+    validate_array_ancestors(store, metrics, array_path, node.format)?;
+    Ok(node)
+}
+
+fn array_ancestor_paths(array_path: &str) -> Vec<String> {
+    let components = array_path
+        .split('/')
+        .filter(|component| !component.is_empty())
+        .collect::<Vec<_>>();
+    if components.is_empty() {
+        return Vec::new();
+    }
+    let mut paths = vec![String::new()];
+    let mut current = String::new();
+    for component in components.iter().take(components.len() - 1) {
+        current = join_key(&current, component);
+        paths.push(current.clone());
+    }
+    paths
+}
+
+fn validate_array_ancestors(
+    store: &ZarrStore,
+    metrics: &mut ZarrScanMetrics,
+    array_path: &str,
+    format: ZarrFormat,
+) -> ZarrFdwResult<()> {
+    for ancestor in array_ancestor_paths(array_path) {
+        let v3_key = join_key(&ancestor, "zarr.json");
+        let v2_group_key = join_key(&ancestor, ".zgroup");
+        let v2_array_key = join_key(&ancestor, ".zarray");
+        let v3 = read_optional_metadata_object(store, metrics, &v3_key)?;
+        let v2_group = read_optional_metadata_object(store, metrics, &v2_group_key)?;
+        let v2_array = read_optional_metadata_object(store, metrics, &v2_array_key)?;
+        if v2_array.is_some() {
+            return Err(ZarrFdwError::InvalidMetadata(format!(
+                "ancestor '{}' is an array, expected a group",
+                if ancestor.is_empty() { "/" } else { &ancestor }
+            )));
+        }
+        match format {
+            ZarrFormat::V3 => {
+                if v2_group.is_some() {
+                    return Err(ZarrFdwError::InvalidMetadata(format!(
+                        "Zarr v3 array '{array_path}' has a Zarr v2 ancestor group '{}'",
+                        if ancestor.is_empty() { "/" } else { &ancestor }
+                    )));
+                }
+                let bytes = v3.ok_or_else(|| {
+                    ZarrFdwError::InvalidMetadata(format!(
+                        "Zarr v3 array '{array_path}' requires explicit zarr.json metadata on ancestor group '{}'",
+                        if ancestor.is_empty() { "/" } else { &ancestor }
+                    ))
+                })?;
+                if !matches!(parse_v3_node(&bytes)?, NodeMeta::Group(_)) {
+                    return Err(ZarrFdwError::InvalidMetadata(format!(
+                        "ancestor '{}' is not a Zarr v3 group",
+                        if ancestor.is_empty() { "/" } else { &ancestor }
+                    )));
+                }
+            }
+            ZarrFormat::V2 => {
+                if v3.is_some() {
+                    return Err(ZarrFdwError::InvalidMetadata(format!(
+                        "Zarr v2 array '{array_path}' has a Zarr v3 ancestor group '{}'",
+                        if ancestor.is_empty() { "/" } else { &ancestor }
+                    )));
+                }
+                if let Some(bytes) = v2_group {
+                    parse_v2_group(&bytes, Map::new())?;
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 fn read_coordinate_metadata(
     store: &ZarrStore,
     metrics: &mut ZarrScanMetrics,
     prefix: &str,
     name: &str,
     expected_length: u64,
-) -> ZarrFdwResult<(CoordinateMetadata, Map<String, JsonValue>)> {
+) -> ZarrFdwResult<(ArrayNode, Option<f64>)> {
     let dir = join_key(prefix, name);
-    let meta_bytes = store.get_object_sync(&format!("{dir}/.zarray"), MAX_METADATA_OBJECT_BYTES)?;
-    metrics.record_remote_get(ReadKind::Metadata, Some(meta_bytes.len()));
-    let meta = ArrayMeta::parse(&meta_bytes).map_err(|e| ZarrFdwError::CoordinateReadError {
-        axis: name.to_string(),
-        error: format!("coordinate array metadata: {e}"),
-    })?;
+    let node =
+        read_array_node(store, metrics, &dir).map_err(|e| ZarrFdwError::CoordinateReadError {
+            axis: name.to_string(),
+            error: format!("coordinate array metadata: {e}"),
+        })?;
+    let meta = &node.meta;
     meta.validate_coordinate()
         .map_err(|e| ZarrFdwError::CoordinateReadError {
             axis: name.to_string(),
@@ -1769,7 +1900,7 @@ fn read_coordinate_metadata(
             ),
         });
     }
-    let (storage_shape, _, _) = checked_chunk_layout(&meta, itemsize).map_err(|error| {
+    let (storage_shape, _, _) = checked_chunk_layout(meta, itemsize).map_err(|error| {
         ZarrFdwError::CoordinateReadError {
             axis: name.to_string(),
             error: error.to_string(),
@@ -1799,8 +1930,7 @@ fn read_coordinate_metadata(
             ),
         });
     }
-    let attributes = read_array_attributes_optional(store, metrics, &dir)?.unwrap_or_default();
-    Ok((CoordinateMetadata { meta, fill_value }, attributes))
+    Ok((node, fill_value))
 }
 
 /// Read a validated 1D numeric coordinate array and return its values as `f64`.
@@ -1809,12 +1939,11 @@ fn read_coordinate_values(
     metrics: &mut ZarrScanMetrics,
     prefix: &str,
     name: &str,
-    coordinate: &CoordinateMetadata,
+    coordinate: &ArrayNode,
+    fill_value: Option<f64>,
 ) -> ZarrFdwResult<Vec<f64>> {
     let dir = join_key(prefix, name);
     let meta = &coordinate.meta;
-
-    let fill_value = coordinate.fill_value;
 
     let coordinate_len = meta
         .shape_extent(0)
@@ -1867,9 +1996,9 @@ fn read_coordinate_values(
     for chunk_index in 0..chunk_count {
         let ci = u64::try_from(chunk_index).map_err(|_| ZarrFdwError::CoordinateReadError {
             axis: name.to_string(),
-            error: "coordinate chunk index exceeds the Zarr v2 u64 index capacity".to_string(),
+            error: "coordinate chunk index exceeds the Zarr u64 index capacity".to_string(),
         })?;
-        let chunk = chunk_key(&meta.dimension_separator, &[ci]);
+        let chunk = chunk_key(&meta.chunk_key_encoding, &[ci]);
         let object_key = join_key(&dir, &chunk);
         let encoded_limit = codec.encoded_read_limit(expected_bytes)?;
         let decoded_values = match store.get_object_optional_sync(&object_key, encoded_limit)? {
@@ -2216,7 +2345,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
         _limit: &Option<Limit>,
         _options: &HashMap<String, String>,
     ) -> ZarrFdwResult<(i64, i32)> {
-        // Do not fetch `.zarray` here: this callback also runs for plain
+        // Do not fetch array metadata here: this callback also runs for plain
         // EXPLAIN, where remote latency/auth failures would be surprising.
         Ok(conservative_rel_size(columns))
     }
@@ -2250,39 +2379,33 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
             .unwrap_or_default();
         self.array_dir = array_group;
 
-        // load array metadata
-        let meta_bytes = self.store.get_object_sync(
-            &join_key(&self.array_dir, ".zarray"),
-            MAX_METADATA_OBJECT_BYTES,
-        )?;
-        self.metrics
-            .record_remote_get(ReadKind::Metadata, Some(meta_bytes.len()));
-        let meta = ArrayMeta::from_bytes(&meta_bytes)?;
-        let value_attributes =
-            read_array_attributes_optional(&self.store, &mut self.metrics, &self.array_dir)?
-                .unwrap_or_default();
-        let dimension_names =
-            named_dimensions(&value_attributes, meta.shape.len(), &self.array_dir)?;
+        // Load and normalize exactly one v2 or v3 array node. The executor
+        // remains format-neutral below this boundary.
+        let value_node = read_array_node(&self.store, &mut self.metrics, &self.array_dir)?;
+        value_node.meta.validate()?;
+        let dimension_names = named_dimensions(&value_node, &self.array_dir)?;
         let coordinate_parent = array_parent_path(&self.array_dir);
-        let mut coordinate_metadata = Vec::with_capacity(dimension_names.len());
-        let mut coordinate_attributes = Vec::with_capacity(dimension_names.len());
-        for (name, &length) in dimension_names.iter().zip(meta.shape.iter()) {
-            let (coordinate, attributes) = read_coordinate_metadata(
+        let mut coordinate_nodes = Vec::with_capacity(dimension_names.len());
+        let mut coordinate_fill_values = Vec::with_capacity(dimension_names.len());
+        for (name, &length) in dimension_names.iter().zip(value_node.meta.shape.iter()) {
+            let (coordinate, fill_value) = read_coordinate_metadata(
                 &self.store,
                 &mut self.metrics,
                 coordinate_parent,
                 name,
                 length,
             )?;
-            coordinate_metadata.push(coordinate);
-            coordinate_attributes.push(attributes);
+            coordinate_nodes.push(coordinate);
+            coordinate_fill_values.push(fill_value);
         }
         let dataset = named_array_dataset(
             &self.array_dir,
-            &meta,
+            &value_node,
             &dimension_names,
-            &coordinate_attributes,
+            &coordinate_nodes,
         )?;
+        let meta = &value_node.meta;
+        let value_attributes = &value_node.attributes;
         let variable = dataset.variable();
         self.array_dir = variable.path().to_string();
         self.axes = dataset.axis_names();
@@ -2319,7 +2442,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
                 option: OPT_TIME_FROM_ATTRS.to_string(),
                 message: "requires exactly one discovered Time dimension".to_string(),
             })?;
-            TimeSpec::from_cf_attributes(&coordinate_attributes[axis])?
+            TimeSpec::from_cf_attributes(&coordinate_nodes[axis].attributes)?
         } else {
             TimeSpec::from_legacy_options(
                 options.get(OPT_TIME_UNIT).map(String::as_str),
@@ -2329,7 +2452,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
         let scientific_decoder = if decode_cf {
             Some(ScientificValueDecoder::from_attributes(
                 dtype,
-                &value_attributes,
+                value_attributes,
             )?)
         } else {
             None
@@ -2380,7 +2503,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
             }
             validate_coordinate_decoding_attributes(
                 dimension.name(),
-                &coordinate_attributes[axis],
+                &coordinate_nodes[axis].attributes,
             )?;
             let coordinate = dimension.coordinate();
             let values = read_coordinate_values(
@@ -2388,7 +2511,8 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
                 &mut self.metrics,
                 coordinate.parent(),
                 coordinate.name(),
-                &coordinate_metadata[axis],
+                &coordinate_nodes[axis],
+                coordinate_fill_values[axis],
             )?;
             validate_coordinate_values(dimension.name(), &values)?;
             coords.push(Some(values));
@@ -2450,7 +2574,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
         let chunk_ranges = if no_rows {
             Vec::new()
         } else {
-            axis_chunk_ranges(&meta, &self.bounds)?
+            axis_chunk_ranges(meta, &self.bounds)?
         };
         let chunks_selected = if no_rows {
             0
@@ -2627,6 +2751,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
 
 #[cfg(test)]
 mod unit_tests {
+    use super::super::meta::{ChunkKeyEncoding, ZarrFormat};
     use super::*;
 
     fn column(name: &str, type_oid: pg_sys::Oid) -> Column {
@@ -2645,9 +2770,27 @@ mod unit_tests {
             dtype: "<f4".to_string(),
             fill_value: serde_json::Value::from(0),
             compressor: None,
-            dimension_separator: ".".to_string(),
+            chunk_key_encoding: ChunkKeyEncoding::V2 { separator: '.' },
             order: 'C',
             filters: None,
+        }
+    }
+
+    fn array_node(
+        shape: Vec<u64>,
+        chunks: Vec<u64>,
+        attributes: Map<String, JsonValue>,
+    ) -> ArrayNode {
+        ArrayNode {
+            format: ZarrFormat::V2,
+            meta: array_meta(shape, chunks),
+            attributes,
+            dimension_names: None,
+            native_dtype: "<f4".to_string(),
+            native_codecs: serde_json::json!({
+                "filters": null,
+                "compressor": null,
+            }),
         }
     }
 
@@ -2663,8 +2806,48 @@ mod unit_tests {
             .iter()
             .map(|name| (*name).to_string())
             .collect::<Vec<_>>();
-        let meta = array_meta(vec![2; names.len()], vec![1; names.len()]);
-        named_array_dataset("nested/value", &meta, &names, &coordinate_attributes).unwrap()
+        let value_node = array_node(
+            vec![2; names.len()],
+            vec![1; names.len()],
+            attributes(serde_json::json!({ "_ARRAY_DIMENSIONS": names })),
+        );
+        let coordinate_nodes = coordinate_attributes
+            .into_iter()
+            .map(|attributes| array_node(vec![2], vec![1], attributes))
+            .collect::<Vec<_>>();
+        named_array_dataset("nested/value", &value_node, &names, &coordinate_nodes).unwrap()
+    }
+
+    #[test]
+    fn array_metadata_document_requires_exactly_one_format() {
+        assert!(matches!(
+            select_array_metadata_document("value", None, Some(vec![2])),
+            Ok(ArrayMetadataDocument::V2(bytes)) if bytes == vec![2]
+        ));
+        assert!(matches!(
+            select_array_metadata_document("value", Some(vec![3]), None),
+            Ok(ArrayMetadataDocument::V3(bytes)) if bytes == vec![3]
+        ));
+        assert!(matches!(
+            select_array_metadata_document("value", Some(vec![3]), Some(vec![2])),
+            Err(ZarrFdwError::InvalidMetadata(message))
+                if message.contains("both zarr.json and .zarray")
+        ));
+        assert!(matches!(
+            select_array_metadata_document("value", None, None),
+            Err(ZarrFdwError::InvalidMetadata(message))
+                if message.contains("neither zarr.json nor .zarray")
+        ));
+    }
+
+    #[test]
+    fn array_ancestor_paths_include_root_and_every_parent_group() {
+        assert!(array_ancestor_paths("").is_empty());
+        assert_eq!(array_ancestor_paths("value"), vec![""]);
+        assert_eq!(
+            array_ancestor_paths("outer/inner/value"),
+            vec!["", "outer", "outer/inner"]
+        );
     }
 
     #[test]

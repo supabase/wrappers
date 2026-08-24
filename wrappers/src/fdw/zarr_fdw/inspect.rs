@@ -1,18 +1,18 @@
 //! Read-only Zarr hierarchy and scientific-metadata inspection.
 //!
 //! This module intentionally does not call the FDW scan executor. It lists
-//! group prefixes and reads only `.zgroup`, `.zarray`, and `.zattrs` objects.
+//! group prefixes and reads only v2 `.zgroup`, `.zarray`, and `.zattrs`
+//! objects or v3 `zarr.json` objects.
 
 use std::collections::{HashMap, HashSet, VecDeque};
 
 use pgrx::pg_sys::panic::{ErrorReport, ErrorReportable};
 use pgrx::{JsonB, pg_sys, prelude::*};
-use serde::Deserialize;
 use serde_json::{Map, Value, json};
 use supabase_wrappers::prelude::ForeignServer;
 
 use super::dataset::parse_named_dimensions;
-use super::meta::ArrayMeta;
+use super::meta::{ArrayNode, NodeMeta, ZarrFormat, parse_v2_array, parse_v2_group, parse_v3_node};
 use super::store::{MAX_METADATA_OBJECT_BYTES, ZarrStore, join_key};
 use super::{ZarrFdwError, ZarrFdwResult};
 
@@ -21,11 +21,6 @@ const MAX_INSPECTION_NODES: usize = 10_000;
 const MAX_INSPECTION_LIST_PAGES: usize = 1_000;
 const MAX_INSPECTION_METADATA_BYTES: usize = 64 * 1024 * 1024;
 const MAX_INSPECTION_DERIVED_CRS_BYTES: usize = MAX_INSPECTION_METADATA_BYTES;
-
-#[derive(Debug, Deserialize)]
-struct GroupMeta {
-    zarr_format: u32,
-}
 
 #[derive(Debug, Clone, PartialEq)]
 struct InspectionRow {
@@ -190,38 +185,75 @@ fn load_foreign_server(server_name: &str) -> ZarrFdwResult<ForeignServer> {
 }
 
 fn inspect_store(store: &ZarrStore) -> ZarrFdwResult<Vec<InspectionRow>> {
-    let mut pending = VecDeque::from([(String::new(), 0usize)]);
+    let mut pending = VecDeque::from([(String::new(), 0usize, None)]);
     let mut discovered = HashSet::from([String::new()]);
     let mut rows = Vec::new();
     let mut metadata_bytes = 0usize;
     let mut list_pages = 0usize;
 
-    while let Some((path, depth)) = pending.pop_front() {
-        let array_key = metadata_key(&path, ".zarray");
-        if let Some(bytes) = read_optional_metadata(store, &array_key, &mut metadata_bytes)? {
-            let meta = ArrayMeta::parse(&bytes).map_err(|error| {
+    while let Some((path, depth, parent_format)) = pending.pop_front() {
+        let v3_key = metadata_key(&path, "zarr.json");
+        let v2_array_key = metadata_key(&path, ".zarray");
+        let v3 = read_optional_metadata(store, &v3_key, &mut metadata_bytes)?;
+        let v2_array = read_optional_metadata(store, &v2_array_key, &mut metadata_bytes)?;
+
+        let (group_format, group_attributes) = if let Some(bytes) = v3 {
+            let v2_group_key = metadata_key(&path, ".zgroup");
+            let v2_group = read_optional_metadata(store, &v2_group_key, &mut metadata_bytes)?;
+            reject_dual_metadata(&path, true, v2_array.is_some(), v2_group.is_some())?;
+            validate_hierarchy_format(&path, parent_format, ZarrFormat::V3)?;
+
+            match parse_v3_node(&bytes).map_err(|error| {
                 ZarrFdwError::InvalidMetadata(format!(
                     "could not parse '{}': {error}",
-                    display_path(&array_key)
+                    display_path(&v3_key)
+                ))
+            })? {
+                NodeMeta::Array(node) => {
+                    rows.push(array_row(&path, *node));
+                    continue;
+                }
+                NodeMeta::Group(node) => (Some(node.format), node.attributes),
+            }
+        } else if let Some(bytes) = v2_array {
+            validate_hierarchy_format(&path, parent_format, ZarrFormat::V2)?;
+            let attributes = read_attributes(store, &path, &mut metadata_bytes)?;
+            let node = parse_v2_array(&bytes, attributes).map_err(|error| {
+                ZarrFdwError::InvalidMetadata(format!(
+                    "could not parse '{}': {error}",
+                    display_path(&v2_array_key)
                 ))
             })?;
-            let attrs = read_attributes(store, &path, &mut metadata_bytes)?;
-            rows.push(array_row(&path, meta, attrs));
+            rows.push(array_row(&path, node));
             continue;
-        }
-
-        let group_key = metadata_key(&path, ".zgroup");
-        let group_meta = read_optional_metadata(store, &group_key, &mut metadata_bytes)?
-            .map(|bytes| {
-                serde_json::from_slice::<GroupMeta>(&bytes).map_err(|error| {
-                    ZarrFdwError::InvalidMetadata(format!(
-                        "could not parse '{}': {error}",
-                        display_path(&group_key)
-                    ))
+        } else {
+            if parent_format == Some(ZarrFormat::V3) {
+                return Err(ZarrFdwError::InvalidMetadata(format!(
+                    "Zarr v3 node '{}' must contain explicit zarr.json metadata",
+                    display_path(&path)
+                )));
+            }
+            let v2_group_key = metadata_key(&path, ".zgroup");
+            let v2_group = read_optional_metadata(store, &v2_group_key, &mut metadata_bytes)?;
+            let attributes = read_attributes(store, &path, &mut metadata_bytes)?;
+            let group = v2_group
+                .map(|bytes| {
+                    parse_v2_group(&bytes, attributes.clone()).map_err(|error| {
+                        ZarrFdwError::InvalidMetadata(format!(
+                            "could not parse '{}': {error}",
+                            display_path(&v2_group_key)
+                        ))
+                    })
                 })
-            })
-            .transpose()?;
-        let attrs = read_attributes(store, &path, &mut metadata_bytes)?;
+                .transpose()?;
+            if let Some(group) = &group {
+                validate_hierarchy_format(&path, parent_format, group.format)?;
+            }
+            (
+                group.as_ref().map(|group| group.format),
+                group.map(|group| group.attributes).unwrap_or(attributes),
+            )
+        };
 
         let mut child_prefixes = Vec::new();
         let mut continuation_token = None;
@@ -251,19 +283,19 @@ fn inspect_store(store: &ZarrStore) -> ZarrFdwResult<Vec<InspectionRow>> {
             }
         }
 
-        let is_group = group_meta.is_some()
-            || !attrs.is_empty()
+        let is_group = group_format.is_some()
+            || !group_attributes.is_empty()
             || !child_prefixes.is_empty()
             || path.is_empty();
         if is_group {
             let mut warnings = Vec::new();
-            if group_meta.is_none() {
+            if group_format.is_none() {
                 warnings.push("group has no .zgroup metadata".to_string());
             }
             rows.push(group_row(
                 &path,
-                group_meta.map(|meta| i64::from(meta.zarr_format)),
-                Value::Object(attrs),
+                group_format.map(zarr_format_number),
+                Value::Object(group_attributes),
                 warnings,
             ));
         }
@@ -276,13 +308,59 @@ fn inspect_store(store: &ZarrStore) -> ZarrFdwResult<Vec<InspectionRow>> {
         }
         child_prefixes.sort();
         for child in child_prefixes {
-            pending.push_back((child, depth + 1));
+            pending.push_back((child, depth + 1, group_format.or(parent_format)));
         }
     }
 
     rows.sort_by(|left, right| left.path.cmp(&right.path));
     resolve_crs_references(&mut rows);
     Ok(rows)
+}
+
+fn reject_dual_metadata(
+    path: &str,
+    has_v3: bool,
+    has_v2_array: bool,
+    has_v2_group: bool,
+) -> ZarrFdwResult<()> {
+    if has_v3 && (has_v2_array || has_v2_group) {
+        return Err(ZarrFdwError::InvalidMetadata(format!(
+            "node '{}' contains both zarr.json and Zarr v2 metadata",
+            display_path(path)
+        )));
+    }
+    Ok(())
+}
+
+fn validate_hierarchy_format(
+    path: &str,
+    parent_format: Option<ZarrFormat>,
+    node_format: ZarrFormat,
+) -> ZarrFdwResult<()> {
+    if node_format == ZarrFormat::V3 && !path.is_empty() && parent_format.is_none() {
+        return Err(ZarrFdwError::InvalidMetadata(format!(
+            "Zarr v3 node '{}' requires explicit Zarr v3 metadata on every ancestor group",
+            display_path(path)
+        )));
+    }
+    if let Some(parent_format) = parent_format {
+        if parent_format != node_format {
+            return Err(ZarrFdwError::InvalidMetadata(format!(
+                "node '{}' uses Zarr v{}, but its parent group uses Zarr v{}",
+                display_path(path),
+                zarr_format_number(node_format),
+                zarr_format_number(parent_format)
+            )));
+        }
+    }
+    Ok(())
+}
+
+fn zarr_format_number(format: ZarrFormat) -> i64 {
+    match format {
+        ZarrFormat::V2 => 2,
+        ZarrFormat::V3 => 3,
+    }
 }
 
 fn read_optional_metadata(
@@ -324,30 +402,40 @@ fn read_attributes(
     })
 }
 
-fn array_row(path: &str, meta: ArrayMeta, attrs: Map<String, Value>) -> InspectionRow {
+fn array_row(path: &str, node: ArrayNode) -> InspectionRow {
+    let ArrayNode {
+        format,
+        meta,
+        attributes: attrs,
+        dimension_names,
+        native_dtype,
+        native_codecs,
+    } = node;
     let mut warnings = Vec::new();
-    let dimensions = named_dimensions(&attrs, meta.shape.len(), &mut warnings);
+    let dimensions = inspected_dimensions(
+        format,
+        dimension_names.as_deref(),
+        &attrs,
+        meta.shape.len(),
+        &mut warnings,
+    );
     let units = string_attribute(&attrs, "units", &mut warnings);
     let calendar = string_attribute(&attrs, "calendar", &mut warnings);
     let scale_factor = numeric_attribute(&attrs, "scale_factor", &mut warnings);
     let add_offset = numeric_attribute(&attrs, "add_offset", &mut warnings);
     let crs = crs_attribute(&attrs);
-    let codecs = json!({
-        "filters": meta.filters,
-        "compressor": meta.compressor,
-    });
 
     InspectionRow {
         path: display_path(path),
         kind: "array".to_string(),
         group_path: parent_path(path),
         variable: Some(node_name(path)),
-        zarr_format: Some(i64::from(meta.zarr_format)),
+        zarr_format: Some(zarr_format_number(format)),
         shape: Some(json!(meta.shape)),
         dimensions,
-        dtype: Some(meta.dtype),
+        dtype: Some(native_dtype),
         chunks: Some(json!(meta.chunks)),
-        codecs: Some(codecs),
+        codecs: Some(native_codecs),
         units,
         fill_value: Some(meta.fill_value),
         scale_factor,
@@ -512,6 +600,43 @@ fn named_dimensions(
     }
 }
 
+fn inspected_dimensions(
+    format: ZarrFormat,
+    native: Option<&[Option<String>]>,
+    attrs: &Map<String, Value>,
+    rank: usize,
+    warnings: &mut Vec<String>,
+) -> Option<Vec<String>> {
+    if format == ZarrFormat::V2 {
+        return named_dimensions(attrs, rank, warnings);
+    }
+
+    let native = native?;
+    if native.len() != rank {
+        warnings.push(format!(
+            "dimension_names has {} names but the array rank is {rank}",
+            native.len()
+        ));
+        return None;
+    }
+    let Some(names) = native.iter().cloned().collect::<Option<Vec<_>>>() else {
+        warnings.push("dimension_names contains an unnamed dimension".to_string());
+        return None;
+    };
+    let probe = Map::from_iter([("_ARRAY_DIMENSIONS".to_string(), json!(names))]);
+    match parse_named_dimensions(&probe, rank) {
+        Ok(dimensions) => dimensions,
+        Err(message) => {
+            warnings.push(
+                message
+                    .replace("_ARRAY_DIMENSIONS names", "dimension_names")
+                    .replace("_ARRAY_DIMENSIONS", "dimension_names"),
+            );
+            None
+        }
+    }
+}
+
 fn string_attribute(
     attrs: &Map<String, Value>,
     name: &str,
@@ -575,20 +700,49 @@ fn node_name(path: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    use super::super::meta::{ArrayMeta, ChunkKeyEncoding};
     use super::*;
 
-    fn array_meta() -> ArrayMeta {
-        ArrayMeta {
-            zarr_format: 2,
-            shape: vec![2, 5, 6],
-            chunks: vec![1, 3, 4],
-            dtype: "<f4".to_string(),
-            fill_value: json!(-7.5),
-            compressor: Some(json!({"id": "blosc", "cname": "lz4"})),
-            dimension_separator: ".".to_string(),
-            order: 'C',
-            filters: Some(vec![]),
+    fn array_node(attributes: Map<String, Value>) -> ArrayNode {
+        ArrayNode {
+            format: ZarrFormat::V2,
+            meta: ArrayMeta {
+                zarr_format: 2,
+                shape: vec![2, 5, 6],
+                chunks: vec![1, 3, 4],
+                dtype: "<f4".to_string(),
+                fill_value: json!(-7.5),
+                compressor: Some(json!({"id": "blosc", "cname": "lz4"})),
+                chunk_key_encoding: ChunkKeyEncoding::V2 { separator: '.' },
+                order: 'C',
+                filters: Some(vec![]),
+            },
+            attributes,
+            dimension_names: None,
+            native_dtype: "<f4".to_string(),
+            native_codecs: json!({
+                "filters": [],
+                "compressor": {"id": "blosc", "cname": "lz4"}
+            }),
         }
+    }
+
+    fn v3_array_node(attributes: Map<String, Value>) -> ArrayNode {
+        let mut node = array_node(attributes);
+        node.format = ZarrFormat::V3;
+        node.meta.zarr_format = 3;
+        node.meta.chunk_key_encoding = ChunkKeyEncoding::Default { separator: '/' };
+        node.dimension_names = Some(vec![
+            Some("time".to_string()),
+            Some("y".to_string()),
+            Some("x".to_string()),
+        ]);
+        node.native_dtype = "float32".to_string();
+        node.native_codecs = json!([{
+            "name": "bytes",
+            "configuration": {"endian": "little"}
+        }]);
+        node
     }
 
     #[test]
@@ -604,7 +758,7 @@ mod tests {
         }))
         .unwrap();
 
-        let row = array_row("climate/temperature", array_meta(), attrs);
+        let row = array_row("climate/temperature", array_node(attrs));
 
         assert_eq!(row.path, "climate/temperature");
         assert_eq!(row.group_path.as_deref(), Some("climate"));
@@ -627,7 +781,7 @@ mod tests {
         }))
         .unwrap();
 
-        let row = array_row("temperature", array_meta(), attrs);
+        let row = array_row("temperature", array_node(attrs));
 
         assert!(row.dimensions.is_none());
         assert_eq!(
@@ -635,6 +789,47 @@ mod tests {
             json!(["lat", "lat", "lon"])
         );
         assert_eq!(row.warnings, vec!["_ARRAY_DIMENSIONS names must be unique"]);
+    }
+
+    #[test]
+    fn v3_array_row_exposes_native_metadata_and_embedded_attributes() {
+        let attrs = serde_json::from_value::<Map<String, Value>>(json!({
+            "units": "K",
+            "scale_factor": 0.01,
+            "add_offset": 273.15
+        }))
+        .unwrap();
+
+        let row = array_row("nested/raw", v3_array_node(attrs));
+
+        assert_eq!(row.zarr_format, Some(3));
+        assert_eq!(row.dimensions.unwrap(), vec!["time", "y", "x"]);
+        assert_eq!(row.dtype.as_deref(), Some("float32"));
+        assert_eq!(
+            row.codecs.unwrap(),
+            json!([{
+                "name": "bytes",
+                "configuration": {"endian": "little"}
+            }])
+        );
+        assert_eq!(row.attributes["units"], json!("K"));
+        assert!(row.warnings.is_empty());
+    }
+
+    #[test]
+    fn rejects_dual_or_implicitly_nested_v3_metadata() {
+        assert!(matches!(
+            reject_dual_metadata("nested/raw", true, true, false),
+            Err(ZarrFdwError::InvalidMetadata(message))
+                if message == "node 'nested/raw' contains both zarr.json and Zarr v2 metadata"
+        ));
+        assert!(matches!(
+            validate_hierarchy_format("nested/raw", None, ZarrFormat::V3),
+            Err(ZarrFdwError::InvalidMetadata(message))
+                if message == "Zarr v3 node 'nested/raw' requires explicit Zarr v3 metadata on every ancestor group"
+        ));
+        validate_hierarchy_format("", None, ZarrFormat::V3).unwrap();
+        validate_hierarchy_format("nested/raw", Some(ZarrFormat::V3), ZarrFormat::V3).unwrap();
     }
 
     #[test]
@@ -649,8 +844,8 @@ mod tests {
         }))
         .unwrap();
         let mut rows = vec![
-            array_row("nested/raw", array_meta(), value_attrs),
-            array_row("nested/spatial_ref", array_meta(), ref_attrs),
+            array_row("nested/raw", array_node(value_attrs)),
+            array_row("nested/spatial_ref", array_node(ref_attrs)),
         ];
 
         resolve_crs_references(&mut rows);
@@ -671,8 +866,8 @@ mod tests {
         }))
         .unwrap();
         let mut rows = vec![
-            array_row("nested/raw", array_meta(), value_attrs),
-            array_row("nested/spatial_ref", array_meta(), ref_attrs),
+            array_row("nested/raw", array_node(value_attrs)),
+            array_row("nested/spatial_ref", array_node(ref_attrs)),
         ];
 
         resolve_crs_references(&mut rows);
@@ -705,9 +900,9 @@ mod tests {
         }))
         .unwrap();
         let mut rows = vec![
-            array_row("nested/missing_raw", array_meta(), missing_attrs),
-            array_row("nested/non_array_raw", array_meta(), non_array_attrs),
-            array_row("nested/crs_less_raw", array_meta(), crs_less_attrs),
+            array_row("nested/missing_raw", array_node(missing_attrs)),
+            array_row("nested/non_array_raw", array_node(non_array_attrs)),
+            array_row("nested/crs_less_raw", array_node(crs_less_attrs)),
             group_row(
                 "nested/group_ref",
                 Some(2),
@@ -720,7 +915,7 @@ mod tests {
                 Value::Object(group_attrs),
                 vec![],
             ),
-            array_row("nested/no_crs", array_meta(), Map::new()),
+            array_row("nested/no_crs", array_node(Map::new())),
         ];
 
         resolve_crs_references(&mut rows);
@@ -781,10 +976,10 @@ mod tests {
         }))
         .unwrap();
         let mut rows = vec![
-            array_row("nested/non_string", array_meta(), non_string_attrs),
-            array_row("nested/empty", array_meta(), empty_attrs),
-            array_row("nested/path_like", array_meta(), path_like_attrs),
-            array_row("nested/multi_token", array_meta(), multi_token_attrs),
+            array_row("nested/non_string", array_node(non_string_attrs)),
+            array_row("nested/empty", array_node(empty_attrs)),
+            array_row("nested/path_like", array_node(path_like_attrs)),
+            array_row("nested/multi_token", array_node(multi_token_attrs)),
         ];
 
         resolve_crs_references(&mut rows);
@@ -835,8 +1030,8 @@ mod tests {
         }))
         .unwrap();
         let mut rows = vec![
-            array_row("nested/raw", array_meta(), value_attrs),
-            array_row("nested/spatial_ref", array_meta(), ref_attrs),
+            array_row("nested/raw", array_node(value_attrs)),
+            array_row("nested/spatial_ref", array_node(ref_attrs)),
         ];
 
         resolve_crs_references_with_limit(&mut rows, 4);

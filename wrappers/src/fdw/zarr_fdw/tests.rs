@@ -32,6 +32,71 @@ mod tests {
         });
     }
 
+    fn create_minio_v3_e2e_server() {
+        Spi::connect_mut(|c| {
+            c.update(
+                r#"CREATE FOREIGN DATA WRAPPER zarr_v3_e2e_wrapper
+                     HANDLER zarr_fdw_handler VALIDATOR zarr_fdw_validator"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"CREATE SERVER zarr_v3_e2e_server
+                     FOREIGN DATA WRAPPER zarr_v3_e2e_wrapper
+                     OPTIONS (
+                       store_url 's3://warehouse/zarr/e2e-v3.zarr',
+                       aws_access_key_id 'admin',
+                       aws_secret_access_key 'password',
+                       aws_region 'us-east-1',
+                       endpoint_url 'http://localhost:8000',
+                       path_style_url 'true'
+                     )"#,
+                None,
+                &[],
+            )
+            .unwrap();
+        });
+    }
+
+    fn create_minio_v3_e2e_table(table: &str, array_group: &str, decode_cf: bool) {
+        create_minio_v3_e2e_server();
+        create_minio_v3_e2e_table_on_server(table, array_group, decode_cf);
+    }
+
+    fn create_minio_v3_e2e_table_on_server(table: &str, array_group: &str, decode_cf: bool) {
+        let decode_option = if decode_cf {
+            ",\n                         decode_cf 'true'"
+        } else {
+            ""
+        };
+        Spi::connect_mut(|c| {
+            c.update(
+                &format!(
+                    r#"CREATE FOREIGN TABLE {table} (
+                         time timestamp with time zone,
+                         y double precision,
+                         x double precision,
+                         value {value_type}
+                       )
+                       SERVER zarr_v3_e2e_server
+                       OPTIONS (
+                         array_group '{array_group}',
+                         time_from_attrs 'true'{decode_option}
+                       )"#,
+                    value_type = if decode_cf {
+                        "double precision"
+                    } else {
+                        "real"
+                    },
+                ),
+                None,
+                &[],
+            )
+            .unwrap();
+        });
+    }
+
     fn create_minio_e2e_table(table: &str, array_group: &str, value_type: &str) {
         create_minio_e2e_table_with_cf(table, array_group, value_type, false);
     }
@@ -2365,6 +2430,352 @@ mod tests {
                  )"#,
         )
         .unwrap();
+    }
+
+    #[pg_test]
+    fn zarr_minio_v3_default_and_v2_chunk_keys_scan_e2e() {
+        create_minio_v3_e2e_server();
+        for (table, array_group) in [
+            ("zarr_v3_default_keys", "nested/raw_default"),
+            ("zarr_v3_v2_keys", "nested/raw_v2keys"),
+        ] {
+            create_minio_v3_e2e_table_on_server(table, array_group, false);
+            Spi::connect(|c| {
+                let summary = c
+                    .select(
+                        &format!(
+                            r#"SELECT count(*) AS row_count,
+                                      count(value) AS value_count,
+                                      sum(value)::double precision AS value_sum,
+                                      min(value)::double precision AS value_min,
+                                      max(value)::double precision AS value_max
+                                 FROM {table}"#
+                        ),
+                        None,
+                        &[],
+                    )
+                    .unwrap()
+                    .next()
+                    .unwrap();
+                assert_eq!(
+                    summary.get_by_name::<i64, _>("row_count").unwrap().unwrap(),
+                    60
+                );
+                assert_eq!(
+                    summary
+                        .get_by_name::<i64, _>("value_count")
+                        .unwrap()
+                        .unwrap(),
+                    60
+                );
+                assert_eq!(
+                    summary.get_by_name::<f64, _>("value_sum").unwrap().unwrap(),
+                    3574.0
+                );
+                assert_eq!(
+                    summary.get_by_name::<f64, _>("value_min").unwrap().unwrap(),
+                    -7.5
+                );
+                assert_eq!(
+                    summary.get_by_name::<f64, _>("value_max").unwrap().unwrap(),
+                    143.0
+                );
+
+                let boundary = c
+                    .select(
+                        &format!(
+                            r#"SELECT value
+                                 FROM {table}
+                                WHERE time = '1970-01-01 00:00:03.6+00'::timestamptz
+                                  AND y = 50
+                                  AND x = 150"#
+                        ),
+                        None,
+                        &[],
+                    )
+                    .unwrap()
+                    .filter_map(|row| row.get_by_name::<f32, _>("value").unwrap())
+                    .collect::<Vec<_>>();
+                assert_eq!(boundary, vec![-7.5]);
+            });
+        }
+    }
+
+    #[pg_test]
+    fn zarr_minio_v3_scalar_aggregate_pushdown_e2e() {
+        create_minio_v3_e2e_table("zarr_v3_aggregate", "nested/raw_default", true);
+        let sql = r#"SELECT count(*) AS total_count,
+                            count(value) AS value_count,
+                            sum(value) AS value_sum,
+                            avg(value) AS value_avg,
+                            min(value) AS value_min,
+                            max(value) AS value_max
+                       FROM zarr_v3_aggregate"#;
+        assert_aggregate_pushed_down(sql);
+
+        Spi::connect(|c| {
+            let row = c.select(sql, None, &[]).unwrap().next().unwrap();
+            assert_eq!(
+                row.get_by_name::<i64, _>("total_count").unwrap().unwrap(),
+                60
+            );
+            assert_eq!(
+                row.get_by_name::<i64, _>("value_count").unwrap().unwrap(),
+                48
+            );
+            let value_sum = row.get_by_name::<f64, _>("value_sum").unwrap().unwrap();
+            let value_avg = row.get_by_name::<f64, _>("value_avg").unwrap().unwrap();
+            let value_min = row.get_by_name::<f64, _>("value_min").unwrap().unwrap();
+            let value_max = row.get_by_name::<f64, _>("value_max").unwrap().unwrap();
+            assert!((value_sum - 13_142.86).abs() < 1e-8);
+            assert!((value_avg - 273.809_583_333_333_36).abs() < 1e-10);
+            assert!((value_min - 273.15).abs() < 1e-10);
+            assert!((value_max - 274.55).abs() < 1e-10);
+        });
+    }
+
+    #[pg_test]
+    fn zarr_inspect_minio_v3_metadata_e2e() {
+        create_minio_v3_e2e_server();
+
+        Spi::connect(|c| {
+            let paths = c
+                .select(
+                    "SELECT path FROM zarr_inspect('zarr_v3_e2e_server') ORDER BY path",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|row| row.get_by_name::<String, _>("path").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(
+                paths,
+                vec![
+                    "/",
+                    "nested",
+                    "nested/raw_default",
+                    "nested/raw_v2keys",
+                    "nested/time",
+                    "nested/x",
+                    "nested/y",
+                ]
+            );
+
+            let root = c
+                .select(
+                    "SELECT kind, zarr_format, attributes, warnings FROM zarr_inspect('zarr_v3_e2e_server') WHERE path = '/'",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(
+                root.get_by_name::<String, _>("kind").unwrap().unwrap(),
+                "group"
+            );
+            assert_eq!(
+                root.get_by_name::<i64, _>("zarr_format").unwrap().unwrap(),
+                3
+            );
+            assert_eq!(
+                root.get_by_name::<JsonB, _>("attributes")
+                    .unwrap()
+                    .unwrap()
+                    .0["title"],
+                serde_json::json!("Deterministic Zarr v3 inspection fixture")
+            );
+            assert_eq!(
+                root.get_by_name::<Vec<String>, _>("warnings")
+                    .unwrap()
+                    .unwrap(),
+                Vec::<String>::new()
+            );
+
+            let nested = c
+                .select(
+                    "SELECT kind, zarr_format, crs, warnings FROM zarr_inspect('zarr_v3_e2e_server') WHERE path = 'nested'",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(
+                nested.get_by_name::<String, _>("kind").unwrap().unwrap(),
+                "group"
+            );
+            assert_eq!(
+                nested
+                    .get_by_name::<i64, _>("zarr_format")
+                    .unwrap()
+                    .unwrap(),
+                3
+            );
+            let nested_crs = nested.get_by_name::<JsonB, _>("crs").unwrap().unwrap().0;
+            assert_eq!(
+                nested_crs["properties"]["name"],
+                serde_json::json!("EPSG:3857")
+            );
+            assert_eq!(
+                nested
+                    .get_by_name::<Vec<String>, _>("warnings")
+                    .unwrap()
+                    .unwrap(),
+                Vec::<String>::new()
+            );
+
+            let raw = c
+                .select(
+                    r#"SELECT kind, group_path, variable, zarr_format, shape,
+                              dimensions, dtype, chunks, codecs, units,
+                              fill_value, scale_factor, add_offset, attributes,
+                              warnings
+                         FROM zarr_inspect('zarr_v3_e2e_server')
+                        WHERE path = 'nested/raw_default'"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(
+                raw.get_by_name::<String, _>("kind").unwrap().unwrap(),
+                "array"
+            );
+            assert_eq!(
+                raw.get_by_name::<String, _>("group_path").unwrap().unwrap(),
+                "nested"
+            );
+            assert_eq!(
+                raw.get_by_name::<String, _>("variable").unwrap().unwrap(),
+                "raw_default"
+            );
+            assert_eq!(
+                raw.get_by_name::<i64, _>("zarr_format").unwrap().unwrap(),
+                3
+            );
+            assert_eq!(
+                raw.get_by_name::<JsonB, _>("shape").unwrap().unwrap().0,
+                serde_json::json!([2, 5, 6])
+            );
+            assert_eq!(
+                raw.get_by_name::<Vec<String>, _>("dimensions")
+                    .unwrap()
+                    .unwrap(),
+                vec!["time", "y", "x"]
+            );
+            assert_eq!(
+                raw.get_by_name::<String, _>("dtype").unwrap().unwrap(),
+                "float32"
+            );
+            assert_eq!(
+                raw.get_by_name::<JsonB, _>("chunks").unwrap().unwrap().0,
+                serde_json::json!([2, 3, 4])
+            );
+            assert_eq!(
+                raw.get_by_name::<JsonB, _>("codecs").unwrap().unwrap().0,
+                serde_json::json!([{
+                    "name": "bytes",
+                    "configuration": {"endian": "little"}
+                }])
+            );
+            assert_eq!(
+                raw.get_by_name::<JsonB, _>("fill_value")
+                    .unwrap()
+                    .unwrap()
+                    .0,
+                serde_json::json!(-7.5)
+            );
+            assert_eq!(raw.get_by_name::<String, _>("units").unwrap().unwrap(), "K");
+            assert_eq!(
+                raw.get_by_name::<f64, _>("scale_factor").unwrap().unwrap(),
+                0.01
+            );
+            assert_eq!(
+                raw.get_by_name::<f64, _>("add_offset").unwrap().unwrap(),
+                273.15
+            );
+            assert_eq!(
+                raw.get_by_name::<JsonB, _>("attributes")
+                    .unwrap()
+                    .unwrap()
+                    .0["missing_value"],
+                serde_json::json!([42.0])
+            );
+            assert_eq!(
+                raw.get_by_name::<Vec<String>, _>("warnings")
+                    .unwrap()
+                    .unwrap(),
+                Vec::<String>::new()
+            );
+
+            let alternate = c
+                .select(
+                    "SELECT zarr_format, dimensions, dtype, codecs FROM zarr_inspect('zarr_v3_e2e_server') WHERE path = 'nested/raw_v2keys'",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(
+                alternate
+                    .get_by_name::<i64, _>("zarr_format")
+                    .unwrap()
+                    .unwrap(),
+                3
+            );
+            assert_eq!(
+                alternate
+                    .get_by_name::<Vec<String>, _>("dimensions")
+                    .unwrap()
+                    .unwrap(),
+                vec!["time", "y", "x"]
+            );
+            assert_eq!(
+                alternate
+                    .get_by_name::<String, _>("dtype")
+                    .unwrap()
+                    .unwrap(),
+                "float32"
+            );
+            assert_eq!(
+                alternate
+                    .get_by_name::<JsonB, _>("codecs")
+                    .unwrap()
+                    .unwrap()
+                    .0,
+                serde_json::json!([{
+                    "name": "bytes",
+                    "configuration": {"endian": "little"}
+                }])
+            );
+
+            let time = c
+                .select(
+                    "SELECT dimensions, units, calendar FROM zarr_inspect('zarr_v3_e2e_server') WHERE path = 'nested/time'",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(
+                time.get_by_name::<Vec<String>, _>("dimensions")
+                    .unwrap()
+                    .unwrap(),
+                vec!["time"]
+            );
+            assert_eq!(
+                time.get_by_name::<String, _>("units").unwrap().unwrap(),
+                "milliseconds since 1970-01-01 00:00:00"
+            );
+            assert_eq!(
+                time.get_by_name::<String, _>("calendar").unwrap().unwrap(),
+                "proleptic_gregorian"
+            );
+        });
     }
 
     #[pg_test]

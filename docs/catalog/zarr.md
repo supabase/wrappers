@@ -9,9 +9,10 @@ tags:
 
 # Zarr
 
-The Zarr Wrapper provides read-only access to Zarr v2 arrays in S3-compatible
-object storage. A scan reads one rank-1 through rank-64 value array whose named
-dimensions resolve to sibling coordinate arrays.
+The Zarr Wrapper provides read-only access to Zarr v2 arrays and a core subset
+of Zarr v3 arrays in S3-compatible object storage. A scan reads one rank-1
+through rank-64 value array whose named dimensions resolve to sibling
+coordinate arrays.
 
 ## Enable the wrapper
 
@@ -75,8 +76,10 @@ order by path;
 ```
 
 The caller must have `USAGE` on the foreign server. Inspection traverses the
-group hierarchy and reads only `.zgroup`, `.zarray`, and `.zattrs`; it does not
-read or decode chunk objects.
+group hierarchy and reads only v2 `.zgroup`, `.zarray`, and `.zattrs` objects or
+v3 `zarr.json` objects; it does not read or decode chunk objects. Zarr v3 groups
+must be explicit. A node that contains both v2 and v3 metadata is rejected
+rather than interpreted using an arbitrary precedence rule.
 
 The function returns these fields:
 
@@ -86,16 +89,16 @@ The function returns these fields:
 | `kind` | `group` or `array` |
 | `group_path` | Parent group for a non-root node |
 | `variable` | Array name; `NULL` for groups |
-| `zarr_format` | Format version recorded by `.zgroup` or `.zarray` |
+| `zarr_format` | Format version recorded by `.zgroup`, `.zarray`, or `zarr.json` |
 | `shape`, `chunks` | Raw JSON arrays, preserving the metadata integer range |
-| `dimensions` | Named dimensions from xarray `_ARRAY_DIMENSIONS` |
-| `dtype` | Raw NumPy/Zarr dtype string |
-| `codecs` | Zarr v2 `filters` and `compressor` metadata |
-| `fill_value` | Raw `.zarray` fill value |
+| `dimensions` | Named dimensions from v2 xarray `_ARRAY_DIMENSIONS` or v3 `dimension_names` |
+| `dtype` | Native v2 NumPy dtype string or v3 data-type identifier |
+| `codecs` | Native v2 `{filters, compressor}` object or v3 ordered codec array |
+| `fill_value` | Raw v2 or v3 fill value |
 | `units`, `calendar` | Common scientific attributes when they are strings |
 | `scale_factor`, `add_offset` | Finite numeric scientific attributes |
 | `crs` | Best-effort CRS metadata from direct `crs`, `spatial_ref`, or `crs_wkt`, or from a resolved sibling `grid_mapping` reference |
-| `attributes` | Complete `.zattrs` JSON object |
+| `attributes` | Complete v2 `.zattrs` object or v3 `attributes` object |
 | `warnings` | Non-fatal metadata issues, such as malformed named dimensions |
 
 The inspection surface exposes scientific metadata. Scans can opt into the
@@ -103,8 +106,8 @@ CF-style value and time-coordinate decoding described below; physical-unit and
 CRS transformations are not applied yet. The complete `attributes` value remains
 authoritative because scientific metadata conventions vary between datasets.
 
-For CRS metadata, `zarr_inspect` keeps the raw `.zattrs` object in
-`attributes` and fills `crs` as a convenience projection. Direct CRS metadata on
+For CRS metadata, `zarr_inspect` keeps the raw node attributes in `attributes`
+and fills `crs` as a convenience projection. Direct CRS metadata on
 the current node wins in this order: `crs`, `spatial_ref`, then `crs_wkt`. If an
 array has no direct CRS metadata but has a simple `grid_mapping` string, the
 inspector attempts to resolve that name to a sibling array in the same group and
@@ -159,13 +162,15 @@ flushed only when the iterator reaches EOF; like other Wrappers FDWs, an executo
 that stops early may not persist the final delta because SPI is not safe from
 `EndForeignScan`.
 
-The selected value array must have a `_ARRAY_DIMENSIONS` attribute containing
-one unique, safe name for every array dimension, in array order. Each name must
-resolve to a same-group, same-name Zarr v2 coordinate array whose shape is one
-dimensional and whose length matches the value-array extent. If a coordinate
-array declares `_ARRAY_DIMENSIONS`, it must contain only its own name. Missing
-or malformed dimension metadata fails instead of falling back to an inferred
-`[y, x]` or `[time, y, x]` layout.
+The selected value array must have one unique, safe name for every array
+dimension, in array order: v2 uses the xarray `_ARRAY_DIMENSIONS` attribute and
+v3 uses native `dimension_names`. If a v3 array also carries the legacy xarray
+attribute, the two declarations must match exactly. Each name must resolve to a
+same-group, same-name coordinate array in the same Zarr format whose shape is
+one dimensional and whose length matches the value-array extent. If a
+coordinate array declares native or legacy dimension names, it must contain
+only its own name. Missing or malformed dimension metadata fails instead of
+falling back to an inferred `[y, x]` or `[time, y, x]` layout.
 
 Dimension names are preserved for PostgreSQL column matching. Coordinate
 metadata can classify dimensions as spatial X/Y, latitude/longitude, vertical,
@@ -175,13 +180,33 @@ name aliases. Incompatible recognized signals fail instead of being guessed.
 Names such as `depth`, `height`, `altitude`, `level`, `lev`, and `z` are vertical
 aliases, while band and channel remain distinct roles.
 
-Supported value mappings are `<f4` to `real`, `<f8` to `double precision`,
+Supported v2 value mappings are `<f4` to `real`, `<f8` to `double precision`,
 `|i1`/`<i1` to PostgreSQL internal `"char"`, `<i2` to `smallint`, `<i4` to
-`integer`, and `<i8` to `bigint`. A coordinate classified as time must be
-declared `timestamptz`; every other currently supported numeric coordinate must
-be `double precision`. Dimension columns do not need to be projected. The
-wrapper reads coordinate metadata for every dimension but downloads coordinate
-chunk values only for dimensions used by the query target or restrictions.
+`integer`, and `<i8` to `bigint`. The corresponding supported v3 identifiers
+are `float32`, `float64`, `int8`, `int16`, `int32`, and `int64`. A coordinate
+classified as time must be declared `timestamptz`; every other currently
+supported numeric coordinate must be `double precision`. Dimension columns do
+not need to be projected. The wrapper reads coordinate metadata for every
+dimension but downloads coordinate chunk values only for dimensions used by
+the query target or restrictions.
+
+### Zarr v3 subset
+
+Zarr v3 arrays must use a regular chunk grid and a codec pipeline containing
+exactly one core `bytes` array-to-bytes codec and no other codecs. Multi-byte
+values must declare little-endian byte order in that codec. The core `default` chunk-key encoding
+and the compatibility `v2` chunk-key encoding are supported with their defined
+`.` or `/` separators; default encoding uses keys beneath the `c` prefix. Missing
+chunks use the required v3 `fill_value` and otherwise follow the same scan,
+filter, CF decoding, aggregate-pushdown, resource-bound, and cancellation
+behavior as v2 arrays.
+
+This subset intentionally excludes v3 sharding, storage transformers,
+consolidated metadata, transpose and bytes-to-bytes codecs, and extension data
+types. Unsupported metadata fails explicitly instead of being ignored.
+Unknown top-level Zarr 3.1 extensions are accepted only when their object is
+explicitly marked `must_understand: false`; shorthand extension definitions are
+outside this bounded subset.
 
 Finite monotonic coordinate values enable conservative chunk pruning. Finite
 unordered coordinates remain projectable and filterable, but pruning is skipped
@@ -436,7 +461,7 @@ interpreted from the manual table options
 options are omitted.
 
 Set `time_from_attrs 'true'` to derive the time conversion from the sibling
-coordinate's `.zattrs` metadata instead:
+coordinate's attributes instead:
 
 ```sql
 create foreign table climate_temperature_from_attrs (
@@ -454,7 +479,7 @@ options (
 
 This mode is intentionally opt-in and cannot be combined with `time_unit` or
 `time_origin`. It works at any supported rank and with any dimension name, but
-requires exactly one coordinate classified as time whose `.zattrs` contains:
+requires exactly one coordinate classified as time whose attributes contain:
 
 - `units` as `<unit> since <origin>`;
 - `calendar` as `proleptic_gregorian`.
@@ -474,7 +499,7 @@ during planning; metadata is read only when a scan starts.
 ## Decode packed scientific values
 
 Set `decode_cf 'true'` on a foreign table to apply common CF-style missing-data
-and packed-value attributes from the selected value array's `.zattrs`:
+and packed-value attributes from the selected value array:
 
 ```sql
 create foreign table decoded_temperature (
@@ -500,8 +525,8 @@ Decoded mode applies this order:
 3. Return `raw * scale_factor + add_offset` as `double precision`.
 
 Masking and valid-range checks happen before scale/offset, in the packed/raw
-domain. A missing Zarr chunk is first materialized with the `.zarray`
-`fill_value`; it becomes SQL `NULL` only when that raw value also matches the
+domain. A missing Zarr chunk is first materialized with the array's `fill_value`;
+it becomes SQL `NULL` only when that raw value also matches the
 scientific missing/validity metadata. The option defaults to `false`, which
 preserves the raw dtype mappings above.
 
@@ -551,9 +576,10 @@ single Foreign Scan or retains a local Aggregate node.
 
 ## Current limitations
 
-- Read-only Zarr v2 on S3-compatible storage.
-- Scans support one value array with rank 1 through 64 and mandatory
-  `_ARRAY_DIMENSIONS`; scalar arrays remain unsupported.
+- Read-only Zarr v2 and the core Zarr v3 subset described above on
+  S3-compatible storage.
+- Scans support one value array with rank 1 through 64 and mandatory v2
+  `_ARRAY_DIMENSIONS` or v3 `dimension_names`; scalar arrays remain unsupported.
 - Every dimension currently requires a same-group, same-name, rank-1 numeric
   coordinate array. Synthesized ordinal coordinates, auxiliary or cross-group
   coordinates, curvilinear/multidimensional coordinates, and string or
@@ -574,14 +600,10 @@ single Foreign Scan or retains a local Aggregate node.
 - Aggregate pushdown is limited to ungrouped `count`, `sum`, `avg`, `min`, and
   `max` over plain columns. Grouped, distinct, filtered, ordered, expression,
   and user-defined aggregates are computed by PostgreSQL.
-- Raw, gzip, zlib, and Blosc/LZ4 chunk compression is supported.
-- Non-empty Zarr filters, Fortran order, Zarr v3, consolidated metadata,
-  sharding, writes, and OME-Zarr are not supported.
-- Zarr v3 is a separate storage-format implementation, not an alternate value
-  decoder: it uses `zarr.json`, a chunk-grid and chunk-key encoding, and an
-  ordered codec pipeline instead of the v2 `.zarray` layout. The dataset and
-  scientific-semantics models are intended to accept a future v3 adapter, but
-  current scans and inspection remain explicitly v2-only.
+- Raw, gzip, zlib, and Blosc/LZ4 chunk compression is supported for v2. The v3
+  subset supports the core `bytes` codec only.
+- Non-empty v2 filters, Fortran order, consolidated metadata, sharding, storage
+  transformers, writes, and OME-Zarr multiscale semantics are not supported.
 - `LIMIT` alone does not prevent coordinate metadata loading; use selective
   coordinate predicates for large arrays. It does stop later lazy data-chunk
   reads after PostgreSQL has accepted enough rows.

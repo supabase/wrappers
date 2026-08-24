@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use serde_json::{Map, Value};
 
-use super::super::meta::ArrayMeta;
+use super::super::meta::{ArrayNode, ZarrFormat};
 use super::super::{ZarrFdwError, ZarrFdwResult};
 use super::model::{CoordinateRef, Dataset, Dimension, DimensionRole};
 
@@ -44,19 +44,28 @@ pub(crate) fn parse_named_dimensions(
 }
 
 /// Require valid xarray dimension metadata for a scan array.
-pub(crate) fn named_dimensions(
-    attrs: &Map<String, Value>,
-    rank: usize,
-    array_path: &str,
-) -> ZarrFdwResult<Vec<String>> {
-    match parse_named_dimensions(attrs, rank) {
-        Ok(Some(dimensions)) => Ok(dimensions),
-        Ok(None) => Err(ZarrFdwError::InvalidMetadata(format!(
-            "array '{array_path}' must define {ARRAY_DIMENSIONS}"
-        ))),
-        Err(message) => Err(ZarrFdwError::InvalidMetadata(format!(
+pub(crate) fn named_dimensions(node: &ArrayNode, array_path: &str) -> ZarrFdwResult<Vec<String>> {
+    let rank = node.meta.shape.len();
+    let legacy = parse_named_dimensions(&node.attributes, rank).map_err(|message| {
+        ZarrFdwError::InvalidMetadata(format!(
             "array '{array_path}' has invalid {ARRAY_DIMENSIONS}: {message}"
-        ))),
+        ))
+    })?;
+    match node.format {
+        ZarrFormat::V2 => legacy.ok_or_else(|| {
+            ZarrFdwError::InvalidMetadata(format!(
+                "array '{array_path}' must define {ARRAY_DIMENSIONS}"
+            ))
+        }),
+        ZarrFormat::V3 => {
+            let native = strict_native_dimension_names(node, array_path)?;
+            if legacy.as_ref().is_some_and(|legacy| legacy != &native) {
+                return Err(ZarrFdwError::InvalidMetadata(format!(
+                    "array '{array_path}' has conflicting dimension_names and {ARRAY_DIMENSIONS}"
+                )));
+            }
+            Ok(native)
+        }
     }
 }
 
@@ -64,10 +73,11 @@ pub(crate) fn named_dimensions(
 /// and the aligned attributes of their same-group coordinate arrays.
 pub(crate) fn named_array_dataset(
     array_path: &str,
-    meta: &ArrayMeta,
+    node: &ArrayNode,
     names: &[String],
-    coordinate_attrs: &[Map<String, Value>],
+    coordinate_nodes: &[ArrayNode],
 ) -> ZarrFdwResult<Dataset> {
+    let meta = &node.meta;
     if names.len() != meta.shape.len() {
         return Err(ZarrFdwError::InvalidMetadata(format!(
             "array '{array_path}' has {} discovered dimensions but rank {}",
@@ -75,10 +85,10 @@ pub(crate) fn named_array_dataset(
             meta.shape.len()
         )));
     }
-    if coordinate_attrs.len() != names.len() {
+    if coordinate_nodes.len() != names.len() {
         return Err(ZarrFdwError::InvalidMetadata(format!(
             "array '{array_path}' has attributes for {} coordinate arrays but {} dimensions",
-            coordinate_attrs.len(),
+            coordinate_nodes.len(),
             names.len()
         )));
     }
@@ -87,14 +97,19 @@ pub(crate) fn named_array_dataset(
     let dimensions = names
         .iter()
         .zip(meta.shape.iter())
-        .zip(coordinate_attrs)
-        .map(|((name, &length), attrs)| {
-            validate_coordinate_dimensions(name, attrs)?;
+        .zip(coordinate_nodes)
+        .map(|((name, &length), coordinate)| {
+            if coordinate.format != node.format {
+                return Err(ZarrFdwError::InvalidMetadata(format!(
+                    "array '{array_path}' and coordinate array '{name}' use different Zarr formats"
+                )));
+            }
+            validate_coordinate_dimensions(name, coordinate)?;
             Ok(Dimension::new(
                 name.clone(),
                 length,
                 CoordinateRef::new(coordinate_parent.to_string(), name.clone()),
-                infer_dimension_role(name, attrs)?,
+                infer_dimension_role(name, &coordinate.attributes)?,
             ))
         })
         .collect::<ZarrFdwResult<Vec<_>>>()?;
@@ -138,8 +153,69 @@ fn validate_dimension_name(name: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn validate_coordinate_dimensions(name: &str, attrs: &Map<String, Value>) -> ZarrFdwResult<()> {
-    match parse_named_dimensions(attrs, 1) {
+fn strict_native_dimension_names(node: &ArrayNode, array_path: &str) -> ZarrFdwResult<Vec<String>> {
+    let native = node.dimension_names.as_ref().ok_or_else(|| {
+        ZarrFdwError::InvalidMetadata(format!(
+            "Zarr v3 array '{array_path}' must define dimension_names"
+        ))
+    })?;
+    if native.len() != node.meta.shape.len() {
+        return Err(ZarrFdwError::InvalidMetadata(format!(
+            "Zarr v3 array '{array_path}' has {} dimension_names but rank {}",
+            native.len(),
+            node.meta.shape.len()
+        )));
+    }
+    let names = native
+        .iter()
+        .map(|name| {
+            name.clone().ok_or_else(|| {
+                ZarrFdwError::InvalidMetadata(format!(
+                    "Zarr v3 array '{array_path}' has an unnamed dimension"
+                ))
+            })
+        })
+        .collect::<ZarrFdwResult<Vec<_>>>()?;
+    for name in &names {
+        validate_dimension_name(name).map_err(|message| {
+            ZarrFdwError::InvalidMetadata(format!(
+                "Zarr v3 array '{array_path}' has invalid dimension_names: {message}"
+            ))
+        })?;
+        validate_v3_node_name(name).map_err(|message| {
+            ZarrFdwError::InvalidMetadata(format!(
+                "Zarr v3 array '{array_path}' has invalid dimension_names: {message}"
+            ))
+        })?;
+    }
+    if names.iter().collect::<HashSet<_>>().len() != names.len() {
+        return Err(ZarrFdwError::InvalidMetadata(format!(
+            "Zarr v3 array '{array_path}' dimension_names must be unique"
+        )));
+    }
+    Ok(names)
+}
+
+fn validate_v3_node_name(name: &str) -> Result<(), String> {
+    if name == "zarr.json"
+        || name.starts_with("__")
+        || name.chars().all(|character| character == '.')
+    {
+        return Err("Zarr v3 dimension names must be valid node names".to_string());
+    }
+    Ok(())
+}
+
+fn validate_coordinate_dimensions(name: &str, node: &ArrayNode) -> ZarrFdwResult<()> {
+    if node.format == ZarrFormat::V3 && node.dimension_names.is_some() {
+        let dimensions = strict_native_dimension_names(node, name)?;
+        if dimensions.len() != 1 || dimensions[0] != name {
+            return Err(ZarrFdwError::InvalidMetadata(format!(
+                "coordinate array '{name}' declares dimension_names {dimensions:?}, expected [\"{name}\"]"
+            )));
+        }
+    }
+    match parse_named_dimensions(&node.attributes, 1) {
         Ok(None) => Ok(()),
         Ok(Some(dimensions)) if dimensions.first().map(String::as_str) == Some(name) => Ok(()),
         Ok(Some(dimensions)) => Err(ZarrFdwError::InvalidMetadata(format!(
@@ -286,18 +362,55 @@ mod tests {
 
     use super::*;
 
-    fn meta(shape: Vec<u64>) -> ArrayMeta {
-        ArrayMeta {
-            zarr_format: 2,
-            chunks: vec![1; shape.len()],
-            shape,
-            dtype: "<f4".to_string(),
-            fill_value: json!(-7.5),
-            compressor: None,
-            dimension_separator: ".".to_string(),
-            order: 'C',
-            filters: None,
+    fn node(shape: Vec<u64>, attributes: Map<String, Value>) -> ArrayNode {
+        ArrayNode {
+            format: ZarrFormat::V2,
+            meta: super::super::super::meta::ArrayMeta {
+                zarr_format: 2,
+                chunks: vec![1; shape.len()],
+                shape,
+                dtype: "<f4".to_string(),
+                fill_value: json!(-7.5),
+                compressor: None,
+                chunk_key_encoding: super::super::super::meta::ChunkKeyEncoding::V2 {
+                    separator: '.',
+                },
+                order: 'C',
+                filters: None,
+            },
+            attributes,
+            dimension_names: None,
+            native_dtype: "<f4".to_string(),
+            native_codecs: json!({"filters": null, "compressor": null}),
         }
+    }
+
+    fn coordinate_nodes(values: Vec<Map<String, Value>>) -> Vec<ArrayNode> {
+        values
+            .into_iter()
+            .map(|attributes| node(vec![2], attributes))
+            .collect()
+    }
+
+    fn v3_node(
+        shape: Vec<u64>,
+        dimension_names: Option<Vec<Option<&str>>>,
+        attributes: Map<String, Value>,
+    ) -> ArrayNode {
+        let mut node = node(shape, attributes);
+        node.format = ZarrFormat::V3;
+        node.meta.zarr_format = 3;
+        node.meta.chunk_key_encoding =
+            super::super::super::meta::ChunkKeyEncoding::Default { separator: '/' };
+        node.native_dtype = "float32".to_string();
+        node.native_codecs = json!([{"name":"bytes","configuration":{"endian":"little"}}]);
+        node.dimension_names = dimension_names.map(|names| {
+            names
+                .into_iter()
+                .map(|name| name.map(str::to_string))
+                .collect()
+        });
+        node
     }
 
     fn attrs(value: Value) -> Map<String, Value> {
@@ -307,8 +420,19 @@ mod tests {
     #[test]
     fn parses_missing_valid_and_invalid_named_dimensions() {
         assert_eq!(parse_named_dimensions(&Map::new(), 2), Ok(None));
+        assert_eq!(
+            parse_named_dimensions(
+                &attrs(json!({"_ARRAY_DIMENSIONS":["__private", "zarr.json", "..."]})),
+                3,
+            ),
+            Ok(Some(vec![
+                "__private".to_string(),
+                "zarr.json".to_string(),
+                "...".to_string(),
+            ]))
+        );
         assert!(matches!(
-            named_dimensions(&Map::new(), 2, "nested/value"),
+            named_dimensions(&node(vec![2, 2], Map::new()), "nested/value"),
             Err(ZarrFdwError::InvalidMetadata(message))
                 if message.contains("array 'nested/value' must define _ARRAY_DIMENSIONS")
         ));
@@ -334,6 +458,54 @@ mod tests {
     }
 
     #[test]
+    fn v3_native_dimensions_are_strict_and_must_match_legacy_hints() {
+        let valid = v3_node(
+            vec![2, 2],
+            Some(vec![Some("row"), Some("column")]),
+            Map::new(),
+        );
+        assert_eq!(
+            named_dimensions(&valid, "nested/value").unwrap(),
+            vec!["row", "column"]
+        );
+
+        for invalid in [
+            v3_node(vec![2], None, Map::new()),
+            v3_node(vec![2], Some(vec![None]), Map::new()),
+            v3_node(vec![2, 2], Some(vec![Some("x")]), Map::new()),
+            v3_node(vec![2, 2], Some(vec![Some("x"), Some("x")]), Map::new()),
+            v3_node(vec![2], Some(vec![Some("../x")]), Map::new()),
+            v3_node(
+                vec![2],
+                Some(vec![Some("x")]),
+                attrs(json!({"_ARRAY_DIMENSIONS":["other"]})),
+            ),
+            v3_node(vec![2], Some(vec![Some("zarr.json")]), Map::new()),
+            v3_node(vec![2], Some(vec![Some("__private")]), Map::new()),
+            v3_node(vec![2], Some(vec![Some("...")]), Map::new()),
+        ] {
+            assert!(named_dimensions(&invalid, "nested/value").is_err());
+        }
+    }
+
+    #[test]
+    fn v3_coordinates_must_match_format_and_name_themselves() {
+        let names = vec!["x".to_string()];
+        let value = v3_node(vec![2], Some(vec![Some("x")]), Map::new());
+        let good = vec![v3_node(vec![2], Some(vec![Some("x")]), Map::new())];
+        assert!(named_array_dataset("value", &value, &names, &good).is_ok());
+
+        let unnamed = vec![v3_node(vec![2], None, Map::new())];
+        assert!(named_array_dataset("value", &value, &names, &unnamed).is_ok());
+
+        let wrong_name = vec![v3_node(vec![2], Some(vec![Some("other")]), Map::new())];
+        assert!(named_array_dataset("value", &value, &names, &wrong_name).is_err());
+
+        let mixed_format = vec![node(vec![2], Map::new())];
+        assert!(named_array_dataset("value", &value, &names, &mixed_format).is_err());
+    }
+
+    #[test]
     fn constructs_arbitrary_rank_nested_dataset() {
         let names = ["forecast_time", "level", "band", "channel"]
             .map(str::to_string)
@@ -344,13 +516,10 @@ mod tests {
             Map::new(),
             Map::new(),
         ];
-        let dataset = named_array_dataset(
-            "nested/generic4d",
-            &meta(vec![2, 5, 6, 1]),
-            &names,
-            &coordinate_attrs,
-        )
-        .unwrap();
+        let value = node(vec![2, 5, 6, 1], attrs(json!({"_ARRAY_DIMENSIONS": names})));
+        let coordinate_nodes = coordinate_nodes(coordinate_attrs);
+        let dataset =
+            named_array_dataset("nested/generic4d", &value, &names, &coordinate_nodes).unwrap();
 
         assert_eq!(dataset.variable().dimensions(), names);
         assert_eq!(dataset.dimensions()[0].semantic_role(), DimensionRole::Time);
@@ -429,13 +598,14 @@ mod tests {
         ));
 
         let names = vec!["time".to_string(), "forecast_time".to_string()];
-        let coordinate_attrs = vec![Map::new(), attrs(json!({"axis": "T"}))];
+        let value = node(vec![2, 2], attrs(json!({"_ARRAY_DIMENSIONS": names})));
+        let coordinate_nodes = coordinate_nodes(vec![Map::new(), attrs(json!({"axis": "T"}))]);
         assert!(matches!(
             named_array_dataset(
                 "multiple_times",
-                &meta(vec![2, 2]),
+                &value,
                 &names,
-                &coordinate_attrs,
+                &coordinate_nodes,
             ),
             Err(ZarrFdwError::InvalidMetadata(message))
                 if message.contains("multiple dimensions with the Time semantic role")
@@ -445,9 +615,13 @@ mod tests {
     #[test]
     fn validates_optional_coordinate_dimension_hint() {
         let names = vec!["level".to_string()];
-        let invalid = vec![attrs(json!({"_ARRAY_DIMENSIONS": ["other"]}))];
-        assert!(named_array_dataset("value", &meta(vec![5]), &names, &invalid).is_err());
-        let missing = vec![Map::new()];
-        assert!(named_array_dataset("value", &meta(vec![5]), &names, &missing).is_ok());
+        let value = node(vec![5], attrs(json!({"_ARRAY_DIMENSIONS": names})));
+        let invalid = vec![node(
+            vec![5],
+            attrs(json!({"_ARRAY_DIMENSIONS": ["other"]})),
+        )];
+        assert!(named_array_dataset("value", &value, &names, &invalid).is_err());
+        let missing = vec![node(vec![5], Map::new())];
+        assert!(named_array_dataset("value", &value, &names, &missing).is_ok());
     }
 }

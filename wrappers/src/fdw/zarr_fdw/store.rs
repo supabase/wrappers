@@ -360,21 +360,6 @@ impl ZarrStore {
         get_object_optional_owned(self.client.clone(), self.url.clone(), key, max_bytes)
     }
 
-    /// Fetch an object that is required rather than a sparse Zarr chunk.
-    pub async fn get_object(&self, key: &str, max_bytes: usize) -> ZarrFdwResult<Vec<u8>> {
-        self.get_object_optional(key, max_bytes)
-            .await?
-            .ok_or_else(|| ZarrFdwError::ObjectNotFound {
-                key: key.to_string(),
-            })
-    }
-
-    /// Synchronous fetch used from `begin_scan`/`iter_scan` (FDW callbacks are
-    /// not async).
-    pub fn get_object_sync(&self, key: &str, max_bytes: usize) -> ZarrFdwResult<Vec<u8>> {
-        self.block_on_interruptibly(self.get_object(key, max_bytes))
-    }
-
     /// Synchronous optional fetch used for sparse Zarr chunks.
     pub fn get_object_optional_sync(
         &self,
