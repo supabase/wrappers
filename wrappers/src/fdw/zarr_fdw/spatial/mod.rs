@@ -8,4 +8,5 @@ pub(crate) mod crs;
 pub(crate) mod grid;
 mod point;
 pub(crate) mod postgis;
+mod temporal;
 mod zonal;

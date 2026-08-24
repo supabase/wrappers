@@ -14,9 +14,9 @@ use super::grid::{CoordinateEnvelope, GridCell};
 use super::point::numeric_cell_to_f64;
 use super::postgis::{MAX_COVERAGE_CANDIDATES, PostgisCatalog};
 
-const MAX_SPATIAL_CANDIDATE_CELLS: usize = 10_000_000;
-const MAX_SPATIAL_OUTPUT_CELLS: usize = 1_000_000;
-const SPATIAL_INTERRUPT_POLL_CELLS: usize = 1_024;
+pub(super) const MAX_SPATIAL_CANDIDATE_CELLS: usize = 10_000_000;
+pub(super) const MAX_SPATIAL_OUTPUT_CELLS: usize = 1_000_000;
+pub(super) const SPATIAL_INTERRUPT_POLL_CELLS: usize = 1_024;
 
 #[derive(Debug, Clone, PartialEq)]
 struct SpatialCellRow {
@@ -42,14 +42,14 @@ impl SpatialCellRow {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-struct ZonalStatsRow {
-    count: i64,
-    valid_count: i64,
-    min: Option<f64>,
-    max: Option<f64>,
-    sum: Option<f64>,
-    avg: Option<f64>,
-    srid: i32,
+pub(super) struct ZonalStatsRow {
+    pub(super) count: i64,
+    pub(super) valid_count: i64,
+    pub(super) min: Option<f64>,
+    pub(super) max: Option<f64>,
+    pub(super) sum: Option<f64>,
+    pub(super) avg: Option<f64>,
+    pub(super) srid: i32,
 }
 
 impl ZonalStatsRow {
@@ -304,7 +304,7 @@ fn spatial_cell_row(
 }
 
 #[derive(Debug, Default)]
-struct ZonalAccumulator {
+pub(super) struct ZonalAccumulator {
     count: i64,
     valid_count: i64,
     min: Option<f64>,
@@ -313,7 +313,7 @@ struct ZonalAccumulator {
 }
 
 impl ZonalAccumulator {
-    fn observe(&mut self, value: Option<f64>) -> ZarrFdwResult<()> {
+    pub(super) fn observe(&mut self, value: Option<f64>) -> ZarrFdwResult<()> {
         self.count = self.count.checked_add(1).ok_or_else(|| {
             ZarrFdwError::InvalidMetadata("zonal COUNT overflowed bigint".to_string())
         })?;
@@ -340,7 +340,7 @@ impl ZonalAccumulator {
         Ok(())
     }
 
-    fn finish(self, srid: i32) -> ZarrFdwResult<ZonalStatsRow> {
+    pub(super) fn finish(self, srid: i32) -> ZarrFdwResult<ZonalStatsRow> {
         let avg = match (self.sum, self.valid_count) {
             (Some(sum), count) if count > 0 => Some(sum / count as f64),
             _ => None,

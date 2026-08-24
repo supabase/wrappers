@@ -149,6 +149,23 @@ mod tests {
         });
     }
 
+    fn create_minio_spatial_time_table(table: &str, decode_cf: bool) {
+        let (value_type, decode_option) = if decode_cf {
+            (
+                "double precision",
+                ",\n                         decode_cf 'true'",
+            )
+        } else {
+            ("real", "")
+        };
+        create_minio_e2e_table_with_options(
+            table,
+            "nested/raw",
+            value_type,
+            &format!(",\n                         time_from_attrs 'true'{decode_option}"),
+        );
+    }
+
     fn install_postgis_in_test_schema() {
         Spi::run("CREATE SCHEMA zarr_gis; CREATE EXTENSION postgis WITH SCHEMA zarr_gis").unwrap();
     }
@@ -2049,6 +2066,302 @@ mod tests {
                    zarr_gis.ST_AsEWKB(
                      zarr_gis.ST_MakeEnvelope(110, 20, 130, 40, 3857)
                    )
+                 )"#,
+        )
+        .unwrap();
+    }
+
+    #[pg_test]
+    fn zarr_postgis_cells_by_time_honor_half_open_bounds() {
+        install_postgis_in_test_schema();
+        create_minio_spatial_time_table("zarr_e2e_spatial_time_cells", false);
+
+        let rows = Spi::connect(|c| {
+            c.select(
+                r#"SELECT extract(epoch FROM cells.time)::double precision AS epoch,
+                          cells.time_index,
+                          pg_catalog.count(*)::bigint AS count,
+                          pg_catalog.min(cells.value) AS min,
+                          pg_catalog.max(cells.value) AS max,
+                          pg_catalog.sum(cells.value)::double precision AS sum
+                     FROM zarr_cells_by_time(
+                       'zarr_e2e_spatial_time_cells',
+                       zarr_gis.ST_AsEWKB(
+                         zarr_gis.ST_MakeEnvelope(110, 20, 130, 40, 3857)
+                       ),
+                       TIMESTAMPTZ '1970-01-01 00:00:00+00',
+                       TIMESTAMPTZ '1970-01-01 00:00:03.600001+00'
+                     ) AS cells
+                    GROUP BY cells.time, cells.time_index
+                    ORDER BY cells.time_index"#,
+                None,
+                &[],
+            )
+            .unwrap()
+            .map(|row| {
+                (
+                    row.get_by_name::<f64, _>("epoch").unwrap().unwrap(),
+                    row.get_by_name::<i64, _>("time_index").unwrap().unwrap(),
+                    row.get_by_name::<i64, _>("count").unwrap().unwrap(),
+                    row.get_by_name::<f64, _>("min").unwrap().unwrap(),
+                    row.get_by_name::<f64, _>("max").unwrap().unwrap(),
+                    row.get_by_name::<f64, _>("sum").unwrap().unwrap(),
+                )
+            })
+            .collect::<Vec<_>>()
+        });
+
+        assert_eq!(
+            rows,
+            vec![
+                (0.0, 0, 9, 11.0, 33.0, 198.0),
+                (3.6, 1, 9, 111.0, 133.0, 1098.0)
+            ]
+        );
+
+        let first_slice_count = Spi::get_one::<i64>(
+            r#"SELECT pg_catalog.count(*)::bigint
+                 FROM zarr_cells_by_time(
+                   'zarr_e2e_spatial_time_cells',
+                   zarr_gis.ST_AsEWKB(
+                     zarr_gis.ST_MakeEnvelope(110, 20, 130, 40, 3857)
+                   ),
+                   TIMESTAMPTZ '1970-01-01 00:00:00+00',
+                   TIMESTAMPTZ '1970-01-01 00:00:03.6+00'
+                 )"#,
+        )
+        .unwrap();
+        assert_eq!(first_slice_count, Some(9));
+    }
+
+    #[pg_test]
+    fn zarr_postgis_zonal_stats_by_time_preserve_scientific_semantics() {
+        install_postgis_in_test_schema();
+        create_minio_spatial_time_table("zarr_e2e_spatial_time_zonal", false);
+
+        let rows = Spi::connect(|c| {
+            c.select(
+                r#"SELECT extract(epoch FROM stats.time)::double precision AS epoch,
+                          stats.time_index,
+                          stats.count,
+                          stats.valid_count,
+                          stats.min,
+                          stats.max,
+                          stats.sum,
+                          stats.avg,
+                          stats.srid
+                     FROM zarr_zonal_stats_by_time(
+                       'zarr_e2e_spatial_time_zonal',
+                       zarr_gis.ST_AsEWKB(
+                         zarr_gis.ST_MakeEnvelope(110, 20, 130, 40, 3857)
+                       ),
+                       TIMESTAMPTZ '1970-01-01 00:00:00+00',
+                       TIMESTAMPTZ '1970-01-01 00:00:03.600001+00'
+                     ) AS stats
+                    ORDER BY stats.time_index"#,
+                None,
+                &[],
+            )
+            .unwrap()
+            .map(|row| {
+                (
+                    row.get_by_name::<f64, _>("epoch").unwrap().unwrap(),
+                    row.get_by_name::<i64, _>("time_index").unwrap().unwrap(),
+                    row.get_by_name::<i64, _>("count").unwrap().unwrap(),
+                    row.get_by_name::<i64, _>("valid_count").unwrap().unwrap(),
+                    row.get_by_name::<f64, _>("min").unwrap(),
+                    row.get_by_name::<f64, _>("max").unwrap(),
+                    row.get_by_name::<f64, _>("sum").unwrap(),
+                    row.get_by_name::<f64, _>("avg").unwrap(),
+                    row.get_by_name::<i32, _>("srid").unwrap().unwrap(),
+                )
+            })
+            .collect::<Vec<_>>()
+        });
+
+        assert_eq!(
+            rows,
+            vec![
+                (
+                    0.0,
+                    0,
+                    9,
+                    9,
+                    Some(11.0),
+                    Some(33.0),
+                    Some(198.0),
+                    Some(22.0),
+                    3857,
+                ),
+                (
+                    3.6,
+                    1,
+                    9,
+                    9,
+                    Some(111.0),
+                    Some(133.0),
+                    Some(1098.0),
+                    Some(122.0),
+                    3857,
+                ),
+            ]
+        );
+    }
+
+    #[pg_test]
+    fn zarr_postgis_zonal_stats_by_time_keep_decoded_null_slices() {
+        install_postgis_in_test_schema();
+        create_minio_spatial_time_table("zarr_e2e_spatial_time_decoded", true);
+
+        let rows = Spi::connect(|c| {
+            c.select(
+                r#"SELECT stats.time_index,
+                          stats.count,
+                          stats.valid_count,
+                          stats.min,
+                          stats.max,
+                          stats.sum,
+                          stats.avg
+                     FROM zarr_zonal_stats_by_time(
+                       'zarr_e2e_spatial_time_decoded',
+                       zarr_gis.ST_AsEWKB(
+                         zarr_gis.ST_MakeEnvelope(140, 40, 150, 50, 3857)
+                       ),
+                       TIMESTAMPTZ '1970-01-01 00:00:00+00',
+                       TIMESTAMPTZ '1970-01-01 00:00:03.600001+00'
+                     ) AS stats
+                    ORDER BY stats.time_index"#,
+                None,
+                &[],
+            )
+            .unwrap()
+            .map(|row| {
+                (
+                    row.get_by_name::<i64, _>("time_index").unwrap().unwrap(),
+                    row.get_by_name::<i64, _>("count").unwrap().unwrap(),
+                    row.get_by_name::<i64, _>("valid_count").unwrap().unwrap(),
+                    row.get_by_name::<f64, _>("min").unwrap(),
+                    row.get_by_name::<f64, _>("max").unwrap(),
+                    row.get_by_name::<f64, _>("sum").unwrap(),
+                    row.get_by_name::<f64, _>("avg").unwrap(),
+                )
+            })
+            .collect::<Vec<_>>()
+        });
+
+        assert_eq!(
+            rows,
+            vec![
+                (0, 4, 0, None, None, None, None),
+                (1, 4, 0, None, None, None, None),
+            ]
+        );
+    }
+
+    #[pg_test]
+    fn zarr_postgis_time_range_validation_and_empty_selection() {
+        install_postgis_in_test_schema();
+        create_minio_spatial_time_table("zarr_e2e_spatial_time_range", false);
+
+        let no_rows = Spi::get_one::<i64>(
+            r#"SELECT pg_catalog.count(*)::bigint
+                 FROM zarr_zonal_stats_by_time(
+                   'zarr_e2e_spatial_time_range',
+                   zarr_gis.ST_AsEWKB(
+                     zarr_gis.ST_MakeEnvelope(110, 20, 130, 40, 3857)
+                   ),
+                   TIMESTAMPTZ '1970-01-01 00:00:10+00',
+                   TIMESTAMPTZ '1970-01-01 00:00:20+00'
+                 )"#,
+        )
+        .unwrap();
+        assert_eq!(no_rows, Some(0));
+
+        Spi::connect(|c| {
+            let empty = c
+                .select(
+                    r#"SELECT pg_catalog.count(*)::bigint AS rows,
+                              pg_catalog.count(*) FILTER (
+                                WHERE stats.count = 0
+                                  AND stats.valid_count = 0
+                                  AND stats.min IS NULL
+                                  AND stats.max IS NULL
+                                  AND stats.sum IS NULL
+                                  AND stats.avg IS NULL
+                              )::bigint AS empty_rows
+                         FROM zarr_zonal_stats_by_time(
+                           'zarr_e2e_spatial_time_range',
+                           zarr_gis.ST_AsEWKB(
+                             zarr_gis.ST_MakeEnvelope(1000, 1000, 1010, 1010, 3857)
+                           ),
+                           TIMESTAMPTZ '1970-01-01 00:00:00+00',
+                           TIMESTAMPTZ '1970-01-01 00:00:03.600001+00'
+                         ) AS stats"#,
+                    Some(1),
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(empty.get_by_name::<i64, _>("rows").unwrap(), Some(2));
+            assert_eq!(empty.get_by_name::<i64, _>("empty_rows").unwrap(), Some(2));
+        });
+
+        let invalid = std::panic::catch_unwind(|| {
+            Spi::run(
+                r#"SELECT *
+                     FROM zarr_zonal_stats_by_time(
+                       'zarr_e2e_spatial_time_range',
+                       zarr_gis.ST_AsEWKB(
+                         zarr_gis.ST_MakeEnvelope(110, 20, 130, 40, 3857)
+                       ),
+                       TIMESTAMPTZ '1970-01-01 00:00:03.6+00',
+                       TIMESTAMPTZ '1970-01-01 00:00:03.6+00'
+                     )"#,
+            )
+        });
+        let failed = match invalid {
+            Ok(result) => result.is_err(),
+            Err(_) => true,
+        };
+        assert!(failed, "expected an empty time range to be rejected");
+    }
+
+    #[pg_test(
+        error = "PostGIS is unavailable for zarr spatial operations: the postgis extension is not installed"
+    )]
+    fn zarr_postgis_cells_by_time_fail_cleanly_without_postgis() {
+        create_minio_spatial_time_table("zarr_e2e_spatial_time_no_postgis", false);
+        Spi::run(
+            r#"SELECT *
+                 FROM zarr_cells_by_time(
+                   'zarr_e2e_spatial_time_no_postgis',
+                   '\x'::bytea,
+                   TIMESTAMPTZ '1970-01-01 00:00:00+00',
+                   TIMESTAMPTZ '1970-01-01 00:00:03.6+00'
+                 )"#,
+        )
+        .unwrap();
+    }
+
+    #[pg_test(
+        error = "zarr array metadata missing or invalid: foreign table 'zarr_e2e_spatial_time_private' does not exist or is not accessible"
+    )]
+    fn zarr_postgis_cells_by_time_enforce_foreign_table_privileges() {
+        install_postgis_in_test_schema();
+        create_minio_spatial_time_table("zarr_e2e_spatial_time_private", false);
+        Spi::run(
+            r#"CREATE ROLE zarr_spatial_time_no_access;
+               GRANT USAGE ON SCHEMA zarr_gis TO zarr_spatial_time_no_access;
+               SET ROLE zarr_spatial_time_no_access;
+               SELECT *
+                 FROM zarr_cells_by_time(
+                   'zarr_e2e_spatial_time_private',
+                   zarr_gis.ST_AsEWKB(
+                     zarr_gis.ST_MakeEnvelope(110, 20, 130, 40, 3857)
+                   ),
+                   TIMESTAMPTZ '1970-01-01 00:00:00+00',
+                   TIMESTAMPTZ '1970-01-01 00:00:03.6+00'
                  )"#,
         )
         .unwrap();

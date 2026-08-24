@@ -57,6 +57,7 @@ use super::spatial::crs::{
 };
 use super::spatial::grid::{
     GridCell, HorizontalAxes, RectilinearGrid, discover_horizontal_axes_from_roles,
+    inclusive_center_bounds,
 };
 use super::store::{MAX_METADATA_OBJECT_BYTES, ZarrStore, join_key, validate_auth_options};
 use super::{ZarrFdwError, ZarrFdwResult};
@@ -97,6 +98,7 @@ const DEFAULT_UNKNOWN_TYPE_WIDTH: i32 = 32;
 const MAX_DECODED_CHUNK_BYTES: usize = 256 * 1024 * 1024;
 const MAX_COORDINATE_VALUES: usize = 16 * 1024 * 1024;
 const MAX_TOTAL_COORDINATE_VALUES: usize = MAX_COORDINATE_VALUES;
+const SPATIAL_TIME_INTERRUPT_POLL_VALUES: usize = 1_024;
 const UNSUPPORTED_COORDINATE_DECODING_ATTRIBUTES: [&str; 7] = [
     "_FillValue",
     "missing_value",
@@ -110,6 +112,81 @@ const UNSUPPORTED_COORDINATE_DECODING_ATTRIBUTES: [&str; 7] = [
 struct CoordinateMetadata {
     meta: ArrayMeta,
     fill_value: Option<f64>,
+}
+
+/// Array-axis positions required by a spatial-time operation.
+///
+/// Horizontal bounds exposed by the operation layer remain in semantic
+/// `[x, y]` order. `horizontal` maps them back to the selected array's actual
+/// dimension order.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) struct SpatialTimeLayout {
+    pub(super) time: usize,
+    pub(super) horizontal: HorizontalAxes,
+}
+
+/// Exact selected time indexes plus the conservative full-rank scan window.
+///
+/// `time_indices` contains only coordinates inside the requested half-open
+/// interval. `bounds` may span rejected indexes on an unordered time axis, so
+/// callers must use `time_indices` for exact row acceptance.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) struct SpatialTimeSelection {
+    pub(super) layout: SpatialTimeLayout,
+    pub(super) time_indices: Vec<usize>,
+    pub(super) bounds: Vec<Option<IndexBounds>>,
+    pub(super) candidate_cells: usize,
+}
+
+fn discover_spatial_time_layout(
+    rank: usize,
+    axis_roles: &[DimensionRole],
+    shape: &[u64],
+) -> ZarrFdwResult<SpatialTimeLayout> {
+    if rank < 3 || shape.len() != rank || axis_roles.len() != rank {
+        return Err(ZarrFdwError::InvalidMetadata(format!(
+            "spatial-time execution requires an array of rank 3 or greater, found rank {rank}"
+        )));
+    }
+
+    let horizontal = discover_horizontal_axes_from_roles(axis_roles.iter().copied())?;
+    let time_axes = axis_roles
+        .iter()
+        .enumerate()
+        .filter_map(|(axis, role)| (*role == DimensionRole::Time).then_some(axis))
+        .collect::<Vec<_>>();
+    if time_axes.len() != 1 {
+        return Err(ZarrFdwError::InvalidMetadata(format!(
+            "spatial-time execution requires exactly one time axis, found {}",
+            time_axes.len()
+        )));
+    }
+    let time = time_axes[0];
+    if time == horizontal.x || time == horizontal.y {
+        return Err(ZarrFdwError::InvalidMetadata(
+            "spatial-time axes must be distinct".to_string(),
+        ));
+    }
+
+    for (axis, &extent) in shape.iter().enumerate() {
+        if axis != time && axis != horizontal.x && axis != horizontal.y && extent != 1 {
+            return Err(ZarrFdwError::InvalidMetadata(format!(
+                "spatial-time execution requires auxiliary dimension {axis} to have extent 1, found {extent}"
+            )));
+        }
+    }
+
+    Ok(SpatialTimeLayout { time, horizontal })
+}
+
+fn spatial_time_value_in_range(
+    time_spec: TimeSpec,
+    raw: f64,
+    start_micros: i64,
+    end_micros: i64,
+) -> ZarrFdwResult<bool> {
+    let micros = time_spec.raw_to_pg_micros(raw)?;
+    Ok(start_micros <= micros && micros < end_micros)
 }
 
 #[wrappers_fdw(
@@ -166,7 +243,7 @@ pub(crate) struct ZarrFdw {
     sub_hi: Vec<usize>,
     sub_idx: Vec<usize>,
     capture_spatial_indices: bool,
-    last_emitted_indices: Option<[usize; 2]>,
+    last_emitted_indices: Option<Vec<usize>>,
     pending: bool,
 
     // --- scalar aggregate execution state -------------------------------
@@ -575,6 +652,196 @@ impl ZarrFdw {
         RectilinearGrid::new(axes, x, y)
     }
 
+    /// Validate the dimension contract shared by spatial-time operations.
+    ///
+    /// Arrays may contain singleton auxiliary dimensions, but execution needs
+    /// exactly one time axis and one unambiguous horizontal pair.
+    pub(super) fn spatial_time_layout(&self) -> ZarrFdwResult<SpatialTimeLayout> {
+        let meta = self.axis_meta.as_ref().ok_or_else(|| {
+            ZarrFdwError::InvalidMetadata(
+                "spatial-time execution requires an initialized array scan".to_string(),
+            )
+        })?;
+        let layout = discover_spatial_time_layout(self.rank, &self.axis_roles, &meta.shape)?;
+
+        for axis in [layout.time, layout.horizontal.x, layout.horizontal.y] {
+            if self.coords.get(axis).and_then(Option::as_deref).is_none() {
+                return Err(ZarrFdwError::InvalidMetadata(format!(
+                    "spatial-time coordinate '{}' was not loaded",
+                    self.axes.get(axis).map_or("unknown", String::as_str)
+                )));
+            }
+        }
+
+        Ok(layout)
+    }
+
+    /// Convert a transformed geometry envelope to inclusive horizontal index
+    /// bounds in semantic `[x, y]` order. The complete spatial-time layout is
+    /// validated before an empty window is returned.
+    pub(super) fn spatial_time_horizontal_window(
+        &self,
+        xmin: f64,
+        ymin: f64,
+        xmax: f64,
+        ymax: f64,
+    ) -> ZarrFdwResult<Option<(HorizontalAxes, [IndexBounds; 2], usize)>> {
+        let layout = self.spatial_time_layout()?;
+        let x = self.coords[layout.horizontal.x]
+            .as_deref()
+            .expect("spatial_time_layout validated the x coordinate");
+        let y = self.coords[layout.horizontal.y]
+            .as_deref()
+            .expect("spatial_time_layout validated the y coordinate");
+        let Some(x_bounds) = inclusive_center_bounds(x, xmin, xmax)? else {
+            return Ok(None);
+        };
+        let Some(y_bounds) = inclusive_center_bounds(y, ymin, ymax)? else {
+            return Ok(None);
+        };
+        let candidate_cells = x_bounds
+            .end
+            .checked_sub(x_bounds.start)
+            .and_then(|extent| extent.checked_add(1))
+            .and_then(|x_extent| {
+                y_bounds
+                    .end
+                    .checked_sub(y_bounds.start)
+                    .and_then(|extent| extent.checked_add(1))
+                    .and_then(|y_extent| x_extent.checked_mul(y_extent))
+            })
+            .ok_or_else(|| {
+                ZarrFdwError::InvalidMetadata(
+                    "spatial-time horizontal candidate count overflowed".to_string(),
+                )
+            })?;
+        Ok(Some((
+            layout.horizontal,
+            [x_bounds, y_bounds],
+            candidate_cells,
+        )))
+    }
+
+    /// Build a conservative full-rank scan window from exact time indexes
+    /// previously returned by `spatial_time_indices`. Unordered time
+    /// coordinates are accepted; exact row filtering must still use
+    /// `time_indices` after the conservative scan.
+    pub(super) fn spatial_time_selection(
+        &self,
+        time_indices: Vec<usize>,
+        horizontal_bounds: [IndexBounds; 2],
+        max_candidates: usize,
+    ) -> ZarrFdwResult<SpatialTimeSelection> {
+        let layout = self.spatial_time_layout()?;
+
+        if time_indices.is_empty() {
+            return Ok(SpatialTimeSelection {
+                layout,
+                time_indices,
+                bounds: vec![None; self.rank],
+                candidate_cells: 0,
+            });
+        }
+
+        let meta = self
+            .axis_meta
+            .as_ref()
+            .expect("spatial_time_layout validated metadata");
+        let time_bounds = IndexBounds {
+            start: *time_indices
+                .first()
+                .expect("non-empty time selection has a first index"),
+            end: *time_indices
+                .last()
+                .expect("non-empty time selection has a last index"),
+        };
+        let mut bounds = vec![None; self.rank];
+        bounds[layout.time] = Some(time_bounds);
+        bounds[layout.horizontal.x] = Some(horizontal_bounds[0]);
+        bounds[layout.horizontal.y] = Some(horizontal_bounds[1]);
+
+        let mut candidate_cells = 1usize;
+        for (axis, axis_bounds) in bounds.iter().enumerate() {
+            let length = meta.shape_extent(axis)?;
+            let extent = match axis_bounds {
+                Some(axis_bounds)
+                    if axis_bounds.start <= axis_bounds.end && axis_bounds.end < length =>
+                {
+                    axis_bounds
+                        .end
+                        .checked_sub(axis_bounds.start)
+                        .and_then(|extent| extent.checked_add(1))
+                        .expect("validated inclusive bounds have a positive extent")
+                }
+                Some(axis_bounds) => {
+                    return Err(ZarrFdwError::InvalidMetadata(format!(
+                        "spatial-time index bounds {}..={} are invalid for dimension {axis} length {length}",
+                        axis_bounds.start, axis_bounds.end
+                    )));
+                }
+                None => length,
+            };
+            candidate_cells = candidate_cells.checked_mul(extent).ok_or_else(|| {
+                ZarrFdwError::InvalidMetadata(
+                    "spatial-time candidate cell count overflowed".to_string(),
+                )
+            })?;
+            if candidate_cells > max_candidates {
+                return Err(ZarrFdwError::InvalidMetadata(format!(
+                    "spatial-time request has {candidate_cells} candidate cells, exceeding the limit of {max_candidates}"
+                )));
+            }
+        }
+
+        Ok(SpatialTimeSelection {
+            layout,
+            time_indices,
+            bounds,
+            candidate_cells,
+        })
+    }
+
+    /// Resolve exact native time-axis indexes inside the requested half-open
+    /// interval independently of any horizontal overlap.
+    pub(super) fn spatial_time_indices(
+        &mut self,
+        start: TimestampWithTimeZone,
+        end: TimestampWithTimeZone,
+        max_time_slices: usize,
+    ) -> ZarrFdwResult<Vec<usize>> {
+        let layout = self.spatial_time_layout()?;
+        let start_micros = start.into_inner();
+        let end_micros = end.into_inner();
+        if start_micros >= end_micros {
+            return Err(ZarrFdwError::InvalidMetadata(
+                "spatial-time start must be earlier than end".to_string(),
+            ));
+        }
+
+        let time_value_count = self.coords[layout.time]
+            .as_deref()
+            .expect("spatial_time_layout validated the time coordinate")
+            .len();
+        let mut time_indices = Vec::new();
+        for index in 0..time_value_count {
+            if index.is_multiple_of(SPATIAL_TIME_INTERRUPT_POLL_VALUES) {
+                self.spatial_check_for_interrupt()?;
+            }
+            let raw = self.coords[layout.time]
+                .as_deref()
+                .expect("spatial_time_layout validated the time coordinate")[index];
+            if spatial_time_value_in_range(self.time_spec, raw, start_micros, end_micros)? {
+                if time_indices.len() >= max_time_slices {
+                    return Err(ZarrFdwError::InvalidMetadata(format!(
+                        "spatial-time request exceeds the limit of {max_time_slices} time slices"
+                    )));
+                }
+                time_indices.push(index);
+            }
+        }
+        Ok(time_indices)
+    }
+
     /// Strictly resolve the selected array's operation-time CRS. The
     /// inspection surface remains permissive; spatial execution requires an
     /// explicit, conflict-free EPSG identifier.
@@ -629,14 +896,77 @@ impl ZarrFdw {
     }
 
     /// Global array indexes for the row most recently returned by
+    /// `iter_scan`, in the selected array's native dimension order.
+    pub(super) fn spatial_last_emitted_global_indices(&self) -> ZarrFdwResult<&[usize]> {
+        self.last_emitted_indices.as_deref().ok_or_else(|| {
+            ZarrFdwError::InvalidMetadata(
+                "spatial row indexes are unavailable before a row is emitted".to_string(),
+            )
+        })
+    }
+
+    /// Global array indexes for the row most recently returned by
     /// `iter_scan`. This avoids reconstructing indexes from coordinate values,
     /// which would be ambiguous for repeated coordinate centers.
     pub(super) fn spatial_last_emitted_indices(&self) -> ZarrFdwResult<[usize; 2]> {
-        self.last_emitted_indices.ok_or_else(|| {
+        let indices = self.last_emitted_indices.as_deref().ok_or_else(|| {
             ZarrFdwError::InvalidMetadata(
                 "spatial row indexes are unavailable before a rank-2 row is emitted".to_string(),
             )
+        })?;
+        indices.try_into().map_err(|_| {
+            ZarrFdwError::InvalidMetadata(format!(
+                "spatial rank-2 row indexes have rank {}",
+                indices.len()
+            ))
         })
+    }
+
+    /// Resolve one loaded coordinate by native array-axis and global index.
+    pub(super) fn spatial_coordinate_at_index(
+        &self,
+        axis: usize,
+        index: usize,
+    ) -> ZarrFdwResult<f64> {
+        let axis_name = self.axes.get(axis).ok_or_else(|| {
+            ZarrFdwError::InvalidMetadata(format!(
+                "spatial coordinate axis {axis} is outside array rank {}",
+                self.rank
+            ))
+        })?;
+        let values = self
+            .coords
+            .get(axis)
+            .and_then(Option::as_deref)
+            .ok_or_else(|| {
+                ZarrFdwError::InvalidMetadata(format!(
+                    "spatial coordinate '{axis_name}' was not loaded"
+                ))
+            })?;
+        values.get(index).copied().ok_or_else(|| {
+            ZarrFdwError::InvalidMetadata(format!(
+                "spatial coordinate index {index} is outside axis {axis} length {}",
+                values.len()
+            ))
+        })
+    }
+
+    /// Convert one coordinate on an already-resolved time axis to PostgreSQL's
+    /// timestamptz representation without rediscovering the complete layout
+    /// for every emitted cell.
+    pub(super) fn spatial_time_at_index(
+        &self,
+        time_axis: usize,
+        index: usize,
+    ) -> ZarrFdwResult<TimestampWithTimeZone> {
+        if self.axis_roles.get(time_axis) != Some(&DimensionRole::Time) {
+            return Err(ZarrFdwError::InvalidMetadata(format!(
+                "spatial-time axis {time_axis} is not the discovered time axis"
+            )));
+        }
+        let raw = self.spatial_coordinate_at_index(time_axis, index)?;
+        let micros = self.time_spec.raw_to_pg_micros(raw)?;
+        TimestampWithTimeZone::try_from(micros).map_err(|_| ZarrFdwError::TimeOutOfRange(raw))
     }
 
     /// Resolve the most recently emitted rank-2 row to one cell in constant
@@ -734,12 +1064,30 @@ impl ZarrFdw {
                 self.rank
             )));
         }
-        for (axis, (bounds, &length)) in array_bounds.iter().zip(meta.shape.iter()).enumerate() {
-            let length = usize::try_from(length).map_err(|_| {
-                ZarrFdwError::InvalidMetadata(format!(
-                    "array dimension {axis} exceeds this platform's index capacity"
-                ))
-            })?;
+        self.restrict_to_axis_bounds(array_bounds.into_iter().map(Some).collect())
+    }
+
+    /// Narrow an initialized scan to optional inclusive bounds for every
+    /// native array axis. `None` preserves the complete extent of that axis.
+    pub(super) fn restrict_to_axis_bounds(
+        &mut self,
+        axis_bounds: Vec<Option<IndexBounds>>,
+    ) -> ZarrFdwResult<()> {
+        let meta = self.axis_meta.as_ref().ok_or_else(|| {
+            ZarrFdwError::InvalidMetadata("spatial scan was not initialized".to_string())
+        })?;
+        if axis_bounds.len() != self.rank || meta.shape.len() != self.rank {
+            return Err(ZarrFdwError::InvalidMetadata(format!(
+                "spatial bounds rank {} does not match array rank {}",
+                axis_bounds.len(),
+                self.rank
+            )));
+        }
+        for (axis, bounds) in axis_bounds.iter().enumerate() {
+            let Some(bounds) = bounds else {
+                continue;
+            };
+            let length = meta.shape_extent(axis)?;
             if bounds.start > bounds.end || bounds.end >= length {
                 return Err(ZarrFdwError::InvalidMetadata(format!(
                     "spatial index bounds {}..={} are invalid for dimension {axis} length {length}",
@@ -748,12 +1096,12 @@ impl ZarrFdw {
             }
         }
 
-        self.bounds = array_bounds.into_iter().map(Some).collect();
-        let chunk_ranges = axis_chunk_ranges(meta, &self.bounds)?;
-        self.metrics.set_chunk_selection(
-            saturating_chunk_count(meta.chunks_per_axis()),
-            saturating_selected_chunk_count(&chunk_ranges),
-        );
+        let chunk_ranges = axis_chunk_ranges(meta, &axis_bounds)?;
+        let all_chunks = saturating_chunk_count(meta.chunks_per_axis());
+        let selected_chunks = saturating_selected_chunk_count(&chunk_ranges);
+        self.bounds = axis_bounds;
+        self.metrics
+            .set_chunk_selection(all_chunks, selected_chunks);
         self.chunk_cursor = ChunkIndexCursor::new(&chunk_ranges)?;
         self.current_chunk.clear();
         self.prefetch.clear();
@@ -1124,10 +1472,18 @@ impl ZarrFdw {
         let value_cell = self.value_cell_at_cursor()?;
         self.metrics.record_decoding_time(decode_started.elapsed());
         if self.capture_spatial_indices {
-            self.last_emitted_indices = Some([
-                self.global_index_at_cursor(0)?,
-                self.global_index_at_cursor(1)?,
-            ]);
+            let mut global_indices = self.last_emitted_indices.take().unwrap_or_default();
+            global_indices.clear();
+            global_indices.try_reserve(self.rank).map_err(|_| {
+                ZarrFdwError::InvalidMetadata(format!(
+                    "could not allocate {0} emitted array indexes",
+                    self.rank
+                ))
+            })?;
+            for axis in 0..self.rank {
+                global_indices.push(self.global_index_at_cursor(axis)?);
+            }
+            self.last_emitted_indices = Some(global_indices);
         }
 
         for col in &self.tgt_cols {
@@ -2317,6 +2673,111 @@ mod unit_tests {
         assert_eq!(lo, vec![0; 3]);
         assert_eq!(hi, vec![0; 3]);
         assert_eq!(idx, vec![0; 3]);
+    }
+
+    #[test]
+    fn spatial_time_layout_accepts_axis_orders_and_singleton_extras() {
+        let time_y_x = discover_spatial_time_layout(
+            3,
+            &[
+                DimensionRole::Time,
+                DimensionRole::SpatialY,
+                DimensionRole::SpatialX,
+            ],
+            &[2, 5, 6],
+        )
+        .unwrap();
+        assert_eq!(time_y_x.time, 0);
+        assert_eq!((time_y_x.horizontal.x, time_y_x.horizontal.y), (2, 1));
+
+        let x_time_y = discover_spatial_time_layout(
+            3,
+            &[
+                DimensionRole::Longitude,
+                DimensionRole::Time,
+                DimensionRole::Latitude,
+            ],
+            &[6, 2, 5],
+        )
+        .unwrap();
+        assert_eq!(x_time_y.time, 1);
+        assert_eq!((x_time_y.horizontal.x, x_time_y.horizontal.y), (0, 2));
+
+        let with_singleton_band = discover_spatial_time_layout(
+            4,
+            &[
+                DimensionRole::Band,
+                DimensionRole::SpatialY,
+                DimensionRole::SpatialX,
+                DimensionRole::Time,
+            ],
+            &[1, 5, 6, 2],
+        )
+        .unwrap();
+        assert_eq!(with_singleton_band.time, 3);
+        assert_eq!(
+            (
+                with_singleton_band.horizontal.x,
+                with_singleton_band.horizontal.y,
+            ),
+            (2, 1)
+        );
+    }
+
+    #[test]
+    fn spatial_time_layout_rejects_invalid_rank_roles_and_extras() {
+        assert!(
+            discover_spatial_time_layout(
+                2,
+                &[DimensionRole::SpatialY, DimensionRole::SpatialX],
+                &[5, 6],
+            )
+            .is_err()
+        );
+        assert!(
+            discover_spatial_time_layout(
+                4,
+                &[
+                    DimensionRole::Band,
+                    DimensionRole::SpatialY,
+                    DimensionRole::SpatialX,
+                    DimensionRole::Time,
+                ],
+                &[2, 5, 6, 2],
+            )
+            .is_err()
+        );
+        assert!(
+            discover_spatial_time_layout(
+                4,
+                &[
+                    DimensionRole::Time,
+                    DimensionRole::SpatialY,
+                    DimensionRole::SpatialX,
+                    DimensionRole::Time,
+                ],
+                &[2, 5, 6, 1],
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn spatial_time_range_is_exact_for_unordered_duplicate_coordinates() {
+        let spec = TimeSpec::default();
+        let start = spec.raw_to_pg_micros(1.0).unwrap();
+        let end = spec.raw_to_pg_micros(3.0).unwrap();
+        let values = [2.0, 0.0, 2.0, 1.0, 3.0];
+        let selected = values
+            .into_iter()
+            .enumerate()
+            .filter_map(|(index, raw)| {
+                spatial_time_value_in_range(spec, raw, start, end)
+                    .unwrap()
+                    .then_some(index)
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(selected, vec![0, 2, 3]);
     }
 
     #[test]

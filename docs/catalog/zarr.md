@@ -333,6 +333,101 @@ value is SQL `NULL`. `valid_count`, `min`, `max`, `sum`, and `avg` ignore decode
 NULL values. With no valid values, `valid_count` is zero and the numeric
 aggregates are NULL. Values and aggregates are widened to `double precision`.
 
+### Add a time range to polygon queries
+
+For an array with one discovered time dimension, use
+`zarr_cells_by_time` to return covered cells at each stored timestamp, or
+`zarr_zonal_stats_by_time` to return one aggregate row per logical time index:
+
+```sql
+create foreign table spatial_temperature_by_time (
+  time timestamptz,
+  y double precision,
+  x double precision,
+  temperature real
+)
+server public_zarr_server
+options (
+  array_group 'climate/spatial_temperature_by_time',
+  time_from_attrs 'true'
+);
+
+with region as (
+  select gis.ST_AsEWKB(
+           gis.ST_MakeEnvelope(110, 20, 130, 40, 3857)
+         ) as ewkb
+)
+select stats.*
+from region
+cross join lateral zarr_zonal_stats_by_time(
+  foreign_table => 'public.spatial_temperature_by_time',
+  region_ewkb   => region.ewkb,
+  start_time    => timestamptz '2025-01-01 00:00:00+00',
+  end_time      => timestamptz '2025-01-02 00:00:00+00'
+) as stats
+order by stats.time_index;
+```
+
+The function signatures are:
+
+```sql
+zarr_cells_by_time(
+  foreign_table text,
+  region_ewkb bytea,
+  start_time timestamptz,
+  end_time timestamptz
+)
+returns table (
+  time timestamptz,
+  x double precision,
+  y double precision,
+  value double precision,
+  time_index bigint,
+  x_index bigint,
+  y_index bigint,
+  srid integer
+);
+
+zarr_zonal_stats_by_time(
+  foreign_table text,
+  region_ewkb bytea,
+  start_time timestamptz,
+  end_time timestamptz
+)
+returns table (
+  time timestamptz,
+  time_index bigint,
+  count bigint,
+  valid_count bigint,
+  min double precision,
+  max double precision,
+  sum double precision,
+  avg double precision,
+  srid integer
+);
+```
+
+Time bounds are required and form a half-open range: `start_time` is included
+and `end_time` is excluded. The FDW uses the same manual or attribute-derived
+time conversion as an ordinary scan. It discovers Time, X, and Y roles rather
+than relying on dimension names or positions, and supports any array-axis order.
+Additional dimensions are accepted only when their extent is one; a
+non-singleton band, level, channel, or unknown dimension must be selected by a
+future API and is therefore rejected here.
+
+Unordered time coordinates are scanned conservatively and checked exactly, so
+matching timestamps are not pruned incorrectly. Duplicate stored timestamps
+remain distinct rows through `time_index`. Zonal output contains one row for
+each selected logical time index; a slice with no covered or valid values has
+zero counts and NULL numeric aggregates. If no stored timestamp falls in the
+requested range, both functions return no rows.
+
+The spatial-time candidate window is limited to 10,000,000 logical cells,
+`zarr_cells_by_time` returns at most 1,000,000 rows, and at most 1,000,000 time
+slices may be selected. These functions preserve the same PostGIS boundary,
+CRS, privilege, scientific-decoding, cache, and cancellation rules as the
+rank-2 polygon functions.
+
 ## Decode time coordinates from attributes
 
 By default, raw values from the one coordinate classified as time are
