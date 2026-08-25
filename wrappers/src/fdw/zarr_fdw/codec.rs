@@ -30,9 +30,40 @@ enum CodecStage {
     Bytes { endian: Option<Endian> },
     Gzip,
     Crc32c,
-    // Zlib and Blosc remain v2-only in this ticket.
+    // Zlib remains v2-only. A present Blosc configuration identifies the
+    // strictly validated v3 codec; v2 deliberately retains its permissive
+    // compressor-metadata behavior through `None`.
     Zlib,
-    Blosc,
+    Blosc { config: Option<BloscConfig> },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum BloscCname {
+    Blosclz,
+    Lz4,
+    Lz4hc,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum BloscShuffle {
+    None,
+    Byte,
+    Bit,
+}
+
+/// The complete, validated Zarr v3 Blosc encoding configuration. These
+/// parameters are retained even though c-blosc's self-describing header owns
+/// decompression; retaining them keeps metadata normalization lossless and
+/// permits safe header consistency checks where the binary format represents
+/// the corresponding setting.
+#[allow(dead_code)] // Encoding parameters are retained intentionally; decoding is self-describing.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct BloscConfig {
+    cname: BloscCname,
+    clevel: u8,
+    shuffle: BloscShuffle,
+    typesize: Option<usize>,
+    blocksize: usize,
 }
 
 impl CodecStage {
@@ -43,7 +74,7 @@ impl CodecStage {
             Self::Gzip => "gzip",
             Self::Crc32c => "crc32c",
             Self::Zlib => "zlib",
-            Self::Blosc => "blosc",
+            Self::Blosc { .. } => "blosc",
         }
     }
 }
@@ -93,7 +124,7 @@ impl CodecPipeline {
         let stage = match id {
             "gzip" => CodecStage::Gzip,
             "zlib" => CodecStage::Zlib,
-            "blosc" => CodecStage::Blosc,
+            "blosc" => CodecStage::Blosc { config: None },
             other => return Err(ZarrFdwError::UnsupportedCompressor(other.to_string())),
         };
         Ok(Self {
@@ -105,7 +136,7 @@ impl CodecPipeline {
     /// executor-normalized NumPy dtype.
     ///
     /// Supported metadata order is exactly:
-    /// `[transpose]? -> bytes -> [gzip]? -> [crc32c]?`.
+    /// `[transpose]? -> bytes -> [gzip | blosc]? -> [crc32c]?`.
     pub(crate) fn from_v3(
         native_dtype: &str,
         rank: usize,
@@ -145,9 +176,16 @@ impl CodecPipeline {
         )?);
         cursor += 1;
 
-        if cursor < codecs.len() && codec_name(codecs, cursor)? == "gzip" {
-            stages.push(parse_gzip(codec_object(codecs, cursor)?, cursor)?);
-            cursor += 1;
+        if cursor < codecs.len() {
+            let stage = match codec_name(codecs, cursor)? {
+                "gzip" => Some(parse_gzip(codec_object(codecs, cursor)?, cursor)?),
+                "blosc" => Some(parse_blosc(codec_object(codecs, cursor)?, cursor)?),
+                _ => None,
+            };
+            if let Some(stage) = stage {
+                stages.push(stage);
+                cursor += 1;
+            }
         }
         if cursor < codecs.len() && codec_name(codecs, cursor)? == "crc32c" {
             stages.push(parse_crc32c(codec_object(codecs, cursor)?, cursor)?);
@@ -158,16 +196,10 @@ impl CodecPipeline {
             validate_codec_object(codec, cursor)?;
             let name = codec_name(codecs, cursor)?;
             match name {
-                "transpose" | "bytes" | "gzip" | "crc32c" => {
+                "transpose" | "bytes" | "gzip" | "blosc" | "crc32c" => {
                     return Err(pipeline_metadata_error(
                         cursor,
                         format!("codec '{name}' is duplicated or appears out of supported order"),
-                    ));
-                }
-                "blosc" => {
-                    return Err(unsupported_pipeline_feature(
-                        cursor,
-                        "Zarr v3 Blosc is not supported yet",
                     ));
                 }
                 "zstd" => {
@@ -218,7 +250,7 @@ impl CodecPipeline {
         self.stages.iter().try_fold(decoded_bytes, |limit, stage| {
             let allowance = match stage {
                 CodecStage::Gzip | CodecStage::Zlib => COMPRESSED_OVERHEAD_ALLOWANCE,
-                CodecStage::Blosc => BLOSC_HEADER_BYTES,
+                CodecStage::Blosc { .. } => BLOSC_HEADER_BYTES,
                 CodecStage::Crc32c => CRC32C_BYTES,
                 CodecStage::Transpose { .. } | CodecStage::Bytes { .. } => 0,
             };
@@ -298,8 +330,8 @@ impl CodecPipeline {
                     };
                     decoded
                 }
-                CodecStage::Blosc => {
-                    let decoded = decode_blosc(data, expected, index)?;
+                CodecStage::Blosc { config } => {
+                    let decoded = decode_blosc(data, expected, index, config.as_ref())?;
                     if interrupt_pending() {
                         return Ok(CodecDecode::Interrupted);
                     }
@@ -514,6 +546,113 @@ fn parse_gzip(codec: &Map<String, Value>, index: usize) -> ZarrFdwResult<CodecSt
     Ok(CodecStage::Gzip)
 }
 
+fn parse_blosc(codec: &Map<String, Value>, index: usize) -> ZarrFdwResult<CodecStage> {
+    validate_codec_object(codec, index)?;
+    let configuration = codec_configuration(codec, index, true)?.expect("required above");
+    validate_fields(
+        configuration,
+        &["cname", "clevel", "shuffle", "typesize", "blocksize"],
+        index,
+    )?;
+
+    let cname = configuration
+        .get("cname")
+        .and_then(Value::as_str)
+        .ok_or_else(|| pipeline_metadata_error(index, "Blosc cname must be a string"))?;
+    let (cname, unavailable_cname) = match cname {
+        "blosclz" => (Some(BloscCname::Blosclz), None),
+        "lz4" => (Some(BloscCname::Lz4), None),
+        "lz4hc" => (Some(BloscCname::Lz4hc), None),
+        "zstd" | "snappy" | "zlib" => (None, Some(cname)),
+        other => {
+            return Err(pipeline_metadata_error(
+                index,
+                format!("Blosc cname '{other}' is not defined by the Zarr v3 Blosc codec"),
+            ));
+        }
+    };
+
+    let clevel = configuration
+        .get("clevel")
+        .and_then(Value::as_u64)
+        .filter(|&level| level <= 9)
+        .ok_or_else(|| {
+            pipeline_metadata_error(index, "Blosc clevel must be an integer from 0 to 9")
+        })? as u8;
+
+    let shuffle = configuration
+        .get("shuffle")
+        .and_then(Value::as_str)
+        .ok_or_else(|| {
+            pipeline_metadata_error(
+                index,
+                "Blosc shuffle must be 'noshuffle', 'shuffle', or 'bitshuffle'",
+            )
+        })?;
+    let shuffle = match shuffle {
+        "noshuffle" => BloscShuffle::None,
+        "shuffle" => BloscShuffle::Byte,
+        "bitshuffle" => BloscShuffle::Bit,
+        _ => {
+            return Err(pipeline_metadata_error(
+                index,
+                "Blosc shuffle must be 'noshuffle', 'shuffle', or 'bitshuffle'",
+            ));
+        }
+    };
+
+    let typesize = configuration
+        .get("typesize")
+        .map(|value| {
+            value
+                .as_u64()
+                .filter(|&value| value > 0)
+                .and_then(|value| usize::try_from(value).ok())
+                .ok_or_else(|| {
+                    pipeline_metadata_error(
+                        index,
+                        "Blosc typesize must be a positive platform-sized integer",
+                    )
+                })
+        })
+        .transpose()?;
+    if shuffle != BloscShuffle::None && typesize.is_none() {
+        return Err(pipeline_metadata_error(
+            index,
+            "Blosc typesize is required when shuffle is 'shuffle' or 'bitshuffle'",
+        ));
+    }
+
+    let blocksize = configuration
+        .get("blocksize")
+        .and_then(Value::as_u64)
+        .and_then(|value| usize::try_from(value).ok())
+        .ok_or_else(|| {
+            pipeline_metadata_error(
+                index,
+                "Blosc blocksize must be a non-negative platform-sized integer",
+            )
+        })?;
+
+    if let Some(cname) = unavailable_cname {
+        return Err(unsupported_pipeline_feature(
+            index,
+            format!("Blosc cname '{cname}' is not enabled in this build"),
+        ));
+    }
+    let cname = cname.expect("supported Blosc cname resolved above");
+
+    Ok(CodecStage::Blosc {
+        config: Some(BloscConfig {
+            cname,
+            clevel,
+            shuffle,
+            typesize,
+            blocksize,
+        }),
+    })
+}
+
 fn parse_crc32c(codec: &Map<String, Value>, index: usize) -> ZarrFdwResult<CodecStage> {
     validate_codec_object(codec, index)?;
     if let Some(configuration) = codec_configuration(codec, index, false)? {
@@ -720,7 +859,15 @@ where
     Ok(Some(decoded))
 }
 
-fn decode_blosc(data: Vec<u8>, expected: usize, index: usize) -> ZarrFdwResult<Vec<u8>> {
+fn decode_blosc(
+    data: Vec<u8>,
+    expected: usize,
+    index: usize,
+    v3_config: Option<&BloscConfig>,
+) -> ZarrFdwResult<Vec<u8>> {
+    if v3_config.is_some() {
+        validate_v3_blosc_header(&data, expected, index)?;
+    }
     let decoder = blosc_rs::Decoder::new(data).map_err(|error| {
         codec_read_error(index, "blosc", format!("invalid Blosc chunk: {error}"))
     })?;
@@ -742,6 +889,46 @@ fn decode_blosc(data: Vec<u8>, expected: usize, index: usize) -> ZarrFdwResult<V
         )
     })?;
     require_exact_length(decoded, expected, index, "blosc")
+}
+
+fn validate_v3_blosc_header(data: &[u8], expected: usize, index: usize) -> ZarrFdwResult<()> {
+    if data.len() < BLOSC_HEADER_BYTES {
+        return Err(codec_read_error(
+            index,
+            "blosc",
+            "encoded chunk is shorter than the 16-byte Blosc header",
+        ));
+    }
+    let declared_nbytes = u32::from_le_bytes(
+        data[4..8]
+            .try_into()
+            .expect("validated 16-byte Blosc header"),
+    ) as usize;
+    if declared_nbytes != expected {
+        return Err(codec_read_error(
+            index,
+            "blosc",
+            format!(
+                "Blosc header declares {declared_nbytes} uncompressed bytes, expected exactly {expected}"
+            ),
+        ));
+    }
+    let declared_cbytes = u32::from_le_bytes(
+        data[12..16]
+            .try_into()
+            .expect("validated 16-byte Blosc header"),
+    ) as usize;
+    if declared_cbytes != data.len() {
+        return Err(codec_read_error(
+            index,
+            "blosc",
+            format!(
+                "Blosc header declares {declared_cbytes} compressed bytes, actual object has {}",
+                data.len()
+            ),
+        ));
+    }
+    Ok(())
 }
 
 fn decode_crc32c<F>(
@@ -874,6 +1061,19 @@ mod tests {
         CodecPipeline::from_v3("float32", 3, &codecs)
     }
 
+    fn v3_blosc(cname: &str, shuffle: &str, typesize: Option<Value>) -> Value {
+        let mut configuration = serde_json::json!({
+            "cname": cname,
+            "clevel": 5,
+            "shuffle": shuffle,
+            "blocksize": 0
+        });
+        if let Some(typesize) = typesize {
+            configuration["typesize"] = typesize;
+        }
+        serde_json::json!({"name":"blosc", "configuration":configuration})
+    }
+
     #[test]
     fn parses_locked_v3_pipeline_and_label() {
         let codecs = serde_json::json!([
@@ -917,6 +1117,107 @@ mod tests {
             let pipeline = CodecPipeline::from_v2(&compressor).unwrap();
             assert_eq!(pipeline.ordered_label(), label);
             assert_eq!(pipeline.encoded_read_limit(32).unwrap(), 32 + allowance);
+        }
+    }
+
+    #[test]
+    fn parses_supported_v3_blosc_configurations_and_label() {
+        for cname in ["blosclz", "lz4", "lz4hc"] {
+            for (shuffle, typesize) in [
+                ("noshuffle", None),
+                ("noshuffle", Some(serde_json::json!(4))),
+                ("shuffle", Some(serde_json::json!(4))),
+                ("bitshuffle", Some(serde_json::json!(4))),
+            ] {
+                let codecs = serde_json::json!([
+                    {"name":"bytes","configuration":{"endian":"little"}},
+                    v3_blosc(cname, shuffle, typesize),
+                    {"name":"crc32c"}
+                ]);
+                let (pipeline, dtype) = v3(codecs).unwrap();
+                assert_eq!(dtype, "<f4");
+                assert_eq!(pipeline.ordered_label(), "bytes -> blosc -> crc32c");
+                assert_eq!(
+                    pipeline.encoded_read_limit(1024).unwrap(),
+                    1024 + BLOSC_HEADER_BYTES + CRC32C_BYTES
+                );
+                let CodecStage::Blosc {
+                    config: Some(config),
+                } = &pipeline.stages[1]
+                else {
+                    panic!("expected configured v3 Blosc stage");
+                };
+                assert!((0..=9).contains(&config.clevel));
+            }
+        }
+    }
+
+    #[test]
+    fn rejects_malformed_and_unavailable_v3_blosc_configurations() {
+        let invalid = [
+            serde_json::json!({"name":"blosc"}),
+            serde_json::json!({"name":"blosc","configuration":{}}),
+            serde_json::json!({"name":"blosc","configuration":{"cname":1,"clevel":5,"shuffle":"noshuffle","blocksize":0}}),
+            v3_blosc("future", "noshuffle", None),
+            serde_json::json!({"name":"blosc","configuration":{"cname":"lz4","clevel":-1,"shuffle":"noshuffle","blocksize":0}}),
+            serde_json::json!({"name":"blosc","configuration":{"cname":"lz4","clevel":10,"shuffle":"noshuffle","blocksize":0}}),
+            serde_json::json!({"name":"blosc","configuration":{"cname":"lz4","clevel":1.5,"shuffle":"noshuffle","blocksize":0}}),
+            v3_blosc("lz4", "auto", Some(serde_json::json!(4))),
+            v3_blosc("lz4", "shuffle", None),
+            v3_blosc("lz4", "shuffle", Some(serde_json::json!(0))),
+            v3_blosc("lz4", "shuffle", Some(serde_json::json!(-1))),
+            serde_json::json!({"name":"blosc","configuration":{"cname":"lz4","clevel":5,"shuffle":"noshuffle"}}),
+            serde_json::json!({"name":"blosc","configuration":{"cname":"lz4","clevel":5,"shuffle":"noshuffle","blocksize":-1}}),
+            serde_json::json!({"name":"blosc","configuration":{"cname":"lz4","clevel":5,"shuffle":"noshuffle","blocksize":0,"extra":true}}),
+            serde_json::json!({"name":"blosc","configuration":{"cname":"lz4","clevel":5,"shuffle":"noshuffle","blocksize":0},"must_understand":"yes"}),
+        ];
+        for codec in invalid {
+            let codecs = serde_json::json!([
+                {"name":"bytes","configuration":{"endian":"little"}},
+                codec
+            ]);
+            assert!(matches!(v3(codecs), Err(ZarrFdwError::InvalidMetadata(_))));
+        }
+
+        for cname in ["zstd", "snappy", "zlib"] {
+            let codecs = serde_json::json!([
+                {"name":"bytes","configuration":{"endian":"little"}},
+                v3_blosc(cname, "noshuffle", None)
+            ]);
+            let error = v3(codecs).unwrap_err();
+            assert!(matches!(
+                &error,
+                ZarrFdwError::UnsupportedExecutionFeature(_)
+            ));
+            assert!(format!("{error}").contains(&format!("Blosc cname '{cname}'")));
+        }
+    }
+
+    #[test]
+    fn rejects_duplicate_or_misordered_v3_blosc() {
+        let blosc = v3_blosc("lz4", "shuffle", Some(serde_json::json!(4)));
+        for codecs in [
+            serde_json::json!([
+                blosc.clone(),
+                {"name":"bytes","configuration":{"endian":"little"}}
+            ]),
+            serde_json::json!([
+                {"name":"bytes","configuration":{"endian":"little"}},
+                blosc.clone(),
+                blosc.clone()
+            ]),
+            serde_json::json!([
+                {"name":"bytes","configuration":{"endian":"little"}},
+                {"name":"gzip","configuration":{"level":1}},
+                blosc.clone()
+            ]),
+            serde_json::json!([
+                {"name":"bytes","configuration":{"endian":"little"}},
+                blosc,
+                {"name":"gzip","configuration":{"level":1}}
+            ]),
+        ] {
+            assert!(matches!(v3(codecs), Err(ZarrFdwError::InvalidMetadata(_))));
         }
     }
 
@@ -1038,6 +1339,150 @@ mod tests {
                     .await
                     .unwrap(),
                 CodecDecode::Decoded((0u8..12).collect())
+            );
+        });
+    }
+
+    #[test]
+    fn v3_blosc_header_validation_rejects_truncation_mismatch_and_trailing_bytes() {
+        use blosc_rs::{CompressAlgo, Encoder};
+
+        let raw = (0..64u32).flat_map(u32::to_le_bytes).collect::<Vec<_>>();
+        let encoded = Encoder::default()
+            .compressor(CompressAlgo::Lz4)
+            .typesize(4.try_into().unwrap())
+            .compress(&raw)
+            .unwrap();
+        validate_v3_blosc_header(&encoded, raw.len(), 1).unwrap();
+
+        let error = validate_v3_blosc_header(&encoded[..15], raw.len(), 1).unwrap_err();
+        assert!(format!("{error}").contains("shorter than the 16-byte Blosc header"));
+
+        let mut wrong_nbytes = encoded.clone();
+        wrong_nbytes[4..8].copy_from_slice(&1u32.to_le_bytes());
+        let error = validate_v3_blosc_header(&wrong_nbytes, raw.len(), 1).unwrap_err();
+        assert!(format!("{error}").contains("declares 1 uncompressed bytes"));
+
+        let mut wrong_cbytes = encoded.clone();
+        wrong_cbytes[12..16].copy_from_slice(&16u32.to_le_bytes());
+        let error = validate_v3_blosc_header(&wrong_cbytes, raw.len(), 1).unwrap_err();
+        assert!(format!("{error}").contains("declares 16 compressed bytes"));
+
+        let mut trailing = encoded;
+        trailing.push(0);
+        let error = validate_v3_blosc_header(&trailing, raw.len(), 1).unwrap_err();
+        assert!(format!("{error}").contains("actual object has"));
+    }
+
+    #[test]
+    fn v3_blosc_decodes_every_advertised_backend_and_shuffle() {
+        use blosc_rs::{CompressAlgo, Encoder, Shuffle};
+
+        // A repetitive, nontrivial payload is large enough that every enabled
+        // backend actually compresses it instead of emitting Blosc's memcpy
+        // fallback. That makes the test prove native unshuffle behavior too.
+        let raw = (0..4096)
+            .map(|index| u8::try_from(index % 16).unwrap())
+            .collect::<Vec<_>>();
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(async {
+            for (cname, algorithm) in [
+                ("blosclz", CompressAlgo::Blosclz),
+                ("lz4", CompressAlgo::Lz4),
+                ("lz4hc", CompressAlgo::Lz4hc),
+            ] {
+                for (shuffle_name, shuffle, expected_flag) in [
+                    ("noshuffle", Shuffle::None, 0u8),
+                    ("shuffle", Shuffle::Byte, 1u8),
+                    ("bitshuffle", Shuffle::Bit, 4u8),
+                ] {
+                    let mut encoder = Encoder::default();
+                    encoder
+                        .compressor(algorithm)
+                        .shuffle(shuffle)
+                        .typesize(4.try_into().unwrap());
+                    let encoded = encoder.compress(&raw).unwrap();
+                    assert!(encoded.len() < raw.len() + BLOSC_HEADER_BYTES);
+                    assert_eq!(encoded[2] & 0b111, expected_flag);
+                    let pipeline = v3(serde_json::json!([
+                        {"name":"bytes","configuration":{"endian":"little"}},
+                        v3_blosc(cname, shuffle_name, Some(serde_json::json!(4)))
+                    ]))
+                    .unwrap()
+                    .0;
+                    assert_eq!(
+                        pipeline
+                            .decode_interruptible(encoded, &[1024], 4, || false)
+                            .await
+                            .unwrap(),
+                        CodecDecode::Decoded(raw.clone()),
+                        "backend={cname}, shuffle={shuffle_name}"
+                    );
+                }
+            }
+        });
+    }
+
+    #[test]
+    fn v3_blosc_decodes_in_reverse_order_and_polls_after_native_call() {
+        use blosc_rs::{CompressAlgo, Encoder};
+
+        let raw = (0..64u32).flat_map(u32::to_le_bytes).collect::<Vec<_>>();
+        let compressed = Encoder::default()
+            .compressor(CompressAlgo::Lz4)
+            .typesize(4.try_into().unwrap())
+            .compress(&raw)
+            .unwrap();
+        let pipeline = v3(serde_json::json!([
+            {"name":"bytes","configuration":{"endian":"little"}},
+            v3_blosc("lz4", "shuffle", Some(serde_json::json!(4))),
+            {"name":"crc32c"}
+        ]))
+        .unwrap()
+        .0;
+        let mut encoded = compressed.clone();
+        encoded.extend_from_slice(&crc32c::crc32c(&compressed).to_le_bytes());
+
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(async {
+            assert_eq!(
+                pipeline
+                    .decode_interruptible(encoded.clone(), &[64], 4, || false)
+                    .await
+                    .unwrap(),
+                CodecDecode::Decoded(raw.clone())
+            );
+
+            let no_crc = v3(serde_json::json!([
+                {"name":"bytes","configuration":{"endian":"little"}},
+                v3_blosc("lz4", "shuffle", Some(serde_json::json!(4)))
+            ]))
+            .unwrap()
+            .0;
+            let mut polls = 0usize;
+            assert_eq!(
+                no_crc
+                    .decode_interruptible(compressed.clone(), &[64], 4, || {
+                        polls += 1;
+                        polls >= 3
+                    })
+                    .await
+                    .unwrap(),
+                CodecDecode::Interrupted
+            );
+
+            let mut truncated = compressed;
+            truncated.pop();
+            let declared = u32::try_from(truncated.len()).unwrap();
+            truncated[12..16].copy_from_slice(&declared.to_le_bytes());
+            let error = no_crc
+                .decode_interruptible(truncated, &[64], 4, || false)
+                .await
+                .unwrap_err();
+            let error = format!("{error}");
+            assert!(error.contains("codec index 1 ('blosc')"));
+            assert!(
+                error.contains("invalid Blosc chunk") || error.contains("failed to decompress")
             );
         });
     }

@@ -3507,6 +3507,438 @@ mod tests {
     }
 
     #[pg_test]
+    fn zarr_minio_v3_blosc_direct_scan_and_aggregate_e2e() {
+        create_minio_v3_e2e_server();
+        create_minio_v3_e2e_table_on_server("zarr_v3_blosc_direct", "nested/blosc_v3", false);
+        create_minio_v3_e2e_table_on_server("zarr_v3_blosc_direct_cf", "nested/blosc_v3", true);
+
+        let raw_sql = r#"SELECT count(*) AS total_count,
+                                count(value) AS value_count,
+                                sum(value)::double precision AS value_sum,
+                                avg(value) AS value_avg,
+                                min(value)::double precision AS value_min,
+                                max(value)::double precision AS value_max
+                           FROM zarr_v3_blosc_direct"#;
+        let decoded_sql = r#"SELECT count(*) AS total_count,
+                                    count(value) AS value_count,
+                                    sum(value) AS value_sum,
+                                    avg(value) AS value_avg,
+                                    min(value) AS value_min,
+                                    max(value) AS value_max
+                               FROM zarr_v3_blosc_direct_cf"#;
+        assert_aggregate_pushed_down(decoded_sql);
+
+        Spi::connect(|c| {
+            let raw = c.select(raw_sql, None, &[]).unwrap().next().unwrap();
+            assert_eq!(
+                raw.get_by_name::<i64, _>("total_count").unwrap().unwrap(),
+                60
+            );
+            assert_eq!(
+                raw.get_by_name::<i64, _>("value_count").unwrap().unwrap(),
+                60
+            );
+            assert_eq!(
+                raw.get_by_name::<f64, _>("value_sum").unwrap().unwrap(),
+                3_574.0
+            );
+            assert!(
+                (raw.get_by_name::<f64, _>("value_avg").unwrap().unwrap() - 59.566_666_666_666_67)
+                    .abs()
+                    < 1e-12
+            );
+            assert_eq!(
+                raw.get_by_name::<f64, _>("value_min").unwrap().unwrap(),
+                -7.5
+            );
+            assert_eq!(
+                raw.get_by_name::<f64, _>("value_max").unwrap().unwrap(),
+                143.0
+            );
+            let fill_count = c
+                .select(
+                    "SELECT count(*) FROM zarr_v3_blosc_direct WHERE value = -7.5",
+                    Some(1),
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap()
+                .get::<i64>(1)
+                .unwrap();
+            assert_eq!(fill_count, Some(8));
+
+            let decoded = c.select(decoded_sql, None, &[]).unwrap().next().unwrap();
+            assert_eq!(
+                decoded
+                    .get_by_name::<i64, _>("total_count")
+                    .unwrap()
+                    .unwrap(),
+                60
+            );
+            assert_eq!(
+                decoded
+                    .get_by_name::<i64, _>("value_count")
+                    .unwrap()
+                    .unwrap(),
+                48
+            );
+            assert!(
+                (decoded.get_by_name::<f64, _>("value_sum").unwrap().unwrap() - 13_142.86).abs()
+                    < 1e-8
+            );
+            assert!(
+                (decoded.get_by_name::<f64, _>("value_avg").unwrap().unwrap()
+                    - 273.809_583_333_333_36)
+                    .abs()
+                    < 1e-10
+            );
+            assert!(
+                (decoded.get_by_name::<f64, _>("value_min").unwrap().unwrap() - 273.15).abs()
+                    < 1e-10
+            );
+            assert!(
+                (decoded.get_by_name::<f64, _>("value_max").unwrap().unwrap() - 274.55).abs()
+                    < 1e-10
+            );
+
+            let probes = c
+                .select(
+                    r#"SELECT time, y, x, value
+                         FROM zarr_v3_blosc_direct
+                        WHERE (time, y, x) IN (
+                          ('1970-01-01 00:00:00+00'::timestamptz, 20, 110),
+                          ('1970-01-01 00:00:00+00'::timestamptz, 50, 130),
+                          ('1970-01-01 00:00:03.6+00'::timestamptz, 20, 110),
+                          ('1970-01-01 00:00:03.6+00'::timestamptz, 50, 150)
+                        )
+                        ORDER BY time, y, x"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .map(|row| row.get_by_name::<f32, _>("value").unwrap().unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(probes, vec![11.0, 43.0, 111.0, -7.5]);
+
+            let plan = c
+                .select(
+                    r#"EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+                       SELECT value
+                         FROM zarr_v3_blosc_direct
+                        WHERE time = '1970-01-01 00:00:00+00'::timestamptz
+                          AND y = 20
+                          AND x = 110"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|row| row.get::<&str>(1).unwrap().map(str::to_string))
+                .collect::<Vec<_>>();
+            let has = |text: &str| plan.iter().any(|line| line.contains(text));
+            assert!(has("Zarr Codec: bytes -> blosc"), "plan: {plan:?}");
+            assert!(has("Zarr Chunks Selected: 1"), "plan: {plan:?}");
+            assert!(has("Zarr Chunks Requested: 1"), "plan: {plan:?}");
+            assert!(has("Zarr Chunks Present: 1"), "plan: {plan:?}");
+            assert!(has("Zarr Data GET Calls: 1"), "plan: {plan:?}");
+            assert!(has("Zarr Data Encoded Bytes: 112 bytes"), "plan: {plan:?}");
+            assert!(has("Zarr Data Decoded Bytes: 96 bytes"), "plan: {plan:?}");
+        });
+    }
+
+    #[pg_test]
+    fn zarr_minio_v3_blosc_coordinate_decode_and_pruning_e2e() {
+        create_minio_v3_e2e_server();
+        Spi::run(
+            r#"CREATE FOREIGN TABLE zarr_v3_blosc_coordinate (
+                 blosc_x double precision,
+                 value real
+               )
+               SERVER zarr_v3_e2e_server
+               OPTIONS (array_group 'nested/blosc_coord_values')"#,
+        )
+        .unwrap();
+
+        let aggregate_sql = r#"SELECT count(*) AS value_count,
+                                      sum(value) AS value_sum,
+                                      avg(value) AS value_avg,
+                                      min(value) AS value_min,
+                                      max(value) AS value_max
+                                 FROM zarr_v3_blosc_coordinate
+                                WHERE blosc_x BETWEEN 110 AND 140"#;
+        assert_aggregate_pushed_down(aggregate_sql);
+
+        Spi::connect(|c| {
+            let values = c
+                .select(
+                    r#"SELECT blosc_x, value
+                         FROM zarr_v3_blosc_coordinate
+                        WHERE blosc_x BETWEEN 110 AND 140
+                        ORDER BY blosc_x"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .map(|row| {
+                    (
+                        row.get_by_name::<f64, _>("blosc_x").unwrap().unwrap(),
+                        row.get_by_name::<f32, _>("value").unwrap().unwrap(),
+                    )
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                values,
+                vec![(110.0, 1.0), (120.0, 2.0), (130.0, 3.0), (140.0, 4.0)]
+            );
+
+            let aggregate = c.select(aggregate_sql, None, &[]).unwrap().next().unwrap();
+            assert_eq!(
+                aggregate
+                    .get_by_name::<i64, _>("value_count")
+                    .unwrap()
+                    .unwrap(),
+                4
+            );
+            assert_eq!(
+                aggregate
+                    .get_by_name::<f32, _>("value_sum")
+                    .unwrap()
+                    .unwrap(),
+                10.0
+            );
+            assert_eq!(
+                aggregate
+                    .get_by_name::<f64, _>("value_avg")
+                    .unwrap()
+                    .unwrap(),
+                2.5
+            );
+            assert_eq!(
+                aggregate
+                    .get_by_name::<f32, _>("value_min")
+                    .unwrap()
+                    .unwrap(),
+                1.0
+            );
+            assert_eq!(
+                aggregate
+                    .get_by_name::<f32, _>("value_max")
+                    .unwrap()
+                    .unwrap(),
+                4.0
+            );
+
+            let plan = c
+                .select(
+                    r#"EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+                       SELECT value
+                         FROM zarr_v3_blosc_coordinate
+                        WHERE blosc_x = 150"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|row| row.get::<&str>(1).unwrap().map(str::to_string))
+                .collect::<Vec<_>>();
+            let has = |text: &str| plan.iter().any(|line| line.contains(text));
+            assert!(has("Zarr Chunks Selected: 1"), "plan: {plan:?}");
+            assert!(has("Zarr Chunks Coordinate-Pruned: 1"), "plan: {plan:?}");
+            assert!(has("Zarr Coordinate GET Calls: 2"), "plan: {plan:?}");
+            assert!(
+                has("Zarr Coordinate Encoded Bytes: 96 bytes"),
+                "plan: {plan:?}"
+            );
+            assert!(
+                has("Zarr Coordinate Decoded Bytes: 64 bytes"),
+                "plan: {plan:?}"
+            );
+            assert!(has("Zarr Data GET Calls: 1"), "plan: {plan:?}");
+            assert!(has("Zarr Data Encoded Bytes: 16 bytes"), "plan: {plan:?}");
+        });
+    }
+
+    #[pg_test]
+    fn zarr_minio_v3_blosc_sharded_inner_e2e() {
+        create_minio_v3_e2e_server();
+        create_minio_v3_e2e_table_on_server("zarr_v3_shard_blosc", "nested/shard_blosc", false);
+        create_minio_v3_e2e_table_on_server("zarr_v3_shard_blosc_cf", "nested/shard_blosc", true);
+
+        let aggregate_sql = r#"SELECT count(*) AS total_count,
+                                      count(value) AS value_count,
+                                      sum(value) AS value_sum,
+                                      avg(value) AS value_avg,
+                                      min(value) AS value_min,
+                                      max(value) AS value_max
+                                 FROM zarr_v3_shard_blosc_cf"#;
+        assert_aggregate_pushed_down(aggregate_sql);
+
+        Spi::connect(|c| {
+            let values = c
+                .select(
+                    r#"SELECT x, value
+                         FROM zarr_v3_shard_blosc
+                        WHERE time = '1970-01-01 00:00:00+00'::timestamptz
+                          AND y = 20
+                          AND x BETWEEN 110 AND 130
+                        ORDER BY x"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .map(|row| {
+                    (
+                        row.get_by_name::<f64, _>("x").unwrap().unwrap(),
+                        row.get_by_name::<f32, _>("value").unwrap().unwrap(),
+                    )
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(values, vec![(110.0, 11.0), (120.0, 12.0), (130.0, 13.0)]);
+
+            let sparse_fill = c
+                .select(
+                    r#"SELECT value
+                         FROM zarr_v3_shard_blosc
+                        WHERE time = '1970-01-01 00:00:03.6+00'::timestamptz
+                          AND y = 50
+                          AND x = 150"#,
+                    Some(1),
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap()
+                .get_by_name::<f32, _>("value")
+                .unwrap();
+            assert_eq!(sparse_fill, Some(-7.5));
+
+            let aggregate = c.select(aggregate_sql, None, &[]).unwrap().next().unwrap();
+            assert_eq!(
+                aggregate
+                    .get_by_name::<i64, _>("total_count")
+                    .unwrap()
+                    .unwrap(),
+                60
+            );
+            assert_eq!(
+                aggregate
+                    .get_by_name::<i64, _>("value_count")
+                    .unwrap()
+                    .unwrap(),
+                48
+            );
+            assert!(
+                (aggregate
+                    .get_by_name::<f64, _>("value_sum")
+                    .unwrap()
+                    .unwrap()
+                    - 13_142.86)
+                    .abs()
+                    < 1e-8
+            );
+            assert!(
+                (aggregate
+                    .get_by_name::<f64, _>("value_avg")
+                    .unwrap()
+                    .unwrap()
+                    - 273.809_583_333_333_36)
+                    .abs()
+                    < 1e-10
+            );
+            assert!(
+                (aggregate
+                    .get_by_name::<f64, _>("value_min")
+                    .unwrap()
+                    .unwrap()
+                    - 273.15)
+                    .abs()
+                    < 1e-10
+            );
+            assert!(
+                (aggregate
+                    .get_by_name::<f64, _>("value_max")
+                    .unwrap()
+                    .unwrap()
+                    - 274.55)
+                    .abs()
+                    < 1e-10
+            );
+
+            let plan = c
+                .select(
+                    r#"EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+                       SELECT value
+                         FROM zarr_v3_shard_blosc
+                        WHERE time = '1970-01-01 00:00:00+00'::timestamptz
+                          AND y = 20
+                          AND x BETWEEN 110 AND 130"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|row| row.get::<&str>(1).unwrap().map(str::to_string))
+                .collect::<Vec<_>>();
+            let has = |text: &str| plan.iter().any(|line| line.contains(text));
+            assert!(has("Zarr Codec: bytes -> blosc"), "plan: {plan:?}");
+            assert!(
+                has("Zarr Storage Layout: sharding_indexed (index: end)"),
+                "plan: {plan:?}"
+            );
+            assert!(has("Zarr Shard Shape: [2, 3, 4]"), "plan: {plan:?}");
+            assert!(has("Zarr Chunk Shape: [1, 3, 2]"), "plan: {plan:?}");
+            assert!(has("Zarr Chunks Selected: 2"), "plan: {plan:?}");
+            assert!(has("Zarr Chunks Requested: 2"), "plan: {plan:?}");
+            assert!(has("Zarr Chunks Present: 2"), "plan: {plan:?}");
+            assert!(has("Zarr Data GET Calls: 3"), "plan: {plan:?}");
+            assert!(has("Zarr Data Encoded Bytes: 148 bytes"), "plan: {plan:?}");
+            assert!(has("Zarr Shard Index GET Calls: 1"), "plan: {plan:?}");
+            assert!(has("Zarr Shard Payload GET Calls: 2"), "plan: {plan:?}");
+            assert!(has("Zarr Shard Index Cache Hits: 1"), "plan: {plan:?}");
+            assert!(has("Zarr Shard Index Cache Misses: 1"), "plan: {plan:?}");
+            assert!(
+                has("Zarr Shard Index Encoded Bytes: 68 bytes"),
+                "plan: {plan:?}"
+            );
+            assert!(
+                has("Zarr Shard Payload Encoded Bytes: 80 bytes"),
+                "plan: {plan:?}"
+            );
+        });
+    }
+
+    #[pg_test]
+    fn zarr_minio_v3_blosc_corrupt_chunks_fail_closed_e2e() {
+        create_minio_v3_e2e_server();
+        create_minio_v3_e2e_table_on_server("zarr_v3_bad_blosc", "nested/bad_blosc", false);
+
+        for (x, key, reason) in [
+            (
+                110,
+                "nested/bad_blosc/c/0/0/0",
+                "encoded chunk is shorter than the 16-byte Blosc header",
+            ),
+            (
+                150,
+                "nested/bad_blosc/c/0/0/1",
+                "Blosc header declares 100 uncompressed bytes, expected exactly 96",
+            ),
+        ] {
+            let message = capture_query_error(&format!(
+                r#"SELECT value
+                     FROM zarr_v3_bad_blosc
+                    WHERE time = '1970-01-01 00:00:00+00'::timestamptz
+                      AND y = 20
+                      AND x = {x}"#
+            ));
+            assert!(message.contains(key), "message: {message}");
+            assert!(
+                message.contains("codec index 1 ('blosc')"),
+                "message: {message}"
+            );
+            assert!(message.contains(reason), "message: {message}");
+        }
+    }
+
+    #[pg_test]
     fn zarr_minio_v3_crc32c_corruption_fails_closed_e2e() {
         create_minio_v3_e2e_table("zarr_v3_bad_crc", "nested/bad_crc", false);
         let message = capture_query_error(
@@ -3623,13 +4055,18 @@ mod tests {
                 vec![
                     "/",
                     "nested",
+                    "nested/bad_blosc",
                     "nested/bad_crc",
                     "nested/bad_gzip",
+                    "nested/blosc_coord_values",
+                    "nested/blosc_v3",
+                    "nested/blosc_x",
                     "nested/oversize",
                     "nested/pipeline",
                     "nested/raw_default",
                     "nested/raw_v2keys",
                     "nested/shard_bad_index_crc",
+                    "nested/shard_blosc",
                     "nested/shard_end",
                     "nested/shard_half_sentinel",
                     "nested/shard_oob",
@@ -3856,6 +4293,88 @@ mod tests {
                 ])
             );
 
+            let blosc = c
+                .select(
+                    "SELECT chunks, codecs FROM zarr_inspect('zarr_v3_e2e_server') WHERE path = 'nested/blosc_v3'",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(
+                blosc.get_by_name::<JsonB, _>("chunks").unwrap().unwrap().0,
+                serde_json::json!([2, 3, 4])
+            );
+            assert_eq!(
+                blosc.get_by_name::<JsonB, _>("codecs").unwrap().unwrap().0,
+                serde_json::json!([
+                    {"name": "bytes", "configuration": {"endian": "little"}},
+                    {
+                        "name": "blosc",
+                        "configuration": {
+                            "typesize": 4,
+                            "cname": "lz4",
+                            "clevel": 5,
+                            "shuffle": "shuffle",
+                            "blocksize": 0
+                        }
+                    }
+                ])
+            );
+
+            let blosc_coordinate = c
+                .select(
+                    "SELECT dimensions, dtype, chunks, codecs FROM zarr_inspect('zarr_v3_e2e_server') WHERE path = 'nested/blosc_x'",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(
+                blosc_coordinate
+                    .get_by_name::<Vec<String>, _>("dimensions")
+                    .unwrap()
+                    .unwrap(),
+                vec!["blosc_x"]
+            );
+            assert_eq!(
+                blosc_coordinate
+                    .get_by_name::<String, _>("dtype")
+                    .unwrap()
+                    .unwrap(),
+                "float64"
+            );
+            assert_eq!(
+                blosc_coordinate
+                    .get_by_name::<JsonB, _>("chunks")
+                    .unwrap()
+                    .unwrap()
+                    .0,
+                serde_json::json!([4])
+            );
+            assert_eq!(
+                blosc_coordinate
+                    .get_by_name::<JsonB, _>("codecs")
+                    .unwrap()
+                    .unwrap()
+                    .0,
+                serde_json::json!([
+                    {"name": "bytes", "configuration": {"endian": "little"}},
+                    {
+                        "name": "blosc",
+                        "configuration": {
+                            "typesize": 8,
+                            "cname": "lz4",
+                            "clevel": 5,
+                            "shuffle": "shuffle",
+                            "blocksize": 0
+                        }
+                    }
+                ])
+            );
+
             let sharded = c
                 .select(
                     "SELECT chunks, codecs FROM zarr_inspect('zarr_v3_e2e_server') WHERE path = 'nested/shard_end'",
@@ -3887,6 +4406,61 @@ mod tests {
                             "name": "bytes",
                             "configuration": {"endian": "little"}
                         }],
+                        "index_codecs": [
+                            {
+                                "name": "bytes",
+                                "configuration": {"endian": "little"}
+                            },
+                            {"name": "crc32c"}
+                        ],
+                        "index_location": "end"
+                    }
+                }])
+            );
+
+            let sharded_blosc = c
+                .select(
+                    "SELECT chunks, codecs FROM zarr_inspect('zarr_v3_e2e_server') WHERE path = 'nested/shard_blosc'",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(
+                sharded_blosc
+                    .get_by_name::<JsonB, _>("chunks")
+                    .unwrap()
+                    .unwrap()
+                    .0,
+                serde_json::json!([2, 3, 4])
+            );
+            assert_eq!(
+                sharded_blosc
+                    .get_by_name::<JsonB, _>("codecs")
+                    .unwrap()
+                    .unwrap()
+                    .0,
+                serde_json::json!([{
+                    "name": "sharding_indexed",
+                    "configuration": {
+                        "chunk_shape": [1, 3, 2],
+                        "codecs": [
+                            {
+                                "name": "bytes",
+                                "configuration": {"endian": "little"}
+                            },
+                            {
+                                "name": "blosc",
+                                "configuration": {
+                                    "typesize": 4,
+                                    "cname": "lz4",
+                                    "clevel": 5,
+                                    "shuffle": "shuffle",
+                                    "blocksize": 0
+                                }
+                            }
+                        ],
                         "index_codecs": [
                             {
                                 "name": "bytes",

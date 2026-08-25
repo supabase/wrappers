@@ -176,6 +176,7 @@ services:
       /mc stat s3/warehouse/zarr/e2e.zarr/nested/y/0;
       /mc stat s3/warehouse/zarr/e2e-v3.zarr/zarr.json;
       /mc stat s3/warehouse/zarr/e2e-v3.zarr/CODEC_FIXTURE_MANIFEST.txt;
+      /mc stat s3/warehouse/zarr/e2e-v3.zarr/BLOSC_FIXTURE_MANIFEST.txt;
       /mc stat s3/warehouse/zarr/e2e-v3.zarr/SHARDING_FIXTURE_MANIFEST.txt;
       /mc stat s3/warehouse/zarr/e2e-v3.zarr/nested/zarr.json;
       /mc stat s3/warehouse/zarr/e2e-v3.zarr/nested/raw_default/zarr.json;
@@ -192,6 +193,19 @@ services:
       /mc stat s3/warehouse/zarr/e2e-v3.zarr/nested/bad_gzip/c/0/0/0;
       /mc stat s3/warehouse/zarr/e2e-v3.zarr/nested/oversize/zarr.json;
       /mc stat s3/warehouse/zarr/e2e-v3.zarr/nested/oversize/c/0/0/0;
+      /mc stat s3/warehouse/zarr/e2e-v3.zarr/nested/blosc_v3/zarr.json;
+      /mc stat s3/warehouse/zarr/e2e-v3.zarr/nested/blosc_v3/c/0/0/0;
+      /mc stat s3/warehouse/zarr/e2e-v3.zarr/nested/blosc_v3/c/0/0/1;
+      /mc stat s3/warehouse/zarr/e2e-v3.zarr/nested/blosc_v3/c/0/1/0;
+      /mc stat s3/warehouse/zarr/e2e-v3.zarr/nested/blosc_x/zarr.json;
+      /mc stat s3/warehouse/zarr/e2e-v3.zarr/nested/blosc_x/c/0;
+      /mc stat s3/warehouse/zarr/e2e-v3.zarr/nested/blosc_x/c/1;
+      /mc stat s3/warehouse/zarr/e2e-v3.zarr/nested/blosc_coord_values/zarr.json;
+      /mc stat s3/warehouse/zarr/e2e-v3.zarr/nested/blosc_coord_values/c/0;
+      /mc stat s3/warehouse/zarr/e2e-v3.zarr/nested/blosc_coord_values/c/1;
+      /mc stat s3/warehouse/zarr/e2e-v3.zarr/nested/bad_blosc/zarr.json;
+      /mc stat s3/warehouse/zarr/e2e-v3.zarr/nested/bad_blosc/c/0/0/0;
+      /mc stat s3/warehouse/zarr/e2e-v3.zarr/nested/bad_blosc/c/0/0/1;
       /mc stat s3/warehouse/zarr/e2e-v3.zarr/nested/shard_end/zarr.json;
       /mc stat s3/warehouse/zarr/e2e-v3.zarr/nested/shard_end/c/0/0/0;
       /mc stat s3/warehouse/zarr/e2e-v3.zarr/nested/shard_end/c/0/0/1;
@@ -200,6 +214,10 @@ services:
       /mc stat s3/warehouse/zarr/e2e-v3.zarr/nested/shard_start/c/0/0/0;
       /mc stat s3/warehouse/zarr/e2e-v3.zarr/nested/shard_start/c/0/0/1;
       /mc stat s3/warehouse/zarr/e2e-v3.zarr/nested/shard_start/c/0/1/0;
+      /mc stat s3/warehouse/zarr/e2e-v3.zarr/nested/shard_blosc/zarr.json;
+      /mc stat s3/warehouse/zarr/e2e-v3.zarr/nested/shard_blosc/c/0/0/0;
+      /mc stat s3/warehouse/zarr/e2e-v3.zarr/nested/shard_blosc/c/0/0/1;
+      /mc stat s3/warehouse/zarr/e2e-v3.zarr/nested/shard_blosc/c/0/1/0;
       /mc stat s3/warehouse/zarr/e2e-v3.zarr/nested/shard_sentinel/zarr.json;
       /mc stat s3/warehouse/zarr/e2e-v3.zarr/nested/shard_sentinel/c/0/0/0;
       /mc stat s3/warehouse/zarr/e2e-v3.zarr/nested/shard_bad_index_crc/zarr.json;
@@ -246,12 +264,20 @@ services:
         echo 'unexpected pipeline chunk c/0/1/1 in sparse Zarr v3 fixture';
         exit 1;
       fi;
+      if /mc stat s3/warehouse/zarr/e2e-v3.zarr/nested/blosc_v3/c/0/1/1; then
+        echo 'unexpected Blosc chunk c/0/1/1 in sparse Zarr v3 fixture';
+        exit 1;
+      fi;
       if /mc stat s3/warehouse/zarr/e2e-v3.zarr/nested/shard_end/c/0/1/1; then
         echo 'unexpected end-index shard c/0/1/1 in sparse Zarr v3 fixture';
         exit 1;
       fi;
       if /mc stat s3/warehouse/zarr/e2e-v3.zarr/nested/shard_start/c/0/1/1; then
         echo 'unexpected start-index shard c/0/1/1 in sparse Zarr v3 fixture';
+        exit 1;
+      fi;
+      if /mc stat s3/warehouse/zarr/e2e-v3.zarr/nested/shard_blosc/c/0/1/1; then
+        echo 'unexpected Blosc shard c/0/1/1 in sparse Zarr v3 fixture';
         exit 1;
       fi;
       if /mc stat s3/warehouse/zarr/e2e-ome-v3.zarr/image/x/zarr.json; then
