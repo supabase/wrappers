@@ -350,18 +350,19 @@ impl ShardIndex {
                 "shard index response is missing its object generation",
             )
         })?;
-        if generation.etag.is_empty() {
+        if generation.validator_is_empty() {
             return Err(shard_error(
                 &shard_key,
-                "shard index response has an empty ETag",
+                "shard index response has an empty object-generation validator",
             ));
         }
-        if generation.total_len != response.total_len {
+        if generation.total_len() != response.total_len {
             return Err(shard_error(
                 &shard_key,
                 format!(
                     "shard index generation length {} does not match Content-Range total {}",
-                    generation.total_len, response.total_len
+                    generation.total_len(),
+                    response.total_len
                 ),
             ));
         }
@@ -929,7 +930,7 @@ mod tests {
         RangedObject {
             identity: ReadIdentity::exact("array/c/0/0/0", start, index_len)
                 .unwrap()
-                .with_generation(ObjectGeneration {
+                .with_generation(ObjectGeneration::S3 {
                     etag: "\"etag-1\"".to_string(),
                     version_id: Some("version-observed-only".to_string()),
                     total_len,
@@ -1037,7 +1038,7 @@ mod tests {
                 length: 24
             }
         );
-        assert_eq!(payload.generation.unwrap().etag, "\"etag-1\"");
+        assert_eq!(payload.generation.unwrap().s3_etag(), Some("\"etag-1\""));
     }
 
     #[test]

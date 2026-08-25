@@ -3,13 +3,14 @@
 //! The scan-facing [`ZarrStore`] owns PostgreSQL interruption handling while
 //! backend implementations own format-specific object and directory access.
 
+mod http;
 mod local;
 
+use ::http::Uri;
 use aws_config::BehaviorVersion;
 use aws_sdk_s3 as s3;
 use futures_util::FutureExt;
 use futures_util::future::LocalBoxFuture;
-use http::Uri;
 use pgrx::pg_sys;
 use std::collections::HashMap;
 use std::future::Future;
@@ -20,6 +21,7 @@ use tokio::time::{MissedTickBehavior, interval};
 
 use supabase_wrappers::prelude::*;
 
+use self::http::HttpBackend;
 use self::local::LocalBackend;
 use super::{ZarrFdwError, ZarrFdwResult};
 
@@ -34,6 +36,7 @@ pub(crate) type StoreFuture<T> = LocalBoxFuture<'static, ZarrFdwResult<T>>;
 pub(crate) enum StorageBackendKind {
     S3,
     Local,
+    Http,
 }
 
 impl StorageBackendKind {
@@ -41,12 +44,13 @@ impl StorageBackendKind {
         match self {
             Self::S3 => "s3",
             Self::Local => "local",
+            Self::Http => "http",
         }
     }
 
     pub(crate) fn effective_max_concurrent_reads(self, configured: usize) -> usize {
         match self {
-            Self::S3 => configured,
+            Self::S3 | Self::Http => configured,
             // Local reads are poll-driven foreground file I/O. Scheduling
             // more than one cannot create useful kernel concurrency.
             Self::Local => 1,
@@ -81,26 +85,61 @@ pub(crate) enum ReadRange {
 
 /// Observed identity of one backend object generation.
 ///
-/// For S3, `version_id` is deliberately observational. Follow-up reads use
-/// `If-Match` with the ETag, preserving deployments that grant `s3:GetObject`
-/// but not `s3:GetObjectVersion`. Local validators carry a reserved `local:`
-/// prefix so a generation can never be reused across backend kinds.
+/// S3's `version_id` is deliberately observational. Follow-up S3 and HTTP
+/// reads use `If-Match`; local reads compare a capability-relative file
+/// fingerprint. Variants make cross-backend cache/generation reuse impossible.
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
-pub(crate) struct ObjectGeneration {
-    pub etag: String,
-    pub version_id: Option<String>,
-    pub total_len: u64,
+pub(crate) enum ObjectGeneration {
+    S3 {
+        etag: String,
+        version_id: Option<String>,
+        total_len: u64,
+    },
+    Http {
+        etag: String,
+        total_len: u64,
+    },
+    Local {
+        fingerprint: String,
+        total_len: u64,
+    },
 }
 
 impl ObjectGeneration {
-    /// Preserve the existing S3-shaped fields while making backend mismatch
-    /// rejection explicit. Local validators are tagged and never sent as an
-    /// S3 `If-Match` value.
     pub(crate) fn backend_kind(&self) -> StorageBackendKind {
-        if self.etag.starts_with("local:") {
-            StorageBackendKind::Local
-        } else {
-            StorageBackendKind::S3
+        match self {
+            Self::S3 { .. } => StorageBackendKind::S3,
+            Self::Local { .. } => StorageBackendKind::Local,
+            Self::Http { .. } => StorageBackendKind::Http,
+        }
+    }
+
+    pub(crate) fn total_len(&self) -> u64 {
+        match self {
+            Self::S3 { total_len, .. }
+            | Self::Local { total_len, .. }
+            | Self::Http { total_len, .. } => *total_len,
+        }
+    }
+
+    pub(crate) fn validator_is_empty(&self) -> bool {
+        match self {
+            Self::S3 { etag, .. } | Self::Http { etag, .. } => etag.is_empty(),
+            Self::Local { fingerprint, .. } => fingerprint.is_empty(),
+        }
+    }
+
+    pub(crate) fn s3_etag(&self) -> Option<&str> {
+        match self {
+            Self::S3 { etag, .. } => Some(etag),
+            _ => None,
+        }
+    }
+
+    pub(crate) fn http_etag(&self) -> Option<&str> {
+        match self {
+            Self::Http { etag, .. } => Some(etag),
+            _ => None,
         }
     }
 }
@@ -152,7 +191,7 @@ impl ReadIdentity {
     }
 }
 
-/// One exactly validated S3 range response.
+/// One exactly validated backend range response.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct RangedObject {
     /// Resolved exact range plus the generation observed in the response.
@@ -232,11 +271,13 @@ pub(crate) struct StoreUrl {
 
 impl StoreUrl {
     pub fn parse(s: &str) -> ZarrFdwResult<Self> {
-        let uri = s
-            .parse::<Uri>()
-            .map_err(|_| ZarrFdwError::InvalidStoreUrl(s.to_string()))?;
+        let uri = s.parse::<Uri>().map_err(|_| {
+            ZarrFdwError::InvalidStoreUrl("expected s3://bucket/prefix".to_string())
+        })?;
         if uri.scheme_str() != Some("s3") || uri.host().is_none() {
-            return Err(ZarrFdwError::InvalidStoreUrl(s.to_string()));
+            return Err(ZarrFdwError::InvalidStoreUrl(
+                "expected s3://bucket/prefix".to_string(),
+            ));
         }
         let bucket = uri.host().expect("host checked above").to_owned();
         let prefix = uri.path().trim_matches('/').to_string();
@@ -382,6 +423,8 @@ const S3_ONLY_OPTIONS: &[&str] = &[
     "path_style_url",
 ];
 
+const HTTP_INSECURE_OPTION: &str = "allow_insecure_http";
+
 /// Validate the configured storage scheme and its backend-specific options.
 ///
 /// PostgreSQL privilege checks are deliberately separate: the DDL validator
@@ -392,6 +435,12 @@ pub(crate) fn validate_store_options(
 ) -> ZarrFdwResult<StorageBackendKind> {
     let store_url = require_option("store_url", options)?;
     if store_url.starts_with("s3://") {
+        if options.contains_key(HTTP_INSECURE_OPTION) {
+            return Err(ZarrFdwError::InvalidOptionValue {
+                option: HTTP_INSECURE_OPTION.to_string(),
+                message: "is only valid for http:// stores".to_string(),
+            });
+        }
         StoreUrl::parse(store_url)?;
         validate_auth_options(options)?;
         return Ok(StorageBackendKind::S3);
@@ -407,15 +456,45 @@ pub(crate) fn validate_store_options(
                 message: "is only valid for s3:// stores".to_string(),
             });
         }
+        if options.contains_key(HTTP_INSECURE_OPTION) {
+            return Err(ZarrFdwError::InvalidOptionValue {
+                option: HTTP_INSECURE_OPTION.to_string(),
+                message: "is only valid for http:// stores".to_string(),
+            });
+        }
         return Ok(StorageBackendKind::Local);
     }
-    Err(ZarrFdwError::InvalidStoreUrl(store_url.to_string()))
+    let scheme = store_url
+        .split_once(':')
+        .map(|(scheme, _)| scheme)
+        .unwrap_or_default();
+    if scheme.eq_ignore_ascii_case("https") || scheme.eq_ignore_ascii_case("http") {
+        if let Some(option) = S3_ONLY_OPTIONS
+            .iter()
+            .find(|option| options.contains_key(**option))
+        {
+            return Err(ZarrFdwError::InvalidOptionValue {
+                option: (*option).to_string(),
+                message: "is only valid for s3:// stores".to_string(),
+            });
+        }
+        let allow_insecure_http = boolean_option(options, HTTP_INSECURE_OPTION)?;
+        HttpBackend::validate_url(store_url, allow_insecure_http)?;
+        return Ok(StorageBackendKind::Http);
+    }
+    Err(ZarrFdwError::InvalidStoreUrl(
+        "storage URL scheme is unsupported".to_string(),
+    ))
 }
 
-/// Enforce the `CREATE/ALTER SERVER` privilege boundary for file stores.
+/// Enforce the `CREATE/ALTER SERVER` privilege boundary for trusted stores.
 pub(crate) fn validate_store_definition_privilege(kind: StorageBackendKind) -> ZarrFdwResult<()> {
-    if kind == StorageBackendKind::Local && !unsafe { pg_sys::superuser() } {
-        return Err(ZarrFdwError::FileStoreDefinitionRequiresSuperuser);
+    if !unsafe { pg_sys::superuser() } {
+        return match kind {
+            StorageBackendKind::Local => Err(ZarrFdwError::FileStoreDefinitionRequiresSuperuser),
+            StorageBackendKind::Http => Err(ZarrFdwError::HttpStoreDefinitionRequiresSuperuser),
+            StorageBackendKind::S3 => Ok(()),
+        };
     }
     Ok(())
 }
@@ -427,6 +506,17 @@ fn validate_file_server_owner(server_oid: pg_sys::Oid) -> ZarrFdwResult<()> {
     let server = unsafe { pg_sys::GetForeignServer(server_oid) };
     if server.is_null() || !unsafe { pg_sys::superuser_arg((*server).owner) } {
         return Err(ZarrFdwError::FileStoreOwnerRequiresSuperuser);
+    }
+    Ok(())
+}
+
+fn validate_http_server_owner(server_oid: pg_sys::Oid) -> ZarrFdwResult<()> {
+    if server_oid == pg_sys::Oid::INVALID {
+        return Err(ZarrFdwError::HttpStoreOwnerRequiresSuperuser);
+    }
+    let server = unsafe { pg_sys::GetForeignServer(server_oid) };
+    if server.is_null() || !unsafe { pg_sys::superuser_arg((*server).owner) } {
+        return Err(ZarrFdwError::HttpStoreOwnerRequiresSuperuser);
     }
     Ok(())
 }
@@ -555,6 +645,11 @@ impl ZarrStore {
                 validate_file_server_owner(server.server_oid)?;
                 Arc::new(LocalBackend::new(store_url)?)
             }
+            StorageBackendKind::Http => {
+                validate_http_server_owner(server.server_oid)?;
+                let allow_insecure_http = boolean_option(&server.options, HTTP_INSECURE_OPTION)?;
+                Arc::new(HttpBackend::new(store_url, allow_insecure_http)?)
+            }
         };
 
         Ok(Self { rt, backend })
@@ -571,6 +666,17 @@ impl ZarrStore {
     pub(crate) fn effective_max_concurrent_reads(&self, configured: usize) -> usize {
         self.backend_kind()
             .effective_max_concurrent_reads(configured)
+    }
+
+    /// Fail before any backend request when hierarchy discovery is requested
+    /// from a readable-but-non-listable HTTP store.
+    pub(crate) fn require_listing(&self) -> ZarrFdwResult<()> {
+        if self.backend_kind() == StorageBackendKind::Http {
+            return Err(ZarrFdwError::UnsupportedExecutionFeature(
+                http::HTTP_LISTING_UNSUPPORTED.to_string(),
+            ));
+        }
+        Ok(())
     }
 
     fn build_client(rt: &Runtime, opts: &HashMap<String, String>, auth: ClientAuth) -> s3::Client {
@@ -615,7 +721,7 @@ impl ZarrStore {
     }
 
     /// Create an owned object fetch future suitable for the foreground
-    /// prefetch window. The future owns cloned SDK/url state and therefore
+    /// prefetch window. The future owns cloned backend state and therefore
     /// never borrows the PostgreSQL scan object while it is queued.
     pub fn get_object_optional_owned(
         &self,
@@ -800,7 +906,12 @@ async fn get_object_range_owned(
         .key(&full_key)
         .range(range_header);
     if let Some(generation) = &identity.generation {
-        request = request.if_match(generation.etag.clone());
+        let etag = generation.s3_etag().ok_or_else(|| {
+            ZarrFdwError::InvalidMetadata(
+                "storage object generation belongs to a different backend".to_string(),
+            )
+        })?;
+        request = request.if_match(etag.to_string());
     }
     let resp = match request.send().await {
         Ok(response) => response,
@@ -867,21 +978,22 @@ async fn get_object_range_owned(
             ))
         })?;
     if let Some(expected) = &identity.generation
-        && expected.etag != etag
+        && expected.s3_etag() != Some(etag.as_str())
     {
         return Err(ZarrFdwError::InvalidMetadata(format!(
             "object '{full_key}' changed while reading a shard (response ETag did not match If-Match)"
         )));
     }
     if let Some(expected) = &identity.generation
-        && expected.total_len != content_range.total
+        && expected.total_len() != content_range.total
     {
         return Err(ZarrFdwError::InvalidMetadata(format!(
             "object '{full_key}' changed while reading a shard (Content-Range total {} did not match indexed object length {})",
-            content_range.total, expected.total_len
+            content_range.total,
+            expected.total_len()
         )));
     }
-    let generation = ObjectGeneration {
+    let generation = ObjectGeneration::S3 {
         etag,
         version_id: resp.version_id.clone(),
         total_len: content_range.total,
@@ -925,7 +1037,7 @@ fn validate_nonempty_range(length: u64) -> ZarrFdwResult<()> {
 fn range_length(range: &ReadRange) -> ZarrFdwResult<u64> {
     match range {
         ReadRange::Whole => Err(ZarrFdwError::InvalidMetadata(
-            "whole-object identity cannot be used for an S3 range read".to_string(),
+            "whole-object identity cannot be used for a storage range read".to_string(),
         )),
         ReadRange::Exact { length, .. } | ReadRange::Suffix { length } => {
             validate_nonempty_range(*length)?;
@@ -937,12 +1049,12 @@ fn range_length(range: &ReadRange) -> ZarrFdwResult<u64> {
 fn range_header(range: &ReadRange) -> ZarrFdwResult<String> {
     match range {
         ReadRange::Whole => Err(ZarrFdwError::InvalidMetadata(
-            "whole-object identity cannot be used for an S3 range read".to_string(),
+            "whole-object identity cannot be used for a storage range read".to_string(),
         )),
         ReadRange::Exact { start, length } => {
             validate_nonempty_range(*length)?;
             let end = start.checked_add(length - 1).ok_or_else(|| {
-                ZarrFdwError::InvalidMetadata("S3 byte range end overflows u64".to_string())
+                ZarrFdwError::InvalidMetadata("storage byte range end overflows u64".to_string())
             })?;
             Ok(format!("bytes={start}-{end}"))
         }
@@ -1229,6 +1341,22 @@ mod tests {
             validate_store_options(&options(&[("store_url", "file:///tmp/zarr")])).unwrap(),
             StorageBackendKind::Local
         );
+        assert_eq!(
+            validate_store_options(&options(&[(
+                "store_url",
+                "https://objects.example.test/root.zarr"
+            )]))
+            .unwrap(),
+            StorageBackendKind::Http
+        );
+        assert_eq!(
+            validate_store_options(&options(&[
+                ("store_url", "http://objects.example.test/root.zarr"),
+                ("allow_insecure_http", "true"),
+            ]))
+            .unwrap(),
+            StorageBackendKind::Http
+        );
         let error = validate_store_options(&options(&[
             ("store_url", "file:///tmp/zarr"),
             ("anonymous", "true"),
@@ -1238,12 +1366,37 @@ mod tests {
             error.to_string(),
             "invalid value for option 'anonymous': is only valid for s3:// stores"
         );
-        assert!(validate_store_options(&options(&[("store_url", "https://host/zarr")])).is_err());
+        assert!(
+            validate_store_options(&options(&[(
+                "store_url",
+                "http://objects.example.test/root.zarr"
+            )]))
+            .is_err()
+        );
+        assert!(
+            validate_store_options(&options(&[
+                ("store_url", "https://objects.example.test/root.zarr"),
+                ("anonymous", "true"),
+            ]))
+            .is_err()
+        );
+        let error = validate_store_options(&options(&[(
+            "store_url",
+            "HTTPS://user:secret@objects.example.test/root.zarr",
+        )]))
+        .unwrap_err()
+        .to_string();
+        assert!(!error.contains("user"));
+        assert!(!error.contains("secret"));
     }
 
     #[test]
     fn backend_read_concurrency_is_truthful() {
         assert_eq!(StorageBackendKind::S3.effective_max_concurrent_reads(8), 8);
+        assert_eq!(
+            StorageBackendKind::Http.effective_max_concurrent_reads(8),
+            8
+        );
         assert_eq!(
             StorageBackendKind::Local.effective_max_concurrent_reads(8),
             1
@@ -1252,19 +1405,24 @@ mod tests {
 
     #[test]
     fn generation_backend_tags_are_disjoint() {
-        let s3 = ObjectGeneration {
+        let s3 = ObjectGeneration::S3 {
             etag: "\"etag\"".to_string(),
             version_id: None,
             total_len: 1,
         };
-        let local = ObjectGeneration {
-            etag: "local:1:2:1:3:4:5:6".to_string(),
-            version_id: None,
+        let local = ObjectGeneration::Local {
+            fingerprint: "1:2:1:3:4:5:6".to_string(),
+            total_len: 1,
+        };
+        let http = ObjectGeneration::Http {
+            etag: "\"etag\"".to_string(),
             total_len: 1,
         };
         assert_eq!(s3.backend_kind(), StorageBackendKind::S3);
         assert_eq!(local.backend_kind(), StorageBackendKind::Local);
+        assert_eq!(http.backend_kind(), StorageBackendKind::Http);
         assert_ne!(s3, local);
+        assert_ne!(s3, http);
     }
 
     #[test]

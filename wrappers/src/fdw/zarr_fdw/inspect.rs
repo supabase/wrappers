@@ -238,6 +238,7 @@ fn zarr_multiscales(
 fn inspect_multiscales(server_name: &str) -> ZarrFdwResult<Vec<MultiscaleInspectionRow>> {
     let server = load_foreign_server(server_name)?;
     let store = ZarrStore::new(&server)?;
+    store.require_listing()?;
     inspect_multiscales_store(&store)
 }
 
@@ -874,6 +875,7 @@ fn checked_multiscale_derived_bytes(
 fn inspect_server(server_name: &str) -> ZarrFdwResult<Vec<InspectionRow>> {
     let server = load_foreign_server(server_name)?;
     let store = ZarrStore::new(&server)?;
+    store.require_listing()?;
     inspect_store(&store)
 }
 

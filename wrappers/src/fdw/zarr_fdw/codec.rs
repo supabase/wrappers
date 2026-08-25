@@ -1878,30 +1878,38 @@ mod tests {
             format!("{}", parse_zstd_frame_header(&[1, 2, 3], 1).unwrap_err())
                 .contains("invalid Zstandard frame header")
         );
-        assert!(format!(
-            "{}",
-            parse_zstd_frame_header(&[0, 0, 0, 0, 0, 0], 1).unwrap_err()
-        )
-        .contains("unexpected magic"));
-        assert!(format!(
-            "{}",
-            parse_zstd_frame_header(&ZSTD_FRAME_MAGIC.to_le_bytes(), 1).unwrap_err()
-        )
-        .contains("frame descriptor is missing"));
+        assert!(
+            format!(
+                "{}",
+                parse_zstd_frame_header(&[0, 0, 0, 0, 0, 0], 1).unwrap_err()
+            )
+            .contains("unexpected magic")
+        );
+        assert!(
+            format!(
+                "{}",
+                parse_zstd_frame_header(&ZSTD_FRAME_MAGIC.to_le_bytes(), 1).unwrap_err()
+            )
+            .contains("frame descriptor is missing")
+        );
         let mut truncated_window = ZSTD_FRAME_MAGIC.to_le_bytes().to_vec();
         truncated_window.push(0);
-        assert!(format!(
-            "{}",
-            parse_zstd_frame_header(&truncated_window, 1).unwrap_err()
-        )
-        .contains("window descriptor is missing"));
+        assert!(
+            format!(
+                "{}",
+                parse_zstd_frame_header(&truncated_window, 1).unwrap_err()
+            )
+            .contains("window descriptor is missing")
+        );
         let mut truncated_content_size = ZSTD_FRAME_MAGIC.to_le_bytes().to_vec();
         truncated_content_size.push(0b0010_0000);
-        assert!(format!(
-            "{}",
-            parse_zstd_frame_header(&truncated_content_size, 1).unwrap_err()
-        )
-        .contains("content-size field is truncated"));
+        assert!(
+            format!(
+                "{}",
+                parse_zstd_frame_header(&truncated_content_size, 1).unwrap_err()
+            )
+            .contains("content-size field is truncated")
+        );
     }
 
     #[test]
@@ -1969,8 +1977,10 @@ mod tests {
                 checksum: metadata_checksum,
             };
             let error = decode_zstd(encoded, raw.len(), &config, &mut || false, 1).unwrap_err();
-            assert!(format!("{error}")
-                .contains("Zstandard checksum metadata does not match the frame checksum flag"));
+            assert!(
+                format!("{error}")
+                    .contains("Zstandard checksum metadata does not match the frame checksum flag")
+            );
         }
 
         let mut corrupt = checksummed;
@@ -2017,30 +2027,38 @@ mod tests {
         let mut trailing = frame.clone();
         trailing.push(0);
         let error = decode_zstd(trailing, raw.len(), &config, &mut || false, 1).unwrap_err();
-        assert!(format!("{error}")
-            .contains("concatenated Zstandard frames and trailing bytes are not supported"));
+        assert!(
+            format!("{error}")
+                .contains("concatenated Zstandard frames and trailing bytes are not supported")
+        );
 
         let mut concatenated = frame.clone();
         concatenated.extend_from_slice(&frame);
         let error = decode_zstd(concatenated, raw.len(), &config, &mut || false, 1).unwrap_err();
-        assert!(format!("{error}")
-            .contains("concatenated Zstandard frames and trailing bytes are not supported"));
+        assert!(
+            format!("{error}")
+                .contains("concatenated Zstandard frames and trailing bytes are not supported")
+        );
 
         let mut excessive_window = ZSTD_FRAME_MAGIC.to_le_bytes().to_vec();
         excessive_window.extend_from_slice(&[0b0000_0100, (13 << 3) | 1]);
-        assert!(format!(
-            "{}",
-            decode_zstd(excessive_window, raw.len(), &config, &mut || false, 1).unwrap_err()
-        )
-        .contains("exceeds the 8388608-byte limit"));
+        assert!(
+            format!(
+                "{}",
+                decode_zstd(excessive_window, raw.len(), &config, &mut || false, 1).unwrap_err()
+            )
+            .contains("exceeds the 8388608-byte limit")
+        );
 
         let mut dictionary = ZSTD_FRAME_MAGIC.to_le_bytes().to_vec();
         dictionary.push(0b0000_0101);
-        assert!(format!(
-            "{}",
-            decode_zstd(dictionary, raw.len(), &config, &mut || false, 1).unwrap_err()
-        )
-        .contains("Zstandard dictionaries are not supported"));
+        assert!(
+            format!(
+                "{}",
+                decode_zstd(dictionary, raw.len(), &config, &mut || false, 1).unwrap_err()
+            )
+            .contains("Zstandard dictionaries are not supported")
+        );
     }
 
     #[test]
@@ -2263,10 +2281,11 @@ mod tests {
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(async {
             let raw = CodecPipeline::raw_v2();
-            assert!(raw
-                .decode_interruptible(vec![1, 2, 3], &[2], 1, || false)
-                .await
-                .is_err());
+            assert!(
+                raw.decode_interruptible(vec![1, 2, 3], &[2], 1, || false)
+                    .await
+                    .is_err()
+            );
             assert_eq!(
                 raw.decode_interruptible(vec![1, 2], &[2], 1, || true)
                     .await
@@ -2292,8 +2311,10 @@ mod tests {
                 CodecDecode::Interrupted
             );
         });
-        assert!(CodecPipeline::raw_v2()
-            .encoded_read_limit(MAX_DECODED_CHUNK_BYTES + 1)
-            .is_err());
+        assert!(
+            CodecPipeline::raw_v2()
+                .encoded_read_limit(MAX_DECODED_CHUNK_BYTES + 1)
+                .is_err()
+        );
     }
 }

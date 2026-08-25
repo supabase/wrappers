@@ -96,6 +96,25 @@ services:
       timeout: 5s
       retries: 3
 
+  zarr-http:
+    container_name: zarr-http
+    build:
+      context: ../dockerfiles/zarr-http
+    environment:
+      - ZARR_HTTP_FIXTURE_ROOT=/fixtures
+    volumes:
+      - ../dockerfiles/s3/test_data/zarr:/fixtures:ro
+    ports:
+      - "127.0.0.1:8787:8787"
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8787/__health', timeout=2).read()"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
   s3:
     image: minio/minio
     container_name: s3
@@ -141,6 +160,8 @@ services:
   s3-init:
     depends_on:
       iceberg-rest:
+        condition: service_healthy
+      zarr-http:
         condition: service_healthy
     container_name: s3-init
     build:

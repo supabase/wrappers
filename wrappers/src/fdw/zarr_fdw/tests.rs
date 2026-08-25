@@ -214,6 +214,92 @@ mod tests {
         .unwrap();
     }
 
+    fn create_http_e2e_wrapper() {
+        Spi::run(
+            r#"CREATE FOREIGN DATA WRAPPER zarr_http_e2e_wrapper
+                 HANDLER zarr_fdw_handler VALIDATOR zarr_fdw_validator"#,
+        )
+        .unwrap();
+    }
+
+    fn create_http_e2e_server(server: &str, case: &str, mode: &str, fixture: &str) {
+        let store_url = format!("http://127.0.0.1:8787/stores/{case}/{mode}/{fixture}");
+        Spi::run(&format!(
+            r#"CREATE SERVER {server}
+                 FOREIGN DATA WRAPPER zarr_http_e2e_wrapper
+                 OPTIONS (
+                   store_url '{store_url}',
+                   allow_insecure_http 'true'
+                 )"#
+        ))
+        .unwrap();
+    }
+
+    fn create_http_time_y_x_table(table: &str, server: &str, array_group: &str, decode_cf: bool) {
+        let (value_type, decode_option) = if decode_cf {
+            (
+                "double precision",
+                ",\n                         decode_cf 'true'",
+            )
+        } else {
+            ("real", "")
+        };
+        Spi::run(&format!(
+            r#"CREATE FOREIGN TABLE {table} (
+                 time timestamp with time zone,
+                 y double precision,
+                 x double precision,
+                 value {value_type}
+               )
+               SERVER {server}
+               OPTIONS (
+                 array_group '{array_group}',
+                 time_from_attrs 'true'{decode_option}
+               )"#
+        ))
+        .unwrap();
+    }
+
+    fn create_http_ome_table(table: &str, server: &str, level: usize) {
+        Spi::run(&format!(
+            r#"CREATE FOREIGN TABLE {table} (
+                 y double precision,
+                 x double precision,
+                 value real
+               )
+               SERVER {server}
+               OPTIONS (
+                 multiscale_group 'image',
+                 multiscale_index '0',
+                 multiscale_level '{level}'
+               )"#
+        ))
+        .unwrap();
+    }
+
+    fn http_case_stats(case: &str) -> serde_json::Value {
+        use std::io::{Read, Write};
+
+        let mut stream = std::net::TcpStream::connect(("127.0.0.1", 8787)).unwrap();
+        stream
+            .set_read_timeout(Some(std::time::Duration::from_secs(2)))
+            .unwrap();
+        write!(
+            stream,
+            "GET /__stats/{case} HTTP/1.1\r\nHost: 127.0.0.1:8787\r\nConnection: close\r\n\r\n"
+        )
+        .unwrap();
+        let mut response = Vec::new();
+        stream.read_to_end(&mut response).unwrap();
+        let separator = response
+            .windows(4)
+            .position(|window| window == b"\r\n\r\n")
+            .expect("HTTP stats response must contain a header terminator");
+        let headers = std::str::from_utf8(&response[..separator]).unwrap();
+        assert!(headers.starts_with("HTTP/1.1 200 "), "response: {headers}");
+        serde_json::from_slice(&response[separator + 4..]).unwrap()
+    }
+
     fn capture_query_error(statement: &str) -> String {
         Spi::connect_mut(|c| {
             c.update(
@@ -224,7 +310,9 @@ mod tests {
                      BEGIN
                        EXECUTE statement;
                        RETURN NULL;
-                     EXCEPTION WHEN OTHERS THEN
+                     EXCEPTION WHEN query_canceled THEN
+                       RETURN SQLERRM;
+                     WHEN OTHERS THEN
                        RETURN SQLERRM;
                      END
                      $function$"#,
@@ -1201,6 +1289,709 @@ mod tests {
             plan.iter().any(|line| line.contains("Foreign Scan")),
             "plan: {plan:?}"
         );
+    }
+
+    #[pg_test]
+    fn zarr_http_validator_requires_insecure_opt_in() {
+        create_http_e2e_wrapper();
+        for (statement, expected) in [
+            (
+                r#"CREATE SERVER zarr_http_missing_opt_in
+                     FOREIGN DATA WRAPPER zarr_http_e2e_wrapper
+                     OPTIONS (store_url 'http://127.0.0.1:8787/root.zarr')"#,
+                "invalid value for option 'allow_insecure_http': must be 'true' for http:// stores",
+            ),
+            (
+                r#"CREATE SERVER zarr_https_bad_opt_in
+                     FOREIGN DATA WRAPPER zarr_http_e2e_wrapper
+                     OPTIONS (
+                       store_url 'https://datasets.example.test/root.zarr',
+                       allow_insecure_http 'true'
+                     )"#,
+                "invalid value for option 'allow_insecure_http': may be 'true' only for http:// stores",
+            ),
+            (
+                r#"CREATE SERVER zarr_http_credentials
+                     FOREIGN DATA WRAPPER zarr_http_e2e_wrapper
+                     OPTIONS (
+                       store_url 'http://user:secret@127.0.0.1:8787/root.zarr',
+                       allow_insecure_http 'true'
+                     )"#,
+                "credentials, query, and fragment are not allowed",
+            ),
+            (
+                r#"CREATE SERVER zarr_http_s3_auth
+                     FOREIGN DATA WRAPPER zarr_http_e2e_wrapper
+                     OPTIONS (
+                       store_url 'http://127.0.0.1:8787/root.zarr',
+                       allow_insecure_http 'true',
+                       anonymous 'true'
+                     )"#,
+                "invalid value for option 'anonymous': is only valid for s3:// stores",
+            ),
+        ] {
+            let message = capture_query_error(statement);
+            assert!(message.contains(expected), "message: {message}");
+        }
+        Spi::run(
+            r#"CREATE SERVER zarr_https_default
+                 FOREIGN DATA WRAPPER zarr_http_e2e_wrapper
+                 OPTIONS (store_url 'https://datasets.example.test/root.zarr')"#,
+        )
+        .unwrap();
+    }
+
+    #[pg_test]
+    fn zarr_http_v2_sparse_cf_aggregate_and_anonymous_transport_e2e() {
+        create_http_e2e_wrapper();
+        create_http_e2e_server(
+            "zarr_http_v2_server",
+            "v2_transport",
+            "anonymous_only",
+            "e2e.zarr",
+        );
+        create_http_time_y_x_table(
+            "zarr_http_v2_raw",
+            "zarr_http_v2_server",
+            "nested/raw",
+            false,
+        );
+        create_http_time_y_x_table("zarr_http_v2_cf", "zarr_http_v2_server", "nested/raw", true);
+        assert_sparse_cube_cf_aggregate("zarr_http_v2_cf");
+
+        Spi::connect(|c| {
+            let summary = c
+                .select(
+                    r#"SELECT count(*) AS total_count,
+                              count(value) AS value_count,
+                              sum(value)::double precision AS value_sum,
+                              min(value)::double precision AS value_min,
+                              max(value)::double precision AS value_max,
+                              count(*) FILTER (WHERE value = -7.5) AS fill_count
+                         FROM zarr_http_v2_raw"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(
+                summary.get_by_name::<i64, _>("total_count").unwrap(),
+                Some(60)
+            );
+            assert_eq!(
+                summary.get_by_name::<i64, _>("value_count").unwrap(),
+                Some(60)
+            );
+            assert_eq!(
+                summary.get_by_name::<f64, _>("value_sum").unwrap(),
+                Some(3_574.0)
+            );
+            assert_eq!(
+                summary.get_by_name::<f64, _>("value_min").unwrap(),
+                Some(-7.5)
+            );
+            assert_eq!(
+                summary.get_by_name::<f64, _>("value_max").unwrap(),
+                Some(143.0)
+            );
+            assert_eq!(
+                summary.get_by_name::<i64, _>("fill_count").unwrap(),
+                Some(8)
+            );
+
+            let raw = c
+                .select(
+                    r#"SELECT value
+                         FROM zarr_http_v2_raw
+                        WHERE time = '1970-01-01 00:00:00+00'::timestamptz
+                          AND y = 20
+                          AND x = 110"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap()
+                .get_by_name::<f32, _>("value")
+                .unwrap();
+            assert_eq!(raw, Some(11.0));
+
+            let decoded = c
+                .select(
+                    r#"SELECT value
+                         FROM zarr_http_v2_cf
+                        WHERE time = '1970-01-01 00:00:00+00'::timestamptz
+                          AND y = 20
+                          AND x = 110"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap()
+                .get_by_name::<f64, _>("value")
+                .unwrap()
+                .unwrap();
+            assert!((decoded - 273.26).abs() < 1e-10);
+
+            let plan = c
+                .select(
+                    r#"EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+                       SELECT count(*), sum(value)
+                         FROM zarr_http_v2_raw"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|row| row.get::<&str>(1).unwrap().map(str::to_string))
+                .collect::<Vec<_>>();
+            let has = |text: &str| plan.iter().any(|line| line.contains(text));
+            assert!(has("Zarr Storage Backend: http"), "plan: {plan:?}");
+            assert!(has("Zarr Max Concurrent Reads: 4"), "plan: {plan:?}");
+            assert!(has("Zarr Chunks Selected: 4"), "plan: {plan:?}");
+            assert!(has("Zarr Chunks Requested: 4"), "plan: {plan:?}");
+            assert!(has("Zarr Chunks Present: 3"), "plan: {plan:?}");
+            assert!(has("Zarr Chunks Missing: 1"), "plan: {plan:?}");
+            assert!(has("Zarr Data GET Calls: 4"), "plan: {plan:?}");
+            assert!(has("Zarr Data Encoded Bytes: 288 bytes"), "plan: {plan:?}");
+            assert!(
+                has("Zarr Fill Bytes Synthesized: 96 bytes"),
+                "plan: {plan:?}"
+            );
+        });
+
+        let stats = http_case_stats("v2_transport");
+        assert_eq!(stats["forbidden_header_gets"], serde_json::json!(0));
+        let encodings = stats["accept_encodings"].as_object().unwrap();
+        assert_eq!(encodings.len(), 1, "stats: {stats}");
+        assert!(
+            encodings
+                .get("identity")
+                .and_then(serde_json::Value::as_u64)
+                .is_some_and(|count| count > 0),
+            "stats: {stats}"
+        );
+    }
+
+    #[pg_test]
+    fn zarr_http_v3_direct_coordinate_aggregate_and_ome_e2e() {
+        create_http_e2e_wrapper();
+        create_http_e2e_server("zarr_http_v3_server", "v3_direct", "plain", "e2e-v3.zarr");
+        create_http_time_y_x_table(
+            "zarr_http_v3_direct",
+            "zarr_http_v3_server",
+            "nested/raw_default",
+            false,
+        );
+        create_http_e2e_server(
+            "zarr_http_ome_server",
+            "ome_explicit",
+            "plain",
+            "e2e-ome-v3.zarr",
+        );
+        create_http_ome_table("zarr_http_ome_level1", "zarr_http_ome_server", 1);
+
+        Spi::connect(|c| {
+            let summary = c
+                .select(
+                    r#"SELECT count(*) AS cells,
+                              sum(value)::double precision AS value_sum,
+                              min(value)::double precision AS value_min,
+                              max(value)::double precision AS value_max,
+                              count(*) FILTER (WHERE value = -7.5) AS fill_count
+                         FROM zarr_http_v3_direct"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(summary.get_by_name::<i64, _>("cells").unwrap(), Some(60));
+            assert_eq!(
+                summary.get_by_name::<f64, _>("value_sum").unwrap(),
+                Some(3_574.0)
+            );
+            assert_eq!(
+                summary.get_by_name::<f64, _>("value_min").unwrap(),
+                Some(-7.5)
+            );
+            assert_eq!(
+                summary.get_by_name::<f64, _>("value_max").unwrap(),
+                Some(143.0)
+            );
+            assert_eq!(
+                summary.get_by_name::<i64, _>("fill_count").unwrap(),
+                Some(8)
+            );
+
+            let plan = c
+                .select(
+                    r#"EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+                       SELECT value
+                         FROM zarr_http_v3_direct
+                        WHERE time = '1970-01-01 00:00:00+00'::timestamptz
+                          AND y = 20
+                          AND x = 110"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|row| row.get::<&str>(1).unwrap().map(str::to_string))
+                .collect::<Vec<_>>();
+            let has = |text: &str| plan.iter().any(|line| line.contains(text));
+            assert!(has("Zarr Storage Backend: http"), "plan: {plan:?}");
+            assert!(has("Zarr Chunks Selected: 1"), "plan: {plan:?}");
+            assert!(has("Zarr Chunks Coordinate-Pruned: 3"), "plan: {plan:?}");
+            assert!(has("Zarr Coordinate GET Calls: 5"), "plan: {plan:?}");
+            assert!(
+                has("Zarr Coordinate Encoded Bytes: 128 bytes"),
+                "plan: {plan:?}"
+            );
+            assert!(has("Zarr Data GET Calls: 1"), "plan: {plan:?}");
+            assert!(has("Zarr Data Encoded Bytes: 96 bytes"), "plan: {plan:?}");
+
+            let level1 = c
+                .select(
+                    "SELECT y, x, value FROM zarr_http_ome_level1 ORDER BY y, x",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .map(|row| {
+                    (
+                        row.get_by_name::<f64, _>("y").unwrap().unwrap(),
+                        row.get_by_name::<f64, _>("x").unwrap().unwrap(),
+                        row.get_by_name::<f32, _>("value").unwrap().unwrap(),
+                    )
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                level1,
+                vec![
+                    (122.0, 266.0, 2.5),
+                    (122.0, 290.0, 4.5),
+                    (130.0, 266.0, 10.5),
+                    (130.0, 290.0, 12.5),
+                ]
+            );
+        });
+    }
+
+    #[pg_test]
+    fn zarr_http_v3_sharding_range_etag_rescan_cache_e2e() {
+        create_http_e2e_wrapper();
+        create_http_e2e_server(
+            "zarr_http_shard_values_server",
+            "shard_values",
+            "plain",
+            "e2e-v3.zarr",
+        );
+        create_http_time_y_x_table(
+            "zarr_http_shard_values",
+            "zarr_http_shard_values_server",
+            "nested/shard_end",
+            false,
+        );
+        create_http_e2e_server(
+            "zarr_http_shard_rescan_server",
+            "shard_rescan",
+            "plain",
+            "e2e-v3.zarr",
+        );
+        create_http_time_y_x_table(
+            "zarr_http_shard_rescan",
+            "zarr_http_shard_rescan_server",
+            "nested/shard_end",
+            false,
+        );
+
+        Spi::connect(|c| {
+            let values = c
+                .select(
+                    r#"SELECT x, value
+                         FROM zarr_http_shard_values
+                        WHERE time = '1970-01-01 00:00:00+00'::timestamptz
+                          AND y = 20
+                          AND x BETWEEN 110 AND 130
+                        ORDER BY x"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .map(|row| {
+                    (
+                        row.get_by_name::<f64, _>("x").unwrap().unwrap(),
+                        row.get_by_name::<f32, _>("value").unwrap().unwrap(),
+                    )
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(values, vec![(110.0, 11.0), (120.0, 12.0), (130.0, 13.0)]);
+
+            let plan = c
+                .select(
+                    r#"EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+                       SELECT ordinal,
+                              (SELECT count(*)
+                                 FROM zarr_http_shard_rescan
+                                WHERE time = '1970-01-01 00:00:00+00'::timestamptz
+                                  AND y = 20
+                                  AND x BETWEEN 110 AND upper_x) AS selected
+                         FROM (VALUES (1, 130.0::double precision),
+                                      (2, 130.0::double precision)) AS limits(ordinal, upper_x)
+                        ORDER BY ordinal"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|row| row.get::<&str>(1).unwrap().map(str::to_string))
+                .collect::<Vec<_>>();
+            let has = |text: &str| plan.iter().any(|line| line.contains(text));
+            assert!(has("Zarr Storage Backend: http"), "plan: {plan:?}");
+            assert!(
+                has("Zarr Storage Layout: sharding_indexed (index: end)"),
+                "plan: {plan:?}"
+            );
+            assert!(has("Zarr Chunks Requested: 4"), "plan: {plan:?}");
+            assert!(has("Zarr Chunks Present: 4"), "plan: {plan:?}");
+            assert!(has("Zarr Data GET Calls: 3"), "plan: {plan:?}");
+            assert!(has("Zarr Data Encoded Bytes: 116 bytes"), "plan: {plan:?}");
+            assert!(has("Zarr Cache Hits: 2"), "plan: {plan:?}");
+            assert!(has("Zarr Cache Misses: 2"), "plan: {plan:?}");
+            assert!(has("Zarr Shard Index GET Calls: 1"), "plan: {plan:?}");
+            assert!(has("Zarr Shard Payload GET Calls: 2"), "plan: {plan:?}");
+            assert!(has("Zarr Shard Index Cache Hits: 3"), "plan: {plan:?}");
+            assert!(has("Zarr Shard Index Cache Misses: 1"), "plan: {plan:?}");
+            assert!(has("Zarr Rescans: 1"), "plan: {plan:?}");
+        });
+
+        let stats = http_case_stats("shard_rescan");
+        assert_eq!(
+            stats["ranges"],
+            serde_json::json!({
+                "bytes=-68": 1,
+                "bytes=0-23": 1,
+                "bytes=48-71": 1
+            }),
+            "stats: {stats}"
+        );
+        assert_eq!(
+            stats["if_matches"],
+            serde_json::json!({
+                "\"711994c2fd69ffddd195ff57991d85b98faba365038f6e451a3e0c6f437d5bd4\"": 2
+            }),
+            "stats: {stats}"
+        );
+    }
+
+    #[pg_test]
+    fn zarr_http_privileges_delegated_usage_and_owner_guard_e2e() {
+        create_http_e2e_wrapper();
+        Spi::run(
+            r#"CREATE ROLE zarr_http_reader NOSUPERUSER;
+               GRANT USAGE ON FOREIGN DATA WRAPPER zarr_http_e2e_wrapper
+                 TO zarr_http_reader;
+               SET ROLE zarr_http_reader"#,
+        )
+        .unwrap();
+        let create_error = capture_query_error(
+            r#"CREATE SERVER zarr_http_forbidden
+                 FOREIGN DATA WRAPPER zarr_http_e2e_wrapper
+                 OPTIONS (
+                   store_url 'http://127.0.0.1:8787/stores/forbidden/plain/e2e.zarr',
+                   allow_insecure_http 'true'
+                 )"#,
+        );
+        assert!(
+            create_error.contains(
+                "HTTP(S) Zarr stores may only be created or altered by a PostgreSQL superuser"
+            ),
+            "message: {create_error}"
+        );
+        Spi::run("RESET ROLE").unwrap();
+
+        create_http_e2e_server(
+            "zarr_http_delegated_server",
+            "delegated",
+            "anonymous_only",
+            "e2e.zarr",
+        );
+        create_http_time_y_x_table(
+            "zarr_http_delegated",
+            "zarr_http_delegated_server",
+            "nested/raw",
+            false,
+        );
+        Spi::run(
+            r#"GRANT USAGE ON FOREIGN SERVER zarr_http_delegated_server
+                 TO zarr_http_reader;
+               GRANT SELECT ON zarr_http_delegated TO zarr_http_reader;
+               GRANT SELECT, INSERT, UPDATE ON public.wrappers_fdw_stats
+                 TO zarr_http_reader;
+               SET ROLE zarr_http_reader"#,
+        )
+        .unwrap();
+        let value = Spi::get_one::<f32>(
+            r#"SELECT value
+                 FROM zarr_http_delegated
+                WHERE time = '1970-01-01 00:00:00+00'::timestamptz
+                  AND y = 20
+                  AND x = 110"#,
+        )
+        .unwrap();
+        assert_eq!(value, Some(11.0));
+        Spi::run("RESET ROLE").unwrap();
+
+        let stats = http_case_stats("delegated");
+        assert_eq!(stats["forbidden_header_gets"], serde_json::json!(0));
+
+        Spi::run("ALTER SERVER zarr_http_delegated_server OWNER TO zarr_http_reader").unwrap();
+        Spi::run("SET ROLE zarr_http_reader").unwrap();
+        let alter_error = capture_query_error(
+            "ALTER SERVER zarr_http_delegated_server OPTIONS (ADD max_concurrent_reads '2')",
+        );
+        assert!(
+            alter_error.contains(
+                "HTTP(S) Zarr stores may only be created or altered by a PostgreSQL superuser"
+            ),
+            "message: {alter_error}"
+        );
+        let runtime_error = capture_query_error(
+            r#"SELECT value
+                 FROM zarr_http_delegated
+                WHERE time = '1970-01-01 00:00:00+00'::timestamptz
+                  AND y = 20
+                  AND x = 110"#,
+        );
+        assert!(
+            runtime_error.contains(
+                "HTTP(S) Zarr store foreign server must be owned by a PostgreSQL superuser"
+            ),
+            "message: {runtime_error}"
+        );
+        Spi::run("RESET ROLE").unwrap();
+    }
+
+    #[pg_test]
+    fn zarr_http_plain_explain_and_listing_fail_without_object_io_e2e() {
+        create_http_e2e_wrapper();
+        create_http_e2e_server(
+            "zarr_http_explain_server",
+            "explain_zero",
+            "deny_all",
+            "e2e.zarr",
+        );
+        create_http_time_y_x_table(
+            "zarr_http_explain",
+            "zarr_http_explain_server",
+            "nested/raw",
+            false,
+        );
+        create_http_e2e_server(
+            "zarr_http_inspect_server",
+            "inspect_zero",
+            "deny_all",
+            "e2e.zarr",
+        );
+        create_http_e2e_server(
+            "zarr_http_multiscales_server",
+            "multiscales_zero",
+            "deny_all",
+            "e2e-ome-v3.zarr",
+        );
+
+        let plan = explain_lines("SELECT * FROM zarr_http_explain");
+        assert!(
+            plan.iter().any(|line| line.contains("Foreign Scan")),
+            "plan: {plan:?}"
+        );
+        assert_eq!(
+            http_case_stats("explain_zero")["object_gets"],
+            serde_json::json!(0)
+        );
+
+        let inspect_error =
+            capture_query_error("SELECT * FROM zarr_inspect('zarr_http_inspect_server')");
+        assert!(
+            inspect_error.contains(
+                "HTTP(S) Zarr stores do not support hierarchy listing; configure an explicit array path or OME multiscale selection"
+            ),
+            "message: {inspect_error}"
+        );
+        assert_eq!(
+            http_case_stats("inspect_zero")["object_gets"],
+            serde_json::json!(0)
+        );
+
+        let multiscales_error =
+            capture_query_error("SELECT * FROM zarr_multiscales('zarr_http_multiscales_server')");
+        assert!(
+            multiscales_error.contains(
+                "HTTP(S) Zarr stores do not support hierarchy listing; configure an explicit array path or OME multiscale selection"
+            ),
+            "message: {multiscales_error}"
+        );
+        assert_eq!(
+            http_case_stats("multiscales_zero")["object_gets"],
+            serde_json::json!(0)
+        );
+    }
+
+    #[pg_test]
+    fn zarr_http_redirect_and_oversize_responses_fail_closed_e2e() {
+        create_http_e2e_wrapper();
+        create_http_e2e_server(
+            "zarr_http_redirect_server",
+            "redirect_rejected",
+            "redirect_chunk",
+            "e2e.zarr",
+        );
+        create_http_time_y_x_table(
+            "zarr_http_redirect",
+            "zarr_http_redirect_server",
+            "nested/raw",
+            false,
+        );
+        create_http_e2e_server(
+            "zarr_http_oversize_server",
+            "oversize_rejected",
+            "oversize_metadata",
+            "e2e.zarr",
+        );
+        create_http_time_y_x_table(
+            "zarr_http_oversize",
+            "zarr_http_oversize_server",
+            "nested/raw",
+            false,
+        );
+
+        let redirect_error = capture_query_error(
+            r#"SELECT value
+                 FROM zarr_http_redirect
+                WHERE time = '1970-01-01 00:00:00+00'::timestamptz
+                  AND y = 20
+                  AND x = 110"#,
+        );
+        assert!(
+            redirect_error.contains("nested/raw/0.0.0")
+                && redirect_error.contains("redirect response was rejected"),
+            "message: {redirect_error}"
+        );
+        assert_eq!(
+            http_case_stats("redirect_rejected")["redirect_sink_gets"],
+            serde_json::json!(0)
+        );
+
+        let oversize_error = capture_query_error("SELECT value FROM zarr_http_oversize LIMIT 1");
+        assert!(
+            oversize_error.contains("nested/raw/.zarray")
+                && oversize_error
+                    .contains("object length 1048577 exceeds the read limit of 1048576 bytes"),
+            "message: {oversize_error}"
+        );
+    }
+
+    #[pg_test]
+    fn zarr_http_range_and_generation_failures_are_explicit_e2e() {
+        create_http_e2e_wrapper();
+        for (server, table, case, mode, expected) in [
+            (
+                "zarr_http_range_200_server",
+                "zarr_http_range_200",
+                "range_200_rejected",
+                "range_200",
+                "range response returned status 200; server ignored Range",
+            ),
+            (
+                "zarr_http_bad_range_server",
+                "zarr_http_bad_range",
+                "bad_content_range_rejected",
+                "bad_content_range",
+                "invalid Content-Range",
+            ),
+            (
+                "zarr_http_no_etag_server",
+                "zarr_http_no_etag",
+                "missing_etag_rejected",
+                "no_etag",
+                "range response omitted strong ETag required for shard consistency",
+            ),
+            (
+                "zarr_http_mutated_server",
+                "zarr_http_mutated",
+                "mutation_rejected",
+                "mutate_shard",
+                "changed while reading a shard: generation-conditioned object is missing or If-Match failed",
+            ),
+        ] {
+            create_http_e2e_server(server, case, mode, "e2e-v3.zarr");
+            create_http_time_y_x_table(table, server, "nested/shard_end", false);
+            let message = capture_query_error(&format!(
+                r#"SELECT value
+                     FROM {table}
+                    WHERE time = '1970-01-01 00:00:00+00'::timestamptz
+                      AND y = 20
+                      AND x = 110"#
+            ));
+            assert!(
+                message.contains("nested/shard_end/c/0/0/0"),
+                "message: {message}"
+            );
+            assert!(message.contains(expected), "message: {message}");
+        }
+
+        let mutation = http_case_stats("mutation_rejected");
+        assert_eq!(
+            mutation["ranges"],
+            serde_json::json!({"bytes=-68": 1, "bytes=0-23": 1}),
+            "stats: {mutation}"
+        );
+        assert_eq!(
+            mutation["if_matches"],
+            serde_json::json!({"\"generation-a\"": 1}),
+            "stats: {mutation}"
+        );
+    }
+
+    #[pg_test]
+    fn zarr_http_stalled_body_honors_statement_timeout_e2e() {
+        // `SET statement_timeout` inside this pg_test would be too late: the
+        // outer test statement has already started. Arm PostgreSQL's existing
+        // statement-timeout handler directly so it fires while reqwest is
+        // awaiting the stalled body.
+        unsafe extern "C" {
+            fn enable_timeout_after(id: std::ffi::c_int, delay_ms: std::ffi::c_int);
+            fn disable_timeout(id: std::ffi::c_int, keep_indicator: bool);
+        }
+        const STATEMENT_TIMEOUT_ID: std::ffi::c_int = 3;
+
+        create_http_e2e_wrapper();
+        create_http_e2e_server(
+            "zarr_http_stall_server",
+            "stalled_body",
+            "stall_chunk",
+            "e2e.zarr",
+        );
+        create_http_time_y_x_table(
+            "zarr_http_stall",
+            "zarr_http_stall_server",
+            "nested/raw",
+            false,
+        );
+        unsafe { enable_timeout_after(STATEMENT_TIMEOUT_ID, 1_500) };
+        let message = capture_query_error(
+            r#"SELECT value
+                 FROM zarr_http_stall
+                WHERE time = '1970-01-01 00:00:00+00'::timestamptz
+                  AND y = 20
+                  AND x = 110"#,
+        );
+        unsafe { disable_timeout(STATEMENT_TIMEOUT_ID, false) };
+        assert!(
+            message.contains("canceling statement due to statement timeout"),
+            "message: {message}"
+        );
+        assert_eq!(Spi::get_one::<i32>("SELECT 1").unwrap(), Some(1));
     }
 
     #[pg_test]

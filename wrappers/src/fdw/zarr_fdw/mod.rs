@@ -57,6 +57,12 @@ enum ZarrFdwError {
     #[error("file:// Zarr store foreign server must be owned by a PostgreSQL superuser")]
     FileStoreOwnerRequiresSuperuser,
 
+    #[error("HTTP(S) Zarr stores may only be created or altered by a PostgreSQL superuser")]
+    HttpStoreDefinitionRequiresSuperuser,
+
+    #[error("HTTP(S) Zarr store foreign server must be owned by a PostgreSQL superuser")]
+    HttpStoreOwnerRequiresSuperuser,
+
     #[error("invalid file:// Zarr store URL: {0}")]
     InvalidFileStoreUrl(String),
 
@@ -65,6 +71,15 @@ enum ZarrFdwError {
 
     #[error("local storage access failed for object '{key}': {message}")]
     LocalStorageAccess { key: String, message: String },
+
+    #[error("invalid HTTP(S) Zarr store URL: {0}")]
+    InvalidHttpStoreUrl(String),
+
+    #[error("HTTP storage key is invalid: {0}")]
+    InvalidHttpStorageKey(String),
+
+    #[error("HTTP storage request for object '{key}' failed: {category}")]
+    HttpStorageAccess { key: String, category: &'static str },
 
     #[error("data type '{0}' is not supported")]
     UnsupportedDataType(String),
@@ -138,7 +153,9 @@ impl From<ZarrFdwError> for ErrorReport {
     fn from(value: ZarrFdwError) -> Self {
         let code = match &value {
             ZarrFdwError::FileStoreDefinitionRequiresSuperuser
-            | ZarrFdwError::FileStoreOwnerRequiresSuperuser => {
+            | ZarrFdwError::FileStoreOwnerRequiresSuperuser
+            | ZarrFdwError::HttpStoreDefinitionRequiresSuperuser
+            | ZarrFdwError::HttpStoreOwnerRequiresSuperuser => {
                 PgSqlErrorCode::ERRCODE_INSUFFICIENT_PRIVILEGE
             }
             ZarrFdwError::InvalidCrs { .. } | ZarrFdwError::InvalidGeometry(_) => {

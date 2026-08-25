@@ -10,9 +10,10 @@ tags:
 # Zarr
 
 The Zarr Wrapper provides read-only access to Zarr v2 arrays and a core subset
-of Zarr v3 arrays in S3-compatible object storage or a secured local filesystem
-directory. A scan reads one rank-1 through rank-64 value array whose named
-dimensions resolve to sibling coordinate arrays.
+of Zarr v3 arrays in S3-compatible object storage, trusted anonymous HTTP(S)
+object stores, or a secured local filesystem directory. A scan reads one
+rank-1 through rank-64 value array whose named dimensions resolve to sibling
+coordinate arrays.
 
 ## Enable the wrapper
 
@@ -68,6 +69,50 @@ fill-value behavior; permission, file-type, containment, and mutation failures
 are errors rather than missing chunks. Errors identify store-relative object
 keys without exposing the ambient filesystem root.
 
+A trusted server that exposes Zarr objects as ordinary anonymous HTTPS `GET`
+requests can be used directly:
+
+```sql
+create server https_zarr_server
+  foreign data wrapper zarr_wrapper
+  options (
+    store_url 'https://datasets.example.org/climate.zarr'
+  );
+```
+
+HTTP(S) store URLs require a host and may contain a port and path, but not
+userinfo, credentials, a query, or a fragment. S3 authentication, endpoint,
+region, and path-style options cannot be used. The backend does not send
+authorization headers or cookies, follow redirects, use ambient HTTP proxies,
+retry requests, or transparently decode HTTP content encodings. Requests use
+`Accept-Encoding: identity`, and any non-identity response encoding is an
+error. Creating or altering an HTTP(S) Zarr server requires a PostgreSQL
+superuser, and its foreign-server owner must remain a superuser. Grant fixed
+servers to readers with PostgreSQL `USAGE` and `SELECT` privileges.
+
+HTTPS is required by default and uses normal certificate and hostname
+verification. Plain HTTP is unencrypted and must be enabled explicitly only
+for a trusted network or local test server:
+
+```sql
+create server insecure_test_zarr_server
+  foreign data wrapper zarr_wrapper
+  options (
+    store_url 'http://127.0.0.1:8787/climate.zarr',
+    allow_insecure_http 'true'
+  );
+```
+
+An HTTP object server must return `200` for a complete object and `404` only
+when that object is absent. Missing chunks then retain normal Zarr fill-value
+behavior; redirects and every other status are errors. Indexed Zarr v3 shards
+additionally require single byte-range `GET` support with exact `206`,
+`Content-Range`, an exact `Content-Length` when that header is present, and a
+quoted strong `ETag`. Payload ranges use `If-Match`; a missing, changed, or
+unsatisfiable conditioned object fails instead of combining two shard
+generations. Responses remain bounded when `Content-Length` is absent, and
+PostgreSQL cancellation is polled while awaiting headers and body chunks.
+
 Chunk execution is bounded by three optional server settings:
 
 | Option | Default | Range |
@@ -77,8 +122,8 @@ Chunk execution is bounded by three optional server settings:
 | `compressed_cache_bytes` | `67108864` | `0`–1 GiB; `0` disables caching |
 
 Reads are prefetched in deterministic chunk order without background tasks.
-S3 uses the configured read concurrency; local stores use one effective read
-at a time while retaining the same byte and cache limits.
+S3 and HTTP(S) use the configured read concurrency; local stores use one
+effective read at a time while retaining the same byte and cache limits.
 The compressed cache belongs to one query execution, so bytes never cross
 roles, credentials, server changes, or queries. A rescan within the same query
 can reuse cached chunks.
@@ -89,7 +134,10 @@ unbounded cache.
 S3 inspection requires `s3:ListBucket` and `s3:GetObject`, while scanning
 requires `s3:GetObject`. Local inspection and scans require the PostgreSQL
 operating-system account to traverse the configured directory and read the
-required metadata and chunk files.
+required metadata and chunk files. HTTP(S) supports exact-object scans,
+including explicit OME multiscale selection, but not hierarchy listing;
+`zarr_inspect` and `zarr_multiscales` therefore reject HTTP(S) servers before
+making an object request.
 
 ## Inspect a dataset
 
@@ -747,8 +795,11 @@ single Foreign Scan or retains a local Aggregate node.
 ## Current limitations
 
 - Read-only Zarr v2 and the core Zarr v3 subset described above on
-  S3-compatible storage or a secured local filesystem directory. Plain HTTP,
-  GCS, Azure, and SSH filesystem URLs are not supported.
+  S3-compatible storage, trusted anonymous HTTP(S) object stores, or a secured
+  local filesystem directory. Authenticated HTTP, redirects, proxies, custom
+  certificate authorities, mutual TLS, WebDAV, GCS, Azure, and SSH filesystem
+  URLs are not supported. Plain HTTP requires explicit opt-in and provides no
+  transport confidentiality or integrity.
 - Scans support one value array with rank 1 through 64 and mandatory v2
   `_ARRAY_DIMENSIONS` or v3 `dimension_names`; scalar arrays remain unsupported.
 - Ordinary arrays require a same-group, same-name, rank-1 numeric coordinate
@@ -788,3 +839,5 @@ single Foreign Scan or retains a local Aggregate node.
   server byte limits above. These are safety bounds, not Zarr format limits.
 - Inspection has hard depth, node, list-page, object-size, and total metadata
   limits and fails explicitly rather than returning a truncated hierarchy.
+  HTTP(S) stores cannot be inspected because this backend deliberately has no
+  directory-listing protocol.

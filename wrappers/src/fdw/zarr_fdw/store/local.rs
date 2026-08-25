@@ -74,7 +74,7 @@ impl LocalBackend {
             return Ok(None);
         };
         let generation = local_generation(&before);
-        let length = usize::try_from(generation.total_len).map_err(|_| {
+        let length = usize::try_from(generation.total_len()).map_err(|_| {
             ZarrFdwError::InvalidMetadata(format!(
                 "local storage object '{key}' length exceeds this platform's index capacity"
             ))
@@ -116,7 +116,8 @@ impl LocalBackend {
             ensure_same_generation(&identity.key, expected, &generation)?;
         }
 
-        let (start, length) = resolved_range(&identity.range, generation.total_len, &identity.key)?;
+        let (start, length) =
+            resolved_range(&identity.range, generation.total_len(), &identity.key)?;
         let length_usize = usize::try_from(length).map_err(|_| {
             ZarrFdwError::InvalidMetadata(format!(
                 "local range read for object '{}' exceeds this platform's index capacity",
@@ -140,7 +141,7 @@ impl LocalBackend {
                 range: ReadRange::Exact { start, length },
                 generation: Some(generation.clone()),
             },
-            total_len: generation.total_len,
+            total_len: generation.total_len(),
             bytes,
         }))
     }
@@ -438,9 +439,9 @@ fn resolved_range(range: &ReadRange, total: u64, key: &str) -> ZarrFdwResult<(u6
 
 fn local_generation(metadata: &Metadata) -> ObjectGeneration {
     let total_len = metadata.size();
-    ObjectGeneration {
-        etag: format!(
-            "local:{}:{}:{total_len}:{}:{}:{}:{}",
+    ObjectGeneration::Local {
+        fingerprint: format!(
+            "{}:{}:{total_len}:{}:{}:{}:{}",
             metadata.dev(),
             metadata.ino(),
             metadata.mtime(),
@@ -448,7 +449,6 @@ fn local_generation(metadata: &Metadata) -> ObjectGeneration {
             metadata.ctime(),
             metadata.ctime_nsec()
         ),
-        version_id: None,
         total_len,
     }
 }
@@ -723,7 +723,7 @@ mod tests {
         let backend = root.backend();
         let identity = ReadIdentity::exact("object", 0, 1)
             .unwrap()
-            .with_generation(ObjectGeneration {
+            .with_generation(ObjectGeneration::S3 {
                 etag: "\"s3-etag\"".to_string(),
                 version_id: None,
                 total_len: 4,

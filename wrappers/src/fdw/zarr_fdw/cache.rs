@@ -204,7 +204,7 @@ mod tests {
         let mut cache = CompressedChunkCache::new(32, 8);
         let whole = ReadIdentity::whole("shard");
         let exact = ReadIdentity::exact("shard", 0, 4).unwrap();
-        let generation = super::super::store::ObjectGeneration {
+        let generation = super::super::store::ObjectGeneration::S3 {
             etag: "etag-a".to_string(),
             version_id: None,
             total_len: 64,
