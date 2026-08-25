@@ -61,16 +61,11 @@ pub(crate) struct ShardChunkAddress {
     pub inner_indices: Vec<u64>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub(crate) enum StorageLayout {
+    #[default]
     Direct,
     Sharded(ShardingConfig),
-}
-
-impl Default for StorageLayout {
-    fn default() -> Self {
-        Self::Direct
-    }
 }
 
 impl StorageLayout {
@@ -578,8 +573,7 @@ impl ShardIndex {
     fn resident_bytes(&self) -> usize {
         self.entries
             .capacity()
-            .checked_mul(std::mem::size_of::<ShardEntry>())
-            .unwrap_or(usize::MAX)
+            .saturating_mul(std::mem::size_of::<ShardEntry>())
     }
 }
 

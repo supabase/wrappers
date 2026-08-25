@@ -1090,15 +1090,15 @@ fn validate_hierarchy_format(
             display_path(path)
         )));
     }
-    if let Some(parent_format) = parent_format {
-        if parent_format != node_format {
-            return Err(ZarrFdwError::InvalidMetadata(format!(
-                "node '{}' uses Zarr v{}, but its parent group uses Zarr v{}",
-                display_path(path),
-                zarr_format_number(node_format),
-                zarr_format_number(parent_format)
-            )));
-        }
+    if let Some(parent_format) = parent_format
+        && parent_format != node_format
+    {
+        return Err(ZarrFdwError::InvalidMetadata(format!(
+            "node '{}' uses Zarr v{}, but its parent group uses Zarr v{}",
+            display_path(path),
+            zarr_format_number(node_format),
+            zarr_format_number(parent_format)
+        )));
     }
     Ok(())
 }
@@ -1242,10 +1242,10 @@ fn resolve_crs_references_with_limit(rows: &mut [InspectionRow], max_derived_byt
     let mut direct_crs_by_array_path = HashMap::new();
     for row in rows.iter() {
         kinds_by_path.insert(row.path.clone(), row.kind.clone());
-        if row.kind == "array" {
-            if let Some(crs) = row.attributes.as_object().and_then(direct_crs_attribute) {
-                direct_crs_by_array_path.insert(row.path.clone(), crs);
-            }
+        if row.kind == "array"
+            && let Some(crs) = row.attributes.as_object().and_then(direct_crs_attribute)
+        {
+            direct_crs_by_array_path.insert(row.path.clone(), crs);
         }
     }
 

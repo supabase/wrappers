@@ -185,7 +185,7 @@ impl LocalBackend {
                 )
             })?;
             scanned = scanned.saturating_add(1);
-            if scanned % LIST_YIELD_ENTRIES == 0 {
+            if scanned.is_multiple_of(LIST_YIELD_ENTRIES) {
                 tokio::task::yield_now().await;
             }
             let file_type = entry.file_type().map_err(|error| {

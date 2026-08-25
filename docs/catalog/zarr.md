@@ -1,10 +1,10 @@
 ---
 source:
 documentation:
-author: supabase
+author: HamzaMPSY(https://github.com/HamzaMPSY)
 tags:
   - native
-  - official
+  - community
 ---
 
 # Zarr

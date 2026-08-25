@@ -562,5 +562,4 @@ mod tests {
             catalog
         ));
     }
-
 }

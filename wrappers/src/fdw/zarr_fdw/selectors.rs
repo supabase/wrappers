@@ -903,8 +903,7 @@ mod tests {
 
     #[test]
     fn parser_rejects_the_4097th_list_member_during_visitation() {
-        let members = std::iter::repeat("0")
-            .take(MAX_SELECTOR_MEMBERS + 1)
+        let members = std::iter::repeat_n("0", MAX_SELECTOR_MEMBERS + 1)
             .collect::<Vec<_>>()
             .join(",");
         let raw = format!(r#"{{"band":{{"indices":[{members}]}}}}"#);

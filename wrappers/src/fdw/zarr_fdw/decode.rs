@@ -341,7 +341,7 @@ pub fn coord_bytes_to_f64(dtype: &str, data: &[u8]) -> ZarrFdwResult<Vec<f64>> {
         }
     };
 
-    if data.len() % item != 0 {
+    if !data.len().is_multiple_of(item) {
         return Err(ZarrFdwError::InvalidMetadata(format!(
             "coordinate data length {} is not a multiple of dtype item size {item}",
             data.len()

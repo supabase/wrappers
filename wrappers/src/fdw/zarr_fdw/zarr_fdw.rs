@@ -2365,7 +2365,7 @@ impl ZarrFdw {
             self.metrics.record_cells(1, matched);
             self.advance_cursor();
             skipped = skipped.saturating_add(1);
-            if skipped % SELECTOR_INTERRUPT_POLL_CELLS == 0 {
+            if skipped.is_multiple_of(SELECTOR_INTERRUPT_POLL_CELLS) {
                 self.process_pending_interrupt()?;
             }
         }
@@ -3801,23 +3801,22 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
                     DimensionSelectors::parse(
                         option_value(&options, OPT_DIMENSION_SELECTORS).as_deref(),
                     )?;
-                    if let Some(v) = option_value(&options, OPT_ARRAY_GROUP) {
-                        if v.trim_matches('/').is_empty() || v.contains("..") {
-                            return Err(ZarrFdwError::InvalidOptionValue {
-                                option: OPT_ARRAY_GROUP.to_string(),
-                                message: "must be a non-empty array path inside the store"
-                                    .to_string(),
-                            });
-                        }
+                    if let Some(v) = option_value(&options, OPT_ARRAY_GROUP)
+                        && (v.trim_matches('/').is_empty() || v.contains(".."))
+                    {
+                        return Err(ZarrFdwError::InvalidOptionValue {
+                            option: OPT_ARRAY_GROUP.to_string(),
+                            message: "must be a non-empty array path inside the store".to_string(),
+                        });
                     }
-                    if let Some(v) = option_value(&options, OPT_BANDS) {
-                        if v.split(',').any(|b| b.trim().is_empty()) {
-                            return Err(ZarrFdwError::InvalidOptionValue {
-                                option: OPT_BANDS.to_string(),
-                                message: "must be a comma-separated list of band column names"
-                                    .to_string(),
-                            });
-                        }
+                    if let Some(v) = option_value(&options, OPT_BANDS)
+                        && v.split(',').any(|b| b.trim().is_empty())
+                    {
+                        return Err(ZarrFdwError::InvalidOptionValue {
+                            option: OPT_BANDS.to_string(),
+                            message: "must be a comma-separated list of band column names"
+                                .to_string(),
+                        });
                     }
                 }
                 _ => {}

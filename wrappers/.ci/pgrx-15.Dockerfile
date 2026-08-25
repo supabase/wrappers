@@ -1,16 +1,13 @@
 # pgrx + PG15 test container for the wrappers crate
 #
-# Debian bookworm (rust:1.88) with PostgreSQL 15, clang, CMake and cargo-pgrx 0.16.1,
-# so native FDWs can be compiled and tested against the PG version the repo's
-# CI targets (see .github/workflows/test_wrappers.yml). This is useful because
-# some local Postgres installs (e.g. Arch `postgresql` = PG 18.x) are NOT
-# supported by pgrx 0.16.1: `pgrx-pg-sys` fails to bind the PG18 headers,
-# while PG15 works out of the box.
+# Debian bookworm (rust:1.97.1) with PostgreSQL 15, clang, CMake and
+# cargo-pgrx 0.19.2, so native FDWs can be compiled and tested against the PG
+# version the repo's CI targets (see .github/workflows/test_wrappers.yml).
 #
 # Image contents:
-#   - rust:1.88 toolchain (matches workspace.package.rust-version)
+#   - rust:1.97.1 toolchain (matches workspace.package.rust-version)
 #   - PostgreSQL 15 server + -dev headers, clang (bindgen), sudo
-#   - cargo-pgrx 0.16.1 (used by the pgrx-tests framework)
+#   - cargo-pgrx 0.19.2 (used by the pgrx-tests framework)
 #   - ~/.pgrx/config.toml mapping pg15 -> /usr/lib/postgresql/15/bin/pg_config
 #   - non-root `builder` user (uid 1000): PostgreSQL refuses to run as root, so
 #     pgrx-tests runs its postmaster as `builder` while installing the
@@ -58,7 +55,7 @@
 #   - sudo + the `builder` user + "chmod o+rx /root" let pgrx install as root
 #     while the postmaster runs as a regular user.
 
-FROM rust:1.88
+FROM rust:1.97.1-bookworm
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
@@ -71,13 +68,12 @@ RUN apt-get update \
       sudo \
  && rm -rf /var/lib/apt/lists/*
 
-RUN mkdir -p /root/.pgrx \
- && printf '[configs]\npg15 = "/usr/lib/postgresql/15/bin/pg_config"\n' > /root/.pgrx/config.toml \
- && chmod o+rx /root \
+RUN chmod o+rx /root \
  && useradd -m -u 1000 builder \
  && mkdir -p /tmp/pgtarget \
  && chown -R builder:builder /tmp/pgtarget
 
-RUN cargo install --locked cargo-pgrx --version 0.16.1 \
+RUN cargo install --locked cargo-pgrx --version 0.19.2 \
+ && cargo pgrx init --pg15 /usr/lib/postgresql/15/bin/pg_config \
  && rustup component add rustfmt clippy \
  && rm -rf /usr/local/cargo/registry/src /usr/local/cargo/registry/cache
