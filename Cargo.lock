@@ -10723,6 +10723,7 @@ dependencies = [
  "wasmtime",
  "wiremock",
  "yup-oauth2",
+ "zstd",
 ]
 
 [[package]]

@@ -18,6 +18,11 @@ const CRC32C_BYTES: usize = 4;
 const STREAM_POLL_BYTES: usize = 64 * 1024;
 const CRC_POLL_BYTES: usize = 1024 * 1024;
 const TRANSPOSE_POLL_CELLS: usize = 4096;
+const ZSTD_WINDOW_LOG_MAX: u32 = 23;
+const ZSTD_WINDOW_BYTES: u64 = 1 << ZSTD_WINDOW_LOG_MAX;
+const ZSTD_FRAME_MAGIC: u32 = 0xfd2f_b528;
+const ZSTD_SKIPPABLE_MAGIC_START: u32 = 0x184d_2a50;
+const ZSTD_SKIPPABLE_MAGIC_MASK: u32 = 0xffff_fff0;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Endian {
@@ -35,6 +40,7 @@ enum CodecStage {
     // compressor-metadata behavior through `None`.
     Zlib,
     Blosc { config: Option<BloscConfig> },
+    Zstd { config: ZstdConfig },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -66,6 +72,22 @@ struct BloscConfig {
     blocksize: usize,
 }
 
+/// The complete Zarr v3 Zstd encoding configuration. Compression level is
+/// retained for lossless metadata normalization even though it does not
+/// affect decoding.
+#[allow(dead_code)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ZstdConfig {
+    level: i32,
+    checksum: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct ZstdFrameHeader {
+    checksum: bool,
+    content_size: Option<u64>,
+}
+
 impl CodecStage {
     fn label(&self) -> &'static str {
         match self {
@@ -75,6 +97,7 @@ impl CodecStage {
             Self::Crc32c => "crc32c",
             Self::Zlib => "zlib",
             Self::Blosc { .. } => "blosc",
+            Self::Zstd { .. } => "zstd",
         }
     }
 }
@@ -136,7 +159,7 @@ impl CodecPipeline {
     /// executor-normalized NumPy dtype.
     ///
     /// Supported metadata order is exactly:
-    /// `[transpose]? -> bytes -> [gzip | blosc]? -> [crc32c]?`.
+    /// `[transpose]? -> bytes -> [gzip | blosc | zstd]? -> [crc32c]?`.
     pub(crate) fn from_v3(
         native_dtype: &str,
         rank: usize,
@@ -180,6 +203,7 @@ impl CodecPipeline {
             let stage = match codec_name(codecs, cursor)? {
                 "gzip" => Some(parse_gzip(codec_object(codecs, cursor)?, cursor)?),
                 "blosc" => Some(parse_blosc(codec_object(codecs, cursor)?, cursor)?),
+                "zstd" => Some(parse_zstd(codec_object(codecs, cursor)?, cursor)?),
                 _ => None,
             };
             if let Some(stage) = stage {
@@ -196,16 +220,10 @@ impl CodecPipeline {
             validate_codec_object(codec, cursor)?;
             let name = codec_name(codecs, cursor)?;
             match name {
-                "transpose" | "bytes" | "gzip" | "blosc" | "crc32c" => {
+                "transpose" | "bytes" | "gzip" | "blosc" | "zstd" | "crc32c" => {
                     return Err(pipeline_metadata_error(
                         cursor,
                         format!("codec '{name}' is duplicated or appears out of supported order"),
-                    ));
-                }
-                "zstd" => {
-                    return Err(unsupported_pipeline_feature(
-                        cursor,
-                        "Zarr v3 Zstd is not supported yet",
                     ));
                 }
                 "sharding_indexed" => {
@@ -249,7 +267,9 @@ impl CodecPipeline {
         }
         self.stages.iter().try_fold(decoded_bytes, |limit, stage| {
             let allowance = match stage {
-                CodecStage::Gzip | CodecStage::Zlib => COMPRESSED_OVERHEAD_ALLOWANCE,
+                CodecStage::Gzip | CodecStage::Zlib | CodecStage::Zstd { .. } => {
+                    COMPRESSED_OVERHEAD_ALLOWANCE
+                }
                 CodecStage::Blosc { .. } => BLOSC_HEADER_BYTES,
                 CodecStage::Crc32c => CRC32C_BYTES,
                 CodecStage::Transpose { .. } | CodecStage::Bytes { .. } => 0,
@@ -335,6 +355,14 @@ impl CodecPipeline {
                     if interrupt_pending() {
                         return Ok(CodecDecode::Interrupted);
                     }
+                    decoded
+                }
+                CodecStage::Zstd { config } => {
+                    let Some(decoded) =
+                        decode_zstd(data, expected, config, &mut interrupt_pending, index)?
+                    else {
+                        return Ok(CodecDecode::Interrupted);
+                    };
                     decoded
                 }
                 CodecStage::Bytes { endian } => {
@@ -544,6 +572,34 @@ fn parse_gzip(codec: &Map<String, Value>, index: usize) -> ZarrFdwResult<CodecSt
         ));
     }
     Ok(CodecStage::Gzip)
+}
+
+fn parse_zstd(codec: &Map<String, Value>, index: usize) -> ZarrFdwResult<CodecStage> {
+    validate_codec_object(codec, index)?;
+    let configuration = codec_configuration(codec, index, true)?.expect("required above");
+    validate_fields(configuration, &["level", "checksum"], index)?;
+
+    let level = configuration
+        .get("level")
+        .and_then(Value::as_i64)
+        .filter(|&level| (-131_072..=22).contains(&level))
+        .and_then(|level| i32::try_from(level).ok())
+        .ok_or_else(|| {
+            pipeline_metadata_error(index, "Zstd level must be an integer from -131072 to 22")
+        })?;
+    let checksum = configuration
+        .get("checksum")
+        .map(|value| {
+            value
+                .as_bool()
+                .ok_or_else(|| pipeline_metadata_error(index, "Zstd checksum must be a boolean"))
+        })
+        .transpose()?
+        .unwrap_or(false);
+
+    Ok(CodecStage::Zstd {
+        config: ZstdConfig { level, checksum },
+    })
 }
 
 fn parse_blosc(codec: &Map<String, Value>, index: usize) -> ZarrFdwResult<CodecStage> {
@@ -859,6 +915,286 @@ where
     Ok(Some(decoded))
 }
 
+fn parse_zstd_frame_header(data: &[u8], index: usize) -> ZarrFdwResult<ZstdFrameHeader> {
+    let magic_bytes: [u8; 4] = data
+        .get(..4)
+        .and_then(|bytes| bytes.try_into().ok())
+        .ok_or_else(|| zstd_header_error(index, "object is shorter than the 4-byte magic"))?;
+    let magic = u32::from_le_bytes(magic_bytes);
+    if magic & ZSTD_SKIPPABLE_MAGIC_MASK == ZSTD_SKIPPABLE_MAGIC_START {
+        return Err(codec_read_error(
+            index,
+            "zstd",
+            "skippable Zstandard frames are not supported",
+        ));
+    }
+    if magic != ZSTD_FRAME_MAGIC {
+        return Err(zstd_header_error(
+            index,
+            format!("unexpected magic 0x{magic:08x}"),
+        ));
+    }
+
+    let descriptor = *data
+        .get(4)
+        .ok_or_else(|| zstd_header_error(index, "frame descriptor is missing"))?;
+    if descriptor & 0b0000_1000 != 0 {
+        return Err(zstd_header_error(index, "reserved descriptor bit is set"));
+    }
+    if descriptor & 0b0000_0011 != 0 {
+        return Err(codec_read_error(
+            index,
+            "zstd",
+            "Zstandard dictionaries are not supported",
+        ));
+    }
+
+    let single_segment = descriptor & 0b0010_0000 != 0;
+    let checksum = descriptor & 0b0000_0100 != 0;
+    let mut cursor = 5usize;
+    let advertised_window = if single_segment {
+        None
+    } else {
+        let window_descriptor = *data
+            .get(cursor)
+            .ok_or_else(|| zstd_header_error(index, "window descriptor is missing"))?;
+        cursor += 1;
+        let exponent = u32::from(window_descriptor >> 3);
+        let mantissa = u64::from(window_descriptor & 0b0000_0111);
+        let window_log = 10u32
+            .checked_add(exponent)
+            .ok_or_else(|| zstd_header_error(index, "window descriptor exponent overflows"))?;
+        let window_base = 1u64.checked_shl(window_log).ok_or_else(|| {
+            zstd_header_error(
+                index,
+                "window descriptor exceeds the supported integer range",
+            )
+        })?;
+        let window_add = (window_base / 8)
+            .checked_mul(mantissa)
+            .ok_or_else(|| zstd_header_error(index, "window descriptor mantissa overflows"))?;
+        Some(
+            window_base
+                .checked_add(window_add)
+                .ok_or_else(|| zstd_header_error(index, "advertised window size overflows"))?,
+        )
+    };
+
+    let content_size_flag = descriptor >> 6;
+    let content_size_bytes = match content_size_flag {
+        0 if single_segment => 1usize,
+        0 => 0usize,
+        1 => 2usize,
+        2 => 4usize,
+        3 => 8usize,
+        _ => unreachable!("two-bit field"),
+    };
+    let content_size = if content_size_bytes == 0 {
+        None
+    } else {
+        let end = cursor
+            .checked_add(content_size_bytes)
+            .ok_or_else(|| zstd_header_error(index, "frame content-size field offset overflows"))?;
+        let bytes = data
+            .get(cursor..end)
+            .ok_or_else(|| zstd_header_error(index, "frame content-size field is truncated"))?;
+        let mut value_bytes = [0u8; 8];
+        value_bytes[..content_size_bytes].copy_from_slice(bytes);
+        let value = u64::from_le_bytes(value_bytes);
+        Some(if content_size_bytes == 2 {
+            value
+                .checked_add(256)
+                .ok_or_else(|| zstd_header_error(index, "frame content size overflows"))?
+        } else {
+            value
+        })
+    };
+
+    let window_size = if single_segment {
+        content_size
+            .ok_or_else(|| zstd_header_error(index, "single-segment frame has no content size"))?
+    } else {
+        advertised_window.expect("non-single-segment frame parsed a window descriptor")
+    };
+    if window_size > ZSTD_WINDOW_BYTES {
+        return Err(codec_read_error(
+            index,
+            "zstd",
+            format!(
+                "Zstandard frame window {window_size} exceeds the {ZSTD_WINDOW_BYTES}-byte limit"
+            ),
+        ));
+    }
+
+    Ok(ZstdFrameHeader {
+        checksum,
+        content_size,
+    })
+}
+
+fn zstd_header_error(index: usize, reason: impl Into<String>) -> ZarrFdwError {
+    codec_read_error(
+        index,
+        "zstd",
+        format!("invalid Zstandard frame header: {}", reason.into()),
+    )
+}
+
+fn zstd_native_error(index: usize, operation: &str, code: usize) -> ZarrFdwError {
+    codec_read_error(
+        index,
+        "zstd",
+        format!("{operation}: {}", zstd::zstd_safe::get_error_name(code)),
+    )
+}
+
+fn decode_zstd<F>(
+    data: Vec<u8>,
+    expected: usize,
+    config: &ZstdConfig,
+    interrupt_pending: &mut F,
+    index: usize,
+) -> ZarrFdwResult<Option<Vec<u8>>>
+where
+    F: FnMut() -> bool,
+{
+    if interrupt_pending() {
+        return Ok(None);
+    }
+    let header = parse_zstd_frame_header(&data, index)?;
+    if header.checksum != config.checksum {
+        return Err(codec_read_error(
+            index,
+            "zstd",
+            format!(
+                "Zstandard checksum metadata does not match the frame checksum flag (metadata={}, frame={})",
+                config.checksum, header.checksum
+            ),
+        ));
+    }
+    if let Some(content_size) = header.content_size {
+        let expected = u64::try_from(expected).map_err(|_| {
+            codec_read_error(
+                index,
+                "zstd",
+                "logical decoded size exceeds the supported integer range",
+            )
+        })?;
+        if content_size != expected {
+            return Err(codec_read_error(
+                index,
+                "zstd",
+                format!(
+                    "Zstandard frame content size {content_size} does not match expected {expected}"
+                ),
+            ));
+        }
+    }
+
+    if interrupt_pending() {
+        return Ok(None);
+    }
+    let frame_size = zstd::zstd_safe::find_frame_compressed_size(&data)
+        .map_err(|code| zstd_native_error(index, "invalid Zstandard frame", code))?;
+    if frame_size != data.len() {
+        return Err(codec_read_error(
+            index,
+            "zstd",
+            format!(
+                "concatenated Zstandard frames and trailing bytes are not supported (first frame has {frame_size} bytes, object has {})",
+                data.len()
+            ),
+        ));
+    }
+
+    if interrupt_pending() {
+        return Ok(None);
+    }
+    let mut context = zstd::zstd_safe::DCtx::try_create().ok_or_else(|| {
+        codec_read_error(
+            index,
+            "zstd",
+            "could not allocate a Zstandard decoder context",
+        )
+    })?;
+    context
+        .init()
+        .map_err(|code| zstd_native_error(index, "failed to initialize Zstandard decoder", code))?;
+    context
+        .set_parameter(zstd::zstd_safe::DParameter::WindowLogMax(
+            ZSTD_WINDOW_LOG_MAX,
+        ))
+        .map_err(|code| {
+            zstd_native_error(index, "failed to set the Zstandard window limit", code)
+        })?;
+    let mut decoder =
+        zstd::stream::read::Decoder::with_context(Cursor::new(data), &mut context).single_frame();
+    read_exact_bounded_sync(&mut decoder, expected, interrupt_pending, index)
+}
+
+fn read_exact_bounded_sync<R, F>(
+    reader: &mut R,
+    expected: usize,
+    interrupt_pending: &mut F,
+    index: usize,
+) -> ZarrFdwResult<Option<Vec<u8>>>
+where
+    R: std::io::Read,
+    F: FnMut() -> bool,
+{
+    let mut decoded = Vec::new();
+    decoded.try_reserve_exact(expected).map_err(|_| {
+        ZarrFdwError::InvalidMetadata(format!(
+            "could not allocate a decoded chunk of {expected} bytes"
+        ))
+    })?;
+    let mut buffer = vec![0u8; STREAM_POLL_BYTES.min(expected.max(1))];
+    while decoded.len() < expected {
+        if interrupt_pending() {
+            return Ok(None);
+        }
+        let remaining = expected - decoded.len();
+        let read_len = remaining.min(buffer.len());
+        let count = std::io::Read::read(reader, &mut buffer[..read_len]).map_err(|error| {
+            codec_read_error(
+                index,
+                "zstd",
+                format!("failed to decode Zstandard frame: {error}"),
+            )
+        })?;
+        if count == 0 {
+            return Err(codec_read_error(
+                index,
+                "zstd",
+                format!(
+                    "decoded chunk has {} bytes, expected exactly {expected}",
+                    decoded.len()
+                ),
+            ));
+        }
+        decoded.extend_from_slice(&buffer[..count]);
+    }
+    if interrupt_pending() {
+        return Ok(None);
+    }
+    let mut extra = [0u8; 1];
+    let extra_count = std::io::Read::read(reader, &mut extra).map_err(|error| {
+        codec_read_error(
+            index,
+            "zstd",
+            format!("failed to decode Zstandard frame: {error}"),
+        )
+    })?;
+    if extra_count != 0 {
+        return Err(codec_read_error(
+            index,
+            "zstd",
+            format!("decoded chunk has more than {expected} bytes, expected exactly {expected}"),
+        ));
+    }
+    Ok(Some(decoded))
+}
+
 fn decode_blosc(
     data: Vec<u8>,
     expected: usize,
@@ -1056,6 +1392,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Write;
 
     fn v3(codecs: Value) -> ZarrFdwResult<(CodecPipeline, String)> {
         CodecPipeline::from_v3("float32", 3, &codecs)
@@ -1072,6 +1409,39 @@ mod tests {
             configuration["typesize"] = typesize;
         }
         serde_json::json!({"name":"blosc", "configuration":configuration})
+    }
+
+    fn v3_zstd(level: Value, checksum: Option<Value>) -> Value {
+        let mut configuration = serde_json::json!({"level":level});
+        if let Some(checksum) = checksum {
+            configuration["checksum"] = checksum;
+        }
+        serde_json::json!({"name":"zstd", "configuration":configuration})
+    }
+
+    fn zstd_pipeline(checksum: bool) -> CodecPipeline {
+        CodecPipeline::from_v3(
+            "int8",
+            1,
+            &serde_json::json!([
+                {"name":"bytes","configuration":{}},
+                v3_zstd(serde_json::json!(1), Some(serde_json::json!(checksum)))
+            ]),
+        )
+        .unwrap()
+        .0
+    }
+
+    fn encode_zstd(raw: &[u8], checksum: bool, include_content_size: bool) -> Vec<u8> {
+        let mut encoder = zstd::stream::write::Encoder::new(Vec::new(), 1).unwrap();
+        encoder.include_checksum(checksum).unwrap();
+        encoder.include_contentsize(include_content_size).unwrap();
+        let pledged_size = u64::try_from(raw.len()).unwrap();
+        encoder
+            .set_pledged_src_size(include_content_size.then_some(pledged_size))
+            .unwrap();
+        encoder.write_all(raw).unwrap();
+        encoder.finish().unwrap()
     }
 
     #[test]
@@ -1117,6 +1487,91 @@ mod tests {
             let pipeline = CodecPipeline::from_v2(&compressor).unwrap();
             assert_eq!(pipeline.ordered_label(), label);
             assert_eq!(pipeline.encoded_read_limit(32).unwrap(), 32 + allowance);
+        }
+    }
+
+    #[test]
+    fn parses_supported_v3_zstd_configurations_and_label() {
+        for level in [-131_072, 0, 22] {
+            for checksum in [None, Some(false), Some(true)] {
+                let codecs = serde_json::json!([
+                    {"name":"bytes","configuration":{"endian":"little"}},
+                    v3_zstd(
+                        serde_json::json!(level),
+                        checksum.map(|value| serde_json::json!(value))
+                    ),
+                    {"name":"crc32c"}
+                ]);
+                let (pipeline, dtype) = v3(codecs).unwrap();
+                assert_eq!(dtype, "<f4");
+                assert_eq!(pipeline.ordered_label(), "bytes -> zstd -> crc32c");
+                assert_eq!(
+                    pipeline.encoded_read_limit(1024).unwrap(),
+                    1024 + COMPRESSED_OVERHEAD_ALLOWANCE + CRC32C_BYTES
+                );
+                let CodecStage::Zstd { config } = &pipeline.stages[1] else {
+                    panic!("expected configured v3 Zstd stage");
+                };
+                assert_eq!(config.level, level);
+                assert_eq!(config.checksum, checksum.unwrap_or(false));
+            }
+        }
+    }
+
+    #[test]
+    fn rejects_malformed_v3_zstd_configurations() {
+        let invalid = [
+            serde_json::json!({"name":"zstd"}),
+            serde_json::json!({"name":"zstd","configuration":{}}),
+            serde_json::json!({"name":"zstd","configuration":{"checksum":true}}),
+            v3_zstd(serde_json::json!(-131_073), None),
+            v3_zstd(serde_json::json!(23), None),
+            v3_zstd(serde_json::json!(1.5), None),
+            v3_zstd(serde_json::json!("1"), None),
+            v3_zstd(serde_json::json!(1), Some(serde_json::json!(1))),
+            serde_json::json!({"name":"zstd","configuration":{"level":1,"extra":true}}),
+            serde_json::json!({"name":"zstd","configuration":{"level":1},"must_understand":"yes"}),
+        ];
+        for codec in invalid {
+            let codecs = serde_json::json!([
+                {"name":"bytes","configuration":{"endian":"little"}},
+                codec
+            ]);
+            let error = v3(codecs).unwrap_err();
+            assert!(matches!(error, ZarrFdwError::InvalidMetadata(_)));
+        }
+    }
+
+    #[test]
+    fn rejects_duplicate_mixed_and_misordered_v3_zstd() {
+        let zstd = v3_zstd(serde_json::json!(1), None);
+        for codecs in [
+            serde_json::json!([
+                zstd.clone(),
+                {"name":"bytes","configuration":{"endian":"little"}}
+            ]),
+            serde_json::json!([
+                {"name":"bytes","configuration":{"endian":"little"}},
+                zstd.clone(),
+                zstd.clone()
+            ]),
+            serde_json::json!([
+                {"name":"bytes","configuration":{"endian":"little"}},
+                {"name":"gzip","configuration":{"level":1}},
+                zstd.clone()
+            ]),
+            serde_json::json!([
+                {"name":"bytes","configuration":{"endian":"little"}},
+                zstd.clone(),
+                v3_blosc("lz4", "noshuffle", None)
+            ]),
+            serde_json::json!([
+                {"name":"bytes","configuration":{"endian":"little"}},
+                {"name":"crc32c"},
+                zstd
+            ]),
+        ] {
+            assert!(matches!(v3(codecs), Err(ZarrFdwError::InvalidMetadata(_))));
         }
     }
 
@@ -1229,7 +1684,7 @@ mod tests {
             serde_json::json!([{"name":"bytes","configuration":{"endian":"little"}}, {"name":"crc32c"}, {"name":"gzip","configuration":{"level":1}}]),
             serde_json::json!([{"name":"bytes","configuration":{"endian":"little"}}, {"name":"bytes","configuration":{"endian":"little"}}]),
             serde_json::json!([{"name":"bytes","configuration":{"endian":"little"}}, {"name":"blosc","configuration":{}}]),
-            serde_json::json!([{"name":"bytes","configuration":{"endian":"little"}}, {"name":"zstd","configuration":{"level":1}}]),
+            serde_json::json!([{"name":"bytes","configuration":{"endian":"little"}}, {"name":"zstd","configuration":{"level":23}}]),
             serde_json::json!([{"name":"sharding_indexed","configuration":{}}]),
         ];
         for codecs in cases {
@@ -1341,6 +1796,278 @@ mod tests {
                 CodecDecode::Decoded((0u8..12).collect())
             );
         });
+    }
+
+    #[test]
+    fn parses_zstd_frame_header_variants_and_enforces_window_policy() {
+        let mut unknown_size = ZSTD_FRAME_MAGIC.to_le_bytes().to_vec();
+        unknown_size.extend_from_slice(&[0b0001_0000, 13 << 3]);
+        assert_eq!(
+            parse_zstd_frame_header(&unknown_size, 1).unwrap(),
+            ZstdFrameHeader {
+                checksum: false,
+                content_size: None,
+            }
+        );
+
+        let mut single_segment = ZSTD_FRAME_MAGIC.to_le_bytes().to_vec();
+        single_segment.extend_from_slice(&[0b0010_0100, 4]);
+        assert_eq!(
+            parse_zstd_frame_header(&single_segment, 1).unwrap(),
+            ZstdFrameHeader {
+                checksum: true,
+                content_size: Some(4),
+            }
+        );
+
+        for (descriptor, encoded, expected) in [
+            (0b0100_0000, 0u64, 256u64),
+            (0b1000_0000, 65_792u64, 65_792u64),
+            (
+                0b1100_0000,
+                u64::from(u32::MAX) + 1,
+                u64::from(u32::MAX) + 1,
+            ),
+        ] {
+            let width = match descriptor >> 6 {
+                1 => 2,
+                2 => 4,
+                3 => 8,
+                _ => unreachable!(),
+            };
+            let mut frame = ZSTD_FRAME_MAGIC.to_le_bytes().to_vec();
+            frame.extend_from_slice(&[descriptor, 0]);
+            frame.extend_from_slice(&encoded.to_le_bytes()[..width]);
+            assert_eq!(
+                parse_zstd_frame_header(&frame, 1).unwrap().content_size,
+                Some(expected)
+            );
+        }
+
+        let mut excessive_window = ZSTD_FRAME_MAGIC.to_le_bytes().to_vec();
+        excessive_window.extend_from_slice(&[0, (13 << 3) | 1]);
+        let error = parse_zstd_frame_header(&excessive_window, 1).unwrap_err();
+        assert!(format!("{error}").contains("exceeds the 8388608-byte limit"));
+
+        let mut excessive_single_segment = ZSTD_FRAME_MAGIC.to_le_bytes().to_vec();
+        excessive_single_segment.push(0b1110_0000);
+        excessive_single_segment.extend_from_slice(&(ZSTD_WINDOW_BYTES + 1).to_le_bytes());
+        let error = parse_zstd_frame_header(&excessive_single_segment, 1).unwrap_err();
+        assert!(format!("{error}").contains("exceeds the 8388608-byte limit"));
+
+        let mut reserved = ZSTD_FRAME_MAGIC.to_le_bytes().to_vec();
+        reserved.extend_from_slice(&[0b0000_1000, 0]);
+        assert!(
+            format!("{}", parse_zstd_frame_header(&reserved, 1).unwrap_err())
+                .contains("reserved descriptor bit")
+        );
+
+        let mut dictionary = ZSTD_FRAME_MAGIC.to_le_bytes().to_vec();
+        dictionary.push(1);
+        assert!(
+            format!("{}", parse_zstd_frame_header(&dictionary, 1).unwrap_err())
+                .contains("Zstandard dictionaries are not supported")
+        );
+
+        let skippable = ZSTD_SKIPPABLE_MAGIC_START.to_le_bytes();
+        assert!(
+            format!("{}", parse_zstd_frame_header(&skippable, 1).unwrap_err())
+                .contains("skippable Zstandard frames are not supported")
+        );
+        assert!(
+            format!("{}", parse_zstd_frame_header(&[1, 2, 3], 1).unwrap_err())
+                .contains("invalid Zstandard frame header")
+        );
+        assert!(format!(
+            "{}",
+            parse_zstd_frame_header(&[0, 0, 0, 0, 0, 0], 1).unwrap_err()
+        )
+        .contains("unexpected magic"));
+        assert!(format!(
+            "{}",
+            parse_zstd_frame_header(&ZSTD_FRAME_MAGIC.to_le_bytes(), 1).unwrap_err()
+        )
+        .contains("frame descriptor is missing"));
+        let mut truncated_window = ZSTD_FRAME_MAGIC.to_le_bytes().to_vec();
+        truncated_window.push(0);
+        assert!(format!(
+            "{}",
+            parse_zstd_frame_header(&truncated_window, 1).unwrap_err()
+        )
+        .contains("window descriptor is missing"));
+        let mut truncated_content_size = ZSTD_FRAME_MAGIC.to_le_bytes().to_vec();
+        truncated_content_size.push(0b0010_0000);
+        assert!(format!(
+            "{}",
+            parse_zstd_frame_header(&truncated_content_size, 1).unwrap_err()
+        )
+        .contains("content-size field is truncated"));
+    }
+
+    #[test]
+    fn zstd_decodes_known_and_unknown_content_sizes_and_polls_cancellation() {
+        let raw = (0..(STREAM_POLL_BYTES * 2 + 17))
+            .map(|index| u8::try_from(index % 251).unwrap())
+            .collect::<Vec<_>>();
+        let known = encode_zstd(&raw, true, true);
+        let unknown = encode_zstd(&raw, false, false);
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(async {
+            assert_eq!(
+                zstd_pipeline(true)
+                    .decode_interruptible(known.clone(), &[raw.len()], 1, || false)
+                    .await
+                    .unwrap(),
+                CodecDecode::Decoded(raw.clone())
+            );
+            assert_eq!(
+                zstd_pipeline(false)
+                    .decode_interruptible(unknown.clone(), &[raw.len()], 1, || false)
+                    .await
+                    .unwrap(),
+                CodecDecode::Decoded(raw.clone())
+            );
+        });
+
+        let config = ZstdConfig {
+            level: 1,
+            checksum: false,
+        };
+        assert_eq!(
+            decode_zstd(unknown.clone(), raw.len(), &config, &mut || true, 1).unwrap(),
+            None
+        );
+        let mut polls = 0usize;
+        assert_eq!(
+            decode_zstd(
+                unknown,
+                raw.len(),
+                &config,
+                &mut || {
+                    polls += 1;
+                    polls >= 5
+                },
+                1,
+            )
+            .unwrap(),
+            None
+        );
+        assert!(polls >= 5);
+    }
+
+    #[test]
+    fn zstd_rejects_checksum_mismatch_corruption_and_non_exact_output() {
+        let raw = (0u8..64).collect::<Vec<_>>();
+        let checksummed = encode_zstd(&raw, true, true);
+        let unchecked = encode_zstd(&raw, false, true);
+
+        for (encoded, metadata_checksum) in
+            [(checksummed.clone(), false), (unchecked.clone(), true)]
+        {
+            let config = ZstdConfig {
+                level: 1,
+                checksum: metadata_checksum,
+            };
+            let error = decode_zstd(encoded, raw.len(), &config, &mut || false, 1).unwrap_err();
+            assert!(format!("{error}")
+                .contains("Zstandard checksum metadata does not match the frame checksum flag"));
+        }
+
+        let mut corrupt = checksummed;
+        *corrupt.last_mut().unwrap() ^= 1;
+        let error = decode_zstd(
+            corrupt,
+            raw.len(),
+            &ZstdConfig {
+                level: 1,
+                checksum: true,
+            },
+            &mut || false,
+            1,
+        )
+        .unwrap_err();
+        let error = format!("{error}");
+        assert!(error.contains("codec index 1 ('zstd')"));
+        assert!(error.contains("failed to decode Zstandard frame"));
+
+        let unknown = encode_zstd(&raw, false, false);
+        let config = ZstdConfig {
+            level: 1,
+            checksum: false,
+        };
+        let short =
+            decode_zstd(unknown.clone(), raw.len() + 1, &config, &mut || false, 1).unwrap_err();
+        assert!(format!("{short}").contains("expected exactly 65"));
+        let long = decode_zstd(unknown, raw.len() - 1, &config, &mut || false, 1).unwrap_err();
+        assert!(format!("{long}").contains("more than 63 bytes"));
+    }
+
+    #[test]
+    fn zstd_rejects_frame_policy_violations_before_decoding() {
+        let raw = [1u8, 2, 3, 4];
+        let frame = encode_zstd(&raw, true, true);
+        let config = ZstdConfig {
+            level: 1,
+            checksum: true,
+        };
+
+        let mismatch = decode_zstd(frame.clone(), 5, &config, &mut || false, 1).unwrap_err();
+        assert!(format!("{mismatch}").contains("content size 4 does not match expected 5"));
+
+        let mut trailing = frame.clone();
+        trailing.push(0);
+        let error = decode_zstd(trailing, raw.len(), &config, &mut || false, 1).unwrap_err();
+        assert!(format!("{error}")
+            .contains("concatenated Zstandard frames and trailing bytes are not supported"));
+
+        let mut concatenated = frame.clone();
+        concatenated.extend_from_slice(&frame);
+        let error = decode_zstd(concatenated, raw.len(), &config, &mut || false, 1).unwrap_err();
+        assert!(format!("{error}")
+            .contains("concatenated Zstandard frames and trailing bytes are not supported"));
+
+        let mut excessive_window = ZSTD_FRAME_MAGIC.to_le_bytes().to_vec();
+        excessive_window.extend_from_slice(&[0b0000_0100, (13 << 3) | 1]);
+        assert!(format!(
+            "{}",
+            decode_zstd(excessive_window, raw.len(), &config, &mut || false, 1).unwrap_err()
+        )
+        .contains("exceeds the 8388608-byte limit"));
+
+        let mut dictionary = ZSTD_FRAME_MAGIC.to_le_bytes().to_vec();
+        dictionary.push(0b0000_0101);
+        assert!(format!(
+            "{}",
+            decode_zstd(dictionary, raw.len(), &config, &mut || false, 1).unwrap_err()
+        )
+        .contains("Zstandard dictionaries are not supported"));
+    }
+
+    #[test]
+    fn pipeline_decodes_crc_then_zstd_then_transpose() {
+        let logical = (0u8..12).collect::<Vec<_>>();
+        let encoded_order = vec![0, 6, 3, 9, 1, 7, 4, 10, 2, 8, 5, 11];
+        let compressed = encode_zstd(&encoded_order, true, true);
+        let mut encoded = compressed.clone();
+        encoded.extend_from_slice(&crc32c::crc32c(&compressed).to_le_bytes());
+        let pipeline = v3(serde_json::json!([
+            {"name":"transpose","configuration":{"order":[2,1,0]}},
+            {"name":"bytes","configuration":{"endian":"little"}},
+            v3_zstd(serde_json::json!(1), Some(serde_json::json!(true))),
+            {"name":"crc32c"}
+        ]))
+        .unwrap()
+        .0;
+        assert_eq!(
+            pipeline.ordered_label(),
+            "transpose -> bytes -> zstd -> crc32c"
+        );
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        assert_eq!(
+            rt.block_on(pipeline.decode_interruptible(encoded, &[2, 2, 3], 1, || false))
+                .unwrap(),
+            CodecDecode::Decoded(logical)
+        );
     }
 
     #[test]
@@ -1536,11 +2263,10 @@ mod tests {
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(async {
             let raw = CodecPipeline::raw_v2();
-            assert!(
-                raw.decode_interruptible(vec![1, 2, 3], &[2], 1, || false)
-                    .await
-                    .is_err()
-            );
+            assert!(raw
+                .decode_interruptible(vec![1, 2, 3], &[2], 1, || false)
+                .await
+                .is_err());
             assert_eq!(
                 raw.decode_interruptible(vec![1, 2], &[2], 1, || true)
                     .await
@@ -1566,10 +2292,8 @@ mod tests {
                 CodecDecode::Interrupted
             );
         });
-        assert!(
-            CodecPipeline::raw_v2()
-                .encoded_read_limit(MAX_DECODED_CHUNK_BYTES + 1)
-                .is_err()
-        );
+        assert!(CodecPipeline::raw_v2()
+            .encoded_read_limit(MAX_DECODED_CHUNK_BYTES + 1)
+            .is_err());
     }
 }

@@ -197,7 +197,7 @@ the query target or restrictions.
 
 Zarr v3 arrays must use a regular chunk grid and a validated codec pipeline.
 The supported order is an optional core `transpose` codec, exactly one core
-`bytes` codec, at most one `gzip` or `blosc` codec, and an optional core
+`bytes` codec, at most one `gzip`, `blosc`, or `zstd` codec, and an optional core
 `crc32c` codec. A transpose must declare one rank-matched permutation, gzip
 levels range from 0 through 9, and CRC32C uses its four-byte little-endian
 trailer. Codec stages cannot be duplicated or reordered. Multi-byte values
@@ -208,16 +208,27 @@ compression levels from 0 through 9, `noshuffle`, `shuffle`, or `bitshuffle`,
 and a non-negative `blocksize`. A positive `typesize` is required for byte or
 bit shuffle and optional for `noshuffle`. The spec-defined `zstd`, `snappy`,
 and `zlib` Blosc cnames are rejected before any chunk read because they are not
-enabled in this build. This does not add support for a separate Zarr v3 `zstd`
+enabled in this build. This is independent of the supported Zarr v3 `zstd`
 codec.
 
+The v3 Zstandard codec requires a compression `level` from -131072 through 22
+and accepts the optional boolean `checksum` setting, which defaults to `false`.
+Each object must contain
+exactly one ordinary Zstandard frame. Its checksum flag must match the codec
+metadata, and a present frame-content size must match the logical decoded chunk
+size; an omitted content size is allowed. Frames advertising a dictionary ID
+are rejected; decoding with dictionaries is unsupported. Skippable frames,
+concatenated frames, and trailing bytes are also rejected. Decoder windows are
+limited to 8 MiB in addition to the general decoded-chunk limit.
+
 Decoding applies the declared stages in reverse, validates a CRC32C trailer
-before decompressing the preceding gzip or Blosc stream, and restores
-transposed chunks to the executor's row-major representation. Blosc's fixed
-header, declared compressed and uncompressed lengths, and trailing bytes are
-validated before decompression. Encoded reads and every decoded intermediate
-are bounded from the declared chunk shape; corrupt, truncated, or
-over-expanding payloads fail instead of returning partial values.
+before decompressing the preceding gzip, Blosc, or Zstandard stream, and
+restores transposed chunks to the executor's row-major representation. Blosc's
+fixed header, declared compressed and uncompressed lengths, and trailing bytes
+are validated before decompression. Zstandard frame checksums are verified by
+the decoder when enabled. Encoded reads and every decoded intermediate are
+bounded from the declared chunk shape; corrupt, truncated, or over-expanding
+payloads fail instead of returning partial values.
 
 The core `default` chunk-key encoding and the compatibility `v2` chunk-key
 encoding are supported with their defined `.` or `/` separators; default
@@ -229,8 +240,8 @@ behavior as v2 arrays.
 A top-level `sharding_indexed` codec is also supported without outer wrapper
 codecs. Its regular outer chunk grid defines shard objects, while its positive
 inner `chunk_shape` must exactly divide every outer shard extent. Inner chunks
-use the same bounded `transpose`/`bytes`/`gzip-or-blosc`/`crc32c` subset
-described above.
+use the same bounded `transpose`/`bytes`/`gzip-or-blosc-or-zstd`/`crc32c`
+subset described above.
 The fixed-size shard index uses little-endian `uint64` offset/length pairs,
 optionally followed by CRC32C, and may be stored at the start or end of the
 shard. Whole-object absence and the required all-`uint64::MAX` index sentinel
@@ -249,8 +260,8 @@ index location, index and payload range requests, bytes, and cache activity.
 This subset intentionally excludes outer codecs around sharding, nested
 sharding, variable-size index codecs, full-shard fallback, range coalescing,
 storage transformers, consolidated metadata, big-endian bytes, alternate
-compressor/CRC32C order, bytes-to-bytes codecs other than gzip or Blosc, and
-extension data types.
+compressor/CRC32C order, bytes-to-bytes codecs other than gzip, Blosc, or
+Zstandard, and extension data types.
 Unsupported metadata fails explicitly instead of being ignored.
 Unknown top-level Zarr 3.1 extensions are accepted only when their object is
 explicitly marked `must_understand: false`; shorthand extension definitions are
@@ -731,8 +742,8 @@ single Foreign Scan or retains a local Aggregate node.
   `max` over plain columns. Grouped, distinct, filtered, ordered, expression,
   and user-defined aggregates are computed by PostgreSQL.
 - Raw, gzip, zlib, and Blosc/LZ4 chunk compression is supported for v2. The v3
-  subset supports the ordered `transpose`, `bytes`, `gzip` or bounded Blosc,
-  and `crc32c` pipeline described above.
+  subset supports the ordered `transpose`, `bytes`, `gzip`, bounded Blosc, or
+  bounded Zstandard, and `crc32c` pipeline described above.
 - Non-empty v2 filters, Fortran order, consolidated metadata, storage
   transformers, writes, and OME-Zarr semantics outside the bounded 0.5
   multiscale subset above are not supported.
