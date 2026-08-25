@@ -2014,31 +2014,19 @@ impl ZarrFdw {
         metrics
     }
 
-    fn iter_aggregate_scan(&mut self, row: &mut Row) -> ZarrFdwResult<Option<()>> {
-        if self.aggregate_emitted {
-            self.flush_persistent_stats_at_eof();
-            return Ok(None);
-        }
-
+    /// Make the next selected cell ready for a consumer.
+    ///
+    /// This is the shared chunk-execution state machine for tuple and aggregate
+    /// scans: preserve an already pending cell, otherwise fetch/cache/decode
+    /// chunks lazily until one has a non-empty selected window. Consumers own
+    /// cell decoding, residual filtering, cursor advancement, and EOF output.
+    fn ensure_cell_ready(&mut self) -> ZarrFdwResult<bool> {
         loop {
             if self.pending {
-                self.reduce_current_cell()?;
-                continue;
+                return Ok(true);
             }
             let Some(encoded) = self.next_prefetched_chunk()? else {
-                let results = self
-                    .aggregate_reducer
-                    .take()
-                    .expect("aggregate reducer set in begin_aggregate_scan")
-                    .finish()?;
-                row.clear();
-                for (alias, cell) in results {
-                    row.push(&alias, cell);
-                }
-                self.aggregate_emitted = true;
-                self.rows_out = 1;
-                self.metrics.record_tuple_emitted();
-                return Ok(Some(()));
+                return Ok(false);
             };
             self.load_chunk(encoded)?;
             let empty_window = (0..self.rank).any(|axis| self.sub_lo[axis] > self.sub_hi[axis]);
@@ -2046,28 +2034,44 @@ impl ZarrFdw {
                 continue;
             }
             self.pending = true;
+            return Ok(true);
         }
     }
 
-    fn iter_scalar_scan(&mut self, row: &mut Row) -> ZarrFdwResult<Option<()>> {
-        loop {
-            if self.pending {
-                row.clear();
-                self.emit_and_advance(row)?;
-                self.rows_out += 1;
-                return Ok(Some(()));
-            }
-            let Some(encoded) = self.next_prefetched_chunk()? else {
-                self.flush_persistent_stats_at_eof();
-                return Ok(None);
-            };
-            self.load_chunk(encoded)?;
-            let empty_window = (0..self.rank).any(|d| self.sub_lo[d] > self.sub_hi[d]);
-            if empty_window {
-                continue;
-            }
-            self.pending = true;
+    fn iter_aggregate_scan(&mut self, row: &mut Row) -> ZarrFdwResult<Option<()>> {
+        if self.aggregate_emitted {
+            self.flush_persistent_stats_at_eof();
+            return Ok(None);
         }
+
+        while self.ensure_cell_ready()? {
+            self.reduce_current_cell()?;
+        }
+
+        let results = self
+            .aggregate_reducer
+            .take()
+            .expect("aggregate reducer set in begin_aggregate_scan")
+            .finish()?;
+        row.clear();
+        for (alias, cell) in results {
+            row.push(&alias, cell);
+        }
+        self.aggregate_emitted = true;
+        self.rows_out = 1;
+        self.metrics.record_tuple_emitted();
+        Ok(Some(()))
+    }
+
+    fn iter_scalar_scan(&mut self, row: &mut Row) -> ZarrFdwResult<Option<()>> {
+        if !self.ensure_cell_ready()? {
+            self.flush_persistent_stats_at_eof();
+            return Ok(None);
+        }
+        row.clear();
+        self.emit_and_advance(row)?;
+        self.rows_out += 1;
+        Ok(Some(()))
     }
 }
 
