@@ -207,9 +207,11 @@ zarr_fdw = [
     "aws-config",
     "aws-sdk-s3",
     "blosc-rs",
+    "cap-std",
     "crc32c",
     "chrono",
     "futures-util",
+    "libc",
     "lru",
     "tokio",
     "tokio-util",
@@ -219,6 +221,7 @@ zarr_fdw = [
     "serde_json",
     "thiserror",
     "http",
+    "url",
 ]
 # Does not include helloworld_fdw because of its general uselessness
 native_fdws = [
@@ -292,7 +295,9 @@ aws-sdk-s3 = { version = "1.86.0", optional = true }
 
 # for zarr_fdw
 blosc-rs = { version = "0.4.0", features = ["lz4"], optional = true }
+cap-std = { version = "3.4.5", optional = true }
 crc32c = { version = "0.6.8", optional = true }
+libc = { version = "0.2", optional = true }
 lru = { version = "0.12.5", optional = true }
 zstd = { version = "0.13.3", default-features = false, optional = true }
 

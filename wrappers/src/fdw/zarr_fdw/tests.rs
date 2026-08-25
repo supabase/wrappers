@@ -1,9 +1,9 @@
 #[cfg(any(test, feature = "pg_test"))]
 #[pgrx::pg_schema]
 mod tests {
+    use pgrx::JsonB;
     use pgrx::pg_test;
     use pgrx::prelude::*;
-    use pgrx::JsonB;
 
     fn create_minio_e2e_server() {
         Spi::connect_mut(|c| {
@@ -150,6 +150,68 @@ mod tests {
             )
             .unwrap();
         });
+    }
+
+    fn local_fixture_url(fixture: &str) -> String {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("dockerfiles/s3/test_data/zarr")
+            .join(fixture)
+            .canonicalize()
+            .unwrap_or_else(|error| {
+                panic!("local Zarr fixture '{fixture}' is unavailable: {error}")
+            });
+        let path = path
+            .to_str()
+            .expect("local Zarr fixture path must be valid UTF-8");
+        assert!(path.starts_with('/'), "local Zarr fixture must be absolute");
+        assert!(
+            !path.contains('\''),
+            "local Zarr fixture path cannot contain a SQL quote"
+        );
+        format!("file://{path}")
+    }
+
+    fn create_local_e2e_wrapper() {
+        Spi::run(
+            r#"CREATE FOREIGN DATA WRAPPER zarr_local_e2e_wrapper
+                 HANDLER zarr_fdw_handler VALIDATOR zarr_fdw_validator"#,
+        )
+        .unwrap();
+    }
+
+    fn create_local_e2e_server(server: &str, fixture: &str) {
+        let store_url = local_fixture_url(fixture);
+        Spi::run(&format!(
+            r#"CREATE SERVER {server}
+                 FOREIGN DATA WRAPPER zarr_local_e2e_wrapper
+                 OPTIONS (store_url '{store_url}')"#
+        ))
+        .unwrap();
+    }
+
+    fn create_local_time_y_x_table(table: &str, server: &str, array_group: &str, decode_cf: bool) {
+        let (value_type, decode_option) = if decode_cf {
+            (
+                "double precision",
+                ",\n                         decode_cf 'true'",
+            )
+        } else {
+            ("real", "")
+        };
+        Spi::run(&format!(
+            r#"CREATE FOREIGN TABLE {table} (
+                 time timestamp with time zone,
+                 y double precision,
+                 x double precision,
+                 value {value_type}
+               )
+               SERVER {server}
+               OPTIONS (
+                 array_group '{array_group}',
+                 time_from_attrs 'true'{decode_option}
+               )"#
+        ))
+        .unwrap();
     }
 
     fn capture_query_error(statement: &str) -> String {
@@ -350,7 +412,7 @@ mod tests {
         );
     }
 
-    fn assert_v3_zstd_cf_aggregate(table: &str) {
+    fn assert_sparse_cube_cf_aggregate(table: &str) {
         let sql = format!(
             r#"SELECT count(*) AS total_count,
                       count(value) AS value_count,
@@ -688,6 +750,457 @@ mod tests {
             )
             .unwrap();
         });
+    }
+
+    #[pg_test]
+    fn zarr_local_v2_scan_sparse_fill_cf_aggregate_and_explain_e2e() {
+        create_local_e2e_wrapper();
+        create_local_e2e_server("zarr_local_v2_server", "e2e.zarr");
+        create_local_time_y_x_table(
+            "zarr_local_v2_raw",
+            "zarr_local_v2_server",
+            "nested/raw",
+            false,
+        );
+        create_local_time_y_x_table(
+            "zarr_local_v2_cf",
+            "zarr_local_v2_server",
+            "nested/raw",
+            true,
+        );
+        assert_sparse_cube_cf_aggregate("zarr_local_v2_cf");
+
+        Spi::connect(|c| {
+            let summary = c
+                .select(
+                    r#"SELECT count(*) AS total_count,
+                              sum(value)::double precision AS value_sum,
+                              min(value)::double precision AS value_min,
+                              max(value)::double precision AS value_max,
+                              count(*) FILTER (WHERE value = -7.5) AS fill_count
+                         FROM zarr_local_v2_raw"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(
+                summary
+                    .get_by_name::<i64, _>("total_count")
+                    .unwrap()
+                    .unwrap(),
+                60
+            );
+            assert_eq!(
+                summary.get_by_name::<f64, _>("value_sum").unwrap().unwrap(),
+                3_574.0
+            );
+            assert_eq!(
+                summary.get_by_name::<f64, _>("value_min").unwrap().unwrap(),
+                -7.5
+            );
+            assert_eq!(
+                summary.get_by_name::<f64, _>("value_max").unwrap().unwrap(),
+                143.0
+            );
+            assert_eq!(
+                summary
+                    .get_by_name::<i64, _>("fill_count")
+                    .unwrap()
+                    .unwrap(),
+                8
+            );
+
+            let probes = c
+                .select(
+                    r#"SELECT value
+                         FROM zarr_local_v2_raw
+                        WHERE (time, y, x) IN (
+                          ('1970-01-01 00:00:00+00'::timestamptz, 20, 110),
+                          ('1970-01-01 00:00:00+00'::timestamptz, 50, 130),
+                          ('1970-01-01 00:00:03.6+00'::timestamptz, 20, 110),
+                          ('1970-01-01 00:00:03.6+00'::timestamptz, 50, 150)
+                        )
+                        ORDER BY time, y, x"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .map(|row| row.get_by_name::<f32, _>("value").unwrap().unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(probes, vec![11.0, 43.0, 111.0, -7.5]);
+
+            let plan = c
+                .select(
+                    r#"EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+                       SELECT count(*), sum(value)
+                         FROM zarr_local_v2_raw"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|row| row.get::<&str>(1).unwrap().map(str::to_string))
+                .collect::<Vec<_>>();
+            let has = |text: &str| plan.iter().any(|line| line.contains(text));
+            assert!(has("Zarr Storage Backend: local"), "plan: {plan:?}");
+            assert!(has("Zarr Max Concurrent Reads: 1"), "plan: {plan:?}");
+            assert!(has("Zarr Chunks Selected: 4"), "plan: {plan:?}");
+            assert!(has("Zarr Chunks Requested: 4"), "plan: {plan:?}");
+            assert!(has("Zarr Chunks Present: 3"), "plan: {plan:?}");
+            assert!(has("Zarr Chunks Missing: 1"), "plan: {plan:?}");
+            assert!(has("Zarr Data GET Calls: 4"), "plan: {plan:?}");
+            assert!(has("Zarr Data Encoded Bytes: 288 bytes"), "plan: {plan:?}");
+        });
+    }
+
+    #[pg_test]
+    fn zarr_local_v3_sharding_range_and_rescan_cache_e2e() {
+        create_local_e2e_wrapper();
+        create_local_e2e_server("zarr_local_v3_server", "e2e-v3.zarr");
+        create_local_time_y_x_table(
+            "zarr_local_v3_shard",
+            "zarr_local_v3_server",
+            "nested/shard_end",
+            false,
+        );
+
+        Spi::connect(|c| {
+            let values = c
+                .select(
+                    r#"SELECT x, value
+                         FROM zarr_local_v3_shard
+                        WHERE time = '1970-01-01 00:00:00+00'::timestamptz
+                          AND y = 20
+                          AND x BETWEEN 110 AND 130
+                        ORDER BY x"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .map(|row| {
+                    (
+                        row.get_by_name::<f64, _>("x").unwrap().unwrap(),
+                        row.get_by_name::<f32, _>("value").unwrap().unwrap(),
+                    )
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(values, vec![(110.0, 11.0), (120.0, 12.0), (130.0, 13.0)]);
+
+            let plan = c
+                .select(
+                    r#"EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+                       SELECT ordinal,
+                              (SELECT count(*)
+                                 FROM zarr_local_v3_shard
+                                WHERE time = '1970-01-01 00:00:00+00'::timestamptz
+                                  AND y = 20
+                                  AND x BETWEEN 110 AND upper_x) AS selected
+                         FROM (VALUES (1, 130.0::double precision),
+                                      (2, 130.0::double precision)) AS limits(ordinal, upper_x)
+                        ORDER BY ordinal"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|row| row.get::<&str>(1).unwrap().map(str::to_string))
+                .collect::<Vec<_>>();
+            let has = |text: &str| plan.iter().any(|line| line.contains(text));
+            assert!(has("Zarr Storage Backend: local"), "plan: {plan:?}");
+            assert!(has("Zarr Max Concurrent Reads: 1"), "plan: {plan:?}");
+            assert!(
+                has("Zarr Storage Layout: sharding_indexed (index: end)"),
+                "plan: {plan:?}"
+            );
+            assert!(has("Zarr Chunks Requested: 4"), "plan: {plan:?}");
+            assert!(has("Zarr Chunks Present: 4"), "plan: {plan:?}");
+            assert!(has("Zarr Data GET Calls: 3"), "plan: {plan:?}");
+            assert!(has("Zarr Data Encoded Bytes: 116 bytes"), "plan: {plan:?}");
+            assert!(has("Zarr Cache Hits: 2"), "plan: {plan:?}");
+            assert!(has("Zarr Cache Misses: 2"), "plan: {plan:?}");
+            assert!(has("Zarr Shard Index GET Calls: 1"), "plan: {plan:?}");
+            assert!(has("Zarr Shard Payload GET Calls: 2"), "plan: {plan:?}");
+            assert!(has("Zarr Shard Index Cache Hits: 3"), "plan: {plan:?}");
+            assert!(has("Zarr Shard Index Cache Misses: 1"), "plan: {plan:?}");
+            assert!(
+                has("Zarr Shard Index Encoded Bytes: 68 bytes"),
+                "plan: {plan:?}"
+            );
+            assert!(
+                has("Zarr Shard Payload Encoded Bytes: 48 bytes"),
+                "plan: {plan:?}"
+            );
+            assert!(has("Zarr Rescans: 1"), "plan: {plan:?}");
+        });
+    }
+
+    #[pg_test]
+    fn zarr_local_inspect_and_multiscales_e2e() {
+        create_local_e2e_wrapper();
+        create_local_e2e_server("zarr_local_inspect_server", "e2e.zarr");
+        create_local_e2e_server("zarr_local_ome_server", "e2e-ome-v3.zarr");
+
+        Spi::connect(|c| {
+            let paths = c
+                .select(
+                    "SELECT path FROM zarr_inspect('zarr_local_inspect_server') ORDER BY path",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|row| row.get_by_name::<String, _>("path").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(
+                paths,
+                vec![
+                    "/",
+                    "nested",
+                    "nested/band",
+                    "nested/blosc",
+                    "nested/channel",
+                    "nested/forecast_time",
+                    "nested/generic4d",
+                    "nested/lazy1m",
+                    "nested/level",
+                    "nested/raw",
+                    "nested/sample",
+                    "nested/spatial2d",
+                    "nested/spatial_ref",
+                    "nested/time",
+                    "nested/x",
+                    "nested/y",
+                ]
+            );
+
+            let raw = c
+                .select(
+                    r#"SELECT zarr_format, shape, dimensions, dtype, chunks
+                         FROM zarr_inspect('zarr_local_inspect_server')
+                        WHERE path = 'nested/raw'"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(raw.get_by_name::<i64, _>("zarr_format").unwrap(), Some(2));
+            assert_eq!(
+                raw.get_by_name::<JsonB, _>("shape").unwrap().unwrap().0,
+                serde_json::json!([2, 5, 6])
+            );
+            assert_eq!(
+                raw.get_by_name::<Vec<String>, _>("dimensions")
+                    .unwrap()
+                    .unwrap(),
+                vec!["time", "y", "x"]
+            );
+            assert_eq!(
+                raw.get_by_name::<String, _>("dtype").unwrap(),
+                Some("<f4".to_string())
+            );
+            assert_eq!(
+                raw.get_by_name::<JsonB, _>("chunks").unwrap().unwrap().0,
+                serde_json::json!([2, 3, 4])
+            );
+
+            let multiscales = c
+                .select(
+                    r#"SELECT level_index, array_path, shape, chunks, scale,
+                              translation, supported, warnings
+                         FROM zarr_multiscales('zarr_local_ome_server')
+                        ORDER BY level_index"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .map(|row| {
+                    (
+                        row.get_by_name::<i64, _>("level_index").unwrap().unwrap(),
+                        row.get_by_name::<String, _>("array_path").unwrap().unwrap(),
+                        row.get_by_name::<JsonB, _>("shape").unwrap().unwrap().0,
+                        row.get_by_name::<JsonB, _>("chunks").unwrap().unwrap().0,
+                        row.get_by_name::<Vec<f64>, _>("scale").unwrap().unwrap(),
+                        row.get_by_name::<Vec<f64>, _>("translation")
+                            .unwrap()
+                            .unwrap(),
+                        row.get_by_name::<bool, _>("supported").unwrap().unwrap(),
+                        row.get_by_name::<Vec<String>, _>("warnings")
+                            .unwrap()
+                            .unwrap(),
+                    )
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                multiscales,
+                vec![
+                    (
+                        0,
+                        "image/0".to_string(),
+                        serde_json::json!([4, 4]),
+                        serde_json::json!([3, 3]),
+                        vec![4.0, 12.0],
+                        vec![120.0, 260.0],
+                        true,
+                        Vec::new(),
+                    ),
+                    (
+                        1,
+                        "image/1".to_string(),
+                        serde_json::json!([2, 2]),
+                        serde_json::json!([2, 2]),
+                        vec![8.0, 24.0],
+                        vec![122.0, 266.0],
+                        true,
+                        Vec::new(),
+                    ),
+                ]
+            );
+
+            let ome_paths = c
+                .select(
+                    "SELECT path FROM zarr_inspect('zarr_local_ome_server') ORDER BY path",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|row| row.get_by_name::<String, _>("path").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(ome_paths, vec!["/", "image", "image/0", "image/1"]);
+        });
+    }
+
+    #[pg_test]
+    fn zarr_local_privileges_owner_transfer_and_runtime_guard_e2e() {
+        create_local_e2e_wrapper();
+        let store_url = local_fixture_url("e2e.zarr");
+        Spi::run(
+            r#"CREATE ROLE zarr_local_nonsupervisor NOSUPERUSER;
+               GRANT USAGE ON FOREIGN DATA WRAPPER zarr_local_e2e_wrapper
+                 TO zarr_local_nonsupervisor"#,
+        )
+        .unwrap();
+
+        Spi::run("SET ROLE zarr_local_nonsupervisor").unwrap();
+        let create_error = capture_query_error(&format!(
+            r#"CREATE SERVER zarr_local_forbidden
+                 FOREIGN DATA WRAPPER zarr_local_e2e_wrapper
+                 OPTIONS (store_url '{store_url}')"#
+        ));
+        assert!(
+            create_error.contains(
+                "file:// Zarr stores may only be created or altered by a PostgreSQL superuser"
+            ),
+            "message: {create_error}"
+        );
+        Spi::run("RESET ROLE").unwrap();
+
+        create_local_e2e_server("zarr_local_delegated_server", "e2e.zarr");
+        create_local_time_y_x_table(
+            "zarr_local_delegated",
+            "zarr_local_delegated_server",
+            "nested/raw",
+            false,
+        );
+        Spi::run(
+            r#"GRANT USAGE ON FOREIGN SERVER zarr_local_delegated_server
+                 TO zarr_local_nonsupervisor;
+               GRANT SELECT ON zarr_local_delegated
+                 TO zarr_local_nonsupervisor;
+               GRANT SELECT, INSERT, UPDATE ON public.wrappers_fdw_stats
+                 TO zarr_local_nonsupervisor;
+               SET ROLE zarr_local_nonsupervisor"#,
+        )
+        .unwrap();
+        let delegated = Spi::get_one::<f32>(
+            r#"SELECT value
+                 FROM zarr_local_delegated
+                WHERE time = '1970-01-01 00:00:00+00'::timestamptz
+                  AND y = 20
+                  AND x = 110"#,
+        )
+        .unwrap();
+        assert_eq!(delegated, Some(11.0));
+        Spi::run("RESET ROLE").unwrap();
+
+        Spi::run("ALTER SERVER zarr_local_delegated_server OWNER TO zarr_local_nonsupervisor")
+            .unwrap();
+        Spi::run("SET ROLE zarr_local_nonsupervisor").unwrap();
+        let alter_error = capture_query_error(
+            "ALTER SERVER zarr_local_delegated_server OPTIONS (ADD max_concurrent_reads '2')",
+        );
+        assert!(
+            alter_error.contains(
+                "file:// Zarr stores may only be created or altered by a PostgreSQL superuser"
+            ),
+            "message: {alter_error}"
+        );
+        let runtime_error = capture_query_error(
+            r#"SELECT value
+                 FROM zarr_local_delegated
+                WHERE time = '1970-01-01 00:00:00+00'::timestamptz
+                  AND y = 20
+                  AND x = 110"#,
+        );
+        assert!(
+            runtime_error.contains(
+                "file:// Zarr store foreign server must be owned by a PostgreSQL superuser"
+            ),
+            "message: {runtime_error}"
+        );
+        Spi::run("RESET ROLE").unwrap();
+    }
+
+    #[pg_test]
+    fn zarr_local_table_path_traversal_is_rejected_before_io() {
+        create_local_e2e_wrapper();
+        create_local_e2e_server("zarr_local_traversal_server", "e2e.zarr");
+        let message = capture_query_error(
+            r#"CREATE FOREIGN TABLE zarr_local_traversal (
+                 time timestamp with time zone,
+                 y double precision,
+                 x double precision,
+                 value real
+               )
+               SERVER zarr_local_traversal_server
+               OPTIONS (array_group '../nested/raw')"#,
+        );
+        assert!(
+            message.contains("must be a non-empty array path inside the store"),
+            "message: {message}"
+        );
+    }
+
+    #[pg_test]
+    fn zarr_local_plain_explain_does_not_open_missing_root_e2e() {
+        create_local_e2e_wrapper();
+        let store_url = format!("{}/missing-root", local_fixture_url("e2e.zarr"));
+        Spi::run(&format!(
+            r#"CREATE SERVER zarr_local_missing_root_server
+                 FOREIGN DATA WRAPPER zarr_local_e2e_wrapper
+                 OPTIONS (store_url '{store_url}')"#
+        ))
+        .unwrap();
+        create_local_time_y_x_table(
+            "zarr_local_missing_root",
+            "zarr_local_missing_root_server",
+            "nested/raw",
+            false,
+        );
+
+        let plan = Spi::connect(|c| {
+            c.select(
+                "EXPLAIN (COSTS OFF) SELECT * FROM zarr_local_missing_root",
+                None,
+                &[],
+            )
+            .unwrap()
+            .filter_map(|row| row.get::<&str>(1).unwrap().map(str::to_string))
+            .collect::<Vec<_>>()
+        });
+        assert!(
+            plan.iter().any(|line| line.contains("Foreign Scan")),
+            "plan: {plan:?}"
+        );
     }
 
     #[pg_test]
@@ -3554,7 +4067,7 @@ mod tests {
             "nested/zstd_pipeline",
             true,
         );
-        assert_v3_zstd_cf_aggregate("zarr_v3_zstd_pipeline_cf");
+        assert_sparse_cube_cf_aggregate("zarr_v3_zstd_pipeline_cf");
 
         Spi::connect(|c| {
             let probes = c
@@ -3733,7 +4246,7 @@ mod tests {
         create_minio_v3_e2e_server();
         create_minio_v3_e2e_table_on_server("zarr_v3_shard_zstd", "nested/shard_zstd", false);
         create_minio_v3_e2e_table_on_server("zarr_v3_shard_zstd_cf", "nested/shard_zstd", true);
-        assert_v3_zstd_cf_aggregate("zarr_v3_shard_zstd_cf");
+        assert_sparse_cube_cf_aggregate("zarr_v3_shard_zstd_cf");
 
         Spi::connect(|c| {
             let values = c

@@ -10,9 +10,9 @@ tags:
 # Zarr
 
 The Zarr Wrapper provides read-only access to Zarr v2 arrays and a core subset
-of Zarr v3 arrays in S3-compatible object storage. A scan reads one rank-1
-through rank-64 value array whose named dimensions resolve to sibling
-coordinate arrays.
+of Zarr v3 arrays in S3-compatible object storage or a secured local filesystem
+directory. A scan reads one rank-1 through rank-64 value array whose named
+dimensions resolve to sibling coordinate arrays.
 
 ## Enable the wrapper
 
@@ -41,7 +41,34 @@ required, `path_style_url 'true'`. Authentication can use the AWS provider
 chain, `anonymous 'true'`, a complete direct key pair, or a complete Vault key
 pair. Authentication modes cannot be combined.
 
-Remote chunk execution is bounded by three optional server settings:
+An absolute local directory can be used without copying the dataset into
+object storage:
+
+```sql
+create server local_zarr_server
+  foreign data wrapper zarr_wrapper
+  options (
+    store_url 'file:///srv/zarr/climate.zarr'
+  );
+```
+
+Local URLs must have the exact `file:///absolute/path` form, without a host,
+userinfo, query, or fragment. S3 authentication, endpoint, region, and
+path-style options cannot be used with a local store. Creating or altering a
+local Zarr server requires a PostgreSQL superuser, and the foreign server must
+remain owned by a superuser at execution time. A superuser can grant `USAGE`
+on a fixed server and `SELECT` on its foreign tables to other roles.
+
+The configured local root and its contents must be administered outside
+PostgreSQL and must not be writable by untrusted operating-system users. Reads
+reject traversal and symbolic links that escape the configured root;
+directory discovery does not follow symbolic-link entries, and final Zarr
+objects must be regular files. Missing regular object paths retain normal Zarr
+fill-value behavior; permission, file-type, containment, and mutation failures
+are errors rather than missing chunks. Errors identify store-relative object
+keys without exposing the ambient filesystem root.
+
+Chunk execution is bounded by three optional server settings:
 
 | Option | Default | Range |
 | --- | ---: | ---: |
@@ -50,6 +77,8 @@ Remote chunk execution is bounded by three optional server settings:
 | `compressed_cache_bytes` | `67108864` | `0`–1 GiB; `0` disables caching |
 
 Reads are prefetched in deterministic chunk order without background tasks.
+S3 uses the configured read concurrency; local stores use one effective read
+at a time while retaining the same byte and cache limits.
 The compressed cache belongs to one query execution, so bytes never cross
 roles, credentials, server changes, or queries. A rescan within the same query
 can reuse cached chunks.
@@ -57,8 +86,10 @@ For sharded arrays, that same byte budget is divided between decoded shard
 indexes and encoded inner-payload ranges; sharding does not add a second
 unbounded cache.
 
-Inspection requires `s3:ListBucket` and `s3:GetObject`. Scanning requires
-`s3:GetObject`.
+S3 inspection requires `s3:ListBucket` and `s3:GetObject`, while scanning
+requires `s3:GetObject`. Local inspection and scans require the PostgreSQL
+operating-system account to traverse the configured directory and read the
+required metadata and chunk files.
 
 ## Inspect a dataset
 
@@ -716,7 +747,8 @@ single Foreign Scan or retains a local Aggregate node.
 ## Current limitations
 
 - Read-only Zarr v2 and the core Zarr v3 subset described above on
-  S3-compatible storage.
+  S3-compatible storage or a secured local filesystem directory. Plain HTTP,
+  GCS, Azure, and SSH filesystem URLs are not supported.
 - Scans support one value array with rank 1 through 64 and mandatory v2
   `_ARRAY_DIMENSIONS` or v3 `dimension_names`; scalar arrays remain unsupported.
 - Ordinary arrays require a same-group, same-name, rank-1 numeric coordinate
@@ -752,7 +784,7 @@ single Foreign Scan or retains a local Aggregate node.
   reads after PostgreSQL has accepted enough rows.
 - Scan execution limits each loaded coordinate and all loaded coordinates
   together to 16,777,216 values. Chunk-index iteration is O(rank); decoded
-  chunks retain their 256 MiB limit and remote concurrency/cache use the server
-  byte limits above. These are safety bounds, not Zarr format limits.
+  chunks retain their 256 MiB limit and storage concurrency/cache use the
+  server byte limits above. These are safety bounds, not Zarr format limits.
 - Inspection has hard depth, node, list-page, object-size, and total metadata
   limits and fails explicitly rather than returning a truncated hierarchy.

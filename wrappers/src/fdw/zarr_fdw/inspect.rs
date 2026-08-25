@@ -411,7 +411,7 @@ fn inspect_ome_v3_nodes(store: &ZarrStore) -> ZarrFdwResult<OmeInspectionNodes> 
             })?;
             if list_pages > MAX_INSPECTION_LIST_PAGES {
                 return Err(ZarrFdwError::InvalidMetadata(format!(
-                    "multiscale inspection exceeds the limit of {MAX_INSPECTION_LIST_PAGES} S3 list pages"
+                    "multiscale inspection exceeds the limit of {MAX_INSPECTION_LIST_PAGES} storage list pages"
                 )));
             }
             let page = store.list_directory_page_sync(&path, continuation_token)?;
@@ -1008,7 +1008,7 @@ fn inspect_store(store: &ZarrStore) -> ZarrFdwResult<Vec<InspectionRow>> {
             })?;
             if list_pages > MAX_INSPECTION_LIST_PAGES {
                 return Err(ZarrFdwError::InvalidMetadata(format!(
-                    "inspection exceeds the limit of {MAX_INSPECTION_LIST_PAGES} S3 list pages"
+                    "inspection exceeds the limit of {MAX_INSPECTION_LIST_PAGES} storage list pages"
                 )));
             }
             let page = store.list_directory_page_sync(&path, continuation_token)?;

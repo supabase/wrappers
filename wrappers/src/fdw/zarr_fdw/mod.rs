@@ -51,6 +51,21 @@ enum ZarrFdwError {
     #[error("Vault secret referenced by option '{option}' was not found")]
     VaultSecretNotFound { option: String },
 
+    #[error("file:// Zarr stores may only be created or altered by a PostgreSQL superuser")]
+    FileStoreDefinitionRequiresSuperuser,
+
+    #[error("file:// Zarr store foreign server must be owned by a PostgreSQL superuser")]
+    FileStoreOwnerRequiresSuperuser,
+
+    #[error("invalid file:// Zarr store URL: {0}")]
+    InvalidFileStoreUrl(String),
+
+    #[error("local storage key is invalid: {0}")]
+    InvalidLocalStorageKey(String),
+
+    #[error("local storage access failed for object '{key}': {message}")]
+    LocalStorageAccess { key: String, message: String },
+
     #[error("data type '{0}' is not supported")]
     UnsupportedDataType(String),
 
@@ -122,6 +137,10 @@ enum ZarrFdwError {
 impl From<ZarrFdwError> for ErrorReport {
     fn from(value: ZarrFdwError) -> Self {
         let code = match &value {
+            ZarrFdwError::FileStoreDefinitionRequiresSuperuser
+            | ZarrFdwError::FileStoreOwnerRequiresSuperuser => {
+                PgSqlErrorCode::ERRCODE_INSUFFICIENT_PRIVILEGE
+            }
             ZarrFdwError::InvalidCrs { .. } | ZarrFdwError::InvalidGeometry(_) => {
                 PgSqlErrorCode::ERRCODE_INVALID_PARAMETER_VALUE
             }

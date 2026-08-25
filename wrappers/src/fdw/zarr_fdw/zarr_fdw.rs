@@ -75,7 +75,7 @@ use super::spatial::grid::{
 };
 use super::store::{
     MAX_METADATA_OBJECT_BYTES, RangedObject, ReadIdentity, ReadRange, ZarrStore, join_key,
-    validate_auth_options,
+    validate_store_definition_privilege, validate_store_options,
 };
 use super::{ZarrFdwError, ZarrFdwResult};
 
@@ -2800,8 +2800,11 @@ fn option_value(options: &[Option<String>], name: &str) -> Option<String> {
 
 impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
     fn new(server: ForeignServer) -> ZarrFdwResult<Self> {
-        let (max_concurrent_reads, max_inflight_bytes, compressed_cache_bytes) =
+        let (configured_max_concurrent_reads, max_inflight_bytes, compressed_cache_bytes) =
             scalable_execution_options(&server.options)?;
+        let store = ZarrStore::new(&server)?;
+        let max_concurrent_reads =
+            store.effective_max_concurrent_reads(configured_max_concurrent_reads);
         let prefetch = OrderedPrefetch::new(
             max_concurrent_reads,
             max_inflight_bytes,
@@ -2811,7 +2814,6 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
             option: OPT_MAX_CONCURRENT_READS.to_string(),
             message: error.to_string(),
         })?;
-        let store = ZarrStore::new(&server)?;
         stats::inc_stats(FDW_NAME, stats::Metric::CreateTimes, 1);
         Ok(Self {
             store,
@@ -2925,6 +2927,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
                 chunk_shape: &chunk_shape,
                 dtype: &dtype,
                 codec: &codec,
+                storage_backend: self.store.backend_label(),
                 storage_layout: &storage_layout,
                 shard_shape,
                 index_location,
@@ -3435,7 +3438,8 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
                         .filter_map(|option| option.split_once('='))
                         .map(|(name, value)| (name.to_string(), value.to_string()))
                         .collect::<HashMap<_, _>>();
-                    validate_auth_options(&server_options)?;
+                    let backend = validate_store_options(&server_options)?;
+                    validate_store_definition_privilege(backend)?;
                     scalable_execution_options(&server_options)?;
                 }
                 FOREIGN_TABLE_RELATION_ID => {

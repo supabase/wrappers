@@ -1,28 +1,72 @@
-//! Object store access for Zarr reading.
+//! Bounded storage access for Zarr reading.
 //!
-//! MVP backend: S3 (via `aws-sdk-s3`), mirroring the setup used by `s3_fdw`.
-//! GCS/Azure/local/sshfs arrive on the v1 roadmap; the `ZarrStore` wrapper is
-//! deliberately narrow (`get_object`) so those backends slot in without
-//! touching the scan path.
+//! The scan-facing [`ZarrStore`] owns PostgreSQL interruption handling while
+//! backend implementations own format-specific object and directory access.
+
+mod local;
 
 use aws_config::BehaviorVersion;
 use aws_sdk_s3 as s3;
+use futures_util::FutureExt;
+use futures_util::future::LocalBoxFuture;
 use http::Uri;
 use pgrx::pg_sys;
 use std::collections::HashMap;
 use std::future::Future;
+use std::sync::Arc;
 use std::time::Duration;
 use tokio::io::AsyncReadExt;
 use tokio::time::{MissedTickBehavior, interval};
 
 use supabase_wrappers::prelude::*;
 
+use self::local::LocalBackend;
 use super::{ZarrFdwError, ZarrFdwResult};
 
 /// Metadata objects are tiny JSON documents. Chunk callers provide a tighter
 /// limit derived from their declared decoded layout.
 pub(crate) const MAX_METADATA_OBJECT_BYTES: usize = 1024 * 1024;
 const INTERRUPT_POLL_INTERVAL: Duration = Duration::from_millis(25);
+
+pub(crate) type StoreFuture<T> = LocalBoxFuture<'static, ZarrFdwResult<T>>;
+
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
+pub(crate) enum StorageBackendKind {
+    S3,
+    Local,
+}
+
+impl StorageBackendKind {
+    pub(crate) fn label(self) -> &'static str {
+        match self {
+            Self::S3 => "s3",
+            Self::Local => "local",
+        }
+    }
+
+    pub(crate) fn effective_max_concurrent_reads(self, configured: usize) -> usize {
+        match self {
+            Self::S3 => configured,
+            // Local reads are poll-driven foreground file I/O. Scheduling
+            // more than one cannot create useful kernel concurrency.
+            Self::Local => 1,
+        }
+    }
+}
+
+pub(crate) trait StorageBackend: Send + Sync {
+    fn kind(&self) -> StorageBackendKind;
+
+    fn get_object_owned(&self, key: String, max_bytes: usize) -> StoreFuture<Option<Vec<u8>>>;
+
+    fn get_range_owned(&self, identity: ReadIdentity) -> StoreFuture<Option<RangedObject>>;
+
+    fn list_directory_page_owned(
+        &self,
+        path: String,
+        continuation_token: Option<String>,
+    ) -> StoreFuture<DirectoryPage>;
+}
 
 /// The exact object bytes represented by one storage read/cache entry.
 ///
@@ -35,16 +79,30 @@ pub(crate) enum ReadRange {
     Suffix { length: u64 },
 }
 
-/// Observed identity of one S3 object generation.
+/// Observed identity of one backend object generation.
 ///
-/// `version_id` is deliberately observational. Follow-up reads use `If-Match`
-/// with the ETag, preserving deployments that grant `s3:GetObject` but not
-/// `s3:GetObjectVersion`.
+/// For S3, `version_id` is deliberately observational. Follow-up reads use
+/// `If-Match` with the ETag, preserving deployments that grant `s3:GetObject`
+/// but not `s3:GetObjectVersion`. Local validators carry a reserved `local:`
+/// prefix so a generation can never be reused across backend kinds.
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub(crate) struct ObjectGeneration {
     pub etag: String,
     pub version_id: Option<String>,
     pub total_len: u64,
+}
+
+impl ObjectGeneration {
+    /// Preserve the existing S3-shaped fields while making backend mismatch
+    /// rejection explicit. Local validators are tagged and never sent as an
+    /// S3 `If-Match` value.
+    pub(crate) fn backend_kind(&self) -> StorageBackendKind {
+        if self.etag.starts_with("local:") {
+            StorageBackendKind::Local
+        } else {
+            StorageBackendKind::S3
+        }
+    }
 }
 
 /// Complete identity for a query-local object read/cache entry.
@@ -58,7 +116,7 @@ pub(crate) struct ReadIdentity {
 impl ReadIdentity {
     pub(crate) fn whole(key: impl Into<String>) -> Self {
         Self {
-            key: normalize_read_key(key),
+            key: key.into(),
             range: ReadRange::Whole,
             generation: None,
         }
@@ -67,10 +125,10 @@ impl ReadIdentity {
     pub(crate) fn exact(key: impl Into<String>, start: u64, length: u64) -> ZarrFdwResult<Self> {
         validate_nonempty_range(length)?;
         start.checked_add(length - 1).ok_or_else(|| {
-            ZarrFdwError::InvalidMetadata("S3 byte range end overflows u64".to_string())
+            ZarrFdwError::InvalidMetadata("storage byte range end overflows u64".to_string())
         })?;
         Ok(Self {
-            key: normalize_read_key(key),
+            key: key.into(),
             range: ReadRange::Exact { start, length },
             generation: None,
         })
@@ -79,7 +137,7 @@ impl ReadIdentity {
     pub(crate) fn suffix(key: impl Into<String>, length: u64) -> ZarrFdwResult<Self> {
         validate_nonempty_range(length)?;
         Ok(Self {
-            key: normalize_read_key(key),
+            key: key.into(),
             range: ReadRange::Suffix { length },
             generation: None,
         })
@@ -92,10 +150,6 @@ impl ReadIdentity {
         self.generation = Some(generation);
         self
     }
-}
-
-fn normalize_read_key(key: impl Into<String>) -> String {
-    key.into().trim_matches('/').to_string()
 }
 
 /// One exactly validated S3 range response.
@@ -317,11 +371,104 @@ pub(crate) fn validate_auth_options(options: &HashMap<String, String>) -> ZarrFd
     })
 }
 
-/// Object store client.
+const S3_ONLY_OPTIONS: &[&str] = &[
+    "anonymous",
+    "aws_access_key_id",
+    "aws_secret_access_key",
+    "vault_access_key_id",
+    "vault_secret_access_key",
+    "aws_region",
+    "endpoint_url",
+    "path_style_url",
+];
+
+/// Validate the configured storage scheme and its backend-specific options.
+///
+/// PostgreSQL privilege checks are deliberately separate: the DDL validator
+/// checks the current user, while runtime construction checks the cataloged
+/// foreign-server owner so delegated `USAGE` continues to work.
+pub(crate) fn validate_store_options(
+    options: &HashMap<String, String>,
+) -> ZarrFdwResult<StorageBackendKind> {
+    let store_url = require_option("store_url", options)?;
+    if store_url.starts_with("s3://") {
+        StoreUrl::parse(store_url)?;
+        validate_auth_options(options)?;
+        return Ok(StorageBackendKind::S3);
+    }
+    if store_url.starts_with("file:") {
+        LocalBackend::validate_url(store_url)?;
+        if let Some(option) = S3_ONLY_OPTIONS
+            .iter()
+            .find(|option| options.contains_key(**option))
+        {
+            return Err(ZarrFdwError::InvalidOptionValue {
+                option: (*option).to_string(),
+                message: "is only valid for s3:// stores".to_string(),
+            });
+        }
+        return Ok(StorageBackendKind::Local);
+    }
+    Err(ZarrFdwError::InvalidStoreUrl(store_url.to_string()))
+}
+
+/// Enforce the `CREATE/ALTER SERVER` privilege boundary for file stores.
+pub(crate) fn validate_store_definition_privilege(kind: StorageBackendKind) -> ZarrFdwResult<()> {
+    if kind == StorageBackendKind::Local && !unsafe { pg_sys::superuser() } {
+        return Err(ZarrFdwError::FileStoreDefinitionRequiresSuperuser);
+    }
+    Ok(())
+}
+
+fn validate_file_server_owner(server_oid: pg_sys::Oid) -> ZarrFdwResult<()> {
+    if server_oid == pg_sys::Oid::INVALID {
+        return Err(ZarrFdwError::FileStoreOwnerRequiresSuperuser);
+    }
+    let server = unsafe { pg_sys::GetForeignServer(server_oid) };
+    if server.is_null() || !unsafe { pg_sys::superuser_arg((*server).owner) } {
+        return Err(ZarrFdwError::FileStoreOwnerRequiresSuperuser);
+    }
+    Ok(())
+}
+
+struct S3Backend {
+    client: s3::Client,
+    url: StoreUrl,
+}
+
+impl StorageBackend for S3Backend {
+    fn kind(&self) -> StorageBackendKind {
+        StorageBackendKind::S3
+    }
+
+    fn get_object_owned(&self, key: String, max_bytes: usize) -> StoreFuture<Option<Vec<u8>>> {
+        get_object_optional_owned(self.client.clone(), self.url.clone(), key, max_bytes)
+            .boxed_local()
+    }
+
+    fn get_range_owned(&self, identity: ReadIdentity) -> StoreFuture<Option<RangedObject>> {
+        get_object_range_owned(self.client.clone(), self.url.clone(), identity).boxed_local()
+    }
+
+    fn list_directory_page_owned(
+        &self,
+        path: String,
+        continuation_token: Option<String>,
+    ) -> StoreFuture<DirectoryPage> {
+        list_directory_page_owned(
+            self.client.clone(),
+            self.url.clone(),
+            path,
+            continuation_token,
+        )
+        .boxed_local()
+    }
+}
+
+/// Query-local storage coordinator.
 pub(crate) struct ZarrStore {
     pub rt: Runtime,
-    pub client: s3::Client,
-    pub url: StoreUrl,
+    backend: Arc<dyn StorageBackend>,
 }
 
 impl ZarrStore {
@@ -342,60 +489,88 @@ impl ZarrStore {
         }
     }
 
-    /// Build an S3-backed store from `CREATE SERVER` options.
+    /// Build the configured store from `CREATE SERVER` options.
     pub fn new(server: &ForeignServer) -> ZarrFdwResult<Self> {
         // Cannot use create_async_runtime() as the runtime needs multiple threads
         let rt = tokio::runtime::Runtime::new()
             .map_err(CreateRuntimeError::FailedToCreateAsyncRuntime)?;
 
+        let kind = validate_store_options(&server.options)?;
         let store_url = require_option("store_url", &server.options)?;
-        let url = StoreUrl::parse(store_url)?;
-
-        let auth_mode = validate_auth_options(&server.options)?;
-        let client = match auth_mode {
-            AuthMode::Anonymous => Self::build_client(&rt, &server.options, ClientAuth::Anonymous),
-            AuthMode::Direct => {
-                let access_key = require_option("aws_access_key_id", &server.options)?.to_string();
-                let secret_key =
-                    require_option("aws_secret_access_key", &server.options)?.to_string();
-                Self::build_client(
-                    &rt,
-                    &server.options,
-                    ClientAuth::Static {
-                        access_key,
-                        secret_key,
-                    },
-                )
-            }
-            AuthMode::Vault => {
-                let vault_access_key_id = require_option("vault_access_key_id", &server.options)?;
-                let vault_secret_access_key =
-                    require_option("vault_secret_access_key", &server.options)?;
-                let access_key = get_vault_secret(vault_access_key_id).ok_or_else(|| {
-                    ZarrFdwError::VaultSecretNotFound {
-                        option: "vault_access_key_id".to_string(),
+        let backend: Arc<dyn StorageBackend> = match kind {
+            StorageBackendKind::S3 => {
+                let url = StoreUrl::parse(store_url)?;
+                let auth_mode = validate_auth_options(&server.options)?;
+                let client = match auth_mode {
+                    AuthMode::Anonymous => {
+                        Self::build_client(&rt, &server.options, ClientAuth::Anonymous)
                     }
-                })?;
-                let secret_key = get_vault_secret(vault_secret_access_key).ok_or_else(|| {
-                    ZarrFdwError::VaultSecretNotFound {
-                        option: "vault_secret_access_key".to_string(),
+                    AuthMode::Direct => {
+                        let access_key =
+                            require_option("aws_access_key_id", &server.options)?.to_string();
+                        let secret_key =
+                            require_option("aws_secret_access_key", &server.options)?.to_string();
+                        Self::build_client(
+                            &rt,
+                            &server.options,
+                            ClientAuth::Static {
+                                access_key,
+                                secret_key,
+                            },
+                        )
                     }
-                })?;
-                Self::build_client(
-                    &rt,
-                    &server.options,
-                    ClientAuth::Static {
-                        access_key,
-                        secret_key,
-                    },
-                )
+                    AuthMode::Vault => {
+                        let vault_access_key_id =
+                            require_option("vault_access_key_id", &server.options)?;
+                        let vault_secret_access_key =
+                            require_option("vault_secret_access_key", &server.options)?;
+                        let access_key =
+                            get_vault_secret(vault_access_key_id).ok_or_else(|| {
+                                ZarrFdwError::VaultSecretNotFound {
+                                    option: "vault_access_key_id".to_string(),
+                                }
+                            })?;
+                        let secret_key =
+                            get_vault_secret(vault_secret_access_key).ok_or_else(|| {
+                                ZarrFdwError::VaultSecretNotFound {
+                                    option: "vault_secret_access_key".to_string(),
+                                }
+                            })?;
+                        Self::build_client(
+                            &rt,
+                            &server.options,
+                            ClientAuth::Static {
+                                access_key,
+                                secret_key,
+                            },
+                        )
+                    }
+                    AuthMode::ProviderChain => {
+                        Self::build_client(&rt, &server.options, ClientAuth::ProviderChain)
+                    }
+                };
+                Arc::new(S3Backend { client, url })
             }
-            AuthMode::ProviderChain => {
-                Self::build_client(&rt, &server.options, ClientAuth::ProviderChain)
+            StorageBackendKind::Local => {
+                validate_file_server_owner(server.server_oid)?;
+                Arc::new(LocalBackend::new(store_url)?)
             }
         };
 
-        Ok(Self { rt, client, url })
+        Ok(Self { rt, backend })
+    }
+
+    pub(crate) fn backend_kind(&self) -> StorageBackendKind {
+        self.backend.kind()
+    }
+
+    pub(crate) fn backend_label(&self) -> &'static str {
+        self.backend_kind().label()
+    }
+
+    pub(crate) fn effective_max_concurrent_reads(&self, configured: usize) -> usize {
+        self.backend_kind()
+            .effective_max_concurrent_reads(configured)
     }
 
     fn build_client(rt: &Runtime, opts: &HashMap<String, String>, auth: ClientAuth) -> s3::Client {
@@ -428,8 +603,8 @@ impl ZarrStore {
         s3::Client::from_conf(s3_config_builder.build())
     }
 
-    /// Fetch a full object by key (relative to the store prefix), returning
-    /// `None` only when S3 explicitly reports `NoSuchKey` or HTTP 404.
+    /// Fetch a full object by key (relative to the store root), returning
+    /// `None` only when the backend explicitly reports that it is absent.
     pub async fn get_object_optional(
         &self,
         key: &str,
@@ -446,8 +621,8 @@ impl ZarrStore {
         &self,
         key: String,
         max_bytes: usize,
-    ) -> impl Future<Output = ZarrFdwResult<Option<Vec<u8>>>> + 'static {
-        get_object_optional_owned(self.client.clone(), self.url.clone(), key, max_bytes)
+    ) -> StoreFuture<Option<Vec<u8>>> {
+        self.backend.get_object_owned(key, max_bytes)
     }
 
     /// Synchronous optional fetch used for sparse Zarr chunks.
@@ -459,14 +634,13 @@ impl ZarrStore {
         self.block_on_interruptibly(self.get_object_optional(key, max_bytes))
     }
 
-    /// Create an owned, exactly bounded S3 range request. Range responses
-    /// without a valid `Content-Range` are rejected; this method never falls
-    /// back to reading the complete object.
+    /// Create an owned, exactly bounded storage range request. This method
+    /// never falls back to reading the complete object.
     pub(crate) fn get_object_range_owned(
         &self,
         identity: ReadIdentity,
-    ) -> impl Future<Output = ZarrFdwResult<Option<RangedObject>>> + 'static {
-        get_object_range_owned(self.client.clone(), self.url.clone(), identity)
+    ) -> StoreFuture<Option<RangedObject>> {
+        self.backend.get_range_owned(identity)
     }
 
     /// Synchronous range fetch for eager coordinate and shard-index reads.
@@ -487,49 +661,9 @@ impl ZarrStore {
         path: &str,
         continuation_token: Option<String>,
     ) -> ZarrFdwResult<DirectoryPage> {
-        let key = self.url.object_key(path);
-        let prefix = if key.is_empty() {
-            String::new()
-        } else {
-            format!("{}/", key.trim_end_matches('/'))
-        };
-        let response = self
-            .client
-            .list_objects_v2()
-            .bucket(&self.url.bucket)
-            .prefix(prefix)
-            .delimiter("/")
-            .max_keys(1000)
-            .set_continuation_token(continuation_token)
-            .send()
-            .await?;
-
-        let mut child_prefixes = response
-            .common_prefixes
-            .unwrap_or_default()
-            .into_iter()
-            .filter_map(|entry| entry.prefix)
-            .filter_map(|entry| self.url.relative_key(&entry))
-            .map(|entry| entry.trim_matches('/').to_string())
-            .collect::<Vec<_>>();
-        child_prefixes.sort();
-        child_prefixes.dedup();
-
-        let next_continuation_token = if response.is_truncated.unwrap_or(false) {
-            response.next_continuation_token
-        } else {
-            None
-        };
-        if response.is_truncated.unwrap_or(false) && next_continuation_token.is_none() {
-            return Err(ZarrFdwError::InvalidMetadata(
-                "S3 returned a truncated listing without a continuation token".to_string(),
-            ));
-        }
-
-        Ok(DirectoryPage {
-            child_prefixes,
-            next_continuation_token,
-        })
+        self.backend
+            .list_directory_page_owned(path.to_string(), continuation_token)
+            .await
     }
 
     pub fn list_directory_page_sync(
@@ -587,11 +721,70 @@ async fn get_object_optional_owned(
     ))
 }
 
+async fn list_directory_page_owned(
+    client: s3::Client,
+    url: StoreUrl,
+    path: String,
+    continuation_token: Option<String>,
+) -> ZarrFdwResult<DirectoryPage> {
+    let key = url.object_key(&path);
+    let prefix = if key.is_empty() {
+        String::new()
+    } else {
+        format!("{}/", key.trim_end_matches('/'))
+    };
+    let response = client
+        .list_objects_v2()
+        .bucket(&url.bucket)
+        .prefix(prefix)
+        .delimiter("/")
+        .max_keys(1000)
+        .set_continuation_token(continuation_token)
+        .send()
+        .await?;
+
+    let mut child_prefixes = response
+        .common_prefixes
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|entry| entry.prefix)
+        .filter_map(|entry| url.relative_key(&entry))
+        .map(|entry| entry.trim_matches('/').to_string())
+        .collect::<Vec<_>>();
+    child_prefixes.sort();
+    child_prefixes.dedup();
+
+    let next_continuation_token = if response.is_truncated.unwrap_or(false) {
+        response.next_continuation_token
+    } else {
+        None
+    };
+    if response.is_truncated.unwrap_or(false) && next_continuation_token.is_none() {
+        return Err(ZarrFdwError::InvalidMetadata(
+            "S3 returned a truncated listing without a continuation token".to_string(),
+        ));
+    }
+
+    Ok(DirectoryPage {
+        child_prefixes,
+        next_continuation_token,
+    })
+}
+
 async fn get_object_range_owned(
     client: s3::Client,
     url: StoreUrl,
     identity: ReadIdentity,
 ) -> ZarrFdwResult<Option<RangedObject>> {
+    if identity
+        .generation
+        .as_ref()
+        .is_some_and(|generation| generation.backend_kind() != StorageBackendKind::S3)
+    {
+        return Err(ZarrFdwError::InvalidMetadata(
+            "storage object generation belongs to a different backend".to_string(),
+        ));
+    }
     let full_key = url.object_key(&identity.key);
     let range_header = range_header(&identity.range)?;
     let expected_length = range_length(&identity.range)?;
@@ -619,7 +812,13 @@ async fn get_object_range_owned(
                 .raw_response()
                 .map(|response| response.status().as_u16());
             if is_missing_object_response(modeled_no_such_key, status) {
-                return Ok(None);
+                return if identity.generation.is_some() {
+                    Err(ZarrFdwError::InvalidMetadata(format!(
+                        "object '{full_key}' changed while reading a shard (generation-conditioned S3 range is now missing)"
+                    )))
+                } else {
+                    Ok(None)
+                };
             }
             if status == Some(412) {
                 return Err(ZarrFdwError::InvalidMetadata(format!(
@@ -717,7 +916,7 @@ async fn get_object_range_owned(
 fn validate_nonempty_range(length: u64) -> ZarrFdwResult<()> {
     if length == 0 {
         return Err(ZarrFdwError::InvalidMetadata(
-            "S3 byte range length must be greater than zero".to_string(),
+            "storage byte range length must be greater than zero".to_string(),
         ));
     }
     Ok(())
@@ -906,10 +1105,7 @@ mod tests {
 
     #[test]
     fn range_headers_use_checked_inclusive_http_bounds() {
-        assert_eq!(
-            ReadIdentity::whole("/array/c/0/").key,
-            ReadIdentity::whole("array/c/0").key
-        );
+        assert_eq!(ReadIdentity::whole("/array/c/0/").key, "/array/c/0/");
         assert_eq!(
             range_header(&ReadRange::Exact {
                 start: 10,
@@ -1021,6 +1217,54 @@ mod tests {
         let u = StoreUrl::parse("s3://cinecube/sentinel2/2025.zarr").unwrap();
         assert_eq!(u.bucket, "cinecube");
         assert_eq!(u.prefix, "sentinel2/2025.zarr");
+    }
+
+    #[test]
+    fn validates_backend_specific_store_options() {
+        assert_eq!(
+            validate_store_options(&options(&[("store_url", "s3://bucket/root")])).unwrap(),
+            StorageBackendKind::S3
+        );
+        assert_eq!(
+            validate_store_options(&options(&[("store_url", "file:///tmp/zarr")])).unwrap(),
+            StorageBackendKind::Local
+        );
+        let error = validate_store_options(&options(&[
+            ("store_url", "file:///tmp/zarr"),
+            ("anonymous", "true"),
+        ]))
+        .unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            "invalid value for option 'anonymous': is only valid for s3:// stores"
+        );
+        assert!(validate_store_options(&options(&[("store_url", "https://host/zarr")])).is_err());
+    }
+
+    #[test]
+    fn backend_read_concurrency_is_truthful() {
+        assert_eq!(StorageBackendKind::S3.effective_max_concurrent_reads(8), 8);
+        assert_eq!(
+            StorageBackendKind::Local.effective_max_concurrent_reads(8),
+            1
+        );
+    }
+
+    #[test]
+    fn generation_backend_tags_are_disjoint() {
+        let s3 = ObjectGeneration {
+            etag: "\"etag\"".to_string(),
+            version_id: None,
+            total_len: 1,
+        };
+        let local = ObjectGeneration {
+            etag: "local:1:2:1:3:4:5:6".to_string(),
+            version_id: None,
+            total_len: 1,
+        };
+        assert_eq!(s3.backend_kind(), StorageBackendKind::S3);
+        assert_eq!(local.backend_kind(), StorageBackendKind::Local);
+        assert_ne!(s3, local);
     }
 
     #[test]
