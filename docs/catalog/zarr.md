@@ -300,8 +300,8 @@ an unmatched value produces an empty scan without data-chunk requests.
 Selectors are always combined with SQL predicates using `AND`; they never
 override a `WHERE` clause. Documents are limited to 64 KiB and 64 dimensions.
 Range/list selectors and string coordinates such as Sentinel band names remain
-deferred. The current spatial functions reject selector-bearing tables until
-their explicit selector-aware overloads are available.
+deferred. Spatial sampling and reduction functions require their explicit
+selector-aware overloads to use selector-bearing tables.
 
 ### Zarr v3 subset
 
@@ -512,11 +512,32 @@ returns table (
 )
 ```
 
+Selector-bearing tables must use the explicit selector-aware overload:
+
+```sql
+zarr_sample(
+  foreign_table text,
+  point_ewkb bytea,
+  method text,
+  dimension_selectors text
+)
+```
+
+The `dimension_selectors` argument uses the same JSON grammar as the foreign
+table option and has no default. Pass `'{}'` when only the table option should
+apply. The point lookup owns the horizontal X/Y dimensions, so selectors may
+target auxiliary dimensions only. Every auxiliary dimension must resolve to
+zero or one exact native index; zero returns no sample row, while more than one
+index fails clearly.
+
 Use a schema-qualified foreign-table name. The caller must have `SELECT` on the
 foreign table and `USAGE` on its foreign server. The table must select one Zarr
 value array with exactly two discovered, one-dimensional horizontal coordinate
-axes and a supported, unambiguous EPSG CRS. EWKB must contain a nonzero SRID;
-the point is transformed into the array CRS before coordinate lookup.
+axes and a supported, unambiguous EPSG CRS. The legacy signature requires a
+rank-2 array. The selector-aware overload also accepts auxiliary dimensions
+when each resolves to zero or one exact native index. EWKB must contain a
+nonzero SRID; the point is transformed into the array CRS before coordinate
+lookup.
 
 `nearest` independently selects the closest stored x and y coordinate. A tie is
 resolved to the lower logical array index, including on descending axes.
@@ -590,11 +611,31 @@ returns table (
 );
 ```
 
-Both functions apply the same foreign-table privilege, rectilinear-grid, CRS,
-and scientific-decoding rules as `zarr_sample`. Region EWKB must contain a
-valid, non-empty, two-dimensional Polygon or MultiPolygon with a positive SRID.
-The geometry is transformed into the array CRS, and its envelope is used only
-for conservative coordinate and chunk pruning.
+Selector-bearing tables must use the explicit selector-aware reduction
+overload:
+
+```sql
+zarr_zonal_stats(
+  foreign_table text,
+  region_ewkb bytea,
+  dimension_selectors text
+)
+```
+
+The polygon owns horizontal X/Y selection. Table and call selectors intersect
+for auxiliary dimensions only. Pass `'{}'` to opt into table selectors without
+adding call selectors. If an auxiliary dimension resolves to no exact index,
+the function returns one empty statistics row; if it resolves to multiple
+indexes, the function fails rather than aggregating unlabeled slices.
+
+Both legacy functions apply the same foreign-table privilege,
+rectilinear-grid, CRS, rank-2, and scientific-decoding rules as the legacy
+`zarr_sample` signature. The selector-aware `zarr_zonal_stats` overload also
+accepts auxiliary dimensions when each resolves to zero or one exact native
+index; `zarr_cells` remains rank-2 and has no selector overload. Region EWKB
+must contain a valid, non-empty, two-dimensional Polygon or MultiPolygon with a
+positive SRID. The geometry is transformed into the array CRS, and its envelope
+is used only for conservative coordinate and chunk pruning.
 
 Exact inclusion uses PostGIS `ST_Covers(region, cell_center)` semantics. A cell
 center on the polygon boundary is therefore included. The returned cells are
@@ -681,13 +722,32 @@ returns table (
 );
 ```
 
+`zarr_zonal_stats_by_time` also has a selector-aware overload:
+
+```sql
+zarr_zonal_stats_by_time(
+  foreign_table text,
+  region_ewkb bytea,
+  start_time timestamptz,
+  end_time timestamptz,
+  dimension_selectors text
+)
+```
+
+The polygon owns X/Y and the time range owns the Time dimension; selectors may
+target only other auxiliary dimensions. Pass `'{}'` to opt into selector-aware
+execution with only table selectors. A non-overlapping time range returns no
+rows. A spatial or auxiliary empty selection with matching time indexes returns
+one empty statistics row per selected time index.
+
 Time bounds are required and form a half-open range: `start_time` is included
 and `end_time` is excluded. The FDW uses the same manual or attribute-derived
 time conversion as an ordinary scan. It discovers Time, X, and Y roles rather
 than relying on dimension names or positions, and supports any array-axis order.
 Additional dimensions are accepted only when their extent is one; a
-non-singleton band, level, channel, or unknown dimension must be selected by a
-future API and is therefore rejected here.
+non-singleton band, level, channel, or unknown dimension must resolve to zero
+or one exact index through the selector-aware overload and is otherwise
+rejected.
 
 Unordered time coordinates are scanned conservatively and checked exactly, so
 matching timestamps are not pruned incorrectly. Duplicate stored timestamps

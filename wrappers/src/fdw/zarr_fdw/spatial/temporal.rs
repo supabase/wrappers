@@ -7,9 +7,10 @@ use pgrx::pg_sys::panic::{ErrorReport, ErrorReportable};
 use pgrx::prelude::*;
 use supabase_wrappers::prelude::{ForeignDataWrapper, Row};
 
+use super::super::selectors::{DimensionSelectors, OPT_DIMENSION_SELECTORS};
 use super::super::zarr_fdw::ZarrFdw;
 use super::super::{ZarrFdwError, ZarrFdwResult};
-use super::catalog::load_zarr_foreign_table;
+use super::catalog::{load_zarr_foreign_table, load_zarr_foreign_table_with_selectors};
 use super::point::numeric_cell_to_f64;
 use super::postgis::{MAX_COVERAGE_CANDIDATES, PostgisCatalog};
 use super::zonal::{
@@ -151,9 +152,48 @@ fn zarr_zonal_stats_by_time(
         name!(srid, i32),
     ),
 > {
-    let rows = zonal_foreign_table(foreign_table, region_ewkb, start_time, end_time)
+    let rows = zonal_foreign_table(foreign_table, region_ewkb, start_time, end_time, None)
         .map_err(ErrorReport::from)
         .unwrap_or_report();
+    TableIterator::new(rows.into_iter().map(TemporalZonalStatsRow::sql_row))
+}
+
+#[allow(clippy::type_complexity)]
+#[pg_extern(
+    name = "zarr_zonal_stats_by_time",
+    create_or_replace,
+    volatile,
+    parallel_unsafe
+)]
+fn zarr_zonal_stats_by_time_with_selectors(
+    foreign_table: &str,
+    region_ewkb: &[u8],
+    start_time: TimestampWithTimeZone,
+    end_time: TimestampWithTimeZone,
+    dimension_selectors: &str,
+) -> TableIterator<
+    'static,
+    (
+        name!(time, TimestampWithTimeZone),
+        name!(time_index, i64),
+        name!(count, i64),
+        name!(valid_count, i64),
+        name!(min, Option<f64>),
+        name!(max, Option<f64>),
+        name!(sum, Option<f64>),
+        name!(avg, Option<f64>),
+        name!(srid, i32),
+    ),
+> {
+    let rows = zonal_foreign_table(
+        foreign_table,
+        region_ewkb,
+        start_time,
+        end_time,
+        Some(dimension_selectors),
+    )
+    .map_err(ErrorReport::from)
+    .unwrap_or_report();
     TableIterator::new(rows.into_iter().map(TemporalZonalStatsRow::sql_row))
 }
 
@@ -164,7 +204,7 @@ fn cells_foreign_table(
     end: TimestampWithTimeZone,
 ) -> ZarrFdwResult<Vec<TemporalCellRow>> {
     let mut cells = Vec::new();
-    visit_foreign_table_cells(foreign_table, region_ewkb, start, end, |cell| {
+    visit_foreign_table_cells(foreign_table, region_ewkb, start, end, None, |cell| {
         if cells.len() >= MAX_SPATIAL_OUTPUT_CELLS {
             return Err(ZarrFdwError::InvalidGeometry(format!(
                 "spatiotemporal polygon selects more than the {MAX_SPATIAL_OUTPUT_CELLS}-cell output limit"
@@ -181,14 +221,22 @@ fn zonal_foreign_table(
     region_ewkb: &[u8],
     start: TimestampWithTimeZone,
     end: TimestampWithTimeZone,
+    call_selectors: Option<&str>,
 ) -> ZarrFdwResult<Vec<TemporalZonalStatsRow>> {
     let mut accumulators = BTreeMap::<i64, ZonalAccumulator>::new();
-    let summary = visit_foreign_table_cells(foreign_table, region_ewkb, start, end, |cell| {
-        accumulators
-            .entry(cell.time_index)
-            .or_default()
-            .observe(cell.value)
-    })?;
+    let summary = visit_foreign_table_cells(
+        foreign_table,
+        region_ewkb,
+        start,
+        end,
+        call_selectors,
+        |cell| {
+            accumulators
+                .entry(cell.time_index)
+                .or_default()
+                .observe(cell.value)
+        },
+    )?;
 
     summary
         .times
@@ -218,13 +266,32 @@ fn visit_foreign_table_cells(
     region_ewkb: &[u8],
     start: TimestampWithTimeZone,
     end: TimestampWithTimeZone,
+    call_selectors: Option<&str>,
     mut visitor: impl FnMut(TemporalCellRow) -> ZarrFdwResult<()>,
 ) -> ZarrFdwResult<TemporalVisitSummary> {
     // Fail before any remote metadata request when the optional spatial
     // dependency is absent or incomplete.
     let postgis = PostgisCatalog::require()?;
-    let table = load_zarr_foreign_table(foreign_table)?;
+    let selector_aware = call_selectors.is_some();
+    let table = if selector_aware {
+        load_zarr_foreign_table_with_selectors(foreign_table)?
+    } else {
+        load_zarr_foreign_table(foreign_table)?
+    };
+    let call_selectors = match call_selectors {
+        Some(raw) => {
+            DimensionSelectors::parse(
+                table
+                    .options
+                    .get(OPT_DIMENSION_SELECTORS)
+                    .map(String::as_str),
+            )?;
+            DimensionSelectors::parse(Some(raw))?
+        }
+        None => DimensionSelectors::default(),
+    };
     let mut fdw = ZarrFdw::new(table.server)?;
+    fdw.set_call_dimension_selectors(call_selectors)?;
     let begin = <ZarrFdw as ForeignDataWrapper<ZarrFdwError>>::begin_scan(
         &mut fdw,
         &[],
@@ -258,7 +325,8 @@ fn visit_prepared_scan(
     // Validate the table contract before a non-overlapping envelope can
     // return an otherwise-successful empty result.
     let value_column = fdw.spatial_value_column()?.to_string();
-    let time_axis = fdw.spatial_time_layout()?.time;
+    let operation_layout = fdw.spatial_time_layout()?;
+    let time_axis = operation_layout.time;
     let time_indices = fdw.spatial_time_indices(start, end, MAX_SPATIAL_OUTPUT_CELLS)?;
     let mut times = Vec::with_capacity(time_indices.len());
     for (selected_position, &time_index) in time_indices.iter().enumerate() {
@@ -276,6 +344,19 @@ fn visit_prepared_scan(
         fdw.spatial_array_path(),
         crs.epsg,
     )?;
+    if !fdw.apply_spatial_dimension_selectors(
+        "zarr_zonal_stats_by_time",
+        &[
+            operation_layout.time,
+            operation_layout.horizontal.x,
+            operation_layout.horizontal.y,
+        ],
+    )? {
+        return Ok(TemporalVisitSummary {
+            times,
+            srid: crs.epsg,
+        });
+    }
     let Some((window_axes, horizontal_bounds, _spatial_candidates)) = fdw
         .spatial_time_horizontal_window(
             envelope.xmin,

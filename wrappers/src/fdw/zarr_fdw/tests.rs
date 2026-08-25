@@ -334,6 +334,44 @@ mod tests {
         })
     }
 
+    fn capture_query_error_as_role(role: &str, statement: &str) -> String {
+        Spi::connect_mut(|c| {
+            c.update(
+                r#"CREATE OR REPLACE FUNCTION pg_temp.capture_zarr_error(statement text)
+                     RETURNS text
+                     LANGUAGE plpgsql
+                     AS $function$
+                     BEGIN
+                       EXECUTE statement;
+                       RETURN NULL;
+                     EXCEPTION WHEN query_canceled THEN
+                       RETURN SQLERRM;
+                     WHEN OTHERS THEN
+                       RETURN SQLERRM;
+                     END
+                     $function$"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(&format!("SET ROLE {role}"), None, &[]).unwrap();
+            let message = c
+                .select(
+                    "SELECT pg_temp.capture_zarr_error($1) AS message",
+                    None,
+                    &[statement.into()],
+                )
+                .unwrap()
+                .next()
+                .unwrap()
+                .get_by_name::<String, _>("message")
+                .unwrap()
+                .expect("query must fail");
+            c.update("RESET ROLE", None, &[]).unwrap();
+            message
+        })
+    }
+
     fn create_minio_e2e_table(table: &str, array_group: &str, value_type: &str) {
         create_minio_e2e_table_with_cf(table, array_group, value_type, false);
     }
@@ -474,6 +512,10 @@ mod tests {
             value_type,
             &format!(",\n                         time_from_attrs 'true'{decode_option}"),
         );
+    }
+
+    fn create_minio_spatial_time_table_with_options(table: &str, options: &str) {
+        create_minio_e2e_table_with_options(table, "nested/raw", "real", options);
     }
 
     fn install_postgis_in_test_schema() {
@@ -3479,6 +3521,443 @@ mod tests {
                  )"#,
         )
         .unwrap();
+    }
+
+    #[pg_test]
+    fn zarr_spatial_selector_overload_catalog_contract() {
+        let overloads_owned_by_extension = Spi::get_one::<bool>(
+            r#"WITH targets(signature, expected_defaults) AS (
+                 VALUES
+                   ('zarr_sample(text,bytea,text)'::pg_catalog.regprocedure, 1),
+                   ('zarr_sample(text,bytea,text,text)'::pg_catalog.regprocedure, 0),
+                   ('zarr_zonal_stats(text,bytea)'::pg_catalog.regprocedure, 0),
+                   ('zarr_zonal_stats(text,bytea,text)'::pg_catalog.regprocedure, 0),
+                   ('zarr_zonal_stats_by_time(text,bytea,timestamp with time zone,timestamp with time zone)'::pg_catalog.regprocedure, 0),
+                   ('zarr_zonal_stats_by_time(text,bytea,timestamp with time zone,timestamp with time zone,text)'::pg_catalog.regprocedure, 0)
+               )
+               SELECT pg_catalog.count(*) = 6
+                  AND pg_catalog.bool_and(proc.pronargdefaults::integer = targets.expected_defaults)
+                  AND pg_catalog.bool_and(
+                        extension.extname IS NOT DISTINCT FROM 'wrappers'
+                      )
+                 FROM targets
+                 JOIN pg_catalog.pg_proc AS proc ON proc.oid = targets.signature
+                 LEFT JOIN pg_catalog.pg_depend AS dependency
+                   ON dependency.classid = 'pg_catalog.pg_proc'::pg_catalog.regclass
+                  AND dependency.objid = proc.oid
+                  AND dependency.refclassid = 'pg_catalog.pg_extension'::pg_catalog.regclass
+                  AND dependency.deptype = 'e'
+                 LEFT JOIN pg_catalog.pg_extension AS extension
+                   ON extension.oid = dependency.refobjid"#,
+        )
+        .unwrap();
+        assert_eq!(overloads_owned_by_extension, Some(true));
+
+        let no_helper_names = Spi::get_one::<bool>(
+            r#"SELECT NOT EXISTS (
+                   SELECT 1
+                     FROM pg_catalog.pg_proc
+                    WHERE proname IN (
+                      'zarr_sample_with_selectors',
+                      'zarr_zonal_stats_with_selectors',
+                      'zarr_zonal_stats_by_time_with_selectors'
+                    )
+               )
+               AND pg_catalog.to_regprocedure('zarr_cells(text,bytea,text)') IS NULL
+               AND pg_catalog.to_regprocedure(
+                     'zarr_cells_by_time(text,bytea,timestamp with time zone,timestamp with time zone,text)'
+                   ) IS NULL"#,
+        )
+        .unwrap();
+        assert_eq!(no_helper_names, Some(true));
+    }
+
+    #[pg_test]
+    fn zarr_postgis_selector_overloads_on_rank3_time_auxiliary() {
+        install_postgis_in_test_schema();
+        create_minio_spatial_time_table("zarr_e2e_spatial_time_selector_ops", false);
+
+        Spi::connect(|c| {
+            let sample = c
+                .select(
+                    r#"SELECT sample.*
+                         FROM zarr_sample(
+                           'zarr_e2e_spatial_time_selector_ops',
+                           zarr_gis.ST_AsEWKB(
+                             zarr_gis.ST_SetSRID(zarr_gis.ST_Point(110, 20), 3857)
+                           ),
+                           'exact',
+                           '{"time":{"index":1}}'
+                         ) AS sample"#,
+                    Some(1),
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(sample.get_by_name::<f64, _>("x").unwrap(), Some(110.0));
+            assert_eq!(sample.get_by_name::<f64, _>("y").unwrap(), Some(20.0));
+            assert_eq!(sample.get_by_name::<f64, _>("value").unwrap(), Some(111.0));
+            assert_eq!(sample.get_by_name::<i64, _>("x_index").unwrap(), Some(1));
+            assert_eq!(sample.get_by_name::<i64, _>("y_index").unwrap(), Some(1));
+            assert_eq!(
+                sample.get_by_name::<f64, _>("coordinate_distance").unwrap(),
+                Some(0.0)
+            );
+
+            let stats = c
+                .select(
+                    r#"SELECT stats.*
+                         FROM zarr_zonal_stats(
+                           'zarr_e2e_spatial_time_selector_ops',
+                           zarr_gis.ST_AsEWKB(
+                             zarr_gis.ST_MakeEnvelope(110, 20, 130, 40, 3857)
+                           ),
+                           '{"time":{"index":1}}'
+                         ) AS stats"#,
+                    Some(1),
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(stats.get_by_name::<i64, _>("count").unwrap(), Some(9));
+            assert_eq!(stats.get_by_name::<i64, _>("valid_count").unwrap(), Some(9));
+            assert_eq!(stats.get_by_name::<f64, _>("min").unwrap(), Some(111.0));
+            assert_eq!(stats.get_by_name::<f64, _>("max").unwrap(), Some(133.0));
+            assert_eq!(stats.get_by_name::<f64, _>("sum").unwrap(), Some(1098.0));
+            assert_eq!(stats.get_by_name::<f64, _>("avg").unwrap(), Some(122.0));
+
+            let by_time = c
+                .select(
+                    r#"SELECT extract(epoch FROM stats.time)::double precision AS epoch,
+                              stats.time_index,
+                              stats.count,
+                              stats.valid_count,
+                              stats.min,
+                              stats.max,
+                              stats.sum,
+                              stats.avg
+                         FROM zarr_zonal_stats_by_time(
+                           'zarr_e2e_spatial_time_selector_ops',
+                           zarr_gis.ST_AsEWKB(
+                             zarr_gis.ST_MakeEnvelope(110, 20, 130, 40, 3857)
+                           ),
+                           TIMESTAMPTZ '1970-01-01 00:00:00+00',
+                           TIMESTAMPTZ '1970-01-01 00:00:03.600001+00',
+                           '{}'
+                         ) AS stats
+                        ORDER BY stats.time_index"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .map(|row| {
+                    (
+                        row.get_by_name::<f64, _>("epoch").unwrap().unwrap(),
+                        row.get_by_name::<i64, _>("time_index").unwrap().unwrap(),
+                        row.get_by_name::<i64, _>("count").unwrap().unwrap(),
+                        row.get_by_name::<i64, _>("valid_count").unwrap().unwrap(),
+                        row.get_by_name::<f64, _>("min").unwrap(),
+                        row.get_by_name::<f64, _>("max").unwrap(),
+                        row.get_by_name::<f64, _>("sum").unwrap(),
+                        row.get_by_name::<f64, _>("avg").unwrap(),
+                    )
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                by_time,
+                vec![
+                    (
+                        0.0,
+                        0,
+                        9,
+                        9,
+                        Some(11.0),
+                        Some(33.0),
+                        Some(198.0),
+                        Some(22.0)
+                    ),
+                    (
+                        3.6,
+                        1,
+                        9,
+                        9,
+                        Some(111.0),
+                        Some(133.0),
+                        Some(1098.0),
+                        Some(122.0)
+                    )
+                ]
+            );
+        });
+    }
+
+    #[pg_test]
+    fn zarr_postgis_selector_overloads_intersections_and_rejections() {
+        install_postgis_in_test_schema();
+        create_minio_spatial_time_table_with_options(
+            "zarr_e2e_spatial_time_table_selector",
+            r#",
+                         time_from_attrs 'true',
+                         dimension_selectors '{"time":{"index":1}}'"#,
+        );
+        Spi::run(
+            r#"CREATE FOREIGN TABLE zarr_e2e_spatial_time_unselected (
+                 time timestamp with time zone,
+                 y double precision,
+                 x double precision,
+                 value real
+               )
+               SERVER zarr_e2e_server
+               OPTIONS (
+                 array_group 'nested/raw',
+                 time_from_attrs 'true'
+               )"#,
+        )
+        .unwrap();
+
+        Spi::connect(|c| {
+            let intersecting = c
+                .select(
+                    r#"SELECT sample.value
+                         FROM zarr_sample(
+                           'zarr_e2e_spatial_time_table_selector',
+                           zarr_gis.ST_AsEWKB(
+                             zarr_gis.ST_SetSRID(zarr_gis.ST_Point(110, 20), 3857)
+                           ),
+                           'exact',
+                           '{"time":{"value":3600}}'
+                         ) AS sample"#,
+                    Some(1),
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap()
+                .get_by_name::<f64, _>("value")
+                .unwrap();
+            assert_eq!(intersecting, Some(111.0));
+
+            let conflicting = c
+                .select(
+                    r#"SELECT pg_catalog.count(*)::bigint AS count
+                         FROM zarr_sample(
+                           'zarr_e2e_spatial_time_table_selector',
+                           zarr_gis.ST_AsEWKB(
+                             zarr_gis.ST_SetSRID(zarr_gis.ST_Point(110, 20), 3857)
+                           ),
+                           'exact',
+                           '{"time":{"index":0}}'
+                         )"#,
+                    Some(1),
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap()
+                .get_by_name::<i64, _>("count")
+                .unwrap();
+            assert_eq!(conflicting, Some(0));
+
+            let empty = c
+                .select(
+                    r#"SELECT stats.count,
+                              stats.valid_count,
+                              stats.min,
+                              stats.max,
+                              stats.sum,
+                              stats.avg
+                         FROM zarr_zonal_stats(
+                           'zarr_e2e_spatial_time_table_selector',
+                           zarr_gis.ST_AsEWKB(
+                             zarr_gis.ST_MakeEnvelope(1000, 1000, 1010, 1010, 3857)
+                           ),
+                           '{"time":{"value":3600}}'
+                         ) AS stats"#,
+                    Some(1),
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(empty.get_by_name::<i64, _>("count").unwrap(), Some(0));
+            assert_eq!(empty.get_by_name::<i64, _>("valid_count").unwrap(), Some(0));
+            assert_eq!(empty.get_by_name::<f64, _>("min").unwrap(), None);
+            assert_eq!(empty.get_by_name::<f64, _>("max").unwrap(), None);
+            assert_eq!(empty.get_by_name::<f64, _>("sum").unwrap(), None);
+            assert_eq!(empty.get_by_name::<f64, _>("avg").unwrap(), None);
+
+            let by_time_empty = c
+                .select(
+                    r#"SELECT pg_catalog.count(*)::bigint AS rows,
+                              pg_catalog.count(*) FILTER (
+                                WHERE stats.count = 0
+                                  AND stats.valid_count = 0
+                                  AND stats.min IS NULL
+                                  AND stats.max IS NULL
+                                  AND stats.sum IS NULL
+                                  AND stats.avg IS NULL
+                              )::bigint AS empty_rows
+                         FROM zarr_zonal_stats_by_time(
+                           'zarr_e2e_spatial_time_unselected',
+                           zarr_gis.ST_AsEWKB(
+                             zarr_gis.ST_MakeEnvelope(1000, 1000, 1010, 1010, 3857)
+                           ),
+                           TIMESTAMPTZ '1970-01-01 00:00:00+00',
+                           TIMESTAMPTZ '1970-01-01 00:00:03.600001+00',
+                           '{}'
+                         ) AS stats"#,
+                    Some(1),
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(
+                by_time_empty.get_by_name::<i64, _>("rows").unwrap(),
+                Some(2)
+            );
+            assert_eq!(
+                by_time_empty.get_by_name::<i64, _>("empty_rows").unwrap(),
+                Some(2)
+            );
+        });
+
+        for (sql, expected) in [
+            (
+                r#"SELECT *
+                     FROM zarr_sample(
+                       'zarr_e2e_spatial_time_unselected',
+                       zarr_gis.ST_AsEWKB(
+                         zarr_gis.ST_SetSRID(zarr_gis.ST_Point(110, 20), 3857)
+                       ),
+                       'exact',
+                       '{"x":{"index":1}}'
+                     )"#,
+                "zarr_sample owns dimension 'x'; selectors may target auxiliary dimensions only",
+            ),
+            (
+                r#"SELECT *
+                     FROM zarr_zonal_stats(
+                       'zarr_e2e_spatial_time_unselected',
+                       zarr_gis.ST_AsEWKB(
+                         zarr_gis.ST_MakeEnvelope(110, 20, 130, 40, 3857)
+                       ),
+                       '{"y":{"index":1}}'
+                     )"#,
+                "zarr_zonal_stats owns dimension 'y'; selectors may target auxiliary dimensions only",
+            ),
+            (
+                r#"SELECT *
+                     FROM zarr_zonal_stats_by_time(
+                       'zarr_e2e_spatial_time_table_selector',
+                       zarr_gis.ST_AsEWKB(
+                         zarr_gis.ST_MakeEnvelope(110, 20, 130, 40, 3857)
+                       ),
+                       TIMESTAMPTZ '1970-01-01 00:00:00+00',
+                       TIMESTAMPTZ '1970-01-01 00:00:03.600001+00',
+                       '{"time":{"index":1}}'
+                     )"#,
+                "zarr_zonal_stats_by_time owns dimension 'time'; selectors may target auxiliary dimensions only",
+            ),
+            (
+                r#"SELECT *
+                     FROM zarr_zonal_stats(
+                       'zarr_e2e_spatial_time_unselected',
+                       zarr_gis.ST_AsEWKB(
+                         zarr_gis.ST_MakeEnvelope(110, 20, 130, 40, 3857)
+                       ),
+                       '{}'
+                     )"#,
+                "auxiliary dimension 'time' resolves to more than one index; spatial operations require zero or one",
+            ),
+        ] {
+            let message = capture_query_error(sql);
+            assert!(message.contains(expected), "message: {message}");
+        }
+    }
+
+    #[pg_test]
+    fn zarr_spatial_selector_overloads_preserve_no_remote_io_ordering() {
+        create_http_e2e_wrapper();
+        create_http_e2e_server(
+            "zarr_http_selector_order_server",
+            "selector_order",
+            "normal",
+            "e2e.zarr",
+        );
+        create_http_time_y_x_table(
+            "zarr_http_selector_order",
+            "zarr_http_selector_order_server",
+            "nested/raw",
+            false,
+        );
+
+        let plan = explain_lines(
+            r#"SELECT *
+                 FROM zarr_sample(
+                   'zarr_http_selector_order',
+                   '\x'::bytea,
+                   'exact',
+                   '{"time":{"index":0}}'
+                 )"#,
+        );
+        assert!(
+            plan.iter().any(|line| line.contains("Function Scan")),
+            "plan: {plan:?}"
+        );
+        assert_eq!(
+            http_case_stats("selector_order")["object_gets"],
+            serde_json::json!(0)
+        );
+
+        let missing_postgis = capture_query_error(
+            r#"SELECT *
+                 FROM zarr_zonal_stats(
+                   'zarr_http_selector_order',
+                   '\x'::bytea,
+                   '{"time":{"index":0}}'
+                 )"#,
+        );
+        assert!(
+            missing_postgis.contains(
+                "PostGIS is unavailable for zarr spatial operations: the postgis extension is not installed"
+            ),
+            "message: {missing_postgis}"
+        );
+        assert_eq!(
+            http_case_stats("selector_order")["object_gets"],
+            serde_json::json!(0)
+        );
+
+        install_postgis_in_test_schema();
+        Spi::run(
+            r#"CREATE ROLE zarr_selector_no_access;
+               GRANT USAGE ON SCHEMA zarr_gis TO zarr_selector_no_access"#,
+        )
+        .unwrap();
+        let inaccessible = capture_query_error_as_role(
+            "zarr_selector_no_access",
+            r#"SELECT *
+                 FROM zarr_zonal_stats(
+                   'zarr_http_selector_order',
+                   zarr_gis.ST_AsEWKB(
+                     zarr_gis.ST_MakeEnvelope(110, 20, 130, 40, 3857)
+                   ),
+                   '{"time":{"index":0}}'
+                 )"#,
+        );
+        assert!(
+            inaccessible.contains(
+                "foreign table 'zarr_http_selector_order' does not exist or is not accessible"
+            ),
+            "message: {inaccessible}"
+        );
+        assert_eq!(
+            http_case_stats("selector_order")["object_gets"],
+            serde_json::json!(0)
+        );
     }
 
     #[pg_test(

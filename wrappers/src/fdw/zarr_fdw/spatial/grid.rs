@@ -186,6 +186,32 @@ pub(crate) struct GridCell {
     pub(crate) distance: f64,
 }
 
+/// One resolved horizontal cell independent of the selected array's rank.
+///
+/// Native array-axis placement remains with `HorizontalAxes`; this value keeps
+/// only the semantic X/Y indexes and coordinates needed by operation results
+/// and exact PostGIS masking.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) struct HorizontalCell {
+    pub(crate) x_index: usize,
+    pub(crate) y_index: usize,
+    pub(crate) x: f64,
+    pub(crate) y: f64,
+    pub(crate) distance: f64,
+}
+
+impl From<GridCell> for HorizontalCell {
+    fn from(cell: GridCell) -> Self {
+        Self {
+            x_index: cell.x_index,
+            y_index: cell.y_index,
+            x: cell.x,
+            y: cell.y,
+            distance: cell.distance,
+        }
+    }
+}
+
 /// Finite transformed geometry bounds in the grid's coordinate reference
 /// system. Bounds are inclusive because exact polygon masking happens after
 /// this conservative center-window selection.

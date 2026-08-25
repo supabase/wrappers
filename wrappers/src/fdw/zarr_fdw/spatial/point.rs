@@ -4,10 +4,11 @@ use pgrx::pg_sys::panic::{ErrorReport, ErrorReportable};
 use pgrx::prelude::*;
 use supabase_wrappers::prelude::{Cell, ForeignDataWrapper, Row};
 
+use super::super::selectors::{DimensionSelectors, OPT_DIMENSION_SELECTORS};
 use super::super::zarr_fdw::ZarrFdw;
 use super::super::{ZarrFdwError, ZarrFdwResult};
-use super::catalog::load_zarr_foreign_table;
-use super::grid::GridCell;
+use super::catalog::{load_zarr_foreign_table, load_zarr_foreign_table_with_selectors};
+use super::grid::HorizontalCell;
 use super::postgis::PostgisCatalog;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -71,7 +72,32 @@ fn zarr_sample(
         name!(srid, i32),
     ),
 > {
-    let rows = sample_foreign_table(foreign_table, point_ewkb, method)
+    let rows = sample_foreign_table(foreign_table, point_ewkb, method, None)
+        .map_err(ErrorReport::from)
+        .unwrap_or_report();
+    TableIterator::new(rows.into_iter().map(SampleRow::sql_row))
+}
+
+#[allow(clippy::type_complexity)]
+#[pg_extern(name = "zarr_sample", create_or_replace, volatile, parallel_unsafe)]
+fn zarr_sample_with_selectors(
+    foreign_table: &str,
+    point_ewkb: &[u8],
+    method: &str,
+    dimension_selectors: &str,
+) -> TableIterator<
+    'static,
+    (
+        name!(x, f64),
+        name!(y, f64),
+        name!(value, Option<f64>),
+        name!(x_index, i64),
+        name!(y_index, i64),
+        name!(coordinate_distance, f64),
+        name!(srid, i32),
+    ),
+> {
+    let rows = sample_foreign_table(foreign_table, point_ewkb, method, Some(dimension_selectors))
         .map_err(ErrorReport::from)
         .unwrap_or_report();
     TableIterator::new(rows.into_iter().map(SampleRow::sql_row))
@@ -81,23 +107,46 @@ fn sample_foreign_table(
     foreign_table: &str,
     point_ewkb: &[u8],
     method: &str,
+    call_selectors: Option<&str>,
 ) -> ZarrFdwResult<Vec<SampleRow>> {
     let method = SampleMethod::parse(method)?;
+    let selector_aware = call_selectors.is_some();
     // Fail before remote metadata reads when the optional spatial dependency is
     // absent or incomplete.
     let postgis = PostgisCatalog::require()?;
-    let table = load_zarr_foreign_table(foreign_table)?;
+    let table = if selector_aware {
+        load_zarr_foreign_table_with_selectors(foreign_table)?
+    } else {
+        load_zarr_foreign_table(foreign_table)?
+    };
+    let call_selectors = match call_selectors {
+        Some(raw) => {
+            DimensionSelectors::parse(
+                table
+                    .options
+                    .get(OPT_DIMENSION_SELECTORS)
+                    .map(String::as_str),
+            )?;
+            DimensionSelectors::parse(Some(raw))?
+        }
+        None => DimensionSelectors::default(),
+    };
     let mut fdw = ZarrFdw::new(table.server)?;
-    <ZarrFdw as ForeignDataWrapper<ZarrFdwError>>::begin_scan(
+    fdw.set_call_dimension_selectors(call_selectors)?;
+    let begin = <ZarrFdw as ForeignDataWrapper<ZarrFdwError>>::begin_scan(
         &mut fdw,
         &[],
         &table.columns,
         &[],
         &None,
         &table.options,
-    )?;
+    );
+    if let Err(error) = begin {
+        let _ = <ZarrFdw as ForeignDataWrapper<ZarrFdwError>>::end_scan(&mut fdw);
+        return Err(error);
+    }
 
-    let result = sample_prepared_scan(&mut fdw, &postgis, point_ewkb, method);
+    let result = sample_prepared_scan(&mut fdw, &postgis, point_ewkb, method, selector_aware);
     let cleanup = <ZarrFdw as ForeignDataWrapper<ZarrFdwError>>::end_scan(&mut fdw);
     match (result, cleanup) {
         (Ok(value), Ok(())) => Ok(value),
@@ -111,22 +160,43 @@ fn sample_prepared_scan(
     postgis: &PostgisCatalog,
     point_ewkb: &[u8],
     method: SampleMethod,
+    selector_aware: bool,
 ) -> ZarrFdwResult<Vec<SampleRow>> {
     // Validate the table contract before exact lookup can return no rows.
     let value_column = fdw.spatial_value_column()?.to_string();
     let crs = fdw.resolved_spatial_crs()?;
     let point = postgis.transform_ewkb_point(point_ewkb, fdw.spatial_array_path(), crs.epsg)?;
-    let cell = {
-        let grid = fdw.rectilinear_grid()?;
+    let (axes, cell) = if selector_aware {
+        let axes = fdw.spatial_horizontal_axes()?;
+        if !fdw.apply_spatial_dimension_selectors("zarr_sample", &[axes.x, axes.y])? {
+            return Ok(Vec::new());
+        }
         match method {
+            SampleMethod::Exact => {
+                let Some((axes, cell)) = fdw.spatial_exact_horizontal_cell(point.x, point.y)?
+                else {
+                    return Ok(Vec::new());
+                };
+                (axes, cell)
+            }
+            SampleMethod::Nearest => fdw.spatial_nearest_horizontal_cell(point.x, point.y)?,
+        }
+    } else {
+        let grid = fdw.rectilinear_grid()?;
+        let axes = grid.axes();
+        let cell = match method {
             SampleMethod::Exact => grid.exact(point.x, point.y)?,
             SampleMethod::Nearest => Some(grid.nearest(point.x, point.y)?),
-        }
+        };
+        let Some(cell) = cell else {
+            return Ok(Vec::new());
+        };
+        fdw.restrict_to_spatial_cell(cell.array_indices)?;
+        (axes, HorizontalCell::from(cell))
     };
-    let Some(cell) = cell else {
-        return Ok(Vec::new());
-    };
-    fdw.restrict_to_spatial_cell(cell.array_indices)?;
+    if selector_aware {
+        fdw.restrict_to_horizontal_cell(axes, cell.x_index, cell.y_index)?;
+    }
 
     let mut row = Row::new();
     if <ZarrFdw as ForeignDataWrapper<ZarrFdwError>>::iter_scan(fdw, &mut row)?.is_none() {
@@ -157,7 +227,7 @@ fn sample_prepared_scan(
     Ok(vec![sample_row(cell, value, crs.epsg)?])
 }
 
-fn sample_row(cell: GridCell, value: Option<f64>, srid: i32) -> ZarrFdwResult<SampleRow> {
+fn sample_row(cell: HorizontalCell, value: Option<f64>, srid: i32) -> ZarrFdwResult<SampleRow> {
     Ok(SampleRow {
         x: cell.x,
         y: cell.y,

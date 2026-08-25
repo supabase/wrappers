@@ -71,8 +71,8 @@ use super::spatial::crs::{
     GridMappingMetadata, ResolvedCrs, grid_mapping_sibling_path, resolve_crs,
 };
 use super::spatial::grid::{
-    GridCell, HorizontalAxes, RectilinearGrid, discover_horizontal_axes_from_roles,
-    inclusive_center_bounds,
+    HorizontalAxes, HorizontalCell, RectilinearGrid, discover_horizontal_axes_from_roles,
+    exact_center_index, inclusive_center_bounds, nearest_center_index,
 };
 use super::store::{
     MAX_METADATA_OBJECT_BYTES, RangedObject, ReadIdentity, ReadRange, ZarrStore, join_key,
@@ -244,7 +244,28 @@ pub(super) struct SpatialTimeSelection {
     pub(super) candidate_cells: usize,
 }
 
+#[cfg(test)]
 fn discover_spatial_time_layout(
+    rank: usize,
+    axis_roles: &[DimensionRole],
+    shape: &[u64],
+) -> ZarrFdwResult<SpatialTimeLayout> {
+    let layout = discover_spatial_time_layout_with_auxiliary_dimensions(rank, axis_roles, shape)?;
+    for (axis, &extent) in shape.iter().enumerate() {
+        if axis != layout.time
+            && axis != layout.horizontal.x
+            && axis != layout.horizontal.y
+            && extent != 1
+        {
+            return Err(ZarrFdwError::InvalidMetadata(format!(
+                "spatial-time execution requires auxiliary dimension {axis} to have extent 1, found {extent}"
+            )));
+        }
+    }
+    Ok(layout)
+}
+
+fn discover_spatial_time_layout_with_auxiliary_dimensions(
     rank: usize,
     axis_roles: &[DimensionRole],
     shape: &[u64],
@@ -272,14 +293,6 @@ fn discover_spatial_time_layout(
         return Err(ZarrFdwError::InvalidMetadata(
             "spatial-time axes must be distinct".to_string(),
         ));
-    }
-
-    for (axis, &extent) in shape.iter().enumerate() {
-        if axis != time && axis != horizontal.x && axis != horizontal.y && extent != 1 {
-            return Err(ZarrFdwError::InvalidMetadata(format!(
-                "spatial-time execution requires auxiliary dimension {axis} to have extent 1, found {extent}"
-            )));
-        }
     }
 
     Ok(SpatialTimeLayout { time, horizontal })
@@ -328,9 +341,12 @@ pub(crate) struct ZarrFdw {
     coords: Vec<Option<Vec<f64>>>,
     // conservative physical cell window shared by ordinary and spatial scans
     selection: Selection,
-    // Commit 4 exposes exact selectors only to ordinary scans. Spatial
-    // operations fail closed until selector-aware overloads land.
+    // Persistent foreign-table selectors and one optional selector-aware
+    // spatial call are kept as separate AND sources so same-axis constraints
+    // retain exact residual semantics.
     dimension_selectors: BoundDimensionSelectors,
+    call_dimension_selectors: DimensionSelectors,
+    bound_call_dimension_selectors: BoundDimensionSelectors,
     // lazy chunk indexes to read, in row-major order
     chunk_cursor: ChunkIndexCursor,
     current_chunk: Vec<u64>,
@@ -788,6 +804,147 @@ impl ZarrFdw {
         })
     }
 
+    /// Install one already-parsed selector document supplied by an explicit
+    /// spatial overload. It remains a separate AND source from the foreign
+    /// table option throughout binding, pruning, and exact residual checks.
+    pub(super) fn set_call_dimension_selectors(
+        &mut self,
+        selectors: DimensionSelectors,
+    ) -> ZarrFdwResult<()> {
+        if self.axis_meta.is_some() {
+            return Err(ZarrFdwError::InvalidMetadata(
+                "spatial call selectors must be installed before scan initialization".to_string(),
+            ));
+        }
+        self.call_dimension_selectors = selectors;
+        Ok(())
+    }
+
+    fn spatial_horizontal_coordinates(&self) -> ZarrFdwResult<(HorizontalAxes, &[f64], &[f64])> {
+        if self.rank < 2 {
+            return Err(ZarrFdwError::InvalidMetadata(format!(
+                "spatial execution requires an array of rank 2 or greater, found rank {}",
+                self.rank
+            )));
+        }
+        let axes = discover_horizontal_axes_from_roles(self.axis_roles.iter().copied())?;
+        let x = self
+            .coords
+            .get(axes.x)
+            .and_then(Option::as_deref)
+            .ok_or_else(|| {
+                ZarrFdwError::InvalidMetadata(format!(
+                    "spatial coordinate '{}' was not loaded",
+                    self.axes.get(axes.x).map_or("x", String::as_str)
+                ))
+            })?;
+        let y = self
+            .coords
+            .get(axes.y)
+            .and_then(Option::as_deref)
+            .ok_or_else(|| {
+                ZarrFdwError::InvalidMetadata(format!(
+                    "spatial coordinate '{}' was not loaded",
+                    self.axes.get(axes.y).map_or("y", String::as_str)
+                ))
+            })?;
+        Ok((axes, x, y))
+    }
+
+    pub(super) fn spatial_horizontal_axes(&self) -> ZarrFdwResult<HorizontalAxes> {
+        self.spatial_horizontal_coordinates()
+            .map(|(axes, _, _)| axes)
+    }
+
+    /// Resolve one exact horizontal center on a rank-2-or-greater array.
+    pub(super) fn spatial_exact_horizontal_cell(
+        &self,
+        target_x: f64,
+        target_y: f64,
+    ) -> ZarrFdwResult<Option<(HorizontalAxes, HorizontalCell)>> {
+        let (axes, x, y) = self.spatial_horizontal_coordinates()?;
+        let Some(x_index) = exact_center_index(x, target_x)? else {
+            return Ok(None);
+        };
+        let Some(y_index) = exact_center_index(y, target_y)? else {
+            return Ok(None);
+        };
+        Ok(Some((
+            axes,
+            HorizontalCell {
+                x_index,
+                y_index,
+                x: x[x_index],
+                y: y[y_index],
+                distance: 0.0,
+            },
+        )))
+    }
+
+    /// Resolve one nearest horizontal center on a rank-2-or-greater array.
+    pub(super) fn spatial_nearest_horizontal_cell(
+        &self,
+        target_x: f64,
+        target_y: f64,
+    ) -> ZarrFdwResult<(HorizontalAxes, HorizontalCell)> {
+        let (axes, x, y) = self.spatial_horizontal_coordinates()?;
+        let x_index = nearest_center_index(x, target_x)?.ok_or_else(|| {
+            ZarrFdwError::InvalidMetadata("spatial x coordinate is empty".to_string())
+        })?;
+        let y_index = nearest_center_index(y, target_y)?.ok_or_else(|| {
+            ZarrFdwError::InvalidMetadata("spatial y coordinate is empty".to_string())
+        })?;
+        let selected_x = x[x_index];
+        let selected_y = y[y_index];
+        Ok((
+            axes,
+            HorizontalCell {
+                x_index,
+                y_index,
+                x: selected_x,
+                y: selected_y,
+                distance: (selected_x - target_x).hypot(selected_y - target_y),
+            },
+        ))
+    }
+
+    /// Convert a transformed geometry envelope to inclusive semantic `[x, y]`
+    /// bounds for a rank-2-or-greater array.
+    pub(super) fn spatial_horizontal_window(
+        &self,
+        xmin: f64,
+        ymin: f64,
+        xmax: f64,
+        ymax: f64,
+    ) -> ZarrFdwResult<Option<(HorizontalAxes, [IndexBounds; 2], usize)>> {
+        let (axes, x, y) = self.spatial_horizontal_coordinates()?;
+        let Some(x_bounds) = inclusive_center_bounds(x, xmin, xmax)? else {
+            return Ok(None);
+        };
+        let Some(y_bounds) = inclusive_center_bounds(y, ymin, ymax)? else {
+            return Ok(None);
+        };
+        let candidate_cells = [x_bounds, y_bounds]
+            .iter()
+            .try_fold(1usize, |total, bounds| {
+                let extent = bounds
+                    .end
+                    .checked_sub(bounds.start)
+                    .and_then(|extent| extent.checked_add(1))
+                    .ok_or_else(|| {
+                        ZarrFdwError::InvalidMetadata(
+                            "spatial horizontal candidate count overflowed".to_string(),
+                        )
+                    })?;
+                total.checked_mul(extent).ok_or_else(|| {
+                    ZarrFdwError::InvalidMetadata(
+                        "spatial horizontal candidate count overflowed".to_string(),
+                    )
+                })
+            })?;
+        Ok(Some((axes, [x_bounds, y_bounds], candidate_cells)))
+    }
+
     /// Borrow the fully decoded horizontal coordinate grid prepared by
     /// `begin_scan`. Spatial operations use this view to choose cells without
     /// creating a second storage or metadata path.
@@ -832,7 +989,11 @@ impl ZarrFdw {
                 "spatial-time execution requires an initialized array scan".to_string(),
             )
         })?;
-        let layout = discover_spatial_time_layout(self.rank, &self.axis_roles, &meta.shape)?;
+        let layout = discover_spatial_time_layout_with_auxiliary_dimensions(
+            self.rank,
+            &self.axis_roles,
+            &meta.shape,
+        )?;
 
         for axis in [layout.time, layout.horizontal.x, layout.horizontal.y] {
             if self.coords.get(axis).and_then(Option::as_deref).is_none() {
@@ -925,7 +1086,7 @@ impl ZarrFdw {
                 .last()
                 .expect("non-empty time selection has a last index"),
         };
-        let mut bounds = vec![None; self.rank];
+        let mut bounds = self.selection.axis_bounds().to_vec();
         bounds[layout.time] = Some(time_bounds);
         bounds[layout.horizontal.x] = Some(horizontal_bounds[0]);
         bounds[layout.horizontal.y] = Some(horizontal_bounds[1]);
@@ -1075,23 +1236,6 @@ impl ZarrFdw {
         })
     }
 
-    /// Global array indexes for the row most recently returned by
-    /// `iter_scan`. This avoids reconstructing indexes from coordinate values,
-    /// which would be ambiguous for repeated coordinate centers.
-    pub(super) fn spatial_last_emitted_indices(&self) -> ZarrFdwResult<[usize; 2]> {
-        let indices = self.last_emitted_indices.as_deref().ok_or_else(|| {
-            ZarrFdwError::InvalidMetadata(
-                "spatial row indexes are unavailable before a rank-2 row is emitted".to_string(),
-            )
-        })?;
-        indices.try_into().map_err(|_| {
-            ZarrFdwError::InvalidMetadata(format!(
-                "spatial rank-2 row indexes have rank {}",
-                indices.len()
-            ))
-        })
-    }
-
     /// Resolve one loaded coordinate by native array-axis and global index.
     pub(super) fn spatial_coordinate_at_index(
         &self,
@@ -1139,25 +1283,25 @@ impl ZarrFdw {
         TimestampWithTimeZone::try_from(micros).map_err(|_| ZarrFdwError::TimeOutOfRange(raw))
     }
 
-    /// Resolve the most recently emitted rank-2 row to one cell in constant
+    /// Resolve the most recently emitted row to one horizontal cell in constant
     /// time. The coordinate vectors and horizontal axes were already fully
     /// validated when the spatial window was prepared, so polygon execution
     /// must not rebuild and revalidate the complete grid for every row.
     pub(super) fn spatial_last_emitted_cell(
         &self,
         axes: HorizontalAxes,
-    ) -> ZarrFdwResult<GridCell> {
-        let array_indices = self.spatial_last_emitted_indices()?;
+    ) -> ZarrFdwResult<HorizontalCell> {
+        let array_indices = self.spatial_last_emitted_global_indices()?;
         let x_index = *array_indices.get(axes.x).ok_or_else(|| {
             ZarrFdwError::InvalidMetadata(format!(
-                "spatial x axis {} is outside rank-2 array indexes",
-                axes.x
+                "spatial x axis {} is outside rank-{} array indexes",
+                axes.x, self.rank
             ))
         })?;
         let y_index = *array_indices.get(axes.y).ok_or_else(|| {
             ZarrFdwError::InvalidMetadata(format!(
-                "spatial y axis {} is outside rank-2 array indexes",
-                axes.y
+                "spatial y axis {} is outside rank-{} array indexes",
+                axes.y, self.rank
             ))
         })?;
         let x_values = self
@@ -1186,8 +1330,7 @@ impl ZarrFdw {
                 y_values.len()
             ))
         })?;
-        Ok(GridCell {
-            array_indices,
+        Ok(HorizontalCell {
             x_index,
             y_index,
             x,
@@ -1201,6 +1344,109 @@ impl ZarrFdw {
     /// invariant enforced by the ordinary scan path.
     pub(super) fn spatial_check_for_interrupt(&mut self) -> ZarrFdwResult<()> {
         self.process_pending_interrupt()
+    }
+
+    /// Resolve every operation-auxiliary dimension to zero or one exact native
+    /// index under the intersection of table and call selectors.
+    ///
+    /// Operation-owned axes cannot be named by either selector source. All
+    /// auxiliary axes are checked even after one resolves empty so an ambiguous
+    /// axis cannot be hidden by an unrelated no-match selector.
+    pub(super) fn apply_spatial_dimension_selectors(
+        &mut self,
+        operation: &str,
+        operation_axes: &[usize],
+    ) -> ZarrFdwResult<bool> {
+        let meta = self.axis_meta.as_ref().ok_or_else(|| {
+            ZarrFdwError::InvalidMetadata("spatial scan was not initialized".to_string())
+        })?;
+        if self.axes.len() != self.rank || meta.shape.len() != self.rank {
+            return Err(ZarrFdwError::InvalidMetadata(format!(
+                "spatial dimension metadata does not match array rank {}",
+                self.rank
+            )));
+        }
+        let axis_lengths = (0..self.rank)
+            .map(|axis| meta.shape_extent(axis))
+            .collect::<ZarrFdwResult<Vec<_>>>()?;
+
+        let mut owned = vec![false; self.rank];
+        for &axis in operation_axes {
+            let Some(slot) = owned.get_mut(axis) else {
+                return Err(ZarrFdwError::InvalidMetadata(format!(
+                    "spatial operation axis {axis} is outside array rank {}",
+                    self.rank
+                )));
+            };
+            *slot = true;
+            if self.dimension_selectors.selects_axis(axis)
+                || self.bound_call_dimension_selectors.selects_axis(axis)
+            {
+                return Err(ZarrFdwError::InvalidOptionValue {
+                    option: OPT_DIMENSION_SELECTORS.to_string(),
+                    message: format!(
+                        "{operation} owns dimension '{}'; selectors may target auxiliary dimensions only",
+                        self.axes[axis]
+                    ),
+                });
+            }
+        }
+
+        let mut auxiliary_bounds = vec![None; self.rank];
+        let mut any_empty = false;
+        for axis in 0..self.rank {
+            if owned[axis] {
+                continue;
+            }
+            let length = axis_lengths[axis];
+            let mut selected = None;
+            for index in 0..length {
+                if index.is_multiple_of(SELECTOR_INTERRUPT_POLL_CELLS) {
+                    self.process_pending_interrupt()?;
+                }
+                if !self
+                    .dimension_selectors
+                    .matches_axis_index(axis, index, &self.coords)?
+                    || !self.bound_call_dimension_selectors.matches_axis_index(
+                        axis,
+                        index,
+                        &self.coords,
+                    )?
+                {
+                    continue;
+                }
+                if selected.is_some() {
+                    return Err(ZarrFdwError::InvalidOptionValue {
+                        option: OPT_DIMENSION_SELECTORS.to_string(),
+                        message: format!(
+                            "auxiliary dimension '{}' resolves to more than one index; spatial operations require zero or one",
+                            self.axes[axis]
+                        ),
+                    });
+                }
+                selected = Some(index);
+            }
+            match selected {
+                Some(index) => {
+                    auxiliary_bounds[axis] = Some(IndexBounds {
+                        start: index,
+                        end: index,
+                    });
+                }
+                None => any_empty = true,
+            }
+        }
+
+        let selection = if any_empty {
+            Selection::empty(self.rank)
+        } else {
+            self.selection
+                .clone()
+                .intersect(Selection::from_axis_bounds(auxiliary_bounds))
+        };
+        let nonempty = !selection.is_empty();
+        self.apply_selection(selection, true)?;
+        Ok(nonempty)
     }
 
     /// Narrow an already-prepared rank-2 scan to one global array cell. This
@@ -1237,19 +1483,53 @@ impl ZarrFdw {
         self.restrict_to_axis_bounds(array_bounds.into_iter().map(Some).collect())
     }
 
+    /// Narrow a rank-2-or-greater scan to one semantic horizontal cell while
+    /// preserving the exact singleton bounds already chosen for auxiliaries.
+    pub(super) fn restrict_to_horizontal_cell(
+        &mut self,
+        axes: HorizontalAxes,
+        x_index: usize,
+        y_index: usize,
+    ) -> ZarrFdwResult<()> {
+        self.restrict_to_horizontal_bounds(
+            axes,
+            [
+                IndexBounds {
+                    start: x_index,
+                    end: x_index,
+                },
+                IndexBounds {
+                    start: y_index,
+                    end: y_index,
+                },
+            ],
+        )
+    }
+
+    /// Narrow a rank-2-or-greater scan with semantic `[x, y]` bounds.
+    pub(super) fn restrict_to_horizontal_bounds(
+        &mut self,
+        axes: HorizontalAxes,
+        horizontal_bounds: [IndexBounds; 2],
+    ) -> ZarrFdwResult<()> {
+        if axes.x >= self.rank || axes.y >= self.rank || axes.x == axes.y {
+            return Err(ZarrFdwError::InvalidMetadata(format!(
+                "spatial horizontal axes ({}, {}) are invalid for array rank {}",
+                axes.x, axes.y, self.rank
+            )));
+        }
+        let mut axis_bounds = vec![None; self.rank];
+        axis_bounds[axes.x] = Some(horizontal_bounds[0]);
+        axis_bounds[axes.y] = Some(horizontal_bounds[1]);
+        self.restrict_to_axis_bounds(axis_bounds)
+    }
+
     /// Narrow an initialized scan to optional inclusive bounds for every
     /// native array axis. `None` preserves the complete extent of that axis.
     pub(super) fn restrict_to_axis_bounds(
         &mut self,
         axis_bounds: Vec<Option<IndexBounds>>,
     ) -> ZarrFdwResult<()> {
-        if !self.dimension_selectors.is_empty() {
-            return Err(ZarrFdwError::InvalidOptionValue {
-                option: OPT_DIMENSION_SELECTORS.to_string(),
-                message: "spatial operations require a selector-aware function overload"
-                    .to_string(),
-            });
-        }
         let meta = self.axis_meta.as_ref().ok_or_else(|| {
             ZarrFdwError::InvalidMetadata("spatial scan was not initialized".to_string())
         })?;
@@ -1273,7 +1553,11 @@ impl ZarrFdw {
             }
         }
 
-        self.apply_selection(Selection::from_axis_bounds(axis_bounds), true)
+        let selection = self
+            .selection
+            .clone()
+            .intersect(Selection::from_axis_bounds(axis_bounds));
+        self.apply_selection(selection, true)
     }
 
     /// Install a conservative candidate window and reset every cursor/buffer
@@ -2051,15 +2335,20 @@ impl ZarrFdw {
     }
 
     fn current_cell_matches_selection(&self) -> ZarrFdwResult<bool> {
-        if self.dimension_selectors.is_empty() {
+        if self.dimension_selectors.is_empty() && self.bound_call_dimension_selectors.is_empty() {
             return Ok(true);
         }
         for axis in 0..self.rank {
-            if !self.dimension_selectors.matches_axis_index(
-                axis,
-                self.global_index_at_cursor(axis)?,
-                &self.coords,
-            )? {
+            let index = self.global_index_at_cursor(axis)?;
+            if !self
+                .dimension_selectors
+                .matches_axis_index(axis, index, &self.coords)?
+                || !self.bound_call_dimension_selectors.matches_axis_index(
+                    axis,
+                    index,
+                    &self.coords,
+                )?
+            {
                 return Ok(false);
             }
         }
@@ -2885,6 +3174,8 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
             coords: Vec::new(),
             selection: Selection::default(),
             dimension_selectors: BoundDimensionSelectors::default(),
+            call_dimension_selectors: DimensionSelectors::default(),
+            bound_call_dimension_selectors: BoundDimensionSelectors::default(),
             chunk_cursor: ChunkIndexCursor::default(),
             current_chunk: Vec::new(),
             current_object_key: String::new(),
@@ -3096,6 +3387,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
         self.aggregate_reducer = None;
         self.aggregate_emitted = false;
         self.dimension_selectors = BoundDimensionSelectors::default();
+        self.bound_call_dimension_selectors = BoundDimensionSelectors::default();
         self.tgt_cols = columns.to_vec();
         let dimension_selectors =
             DimensionSelectors::parse(options.get(OPT_DIMENSION_SELECTORS).map(String::as_str))?;
@@ -3179,6 +3471,9 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
         self.array_dir = variable.path().to_string();
         self.axes = dataset.axis_names();
         let bound_dimension_selectors = dimension_selectors.bind(&self.axes, &meta.shape)?;
+        let bound_call_dimension_selectors = self
+            .call_dimension_selectors
+            .bind(&self.axes, &meta.shape)?;
         debug_assert_eq!(variable.dimensions(), self.axes.as_slice());
         self.axis_roles = dataset
             .dimensions()
@@ -3271,6 +3566,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
             .map(|(axis, dimension)| {
                 columns.iter().any(|column| column.name == dimension.name())
                     || bound_dimension_selectors.requires_coordinate(axis)
+                    || bound_call_dimension_selectors.requires_coordinate(axis)
             })
             .collect::<Vec<_>>();
         checked_total_coordinate_values(
@@ -3349,8 +3645,18 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
                 process_postgres_interrupts();
                 Ok(())
             })?;
-        let plan = planner.plan(qual_selection.intersect(selector_selection))?;
+        let call_selector_selection =
+            bound_call_dimension_selectors.resolve(&meta.shape, &self.coords, || {
+                process_postgres_interrupts();
+                Ok(())
+            })?;
+        let plan = planner.plan(
+            qual_selection
+                .intersect(selector_selection)
+                .intersect(call_selector_selection),
+        )?;
         self.dimension_selectors = bound_dimension_selectors;
+        self.bound_call_dimension_selectors = bound_call_dimension_selectors;
         self.apply_scan_plan(plan, false)
     }
 
@@ -3428,6 +3734,8 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
         self.coords.clear();
         self.selection = Selection::default();
         self.dimension_selectors = BoundDimensionSelectors::default();
+        self.call_dimension_selectors = DimensionSelectors::default();
+        self.bound_call_dimension_selectors = BoundDimensionSelectors::default();
         self.axis_roles.clear();
         self.sub_lo.clear();
         self.sub_hi.clear();

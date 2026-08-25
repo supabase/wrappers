@@ -7,10 +7,11 @@ use pgrx::prelude::*;
 use supabase_wrappers::prelude::{ForeignDataWrapper, Row};
 
 use super::super::aggregate::{checked_float_add_f64, compare_f64};
+use super::super::selectors::{DimensionSelectors, OPT_DIMENSION_SELECTORS};
 use super::super::zarr_fdw::ZarrFdw;
 use super::super::{ZarrFdwError, ZarrFdwResult};
-use super::catalog::load_zarr_foreign_table;
-use super::grid::{CoordinateEnvelope, GridCell};
+use super::catalog::{load_zarr_foreign_table, load_zarr_foreign_table_with_selectors};
+use super::grid::{CoordinateEnvelope, HorizontalCell};
 use super::point::numeric_cell_to_f64;
 use super::postgis::{MAX_COVERAGE_CANDIDATES, PostgisCatalog};
 
@@ -94,7 +95,7 @@ fn zarr_cells(
     ),
 > {
     let mut cells = Vec::new();
-    visit_foreign_table_cells(foreign_table, region_ewkb, |cell| {
+    visit_foreign_table_cells(foreign_table, region_ewkb, None, |cell| {
         if cells.len() >= MAX_SPATIAL_OUTPUT_CELLS {
             return Err(ZarrFdwError::InvalidGeometry(format!(
                 "polygon selects more than the {MAX_SPATIAL_OUTPUT_CELLS}-cell output limit"
@@ -126,9 +127,48 @@ fn zarr_zonal_stats(
     ),
 > {
     let mut accumulator = ZonalAccumulator::default();
-    let srid = visit_foreign_table_cells(foreign_table, region_ewkb, |cell| {
+    let srid = visit_foreign_table_cells(foreign_table, region_ewkb, None, |cell| {
         accumulator.observe(cell.value)
     })
+    .map_err(ErrorReport::from)
+    .unwrap_or_report();
+    let row = accumulator
+        .finish(srid)
+        .map_err(ErrorReport::from)
+        .unwrap_or_report();
+    TableIterator::once(row.sql_row())
+}
+
+#[allow(clippy::type_complexity)]
+#[pg_extern(
+    name = "zarr_zonal_stats",
+    create_or_replace,
+    volatile,
+    parallel_unsafe
+)]
+fn zarr_zonal_stats_with_selectors(
+    foreign_table: &str,
+    region_ewkb: &[u8],
+    dimension_selectors: &str,
+) -> TableIterator<
+    'static,
+    (
+        name!(count, i64),
+        name!(valid_count, i64),
+        name!(min, Option<f64>),
+        name!(max, Option<f64>),
+        name!(sum, Option<f64>),
+        name!(avg, Option<f64>),
+        name!(srid, i32),
+    ),
+> {
+    let mut accumulator = ZonalAccumulator::default();
+    let srid = visit_foreign_table_cells(
+        foreign_table,
+        region_ewkb,
+        Some(dimension_selectors),
+        |cell| accumulator.observe(cell.value),
+    )
     .map_err(ErrorReport::from)
     .unwrap_or_report();
     let row = accumulator
@@ -141,23 +181,52 @@ fn zarr_zonal_stats(
 fn visit_foreign_table_cells(
     foreign_table: &str,
     region_ewkb: &[u8],
+    call_selectors: Option<&str>,
     mut visitor: impl FnMut(SpatialCellRow) -> ZarrFdwResult<()>,
 ) -> ZarrFdwResult<i32> {
     // Fail before any remote metadata request when the optional spatial
     // dependency is absent or incomplete.
     let postgis = PostgisCatalog::require()?;
-    let table = load_zarr_foreign_table(foreign_table)?;
+    let selector_aware = call_selectors.is_some();
+    let table = if selector_aware {
+        load_zarr_foreign_table_with_selectors(foreign_table)?
+    } else {
+        load_zarr_foreign_table(foreign_table)?
+    };
+    let call_selectors = match call_selectors {
+        Some(raw) => {
+            DimensionSelectors::parse(
+                table
+                    .options
+                    .get(OPT_DIMENSION_SELECTORS)
+                    .map(String::as_str),
+            )?;
+            DimensionSelectors::parse(Some(raw))?
+        }
+        None => DimensionSelectors::default(),
+    };
     let mut fdw = ZarrFdw::new(table.server)?;
-    <ZarrFdw as ForeignDataWrapper<ZarrFdwError>>::begin_scan(
+    fdw.set_call_dimension_selectors(call_selectors)?;
+    let begin = <ZarrFdw as ForeignDataWrapper<ZarrFdwError>>::begin_scan(
         &mut fdw,
         &[],
         &table.columns,
         &[],
         &None,
         &table.options,
-    )?;
+    );
+    if let Err(error) = begin {
+        let _ = <ZarrFdw as ForeignDataWrapper<ZarrFdwError>>::end_scan(&mut fdw);
+        return Err(error);
+    }
 
-    let result = visit_prepared_scan(&mut fdw, &postgis, region_ewkb, &mut visitor);
+    let result = visit_prepared_scan(
+        &mut fdw,
+        &postgis,
+        region_ewkb,
+        selector_aware,
+        &mut visitor,
+    );
     let cleanup = <ZarrFdw as ForeignDataWrapper<ZarrFdwError>>::end_scan(&mut fdw);
     match (result, cleanup) {
         (Ok(value), Ok(())) => Ok(value),
@@ -170,6 +239,7 @@ fn visit_prepared_scan(
     fdw: &mut ZarrFdw,
     postgis: &PostgisCatalog,
     region_ewkb: &[u8],
+    selector_aware: bool,
     visitor: &mut impl FnMut(SpatialCellRow) -> ZarrFdwResult<()>,
 ) -> ZarrFdwResult<i32> {
     // Validate the table contract before a non-overlapping envelope can
@@ -181,11 +251,27 @@ fn visit_prepared_scan(
         fdw.spatial_array_path(),
         crs.epsg,
     )?;
-    let (axes, bounds, candidate_count) = {
+    let validated_envelope =
+        CoordinateEnvelope::new(envelope.xmin, envelope.ymin, envelope.xmax, envelope.ymax)?;
+    let (axes, bounds, candidate_count) = if selector_aware {
+        let axes = fdw.spatial_horizontal_axes()?;
+        if !fdw.apply_spatial_dimension_selectors("zarr_zonal_stats", &[axes.x, axes.y])? {
+            return Ok(crs.epsg);
+        }
+        let plan = fdw.spatial_horizontal_window(
+            envelope.xmin,
+            envelope.ymin,
+            envelope.xmax,
+            envelope.ymax,
+        )?;
+        (
+            axes,
+            plan.as_ref().map(|(_, bounds, _)| *bounds),
+            plan.as_ref().map_or(0, |(_, _, total)| *total),
+        )
+    } else {
         let grid = fdw.rectilinear_grid()?;
-        let envelope =
-            CoordinateEnvelope::new(envelope.xmin, envelope.ymin, envelope.xmax, envelope.ymax)?;
-        let plan = grid.window_plan(envelope)?;
+        let plan = grid.window_plan(validated_envelope)?;
         let bounds = plan.as_ref().map(|plan| plan.bounds());
         let candidate_count = plan.as_ref().map_or(0, |plan| plan.total_cells());
         (grid.axes(), bounds, candidate_count)
@@ -198,7 +284,11 @@ fn visit_prepared_scan(
     let Some(bounds) = bounds else {
         return Ok(crs.epsg);
     };
-    fdw.restrict_to_spatial_bounds(bounds)?;
+    if selector_aware {
+        fdw.restrict_to_horizontal_bounds(axes, bounds)?;
+    } else {
+        fdw.restrict_to_spatial_bounds(bounds)?;
+    }
 
     let mut candidates = Vec::with_capacity(MAX_COVERAGE_CANDIDATES);
     let mut row = Row::new();
@@ -251,7 +341,7 @@ fn visit_covered_batch(
     region_ewkb: &[u8],
     fdw: &mut ZarrFdw,
     srid: i32,
-    candidates: &mut Vec<(GridCell, Option<f64>)>,
+    candidates: &mut Vec<(HorizontalCell, Option<f64>)>,
     visitor: &mut impl FnMut(SpatialCellRow) -> ZarrFdwResult<()>,
 ) -> ZarrFdwResult<()> {
     fdw.spatial_check_for_interrupt()?;
@@ -281,7 +371,7 @@ fn visit_covered_batch(
 }
 
 fn spatial_cell_row(
-    cell: GridCell,
+    cell: HorizontalCell,
     value: Option<f64>,
     srid: i32,
 ) -> ZarrFdwResult<SpatialCellRow> {

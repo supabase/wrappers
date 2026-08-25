@@ -19,6 +19,24 @@ pub(crate) struct SpatialForeignTable {
 /// construct a fresh Zarr executor. The privilege predicates deliberately make
 /// missing and inaccessible relations indistinguishable.
 pub(crate) fn load_zarr_foreign_table(relation_name: &str) -> ZarrFdwResult<SpatialForeignTable> {
+    load_zarr_foreign_table_impl(relation_name, false)
+}
+
+/// Resolve a caller-visible relation for a selector-aware spatial overload.
+///
+/// The same catalog identity and privilege checks run before the caller parses
+/// selector input or constructs a storage backend. Only the explicit overloads
+/// opt out of the legacy fail-closed table-option guard.
+pub(crate) fn load_zarr_foreign_table_with_selectors(
+    relation_name: &str,
+) -> ZarrFdwResult<SpatialForeignTable> {
+    load_zarr_foreign_table_impl(relation_name, true)
+}
+
+fn load_zarr_foreign_table_impl(
+    relation_name: &str,
+    allow_dimension_selectors: bool,
+) -> ZarrFdwResult<SpatialForeignTable> {
     let (table_oid, server_oid, server_name, server_type, server_version) = Spi::connect(
         |client| {
             let mut rows = client.select(
@@ -81,7 +99,7 @@ pub(crate) fn load_zarr_foreign_table(relation_name: &str) -> ZarrFdwResult<Spat
           WHERE table_catalog.ftrelid = $1::bigint::pg_catalog.oid",
         table_oid,
     )?;
-    if table_options.contains_key(OPT_DIMENSION_SELECTORS) {
+    if !allow_dimension_selectors && table_options.contains_key(OPT_DIMENSION_SELECTORS) {
         return Err(ZarrFdwError::InvalidOptionValue {
             option: OPT_DIMENSION_SELECTORS.to_string(),
             message: "spatial operations require a selector-aware function overload".to_string(),

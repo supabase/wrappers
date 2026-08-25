@@ -144,6 +144,10 @@ impl BoundDimensionSelectors {
         )
     }
 
+    pub(crate) fn selects_axis(&self, axis: usize) -> bool {
+        self.by_axis.get(axis).is_some_and(Option::is_some)
+    }
+
     pub(crate) fn resolve(
         &self,
         shape: &[u64],
