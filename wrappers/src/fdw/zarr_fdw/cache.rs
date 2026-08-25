@@ -1,9 +1,11 @@
-//! Query-local cache for complete encoded Zarr chunk objects.
+//! Query-local cache for complete bounded Zarr storage reads.
 
 use lru::LruCache;
 use std::sync::Arc;
 
-/// A complete object response cached before decompression.
+use super::store::ReadIdentity;
+
+/// A complete whole-object or exact-range response cached before decoding.
 ///
 /// Missing objects are cached explicitly because a sparse Zarr chunk uses the
 /// array's fill-value semantics. Other storage errors must never enter the
@@ -30,7 +32,7 @@ impl CachedObject {
 /// limit disables it without requiring a separate optional field at call
 /// sites.
 pub(crate) struct CompressedChunkCache {
-    entries: LruCache<String, CachedObject>,
+    entries: LruCache<ReadIdentity, CachedObject>,
     resident_bytes: usize,
     max_bytes: usize,
     max_entries: usize,
@@ -48,19 +50,40 @@ impl CompressedChunkCache {
         }
     }
 
+    #[cfg(test)]
     pub(crate) fn get(&mut self, key: &str) -> Option<CachedObject> {
-        self.entries.get(key).cloned()
+        self.get_identity(&ReadIdentity::whole(key))
+    }
+
+    /// Look up bytes by the complete key/range/generation identity. This
+    /// prevents a whole object, shard index, and inner payload from aliasing.
+    pub(crate) fn get_identity(&mut self, identity: &ReadIdentity) -> Option<CachedObject> {
+        self.entries.get(identity).cloned()
     }
 
     /// Insert a complete encoded object. Returns `false` when caching is
     /// disabled or the object is larger than the entire byte budget.
+    #[cfg(test)]
     pub(crate) fn insert_present(&mut self, key: String, bytes: Arc<[u8]>) -> bool {
-        self.insert(key, CachedObject::Present(bytes))
+        self.insert_present_identity(ReadIdentity::whole(key), bytes)
+    }
+
+    pub(crate) fn insert_present_identity(
+        &mut self,
+        identity: ReadIdentity,
+        bytes: Arc<[u8]>,
+    ) -> bool {
+        self.insert(identity, CachedObject::Present(bytes))
     }
 
     /// Cache an explicit object-not-found response.
+    #[cfg(test)]
     pub(crate) fn insert_missing(&mut self, key: String) -> bool {
-        self.insert(key, CachedObject::Missing)
+        self.insert_missing_identity(ReadIdentity::whole(key))
+    }
+
+    pub(crate) fn insert_missing_identity(&mut self, identity: ReadIdentity) -> bool {
+        self.insert(identity, CachedObject::Missing)
     }
 
     #[cfg(test)]
@@ -86,8 +109,8 @@ impl CompressedChunkCache {
         self.evictions
     }
 
-    fn insert(&mut self, key: String, object: CachedObject) -> bool {
-        if let Some(previous) = self.entries.pop(&key) {
+    fn insert(&mut self, identity: ReadIdentity, object: CachedObject) -> bool {
+        if let Some(previous) = self.entries.pop(&identity) {
             self.resident_bytes = self
                 .resident_bytes
                 .saturating_sub(previous.resident_bytes());
@@ -112,7 +135,7 @@ impl CompressedChunkCache {
         }
 
         self.resident_bytes += object_bytes;
-        self.entries.put(key, object);
+        self.entries.put(identity, object);
         true
     }
 }
@@ -174,5 +197,35 @@ mod tests {
         cache.clear();
         assert!(cache.is_empty());
         assert_eq!(cache.resident_bytes(), 0);
+    }
+
+    #[test]
+    fn whole_ranges_and_generations_do_not_alias() {
+        let mut cache = CompressedChunkCache::new(32, 8);
+        let whole = ReadIdentity::whole("shard");
+        let exact = ReadIdentity::exact("shard", 0, 4).unwrap();
+        let generation = super::super::store::ObjectGeneration {
+            etag: "etag-a".to_string(),
+            version_id: None,
+            total_len: 64,
+        };
+        let exact_generation = exact.clone().with_generation(generation);
+
+        assert!(cache.insert_present_identity(whole.clone(), bytes(1, 4)));
+        assert!(cache.insert_present_identity(exact.clone(), bytes(2, 4)));
+        assert!(cache.insert_present_identity(exact_generation.clone(), bytes(3, 4)));
+
+        assert_eq!(
+            cache.get_identity(&whole),
+            Some(CachedObject::Present(bytes(1, 4)))
+        );
+        assert_eq!(
+            cache.get_identity(&exact),
+            Some(CachedObject::Present(bytes(2, 4)))
+        );
+        assert_eq!(
+            cache.get_identity(&exact_generation),
+            Some(CachedObject::Present(bytes(3, 4)))
+        );
     }
 }

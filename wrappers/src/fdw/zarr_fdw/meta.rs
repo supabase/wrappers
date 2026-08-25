@@ -6,6 +6,7 @@
 
 use super::codec::CodecPipeline;
 use super::decode::{DType, fill_value_bytes};
+use super::sharding::{ShardingConfig, StorageLayout};
 use super::{ZarrFdwError, ZarrFdwResult};
 use serde::Deserialize;
 use serde_json::{Map, Value};
@@ -38,6 +39,9 @@ pub struct ArrayMeta {
     pub compressor: Option<Value>,
     /// Validated, format-neutral execution pipeline.
     pub codec_pipeline: CodecPipeline,
+    /// Physical storage mapping. `chunks` remains the executor's logical
+    /// chunk shape; sharded layouts retain their native outer shape here.
+    pub storage_layout: StorageLayout,
     pub chunk_key_encoding: ChunkKeyEncoding,
     pub order: char,
     pub filters: Option<Vec<Value>>,
@@ -162,6 +166,16 @@ impl ArrayMeta {
             .zip(self.chunks.iter())
             .map(|(shape, chunk)| shape.div_ceil(*chunk))
             .collect()
+    }
+
+    /// Native regular chunk-grid shape reported by metadata inspection.
+    /// This is the shard shape for `sharding_indexed`, and the logical chunk
+    /// shape for direct v2/v3 arrays.
+    pub(crate) fn native_chunk_shape(&self) -> &[u64] {
+        match &self.storage_layout {
+            StorageLayout::Direct => &self.chunks,
+            StorageLayout::Sharded(config) => &config.shard_shape,
+        }
     }
 
     pub fn shape_extent(&self, axis: usize) -> ZarrFdwResult<usize> {
@@ -305,6 +319,7 @@ fn v2_meta(raw: V2ArrayMeta) -> ZarrFdwResult<ArrayMeta> {
         // the legacy compressor through `CodecPipeline::from_v2` at scan
         // startup, while v3 stores its already-validated ordered pipeline.
         codec_pipeline: CodecPipeline::raw_v2(),
+        storage_layout: StorageLayout::Direct,
         chunk_key_encoding: ChunkKeyEncoding::V2 { separator },
         order: raw.order,
         filters: raw.filters,
@@ -387,8 +402,29 @@ fn parse_v3_array(
     let native_codecs = object.get("codecs").cloned().ok_or_else(|| {
         ZarrFdwError::InvalidMetadata("Zarr v3 array must define codecs".to_string())
     })?;
-    let (codec_pipeline, dtype) =
-        CodecPipeline::from_v3(&native_dtype, shape.len(), &native_codecs)?;
+    let sharded = native_codecs.as_array().is_some_and(|codecs| {
+        codecs.len() == 1
+            && codecs[0]
+                .as_object()
+                .and_then(|codec| codec.get("name"))
+                .and_then(Value::as_str)
+                == Some("sharding_indexed")
+    });
+    let (codec_pipeline, storage_layout, dtype, chunks) = if sharded {
+        let (config, dtype) = ShardingConfig::from_v3(&native_dtype, &chunks, &native_codecs)?;
+        let codec_pipeline = config.inner_codecs.clone();
+        let chunks = config.inner_chunk_shape.clone();
+        (
+            codec_pipeline,
+            StorageLayout::Sharded(config),
+            dtype,
+            chunks,
+        )
+    } else {
+        let (codec_pipeline, dtype) =
+            CodecPipeline::from_v3(&native_dtype, shape.len(), &native_codecs)?;
+        (codec_pipeline, StorageLayout::Direct, dtype, chunks)
+    };
     let parsed_dtype = DType::parse(&dtype)?;
     fill_value_bytes(parsed_dtype, &fill_value).map_err(|error| {
         ZarrFdwError::InvalidMetadata(format!(
@@ -433,6 +469,7 @@ fn parse_v3_array(
         fill_value,
         compressor: None,
         codec_pipeline,
+        storage_layout,
         chunk_key_encoding,
         order: 'C',
         filters: None,
@@ -601,6 +638,7 @@ mod tests {
             fill_value: Value::Null,
             compressor: None,
             codec_pipeline: CodecPipeline::raw_v2(),
+            storage_layout: StorageLayout::Direct,
             chunk_key_encoding: ChunkKeyEncoding::V2 { separator: '.' },
             order: 'C',
             filters: None,
@@ -668,6 +706,73 @@ mod tests {
             panic!("expected group")
         };
         assert_eq!(group.attributes["title"], "root");
+    }
+
+    #[test]
+    fn sharded_v3_keeps_logical_and_native_chunk_shapes_distinct() {
+        let value = serde_json::json!({
+            "zarr_format":3,"node_type":"array","shape":[2,5,6],
+            "data_type":"float32",
+            "chunk_grid":{"name":"regular","configuration":{"chunk_shape":[2,3,4]}},
+            "chunk_key_encoding":{"name":"default"},"fill_value":-7.5,
+            "codecs":[{
+                "name":"sharding_indexed",
+                "configuration":{
+                    "chunk_shape":[1,3,2],
+                    "codecs":[{"name":"bytes","configuration":{"endian":"little"}}],
+                    "index_codecs":[
+                        {"name":"bytes","configuration":{"endian":"little"}},
+                        {"name":"crc32c"}
+                    ],
+                    "index_location":"end"
+                }
+            }],
+            "dimension_names":["time","y","x"],"attributes":{}
+        });
+        let NodeMeta::Array(node) = parse_v3_node(&serde_json::to_vec(&value).unwrap()).unwrap()
+        else {
+            panic!("expected array")
+        };
+        assert_eq!(node.meta.chunks, vec![1, 3, 2]);
+        assert_eq!(node.meta.native_chunk_shape(), &[2, 3, 4]);
+        assert_eq!(
+            node.meta.storage_layout.ordered_label(),
+            "sharding_indexed (index: end)"
+        );
+        assert_eq!(node.meta.codec_pipeline.ordered_label(), "bytes");
+        assert_eq!(node.native_codecs, value["codecs"]);
+    }
+
+    #[test]
+    fn sharded_v3_layout_applies_to_rank_one_coordinate_arrays() {
+        let value = serde_json::json!({
+            "zarr_format":3,"node_type":"array","shape":[8],
+            "data_type":"float64",
+            "chunk_grid":{"name":"regular","configuration":{"chunk_shape":[4]}},
+            "chunk_key_encoding":{"name":"default"},"fill_value":0,
+            "codecs":[{
+                "name":"sharding_indexed",
+                "configuration":{
+                    "chunk_shape":[2],
+                    "codecs":[{"name":"bytes","configuration":{"endian":"little"}}],
+                    "index_codecs":[{"name":"bytes","configuration":{"endian":"little"}}]
+                }
+            }],
+            "dimension_names":["time"],"attributes":{}
+        });
+        let NodeMeta::Array(node) = parse_v3_node(&serde_json::to_vec(&value).unwrap()).unwrap()
+        else {
+            panic!("expected array")
+        };
+        assert_eq!(node.meta.chunks, vec![2]);
+        assert_eq!(node.meta.native_chunk_shape(), &[4]);
+        let StorageLayout::Sharded(config) = &node.meta.storage_layout else {
+            panic!("expected sharded storage")
+        };
+        assert_eq!(
+            config.split_logical_indices(&[3]).unwrap(),
+            (vec![1], vec![1])
+        );
     }
 
     #[test]

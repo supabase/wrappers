@@ -53,6 +53,9 @@ Reads are prefetched in deterministic chunk order without background tasks.
 The compressed cache belongs to one query execution, so bytes never cross
 roles, credentials, server changes, or queries. A rescan within the same query
 can reuse cached chunks.
+For sharded arrays, that same byte budget is divided between decoded shard
+indexes and encoded inner-payload ranges; sharding does not add a second
+unbounded cache.
 
 Inspection requires `s3:ListBucket` and `s3:GetObject`. Scanning requires
 `s3:GetObject`.
@@ -213,10 +216,30 @@ encoding uses keys beneath the `c` prefix. Missing chunks use the required v3
 scan, filter, CF decoding, aggregate-pushdown, resource-bound, and cancellation
 behavior as v2 arrays.
 
-This subset intentionally excludes v3 sharding, storage transformers,
-consolidated metadata, big-endian bytes, alternate gzip/CRC32C order, other
-bytes-to-bytes codecs, and extension data types. Unsupported metadata fails
-explicitly instead of being ignored.
+A top-level `sharding_indexed` codec is also supported without outer wrapper
+codecs. Its regular outer chunk grid defines shard objects, while its positive
+inner `chunk_shape` must exactly divide every outer shard extent. Inner chunks
+use the same bounded `transpose`/`bytes`/`gzip`/`crc32c` subset described above.
+The fixed-size shard index uses little-endian `uint64` offset/length pairs,
+optionally followed by CRC32C, and may be stored at the start or end of the
+shard. Whole-object absence and the required all-`uint64::MAX` index sentinel
+both synthesize the array fill value. Inner payload order is not assumed; each
+read follows the offset and length stored in the decoded index.
+
+Sharded S3 scans read only the fixed index prefix or suffix and the exact byte
+ranges for selected inner chunks; they never fall back to downloading a whole
+shard. Decoded indexes and encoded inner ranges are cached only for the current
+query and retain the existing concurrency, inflight-byte, cancellation, and
+rescan rules. Range responses, index checksums, sentinels, offset arithmetic,
+object bounds, and overlap with the index region are validated before decode.
+`EXPLAIN ANALYZE` distinguishes the outer shard and inner logical chunk shapes,
+index location, index and payload range requests, bytes, and cache activity.
+
+This subset intentionally excludes outer codecs around sharding, nested
+sharding, variable-size index codecs, full-shard fallback, range coalescing,
+storage transformers, consolidated metadata, big-endian bytes, alternate
+gzip/CRC32C order, other bytes-to-bytes codecs, and extension data types.
+Unsupported metadata fails explicitly instead of being ignored.
 Unknown top-level Zarr 3.1 extensions are accepted only when their object is
 explicitly marked `must_understand: false`; shorthand extension definitions are
 outside this bounded subset.
@@ -616,7 +639,7 @@ single Foreign Scan or retains a local Aggregate node.
 - Raw, gzip, zlib, and Blosc/LZ4 chunk compression is supported for v2. The v3
   subset supports the ordered `transpose`, `bytes`, `gzip`, and `crc32c`
   pipeline described above.
-- Non-empty v2 filters, Fortran order, consolidated metadata, sharding, storage
+- Non-empty v2 filters, Fortran order, consolidated metadata, storage
   transformers, writes, and OME-Zarr multiscale semantics are not supported.
 - `LIMIT` alone does not prevent coordinate metadata loading; use selective
   coordinate predicates for large arrays. It does stop later lazy data-chunk

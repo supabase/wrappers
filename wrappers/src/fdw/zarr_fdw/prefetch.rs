@@ -16,6 +16,7 @@ use thiserror::Error;
 use tokio::time::{MissedTickBehavior, interval};
 
 use super::cache::{CachedObject, CompressedChunkCache};
+use super::store::ReadIdentity;
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub(crate) enum PrefetchConfigError {
@@ -32,7 +33,7 @@ pub(crate) enum PrefetchConfigError {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct PrefetchRequest<T> {
     pub context: T,
-    pub key: String,
+    pub identity: ReadIdentity,
     /// Maximum bytes the storage read is allowed to return. The prefetcher
     /// reserves this conservative amount before issuing the request.
     pub max_bytes: usize,
@@ -59,6 +60,9 @@ pub(crate) enum ScheduleError<T> {
 pub(crate) enum PrefetchSource {
     Cache,
     Remote,
+    /// No object body exists: a sparse shard/index entry was resolved to the
+    /// array fill value before entering the ordered queue.
+    Synthesized,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -85,6 +89,7 @@ pub(crate) enum PrefetchNext<T, E> {
 
 enum Completion<T, E> {
     Cached(PrefetchRequest<T>, CachedObject),
+    Synthesized(PrefetchRequest<T>, CachedObject),
     Fetched(PrefetchRequest<T>, Result<Option<Vec<u8>>, E>),
 }
 
@@ -138,14 +143,14 @@ impl<T: 'static, E: 'static> OrderedPrefetch<T, E> {
         fetch: F,
     ) -> Result<PrefetchSource, ScheduleError<T>>
     where
-        F: FnOnce(String, usize) -> Fut,
+        F: FnOnce(ReadIdentity, usize) -> Fut,
         Fut: Future<Output = Result<Option<Vec<u8>>, E>> + 'static,
     {
         if self.pending.len() >= self.max_concurrent_reads {
             return Err(ScheduleError::WindowFull(request));
         }
 
-        if let Some(object) = cache.get(&request.key) {
+        if let Some(object) = cache.get_identity(&request.identity) {
             if let CachedObject::Present(bytes) = &object
                 && bytes.len() > request.max_bytes
             {
@@ -174,14 +179,30 @@ impl<T: 'static, E: 'static> OrderedPrefetch<T, E> {
             return Err(ScheduleError::WindowFull(request));
         }
 
-        let key = request.key.clone();
+        let identity = request.identity.clone();
         let max_bytes = request.max_bytes;
-        let future = fetch(key, max_bytes);
+        let future = fetch(identity, max_bytes);
         self.pending
             .push_back(async move { Completion::Fetched(request, future.await) }.boxed_local());
         self.inflight_reads += 1;
         self.reserved_bytes += max_bytes;
         Ok(PrefetchSource::Remote)
+    }
+
+    /// Queue an already-resolved sparse result without performing a cache
+    /// lookup or creating a storage future. It still participates in ordered
+    /// delivery and the request-count window.
+    pub(crate) fn try_schedule_synthesized(
+        &mut self,
+        request: PrefetchRequest<T>,
+        object: CachedObject,
+    ) -> Result<PrefetchSource, ScheduleError<T>> {
+        if self.pending.len() >= self.max_concurrent_reads {
+            return Err(ScheduleError::WindowFull(request));
+        }
+        self.pending
+            .push_back(async move { Completion::Synthesized(request, object) }.boxed_local());
+        Ok(PrefetchSource::Synthesized)
     }
 
     /// Return the next result in scheduling order.
@@ -243,6 +264,14 @@ impl<T: 'static, E: 'static> OrderedPrefetch<T, E> {
                         remote_bytes: 0,
                     });
                 }
+                Wait::Completion(Some(Completion::Synthesized(request, object))) => {
+                    return PrefetchNext::Ready(PrefetchedObject {
+                        request,
+                        object,
+                        source: PrefetchSource::Synthesized,
+                        remote_bytes: 0,
+                    });
+                }
                 Wait::Completion(Some(Completion::Fetched(request, result))) => {
                     self.inflight_reads = self.inflight_reads.saturating_sub(1);
                     self.reserved_bytes = self.reserved_bytes.saturating_sub(request.max_bytes);
@@ -250,7 +279,10 @@ impl<T: 'static, E: 'static> OrderedPrefetch<T, E> {
                         Ok(Some(bytes)) => {
                             let remote_bytes = bytes.len();
                             let bytes: Arc<[u8]> = Arc::from(bytes);
-                            cache.insert_present(request.key.clone(), Arc::clone(&bytes));
+                            cache.insert_present_identity(
+                                request.identity.clone(),
+                                Arc::clone(&bytes),
+                            );
                             PrefetchNext::Ready(PrefetchedObject {
                                 request,
                                 object: CachedObject::Present(bytes),
@@ -259,7 +291,7 @@ impl<T: 'static, E: 'static> OrderedPrefetch<T, E> {
                             })
                         }
                         Ok(None) => {
-                            cache.insert_missing(request.key.clone());
+                            cache.insert_missing_identity(request.identity.clone());
                             PrefetchNext::Ready(PrefetchedObject {
                                 request,
                                 object: CachedObject::Missing,
@@ -286,7 +318,6 @@ impl<T: 'static, E: 'static> OrderedPrefetch<T, E> {
         self.reserved_bytes = 0;
     }
 
-    #[cfg(test)]
     pub(crate) fn is_empty(&self) -> bool {
         self.pending.is_empty()
     }
@@ -312,7 +343,7 @@ mod tests {
     fn request(id: usize, max_bytes: usize) -> PrefetchRequest<usize> {
         PrefetchRequest {
             context: id,
-            key: format!("chunk-{id}"),
+            identity: ReadIdentity::whole(format!("chunk-{id}")),
             max_bytes,
         }
     }

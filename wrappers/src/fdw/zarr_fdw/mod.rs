@@ -13,6 +13,7 @@ mod meta;
 mod metrics;
 mod prefetch;
 mod scientific;
+mod sharding;
 mod spatial;
 mod store;
 

@@ -41,6 +41,13 @@ pub(crate) struct ZarrScanMetrics {
     pub(crate) cache_hits: u64,
     pub(crate) cache_misses: u64,
     pub(crate) cache_evictions: u64,
+    pub(crate) shard_index_get_calls: u64,
+    pub(crate) shard_index_encoded_bytes: u64,
+    pub(crate) shard_payload_get_calls: u64,
+    pub(crate) shard_payload_encoded_bytes: u64,
+    pub(crate) shard_index_cache_hits: u64,
+    pub(crate) shard_index_cache_misses: u64,
+    pub(crate) shard_index_cache_evictions: u64,
     pub(crate) logical_cells_examined: u64,
     /// Present only when the FDW evaluates every scan qual exactly.
     pub(crate) logical_cells_matched: Option<u64>,
@@ -59,12 +66,18 @@ pub(crate) struct ZarrExplainContext<'a> {
     pub(crate) chunk_shape: &'a [usize],
     pub(crate) dtype: &'a str,
     pub(crate) codec: &'a str,
+    pub(crate) storage_layout: &'a str,
+    pub(crate) shard_shape: Option<&'a [u64]>,
+    pub(crate) index_location: Option<&'a str>,
     pub(crate) aggregate_mode: &'a str,
     pub(crate) max_concurrent_reads: usize,
     pub(crate) max_inflight_bytes: usize,
     pub(crate) compressed_cache_bytes: usize,
     pub(crate) cache_entries: usize,
     pub(crate) cache_resident_bytes: usize,
+    pub(crate) shard_index_cache_bytes: usize,
+    pub(crate) shard_index_cache_entries: usize,
+    pub(crate) shard_index_cache_resident_bytes: usize,
 }
 
 impl ZarrScanMetrics {
@@ -137,6 +150,38 @@ impl ZarrScanMetrics {
 
     pub(crate) fn record_cache_evictions(&mut self, count: usize) {
         saturating_add(&mut self.cache_evictions, usize_to_u64(count));
+    }
+
+    pub(crate) fn record_shard_index_get(&mut self, encoded_bytes: Option<usize>) {
+        saturating_increment(&mut self.shard_index_get_calls);
+        if let Some(encoded_bytes) = encoded_bytes {
+            saturating_add(
+                &mut self.shard_index_encoded_bytes,
+                usize_to_u64(encoded_bytes),
+            );
+        }
+    }
+
+    pub(crate) fn record_shard_payload_get(&mut self, encoded_bytes: Option<usize>) {
+        saturating_increment(&mut self.shard_payload_get_calls);
+        if let Some(encoded_bytes) = encoded_bytes {
+            saturating_add(
+                &mut self.shard_payload_encoded_bytes,
+                usize_to_u64(encoded_bytes),
+            );
+        }
+    }
+
+    pub(crate) fn record_shard_index_cache_lookup(&mut self, hit: bool) {
+        if hit {
+            saturating_increment(&mut self.shard_index_cache_hits);
+        } else {
+            saturating_increment(&mut self.shard_index_cache_misses);
+        }
+    }
+
+    pub(crate) fn record_shard_index_cache_evictions(&mut self, count: usize) {
+        saturating_add(&mut self.shard_index_cache_evictions, usize_to_u64(count));
     }
 
     pub(crate) fn record_decoded_bytes(
@@ -220,6 +265,7 @@ impl ZarrScanMetrics {
             ExplainProperty::text("Zarr Chunk Shape", format!("{:?}", context.chunk_shape)),
             ExplainProperty::text("Zarr Dtype", context.dtype),
             ExplainProperty::text("Zarr Codec", context.codec),
+            ExplainProperty::text("Zarr Storage Layout", context.storage_layout),
             ExplainProperty::text("Zarr Aggregate Pushdown", context.aggregate_mode),
             ExplainProperty::text("Zarr Chunk-Stat Pruning", "disabled"),
             ExplainProperty::unsigned(
@@ -245,6 +291,20 @@ impl ZarrScanMetrics {
                 usize_to_u64(context.cache_resident_bytes),
                 "bytes",
             ),
+            ExplainProperty::unsigned_with_unit(
+                "Zarr Shard Index Cache Capacity",
+                usize_to_u64(context.shard_index_cache_bytes),
+                "bytes",
+            ),
+            ExplainProperty::unsigned(
+                "Zarr Shard Index Cache Entries",
+                usize_to_u64(context.shard_index_cache_entries),
+            ),
+            ExplainProperty::unsigned_with_unit(
+                "Zarr Shard Index Cache Resident",
+                usize_to_u64(context.shard_index_cache_resident_bytes),
+                "bytes",
+            ),
             ExplainProperty::unsigned("Zarr Chunks Total", self.chunks_total),
             ExplainProperty::unsigned("Zarr Chunks Selected", self.chunks_selected),
             ExplainProperty::unsigned(
@@ -261,6 +321,17 @@ impl ZarrScanMetrics {
             ExplainProperty::unsigned("Zarr Cache Hits", self.cache_hits),
             ExplainProperty::unsigned("Zarr Cache Misses", self.cache_misses),
             ExplainProperty::unsigned("Zarr Cache Evictions", self.cache_evictions),
+            ExplainProperty::unsigned("Zarr Shard Index GET Calls", self.shard_index_get_calls),
+            ExplainProperty::unsigned("Zarr Shard Payload GET Calls", self.shard_payload_get_calls),
+            ExplainProperty::unsigned("Zarr Shard Index Cache Hits", self.shard_index_cache_hits),
+            ExplainProperty::unsigned(
+                "Zarr Shard Index Cache Misses",
+                self.shard_index_cache_misses,
+            ),
+            ExplainProperty::unsigned(
+                "Zarr Shard Index Cache Evictions",
+                self.shard_index_cache_evictions,
+            ),
             ExplainProperty::unsigned_with_unit(
                 "Zarr Remote Encoded Bytes",
                 self.total_encoded_bytes(),
@@ -279,6 +350,16 @@ impl ZarrScanMetrics {
             ExplainProperty::unsigned_with_unit(
                 "Zarr Data Encoded Bytes",
                 self.data_encoded_bytes,
+                "bytes",
+            ),
+            ExplainProperty::unsigned_with_unit(
+                "Zarr Shard Index Encoded Bytes",
+                self.shard_index_encoded_bytes,
+                "bytes",
+            ),
+            ExplainProperty::unsigned_with_unit(
+                "Zarr Shard Payload Encoded Bytes",
+                self.shard_payload_encoded_bytes,
                 "bytes",
             ),
             ExplainProperty::unsigned_with_unit(
@@ -312,6 +393,19 @@ impl ZarrScanMetrics {
             ExplainProperty::unsigned_with_unit("Zarr Decoding Time", self.decoding_micros, "us"),
             ExplainProperty::unsigned_with_unit("Zarr Aggregate Time", self.aggregate_micros, "us"),
         ];
+
+        if let Some(shard_shape) = context.shard_shape {
+            properties.push(ExplainProperty::text(
+                "Zarr Shard Shape",
+                format!("{shard_shape:?}"),
+            ));
+        }
+        if let Some(index_location) = context.index_location {
+            properties.push(ExplainProperty::text(
+                "Zarr Shard Index Location",
+                index_location,
+            ));
+        }
 
         if let Some(matched) = self.logical_cells_matched {
             properties.push(ExplainProperty::unsigned(
@@ -391,12 +485,18 @@ mod tests {
             chunk_shape: &chunk_shape,
             dtype: "<f4",
             codec: "blosc",
+            storage_layout: "direct",
+            shard_shape: None,
+            index_location: None,
             aggregate_mode: "disabled",
             max_concurrent_reads: 4,
             max_inflight_bytes: 8 * 1024 * 1024,
             compressed_cache_bytes: 1024 * 1024,
             cache_entries: 0,
             cache_resident_bytes: 0,
+            shard_index_cache_bytes: 0,
+            shard_index_cache_entries: 0,
+            shard_index_cache_resident_bytes: 0,
         });
 
         assert!(properties.iter().any(|property| {

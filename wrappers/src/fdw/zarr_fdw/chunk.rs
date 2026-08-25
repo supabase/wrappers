@@ -256,6 +256,7 @@ mod tests {
             dtype: "<f4".to_string(),
             compressor: None,
             codec_pipeline: super::super::codec::CodecPipeline::raw_v2(),
+            storage_layout: super::super::sharding::StorageLayout::Direct,
             fill_value: serde_json::Value::Null,
             chunk_key_encoding: ChunkKeyEncoding::V2 { separator: '.' },
             order: 'C',

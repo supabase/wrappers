@@ -373,6 +373,7 @@ mod tests {
                 fill_value: json!(-7.5),
                 compressor: None,
                 codec_pipeline: super::super::super::codec::CodecPipeline::raw_v2(),
+                storage_layout: super::super::super::sharding::StorageLayout::Direct,
                 chunk_key_encoding: super::super::super::meta::ChunkKeyEncoding::V2 {
                     separator: '.',
                 },

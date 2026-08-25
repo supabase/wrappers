@@ -2534,6 +2534,399 @@ mod tests {
     }
 
     #[pg_test]
+    fn zarr_minio_v3_sharding_start_end_scan_and_sparse_fill_e2e() {
+        create_minio_v3_e2e_server();
+        for (table, array_group) in [
+            ("zarr_v3_shard_end", "nested/shard_end"),
+            ("zarr_v3_shard_start", "nested/shard_start"),
+        ] {
+            create_minio_v3_e2e_table_on_server(table, array_group, false);
+            let aggregate_sql = format!(
+                r#"SELECT count(*) AS total_count,
+                           count(value) AS value_count,
+                           sum(value) AS value_sum,
+                           avg(value) AS value_avg,
+                           min(value) AS value_min,
+                           max(value) AS value_max
+                      FROM {table}"#
+            );
+            assert_aggregate_pushed_down(&aggregate_sql);
+
+            Spi::connect(|c| {
+                let summary = c.select(&aggregate_sql, None, &[]).unwrap().next().unwrap();
+                assert_eq!(
+                    summary
+                        .get_by_name::<i64, _>("total_count")
+                        .unwrap()
+                        .unwrap(),
+                    60
+                );
+                assert_eq!(
+                    summary
+                        .get_by_name::<i64, _>("value_count")
+                        .unwrap()
+                        .unwrap(),
+                    60
+                );
+                assert_eq!(
+                    summary.get_by_name::<f32, _>("value_sum").unwrap().unwrap(),
+                    3_574.0
+                );
+                assert!(
+                    (summary.get_by_name::<f64, _>("value_avg").unwrap().unwrap()
+                        - 59.566_666_666_666_67)
+                        .abs()
+                        < 1e-12
+                );
+                assert_eq!(
+                    summary.get_by_name::<f32, _>("value_min").unwrap().unwrap(),
+                    -7.5
+                );
+                assert_eq!(
+                    summary.get_by_name::<f32, _>("value_max").unwrap().unwrap(),
+                    143.0
+                );
+                let fill_count = c
+                    .select(
+                        &format!("SELECT count(*) FROM {table} WHERE value = -7.5"),
+                        Some(1),
+                        &[],
+                    )
+                    .unwrap()
+                    .next()
+                    .unwrap()
+                    .get::<i64>(1)
+                    .unwrap();
+                assert_eq!(fill_count, Some(8));
+
+                // The pinned start-index shard stores these two logical inner
+                // chunks out of C-order physically. Correct values prove that
+                // the index offsets, rather than payload order, drive reads.
+                let morton_order_probe = c
+                    .select(
+                        &format!(
+                            r#"SELECT x, value
+                                 FROM {table}
+                                WHERE time = '1970-01-01 00:00:00+00'::timestamptz
+                                  AND y = 20
+                                  AND x BETWEEN 110 AND 130
+                                ORDER BY x"#
+                        ),
+                        None,
+                        &[],
+                    )
+                    .unwrap()
+                    .map(|row| {
+                        (
+                            row.get_by_name::<f64, _>("x").unwrap().unwrap(),
+                            row.get_by_name::<f32, _>("value").unwrap().unwrap(),
+                        )
+                    })
+                    .collect::<Vec<_>>();
+                assert_eq!(
+                    morton_order_probe,
+                    vec![(110.0, 11.0), (120.0, 12.0), (130.0, 13.0)]
+                );
+
+                let absent_shard_fill = c
+                    .select(
+                        &format!(
+                            r#"SELECT value
+                                 FROM {table}
+                                WHERE time = '1970-01-01 00:00:03.6+00'::timestamptz
+                                  AND y = 50
+                                  AND x = 150"#
+                        ),
+                        Some(1),
+                        &[],
+                    )
+                    .unwrap()
+                    .next()
+                    .unwrap()
+                    .get_by_name::<f32, _>("value")
+                    .unwrap();
+                assert_eq!(absent_shard_fill, Some(-7.5));
+            });
+        }
+    }
+
+    #[pg_test]
+    fn zarr_minio_v3_sharding_scientific_aggregate_pushdown_e2e() {
+        create_minio_v3_e2e_table("zarr_v3_shard_cf", "nested/shard_end", true);
+        let sql = r#"SELECT count(*) AS total_count,
+                            count(value) AS value_count,
+                            sum(value) AS value_sum,
+                            avg(value) AS value_avg,
+                            min(value) AS value_min,
+                            max(value) AS value_max
+                       FROM zarr_v3_shard_cf"#;
+        assert_aggregate_pushed_down(sql);
+
+        Spi::connect(|c| {
+            let row = c.select(sql, None, &[]).unwrap().next().unwrap();
+            assert_eq!(
+                row.get_by_name::<i64, _>("total_count").unwrap().unwrap(),
+                60
+            );
+            assert_eq!(
+                row.get_by_name::<i64, _>("value_count").unwrap().unwrap(),
+                48
+            );
+            assert!(
+                (row.get_by_name::<f64, _>("value_sum").unwrap().unwrap() - 13_142.86).abs() < 1e-8
+            );
+            assert!(
+                (row.get_by_name::<f64, _>("value_avg").unwrap().unwrap() - 273.809_583_333_333_36)
+                    .abs()
+                    < 1e-10
+            );
+            assert!(
+                (row.get_by_name::<f64, _>("value_min").unwrap().unwrap() - 273.15).abs() < 1e-10
+            );
+            assert!(
+                (row.get_by_name::<f64, _>("value_max").unwrap().unwrap() - 274.55).abs() < 1e-10
+            );
+        });
+    }
+
+    #[pg_test]
+    fn zarr_minio_v3_sharding_missing_inner_sentinel_uses_fill_e2e() {
+        create_minio_v3_e2e_server();
+        create_minio_v3_e2e_table_on_server(
+            "zarr_v3_shard_sentinel_raw",
+            "nested/shard_sentinel",
+            false,
+        );
+        create_minio_v3_e2e_table_on_server(
+            "zarr_v3_shard_sentinel_cf",
+            "nested/shard_sentinel",
+            true,
+        );
+
+        Spi::connect(|c| {
+            let raw = c
+                .select(
+                    r#"SELECT value
+                         FROM zarr_v3_shard_sentinel_raw
+                        WHERE time = '1970-01-01 00:00:00+00'::timestamptz
+                          AND y = 20
+                          AND x = 110"#,
+                    Some(1),
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap()
+                .get_by_name::<f32, _>("value")
+                .unwrap();
+            assert_eq!(raw, Some(-7.5));
+
+            let decoded = c
+                .select(
+                    r#"SELECT value
+                         FROM zarr_v3_shard_sentinel_cf
+                        WHERE time = '1970-01-01 00:00:00+00'::timestamptz
+                          AND y = 20
+                          AND x = 110"#,
+                    Some(1),
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap()
+                .get_by_name::<f64, _>("value")
+                .unwrap();
+            assert_eq!(decoded, None);
+        });
+    }
+
+    #[pg_test]
+    fn zarr_minio_v3_sharding_index_corruption_fails_closed_e2e() {
+        create_minio_v3_e2e_server();
+        let cases: [(&str, &str, &[&str]); 4] = [
+            (
+                "zarr_v3_shard_bad_index_crc",
+                "nested/shard_bad_index_crc",
+                &["shard index codec index 1 ('crc32c')", "checksum mismatch"],
+            ),
+            (
+                "zarr_v3_shard_truncated_index",
+                "nested/shard_truncated_index",
+                &["expected exactly the final 68 bytes"],
+            ),
+            (
+                "zarr_v3_shard_oob",
+                "nested/shard_oob",
+                &["inner chunk byte range", "exceeds shard object length"],
+            ),
+            (
+                "zarr_v3_shard_half_sentinel",
+                "nested/shard_half_sentinel",
+                &[
+                    "uses a mixed uint64 missing sentinel",
+                    "offset and nbytes must both be 2^64 - 1",
+                ],
+            ),
+        ];
+
+        for (table, array_group, expected_phrases) in cases {
+            create_minio_v3_e2e_table_on_server(table, array_group, false);
+            let message = capture_query_error(&format!(
+                r#"SELECT value
+                     FROM {table}
+                    WHERE time = '1970-01-01 00:00:00+00'::timestamptz
+                      AND y = 20
+                      AND x = 110"#
+            ));
+            assert!(
+                message.contains(&format!("{array_group}/c/0/0/0")),
+                "message: {message}"
+            );
+            for phrase in expected_phrases {
+                assert!(message.contains(*phrase), "message: {message}");
+            }
+        }
+    }
+
+    #[pg_test]
+    fn zarr_minio_v3_sharding_bounded_range_metrics_e2e() {
+        create_minio_v3_e2e_server();
+        create_minio_v3_e2e_table_on_server("zarr_v3_shard_ranges", "nested/shard_end", false);
+        create_minio_v3_e2e_table_on_server(
+            "zarr_v3_shard_start_range",
+            "nested/shard_start",
+            false,
+        );
+
+        Spi::connect(|c| {
+            let plan = c
+                .select(
+                    r#"EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+                       SELECT value
+                         FROM zarr_v3_shard_ranges
+                        WHERE time = '1970-01-01 00:00:00+00'::timestamptz
+                          AND y = 20
+                          AND x BETWEEN 110 AND 130"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|row| row.get::<&str>(1).unwrap().map(str::to_string))
+                .collect::<Vec<_>>();
+            let has = |text: &str| plan.iter().any(|line| line.contains(text));
+            assert!(
+                has("Zarr Storage Layout: sharding_indexed (index: end)"),
+                "plan: {plan:?}"
+            );
+            assert!(has("Zarr Shard Shape: [2, 3, 4]"), "plan: {plan:?}");
+            assert!(has("Zarr Chunk Shape: [1, 3, 2]"), "plan: {plan:?}");
+            assert!(has("Zarr Shard Index Location: end"), "plan: {plan:?}");
+            assert!(has("Zarr Chunks Selected: 2"), "plan: {plan:?}");
+            assert!(has("Zarr Chunks Requested: 2"), "plan: {plan:?}");
+            assert!(has("Zarr Chunks Present: 2"), "plan: {plan:?}");
+            assert!(has("Zarr Data GET Calls: 3"), "plan: {plan:?}");
+            assert!(has("Zarr Data Encoded Bytes: 116 bytes"), "plan: {plan:?}");
+            assert!(has("Zarr Cache Hits: 0"), "plan: {plan:?}");
+            assert!(has("Zarr Cache Misses: 2"), "plan: {plan:?}");
+            assert!(has("Zarr Shard Index GET Calls: 1"), "plan: {plan:?}");
+            assert!(has("Zarr Shard Payload GET Calls: 2"), "plan: {plan:?}");
+            assert!(has("Zarr Shard Index Cache Hits: 1"), "plan: {plan:?}");
+            assert!(has("Zarr Shard Index Cache Misses: 1"), "plan: {plan:?}");
+            assert!(
+                has("Zarr Shard Index Encoded Bytes: 68 bytes"),
+                "plan: {plan:?}"
+            );
+            assert!(
+                has("Zarr Shard Payload Encoded Bytes: 48 bytes"),
+                "plan: {plan:?}"
+            );
+
+            let start_plan = c
+                .select(
+                    r#"EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+                       SELECT value
+                         FROM zarr_v3_shard_start_range
+                        WHERE time = '1970-01-01 00:00:00+00'::timestamptz
+                          AND y = 20
+                          AND x = 130"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|row| row.get::<&str>(1).unwrap().map(str::to_string))
+                .collect::<Vec<_>>();
+            let start_has = |text: &str| start_plan.iter().any(|line| line.contains(text));
+            assert!(
+                start_has("Zarr Storage Layout: sharding_indexed (index: start)"),
+                "plan: {start_plan:?}"
+            );
+            assert!(
+                start_has("Zarr Shard Index Location: start"),
+                "plan: {start_plan:?}"
+            );
+            assert!(start_has("Zarr Data GET Calls: 2"), "plan: {start_plan:?}");
+            assert!(
+                start_has("Zarr Data Encoded Bytes: 92 bytes"),
+                "plan: {start_plan:?}"
+            );
+            assert!(
+                start_has("Zarr Shard Index GET Calls: 1"),
+                "plan: {start_plan:?}"
+            );
+            assert!(
+                start_has("Zarr Shard Payload GET Calls: 1"),
+                "plan: {start_plan:?}"
+            );
+            assert!(
+                start_has("Zarr Shard Index Encoded Bytes: 68 bytes"),
+                "plan: {start_plan:?}"
+            );
+            assert!(
+                start_has("Zarr Shard Payload Encoded Bytes: 24 bytes"),
+                "plan: {start_plan:?}"
+            );
+        });
+    }
+
+    #[pg_test]
+    fn zarr_minio_v3_sharding_rescan_cache_e2e() {
+        create_minio_v3_e2e_table("zarr_v3_shard_rescan", "nested/shard_end", false);
+
+        Spi::connect(|c| {
+            let plan = c
+                .select(
+                    r#"EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+                       SELECT ordinal,
+                              (SELECT count(*)
+                                 FROM zarr_v3_shard_rescan
+                                WHERE time = '1970-01-01 00:00:00+00'::timestamptz
+                                  AND y = 20
+                                  AND x BETWEEN 110 AND upper_x) AS selected
+                         FROM (VALUES (1, 130.0::double precision),
+                                      (2, 130.0::double precision)) AS limits(ordinal, upper_x)
+                        ORDER BY ordinal"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|row| row.get::<&str>(1).unwrap().map(str::to_string))
+                .collect::<Vec<_>>();
+            let has = |text: &str| plan.iter().any(|line| line.contains(text));
+            assert!(has("Zarr Chunks Requested: 4"), "plan: {plan:?}");
+            assert!(has("Zarr Chunks Present: 4"), "plan: {plan:?}");
+            assert!(has("Zarr Data GET Calls: 3"), "plan: {plan:?}");
+            assert!(has("Zarr Data Encoded Bytes: 116 bytes"), "plan: {plan:?}");
+            assert!(has("Zarr Cache Hits: 2"), "plan: {plan:?}");
+            assert!(has("Zarr Cache Misses: 2"), "plan: {plan:?}");
+            assert!(has("Zarr Shard Index GET Calls: 1"), "plan: {plan:?}");
+            assert!(has("Zarr Shard Payload GET Calls: 2"), "plan: {plan:?}");
+            assert!(has("Zarr Shard Index Cache Hits: 3"), "plan: {plan:?}");
+            assert!(has("Zarr Shard Index Cache Misses: 1"), "plan: {plan:?}");
+            assert!(has("Zarr Rescans: 1"), "plan: {plan:?}");
+        });
+    }
+
+    #[pg_test]
     fn zarr_minio_v3_ordered_codec_pipeline_scan_e2e() {
         create_minio_v3_e2e_table("zarr_v3_pipeline", "nested/pipeline", false);
 
@@ -2796,6 +3189,13 @@ mod tests {
                     "nested/pipeline",
                     "nested/raw_default",
                     "nested/raw_v2keys",
+                    "nested/shard_bad_index_crc",
+                    "nested/shard_end",
+                    "nested/shard_half_sentinel",
+                    "nested/shard_oob",
+                    "nested/shard_sentinel",
+                    "nested/shard_start",
+                    "nested/shard_truncated_index",
                     "nested/time",
                     "nested/x",
                     "nested/y",
@@ -3014,6 +3414,49 @@ mod tests {
                     {"name": "gzip", "configuration": {"level": 1}},
                     {"name": "crc32c"}
                 ])
+            );
+
+            let sharded = c
+                .select(
+                    "SELECT chunks, codecs FROM zarr_inspect('zarr_v3_e2e_server') WHERE path = 'nested/shard_end'",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(
+                sharded
+                    .get_by_name::<JsonB, _>("chunks")
+                    .unwrap()
+                    .unwrap()
+                    .0,
+                serde_json::json!([2, 3, 4])
+            );
+            assert_eq!(
+                sharded
+                    .get_by_name::<JsonB, _>("codecs")
+                    .unwrap()
+                    .unwrap()
+                    .0,
+                serde_json::json!([{
+                    "name": "sharding_indexed",
+                    "configuration": {
+                        "chunk_shape": [1, 3, 2],
+                        "codecs": [{
+                            "name": "bytes",
+                            "configuration": {"endian": "little"}
+                        }],
+                        "index_codecs": [
+                            {
+                                "name": "bytes",
+                                "configuration": {"endian": "little"}
+                            },
+                            {"name": "crc32c"}
+                        ],
+                        "index_location": "end"
+                    }
+                }])
             );
 
             let time = c

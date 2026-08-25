@@ -24,6 +24,96 @@ use super::{ZarrFdwError, ZarrFdwResult};
 pub(crate) const MAX_METADATA_OBJECT_BYTES: usize = 1024 * 1024;
 const INTERRUPT_POLL_INTERVAL: Duration = Duration::from_millis(25);
 
+/// The exact object bytes represented by one storage read/cache entry.
+///
+/// Suffix requests are useful for end-located shard indexes. Successful
+/// suffix reads are normalized to [`ReadRange::Exact`] in [`RangedObject`].
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub(crate) enum ReadRange {
+    Whole,
+    Exact { start: u64, length: u64 },
+    Suffix { length: u64 },
+}
+
+/// Observed identity of one S3 object generation.
+///
+/// `version_id` is deliberately observational. Follow-up reads use `If-Match`
+/// with the ETag, preserving deployments that grant `s3:GetObject` but not
+/// `s3:GetObjectVersion`.
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub(crate) struct ObjectGeneration {
+    pub etag: String,
+    pub version_id: Option<String>,
+    pub total_len: u64,
+}
+
+/// Complete identity for a query-local object read/cache entry.
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub(crate) struct ReadIdentity {
+    pub key: String,
+    pub range: ReadRange,
+    pub generation: Option<ObjectGeneration>,
+}
+
+impl ReadIdentity {
+    pub(crate) fn whole(key: impl Into<String>) -> Self {
+        Self {
+            key: normalize_read_key(key),
+            range: ReadRange::Whole,
+            generation: None,
+        }
+    }
+
+    pub(crate) fn exact(key: impl Into<String>, start: u64, length: u64) -> ZarrFdwResult<Self> {
+        validate_nonempty_range(length)?;
+        start.checked_add(length - 1).ok_or_else(|| {
+            ZarrFdwError::InvalidMetadata("S3 byte range end overflows u64".to_string())
+        })?;
+        Ok(Self {
+            key: normalize_read_key(key),
+            range: ReadRange::Exact { start, length },
+            generation: None,
+        })
+    }
+
+    pub(crate) fn suffix(key: impl Into<String>, length: u64) -> ZarrFdwResult<Self> {
+        validate_nonempty_range(length)?;
+        Ok(Self {
+            key: normalize_read_key(key),
+            range: ReadRange::Suffix { length },
+            generation: None,
+        })
+    }
+
+    /// Apply an observed generation to a follow-up exact read. The resulting
+    /// request is sent with `If-Match` so an index and payload can never come
+    /// from different shard generations.
+    pub(crate) fn with_generation(mut self, generation: ObjectGeneration) -> Self {
+        self.generation = Some(generation);
+        self
+    }
+}
+
+fn normalize_read_key(key: impl Into<String>) -> String {
+    key.into().trim_matches('/').to_string()
+}
+
+/// One exactly validated S3 range response.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct RangedObject {
+    /// Resolved exact range plus the generation observed in the response.
+    pub identity: ReadIdentity,
+    pub total_len: u64,
+    pub bytes: Vec<u8>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct ContentRange {
+    start: u64,
+    end: u64,
+    total: u64,
+}
+
 enum Interruptible<T> {
     Ready(T),
     Interrupted,
@@ -369,6 +459,24 @@ impl ZarrStore {
         self.block_on_interruptibly(self.get_object_optional(key, max_bytes))
     }
 
+    /// Create an owned, exactly bounded S3 range request. Range responses
+    /// without a valid `Content-Range` are rejected; this method never falls
+    /// back to reading the complete object.
+    pub(crate) fn get_object_range_owned(
+        &self,
+        identity: ReadIdentity,
+    ) -> impl Future<Output = ZarrFdwResult<Option<RangedObject>>> + 'static {
+        get_object_range_owned(self.client.clone(), self.url.clone(), identity)
+    }
+
+    /// Synchronous range fetch for eager coordinate and shard-index reads.
+    pub(crate) fn get_object_range_sync(
+        &self,
+        identity: ReadIdentity,
+    ) -> ZarrFdwResult<Option<RangedObject>> {
+        self.block_on_interruptibly(self.get_object_range_owned(identity))
+    }
+
     /// List one bounded page of immediate child prefixes below `path`.
     ///
     /// The caller owns pagination and global discovery limits. Only common
@@ -479,6 +587,251 @@ async fn get_object_optional_owned(
     ))
 }
 
+async fn get_object_range_owned(
+    client: s3::Client,
+    url: StoreUrl,
+    identity: ReadIdentity,
+) -> ZarrFdwResult<Option<RangedObject>> {
+    let full_key = url.object_key(&identity.key);
+    let range_header = range_header(&identity.range)?;
+    let expected_length = range_length(&identity.range)?;
+    let expected_length_usize = usize::try_from(expected_length).map_err(|_| {
+        ZarrFdwError::InvalidMetadata(format!(
+            "range read for object '{full_key}' exceeds this platform's index capacity"
+        ))
+    })?;
+
+    let mut request = client
+        .get_object()
+        .bucket(&url.bucket)
+        .key(&full_key)
+        .range(range_header);
+    if let Some(generation) = &identity.generation {
+        request = request.if_match(generation.etag.clone());
+    }
+    let resp = match request.send().await {
+        Ok(response) => response,
+        Err(error) => {
+            let modeled_no_such_key = error
+                .as_service_error()
+                .is_some_and(|error| error.is_no_such_key());
+            let status = error
+                .raw_response()
+                .map(|response| response.status().as_u16());
+            if is_missing_object_response(modeled_no_such_key, status) {
+                return Ok(None);
+            }
+            if status == Some(412) {
+                return Err(ZarrFdwError::InvalidMetadata(format!(
+                    "object '{full_key}' changed while reading a shard (S3 If-Match precondition failed)"
+                )));
+            }
+            return Err(error.into());
+        }
+    };
+
+    let content_range =
+        required_content_range(resp.content_range.as_deref()).map_err(|message| {
+            ZarrFdwError::InvalidMetadata(format!(
+                "invalid Content-Range for object '{full_key}': {message}"
+            ))
+        })?;
+    validate_content_range(&identity.range, content_range).map_err(|message| {
+        ZarrFdwError::InvalidMetadata(format!(
+            "invalid Content-Range for object '{full_key}': {message}"
+        ))
+    })?;
+
+    let content_length = resp.content_length.ok_or_else(|| {
+        ZarrFdwError::InvalidMetadata(format!(
+            "range response for object '{full_key}' omitted Content-Length"
+        ))
+    })?;
+    let content_length = u64::try_from(content_length).map_err(|_| {
+        ZarrFdwError::InvalidMetadata(format!(
+            "range response for object '{full_key}' has a negative Content-Length"
+        ))
+    })?;
+    if content_length != expected_length {
+        return Err(ZarrFdwError::InvalidMetadata(format!(
+            "range response for object '{full_key}' has Content-Length {content_length}, expected exactly {expected_length} bytes"
+        )));
+    }
+
+    let etag = resp
+        .e_tag
+        .clone()
+        .filter(|etag| !etag.is_empty())
+        .ok_or_else(|| {
+            ZarrFdwError::InvalidMetadata(format!(
+                "range response for object '{full_key}' omitted ETag required for shard consistency"
+            ))
+        })?;
+    if let Some(expected) = &identity.generation
+        && expected.etag != etag
+    {
+        return Err(ZarrFdwError::InvalidMetadata(format!(
+            "object '{full_key}' changed while reading a shard (response ETag did not match If-Match)"
+        )));
+    }
+    if let Some(expected) = &identity.generation
+        && expected.total_len != content_range.total
+    {
+        return Err(ZarrFdwError::InvalidMetadata(format!(
+            "object '{full_key}' changed while reading a shard (Content-Range total {} did not match indexed object length {})",
+            content_range.total, expected.total_len
+        )));
+    }
+    let generation = ObjectGeneration {
+        etag,
+        version_id: resp.version_id.clone(),
+        total_len: content_range.total,
+    };
+    let bytes = read_bounded_object(
+        resp.body.into_async_read(),
+        expected_length_usize,
+        &full_key,
+    )
+    .await?;
+    if bytes.len() != expected_length_usize {
+        return Err(ZarrFdwError::InvalidMetadata(format!(
+            "range response for object '{full_key}' returned {} body bytes, expected exactly {expected_length} bytes",
+            bytes.len()
+        )));
+    }
+
+    Ok(Some(RangedObject {
+        identity: ReadIdentity {
+            key: identity.key,
+            range: ReadRange::Exact {
+                start: content_range.start,
+                length: expected_length,
+            },
+            generation: Some(generation),
+        },
+        total_len: content_range.total,
+        bytes,
+    }))
+}
+
+fn validate_nonempty_range(length: u64) -> ZarrFdwResult<()> {
+    if length == 0 {
+        return Err(ZarrFdwError::InvalidMetadata(
+            "S3 byte range length must be greater than zero".to_string(),
+        ));
+    }
+    Ok(())
+}
+
+fn range_length(range: &ReadRange) -> ZarrFdwResult<u64> {
+    match range {
+        ReadRange::Whole => Err(ZarrFdwError::InvalidMetadata(
+            "whole-object identity cannot be used for an S3 range read".to_string(),
+        )),
+        ReadRange::Exact { length, .. } | ReadRange::Suffix { length } => {
+            validate_nonempty_range(*length)?;
+            Ok(*length)
+        }
+    }
+}
+
+fn range_header(range: &ReadRange) -> ZarrFdwResult<String> {
+    match range {
+        ReadRange::Whole => Err(ZarrFdwError::InvalidMetadata(
+            "whole-object identity cannot be used for an S3 range read".to_string(),
+        )),
+        ReadRange::Exact { start, length } => {
+            validate_nonempty_range(*length)?;
+            let end = start.checked_add(length - 1).ok_or_else(|| {
+                ZarrFdwError::InvalidMetadata("S3 byte range end overflows u64".to_string())
+            })?;
+            Ok(format!("bytes={start}-{end}"))
+        }
+        ReadRange::Suffix { length } => {
+            validate_nonempty_range(*length)?;
+            Ok(format!("bytes=-{length}"))
+        }
+    }
+}
+
+fn parse_content_range(value: &str) -> Result<ContentRange, String> {
+    let bytes = value
+        .strip_prefix("bytes ")
+        .ok_or_else(|| "expected canonical 'bytes START-END/TOTAL'".to_string())?;
+    let (range, total) = bytes
+        .split_once('/')
+        .ok_or_else(|| "expected canonical 'bytes START-END/TOTAL'".to_string())?;
+    if total == "*" {
+        return Err("wildcard total length is not accepted".to_string());
+    }
+    let (start, end) = range
+        .split_once('-')
+        .ok_or_else(|| "expected canonical 'bytes START-END/TOTAL'".to_string())?;
+    let start = parse_canonical_u64(start, "start")?;
+    let end = parse_canonical_u64(end, "end")?;
+    let total = parse_canonical_u64(total, "total")?;
+    if start > end {
+        return Err("range start exceeds range end".to_string());
+    }
+    if end >= total {
+        return Err("range end must be smaller than total object length".to_string());
+    }
+    Ok(ContentRange { start, end, total })
+}
+
+fn required_content_range(value: Option<&str>) -> Result<ContentRange, String> {
+    let value = value.ok_or_else(|| {
+        "header is absent; refusing a full-object fallback for a range request".to_string()
+    })?;
+    parse_content_range(value)
+}
+
+fn parse_canonical_u64(value: &str, label: &str) -> Result<u64, String> {
+    if value.is_empty()
+        || (value.len() > 1 && value.starts_with('0'))
+        || !value.bytes().all(|byte| byte.is_ascii_digit())
+    {
+        return Err(format!("{label} is not a canonical unsigned integer"));
+    }
+    value
+        .parse::<u64>()
+        .map_err(|_| format!("{label} exceeds u64"))
+}
+
+fn validate_content_range(range: &ReadRange, actual: ContentRange) -> Result<(), String> {
+    let actual_length = actual
+        .end
+        .checked_sub(actual.start)
+        .and_then(|length| length.checked_add(1))
+        .ok_or_else(|| "returned byte length overflows u64".to_string())?;
+    match range {
+        ReadRange::Whole => Err("whole-object request cannot have a range response".to_string()),
+        ReadRange::Exact { start, length } => {
+            let expected_end = start
+                .checked_add(length.checked_sub(1).ok_or_else(|| {
+                    "requested byte range length must be greater than zero".to_string()
+                })?)
+                .ok_or_else(|| "requested byte range end overflows u64".to_string())?;
+            if actual.start != *start || actual.end != expected_end || actual_length != *length {
+                return Err(format!(
+                    "returned bytes {}-{}/{}, expected exactly {start}-{expected_end}",
+                    actual.start, actual.end, actual.total
+                ));
+            }
+            Ok(())
+        }
+        ReadRange::Suffix { length } => {
+            if actual_length != *length || actual.end.checked_add(1) != Some(actual.total) {
+                return Err(format!(
+                    "returned suffix bytes {}-{}/{}, expected exactly the final {length} bytes",
+                    actual.start, actual.end, actual.total
+                ));
+            }
+            Ok(())
+        }
+    }
+}
+
 async fn read_bounded_object<R>(
     mut reader: R,
     max_bytes: usize,
@@ -547,6 +900,118 @@ mod tests {
                 4,
                 "too-large"
             ))
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn range_headers_use_checked_inclusive_http_bounds() {
+        assert_eq!(
+            ReadIdentity::whole("/array/c/0/").key,
+            ReadIdentity::whole("array/c/0").key
+        );
+        assert_eq!(
+            range_header(&ReadRange::Exact {
+                start: 10,
+                length: 4
+            })
+            .unwrap(),
+            "bytes=10-13"
+        );
+        assert_eq!(
+            range_header(&ReadRange::Suffix { length: 68 }).unwrap(),
+            "bytes=-68"
+        );
+        assert!(
+            range_header(&ReadRange::Exact {
+                start: 0,
+                length: 0
+            })
+            .is_err()
+        );
+        assert!(
+            range_header(&ReadRange::Exact {
+                start: u64::MAX,
+                length: 2
+            })
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn content_range_parser_is_canonical_and_checked() {
+        assert_eq!(
+            parse_content_range("bytes 10-13/100").unwrap(),
+            ContentRange {
+                start: 10,
+                end: 13,
+                total: 100
+            }
+        );
+        for invalid in [
+            "bytes 10-13/*",
+            "bytes 010-13/100",
+            "Bytes 10-13/100",
+            "bytes 13-10/100",
+            "bytes 10-100/100",
+            "bytes 10-13/",
+        ] {
+            assert!(parse_content_range(invalid).is_err(), "{invalid}");
+        }
+        assert!(required_content_range(None).is_err());
+        assert!(required_content_range(Some("not-a-content-range")).is_err());
+    }
+
+    #[test]
+    fn content_range_must_match_exact_or_full_suffix_request() {
+        let exact = ReadRange::Exact {
+            start: 10,
+            length: 4,
+        };
+        assert!(
+            validate_content_range(
+                &exact,
+                ContentRange {
+                    start: 10,
+                    end: 13,
+                    total: 100
+                }
+            )
+            .is_ok()
+        );
+        assert!(
+            validate_content_range(
+                &exact,
+                ContentRange {
+                    start: 10,
+                    end: 12,
+                    total: 100
+                }
+            )
+            .is_err()
+        );
+
+        let suffix = ReadRange::Suffix { length: 4 };
+        assert!(
+            validate_content_range(
+                &suffix,
+                ContentRange {
+                    start: 96,
+                    end: 99,
+                    total: 100
+                }
+            )
+            .is_ok()
+        );
+        assert!(
+            validate_content_range(
+                &suffix,
+                ContentRange {
+                    start: 0,
+                    end: 2,
+                    total: 3
+                }
+            )
             .is_err()
         );
     }

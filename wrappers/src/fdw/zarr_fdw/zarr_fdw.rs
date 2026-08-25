@@ -21,6 +21,7 @@
 //! catalog table); the MVP prunes on the `x`/`y`/`time` columns directly.
 
 use crate::stats;
+use futures_util::FutureExt;
 use pgrx::datum::TimestampWithTimeZone;
 use pgrx::pg_sys;
 use serde_json::{Map, Value as JsonValue};
@@ -54,6 +55,10 @@ use super::prefetch::{
     OrderedPrefetch, PrefetchNext, PrefetchRequest, PrefetchSource, ScheduleError,
 };
 use super::scientific::{ScientificValueDecoder, time::TimeSpec};
+use super::sharding::{
+    CachedShardIndex, MAX_SHARD_INDEX_BYTES, ShardIndex, ShardIndexCache, ShardIndexDecode,
+    ShardingConfig, StorageLayout,
+};
 use super::spatial::crs::{
     GridMappingMetadata, ResolvedCrs, grid_mapping_sibling_path, resolve_crs,
 };
@@ -61,7 +66,10 @@ use super::spatial::grid::{
     GridCell, HorizontalAxes, RectilinearGrid, discover_horizontal_axes_from_roles,
     inclusive_center_bounds,
 };
-use super::store::{MAX_METADATA_OBJECT_BYTES, ZarrStore, join_key, validate_auth_options};
+use super::store::{
+    MAX_METADATA_OBJECT_BYTES, RangedObject, ReadIdentity, ReadRange, ZarrStore, join_key,
+    validate_auth_options,
+};
 use super::{ZarrFdwError, ZarrFdwResult};
 
 const FDW_NAME: &str = "ZarrFdw";
@@ -87,6 +95,7 @@ const MAX_MAX_INFLIGHT_BYTES: usize = 1024 * 1024 * 1024;
 const DEFAULT_COMPRESSED_CACHE_BYTES: usize = 64 * 1024 * 1024;
 const MAX_COMPRESSED_CACHE_BYTES: usize = 1024 * 1024 * 1024;
 const MAX_COMPRESSED_CACHE_ENTRIES: usize = 4096;
+const SHARD_INDEX_CACHE_FRACTION: usize = 4;
 const INTERRUPT_POLL_INTERVAL: Duration = Duration::from_millis(25);
 
 // Planning must stay deterministic and network-free. Until metadata-backed or
@@ -116,6 +125,27 @@ const UNSUPPORTED_COORDINATE_DECODING_ATTRIBUTES: [&str; 7] = [
 enum ArrayMetadataDocument {
     V2(Vec<u8>),
     V3(Vec<u8>),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct ChunkFetchContext {
+    logical_indices: Vec<u64>,
+    object_key: String,
+}
+
+enum ResolvedChunkRequest {
+    Fetch(PrefetchRequest<ChunkFetchContext>),
+    Synthesized(PrefetchRequest<ChunkFetchContext>),
+}
+
+enum DeferredChunkRequest {
+    Logical(Vec<u64>),
+    Resolved(ResolvedChunkRequest),
+}
+
+enum ShardIndexResolution {
+    Ready(Option<Arc<ShardIndex>>),
+    WouldBlock,
 }
 
 /// Array-axis positions required by a spatial-time operation.
@@ -227,15 +257,22 @@ pub(crate) struct ZarrFdw {
     // lazy chunk indexes to read, in row-major order
     chunk_cursor: ChunkIndexCursor,
     current_chunk: Vec<u64>,
-    deferred_prefetch: Option<PrefetchRequest<Vec<u64>>>,
-    prefetch: OrderedPrefetch<Vec<u64>, ZarrFdwError>,
+    current_object_key: String,
+    deferred_prefetch: Option<DeferredChunkRequest>,
+    prefetch: OrderedPrefetch<ChunkFetchContext, ZarrFdwError>,
     compressed_cache: CompressedChunkCache,
+    shard_index_cache: ShardIndexCache,
+    payload_cache_bytes: usize,
+    shard_index_cache_bytes: usize,
+    cache_layout_sharded: bool,
     max_concurrent_reads: usize,
     max_inflight_bytes: usize,
     compressed_cache_bytes: usize,
     metrics: ZarrScanMetrics,
     remote_data_get_calls: Arc<AtomicU64>,
     remote_data_encoded_bytes: Arc<AtomicU64>,
+    remote_shard_payload_get_calls: Arc<AtomicU64>,
+    remote_shard_payload_encoded_bytes: Arc<AtomicU64>,
     flushed_encoded_bytes: u64,
     flushed_cells: u64,
     flushed_tuples: u64,
@@ -303,6 +340,31 @@ where
         );
     }
     result
+}
+
+async fn observe_shard_payload_fetch<F>(
+    future: F,
+    shard_key: String,
+    remote_get_calls: Arc<AtomicU64>,
+    remote_encoded_bytes: Arc<AtomicU64>,
+    shard_payload_get_calls: Arc<AtomicU64>,
+    shard_payload_encoded_bytes: Arc<AtomicU64>,
+) -> ZarrFdwResult<Option<Vec<u8>>>
+where
+    F: Future<Output = ZarrFdwResult<Option<RangedObject>>>,
+{
+    atomic_saturating_add(&remote_get_calls, 1);
+    atomic_saturating_add(&shard_payload_get_calls, 1);
+    let response = future.await?.ok_or_else(|| {
+        ZarrFdwError::InvalidMetadata(format!(
+            "indexed shard object '{shard_key}' disappeared before its payload range was read"
+        ))
+    })?;
+    let bytes = response.bytes;
+    let len = u64::try_from(bytes.len()).unwrap_or(u64::MAX);
+    atomic_saturating_add(&remote_encoded_bytes, len);
+    atomic_saturating_add(&shard_payload_encoded_bytes, len);
+    Ok(Some(bytes))
 }
 
 fn checked_chunk_layout(
@@ -1220,82 +1282,302 @@ impl ZarrFdw {
         self.pending = false;
     }
 
-    fn chunk_request(&self, indices: Vec<u64>) -> ZarrFdwResult<PrefetchRequest<Vec<u64>>> {
+    fn configure_sharded_cache_budget(&mut self) {
+        if self.cache_layout_sharded {
+            return;
+        }
+        let index_bytes =
+            (self.compressed_cache_bytes / SHARD_INDEX_CACHE_FRACTION).min(MAX_SHARD_INDEX_BYTES);
+        let payload_bytes = self.compressed_cache_bytes.saturating_sub(index_bytes);
+        let index_entries = if index_bytes == 0 {
+            0
+        } else {
+            MAX_COMPRESSED_CACHE_ENTRIES / SHARD_INDEX_CACHE_FRACTION
+        };
+        let payload_entries = MAX_COMPRESSED_CACHE_ENTRIES.saturating_sub(index_entries);
+        self.compressed_cache = CompressedChunkCache::new(payload_bytes, payload_entries);
+        self.shard_index_cache = ShardIndexCache::new(index_bytes, index_entries);
+        self.payload_cache_bytes = payload_bytes;
+        self.shard_index_cache_bytes = index_bytes;
+        self.cache_layout_sharded = true;
+    }
+
+    fn resolve_shard_index(
+        &mut self,
+        config: &ShardingConfig,
+        shard_key: &str,
+        read_kind: ReadKind,
+        allow_remote: bool,
+    ) -> ZarrFdwResult<ShardIndexResolution> {
+        let request = config.index_read_identity(shard_key.to_string())?;
+        if let Some(cached) = self.shard_index_cache.get(&request) {
+            self.metrics.record_shard_index_cache_lookup(true);
+            return Ok(ShardIndexResolution::Ready(match cached {
+                CachedShardIndex::Present(index) => Some(index),
+                CachedShardIndex::Missing => None,
+            }));
+        }
+        if !allow_remote {
+            return Ok(ShardIndexResolution::WouldBlock);
+        }
+        if config.encoded_index_bytes > self.max_inflight_bytes {
+            return Err(ZarrFdwError::InvalidMetadata(format!(
+                "shard index read limit {} exceeds max_inflight_bytes {}",
+                config.encoded_index_bytes, self.max_inflight_bytes
+            )));
+        }
+
+        self.metrics.record_shard_index_cache_lookup(false);
+        self.metrics.record_remote_request(read_kind);
+        let response = self.store.get_object_range_sync(request.clone())?;
+        let response_bytes = response.as_ref().map(|response| response.bytes.len());
+        if let Some(bytes) = response_bytes {
+            self.metrics.record_remote_response_bytes(read_kind, bytes);
+        }
+        self.metrics.record_shard_index_get(response_bytes);
+
+        let evictions_before = self.shard_index_cache.evictions();
+        let Some(response) = response else {
+            self.shard_index_cache.insert_missing(request);
+            self.metrics.record_shard_index_cache_evictions(
+                self.shard_index_cache
+                    .evictions()
+                    .saturating_sub(evictions_before),
+            );
+            return Ok(ShardIndexResolution::Ready(None));
+        };
+        let index =
+            match ShardIndex::decode_interruptible(config, response, postgres_interrupt_pending)? {
+                ShardIndexDecode::Decoded(index) => Arc::new(index),
+                ShardIndexDecode::Interrupted => {
+                    self.process_pending_interrupt()?;
+                    return Err(ZarrFdwError::InvalidMetadata(
+                        "query interruption was requested".to_string(),
+                    ));
+                }
+            };
+        self.shard_index_cache
+            .insert_present(request, Arc::clone(&index));
+        self.metrics.record_shard_index_cache_evictions(
+            self.shard_index_cache
+                .evictions()
+                .saturating_sub(evictions_before),
+        );
+        Ok(ShardIndexResolution::Ready(Some(index)))
+    }
+
+    fn chunk_request(
+        &mut self,
+        indices: Vec<u64>,
+        allow_remote_index: bool,
+    ) -> ZarrFdwResult<Option<ResolvedChunkRequest>> {
         let meta = self
             .axis_meta
             .as_ref()
-            .expect("begin_scan must be called before iter_scan");
+            .expect("begin_scan must be called before iter_scan")
+            .clone();
         let dtype = self.dtype.expect("dtype set in begin_scan");
         let codec = self.codec.as_ref().expect("codec set in begin_scan");
-        let (_, _, expected) = checked_chunk_layout(meta, dtype.itemsize())?;
-        let max_bytes = codec.encoded_read_limit(expected)?;
-        if max_bytes > self.max_inflight_bytes {
-            return Err(ZarrFdwError::InvalidMetadata(format!(
-                "encoded chunk read limit {max_bytes} exceeds max_inflight_bytes {}",
-                self.max_inflight_bytes
-            )));
+        let (_, _, expected) = checked_chunk_layout(&meta, dtype.itemsize())?;
+        let encoded_limit = codec.encoded_read_limit(expected)?;
+        let context = |object_key: String| ChunkFetchContext {
+            logical_indices: indices.clone(),
+            object_key,
+        };
+
+        match &meta.storage_layout {
+            StorageLayout::Direct => {
+                if encoded_limit > self.max_inflight_bytes {
+                    return Err(ZarrFdwError::InvalidMetadata(format!(
+                        "encoded chunk read limit {encoded_limit} exceeds max_inflight_bytes {}",
+                        self.max_inflight_bytes
+                    )));
+                }
+                let key = join_key(
+                    &self.array_dir,
+                    &chunk_key(&meta.chunk_key_encoding, &indices),
+                );
+                Ok(Some(ResolvedChunkRequest::Fetch(PrefetchRequest {
+                    context: context(key.clone()),
+                    identity: ReadIdentity::whole(key),
+                    max_bytes: encoded_limit,
+                })))
+            }
+            StorageLayout::Sharded(config) => {
+                let address = config.chunk_address(&indices)?;
+                let shard_key = join_key(
+                    &self.array_dir,
+                    &chunk_key(&meta.chunk_key_encoding, &address.shard_indices),
+                );
+                let index = match self.resolve_shard_index(
+                    config,
+                    &shard_key,
+                    ReadKind::Data,
+                    allow_remote_index,
+                )? {
+                    ShardIndexResolution::Ready(index) => index,
+                    ShardIndexResolution::WouldBlock => return Ok(None),
+                };
+                let request_context = context(shard_key.clone());
+                let Some(index) = index else {
+                    return Ok(Some(ResolvedChunkRequest::Synthesized(PrefetchRequest {
+                        context: request_context,
+                        identity: config.index_read_identity(shard_key)?,
+                        max_bytes: 0,
+                    })));
+                };
+                let entry = index.entry(&address.inner_indices)?;
+                let Some(identity) = index.payload_read_identity(entry)? else {
+                    return Ok(Some(ResolvedChunkRequest::Synthesized(PrefetchRequest {
+                        context: request_context,
+                        identity: index.index_identity().clone(),
+                        max_bytes: 0,
+                    })));
+                };
+                let max_bytes = match &identity.range {
+                    ReadRange::Exact { length, .. } => usize::try_from(*length).map_err(|_| {
+                        ZarrFdwError::InvalidMetadata(format!(
+                            "inner chunk range in shard '{shard_key}' exceeds this platform's index capacity"
+                        ))
+                    })?,
+                    ReadRange::Whole | ReadRange::Suffix { .. } => {
+                        return Err(ZarrFdwError::InvalidMetadata(format!(
+                            "inner chunk in shard '{shard_key}' did not resolve to an exact byte range"
+                        )));
+                    }
+                };
+                if max_bytes > encoded_limit {
+                    return Err(ZarrFdwError::InvalidMetadata(format!(
+                        "inner chunk range in shard '{shard_key}' is {max_bytes} bytes, exceeding its encoded read limit of {encoded_limit}"
+                    )));
+                }
+                if max_bytes > self.max_inflight_bytes {
+                    return Err(ZarrFdwError::InvalidMetadata(format!(
+                        "inner chunk range in shard '{shard_key}' is {max_bytes} bytes, exceeding max_inflight_bytes {}",
+                        self.max_inflight_bytes
+                    )));
+                }
+                Ok(Some(ResolvedChunkRequest::Fetch(PrefetchRequest {
+                    context: request_context,
+                    identity,
+                    max_bytes,
+                })))
+            }
         }
-        let key = join_key(
-            &self.array_dir,
-            &chunk_key(&meta.chunk_key_encoding, &indices),
-        );
-        Ok(PrefetchRequest {
-            context: indices,
-            key,
-            max_bytes,
-        })
+    }
+
+    fn schedule_chunk_request(&mut self, resolved: ResolvedChunkRequest) -> ZarrFdwResult<bool> {
+        let result = match resolved {
+            ResolvedChunkRequest::Synthesized(request) => self
+                .prefetch
+                .try_schedule_synthesized(request, CachedObject::Missing)
+                .map(|source| (source, false))
+                .map_err(|error| (error, true)),
+            ResolvedChunkRequest::Fetch(request) => {
+                let store = &self.store;
+                let remote_get_calls = Arc::clone(&self.remote_data_get_calls);
+                let remote_encoded_bytes = Arc::clone(&self.remote_data_encoded_bytes);
+                let shard_payload_get_calls = Arc::clone(&self.remote_shard_payload_get_calls);
+                let shard_payload_encoded_bytes =
+                    Arc::clone(&self.remote_shard_payload_encoded_bytes);
+                self.prefetch
+                    .try_schedule(
+                        request,
+                        &mut self.compressed_cache,
+                        move |identity, max_bytes| match identity.range.clone() {
+                            ReadRange::Whole => {
+                                let fetch =
+                                    store.get_object_optional_owned(identity.key, max_bytes);
+                                observe_data_fetch(fetch, remote_get_calls, remote_encoded_bytes)
+                                    .boxed_local()
+                            }
+                            ReadRange::Exact { .. } | ReadRange::Suffix { .. } => {
+                                let shard_key = identity.key.clone();
+                                let fetch = store.get_object_range_owned(identity);
+                                observe_shard_payload_fetch(
+                                    fetch,
+                                    shard_key,
+                                    remote_get_calls,
+                                    remote_encoded_bytes,
+                                    shard_payload_get_calls,
+                                    shard_payload_encoded_bytes,
+                                )
+                                .boxed_local()
+                            }
+                        },
+                    )
+                    .map(|source| (source, true))
+                    .map_err(|error| (error, false))
+            }
+        };
+
+        match result {
+            Ok((source, has_payload_cache_lookup)) => {
+                self.metrics.record_chunk_request();
+                if has_payload_cache_lookup {
+                    self.metrics
+                        .record_cache_lookup(source == PrefetchSource::Cache);
+                }
+                Ok(true)
+            }
+            Err((ScheduleError::WindowFull(request), synthesized)) => {
+                let request = if synthesized {
+                    ResolvedChunkRequest::Synthesized(request)
+                } else {
+                    ResolvedChunkRequest::Fetch(request)
+                };
+                self.deferred_prefetch = Some(DeferredChunkRequest::Resolved(request));
+                Ok(false)
+            }
+            Err((
+                ScheduleError::RequestTooLarge {
+                    request,
+                    max_inflight_bytes,
+                },
+                _,
+            )) => Err(ZarrFdwError::InvalidMetadata(format!(
+                "object '{}' read limit {} exceeds max_inflight_bytes {max_inflight_bytes}",
+                request.identity.key, request.max_bytes
+            ))),
+            Err((
+                ScheduleError::CachedObjectTooLarge {
+                    request,
+                    actual_bytes,
+                },
+                _,
+            )) => Err(ZarrFdwError::InvalidMetadata(format!(
+                "cached object '{}' is {actual_bytes} bytes, exceeding its read limit of {}",
+                request.identity.key, request.max_bytes
+            ))),
+        }
     }
 
     fn fill_prefetch_window(&mut self) -> ZarrFdwResult<()> {
         loop {
-            let request = if let Some(request) = self.deferred_prefetch.take() {
-                request
+            let logical = if let Some(deferred) = self.deferred_prefetch.take() {
+                match deferred {
+                    DeferredChunkRequest::Logical(indices) => indices,
+                    DeferredChunkRequest::Resolved(request) => {
+                        if !self.schedule_chunk_request(request)? {
+                            break;
+                        }
+                        continue;
+                    }
+                }
             } else {
                 let mut indices = Vec::new();
                 if !self.chunk_cursor.next_into(&mut indices) {
                     break;
                 }
-                self.chunk_request(indices)?
+                indices
             };
-
-            let store = &self.store;
-            let remote_get_calls = Arc::clone(&self.remote_data_get_calls);
-            let remote_encoded_bytes = Arc::clone(&self.remote_data_encoded_bytes);
-            match self.prefetch.try_schedule(
-                request,
-                &mut self.compressed_cache,
-                move |key, max_bytes| {
-                    let fetch = store.get_object_optional_owned(key, max_bytes);
-                    observe_data_fetch(fetch, remote_get_calls, remote_encoded_bytes)
-                },
-            ) {
-                Ok(source) => {
-                    self.metrics.record_chunk_request();
-                    let cache_hit = source == PrefetchSource::Cache;
-                    self.metrics.record_cache_lookup(cache_hit);
-                }
-                Err(ScheduleError::WindowFull(request)) => {
-                    self.deferred_prefetch = Some(request);
-                    break;
-                }
-                Err(ScheduleError::RequestTooLarge {
-                    request,
-                    max_inflight_bytes,
-                }) => {
-                    return Err(ZarrFdwError::InvalidMetadata(format!(
-                        "object '{}' read limit {} exceeds max_inflight_bytes {max_inflight_bytes}",
-                        request.key, request.max_bytes
-                    )));
-                }
-                Err(ScheduleError::CachedObjectTooLarge {
-                    request,
-                    actual_bytes,
-                }) => {
-                    return Err(ZarrFdwError::InvalidMetadata(format!(
-                        "cached object '{}' is {actual_bytes} bytes, exceeding its read limit of {}",
-                        request.key, request.max_bytes
-                    )));
-                }
+            let Some(request) = self.chunk_request(logical.clone(), self.prefetch.is_empty())?
+            else {
+                self.deferred_prefetch = Some(DeferredChunkRequest::Logical(logical));
+                break;
+            };
+            if !self.schedule_chunk_request(request)? {
+                break;
             }
         }
         Ok(())
@@ -1334,7 +1616,8 @@ impl ZarrFdw {
 
         match outcome {
             PrefetchNext::Ready(result) => {
-                self.current_chunk = result.request.context;
+                self.current_chunk = result.request.context.logical_indices;
+                self.current_object_key = result.request.context.object_key;
                 self.metrics
                     .record_chunk_result(matches!(&result.object, CachedObject::Present(_)));
                 Ok(Some(result.object))
@@ -1370,7 +1653,6 @@ impl ZarrFdw {
 
         // Effective (edge) chunk shape. Regular Zarr chunks retain the full
         // declared shape; `eff` only controls which logical cells are emitted.
-        let key = chunk_key(&meta.chunk_key_encoding, &ci);
         if ci.len() != self.rank {
             return Err(ZarrFdwError::InvalidMetadata(
                 "chunk index rank does not match the array rank".to_string(),
@@ -1413,7 +1695,7 @@ impl ZarrFdw {
         // Regular edge chunks retain the declared chunk shape. Use that full
         // shape for byte validation and C-order strides; `eff` ignores the
         // out-of-array region when deciding which cells to emit.
-        let object_key = join_key(&self.array_dir, &key);
+        let object_key = self.current_object_key.clone();
         let (decoded, synthesized_fill) = match encoded {
             CachedObject::Present(raw) => {
                 let started = Instant::now();
@@ -1448,7 +1730,7 @@ impl ZarrFdw {
                 true,
             ),
         };
-        require_exact_decoded_len(&key, decoded.len(), expected)?;
+        require_exact_decoded_len(&object_key, decoded.len(), expected)?;
         self.metrics
             .record_decoded_bytes(ReadKind::Data, decoded.len(), synthesized_fill);
         self.chunk_bytes.clear();
@@ -1591,8 +1873,19 @@ impl ZarrFdw {
 
     fn metrics_snapshot(&self) -> ZarrScanMetrics {
         let mut metrics = self.metrics.clone();
-        metrics.data_get_calls = self.remote_data_get_calls.load(Ordering::Relaxed);
-        metrics.data_encoded_bytes = self.remote_data_encoded_bytes.load(Ordering::Relaxed);
+        metrics.data_get_calls = metrics
+            .data_get_calls
+            .saturating_add(self.remote_data_get_calls.load(Ordering::Relaxed));
+        metrics.data_encoded_bytes = metrics
+            .data_encoded_bytes
+            .saturating_add(self.remote_data_encoded_bytes.load(Ordering::Relaxed));
+        metrics.shard_payload_get_calls = metrics
+            .shard_payload_get_calls
+            .saturating_add(self.remote_shard_payload_get_calls.load(Ordering::Relaxed));
+        metrics.shard_payload_encoded_bytes = metrics.shard_payload_encoded_bytes.saturating_add(
+            self.remote_shard_payload_encoded_bytes
+                .load(Ordering::Relaxed),
+        );
         metrics
     }
 
@@ -1961,8 +2254,7 @@ fn read_coordinate_metadata(
 
 /// Read a validated 1D numeric coordinate array and return its values as `f64`.
 fn read_coordinate_values(
-    store: &ZarrStore,
-    metrics: &mut ZarrScanMetrics,
+    fdw: &mut ZarrFdw,
     prefix: &str,
     name: &str,
     coordinate: &ArrayNode,
@@ -2024,14 +2316,109 @@ fn read_coordinate_values(
             axis: name.to_string(),
             error: "coordinate chunk index exceeds the Zarr u64 index capacity".to_string(),
         })?;
-        let chunk = chunk_key(&meta.chunk_key_encoding, &[ci]);
-        let object_key = join_key(&dir, &chunk);
         let encoded_limit = codec.encoded_read_limit(expected_bytes)?;
-        let decoded_values = match store.get_object_optional_sync(&object_key, encoded_limit)? {
+        let (object_key, encoded) = match &meta.storage_layout {
+            StorageLayout::Direct => {
+                let chunk = chunk_key(&meta.chunk_key_encoding, &[ci]);
+                let object_key = join_key(&dir, &chunk);
+                let encoded = fdw
+                    .store
+                    .get_object_optional_sync(&object_key, encoded_limit)?;
+                fdw.metrics
+                    .record_remote_get(ReadKind::Coordinate, encoded.as_ref().map(Vec::len));
+                (object_key, encoded)
+            }
+            StorageLayout::Sharded(config) => {
+                let address = config.chunk_address(&[ci])?;
+                let shard_key = join_key(
+                    &dir,
+                    &chunk_key(&meta.chunk_key_encoding, &address.shard_indices),
+                );
+                let index = match fdw.resolve_shard_index(
+                    config,
+                    &shard_key,
+                    ReadKind::Coordinate,
+                    true,
+                )? {
+                    ShardIndexResolution::Ready(index) => index,
+                    ShardIndexResolution::WouldBlock => {
+                        return Err(ZarrFdwError::CoordinateReadError {
+                            axis: name.to_string(),
+                            error: "coordinate shard index resolution unexpectedly blocked"
+                                .to_string(),
+                        });
+                    }
+                };
+                match index {
+                    None => (shard_key, None),
+                    Some(index) => {
+                        let entry = index.entry(&address.inner_indices)?;
+                        match index.payload_read_identity(entry)? {
+                            None => (shard_key, None),
+                            Some(identity) => {
+                                let payload_bytes = match &identity.range {
+                                    ReadRange::Exact { length, .. } => usize::try_from(*length)
+                                        .map_err(|_| ZarrFdwError::CoordinateReadError {
+                                            axis: name.to_string(),
+                                            error: format!(
+                                                "inner chunk range in shard '{shard_key}' exceeds this platform's index capacity"
+                                            ),
+                                        })?,
+                                    ReadRange::Whole | ReadRange::Suffix { .. } => {
+                                        return Err(ZarrFdwError::CoordinateReadError {
+                                            axis: name.to_string(),
+                                            error: format!(
+                                                "inner chunk in shard '{shard_key}' did not resolve to an exact byte range"
+                                            ),
+                                        });
+                                    }
+                                };
+                                if payload_bytes > encoded_limit {
+                                    return Err(ZarrFdwError::CoordinateReadError {
+                                        axis: name.to_string(),
+                                        error: format!(
+                                            "inner chunk range in shard '{shard_key}' is {payload_bytes} bytes, exceeding its encoded read limit of {encoded_limit}"
+                                        ),
+                                    });
+                                }
+                                if payload_bytes > fdw.max_inflight_bytes {
+                                    return Err(ZarrFdwError::CoordinateReadError {
+                                        axis: name.to_string(),
+                                        error: format!(
+                                            "inner chunk range in shard '{shard_key}' is {payload_bytes} bytes, exceeding max_inflight_bytes {}",
+                                            fdw.max_inflight_bytes
+                                        ),
+                                    });
+                                }
+                                fdw.metrics.record_remote_request(ReadKind::Coordinate);
+                                let response = fdw.store.get_object_range_sync(identity)?;
+                                let response_bytes =
+                                    response.as_ref().map(|response| response.bytes.len());
+                                if let Some(bytes) = response_bytes {
+                                    fdw.metrics
+                                        .record_remote_response_bytes(ReadKind::Coordinate, bytes);
+                                }
+                                fdw.metrics.record_shard_payload_get(response_bytes);
+                                let response = response.ok_or_else(|| {
+                                    ZarrFdwError::CoordinateReadError {
+                                        axis: name.to_string(),
+                                        error: format!(
+                                            "indexed shard object '{shard_key}' disappeared before its payload range was read"
+                                        ),
+                                    }
+                                })?;
+                                (shard_key, Some(response.bytes))
+                            }
+                        }
+                    }
+                }
+            }
+        };
+        let decoded_values = match encoded {
             Some(raw) => {
-                metrics.record_remote_get(ReadKind::Coordinate, Some(raw.len()));
                 let started = Instant::now();
-                let decoded = store
+                let decoded = fdw
+                    .store
                     .rt
                     .block_on(codec.decode_interruptible(
                         raw,
@@ -2053,13 +2440,14 @@ fn read_coordinate_values(
                         });
                     }
                 };
-                metrics.record_decompression_time(started.elapsed());
-                metrics.record_decoded_bytes(ReadKind::Coordinate, decoded.len(), false);
+                fdw.metrics.record_decompression_time(started.elapsed());
+                fdw.metrics
+                    .record_decoded_bytes(ReadKind::Coordinate, decoded.len(), false);
                 coord_bytes_to_f64(&meta.dtype, &decoded[..expected_bytes])?
             }
             None => {
-                metrics.record_remote_get(ReadKind::Coordinate, None);
-                metrics.record_decoded_bytes(ReadKind::Coordinate, expected_bytes, true);
+                fdw.metrics
+                    .record_decoded_bytes(ReadKind::Coordinate, expected_bytes, true);
                 filled_coordinate_values(fill_value, chunk_len, &object_key, name)?
             }
         };
@@ -2075,7 +2463,7 @@ fn read_coordinate_values(
                 .ok_or_else(|| ZarrFdwError::CoordinateReadError {
                     axis: name.to_string(),
                     error: format!(
-                        "coordinate chunk '{chunk}' starts beyond the declared array length"
+                        "coordinate chunk '{object_key}' starts beyond the declared array length"
                     ),
                 })?;
         let effective_len = remaining.min(chunk_len);
@@ -2243,18 +2631,25 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
             bounds: Vec::new(),
             chunk_cursor: ChunkIndexCursor::default(),
             current_chunk: Vec::new(),
+            current_object_key: String::new(),
             deferred_prefetch: None,
             prefetch,
             compressed_cache: CompressedChunkCache::new(
                 compressed_cache_bytes,
                 MAX_COMPRESSED_CACHE_ENTRIES,
             ),
+            shard_index_cache: ShardIndexCache::new(0, 0),
+            payload_cache_bytes: compressed_cache_bytes,
+            shard_index_cache_bytes: 0,
+            cache_layout_sharded: false,
             max_concurrent_reads,
             max_inflight_bytes,
             compressed_cache_bytes,
             metrics: ZarrScanMetrics::default(),
             remote_data_get_calls: Arc::new(AtomicU64::new(0)),
             remote_data_encoded_bytes: Arc::new(AtomicU64::new(0)),
+            remote_shard_payload_get_calls: Arc::new(AtomicU64::new(0)),
+            remote_shard_payload_encoded_bytes: Arc::new(AtomicU64::new(0)),
             flushed_encoded_bytes: 0,
             flushed_cells: 0,
             flushed_tuples: 0,
@@ -2304,6 +2699,14 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
             .as_ref()
             .map(CodecPipeline::ordered_label)
             .unwrap_or_else(|| "unknown".to_string());
+        let storage_layout = meta.storage_layout.ordered_label();
+        let (shard_shape, index_location) = match &meta.storage_layout {
+            StorageLayout::Direct => (None, None),
+            StorageLayout::Sharded(config) => (
+                Some(config.shard_shape.as_slice()),
+                Some(config.index_location.label()),
+            ),
+        };
         let aggregate_mode = if self.aggregate_defs.is_empty() {
             "none".to_string()
         } else {
@@ -2321,12 +2724,18 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
                 chunk_shape: &chunk_shape,
                 dtype: &dtype,
                 codec: &codec,
+                storage_layout: &storage_layout,
+                shard_shape,
+                index_location,
                 aggregate_mode: &aggregate_mode,
                 max_concurrent_reads: self.max_concurrent_reads,
                 max_inflight_bytes: self.max_inflight_bytes,
-                compressed_cache_bytes: self.compressed_cache_bytes,
+                compressed_cache_bytes: self.payload_cache_bytes,
                 cache_entries: self.compressed_cache.len(),
                 cache_resident_bytes: self.compressed_cache.resident_bytes(),
+                shard_index_cache_bytes: self.shard_index_cache_bytes,
+                shard_index_cache_entries: self.shard_index_cache.len(),
+                shard_index_cache_resident_bytes: self.shard_index_cache.resident_bytes(),
             })
     }
 
@@ -2518,6 +2927,13 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
         self.scientific_decoder = scientific_decoder;
         self.fill_bytes = fill_value_bytes(dtype, &meta.fill_value)?;
         self.time_spec = time_spec;
+        if matches!(&meta.storage_layout, StorageLayout::Sharded(_))
+            || coordinate_nodes.iter().any(|coordinate| {
+                matches!(&coordinate.meta.storage_layout, StorageLayout::Sharded(_))
+            })
+        {
+            self.configure_sharded_cache_budget();
+        }
 
         // Coordinate metadata is required for every dimension, but coordinate
         // chunk values are needed only for projected or restricted dimensions.
@@ -2546,8 +2962,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
             )?;
             let coordinate = dimension.coordinate();
             let values = read_coordinate_values(
-                &self.store,
-                &mut self.metrics,
+                self,
                 coordinate.parent(),
                 coordinate.name(),
                 &coordinate_nodes[axis],
@@ -2810,6 +3225,7 @@ mod unit_tests {
             fill_value: serde_json::Value::from(0),
             compressor: None,
             codec_pipeline: CodecPipeline::raw_v2(),
+            storage_layout: StorageLayout::Direct,
             chunk_key_encoding: ChunkKeyEncoding::V2 { separator: '.' },
             order: 'C',
             filters: None,
