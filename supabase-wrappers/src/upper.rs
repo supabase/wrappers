@@ -9,7 +9,9 @@ use std::ptr;
 
 use crate::interface::{Aggregate, AggregateKind, Column};
 use crate::prelude::ForeignDataWrapper;
+use crate::qual::is_builtin_pg_catalog_object;
 use crate::scan::FdwState;
+use crate::utils::ReportableError;
 
 /// Helper to iterate over a pg_sys::List using raw pointer access.
 /// Returns an iterator over pointers to the list elements.
@@ -34,6 +36,10 @@ unsafe fn list_iter<T>(list: *mut pg_sys::List) -> impl Iterator<Item = *mut T> 
 /// by looking up the function name.
 fn oid_to_aggregate_kind(aggfnoid: pg_sys::Oid) -> Option<AggregateKind> {
     unsafe {
+        if !is_builtin_pg_catalog_object(aggfnoid, pg_sys::get_func_namespace(aggfnoid)) {
+            return None;
+        }
+
         let agg_name = pg_sys::get_func_name(aggfnoid);
         if agg_name.is_null() {
             return None;
@@ -148,6 +154,13 @@ unsafe fn extract_aggregates(
                     return None;
                 }
 
+                // Ordered aggregate transition state is not represented by
+                // Aggregate, so an FDW could not reproduce its semantics.
+                if !(*aggref).aggorder.is_null() {
+                    debug2!("Aggregate has ORDER BY clause, skipping pushdown");
+                    return None;
+                }
+
                 // DISTINCT only supported for COUNT(column)
                 if !(*aggref).aggdistinct.is_null() {
                     match kind {
@@ -196,6 +209,12 @@ unsafe fn extract_aggregates(
                     alias: format!("agg_{}", resno + 1),
                     type_oid: (*aggref).aggtype,
                 });
+            } else if (*expr).type_ != pg_sys::NodeTag::T_Var {
+                // A Var may be a plain GROUP BY output. Any other expression
+                // is not represented in the foreign aggregate result contract
+                // and must remain a PostgreSQL projection/aggregate plan.
+                debug2!("Non-aggregate upper target expression, skipping pushdown");
+                return None;
             }
         }
 
@@ -292,6 +311,12 @@ pub(super) extern "C-unwind" fn get_foreign_upper_paths<
     }
 
     unsafe {
+        let parse = (*root).parse;
+        if !parse.is_null() && !(*parse).groupingSets.is_null() {
+            debug2!("Grouping sets are not supported, skipping aggregate pushdown");
+            return;
+        }
+
         // Get the FDW state from the input relation (set during get_foreign_rel_size)
         let fdw_private = (*input_rel).fdw_private;
         if fdw_private.is_null() {
@@ -349,6 +374,26 @@ pub(super) extern "C-unwind" fn get_foreign_upper_paths<
             }
         }
 
+        // An aggregate FDW consumes base rows before PostgreSQL can recheck
+        // restrictions. Never register the upper path if any base restriction
+        // was omitted from the Qual representation.
+        if !state.all_base_quals_extracted {
+            debug2!("Not all base restrictions were extracted, skipping aggregate pushdown");
+            return;
+        }
+
+        // Preserve the original base columns before get_foreign_plan replaces
+        // state.tgts with the aggregate output aliases.
+        let base_columns = state.tgts.clone();
+
+        let can_pushdown = state
+            .can_pushdown_aggregate(&aggregates, &group_by, &base_columns)
+            .report_unwrap();
+        if !can_pushdown {
+            debug2!("FDW rejected this aggregate query shape, skipping pushdown");
+            return;
+        }
+
         // Store aggregates and group_by in the FdwState so they survive to
         // execution. Note: input_rel.fdw_private and output_rel.fdw_private
         // share the same FdwState pointer, so this mutation is visible through
@@ -357,19 +402,23 @@ pub(super) extern "C-unwind" fn get_foreign_upper_paths<
         // to the base-rel scan with a local Aggregate on top.
         state.aggregates = aggregates.clone();
         state.group_by = group_by.clone();
+        state.aggregate_base_columns = base_columns;
 
-        // Cost estimation. We deliberately price the pushdown at ~0 so the
-        // planner prefers it over the local HashAgg/GroupAgg alternatives that
-        // also live on grouped_rel — pushdown collapses the row stream at the
-        // remote side and is essentially always cheaper than fetching rows and
-        // aggregating locally.
-        let rows: i64 = 1;
+        let (rows, width) = state
+            .get_aggregate_rel_size(&aggregates, &group_by)
+            .report_unwrap();
+        (*output_rel).rows = rows as f64;
+        (*(*output_rel).reltarget).width = width;
+
+        // Prefer an eligible pushdown path over fetching base rows for a local
+        // HashAgg/GroupAgg. The FDW callback above supplies the result row count
+        // and width; startup_cost remains the configurable remote fixed cost.
         let startup_cost = state
             .opts
             .get("startup_cost")
             .and_then(|c| c.parse::<f64>().ok())
             .unwrap_or(0.0);
-        let total_cost = startup_cost;
+        let total_cost = startup_cost + rows.max(0) as f64;
 
         debug2!(
             "Aggregate pushdown cost estimate: rows={rows}, startup={startup_cost}, total={total_cost}"

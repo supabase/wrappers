@@ -1,0 +1,28 @@
+Generator: zarr-python 3.1.3, numpy 2.5.2, numcodecs 0.16.5
+Container: docker.io/library/python:3.12.5-slim-bookworm@sha256:f362e1c75ff1670f2776d72cff6ad84094029d2fa73b9fcf5bd7b5b07f45271c (arm64)
+Determinism: two isolated ephemeral-container generations compared byte-for-byte
+Committed metadata: generator JSON plus one terminal newline; hashes below cover committed bytes
+Blosc: cname=lz4, clevel=5, shuffle=shuffle, typesize=4 (8 for f64 coordinate), blocksize=0
+Logical cube: value[time,y,x] = 100*time + 10*y + x; shape [2,5,6]; fill -7.5
+Sparse direct/sharded arrays omit c/0/1/1. The coordinate values are 100,110,120,130,140,150.
+bad_blosc/c/0/0/0 keeps 15 Blosc header bytes and adds a valid outer CRC32C.
+bad_blosc/c/0/0/1 changes the declared uncompressed size from 96 to 100 and adds a valid outer CRC32C.
+
+SHA256                                                            BYTES  PATH
+12162ac50f16e41f564401531f2c238b987e86f6916c87628b7452bb729b1af0  19     nested/bad_blosc/c/0/0/0
+fc4ede630266d27dfb47b8f70251470407e6a1a4c88b9912fd78785cd54633da  116    nested/bad_blosc/c/0/0/1
+0e5ea30294c97076f85b1d57f1e3dd08f279d82ec409489238c4a7f27e239e82  661    nested/bad_blosc/zarr.json
+4c9c4f354e74153db012329d71c8562ec23e498148174b2c49de58f45d47cdbe  16     nested/blosc_coord_values/c/0
+61e6781b6b1971e032dc9f85ea23b09e68e90cbafb1b2acb635397552273e94c  16     nested/blosc_coord_values/c/1
+d3040712263db0e3d1e183e66d43cb5aa68357d1f2294cabc107371ced9f454f  368    nested/blosc_coord_values/zarr.json
+7c2e635c736d4da3c5893ccdf3af228499dfc621f3933e29d055cbfbef1c3f94  112    nested/blosc_v3/c/0/0/0
+0e6729d2277853bdb6f764bef5983a1fad6cb2b381d35ee96e8f00e84d92181f  112    nested/blosc_v3/c/0/0/1
+c2f6f14cb5fb5274b153b63bc3867107a5e6035956bc00963c60ac7490fa27b0  112    nested/blosc_v3/c/0/1/0
+e74afc8b2e017854233e08916d4e5da31b55f4e964b8b26993ee4b78998bab04  643    nested/blosc_v3/zarr.json
+c0856a3ee16e598ef6b15caf1f1899fa3b95e04ac5b050cd07f8072b4a3d94f2  48     nested/blosc_x/c/0
+a6f4fa25efd5cc86ff168b1f034b4410f91c5791091dfce3d8bf23a97f3b6459  48     nested/blosc_x/c/1
+0d42a4fb3dd258c0272618b35ff78d4d7f2208c4c72e03c4907de90abd3331d2  538    nested/blosc_x/zarr.json
+0b20a9a038c73d1cbdc9e4c96d78c00df53355bbcb9b34a234c40c39697343d0  228    nested/shard_blosc/c/0/0/0
+9390f39372380bd02b2705f7b7379fd1cf52da544b82fccb871df037eab53c70  148    nested/shard_blosc/c/0/0/1
+8213467353f85b55923a4a391f200478c0ac9af3bfcb86e9ea07aba4cdefcdf4  228    nested/shard_blosc/c/0/1/0
+c98676cbae021f0d168089e09d45320c8a0c165351f69096f24ea157cdf7857e  833    nested/shard_blosc/zarr.json

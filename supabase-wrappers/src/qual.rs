@@ -14,7 +14,12 @@ use std::os::raw::c_int;
 use std::ptr;
 use std::sync::Mutex;
 
-use crate::interface::Param;
+use crate::interface::{Param, ParamValue};
+
+pub(crate) fn is_builtin_pg_catalog_object(oid: Oid, namespace: Oid) -> bool {
+    namespace == Oid::from(pg_sys::PG_CATALOG_NAMESPACE)
+        && oid.to_u32() < pg_sys::FirstNormalObjectId
+}
 
 /// Parses a Postgres array `Datum` (given its element/array type OID) into a `Vec<Cell>`.
 ///
@@ -146,19 +151,31 @@ pub unsafe fn form_array_from_datum(
     }
 }
 
-pub(crate) unsafe fn get_operator(opno: pg_sys::Oid) -> pg_sys::Form_pg_operator {
+struct OperatorInfo {
+    name: String,
+    commutator: pg_sys::Oid,
+}
+
+unsafe fn get_builtin_operator(opno: pg_sys::Oid) -> Option<OperatorInfo> {
     unsafe {
         let htup = pg_sys::SearchSysCache1(
             pg_sys::SysCacheIdentifier::OPEROID.try_into().unwrap(),
             opno.into(),
         );
         if htup.is_null() {
-            pg_sys::ReleaseSysCache(htup);
             pgrx::error!("cache lookup operator {:?} failed", opno);
         }
         let op = pg_sys::GETSTRUCT(htup) as pg_sys::Form_pg_operator;
+        let operator = if is_builtin_pg_catalog_object(opno, (*op).oprnamespace) {
+            Some(OperatorInfo {
+                name: pgrx::name_data_to_str(&(*op).oprname).to_string(),
+                commutator: (*op).oprcom,
+            })
+        } else {
+            None
+        };
         pg_sys::ReleaseSysCache(htup);
-        op
+        operator
     }
 }
 
@@ -191,11 +208,10 @@ pub(crate) unsafe fn extract_from_op_expr(
 
                 // get operator
                 let opno = (*expr).opno;
-                let opr = get_operator(opno);
-                if opr.is_null() {
-                    report_warning("operator is empty");
+                let Some(mut operator) = get_builtin_operator(opno) else {
+                    report_warning("only built-in pg_catalog operators are supported in quals");
                     return None;
-                }
+                };
 
                 let mut left = unnest_clause(*args.get(0).unwrap() as _);
                 let mut right = unnest_clause(*args.get(1).unwrap() as _);
@@ -203,8 +219,10 @@ pub(crate) unsafe fn extract_from_op_expr(
                 // swap operands if needed
                 if is_a(right, pg_sys::NodeTag::T_Var)
                     && !is_a(left, pg_sys::NodeTag::T_Var)
-                    && (*opr).oprcom != Oid::INVALID
+                    && operator.commutator != Oid::INVALID
                 {
+                    let commutator = get_builtin_operator(operator.commutator)?;
+                    operator = commutator;
                     std::mem::swap(&mut left, &mut right);
                 }
 
@@ -235,6 +253,7 @@ pub(crate) unsafe fn extract_from_op_expr(
                                 id: (*right).paramid as _,
                                 type_oid: (*right).paramtype,
                                 eval_value: Mutex::new(None).into(),
+                                eval_state: Mutex::new(ParamValue::Unevaluated).into(),
                                 expr_eval: ExprEval {
                                     expr: if (*right).paramkind == pg_sys::ParamKind::PARAM_EXEC {
                                         right as _
@@ -252,7 +271,7 @@ pub(crate) unsafe fn extract_from_op_expr(
                         if let Some(value) = value {
                             let qual = Qual {
                                 field: CStr::from_ptr(field).to_str().unwrap().to_string(),
-                                operator: pgrx::name_data_to_str(&(*opr).oprname).to_string(),
+                                operator: operator.name,
                                 value: Value::Cell(value),
                                 use_or: false,
                                 param,
@@ -318,10 +337,10 @@ pub(crate) unsafe fn extract_from_scalar_array_op_expr(
 
                 // get operator
                 let opno = (*expr).opno;
-                let opr = get_operator(opno);
-                if opr.is_null() {
+                let Some(operator) = get_builtin_operator(opno) else {
+                    report_warning("only built-in pg_catalog operators are supported in quals");
                     return None;
-                }
+                };
 
                 let left = unnest_clause(*args.get(0).unwrap() as _);
                 let right = unnest_clause(*args.get(1).unwrap() as _);
@@ -343,7 +362,7 @@ pub(crate) unsafe fn extract_from_scalar_array_op_expr(
                         if let Some(value) = value {
                             let qual = Qual {
                                 field: CStr::from_ptr(field).to_str().unwrap().to_string(),
-                                operator: pgrx::name_data_to_str(&(*opr).oprname).to_string(),
+                                operator: operator.name,
                                 value: Value::Array(value),
                                 use_or: (*expr).useOr,
                                 param: None,
@@ -462,14 +481,20 @@ pub(crate) unsafe fn extract_from_boolean_test(
     }
 }
 
+pub(crate) struct ExtractedQuals {
+    pub(crate) quals: Vec<Qual>,
+    pub(crate) all_extracted: bool,
+}
+
 pub(crate) unsafe fn extract_quals(
     root: *mut pg_sys::PlannerInfo,
     baserel: *mut pg_sys::RelOptInfo,
     baserel_id: pg_sys::Oid,
-) -> Vec<Qual> {
+) -> ExtractedQuals {
     unsafe {
         pgrx::memcx::current_context(|mcx| {
             let mut quals = Vec::new();
+            let mut all_extracted = true;
 
             if let Some(conds) =
                 List::<*mut c_void>::downcast_ptr_in_memcx((*baserel).baserestrictinfo, mcx)
@@ -502,11 +527,39 @@ pub(crate) unsafe fn extract_quals(
 
                     if let Some(qual) = extracted {
                         quals.push(qual);
+                    } else {
+                        all_extracted = false;
                     }
                 }
+            } else if !(*baserel).baserestrictinfo.is_null() {
+                all_extracted = false;
             }
 
-            quals
+            ExtractedQuals {
+                quals,
+                all_extracted,
+            }
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_builtin_pg_catalog_object_identity() {
+        let catalog = Oid::from(pg_sys::PG_CATALOG_NAMESPACE);
+        let custom_namespace = Oid::from(pg_sys::PG_CATALOG_NAMESPACE + 1);
+
+        assert!(is_builtin_pg_catalog_object(Oid::from(96_u32), catalog));
+        assert!(!is_builtin_pg_catalog_object(
+            Oid::from(96_u32),
+            custom_namespace
+        ));
+        assert!(!is_builtin_pg_catalog_object(
+            Oid::from(pg_sys::FirstNormalObjectId),
+            catalog
+        ));
     }
 }

@@ -1,0 +1,33 @@
+Generator: zarr-python 3.1.3, numpy 2.5.2, numcodecs 0.16.5 (libzstd 1.5.7)
+Container: docker.io/library/python:3.12.5-slim-bookworm@sha256:f362e1c75ff1670f2776d72cff6ad84094029d2fa73b9fcf5bd7b5b07f45271c (arm64)
+Determinism: two isolated ephemeral-container generations compared byte-for-byte
+Committed metadata: generator JSON plus one terminal newline; hashes below cover committed bytes
+Primary pipeline: transpose [2,1,0] -> bytes little -> zstd level=1/checksum=true -> crc32c
+Coordinate pipeline: bytes little -> zstd level=1/checksum=false
+Sharded pipeline: one [2,3,4] inner chunk per [2,3,4] shard, zstd checksum=true, 20-byte end index
+Logical cube: value[time,y,x] = 100*time + 10*y + x; shape [2,5,6]; fill -7.5
+Sparse direct/sharded arrays omit c/0/1/1. The zstd_x coordinate values are 100,110,120,130,140,150.
+zstd_bad cases 0..2 are a flipped content checksum, a 16 MiB window, and a nonzero Dictionary_ID_Flag.
+
+SHA256                                                            BYTES  PATH
+186f3d6b9c63a431b675a2a53e2e94b4540d9d50e12fd9488a08f519e9777f9a  98     nested/shard_zstd/c/0/0/0
+8631ccb760254df6ca324ec835191bc75f82769a999e7301df1d2ffb228eb18a  98     nested/shard_zstd/c/0/0/1
+5aece0b83a4cc262141d307ca2cd4491afdbc2575474e54afac9191ceae6e7c7  94     nested/shard_zstd/c/0/1/0
+0862bebbfddb4cabb08a9a968e739f3d4f936f63d90432f9dd176f171ac0e584  786    nested/shard_zstd/zarr.json
+b0c45303f7f11848cb5e6e5b2af2fb2aecd0b72c28748b88b583ab6bb76df174  24     nested/zstd_bad/failure_case/c/0
+e16c5d4040bf050671561dde17680b678c388fe3bd014aa4c4c7edd30fb9e204  372    nested/zstd_bad/failure_case/zarr.json
+577c5a5001f0b43d1f5bdc13c03ee9ea4e831fd478cc8aab8ffdf1c73b66c8a8  17     nested/zstd_bad/values/c/0
+6c2195f2818e3f2ed77c814489dad2557d666c2a37861acc033b2cc3f25d6604  6      nested/zstd_bad/values/c/1
+72de3c89e92c19de606fa699e23c64383048fb462f27f7f0cf2ac6d8fd74caf7  7      nested/zstd_bad/values/c/2
+c523e7a72f6e944961a2230758a3c6a195daa35a2e885269e5ed7a42a1a6abe4  509    nested/zstd_bad/values/zarr.json
+299dcc2ba841f9c6ecdea892e044612119e63f9b6cf6de6b6114a5f0dd200e31  54     nested/zstd_bad/zarr.json
+4c9c4f354e74153db012329d71c8562ec23e498148174b2c49de58f45d47cdbe  16     nested/zstd_coord_values/c/0
+61e6781b6b1971e032dc9f85ea23b09e68e90cbafb1b2acb635397552273e94c  16     nested/zstd_coord_values/c/1
+d21f17b187aae277e7a812540097c60ce0db9c41964de0712533e0a506cdb032  367    nested/zstd_coord_values/zarr.json
+53097d09f2ead2addce462771e3850d07b0d564de7c850b6da1085820da7d89e  82     nested/zstd_pipeline/c/0/0/0
+e6e0b455e6a65c4662446e1ca1f4e9c508d35edc7c5006fab1abed83a7e5b181  77     nested/zstd_pipeline/c/0/0/1
+4065d0b223321e5f833a8764fbe15788d676d1dcde86805872137423c90b5055  77     nested/zstd_pipeline/c/0/1/0
+b47ff6445485d2e7846e4d6ea60e0b702d51b125543962dfb9032ef834884c37  669    nested/zstd_pipeline/zarr.json
+73f899386280fcf55ebeebe74ed1ab13eb10261a0777d8b3606b8de78c8b340a  41     nested/zstd_x/c/0
+a0c2a2e4d6aff4b06ecf1028b0c56707308931582056677a92ee57e4a0cc743e  29     nested/zstd_x/c/1
+de0c79097b57f2c0b522a544a5df8f58c36af5e7a1efcf7b33a4f6cc2fdc11ce  491    nested/zstd_x/zarr.json

@@ -1,0 +1,7 @@
+SHA256                                                            BYTES  PATH
+a9847c35ecb7cf3ec3778eed644039258e5dbdb3a3fd47c8b427015c76486c91  93     nested/pipeline/c/0/0/0
+167b7d675605843f0e35c6cf24ccfa382de12fe3ebfc6cb7e8c4c7f490f11687  67     nested/pipeline/c/0/0/1
+38785f6443a2f1ccd12a701a7c12138c534bb05979dbd7c5754ff2e0c5364de8  78     nested/pipeline/c/0/1/0
+360e8a0ef3b3976547f5e2287fb80966e56b01fbd72472155059e8350b2d26aa  93     nested/bad_crc/c/0/0/0
+76f8fb842435a035a1f12e77147ae147c4bc9accae04264c8c5b69c2e5c64a75  85     nested/bad_gzip/c/0/0/0
+02cde18c039b3402507e1dcd52c98014ed58c03bcf34f32b7311b1db16f78690  94     nested/oversize/c/0/0/0

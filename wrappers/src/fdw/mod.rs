@@ -54,3 +54,6 @@ mod duckdb_fdw;
 
 #[cfg(feature = "dynamodb_fdw")]
 mod dynamodb_fdw;
+
+#[cfg(feature = "zarr_fdw")]
+mod zarr_fdw;

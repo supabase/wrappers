@@ -54,9 +54,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Build docker images
+      - name: Start test services and wait for fixtures
         run: |
           docker compose -f wrappers/.ci/docker-compose-native.yaml up -d
+          docker compose -f wrappers/.ci/docker-compose-native.yaml wait s3-init
+          test "$(docker inspect -f '{{.State.ExitCode}}' s3-init)" = "0"
 
       - uses: actions-rust-lang/setup-rust-toolchain@150fca883cd4034361b621bd4e6a9d34e5143606 # v1.15.4
         with:
@@ -65,13 +67,13 @@ jobs:
 
       - run: |
           sudo apt remove -y postgres*
-          sudo apt -y install curl ca-certificates build-essential pkg-config libssl-dev
+          sudo apt -y install curl ca-certificates build-essential cmake pkg-config libssl-dev
           sudo install -d /usr/share/postgresql-common/pgdg
           sudo curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
           . /etc/os-release
           sudo sh -c "echo 'deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $VERSION_CODENAME-pgdg main' > /etc/apt/sources.list.d/pgdg.list"
           sudo apt update -y -qq --fix-missing
-          sudo apt -y install postgresql-client-15 postgresql-15 postgresql-server-dev-15
+          sudo apt -y install postgresql-client-15 postgresql-15 postgresql-15-postgis-3 postgresql-15-postgis-3-scripts postgresql-server-dev-15
           sudo apt -y autoremove && sudo apt -y clean
           sudo chmod a+rwx `/usr/lib/postgresql/15/bin/pg_config --pkglibdir` `/usr/lib/postgresql/15/bin/pg_config --sharedir`/extension /var/run/postgresql/
 
@@ -183,7 +185,7 @@ jobs:
       - name: Install PostgreSQL 15
         run: |
           sudo apt remove -y postgres*
-          sudo apt -y install curl ca-certificates build-essential pkg-config libssl-dev
+          sudo apt -y install curl ca-certificates build-essential cmake pkg-config libssl-dev
           sudo install -d /usr/share/postgresql-common/pgdg
           sudo curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
           . /etc/os-release
