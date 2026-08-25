@@ -272,10 +272,20 @@ not need to be projected. The wrapper reads coordinate metadata for every
 dimension but downloads coordinate chunk values only for dimensions used by
 the query target or restrictions.
 
-Foreign tables can persist exact restrictions on any named numeric dimension
-with `dimension_selectors`. The option is a JSON object whose keys are exact,
-case-sensitive dimension names. Each dimension selects either one zero-based
-physical index or one raw numeric coordinate value:
+Foreign tables can persist restrictions on any named numeric dimension with
+`dimension_selectors`. The option is a JSON object whose keys are exact,
+case-sensitive dimension names. Each dimension must use exactly one of these
+forms:
+
+- `{"index": n}` selects one zero-based physical index.
+- `{"indices": [n, ...]}` selects a nonempty unique list of zero-based indexes.
+- `{"index_range": {"start": n, "stop": n}}` selects the half-open physical
+  index range `[start, stop)`.
+- `{"value": x}` selects one raw numeric coordinate value.
+- `{"values": [x, ...]}` selects a nonempty unique list of finite raw numeric
+  coordinate values.
+- `{"value_range": {"min": x, "max": x}}` selects the closed raw coordinate
+  range `[min, max]`.
 
 ```sql
 create foreign table temperature_850hpa (
@@ -295,13 +305,19 @@ options (
 Index selectors do not download coordinate values. Value selectors compare
 exactly in the stored numeric coordinate domain and load only the required
 coordinate vectors; they are not decoded as timestamps, strings, or CF-packed
-values. Duplicate coordinate values select every matching native index, while
-an unmatched value produces an empty scan without data-chunk requests.
+values. List inputs are unordered API constraints, not output ordering hints:
+rows are emitted in the array's native C order. Duplicate coordinate values
+select every matching native index, while an unmatched value produces an empty
+scan without data-chunk requests. Selector lists are bounded to 4096 members;
+documents are limited to 64 KiB and 64 dimensions.
+
 Selectors are always combined with SQL predicates using `AND`; they never
-override a `WHERE` clause. Documents are limited to 64 KiB and 64 dimensions.
-Range/list selectors and string coordinates such as Sentinel band names remain
-deferred. Spatial sampling and reduction functions require their explicit
-selector-aware overloads to use selector-bearing tables.
+override a `WHERE` clause. String coordinates such as Sentinel band names
+remain deferred. Spatial sampling and reduction functions require their
+explicit selector-aware overloads to use selector-bearing tables. For those
+spatial overloads, operation-owned X/Y dimensions, plus Time for by-time
+operations, cannot be selected through `dimension_selectors`; every auxiliary
+dimension must resolve to zero or one exact index.
 
 ### Zarr v3 subset
 
@@ -898,9 +914,9 @@ single Foreign Scan or retains a local Aggregate node.
   rank-2 levels instead synthesize `y` and `x` from their scale/translation
   metadata. Other synthesized ordinal coordinates, auxiliary or cross-group
   coordinates, curvilinear/multidimensional coordinates, and string or
-  categorical band/channel coordinates are not supported. Exact
-  `dimension_selectors` currently accept only a numeric coordinate value or a
-  zero-based index; range and list forms are not yet supported.
+  categorical band/channel coordinates are not supported. `dimension_selectors`
+  accept only numeric coordinate values and zero-based physical indexes; string
+  and categorical selector values are not supported.
 - Coordinate packing, masks, valid ranges, and scale/offset are not decoded. If
   a coordinate used by a query declares those attributes, the scan fails rather
   than silently ignoring them.
