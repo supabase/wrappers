@@ -250,6 +250,86 @@ for that axis and PostgreSQL rechecks the original predicate. Integer coordinate
 values must convert to `double precision` exactly; values that would lose
 identity fail explicitly.
 
+### OME-Zarr 0.5 multiscales
+
+Use `zarr_multiscales` to discover OME-Zarr 0.5 resolution levels before
+creating a foreign table:
+
+```sql
+select group_path,
+       multiscale_index,
+       multiscale_name,
+       level_index,
+       array_path,
+       axes,
+       shape,
+       chunks,
+       dtype,
+       scale,
+       translation,
+       supported,
+       warnings
+from zarr_multiscales('public_zarr_server')
+order by group_path, multiscale_index, level_index;
+```
+
+The function verifies `USAGE` on the foreign server, traverses only bounded
+metadata, and returns one row per declared level. It does not read chunk data.
+Malformed OME metadata fails explicitly. A valid level outside the execution
+subset remains discoverable with `supported = false` and an explanation in
+`warnings`. Capability checks include the level rank and axes, native dtype,
+codec and storage layout, synthesized-coordinate limits, and finite affine
+endpoints. Exceeding the bounded derived discovery-output budget fails the
+request explicitly instead of returning partial rows.
+
+Select a level explicitly with all three multiscale table options:
+
+```sql
+create foreign table image_level_1 (
+  y double precision,
+  x double precision,
+  intensity real
+)
+server public_zarr_server
+options (
+  multiscale_group 'image',
+  multiscale_index '0',
+  multiscale_level '1'
+);
+```
+
+`multiscale_index` and `multiscale_level` are zero-based indexes into the
+declared OME arrays. The three options are required together and cannot be
+combined with `array_group`. The wrapper never chooses an image, multiscale,
+or resolution level implicitly. Plain `EXPLAIN` remains metadata-I/O free.
+
+Execution currently supports OME metadata version exactly `0.5` on Zarr v3,
+with rank-2 axes exactly `y`, `x`, both declared as spatial axes. Every level's
+native `dimension_names` must match those axes. A dataset transform must contain
+one inline positive finite scale and may contain one following inline finite
+translation. The multiscale may declare the same transform sequence, which is
+applied after the dataset transform. For dataset scale/translation `sd`, `td`
+and multiscale scale/translation `sg`, `tg`, effective coordinates are:
+
+```text
+scale       = sg * sd
+translation = sg * td + tg
+coordinate  = scale * array_index + translation
+```
+
+The operations are component-wise and do not add a half-pixel offset. The
+synthesized coordinate vectors use the same bounds, pruning, aggregate,
+allocation, arithmetic, and cancellation safeguards as stored coordinates.
+The selected value array can use any numeric dtype, direct or sharded layout,
+and codec pipeline from the supported Zarr v3 subset above.
+
+This is a bounded reader subset of the
+[OME-Zarr 0.5 specification](https://ngff.openmicroscopy.org/0.5/). It does not
+implement automatic resolution selection, rank-3 through rank-5 execution,
+time/channel/depth slicing, path-backed or general affine transforms,
+resampling, labels, OMERO display metadata, plates, wells, series, OME-XML,
+CRS inference, or writes.
+
 ## Sample a spatial point
 
 `zarr_sample` performs a read-only point lookup on a rank-2 rectilinear array.
@@ -616,8 +696,10 @@ single Foreign Scan or retains a local Aggregate node.
   S3-compatible storage.
 - Scans support one value array with rank 1 through 64 and mandatory v2
   `_ARRAY_DIMENSIONS` or v3 `dimension_names`; scalar arrays remain unsupported.
-- Every dimension currently requires a same-group, same-name, rank-1 numeric
-  coordinate array. Synthesized ordinal coordinates, auxiliary or cross-group
+- Ordinary arrays require a same-group, same-name, rank-1 numeric coordinate
+  array for every dimension. Explicitly selected supported OME-Zarr 0.5
+  rank-2 levels instead synthesize `y` and `x` from their scale/translation
+  metadata. Other synthesized ordinal coordinates, auxiliary or cross-group
   coordinates, curvilinear/multidimensional coordinates, and string or
   categorical band/channel coordinates are not supported.
 - Coordinate packing, masks, valid ranges, and scale/offset are not decoded. If
@@ -640,7 +722,8 @@ single Foreign Scan or retains a local Aggregate node.
   subset supports the ordered `transpose`, `bytes`, `gzip`, and `crc32c`
   pipeline described above.
 - Non-empty v2 filters, Fortran order, consolidated metadata, storage
-  transformers, writes, and OME-Zarr multiscale semantics are not supported.
+  transformers, writes, and OME-Zarr semantics outside the bounded 0.5
+  multiscale subset above are not supported.
 - `LIMIT` alone does not prevent coordinate metadata loading; use selective
   coordinate predicates for large arrays. It does stop later lazy data-chunk
   reads after PostgreSQL has accepted enough rows.

@@ -3,7 +3,7 @@
 /// The model is deliberately independent of the legacy `x`/`y`/`time`
 /// profile. Metadata adapters assign names and semantic roles; the executor
 /// works from those descriptors.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) struct Dataset {
     dimensions: Vec<Dimension>,
     variable: Variable,
@@ -49,11 +49,11 @@ impl Dataset {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) struct Dimension {
     name: String,
     length: u64,
-    coordinate: CoordinateRef,
+    coordinate: CoordinateSource,
     semantic_role: DimensionRole,
 }
 
@@ -61,7 +61,7 @@ impl Dimension {
     pub(super) fn new(
         name: String,
         length: u64,
-        coordinate: CoordinateRef,
+        coordinate: CoordinateSource,
         semantic_role: DimensionRole,
     ) -> Self {
         Self {
@@ -80,13 +80,33 @@ impl Dimension {
         self.length
     }
 
-    pub(crate) fn coordinate(&self) -> &CoordinateRef {
+    /// Coordinate source selected by the metadata adapter.
+    pub(crate) fn coordinate_source(&self) -> &CoordinateSource {
         &self.coordinate
+    }
+
+    #[cfg(test)]
+    pub(crate) fn stored_coordinate(&self) -> Option<&CoordinateRef> {
+        match &self.coordinate {
+            CoordinateSource::Stored(coordinate) => Some(coordinate),
+            CoordinateSource::Affine { .. } => None,
+        }
     }
 
     pub(crate) fn semantic_role(&self) -> DimensionRole {
         self.semantic_role
     }
+}
+
+/// Format-neutral source for one dimension's coordinate values.
+///
+/// Existing named-array datasets retain their same-group one-dimensional
+/// coordinate arrays. OME-Zarr 0.5 levels instead synthesize rectilinear
+/// coordinates from their normalized scale and translation.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum CoordinateSource {
+    Stored(CoordinateRef),
+    Affine { scale: f64, translation: f64 },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

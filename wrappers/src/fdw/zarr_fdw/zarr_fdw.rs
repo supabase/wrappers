@@ -43,7 +43,10 @@ use super::chunk::{
     ChunkIndexCursor, IndexBounds, axis_chunk_ranges, chunk_key, index_bounds_from_value_range,
 };
 use super::codec::{CodecDecode, CodecPipeline};
-use super::dataset::{Dataset, DimensionRole, named_array_dataset, named_dimensions};
+use super::dataset::{
+    CoordinateSource, Dataset, DimensionRole, named_array_dataset, named_dimensions,
+    ome_rank2_dataset,
+};
 use super::decode::{
     DType, coord_bytes_to_f64, coord_fill_value_to_f64, coordinate_itemsize, fill_value_bytes,
 };
@@ -51,6 +54,10 @@ use super::meta::{
     ArrayMeta, ArrayNode, NodeMeta, ZarrFormat, parse_v2_array, parse_v2_group, parse_v3_node,
 };
 use super::metrics::{ReadKind, ZarrExplainContext, ZarrScanMetrics};
+use super::ome::{
+    ResolvedOmeLevel, canonical_ome_group_path, resolve_ome_05_level,
+    validate_optional_ome_05_attributes,
+};
 use super::prefetch::{
     OrderedPrefetch, PrefetchNext, PrefetchRequest, PrefetchSource, ScheduleError,
 };
@@ -76,6 +83,9 @@ const FDW_NAME: &str = "ZarrFdw";
 
 // Table option names.
 const OPT_ARRAY_GROUP: &str = "array_group";
+const OPT_MULTISCALE_GROUP: &str = "multiscale_group";
+const OPT_MULTISCALE_INDEX: &str = "multiscale_index";
+const OPT_MULTISCALE_LEVEL: &str = "multiscale_level";
 const OPT_BANDS: &str = "bands";
 const OPT_TIME_UNIT: &str = "time_unit";
 const OPT_TIME_ORIGIN: &str = "time_origin";
@@ -121,6 +131,66 @@ const UNSUPPORTED_COORDINATE_DECODING_ATTRIBUTES: [&str; 7] = [
     "scale_factor",
     "add_offset",
 ];
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct MultiscaleSelectionOptions {
+    group: String,
+    index: usize,
+    level: usize,
+}
+
+fn multiscale_selection_options(
+    options: &HashMap<String, String>,
+) -> ZarrFdwResult<Option<MultiscaleSelectionOptions>> {
+    let group = options.get(OPT_MULTISCALE_GROUP);
+    let index = options.get(OPT_MULTISCALE_INDEX);
+    let level = options.get(OPT_MULTISCALE_LEVEL);
+    let present = [group.is_some(), index.is_some(), level.is_some()];
+    if !present.iter().any(|present| *present) {
+        return Ok(None);
+    }
+    if !present.iter().all(|present| *present) {
+        return Err(ZarrFdwError::InvalidOptionValue {
+            option: OPT_MULTISCALE_GROUP.to_string(),
+            message:
+                "multiscale_group, multiscale_index, and multiscale_level must be provided together"
+                    .to_string(),
+        });
+    }
+    if options.contains_key(OPT_ARRAY_GROUP) {
+        return Err(ZarrFdwError::InvalidOptionValue {
+            option: OPT_MULTISCALE_GROUP.to_string(),
+            message: "array_group cannot be combined with multiscale selection options".to_string(),
+        });
+    }
+
+    let raw_group = group.expect("all multiscale options were checked");
+    let group =
+        canonical_ome_group_path(raw_group).map_err(|_| ZarrFdwError::InvalidOptionValue {
+            option: OPT_MULTISCALE_GROUP.to_string(),
+            message: "must be '/' or a safe relative Zarr group path".to_string(),
+        })?;
+
+    let parse_index = |option: &'static str, value: &str| {
+        value
+            .parse::<usize>()
+            .map_err(|_| ZarrFdwError::InvalidOptionValue {
+                option: option.to_string(),
+                message: "must be a zero-based non-negative integer".to_string(),
+            })
+    };
+    Ok(Some(MultiscaleSelectionOptions {
+        group,
+        index: parse_index(
+            OPT_MULTISCALE_INDEX,
+            index.expect("all multiscale options were checked"),
+        )?,
+        level: parse_index(
+            OPT_MULTISCALE_LEVEL,
+            level.expect("all multiscale options were checked"),
+        )?,
+    }))
+}
 
 enum ArrayMetadataDocument {
     V2(Vec<u8>),
@@ -241,6 +311,8 @@ pub(crate) struct ZarrFdw {
     // selected value array attributes retained for operation-layer metadata
     // such as strict CRS resolution
     array_attributes: Map<String, JsonValue>,
+    // explicit OME-Zarr 0.5 selection, retained for EXPLAIN ANALYZE only
+    selected_ome_level: Option<ResolvedOmeLevel>,
     // scientific meaning assigned by the metadata adapter, in array order
     axis_roles: Vec<DimensionRole>,
     rank: usize,
@@ -525,6 +597,55 @@ fn filled_coordinate_values(
             error: format!("could not allocate a coordinate chunk of {cell_count} values"),
         })?;
     values.resize(cell_count, fill_value);
+    Ok(values)
+}
+
+fn affine_coordinate_values(
+    axis: &str,
+    length: u64,
+    scale: f64,
+    translation: f64,
+) -> ZarrFdwResult<Vec<f64>> {
+    if !scale.is_finite() || scale <= 0.0 || !translation.is_finite() {
+        return Err(ZarrFdwError::CoordinateReadError {
+            axis: axis.to_string(),
+            error:
+                "OME-Zarr affine coordinates require a finite positive scale and finite translation"
+                    .to_string(),
+        });
+    }
+    let length = usize::try_from(length).map_err(|_| ZarrFdwError::CoordinateReadError {
+        axis: axis.to_string(),
+        error: "coordinate length exceeds this platform's index capacity".to_string(),
+    })?;
+    if length > MAX_COORDINATE_VALUES {
+        return Err(ZarrFdwError::CoordinateReadError {
+            axis: axis.to_string(),
+            error: format!(
+                "coordinate has {length} values, exceeding the safety limit of {MAX_COORDINATE_VALUES}"
+            ),
+        });
+    }
+    let mut values = Vec::new();
+    values
+        .try_reserve_exact(length)
+        .map_err(|_| ZarrFdwError::CoordinateReadError {
+            axis: axis.to_string(),
+            error: format!("could not allocate {length} synthesized coordinate values"),
+        })?;
+    for index in 0..length {
+        if index % SPATIAL_TIME_INTERRUPT_POLL_VALUES == 0 {
+            process_postgres_interrupts();
+        }
+        let value = scale.mul_add(index as f64, translation);
+        if !value.is_finite() {
+            return Err(ZarrFdwError::CoordinateReadError {
+                axis: axis.to_string(),
+                error: format!("synthesized coordinate at index {index} is not finite"),
+            });
+        }
+        values.push(value);
+    }
     Ok(values)
 }
 
@@ -2095,6 +2216,54 @@ fn read_array_node(
     Ok(node)
 }
 
+fn read_ome_group_attributes(
+    store: &ZarrStore,
+    metrics: &mut ZarrScanMetrics,
+    group_path: &str,
+) -> ZarrFdwResult<Map<String, JsonValue>> {
+    let v3_key = join_key(group_path, "zarr.json");
+    let v2_group_key = join_key(group_path, ".zgroup");
+    let v2_array_key = join_key(group_path, ".zarray");
+    let v3 = read_optional_metadata_object(store, metrics, &v3_key)?;
+    let v2_group = read_optional_metadata_object(store, metrics, &v2_group_key)?;
+    let v2_array = read_optional_metadata_object(store, metrics, &v2_array_key)?;
+    if v2_group.is_some() || v2_array.is_some() {
+        return Err(ZarrFdwError::InvalidMetadata(format!(
+            "OME-Zarr group '{}' must be a Zarr v3 group",
+            if group_path.is_empty() {
+                "/"
+            } else {
+                group_path
+            }
+        )));
+    }
+    let bytes = v3.ok_or_else(|| {
+        ZarrFdwError::InvalidMetadata(format!(
+            "OME-Zarr group '{}' must be a Zarr v3 group",
+            if group_path.is_empty() {
+                "/"
+            } else {
+                group_path
+            }
+        ))
+    })?;
+    let group = match parse_v3_node(&bytes)? {
+        NodeMeta::Group(group) => group,
+        NodeMeta::Array(_) => {
+            return Err(ZarrFdwError::InvalidMetadata(format!(
+                "OME-Zarr group '{}' must be a Zarr v3 group",
+                if group_path.is_empty() {
+                    "/"
+                } else {
+                    group_path
+                }
+            )));
+        }
+    };
+    validate_array_ancestors(store, metrics, group_path, ZarrFormat::V3)?;
+    Ok(group.attributes)
+}
+
 fn array_ancestor_paths(array_path: &str) -> Vec<String> {
     let components = array_path
         .split('/')
@@ -2164,6 +2333,36 @@ fn validate_array_ancestors(
                 }
             }
         }
+    }
+    Ok(())
+}
+
+fn validate_ome_hierarchy_versions(
+    store: &ZarrStore,
+    metrics: &mut ZarrScanMetrics,
+    array_path: &str,
+) -> ZarrFdwResult<()> {
+    for ancestor in array_ancestor_paths(array_path) {
+        let key = join_key(&ancestor, "zarr.json");
+        let bytes = read_optional_metadata_object(store, metrics, &key)?.ok_or_else(|| {
+            ZarrFdwError::InvalidMetadata(format!(
+                "OME-Zarr array '{array_path}' requires explicit zarr.json metadata on ancestor group '{}'",
+                if ancestor.is_empty() { "/" } else { &ancestor }
+            ))
+        })?;
+        let attributes = match parse_v3_node(&bytes)? {
+            NodeMeta::Group(group) => group.attributes,
+            NodeMeta::Array(_) => {
+                return Err(ZarrFdwError::InvalidMetadata(format!(
+                    "OME-Zarr ancestor '{}' is an array, expected a group",
+                    if ancestor.is_empty() { "/" } else { &ancestor }
+                )));
+            }
+        };
+        validate_optional_ome_05_attributes(
+            if ancestor.is_empty() { "/" } else { &ancestor },
+            Some(&attributes),
+        )?;
     }
     Ok(())
 }
@@ -2620,6 +2819,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
             array_dir: String::new(),
             axes: Vec::new(),
             array_attributes: Map::new(),
+            selected_ome_level: None,
             axis_roles: Vec::new(),
             rank: 0,
             axis_meta: None,
@@ -2716,7 +2916,8 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
                 .collect::<Vec<_>>()
                 .join(", ")
         };
-        self.metrics_snapshot()
+        let mut properties = self
+            .metrics_snapshot()
             .explain_properties(ZarrExplainContext {
                 array: &self.array_dir,
                 dimensions: &self.axes,
@@ -2736,7 +2937,34 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
                 shard_index_cache_bytes: self.shard_index_cache_bytes,
                 shard_index_cache_entries: self.shard_index_cache.len(),
                 shard_index_cache_resident_bytes: self.shard_index_cache.resident_bytes(),
-            })
+            });
+        if let Some(level) = &self.selected_ome_level {
+            properties.push(ExplainProperty::text(
+                "Zarr OME Group",
+                if level.group_path.is_empty() {
+                    "/"
+                } else {
+                    &level.group_path
+                },
+            ));
+            properties.push(ExplainProperty::unsigned(
+                "Zarr OME Multiscale Index",
+                u64::try_from(level.multiscale_index).unwrap_or(u64::MAX),
+            ));
+            properties.push(ExplainProperty::unsigned(
+                "Zarr OME Level Index",
+                u64::try_from(level.level_index).unwrap_or(u64::MAX),
+            ));
+            properties.push(ExplainProperty::text(
+                "Zarr OME Effective Scale",
+                format!("{:?}", level.transform.scale),
+            ));
+            properties.push(ExplainProperty::text(
+                "Zarr OME Effective Translation",
+                format!("{:?}", level.transform.translation),
+            ));
+        }
+        properties
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -2819,39 +3047,72 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
         )?;
         let decode_cf = boolean_table_option(options, OPT_DECODE_CF)?;
 
-        // the array_group option scopes which Zarr array in the store this
-        // foreign table reads; the default is the store root itself
-        let array_group = options
-            .get(OPT_ARRAY_GROUP)
-            .map(|s| s.trim_matches('/').to_string())
-            .unwrap_or_default();
-        self.array_dir = array_group;
-
-        // Load and normalize exactly one v2 or v3 array node. The executor
-        // remains format-neutral below this boundary.
-        let value_node = read_array_node(&self.store, &mut self.metrics, &self.array_dir)?;
-        value_node.meta.validate()?;
-        let dimension_names = named_dimensions(&value_node, &self.array_dir)?;
-        let coordinate_parent = array_parent_path(&self.array_dir);
-        let mut coordinate_nodes = Vec::with_capacity(dimension_names.len());
-        let mut coordinate_fill_values = Vec::with_capacity(dimension_names.len());
-        for (name, &length) in dimension_names.iter().zip(value_node.meta.shape.iter()) {
-            let (coordinate, fill_value) = read_coordinate_metadata(
-                &self.store,
-                &mut self.metrics,
-                coordinate_parent,
-                name,
-                length,
-            )?;
-            coordinate_nodes.push(coordinate);
-            coordinate_fill_values.push(fill_value);
-        }
-        let dataset = named_array_dataset(
-            &self.array_dir,
-            &value_node,
-            &dimension_names,
-            &coordinate_nodes,
-        )?;
+        let multiscale_selection = multiscale_selection_options(options)?;
+        let (value_node, dataset, coordinate_nodes, coordinate_fill_values, selected_ome_level) =
+            if let Some(selection) = multiscale_selection {
+                let group_attributes =
+                    read_ome_group_attributes(&self.store, &mut self.metrics, &selection.group)?;
+                let level = resolve_ome_05_level(
+                    &selection.group,
+                    &group_attributes,
+                    selection.index,
+                    selection.level,
+                )?;
+                validate_ome_hierarchy_versions(&self.store, &mut self.metrics, &level.array_path)?;
+                let value_node =
+                    read_array_node(&self.store, &mut self.metrics, &level.array_path)?;
+                validate_optional_ome_05_attributes(
+                    &level.array_path,
+                    Some(&value_node.attributes),
+                )?;
+                value_node.meta.validate()?;
+                let dataset = ome_rank2_dataset(&level.array_path, &value_node, &level)?;
+                let rank = dataset.dimensions().len();
+                (
+                    value_node,
+                    dataset,
+                    vec![None; rank],
+                    vec![None; rank],
+                    Some(level),
+                )
+            } else {
+                // `array_group` scopes one ordinary Zarr array; the default is
+                // the store root. Existing behavior is unchanged outside OME
+                // selection mode.
+                let array_dir = options
+                    .get(OPT_ARRAY_GROUP)
+                    .map(|path| path.trim_matches('/').to_string())
+                    .unwrap_or_default();
+                let value_node = read_array_node(&self.store, &mut self.metrics, &array_dir)?;
+                value_node.meta.validate()?;
+                let dimension_names = named_dimensions(&value_node, &array_dir)?;
+                let coordinate_parent = array_parent_path(&array_dir);
+                let mut coordinate_nodes = Vec::with_capacity(dimension_names.len());
+                let mut coordinate_fill_values = Vec::with_capacity(dimension_names.len());
+                let mut aligned_nodes = Vec::with_capacity(dimension_names.len());
+                for (name, &length) in dimension_names.iter().zip(value_node.meta.shape.iter()) {
+                    let (coordinate, fill_value) = read_coordinate_metadata(
+                        &self.store,
+                        &mut self.metrics,
+                        coordinate_parent,
+                        name,
+                        length,
+                    )?;
+                    aligned_nodes.push(coordinate.clone());
+                    coordinate_nodes.push(Some(coordinate));
+                    coordinate_fill_values.push(fill_value);
+                }
+                let dataset =
+                    named_array_dataset(&array_dir, &value_node, &dimension_names, &aligned_nodes)?;
+                (
+                    value_node,
+                    dataset,
+                    coordinate_nodes,
+                    coordinate_fill_values,
+                    None,
+                )
+            };
+        self.selected_ome_level = selected_ome_level;
         let meta = &value_node.meta;
         let value_attributes = &value_node.attributes;
         let variable = dataset.variable();
@@ -2890,7 +3151,12 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
                 option: OPT_TIME_FROM_ATTRS.to_string(),
                 message: "requires exactly one discovered Time dimension".to_string(),
             })?;
-            TimeSpec::from_cf_attributes(&coordinate_nodes[axis].attributes)?
+            let coordinate = coordinate_nodes[axis].as_ref().ok_or_else(|| {
+                ZarrFdwError::InvalidMetadata(
+                    "time_from_attrs requires a stored time coordinate array".to_string(),
+                )
+            })?;
+            TimeSpec::from_cf_attributes(&coordinate.attributes)?
         } else {
             TimeSpec::from_legacy_options(
                 options.get(OPT_TIME_UNIT).map(String::as_str),
@@ -2928,7 +3194,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
         self.fill_bytes = fill_value_bytes(dtype, &meta.fill_value)?;
         self.time_spec = time_spec;
         if matches!(&meta.storage_layout, StorageLayout::Sharded(_))
-            || coordinate_nodes.iter().any(|coordinate| {
+            || coordinate_nodes.iter().flatten().any(|coordinate| {
                 matches!(&coordinate.meta.storage_layout, StorageLayout::Sharded(_))
             })
         {
@@ -2956,18 +3222,30 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
                 coords.push(None);
                 continue;
             }
-            validate_coordinate_decoding_attributes(
-                dimension.name(),
-                &coordinate_nodes[axis].attributes,
-            )?;
-            let coordinate = dimension.coordinate();
-            let values = read_coordinate_values(
-                self,
-                coordinate.parent(),
-                coordinate.name(),
-                &coordinate_nodes[axis],
-                coordinate_fill_values[axis],
-            )?;
+            let values = match dimension.coordinate_source() {
+                CoordinateSource::Stored(coordinate) => {
+                    let node = coordinate_nodes[axis].as_ref().ok_or_else(|| {
+                        ZarrFdwError::InvalidMetadata(format!(
+                            "stored coordinate '{}' has no loaded metadata",
+                            dimension.name()
+                        ))
+                    })?;
+                    validate_coordinate_decoding_attributes(dimension.name(), &node.attributes)?;
+                    read_coordinate_values(
+                        self,
+                        coordinate.parent(),
+                        coordinate.name(),
+                        node,
+                        coordinate_fill_values[axis],
+                    )?
+                }
+                CoordinateSource::Affine { scale, translation } => affine_coordinate_values(
+                    dimension.name(),
+                    dimension.length(),
+                    *scale,
+                    *translation,
+                )?,
+            };
             validate_coordinate_values(dimension.name(), &values)?;
             coords.push(Some(values));
         }
@@ -3117,6 +3395,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
         self.array_dir.clear();
         self.axes.clear();
         self.array_attributes.clear();
+        self.selected_ome_level = None;
         self.chunk_bytes.clear();
         self.chunk_shape.clear();
         self.chunk_cursor = ChunkIndexCursor::default();
@@ -3160,6 +3439,13 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
                     scalable_execution_options(&server_options)?;
                 }
                 FOREIGN_TABLE_RELATION_ID => {
+                    let table_options = options
+                        .iter()
+                        .flatten()
+                        .filter_map(|option| option.split_once('='))
+                        .map(|(name, value)| (name.to_string(), value.to_string()))
+                        .collect::<HashMap<_, _>>();
+                    multiscale_selection_options(&table_options)?;
                     if let Some(v) = option_value(&options, OPT_TIME_UNIT) {
                         TimeSpec::from_legacy_options(Some(&v), None)?;
                     }

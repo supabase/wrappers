@@ -216,6 +216,16 @@ services:
       /mc stat s3/warehouse/zarr/e2e-v3.zarr/nested/x/c/1;
       /mc stat s3/warehouse/zarr/e2e-v3.zarr/nested/y/zarr.json;
       /mc stat s3/warehouse/zarr/e2e-v3.zarr/nested/y/c/1;
+      /mc stat s3/warehouse/zarr/e2e-ome-v3.zarr/zarr.json;
+      /mc stat s3/warehouse/zarr/e2e-ome-v3.zarr/OME_FIXTURE_MANIFEST.txt;
+      /mc stat s3/warehouse/zarr/e2e-ome-v3.zarr/image/zarr.json;
+      /mc stat s3/warehouse/zarr/e2e-ome-v3.zarr/image/0/zarr.json;
+      /mc stat s3/warehouse/zarr/e2e-ome-v3.zarr/image/0/c/0/0;
+      /mc stat s3/warehouse/zarr/e2e-ome-v3.zarr/image/0/c/0/1;
+      /mc stat s3/warehouse/zarr/e2e-ome-v3.zarr/image/0/c/1/0;
+      /mc stat s3/warehouse/zarr/e2e-ome-v3.zarr/image/0/c/1/1;
+      /mc stat s3/warehouse/zarr/e2e-ome-v3.zarr/image/1/zarr.json;
+      /mc stat s3/warehouse/zarr/e2e-ome-v3.zarr/image/1/c/0/0;
       if /mc stat s3/warehouse/zarr/e2e.zarr/nested/spatial2d/0.0; then
         echo 'unexpected data chunk 0.0 in fill-only spatial Zarr fixture';
         exit 1;
@@ -242,6 +252,14 @@ services:
       fi;
       if /mc stat s3/warehouse/zarr/e2e-v3.zarr/nested/shard_start/c/0/1/1; then
         echo 'unexpected start-index shard c/0/1/1 in sparse Zarr v3 fixture';
+        exit 1;
+      fi;
+      if /mc stat s3/warehouse/zarr/e2e-ome-v3.zarr/image/x/zarr.json; then
+        echo 'unexpected x coordinate array in OME-Zarr v3 fixture';
+        exit 1;
+      fi;
+      if /mc stat s3/warehouse/zarr/e2e-ome-v3.zarr/image/y/zarr.json; then
+        echo 'unexpected y coordinate array in OME-Zarr v3 fixture';
         exit 1;
       fi;
       python /iceberg_seed.py

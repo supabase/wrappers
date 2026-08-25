@@ -11,6 +11,7 @@ mod decode;
 mod inspect;
 mod meta;
 mod metrics;
+mod ome;
 mod prefetch;
 mod scientific;
 mod sharding;
@@ -55,6 +56,12 @@ enum ZarrFdwError {
 
     #[error("compressor '{0}' is not supported yet")]
     UnsupportedCompressor(String),
+
+    /// Structurally valid metadata that the current read-only executor cannot
+    /// execute. Inspection may surface this as a capability warning, while
+    /// malformed metadata must remain `InvalidMetadata`.
+    #[error("{0}")]
+    UnsupportedExecutionFeature(String),
 
     #[error(
         "column '{column}' has incompatible PostgreSQL type OID {actual}; expected {expected} (OID {expected_oid})"

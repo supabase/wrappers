@@ -154,17 +154,41 @@ impl CodecPipeline {
             cursor += 1;
         }
         if cursor != codecs.len() {
+            let codec = codec_object(codecs, cursor)?;
+            validate_codec_object(codec, cursor)?;
             let name = codec_name(codecs, cursor)?;
-            let reason = match name {
+            match name {
                 "transpose" | "bytes" | "gzip" | "crc32c" => {
-                    format!("codec '{name}' is duplicated or appears out of supported order")
+                    return Err(pipeline_metadata_error(
+                        cursor,
+                        format!("codec '{name}' is duplicated or appears out of supported order"),
+                    ));
                 }
-                "blosc" => "Zarr v3 Blosc is not supported yet".to_string(),
-                "zstd" => "Zarr v3 Zstd is not supported yet".to_string(),
-                "sharding_indexed" => "sharded Zarr v3 chunks are not supported".to_string(),
-                other => format!("Zarr v3 codec '{other}' is not supported"),
-            };
-            return Err(pipeline_metadata_error(cursor, reason));
+                "blosc" => {
+                    return Err(unsupported_pipeline_feature(
+                        cursor,
+                        "Zarr v3 Blosc is not supported yet",
+                    ));
+                }
+                "zstd" => {
+                    return Err(unsupported_pipeline_feature(
+                        cursor,
+                        "Zarr v3 Zstd is not supported yet",
+                    ));
+                }
+                "sharding_indexed" => {
+                    return Err(unsupported_pipeline_feature(
+                        cursor,
+                        "sharded Zarr v3 chunks are not supported",
+                    ));
+                }
+                other => {
+                    return Err(unsupported_pipeline_feature(
+                        cursor,
+                        format!("Zarr v3 codec '{other}' is not supported"),
+                    ));
+                }
+            }
         }
 
         Ok((Self { stages }, dtype))
@@ -440,7 +464,7 @@ fn parse_bytes(
             Some("little") => Ok(CodecStage::Bytes {
                 endian: Some(Endian::Little),
             }),
-            Some("big") => Err(pipeline_metadata_error(
+            Some("big") => Err(unsupported_pipeline_feature(
                 index,
                 "big-endian Zarr v3 bytes are not supported yet",
             )),
@@ -459,7 +483,7 @@ fn parse_bytes(
             Some("little") => Ok(CodecStage::Bytes {
                 endian: Some(Endian::Little),
             }),
-            Some("big") => Err(pipeline_metadata_error(
+            Some("big") => Err(unsupported_pipeline_feature(
                 index,
                 "big-endian Zarr v3 bytes are not supported yet",
             )),
@@ -523,6 +547,13 @@ fn validate_permutation(order: &[usize], rank: usize, index: usize) -> ZarrFdwRe
 
 fn pipeline_metadata_error(index: usize, reason: impl Into<String>) -> ZarrFdwError {
     ZarrFdwError::InvalidMetadata(format!("Zarr v3 codec index {index}: {}", reason.into()))
+}
+
+fn unsupported_pipeline_feature(index: usize, reason: impl Into<String>) -> ZarrFdwError {
+    ZarrFdwError::UnsupportedExecutionFeature(format!(
+        "Zarr v3 codec index {index}: {}",
+        reason.into()
+    ))
 }
 
 fn codec_read_error(index: usize, name: &str, reason: impl Into<String>) -> ZarrFdwError {

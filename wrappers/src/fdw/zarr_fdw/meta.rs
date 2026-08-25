@@ -345,7 +345,7 @@ fn parse_v3_array(
     validate_extension_object(chunk_grid, "chunk_grid")?;
     reject_ignorable_extension(chunk_grid, "chunk_grid")?;
     if required_string(chunk_grid, "name")? != "regular" {
-        return Err(ZarrFdwError::InvalidMetadata(
+        return Err(ZarrFdwError::UnsupportedExecutionFeature(
             "only the Zarr v3 regular chunk grid is supported".to_string(),
         ));
     }
@@ -384,19 +384,32 @@ fn parse_v3_array(
         "default" => ChunkKeyEncoding::Default { separator },
         "v2" => ChunkKeyEncoding::V2 { separator },
         other => {
-            return Err(ZarrFdwError::InvalidMetadata(format!(
+            return Err(ZarrFdwError::UnsupportedExecutionFeature(format!(
                 "Zarr v3 chunk-key encoding '{other}' is not supported"
             )));
         }
     };
 
-    if object
-        .get("storage_transformers")
-        .is_some_and(|value| value.as_array().is_none_or(|items| !items.is_empty()))
-    {
-        return Err(ZarrFdwError::InvalidMetadata(
-            "Zarr v3 storage transformers are not supported yet".to_string(),
-        ));
+    if let Some(value) = object.get("storage_transformers") {
+        let transformers = value.as_array().ok_or_else(|| {
+            ZarrFdwError::InvalidMetadata(
+                "Zarr v3 storage_transformers must be an array".to_string(),
+            )
+        })?;
+        for (index, transformer) in transformers.iter().enumerate() {
+            let transformer = transformer.as_object().ok_or_else(|| {
+                ZarrFdwError::InvalidMetadata(format!(
+                    "Zarr v3 storage transformer {index} must be an object"
+                ))
+            })?;
+            validate_extension_object(transformer, "storage transformer")?;
+            required_string(transformer, "name")?;
+        }
+        if !transformers.is_empty() {
+            return Err(ZarrFdwError::UnsupportedExecutionFeature(
+                "Zarr v3 storage transformers are not supported yet".to_string(),
+            ));
+        }
     }
 
     let native_codecs = object.get("codecs").cloned().ok_or_else(|| {

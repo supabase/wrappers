@@ -1,0 +1,39 @@
+Deterministic OME-Zarr 0.5 fixture
+
+All JSON files are compact UTF-8 with one trailing LF. Chunk payloads are raw
+little-endian float32 values in C order and have no trailing bytes.
+
+Path                  Size  SHA-256
+zarr.json               98  eb68e3c30a89eb1883bcdb152468afc6c853d65861f98751fec19847e886465a
+image/zarr.json         619  e28c2f7555f7b3da45aa2c6c1e3a490e9dd72288d6ec7bebf7fa2ef82d8d5cc2
+image/0/zarr.json       344  43db3f8fb94961e250b056277dd2fdb1c6e1c6d2fc976339749ae0822c9e24f5
+image/0/c/0/0            36  83cf3898c7093e3e5466e574f8caa41efb7af0a79e96d5b8d23020e38d85d904
+image/0/c/0/1            36  cfee151d5217284f9d1b1d46bb6668b398072fa40b54f76469da02c927f9cc49
+image/0/c/1/0            36  c81547bbf5e968af93c468aa6aff1b1be7973e585f63f2c898806af82f6379b7
+image/0/c/1/1            36  9c8d0085e96b400e2503648181df76a578189a794166b26d6e776fe267f9a6d4
+image/1/zarr.json       344  876066672fde070eabed12258f8d10e1abfcd71cd78b4a22a8dd57766c5e489f
+image/1/c/0/0            16  86536b4219044ba9c64ab26ca4e95312a342554c145ed88c96e44f05e1111535
+
+Decoded level 0 (shape [4,4], chunks [3,3]; edge padding is -1):
+  0  1  2  3
+  4  5  6  7
+  8  9 10 11
+ 12 13 14 15
+
+Decoded level 1 (shape [2,2], chunks [2,2], 2x2 means):
+  2.5  4.5
+ 10.5 12.5
+
+Dataset transforms are followed by the multiscale transform. Effective
+coordinates are:
+  level 0: scale [4,12], translation [120,260]
+           y [120,124,128,132], x [260,272,284,296]
+  level 1: scale [8,24], translation [122,266]
+           y [122,130], x [266,290]
+
+Literal payload hex:
+  image/0/c/0/0  000000000000803f00000040000080400000a0400000c040000000410000104100002041
+  image/0/c/0/1  00004040000080bf000080bf0000e040000080bf000080bf00003041000080bf000080bf
+  image/0/c/1/0  000040410000504100006041000080bf000080bf000080bf000080bf000080bf000080bf
+  image/0/c/1/1  00007041000080bf000080bf000080bf000080bf000080bf000080bf000080bf000080bf
+  image/1/c/0/0  00002040000090400000284100004841

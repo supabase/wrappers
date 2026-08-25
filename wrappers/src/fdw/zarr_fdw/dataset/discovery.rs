@@ -3,8 +3,9 @@ use std::collections::HashSet;
 use serde_json::{Map, Value};
 
 use super::super::meta::{ArrayNode, ZarrFormat};
+use super::super::ome::ResolvedOmeLevel;
 use super::super::{ZarrFdwError, ZarrFdwResult};
-use super::model::{CoordinateRef, Dataset, Dimension, DimensionRole};
+use super::model::{CoordinateRef, CoordinateSource, Dataset, Dimension, DimensionRole};
 
 const ARRAY_DIMENSIONS: &str = "_ARRAY_DIMENSIONS";
 
@@ -108,7 +109,10 @@ pub(crate) fn named_array_dataset(
             Ok(Dimension::new(
                 name.clone(),
                 length,
-                CoordinateRef::new(coordinate_parent.to_string(), name.clone()),
+                CoordinateSource::Stored(CoordinateRef::new(
+                    coordinate_parent.to_string(),
+                    name.clone(),
+                )),
                 infer_dimension_role(name, &coordinate.attributes)?,
             ))
         })
@@ -128,6 +132,103 @@ pub(crate) fn named_array_dataset(
         dimensions,
         array_path.to_string(),
         meta.dtype.clone(),
+    ))
+}
+
+/// Build the initial OME-Zarr 0.5 execution descriptor.
+///
+/// This deliberately supports only a two-dimensional `[y, x]` image. The
+/// OME axes are authoritative but must agree exactly with the selected v3
+/// array's native `dimension_names`. Coordinate values are synthesized from
+/// the already-composed effective transform in `level`.
+pub(crate) fn ome_rank2_dataset(
+    array_path: &str,
+    node: &ArrayNode,
+    level: &ResolvedOmeLevel,
+) -> ZarrFdwResult<Dataset> {
+    if node.format != ZarrFormat::V3 {
+        return Err(ZarrFdwError::InvalidMetadata(format!(
+            "OME-Zarr 0.5 array '{array_path}' must use Zarr v3"
+        )));
+    }
+    node.meta.validate()?;
+    if array_path != level.array_path {
+        return Err(ZarrFdwError::InvalidMetadata(format!(
+            "OME-Zarr selected array path '{}' does not match loaded array '{array_path}'",
+            level.array_path
+        )));
+    }
+    if node.meta.shape.len() != 2 || level.axes.len() != 2 {
+        return Err(ZarrFdwError::InvalidMetadata(format!(
+            "OME-Zarr rank-2 execution requires axes [y, x], found array rank {} and {} axes",
+            node.meta.shape.len(),
+            level.axes.len()
+        )));
+    }
+
+    let expected_names = ["y", "x"];
+    for (axis, expected) in level.axes.iter().zip(expected_names) {
+        if axis.name != expected || axis.kind.as_deref() != Some("space") {
+            return Err(ZarrFdwError::InvalidMetadata(format!(
+                "OME-Zarr rank-2 execution requires axes [y, x] with type 'space', found {:?}",
+                level
+                    .axes
+                    .iter()
+                    .map(|axis| (&axis.name, axis.kind.as_deref()))
+                    .collect::<Vec<_>>()
+            )));
+        }
+    }
+
+    let names = named_dimensions(node, array_path)?;
+    let ome_names = level
+        .axes
+        .iter()
+        .map(|axis| axis.name.clone())
+        .collect::<Vec<_>>();
+    if names != ome_names {
+        return Err(ZarrFdwError::InvalidMetadata(format!(
+            "OME-Zarr axes {ome_names:?} do not match array dimension_names {names:?} for '{array_path}'"
+        )));
+    }
+    if level.transform.scale.len() != 2 || level.transform.translation.len() != 2 {
+        return Err(ZarrFdwError::InvalidMetadata(format!(
+            "OME-Zarr rank-2 transform for '{array_path}' must contain two scale and translation values"
+        )));
+    }
+
+    let dimensions = level
+        .axes
+        .iter()
+        .zip(node.meta.shape.iter().copied())
+        .zip(
+            level
+                .transform
+                .scale
+                .iter()
+                .copied()
+                .zip(level.transform.translation.iter().copied()),
+        )
+        .enumerate()
+        .map(|(axis_index, ((axis, length), (scale, translation)))| {
+            let semantic_role = if axis_index == 0 {
+                DimensionRole::SpatialY
+            } else {
+                DimensionRole::SpatialX
+            };
+            Dimension::new(
+                axis.name.clone(),
+                length,
+                CoordinateSource::Affine { scale, translation },
+                semantic_role,
+            )
+        })
+        .collect();
+
+    Ok(Dataset::new(
+        dimensions,
+        array_path.to_string(),
+        node.meta.dtype.clone(),
     ))
 }
 
@@ -360,6 +461,7 @@ fn array_parent_path(array_path: &str) -> &str {
 mod tests {
     use serde_json::json;
 
+    use super::super::super::ome::{AffineTransform, OmeAxis};
     use super::*;
 
     fn node(shape: Vec<u64>, attributes: Map<String, Value>) -> ArrayNode {
@@ -507,6 +609,107 @@ mod tests {
         assert!(named_array_dataset("value", &value, &names, &mixed_format).is_err());
     }
 
+    fn ome_level(axes: Vec<OmeAxis>) -> ResolvedOmeLevel {
+        ResolvedOmeLevel {
+            group_path: "nested/image".to_string(),
+            multiscale_index: 0,
+            multiscale_name: Some("image".to_string()),
+            level_index: 0,
+            array_path: "nested/image/0".to_string(),
+            axes,
+            transform: AffineTransform {
+                scale: vec![2.0, 3.0],
+                translation: vec![10.0, 100.0],
+            },
+            warnings: Vec::new(),
+        }
+    }
+
+    fn ome_axes() -> Vec<OmeAxis> {
+        ["y", "x"]
+            .into_iter()
+            .map(|name| OmeAxis {
+                name: name.to_string(),
+                kind: Some("space".to_string()),
+                unit: Some("micrometer".to_string()),
+            })
+            .collect()
+    }
+
+    #[test]
+    fn constructs_rank2_ome_dataset_with_affine_coordinates() {
+        let value = v3_node(vec![2, 3], Some(vec![Some("y"), Some("x")]), Map::new());
+        let dataset = ome_rank2_dataset("nested/image/0", &value, &ome_level(ome_axes())).unwrap();
+
+        assert_eq!(dataset.axis_names(), vec!["y", "x"]);
+        assert_eq!(
+            dataset.dimensions()[0].semantic_role(),
+            DimensionRole::SpatialY
+        );
+        assert_eq!(
+            dataset.dimensions()[1].semantic_role(),
+            DimensionRole::SpatialX
+        );
+        assert_eq!(dataset.dimensions()[0].stored_coordinate(), None);
+        assert!(matches!(
+            dataset.dimensions()[0].coordinate_source(),
+            CoordinateSource::Affine {
+                scale: 2.0,
+                translation: 10.0
+            }
+        ));
+        assert!(matches!(
+            dataset.dimensions()[1].coordinate_source(),
+            CoordinateSource::Affine {
+                scale: 3.0,
+                translation: 100.0
+            }
+        ));
+    }
+
+    #[test]
+    fn ome_dataset_rejects_format_rank_axes_path_and_dimension_mismatches() {
+        let valid = v3_node(vec![2, 3], Some(vec![Some("y"), Some("x")]), Map::new());
+        let mut cases = Vec::new();
+        cases.push((
+            node(vec![2, 3], Map::new()),
+            ome_level(ome_axes()),
+            "must use Zarr v3",
+        ));
+        cases.push((
+            v3_node(
+                vec![1, 2, 3],
+                Some(vec![Some("z"), Some("y"), Some("x")]),
+                Map::new(),
+            ),
+            ome_level(ome_axes()),
+            "rank-2 execution requires axes [y, x]",
+        ));
+        let mut wrong_axes = ome_axes();
+        wrong_axes.swap(0, 1);
+        cases.push((valid.clone(), ome_level(wrong_axes), "requires axes [y, x]"));
+        cases.push((
+            v3_node(
+                vec![2, 3],
+                Some(vec![Some("row"), Some("column")]),
+                Map::new(),
+            ),
+            ome_level(ome_axes()),
+            "do not match array dimension_names",
+        ));
+        let mut wrong_path = ome_level(ome_axes());
+        wrong_path.array_path = "nested/image/other".to_string();
+        cases.push((valid, wrong_path, "does not match loaded array"));
+
+        for (node, level, phrase) in cases {
+            let error = ome_rank2_dataset("nested/image/0", &node, &level).unwrap_err();
+            assert!(
+                error.to_string().contains(phrase),
+                "unexpected error: {error}"
+            );
+        }
+    }
+
     #[test]
     fn constructs_arbitrary_rank_nested_dataset() {
         let names = ["forecast_time", "level", "band", "channel"]
@@ -534,7 +737,13 @@ mod tests {
             dataset.dimensions()[3].semantic_role(),
             DimensionRole::Channel
         );
-        assert_eq!(dataset.dimensions()[3].coordinate().parent(), "nested");
+        assert_eq!(
+            dataset.dimensions()[3]
+                .stored_coordinate()
+                .unwrap()
+                .parent(),
+            "nested"
+        );
     }
 
     #[test]

@@ -97,6 +97,61 @@ mod tests {
         });
     }
 
+    fn create_minio_ome_v3_e2e_server() {
+        Spi::connect_mut(|c| {
+            c.update(
+                r#"CREATE FOREIGN DATA WRAPPER zarr_ome_v3_e2e_wrapper
+                     HANDLER zarr_fdw_handler VALIDATOR zarr_fdw_validator"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"CREATE SERVER zarr_ome_v3_e2e_server
+                     FOREIGN DATA WRAPPER zarr_ome_v3_e2e_wrapper
+                     OPTIONS (
+                       store_url 's3://warehouse/zarr/e2e-ome-v3.zarr',
+                       aws_access_key_id 'admin',
+                       aws_secret_access_key 'password',
+                       aws_region 'us-east-1',
+                       endpoint_url 'http://localhost:8000',
+                       path_style_url 'true'
+                     )"#,
+                None,
+                &[],
+            )
+            .unwrap();
+        });
+    }
+
+    fn create_minio_ome_v3_e2e_table(table: &str, level: usize) {
+        create_minio_ome_v3_e2e_server();
+        create_minio_ome_v3_e2e_table_on_server(table, level);
+    }
+
+    fn create_minio_ome_v3_e2e_table_on_server(table: &str, level: usize) {
+        Spi::connect_mut(|c| {
+            c.update(
+                &format!(
+                    r#"CREATE FOREIGN TABLE {table} (
+                         y double precision,
+                         x double precision,
+                         value real
+                       )
+                       SERVER zarr_ome_v3_e2e_server
+                       OPTIONS (
+                         multiscale_group 'image',
+                         multiscale_index '0',
+                         multiscale_level '{level}'
+                       )"#
+                ),
+                None,
+                &[],
+            )
+            .unwrap();
+        });
+    }
+
     fn capture_query_error(statement: &str) -> String {
         Spi::connect_mut(|c| {
             c.update(
@@ -2462,6 +2517,391 @@ mod tests {
                  )"#,
         )
         .unwrap();
+    }
+
+    #[pg_test]
+    fn zarr_multiscales_minio_ome_v05_discovery_e2e() {
+        create_minio_ome_v3_e2e_server();
+
+        Spi::connect(|c| {
+            let rows = c
+                .select(
+                    r#"SELECT group_path, multiscale_index, multiscale_name,
+                              level_index, array_path, axes, shape, chunks,
+                              dtype, codecs, scale, translation, supported,
+                              warnings
+                         FROM zarr_multiscales('zarr_ome_v3_e2e_server')
+                        ORDER BY group_path, multiscale_index, level_index"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .collect::<Vec<_>>();
+            assert_eq!(rows.len(), 2);
+
+            let expected = [
+                (
+                    0_i64,
+                    "image/0",
+                    serde_json::json!([4, 4]),
+                    serde_json::json!([3, 3]),
+                    vec![4.0, 12.0],
+                    vec![120.0, 260.0],
+                ),
+                (
+                    1_i64,
+                    "image/1",
+                    serde_json::json!([2, 2]),
+                    serde_json::json!([2, 2]),
+                    vec![8.0, 24.0],
+                    vec![122.0, 266.0],
+                ),
+            ];
+            for (row, (level, array_path, shape, chunks, scale, translation)) in
+                rows.iter().zip(expected)
+            {
+                assert_eq!(
+                    row.get_by_name::<String, _>("group_path").unwrap(),
+                    Some("image".to_string())
+                );
+                assert_eq!(
+                    row.get_by_name::<i64, _>("multiscale_index").unwrap(),
+                    Some(0)
+                );
+                assert_eq!(
+                    row.get_by_name::<String, _>("multiscale_name").unwrap(),
+                    Some("mean-pyramid".to_string())
+                );
+                assert_eq!(
+                    row.get_by_name::<i64, _>("level_index").unwrap(),
+                    Some(level)
+                );
+                assert_eq!(
+                    row.get_by_name::<String, _>("array_path").unwrap(),
+                    Some(array_path.to_string())
+                );
+                assert_eq!(
+                    row.get_by_name::<JsonB, _>("axes").unwrap().unwrap().0,
+                    serde_json::json!([
+                        {"name": "y", "type": "space", "unit": "micrometer"},
+                        {"name": "x", "type": "space", "unit": "micrometer"}
+                    ])
+                );
+                assert_eq!(
+                    row.get_by_name::<JsonB, _>("shape").unwrap().unwrap().0,
+                    shape
+                );
+                assert_eq!(
+                    row.get_by_name::<JsonB, _>("chunks").unwrap().unwrap().0,
+                    chunks
+                );
+                assert_eq!(
+                    row.get_by_name::<String, _>("dtype").unwrap(),
+                    Some("float32".to_string())
+                );
+                assert_eq!(
+                    row.get_by_name::<JsonB, _>("codecs").unwrap().unwrap().0,
+                    serde_json::json!([{
+                        "name": "bytes",
+                        "configuration": {"endian": "little"}
+                    }])
+                );
+                assert_eq!(
+                    row.get_by_name::<Vec<f64>, _>("scale").unwrap(),
+                    Some(scale)
+                );
+                assert_eq!(
+                    row.get_by_name::<Vec<f64>, _>("translation").unwrap(),
+                    Some(translation)
+                );
+                assert_eq!(row.get_by_name::<bool, _>("supported").unwrap(), Some(true));
+                assert_eq!(
+                    row.get_by_name::<Vec<String>, _>("warnings").unwrap(),
+                    Some(Vec::new())
+                );
+            }
+
+            let paths = c
+                .select(
+                    "SELECT path FROM zarr_inspect('zarr_ome_v3_e2e_server') ORDER BY path",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|row| row.get_by_name::<String, _>("path").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(paths, vec!["/", "image", "image/0", "image/1"]);
+        });
+    }
+
+    #[pg_test]
+    fn zarr_minio_ome_v05_explicit_level_scans_e2e() {
+        create_minio_ome_v3_e2e_server();
+        create_minio_ome_v3_e2e_table_on_server("zarr_ome_v05_level0", 0);
+        create_minio_ome_v3_e2e_table_on_server("zarr_ome_v05_level1", 1);
+
+        Spi::connect(|c| {
+            let level0 = c
+                .select(
+                    "SELECT y, x, value FROM zarr_ome_v05_level0 ORDER BY y, x",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .map(|row| {
+                    (
+                        row.get_by_name::<f64, _>("y").unwrap().unwrap(),
+                        row.get_by_name::<f64, _>("x").unwrap().unwrap(),
+                        row.get_by_name::<f32, _>("value").unwrap().unwrap(),
+                    )
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                level0,
+                vec![
+                    (120.0, 260.0, 0.0),
+                    (120.0, 272.0, 1.0),
+                    (120.0, 284.0, 2.0),
+                    (120.0, 296.0, 3.0),
+                    (124.0, 260.0, 4.0),
+                    (124.0, 272.0, 5.0),
+                    (124.0, 284.0, 6.0),
+                    (124.0, 296.0, 7.0),
+                    (128.0, 260.0, 8.0),
+                    (128.0, 272.0, 9.0),
+                    (128.0, 284.0, 10.0),
+                    (128.0, 296.0, 11.0),
+                    (132.0, 260.0, 12.0),
+                    (132.0, 272.0, 13.0),
+                    (132.0, 284.0, 14.0),
+                    (132.0, 296.0, 15.0),
+                ]
+            );
+
+            let level1 = c
+                .select(
+                    "SELECT y, x, value FROM zarr_ome_v05_level1 ORDER BY y, x",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .map(|row| {
+                    (
+                        row.get_by_name::<f64, _>("y").unwrap().unwrap(),
+                        row.get_by_name::<f64, _>("x").unwrap().unwrap(),
+                        row.get_by_name::<f32, _>("value").unwrap().unwrap(),
+                    )
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                level1,
+                vec![
+                    (122.0, 266.0, 2.5),
+                    (122.0, 290.0, 4.5),
+                    (130.0, 266.0, 10.5),
+                    (130.0, 290.0, 12.5),
+                ]
+            );
+        });
+    }
+
+    #[pg_test]
+    fn zarr_minio_ome_v05_affine_pruning_metrics_e2e() {
+        create_minio_ome_v3_e2e_table("zarr_ome_v05_pruning", 0);
+
+        Spi::connect(|c| {
+            let value = c
+                .select(
+                    "SELECT value FROM zarr_ome_v05_pruning WHERE y = 132 AND x = 296",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap()
+                .get_by_name::<f32, _>("value")
+                .unwrap();
+            assert_eq!(value, Some(15.0));
+
+            let plan = c
+                .select(
+                    r#"EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+                       SELECT value
+                         FROM zarr_ome_v05_pruning
+                        WHERE y = 132 AND x = 296"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|row| row.get::<&str>(1).unwrap().map(str::to_string))
+                .collect::<Vec<_>>();
+            let has = |text: &str| plan.iter().any(|line| line.contains(text));
+            assert!(has("Zarr Array: image/0"), "plan: {plan:?}");
+            assert!(has("Zarr Dimensions: [y, x]"), "plan: {plan:?}");
+            assert!(has("Zarr Shape: [4, 4]"), "plan: {plan:?}");
+            assert!(has("Zarr Chunk Shape: [3, 3]"), "plan: {plan:?}");
+            assert!(has("Zarr OME Group: image"), "plan: {plan:?}");
+            assert!(has("Zarr OME Multiscale Index: 0"), "plan: {plan:?}");
+            assert!(has("Zarr OME Level Index: 0"), "plan: {plan:?}");
+            assert!(
+                has("Zarr OME Effective Scale: [4.0, 12.0]"),
+                "plan: {plan:?}"
+            );
+            assert!(
+                has("Zarr OME Effective Translation: [120.0, 260.0]"),
+                "plan: {plan:?}"
+            );
+            assert!(has("Zarr Chunks Total: 4"), "plan: {plan:?}");
+            assert!(has("Zarr Chunks Selected: 1"), "plan: {plan:?}");
+            assert!(has("Zarr Chunks Coordinate-Pruned: 3"), "plan: {plan:?}");
+            assert!(has("Zarr Chunks Requested: 1"), "plan: {plan:?}");
+            assert!(has("Zarr Chunks Present: 1"), "plan: {plan:?}");
+            assert!(has("Zarr Coordinate GET Calls: 0"), "plan: {plan:?}");
+            assert!(
+                has("Zarr Coordinate Encoded Bytes: 0 bytes"),
+                "plan: {plan:?}"
+            );
+            assert!(has("Zarr Data GET Calls: 1"), "plan: {plan:?}");
+            assert!(has("Zarr Data Encoded Bytes: 36 bytes"), "plan: {plan:?}");
+            assert!(has("Zarr Data Decoded Bytes: 36 bytes"), "plan: {plan:?}");
+        });
+    }
+
+    #[pg_test]
+    fn zarr_minio_ome_v05_aggregate_pushdown_e2e() {
+        create_minio_ome_v3_e2e_server();
+        create_minio_ome_v3_e2e_table_on_server("zarr_ome_v05_aggregate0", 0);
+        create_minio_ome_v3_e2e_table_on_server("zarr_ome_v05_aggregate1", 1);
+
+        for (table, count, sum, minimum, maximum) in [
+            (
+                "zarr_ome_v05_aggregate0",
+                16_i64,
+                120.0_f32,
+                0.0_f32,
+                15.0_f32,
+            ),
+            (
+                "zarr_ome_v05_aggregate1",
+                4_i64,
+                30.0_f32,
+                2.5_f32,
+                12.5_f32,
+            ),
+        ] {
+            let sql = format!(
+                r#"SELECT count(*) AS total_count,
+                           count(value) AS value_count,
+                           sum(value) AS value_sum,
+                           avg(value) AS value_avg,
+                           min(value) AS value_min,
+                           max(value) AS value_max
+                      FROM {table}"#
+            );
+            assert_aggregate_pushed_down(&sql);
+            Spi::connect(|c| {
+                let row = c.select(&sql, None, &[]).unwrap().next().unwrap();
+                assert_eq!(
+                    row.get_by_name::<i64, _>("total_count").unwrap(),
+                    Some(count)
+                );
+                assert_eq!(
+                    row.get_by_name::<i64, _>("value_count").unwrap(),
+                    Some(count)
+                );
+                assert_eq!(row.get_by_name::<f32, _>("value_sum").unwrap(), Some(sum));
+                assert_eq!(row.get_by_name::<f64, _>("value_avg").unwrap(), Some(7.5));
+                assert_eq!(
+                    row.get_by_name::<f32, _>("value_min").unwrap(),
+                    Some(minimum)
+                );
+                assert_eq!(
+                    row.get_by_name::<f32, _>("value_max").unwrap(),
+                    Some(maximum)
+                );
+            });
+        }
+
+        for table in ["zarr_ome_v05_aggregate0", "zarr_ome_v05_aggregate1"] {
+            Spi::connect(|c| {
+                let row = c
+                    .select(
+                        &format!(
+                            r#"SELECT count(*) AS cells,
+                                      sum(value) AS value_sum
+                                 FROM {table}
+                                WHERE y BETWEEN 122 AND 130
+                                  AND x BETWEEN 266 AND 290"#
+                        ),
+                        None,
+                        &[],
+                    )
+                    .unwrap()
+                    .next()
+                    .unwrap();
+                assert_eq!(row.get_by_name::<i64, _>("cells").unwrap(), Some(4));
+                assert_eq!(row.get_by_name::<f32, _>("value_sum").unwrap(), Some(30.0));
+            });
+        }
+    }
+
+    #[pg_test]
+    fn zarr_minio_ome_v05_selector_rejections_e2e() {
+        create_minio_ome_v3_e2e_server();
+
+        let partial = capture_query_error(
+            r#"CREATE FOREIGN TABLE zarr_ome_v05_partial (
+                 y double precision, x double precision, value real
+               ) SERVER zarr_ome_v3_e2e_server
+               OPTIONS (multiscale_group 'image')"#,
+        );
+        assert!(
+            partial.contains(
+                "multiscale_group, multiscale_index, and multiscale_level must be provided together"
+            ),
+            "message: {partial}"
+        );
+
+        let conflicting = capture_query_error(
+            r#"CREATE FOREIGN TABLE zarr_ome_v05_conflicting (
+                 y double precision, x double precision, value real
+               ) SERVER zarr_ome_v3_e2e_server
+               OPTIONS (
+                 array_group 'image/0',
+                 multiscale_group 'image',
+                 multiscale_index '0',
+                 multiscale_level '0'
+               )"#,
+        );
+        assert!(
+            conflicting
+                .contains("array_group cannot be combined with multiscale selection options"),
+            "message: {conflicting}"
+        );
+
+        create_minio_ome_v3_e2e_table_on_server("zarr_ome_v05_bad_level", 2);
+        let bad_level = capture_query_error("SELECT * FROM zarr_ome_v05_bad_level");
+        assert!(
+            bad_level.contains("multiscale level 2 is outside"),
+            "message: {bad_level}"
+        );
+
+        Spi::run(
+            r#"CREATE FOREIGN TABLE zarr_ome_v05_bad_index (
+                 y double precision, x double precision, value real
+               ) SERVER zarr_ome_v3_e2e_server
+               OPTIONS (
+                 multiscale_group 'image',
+                 multiscale_index '1',
+                 multiscale_level '0'
+               )"#,
+        )
+        .unwrap();
+        let bad_index = capture_query_error("SELECT * FROM zarr_ome_v05_bad_index");
+        assert!(
+            bad_index.contains("multiscale index 1 is outside"),
+            "message: {bad_index}"
+        );
     }
 
     #[pg_test]
