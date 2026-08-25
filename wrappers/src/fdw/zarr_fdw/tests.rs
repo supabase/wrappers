@@ -2483,6 +2483,31 @@ mod tests {
             assert_eq!(empty.get_by_name::<f32, _>("value_min").unwrap(), None);
             assert_eq!(empty.get_by_name::<f32, _>("value_max").unwrap(), None);
 
+            let empty_plan = c
+                .select(
+                    r#"EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+                       SELECT count(*), sum(value)
+                         FROM zarr_e2e_aggregate
+                        WHERE x > 999"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|row| row.get::<&str>(1).unwrap().map(str::to_string))
+                .collect::<Vec<_>>();
+            let empty_has = |text: &str| empty_plan.iter().any(|line| line.contains(text));
+            assert!(empty_has("Zarr Chunks Selected: 0"), "plan: {empty_plan:?}");
+            assert!(
+                empty_has("Zarr Chunks Requested: 0"),
+                "plan: {empty_plan:?}"
+            );
+            assert!(empty_has("Zarr Data GET Calls: 0"), "plan: {empty_plan:?}");
+            assert!(
+                empty_has("Zarr Logical Cells Examined: 0"),
+                "plan: {empty_plan:?}"
+            );
+            assert!(empty_has("Zarr Tuples Emitted: 1"), "plan: {empty_plan:?}");
+
             for (operator, expected) in [("<", 60), ("<=", 60), ("=", 0), (">", 0), (">=", 0)] {
                 let count = c
                     .select(

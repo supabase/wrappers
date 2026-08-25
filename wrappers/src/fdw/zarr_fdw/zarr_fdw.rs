@@ -39,7 +39,7 @@ use super::aggregate::{
     AggregateReducer, aggregate_signature_supported, qual_matches, qual_shape_supported,
 };
 use super::cache::{CachedObject, CompressedChunkCache};
-use super::chunk::{ChunkIndexCursor, IndexBounds, chunk_key, index_bounds_from_value_range};
+use super::chunk::{ChunkIndexCursor, IndexBounds, chunk_key};
 use super::codec::{CodecDecode, CodecPipeline};
 use super::dataset::{
     CoordinateSource, Dataset, DimensionRole, named_array_dataset, named_dimensions,
@@ -59,6 +59,7 @@ use super::ome::{
 use super::prefetch::{
     OrderedPrefetch, PrefetchNext, PrefetchRequest, PrefetchSource, ScheduleError,
 };
+use super::scan_plan::{CoordinateRange, ScanPlan, ScanPlanner};
 use super::scientific::{ScientificValueDecoder, time::TimeSpec};
 use super::selection::Selection;
 use super::sharding::{
@@ -459,23 +460,6 @@ fn checked_chunk_layout(
     Ok((storage_shape, storage_cells, decoded_bytes))
 }
 
-fn saturating_chunk_count(extents: impl IntoIterator<Item = u64>) -> u64 {
-    extents
-        .into_iter()
-        .fold(1u64, |total, extent| total.saturating_mul(extent))
-}
-
-fn saturating_selected_chunk_count(ranges: &[(usize, usize)]) -> u64 {
-    ranges.iter().fold(1u64, |total, &(start, end)| {
-        let extent = end
-            .checked_sub(start)
-            .and_then(|span| span.checked_add(1))
-            .and_then(|count| u64::try_from(count).ok())
-            .unwrap_or(u64::MAX);
-        total.saturating_mul(extent)
-    })
-}
-
 fn checked_flat_offset(indices: &[usize], shape: &[usize]) -> ZarrFdwResult<usize> {
     if indices.len() != shape.len() {
         return Err(ZarrFdwError::InvalidMetadata(
@@ -712,11 +696,6 @@ fn validate_coordinate_values(axis: &str, values: &[f64]) -> ZarrFdwResult<()> {
     }
 
     Ok(())
-}
-
-fn coordinate_values_are_monotonic(values: &[f64]) -> bool {
-    values.windows(2).all(|pair| pair[0] <= pair[1])
-        || values.windows(2).all(|pair| pair[0] >= pair[1])
 }
 
 fn validate_coordinate_decoding_attributes(
@@ -1298,17 +1277,23 @@ impl ZarrFdw {
                 "scan selection requires initialized metadata".to_string(),
             )
         })?;
-        let chunk_ranges = selection.chunk_ranges(meta)?;
-        let all_chunks = saturating_chunk_count(meta.chunks_per_axis());
-        let selected_chunks = if selection.is_empty() {
-            0
-        } else {
-            saturating_selected_chunk_count(&chunk_ranges)
-        };
-        self.selection = selection;
+        let plan = ScanPlanner::new(meta).plan(selection)?;
+        self.apply_scan_plan(plan, capture_emitted_indices)
+    }
+
+    /// Install an already validated executor-time plan. The plan contains only
+    /// rank-sized axis ranges; `ChunkIndexCursor` remains the sole lazy chunk
+    /// enumerator.
+    fn apply_scan_plan(
+        &mut self,
+        plan: ScanPlan,
+        capture_emitted_indices: bool,
+    ) -> ZarrFdwResult<()> {
+        let chunk_cursor = ChunkIndexCursor::new(plan.axis_chunk_ranges())?;
         self.metrics
-            .set_chunk_selection(all_chunks, selected_chunks);
-        self.chunk_cursor = ChunkIndexCursor::new(&chunk_ranges)?;
+            .set_chunk_selection(plan.chunks_total(), plan.chunks_selected());
+        self.selection = plan.into_selection();
+        self.chunk_cursor = chunk_cursor;
         self.current_chunk.clear();
         self.prefetch.clear();
         self.deferred_prefetch = None;
@@ -3274,7 +3259,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
         self.coords = coords;
 
         // translate quals into per-axis value ranges and intersect them
-        let mut ranges: Vec<(Option<f64>, Option<f64>)> = vec![(None, None); rank];
+        let mut ranges: Vec<CoordinateRange> = vec![(None, None); rank];
         for q in quals {
             let Some(axis) = self.axes.iter().position(|a| a == &q.field) else {
                 continue;
@@ -3298,36 +3283,9 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
             }
         }
 
-        // value ranges -> per-axis index bounds -> lazy chunk cursor
-        let mut bounds: Vec<Option<IndexBounds>> = Vec::with_capacity(rank);
-        let mut no_rows = false;
-        for (axis, &(lo, hi)) in ranges.iter().enumerate() {
-            if lo.is_none() && hi.is_none() {
-                bounds.push(None);
-                continue;
-            }
-            let coords = self.coords[axis].as_deref().ok_or_else(|| {
-                ZarrFdwError::InvalidMetadata(format!(
-                    "coordinate '{}' is required for predicate pruning but was not loaded",
-                    self.axes[axis]
-                ))
-            })?;
-            if !coordinate_values_are_monotonic(coords) {
-                bounds.push(None);
-                continue;
-            }
-            let b = index_bounds_from_value_range(coords, lo, hi);
-            if b.is_none() {
-                no_rows = true;
-            }
-            bounds.push(b);
-        }
-        let selection = if no_rows {
-            Selection::empty(rank)
-        } else {
-            Selection::from_axis_bounds(bounds)
-        };
-        self.apply_selection(selection, false)
+        let plan =
+            ScanPlanner::new(meta).plan_coordinate_ranges(&self.axes, &self.coords, &ranges)?;
+        self.apply_scan_plan(plan, false)
     }
 
     fn begin_aggregate_scan_with_base_columns(
@@ -3932,9 +3890,6 @@ mod unit_tests {
         ] {
             validate_coordinate_values("x", &finite).unwrap();
         }
-        assert!(coordinate_values_are_monotonic(&[0.0, 1.0, 2.0]));
-        assert!(coordinate_values_are_monotonic(&[2.0, 1.0, 0.0]));
-        assert!(!coordinate_values_are_monotonic(&[0.0, 2.0, 1.0]));
 
         for invalid in [
             vec![0.0, f64::NAN],

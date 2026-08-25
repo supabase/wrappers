@@ -4,7 +4,7 @@
 //! temporal, and spatial predicates remain the responsibility of their current
 //! execution layers.
 
-use super::chunk::{IndexBounds, axis_chunk_ranges};
+use super::chunk::IndexBounds;
 use super::meta::ArrayMeta;
 use super::{ZarrFdwError, ZarrFdwResult};
 
@@ -54,9 +54,7 @@ impl Selection {
         self.empty
     }
 
-    /// Validate this rank-sized selection and derive its inclusive chunk
-    /// ranges. An explicitly empty selection never addresses a chunk.
-    pub(crate) fn chunk_ranges(&self, meta: &ArrayMeta) -> ZarrFdwResult<Vec<(usize, usize)>> {
+    pub(crate) fn validate(&self, meta: &ArrayMeta) -> ZarrFdwResult<()> {
         if self.rank() != meta.shape.len() {
             return Err(ZarrFdwError::InvalidMetadata(format!(
                 "selection rank {} does not match array rank {}",
@@ -78,11 +76,7 @@ impl Selection {
             }
         }
 
-        if self.empty {
-            Ok(Vec::new())
-        } else {
-            axis_chunk_ranges(meta, &self.axis_bounds)
-        }
+        Ok(())
     }
 }
 
@@ -119,14 +113,11 @@ mod tests {
         assert_eq!(selection.rank(), 3);
         assert_eq!(selection.axis_bounds(), &[None, None, None]);
         assert!(!selection.is_empty());
-        assert_eq!(
-            selection.chunk_ranges(&meta).unwrap(),
-            vec![(0, 11), (0, 9), (0, 4)]
-        );
+        selection.validate(&meta).unwrap();
     }
 
     #[test]
-    fn bounded_selection_derives_inclusive_chunk_ranges() {
+    fn bounded_selection_preserves_rank_aligned_bounds() {
         let meta = meta(vec![48, 100, 100], vec![4, 10, 10]);
         let bounds = vec![
             Some(IndexBounds { start: 5, end: 11 }),
@@ -136,29 +127,23 @@ mod tests {
         let selection = Selection::from_axis_bounds(bounds.clone());
 
         assert_eq!(selection.axis_bounds(), bounds.as_slice());
-        assert_eq!(
-            selection.chunk_ranges(&meta).unwrap(),
-            vec![(1, 2), (0, 9), (2, 3)]
-        );
+        selection.validate(&meta).unwrap();
     }
 
     #[test]
     fn empty_selection_is_distinct_from_an_unconstrained_selection() {
-        let meta = meta(vec![8, 8], vec![4, 4]);
         let empty = Selection::empty(2);
         let full = Selection::full(2);
 
         assert_eq!(empty.axis_bounds(), full.axis_bounds());
         assert!(empty.is_empty());
         assert!(!full.is_empty());
-        assert!(empty.chunk_ranges(&meta).unwrap().is_empty());
-        assert_eq!(full.chunk_ranges(&meta).unwrap(), vec![(0, 1), (0, 1)]);
     }
 
     #[test]
     fn rank_mismatch_is_rejected_before_chunk_math() {
         let meta = meta(vec![8, 8], vec![4, 4]);
-        let error = Selection::full(3).chunk_ranges(&meta).unwrap_err();
+        let error = Selection::full(3).validate(&meta).unwrap_err();
 
         assert!(error.to_string().contains(
             "zarr array metadata missing or invalid: selection rank 3 does not match array rank 2"
@@ -166,17 +151,13 @@ mod tests {
     }
 
     #[test]
-    fn selection_matches_existing_axis_chunk_range_math() {
-        let meta = meta(vec![12, 17], vec![5, 4]);
-        let bounds = vec![Some(IndexBounds { start: 4, end: 10 }), None];
-        let expected = axis_chunk_ranges(&meta, &bounds).unwrap();
+    fn selection_accepts_rank_64_without_cartesian_state() {
+        let meta = meta(vec![2; 64], vec![1; 64]);
+        let selection = Selection::full(64);
 
-        assert_eq!(
-            Selection::from_axis_bounds(bounds)
-                .chunk_ranges(&meta)
-                .unwrap(),
-            expected
-        );
+        selection.validate(&meta).unwrap();
+        assert_eq!(selection.rank(), 64);
+        assert_eq!(selection.axis_bounds().len(), 64);
     }
 
     #[test]
@@ -188,7 +169,7 @@ mod tests {
             IndexBounds { start: 0, end: 8 },
         ] {
             let error = Selection::from_axis_bounds(vec![Some(bounds)])
-                .chunk_ranges(&meta)
+                .validate(&meta)
                 .unwrap_err();
             assert!(error.to_string().contains("selection index bounds"));
         }

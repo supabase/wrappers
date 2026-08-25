@@ -13,6 +13,7 @@ mod meta;
 mod metrics;
 mod ome;
 mod prefetch;
+mod scan_plan;
 mod scientific;
 mod selection;
 mod sharding;
