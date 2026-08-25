@@ -713,6 +713,7 @@ mod tests {
                 dtype: "<f4".to_string(),
                 fill_value: json!(-7.5),
                 compressor: Some(json!({"id": "blosc", "cname": "lz4"})),
+                codec_pipeline: super::super::codec::CodecPipeline::raw_v2(),
                 chunk_key_encoding: ChunkKeyEncoding::V2 { separator: '.' },
                 order: 'C',
                 filters: Some(vec![]),

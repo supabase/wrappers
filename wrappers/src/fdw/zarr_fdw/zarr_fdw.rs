@@ -41,10 +41,10 @@ use super::cache::{CachedObject, CompressedChunkCache};
 use super::chunk::{
     ChunkIndexCursor, IndexBounds, axis_chunk_ranges, chunk_key, index_bounds_from_value_range,
 };
+use super::codec::{CodecDecode, CodecPipeline};
 use super::dataset::{Dataset, DimensionRole, named_array_dataset, named_dimensions};
 use super::decode::{
-    Codec, DType, coord_bytes_to_f64, coord_fill_value_to_f64, coordinate_itemsize,
-    fill_value_bytes,
+    DType, coord_bytes_to_f64, coord_fill_value_to_f64, coordinate_itemsize, fill_value_bytes,
 };
 use super::meta::{
     ArrayMeta, ArrayNode, NodeMeta, ZarrFormat, parse_v2_array, parse_v2_group, parse_v3_node,
@@ -79,7 +79,9 @@ const OPT_COMPRESSED_CACHE_BYTES: &str = "compressed_cache_bytes";
 
 const DEFAULT_MAX_CONCURRENT_READS: usize = 4;
 const MAX_CONCURRENT_READS: usize = 32;
-const DEFAULT_MAX_INFLIGHT_BYTES: usize = 257 * 1024 * 1024;
+// One maximum-size decoded chunk, gzip/zlib's bounded framing allowance, and
+// the optional v3 CRC32C trailer must all fit under the default request budget.
+const DEFAULT_MAX_INFLIGHT_BYTES: usize = 257 * 1024 * 1024 + 4;
 const MIN_MAX_INFLIGHT_BYTES: usize = 1024 * 1024;
 const MAX_MAX_INFLIGHT_BYTES: usize = 1024 * 1024 * 1024;
 const DEFAULT_COMPRESSED_CACHE_BYTES: usize = 64 * 1024 * 1024;
@@ -214,7 +216,7 @@ pub(crate) struct ZarrFdw {
     rank: usize,
     axis_meta: Option<ArrayMeta>,
     dtype: Option<DType>,
-    codec: Option<Codec>,
+    codec: Option<CodecPipeline>,
     scientific_decoder: Option<ScientificValueDecoder>,
     // one decoded scalar, repeated when a data chunk is absent
     fill_bytes: Option<Vec<u8>>,
@@ -1418,9 +1420,27 @@ impl ZarrFdw {
                 let decoded = self
                     .store
                     .rt
-                    .block_on(codec.decompress(raw.as_ref().to_vec(), expected))?;
+                    .block_on(codec.decode_interruptible(
+                        raw.as_ref().to_vec(),
+                        &storage_shape,
+                        dt.itemsize(),
+                        postgres_interrupt_pending,
+                    ))
+                    .map_err(|error| {
+                        ZarrFdwError::ReadError(std::io::Error::other(format!(
+                            "chunk '{object_key}': {error}"
+                        )))
+                    })?;
                 self.metrics.record_decompression_time(started.elapsed());
-                self.process_pending_interrupt()?;
+                let decoded = match decoded {
+                    CodecDecode::Decoded(decoded) => decoded,
+                    CodecDecode::Interrupted => {
+                        self.process_pending_interrupt()?;
+                        return Err(ZarrFdwError::InvalidMetadata(
+                            "query interruption was requested".to_string(),
+                        ));
+                    }
+                };
                 (decoded, false)
             }
             CachedObject::Missing => (
@@ -1855,6 +1875,14 @@ fn validate_array_ancestors(
     Ok(())
 }
 
+fn codec_pipeline_for_execution(meta: &ArrayMeta) -> ZarrFdwResult<CodecPipeline> {
+    if meta.zarr_format == 2 {
+        CodecPipeline::from_v2(&meta.compressor)
+    } else {
+        Ok(meta.codec_pipeline.clone())
+    }
+}
+
 fn read_coordinate_metadata(
     store: &ZarrStore,
     metrics: &mut ZarrScanMetrics,
@@ -1915,11 +1943,9 @@ fn read_coordinate_metadata(
             ),
         });
     }
-    Codec::from_compressor_json(&meta.compressor).map_err(|error| {
-        ZarrFdwError::CoordinateReadError {
-            axis: name.to_string(),
-            error: format!("coordinate array compressor: {error}"),
-        }
+    codec_pipeline_for_execution(meta).map_err(|error| ZarrFdwError::CoordinateReadError {
+        axis: name.to_string(),
+        error: format!("coordinate array codec pipeline: {error}"),
     })?;
     if meta.shape[0] != expected_length {
         return Err(ZarrFdwError::CoordinateReadError {
@@ -1979,7 +2005,7 @@ fn read_coordinate_values(
         });
     }
 
-    let codec = Codec::from_compressor_json(&meta.compressor)?;
+    let codec = codec_pipeline_for_execution(meta)?;
     let per_axis = meta.chunks_per_axis();
     let chunk_count =
         usize::try_from(per_axis[0]).map_err(|_| ZarrFdwError::CoordinateReadError {
@@ -2007,11 +2033,26 @@ fn read_coordinate_values(
                 let started = Instant::now();
                 let decoded = store
                     .rt
-                    .block_on(codec.decompress(raw, expected_bytes))
+                    .block_on(codec.decode_interruptible(
+                        raw,
+                        &storage_shape,
+                        itemsize,
+                        postgres_interrupt_pending,
+                    ))
                     .map_err(|e| ZarrFdwError::CoordinateReadError {
                         axis: name.to_string(),
-                        error: e.to_string(),
+                        error: format!("chunk '{object_key}': {e}"),
                     })?;
+                let decoded = match decoded {
+                    CodecDecode::Decoded(decoded) => decoded,
+                    CodecDecode::Interrupted => {
+                        process_postgres_interrupts();
+                        return Err(ZarrFdwError::CoordinateReadError {
+                            axis: name.to_string(),
+                            error: "query interruption was requested".to_string(),
+                        });
+                    }
+                };
                 metrics.record_decompression_time(started.elapsed());
                 metrics.record_decoded_bytes(ReadKind::Coordinate, decoded.len(), false);
                 coord_bytes_to_f64(&meta.dtype, &decoded[..expected_bytes])?
@@ -2258,13 +2299,11 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
             .dtype
             .map(|dtype| format!("{dtype:?}"))
             .unwrap_or_else(|| meta.dtype.clone());
-        let codec = match self.codec.as_ref() {
-            Some(Codec::Raw) => "raw",
-            Some(Codec::Gzip) => "gzip",
-            Some(Codec::Zlib) => "zlib",
-            Some(Codec::Blosc) => "blosc",
-            None => "unknown",
-        };
+        let codec = self
+            .codec
+            .as_ref()
+            .map(CodecPipeline::ordered_label)
+            .unwrap_or_else(|| "unknown".to_string());
         let aggregate_mode = if self.aggregate_defs.is_empty() {
             "none".to_string()
         } else {
@@ -2281,7 +2320,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
                 shape: &meta.shape,
                 chunk_shape: &chunk_shape,
                 dtype: &dtype,
-                codec,
+                codec: &codec,
                 aggregate_mode: &aggregate_mode,
                 max_concurrent_reads: self.max_concurrent_reads,
                 max_inflight_bytes: self.max_inflight_bytes,
@@ -2475,7 +2514,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
         self.axis_meta = Some(meta.clone());
         self.array_attributes = value_attributes.clone();
         self.dtype = Some(dtype);
-        self.codec = Some(Codec::from_compressor_json(&meta.compressor)?);
+        self.codec = Some(codec_pipeline_for_execution(meta)?);
         self.scientific_decoder = scientific_decoder;
         self.fill_bytes = fill_value_bytes(dtype, &meta.fill_value)?;
         self.time_spec = time_spec;
@@ -2770,6 +2809,7 @@ mod unit_tests {
             dtype: "<f4".to_string(),
             fill_value: serde_json::Value::from(0),
             compressor: None,
+            codec_pipeline: CodecPipeline::raw_v2(),
             chunk_key_encoding: ChunkKeyEncoding::V2 { separator: '.' },
             order: 'C',
             filters: None,

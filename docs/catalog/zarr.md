@@ -46,7 +46,7 @@ Remote chunk execution is bounded by three optional server settings:
 | Option | Default | Range |
 | --- | ---: | ---: |
 | `max_concurrent_reads` | `4` | `1`–`32` |
-| `max_inflight_bytes` | `269484032` | 1 MiB–1 GiB |
+| `max_inflight_bytes` | `269484036` | 1 MiB–1 GiB |
 | `compressed_cache_bytes` | `67108864` | `0`–1 GiB; `0` disables caching |
 
 Reads are prefetched in deterministic chunk order without background tasks.
@@ -192,18 +192,31 @@ the query target or restrictions.
 
 ### Zarr v3 subset
 
-Zarr v3 arrays must use a regular chunk grid and a codec pipeline containing
-exactly one core `bytes` array-to-bytes codec and no other codecs. Multi-byte
-values must declare little-endian byte order in that codec. The core `default` chunk-key encoding
-and the compatibility `v2` chunk-key encoding are supported with their defined
-`.` or `/` separators; default encoding uses keys beneath the `c` prefix. Missing
-chunks use the required v3 `fill_value` and otherwise follow the same scan,
-filter, CF decoding, aggregate-pushdown, resource-bound, and cancellation
+Zarr v3 arrays must use a regular chunk grid and a validated codec pipeline.
+The supported order is an optional core `transpose` codec, exactly one core
+`bytes` codec, an optional core `gzip` codec, and an optional core `crc32c`
+codec. A transpose must declare one rank-matched permutation, gzip levels range
+from 0 through 9, and CRC32C uses its four-byte little-endian trailer. Codec
+stages cannot be duplicated or reordered. Multi-byte values must declare
+little-endian byte order in the `bytes` codec.
+
+Decoding applies the declared stages in reverse, validates a CRC32C trailer
+before decompressing the preceding gzip stream, and restores transposed chunks
+to the executor's row-major representation. Encoded reads and every decoded
+intermediate are bounded from the declared chunk shape; corrupt, truncated, or
+over-expanding payloads fail instead of returning partial values.
+
+The core `default` chunk-key encoding and the compatibility `v2` chunk-key
+encoding are supported with their defined `.` or `/` separators; default
+encoding uses keys beneath the `c` prefix. Missing chunks use the required v3
+`fill_value` without running the codec pipeline and otherwise follow the same
+scan, filter, CF decoding, aggregate-pushdown, resource-bound, and cancellation
 behavior as v2 arrays.
 
 This subset intentionally excludes v3 sharding, storage transformers,
-consolidated metadata, transpose and bytes-to-bytes codecs, and extension data
-types. Unsupported metadata fails explicitly instead of being ignored.
+consolidated metadata, big-endian bytes, alternate gzip/CRC32C order, other
+bytes-to-bytes codecs, and extension data types. Unsupported metadata fails
+explicitly instead of being ignored.
 Unknown top-level Zarr 3.1 extensions are accepted only when their object is
 explicitly marked `must_understand: false`; shorthand extension definitions are
 outside this bounded subset.
@@ -601,7 +614,8 @@ single Foreign Scan or retains a local Aggregate node.
   `max` over plain columns. Grouped, distinct, filtered, ordered, expression,
   and user-defined aggregates are computed by PostgreSQL.
 - Raw, gzip, zlib, and Blosc/LZ4 chunk compression is supported for v2. The v3
-  subset supports the core `bytes` codec only.
+  subset supports the ordered `transpose`, `bytes`, `gzip`, and `crc32c`
+  pipeline described above.
 - Non-empty v2 filters, Fortran order, consolidated metadata, sharding, storage
   transformers, writes, and OME-Zarr multiscale semantics are not supported.
 - `LIMIT` alone does not prevent coordinate metadata loading; use selective

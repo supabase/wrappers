@@ -4,6 +4,7 @@
 //! the same shape, chunk, dtype, fill, and chunk-key contract for Zarr v2 and
 //! for the bounded direct Zarr v3 subset supported by this module.
 
+use super::codec::CodecPipeline;
 use super::decode::{DType, fill_value_bytes};
 use super::{ZarrFdwError, ZarrFdwResult};
 use serde::Deserialize;
@@ -35,6 +36,8 @@ pub struct ArrayMeta {
     pub fill_value: Value,
     /// V2 compressor metadata. Direct v3 arrays normalize to raw here.
     pub compressor: Option<Value>,
+    /// Validated, format-neutral execution pipeline.
+    pub codec_pipeline: CodecPipeline,
     pub chunk_key_encoding: ChunkKeyEncoding,
     pub order: char,
     pub filters: Option<Vec<Value>>,
@@ -298,6 +301,10 @@ fn v2_meta(raw: V2ArrayMeta) -> ZarrFdwResult<ArrayMeta> {
         dtype: raw.dtype,
         fill_value: raw.fill_value,
         compressor: raw.compressor,
+        // V2 inspection remains permissive: execution resolves and validates
+        // the legacy compressor through `CodecPipeline::from_v2` at scan
+        // startup, while v3 stores its already-validated ordered pipeline.
+        codec_pipeline: CodecPipeline::raw_v2(),
         chunk_key_encoding: ChunkKeyEncoding::V2 { separator },
         order: raw.order,
         filters: raw.filters,
@@ -380,56 +387,8 @@ fn parse_v3_array(
     let native_codecs = object.get("codecs").cloned().ok_or_else(|| {
         ZarrFdwError::InvalidMetadata("Zarr v3 array must define codecs".to_string())
     })?;
-    let codecs = native_codecs.as_array().ok_or_else(|| {
-        ZarrFdwError::InvalidMetadata("Zarr v3 codecs must be an array".to_string())
-    })?;
-    if codecs.len() != 1 {
-        return Err(ZarrFdwError::InvalidMetadata(
-            "this Zarr v3 slice requires exactly one bytes codec".to_string(),
-        ));
-    }
-    let codec = codecs[0].as_object().ok_or_else(|| {
-        ZarrFdwError::InvalidMetadata("Zarr v3 codec entries must be objects".to_string())
-    })?;
-    validate_extension_object(codec, "codec")?;
-    if required_string(codec, "name")? != "bytes" {
-        return Err(ZarrFdwError::InvalidMetadata(
-            "this Zarr v3 slice supports only the bytes codec".to_string(),
-        ));
-    }
-    let codec_configuration = optional_object_ref(codec, "configuration")?;
-    if let Some(configuration) = codec_configuration {
-        validate_exact_fields(configuration, &["endian"], "bytes codec configuration")?;
-    }
-    let (dtype, multi_byte) = normalize_v3_dtype(&native_dtype)?;
-    let endian = codec_configuration
-        .and_then(|configuration| configuration.get("endian"))
-        .map(|value| {
-            value.as_str().ok_or_else(|| {
-                ZarrFdwError::InvalidMetadata(
-                    "the Zarr v3 bytes codec endian must be a string".to_string(),
-                )
-            })
-        })
-        .transpose()?;
-    if endian.is_some_and(|endian| !matches!(endian, "little" | "big")) {
-        return Err(ZarrFdwError::InvalidMetadata(
-            "the Zarr v3 bytes codec endian must be 'little' or 'big'".to_string(),
-        ));
-    }
-    if multi_byte {
-        let endian = endian.ok_or_else(|| {
-            ZarrFdwError::InvalidMetadata(
-                "the Zarr v3 bytes codec must declare endian for multi-byte numeric data"
-                    .to_string(),
-            )
-        })?;
-        if endian != "little" {
-            return Err(ZarrFdwError::UnsupportedDataType(format!(
-                "{native_dtype} with {endian}-endian bytes"
-            )));
-        }
-    }
+    let (codec_pipeline, dtype) =
+        CodecPipeline::from_v3(&native_dtype, shape.len(), &native_codecs)?;
     let parsed_dtype = DType::parse(&dtype)?;
     fill_value_bytes(parsed_dtype, &fill_value).map_err(|error| {
         ZarrFdwError::InvalidMetadata(format!(
@@ -473,6 +432,7 @@ fn parse_v3_array(
         dtype,
         fill_value,
         compressor: None,
+        codec_pipeline,
         chunk_key_encoding,
         order: 'C',
         filters: None,
@@ -486,19 +446,6 @@ fn parse_v3_array(
         native_dtype,
         native_codecs,
     })
-}
-
-fn normalize_v3_dtype(data_type: &str) -> ZarrFdwResult<(String, bool)> {
-    let normalized = match data_type {
-        "float32" => ("<f4", true),
-        "float64" => ("<f8", true),
-        "int8" => ("|i1", false),
-        "int16" => ("<i2", true),
-        "int32" => ("<i4", true),
-        "int64" => ("<i8", true),
-        other => return Err(ZarrFdwError::UnsupportedDataType(other.to_string())),
-    };
-    Ok((normalized.0.to_string(), normalized.1))
 }
 
 fn parse_separator(value: &str, field: &str) -> ZarrFdwResult<char> {
@@ -653,6 +600,7 @@ mod tests {
             dtype: "<f4".to_string(),
             fill_value: Value::Null,
             compressor: None,
+            codec_pipeline: CodecPipeline::raw_v2(),
             chunk_key_encoding: ChunkKeyEncoding::V2 { separator: '.' },
             order: 'C',
             filters: None,
@@ -672,6 +620,20 @@ mod tests {
             node.meta.chunk_key_encoding,
             ChunkKeyEncoding::V2 { separator: '/' }
         );
+    }
+
+    #[test]
+    fn v2_metadata_inspection_remains_permissive_for_unknown_compressors() {
+        let node = parse_v2_array(
+            br#"{"zarr_format":2,"shape":[2],"chunks":[1],"dtype":"<f4","compressor":{"id":"future-codec","level":7},"fill_value":0,"order":"C"}"#,
+            Map::new(),
+        )
+        .unwrap();
+        assert_eq!(node.native_codecs["compressor"]["id"], "future-codec");
+        assert!(matches!(
+            CodecPipeline::from_v2(&node.meta.compressor),
+            Err(ZarrFdwError::UnsupportedCompressor(id)) if id == "future-codec"
+        ));
     }
 
     #[test]

@@ -372,6 +372,7 @@ mod tests {
                 dtype: "<f4".to_string(),
                 fill_value: json!(-7.5),
                 compressor: None,
+                codec_pipeline: super::super::super::codec::CodecPipeline::raw_v2(),
                 chunk_key_encoding: super::super::super::meta::ChunkKeyEncoding::V2 {
                     separator: '.',
                 },

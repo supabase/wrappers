@@ -97,6 +97,38 @@ mod tests {
         });
     }
 
+    fn capture_query_error(statement: &str) -> String {
+        Spi::connect_mut(|c| {
+            c.update(
+                r#"CREATE OR REPLACE FUNCTION pg_temp.capture_zarr_error(statement text)
+                     RETURNS text
+                     LANGUAGE plpgsql
+                     AS $function$
+                     BEGIN
+                       EXECUTE statement;
+                       RETURN NULL;
+                     EXCEPTION WHEN OTHERS THEN
+                       RETURN SQLERRM;
+                     END
+                     $function$"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.select(
+                "SELECT pg_temp.capture_zarr_error($1) AS message",
+                None,
+                &[statement.into()],
+            )
+            .unwrap()
+            .next()
+            .unwrap()
+            .get_by_name::<String, _>("message")
+            .unwrap()
+            .expect("query must fail")
+        })
+    }
+
     fn create_minio_e2e_table(table: &str, array_group: &str, value_type: &str) {
         create_minio_e2e_table_with_cf(table, array_group, value_type, false);
     }
@@ -2502,6 +2534,211 @@ mod tests {
     }
 
     #[pg_test]
+    fn zarr_minio_v3_ordered_codec_pipeline_scan_e2e() {
+        create_minio_v3_e2e_table("zarr_v3_pipeline", "nested/pipeline", false);
+
+        Spi::connect(|c| {
+            let summary = c
+                .select(
+                    r#"SELECT count(*) AS total_count,
+                              count(value) AS value_count,
+                              sum(value)::double precision AS value_sum,
+                              avg(value) AS value_avg,
+                              min(value)::double precision AS value_min,
+                              max(value)::double precision AS value_max,
+                              count(*) FILTER (WHERE value = -7.5) AS fill_count
+                         FROM zarr_v3_pipeline"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(
+                summary
+                    .get_by_name::<i64, _>("total_count")
+                    .unwrap()
+                    .unwrap(),
+                60
+            );
+            assert_eq!(
+                summary
+                    .get_by_name::<i64, _>("value_count")
+                    .unwrap()
+                    .unwrap(),
+                60
+            );
+            assert_eq!(
+                summary.get_by_name::<f64, _>("value_sum").unwrap().unwrap(),
+                3_574.0
+            );
+            assert!(
+                (summary.get_by_name::<f64, _>("value_avg").unwrap().unwrap()
+                    - 59.566_666_666_666_67)
+                    .abs()
+                    < 1e-12
+            );
+            assert_eq!(
+                summary.get_by_name::<f64, _>("value_min").unwrap().unwrap(),
+                -7.5
+            );
+            assert_eq!(
+                summary.get_by_name::<f64, _>("value_max").unwrap().unwrap(),
+                143.0
+            );
+            assert_eq!(
+                summary
+                    .get_by_name::<i64, _>("fill_count")
+                    .unwrap()
+                    .unwrap(),
+                8
+            );
+
+            for (time, y, x, expected) in [
+                ("1970-01-01 00:00:00+00", 20, 110, 11.0_f32),
+                ("1970-01-01 00:00:00+00", 50, 130, 43.0_f32),
+                ("1970-01-01 00:00:03.6+00", 20, 110, 111.0_f32),
+                ("1970-01-01 00:00:03.6+00", 30, 150, 125.0_f32),
+                ("1970-01-01 00:00:03.6+00", 50, 150, -7.5_f32),
+            ] {
+                let values = c
+                    .select(
+                        &format!(
+                            "SELECT value FROM zarr_v3_pipeline \
+                             WHERE time = '{time}'::timestamptz AND y = {y} AND x = {x}"
+                        ),
+                        None,
+                        &[],
+                    )
+                    .unwrap()
+                    .filter_map(|row| row.get_by_name::<f32, _>("value").unwrap())
+                    .collect::<Vec<_>>();
+                assert_eq!(values, vec![expected]);
+            }
+
+            let plan = c
+                .select(
+                    r#"EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+                       SELECT value
+                         FROM zarr_v3_pipeline
+                        WHERE time = '1970-01-01 00:00:00+00'::timestamptz
+                          AND y = 20
+                          AND x = 110"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|row| row.get::<&str>(1).unwrap().map(str::to_string))
+                .collect::<Vec<_>>();
+            let has = |text: &str| plan.iter().any(|line| line.contains(text));
+            assert!(has("Zarr Chunks Selected: 1"), "plan: {plan:?}");
+            assert!(has("Zarr Chunks Requested: 1"), "plan: {plan:?}");
+            assert!(
+                has("Zarr Codec: transpose -> bytes -> gzip -> crc32c"),
+                "plan: {plan:?}"
+            );
+        });
+    }
+
+    #[pg_test]
+    fn zarr_minio_v3_codec_pipeline_aggregate_pushdown_e2e() {
+        create_minio_v3_e2e_table("zarr_v3_pipeline_cf", "nested/pipeline", true);
+        let sql = r#"SELECT count(*) AS total_count,
+                            count(value) AS value_count,
+                            sum(value) AS value_sum,
+                            avg(value) AS value_avg,
+                            min(value) AS value_min,
+                            max(value) AS value_max
+                       FROM zarr_v3_pipeline_cf"#;
+        assert_aggregate_pushed_down(sql);
+
+        Spi::connect(|c| {
+            let row = c.select(sql, None, &[]).unwrap().next().unwrap();
+            assert_eq!(
+                row.get_by_name::<i64, _>("total_count").unwrap().unwrap(),
+                60
+            );
+            assert_eq!(
+                row.get_by_name::<i64, _>("value_count").unwrap().unwrap(),
+                48
+            );
+            let value_sum = row.get_by_name::<f64, _>("value_sum").unwrap().unwrap();
+            let value_avg = row.get_by_name::<f64, _>("value_avg").unwrap().unwrap();
+            let value_min = row.get_by_name::<f64, _>("value_min").unwrap().unwrap();
+            let value_max = row.get_by_name::<f64, _>("value_max").unwrap().unwrap();
+            assert!((value_sum - 13_142.86).abs() < 1e-8);
+            assert!((value_avg - 273.809_583_333_333_36).abs() < 1e-10);
+            assert!((value_min - 273.15).abs() < 1e-10);
+            assert!((value_max - 274.55).abs() < 1e-10);
+        });
+    }
+
+    #[pg_test]
+    fn zarr_minio_v3_crc32c_corruption_fails_closed_e2e() {
+        create_minio_v3_e2e_table("zarr_v3_bad_crc", "nested/bad_crc", false);
+        let message = capture_query_error(
+            r#"SELECT value
+                 FROM zarr_v3_bad_crc
+                WHERE time = '1970-01-01 00:00:00+00'::timestamptz
+                  AND y = 20
+                  AND x = 110"#,
+        );
+        assert!(
+            message.contains("nested/bad_crc/c/0/0/0"),
+            "message: {message}"
+        );
+        assert!(
+            message.contains("codec index 3 ('crc32c')"),
+            "message: {message}"
+        );
+        assert!(
+            message.to_ascii_lowercase().contains("checksum mismatch"),
+            "message: {message}"
+        );
+    }
+
+    #[pg_test]
+    fn zarr_minio_v3_truncated_gzip_fails_closed_e2e() {
+        create_minio_v3_e2e_table("zarr_v3_bad_gzip", "nested/bad_gzip", false);
+        let message = capture_query_error(
+            r#"SELECT value
+                 FROM zarr_v3_bad_gzip
+                WHERE time = '1970-01-01 00:00:00+00'::timestamptz
+                  AND y = 20
+                  AND x = 110"#,
+        );
+        assert!(
+            message.contains("nested/bad_gzip/c/0/0/0"),
+            "message: {message}"
+        );
+        assert!(
+            message.contains("codec index 2 ('gzip')"),
+            "message: {message}"
+        );
+    }
+
+    #[pg_test]
+    fn zarr_minio_v3_overexpanding_gzip_fails_closed_e2e() {
+        create_minio_v3_e2e_table("zarr_v3_oversize", "nested/oversize", false);
+        let message = capture_query_error(
+            r#"SELECT value
+                 FROM zarr_v3_oversize
+                WHERE time = '1970-01-01 00:00:00+00'::timestamptz
+                  AND y = 20
+                  AND x = 110"#,
+        );
+        assert!(
+            message.contains("nested/oversize/c/0/0/0"),
+            "message: {message}"
+        );
+        assert!(
+            message.contains("codec index 2 ('gzip')")
+                && message.contains("decoded chunk has more than 96 bytes, expected exactly 96"),
+            "message: {message}"
+        );
+    }
+
+    #[pg_test]
     fn zarr_minio_v3_scalar_aggregate_pushdown_e2e() {
         create_minio_v3_e2e_table("zarr_v3_aggregate", "nested/raw_default", true);
         let sql = r#"SELECT count(*) AS total_count,
@@ -2553,6 +2790,10 @@ mod tests {
                 vec![
                     "/",
                     "nested",
+                    "nested/bad_crc",
+                    "nested/bad_gzip",
+                    "nested/oversize",
+                    "nested/pipeline",
                     "nested/raw_default",
                     "nested/raw_v2keys",
                     "nested/time",
@@ -2750,6 +2991,29 @@ mod tests {
                     "name": "bytes",
                     "configuration": {"endian": "little"}
                 }])
+            );
+
+            let pipeline = c
+                .select(
+                    "SELECT codecs FROM zarr_inspect('zarr_v3_e2e_server') WHERE path = 'nested/pipeline'",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap();
+            assert_eq!(
+                pipeline
+                    .get_by_name::<JsonB, _>("codecs")
+                    .unwrap()
+                    .unwrap()
+                    .0,
+                serde_json::json!([
+                    {"name": "transpose", "configuration": {"order": [2, 1, 0]}},
+                    {"name": "bytes", "configuration": {"endian": "little"}},
+                    {"name": "gzip", "configuration": {"level": 1}},
+                    {"name": "crc32c"}
+                ])
             );
 
             let time = c

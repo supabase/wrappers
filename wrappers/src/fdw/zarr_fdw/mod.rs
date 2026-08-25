@@ -5,6 +5,7 @@ mod zarr_fdw;
 mod aggregate;
 mod cache;
 mod chunk;
+mod codec;
 mod dataset;
 mod decode;
 mod inspect;

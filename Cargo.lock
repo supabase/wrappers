@@ -10678,6 +10678,7 @@ dependencies = [
  "chrono",
  "chrono-tz 0.6.3",
  "clickhouse-rs",
+ "crc32c",
  "crossbeam",
  "csv",
  "dirs",
