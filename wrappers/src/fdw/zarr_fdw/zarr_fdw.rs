@@ -39,9 +39,7 @@ use super::aggregate::{
     AggregateReducer, aggregate_signature_supported, qual_matches, qual_shape_supported,
 };
 use super::cache::{CachedObject, CompressedChunkCache};
-use super::chunk::{
-    ChunkIndexCursor, IndexBounds, axis_chunk_ranges, chunk_key, index_bounds_from_value_range,
-};
+use super::chunk::{ChunkIndexCursor, IndexBounds, chunk_key, index_bounds_from_value_range};
 use super::codec::{CodecDecode, CodecPipeline};
 use super::dataset::{
     CoordinateSource, Dataset, DimensionRole, named_array_dataset, named_dimensions,
@@ -62,6 +60,7 @@ use super::prefetch::{
     OrderedPrefetch, PrefetchNext, PrefetchRequest, PrefetchSource, ScheduleError,
 };
 use super::scientific::{ScientificValueDecoder, time::TimeSpec};
+use super::selection::Selection;
 use super::sharding::{
     CachedShardIndex, MAX_SHARD_INDEX_BYTES, ShardIndex, ShardIndexCache, ShardIndexDecode,
     ShardingConfig, StorageLayout,
@@ -324,8 +323,8 @@ pub(crate) struct ZarrFdw {
     fill_bytes: Option<Vec<u8>>,
     // coordinate values per axis when required by projection or restrictions
     coords: Vec<Option<Vec<f64>>>,
-    // per-axis global index bounds from pushed-down quals
-    bounds: Vec<Option<IndexBounds>>,
+    // conservative physical cell window shared by ordinary and spatial scans
+    selection: Selection,
     // lazy chunk indexes to read, in row-major order
     chunk_cursor: ChunkIndexCursor,
     current_chunk: Vec<u64>,
@@ -1283,10 +1282,30 @@ impl ZarrFdw {
             }
         }
 
-        let chunk_ranges = axis_chunk_ranges(meta, &axis_bounds)?;
+        self.apply_selection(Selection::from_axis_bounds(axis_bounds), true)
+    }
+
+    /// Install a conservative candidate window and reset every cursor/buffer
+    /// derived from the previous window. Exact SQL, temporal, and PostGIS
+    /// residual checks remain with their existing owners.
+    fn apply_selection(
+        &mut self,
+        selection: Selection,
+        capture_emitted_indices: bool,
+    ) -> ZarrFdwResult<()> {
+        let meta = self.axis_meta.as_ref().ok_or_else(|| {
+            ZarrFdwError::InvalidMetadata(
+                "scan selection requires initialized metadata".to_string(),
+            )
+        })?;
+        let chunk_ranges = selection.chunk_ranges(meta)?;
         let all_chunks = saturating_chunk_count(meta.chunks_per_axis());
-        let selected_chunks = saturating_selected_chunk_count(&chunk_ranges);
-        self.bounds = axis_bounds;
+        let selected_chunks = if selection.is_empty() {
+            0
+        } else {
+            saturating_selected_chunk_count(&chunk_ranges)
+        };
+        self.selection = selection;
         self.metrics
             .set_chunk_selection(all_chunks, selected_chunks);
         self.chunk_cursor = ChunkIndexCursor::new(&chunk_ranges)?;
@@ -1296,7 +1315,7 @@ impl ZarrFdw {
         self.chunk_bytes.clear();
         self.chunk_shape.clear();
         [self.sub_lo, self.sub_hi, self.sub_idx] = zeroed_scan_cursors(self.rank);
-        self.capture_spatial_indices = true;
+        self.capture_spatial_indices = capture_emitted_indices;
         self.last_emitted_indices = None;
         self.pending = false;
         self.rows_out = 0;
@@ -1758,7 +1777,7 @@ impl ZarrFdw {
     }
 
     /// Decode `self.current_chunk`, priming the within-chunk
-    /// index window from `self.bounds`.
+    /// index window from the active selection.
     fn load_chunk(&mut self, encoded: CachedObject) -> ZarrFdwResult<()> {
         self.process_pending_interrupt()?;
         let meta = self
@@ -1875,7 +1894,7 @@ impl ZarrFdw {
                 ZarrFdwError::InvalidMetadata(format!("chunk start offset overflow on axis {d}"))
             })?;
             let hi_def = eff[d].saturating_sub(1);
-            match &self.bounds[d] {
+            match &self.selection.axis_bounds()[d] {
                 Some(b) => {
                     self.sub_lo[d] = b.start.saturating_sub(base).min(hi_def);
                     self.sub_hi[d] = b.end.saturating_sub(base).min(hi_def);
@@ -2830,7 +2849,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
             scientific_decoder: None,
             fill_bytes: None,
             coords: Vec::new(),
-            bounds: Vec::new(),
+            selection: Selection::default(),
             chunk_cursor: ChunkIndexCursor::default(),
             current_chunk: Vec::new(),
             current_object_key: String::new(),
@@ -3303,33 +3322,12 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
             }
             bounds.push(b);
         }
-        self.bounds = bounds;
-
-        let chunks_total = saturating_chunk_count(meta.chunks_per_axis());
-        let chunk_ranges = if no_rows {
-            Vec::new()
+        let selection = if no_rows {
+            Selection::empty(rank)
         } else {
-            axis_chunk_ranges(meta, &self.bounds)?
+            Selection::from_axis_bounds(bounds)
         };
-        let chunks_selected = if no_rows {
-            0
-        } else {
-            saturating_selected_chunk_count(&chunk_ranges)
-        };
-        self.metrics
-            .set_chunk_selection(chunks_total, chunks_selected);
-        self.chunk_cursor = ChunkIndexCursor::new(&chunk_ranges)?;
-        self.current_chunk.clear();
-        self.prefetch.clear();
-        self.deferred_prefetch = None;
-        self.chunk_bytes.clear();
-        self.chunk_shape.clear();
-        [self.sub_lo, self.sub_hi, self.sub_idx] = zeroed_scan_cursors(rank);
-        self.capture_spatial_indices = false;
-        self.last_emitted_indices = None;
-        self.pending = false;
-        self.rows_out = 0;
-        Ok(())
+        self.apply_selection(selection, false)
     }
 
     fn begin_aggregate_scan_with_base_columns(
@@ -3404,7 +3402,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
         self.chunk_cursor = ChunkIndexCursor::default();
         self.current_chunk.clear();
         self.coords.clear();
-        self.bounds.clear();
+        self.selection = Selection::default();
         self.axis_roles.clear();
         self.sub_lo.clear();
         self.sub_hi.clear();

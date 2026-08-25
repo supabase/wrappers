@@ -14,6 +14,7 @@ mod metrics;
 mod ome;
 mod prefetch;
 mod scientific;
+mod selection;
 mod sharding;
 mod spatial;
 mod store;
