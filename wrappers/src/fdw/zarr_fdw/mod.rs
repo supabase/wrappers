@@ -16,6 +16,7 @@ mod prefetch;
 mod scan_plan;
 mod scientific;
 mod selection;
+mod selectors;
 mod sharding;
 mod spatial;
 mod store;

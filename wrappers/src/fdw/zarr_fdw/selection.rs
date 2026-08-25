@@ -54,6 +54,32 @@ impl Selection {
         self.empty
     }
 
+    pub(crate) fn intersect(self, other: Self) -> Self {
+        debug_assert_eq!(self.rank(), other.rank());
+        let rank = self.rank();
+        if self.empty || other.empty || other.rank() != rank {
+            return Self::empty(rank);
+        }
+
+        let mut bounds = Vec::with_capacity(rank);
+        for axis in 0..rank {
+            let bound = match (self.axis_bounds[axis], other.axis_bounds[axis]) {
+                (Some(left), Some(right)) => {
+                    let start = left.start.max(right.start);
+                    let end = left.end.min(right.end);
+                    if start > end {
+                        return Self::empty(rank);
+                    }
+                    Some(IndexBounds { start, end })
+                }
+                (Some(bound), None) | (None, Some(bound)) => Some(bound),
+                (None, None) => None,
+            };
+            bounds.push(bound);
+        }
+        Self::from_axis_bounds(bounds)
+    }
+
     pub(crate) fn validate(&self, meta: &ArrayMeta) -> ZarrFdwResult<()> {
         if self.rank() != meta.shape.len() {
             return Err(ZarrFdwError::InvalidMetadata(format!(
@@ -173,5 +199,28 @@ mod tests {
                 .unwrap_err();
             assert!(error.to_string().contains("selection index bounds"));
         }
+    }
+
+    #[test]
+    fn intersections_preserve_unconstrained_axes_and_explicit_emptiness() {
+        let left = Selection::from_axis_bounds(vec![Some(IndexBounds { start: 1, end: 6 }), None]);
+        let right = Selection::from_axis_bounds(vec![
+            Some(IndexBounds { start: 4, end: 7 }),
+            Some(IndexBounds { start: 2, end: 3 }),
+        ]);
+        assert_eq!(
+            left.intersect(right).axis_bounds(),
+            &[
+                Some(IndexBounds { start: 4, end: 6 }),
+                Some(IndexBounds { start: 2, end: 3 })
+            ]
+        );
+
+        let disjoint =
+            Selection::from_axis_bounds(vec![Some(IndexBounds { start: 0, end: 1 })]).intersect(
+                Selection::from_axis_bounds(vec![Some(IndexBounds { start: 2, end: 3 })]),
+            );
+        assert!(disjoint.is_empty());
+        assert!(Selection::full(1).intersect(Selection::empty(1)).is_empty());
     }
 }

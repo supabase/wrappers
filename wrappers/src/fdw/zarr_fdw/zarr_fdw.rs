@@ -62,6 +62,7 @@ use super::prefetch::{
 use super::scan_plan::{CoordinateRange, ScanPlan, ScanPlanner};
 use super::scientific::{ScientificValueDecoder, time::TimeSpec};
 use super::selection::Selection;
+use super::selectors::{BoundDimensionSelectors, DimensionSelectors, OPT_DIMENSION_SELECTORS};
 use super::sharding::{
     CachedShardIndex, MAX_SHARD_INDEX_BYTES, ShardIndex, ShardIndexCache, ShardIndexDecode,
     ShardingConfig, StorageLayout,
@@ -122,6 +123,7 @@ const MAX_DECODED_CHUNK_BYTES: usize = 256 * 1024 * 1024;
 const MAX_COORDINATE_VALUES: usize = 16 * 1024 * 1024;
 const MAX_TOTAL_COORDINATE_VALUES: usize = MAX_COORDINATE_VALUES;
 const SPATIAL_TIME_INTERRUPT_POLL_VALUES: usize = 1_024;
+const SELECTOR_INTERRUPT_POLL_CELLS: usize = 1_024;
 const UNSUPPORTED_COORDINATE_DECODING_ATTRIBUTES: [&str; 7] = [
     "_FillValue",
     "missing_value",
@@ -326,6 +328,9 @@ pub(crate) struct ZarrFdw {
     coords: Vec<Option<Vec<f64>>>,
     // conservative physical cell window shared by ordinary and spatial scans
     selection: Selection,
+    // Commit 4 exposes exact selectors only to ordinary scans. Spatial
+    // operations fail closed until selector-aware overloads land.
+    dimension_selectors: BoundDimensionSelectors,
     // lazy chunk indexes to read, in row-major order
     chunk_cursor: ChunkIndexCursor,
     current_chunk: Vec<u64>,
@@ -1238,6 +1243,13 @@ impl ZarrFdw {
         &mut self,
         axis_bounds: Vec<Option<IndexBounds>>,
     ) -> ZarrFdwResult<()> {
+        if !self.dimension_selectors.is_empty() {
+            return Err(ZarrFdwError::InvalidOptionValue {
+                option: OPT_DIMENSION_SELECTORS.to_string(),
+                message: "spatial operations require a selector-aware function overload"
+                    .to_string(),
+            });
+        }
         let meta = self.axis_meta.as_ref().ok_or_else(|| {
             ZarrFdwError::InvalidMetadata("spatial scan was not initialized".to_string())
         })?;
@@ -2038,13 +2050,46 @@ impl ZarrFdw {
         }
     }
 
+    fn current_cell_matches_selection(&self) -> ZarrFdwResult<bool> {
+        if self.dimension_selectors.is_empty() {
+            return Ok(true);
+        }
+        for axis in 0..self.rank {
+            if !self.dimension_selectors.matches_axis_index(
+                axis,
+                self.global_index_at_cursor(axis)?,
+                &self.coords,
+            )? {
+                return Ok(false);
+            }
+        }
+        Ok(true)
+    }
+
+    fn ensure_selected_cell_ready(&mut self) -> ZarrFdwResult<bool> {
+        let mut skipped = 0usize;
+        while self.ensure_cell_ready()? {
+            if self.current_cell_matches_selection()? {
+                return Ok(true);
+            }
+            let matched = (!self.aggregate_defs.is_empty()).then_some(0);
+            self.metrics.record_cells(1, matched);
+            self.advance_cursor();
+            skipped = skipped.saturating_add(1);
+            if skipped % SELECTOR_INTERRUPT_POLL_CELLS == 0 {
+                self.process_pending_interrupt()?;
+            }
+        }
+        Ok(false)
+    }
+
     fn iter_aggregate_scan(&mut self, row: &mut Row) -> ZarrFdwResult<Option<()>> {
         if self.aggregate_emitted {
             self.flush_persistent_stats_at_eof();
             return Ok(None);
         }
 
-        while self.ensure_cell_ready()? {
+        while self.ensure_selected_cell_ready()? {
             self.reduce_current_cell()?;
         }
 
@@ -2064,7 +2109,7 @@ impl ZarrFdw {
     }
 
     fn iter_scalar_scan(&mut self, row: &mut Row) -> ZarrFdwResult<Option<()>> {
-        if !self.ensure_cell_ready()? {
+        if !self.ensure_selected_cell_ready()? {
             self.flush_persistent_stats_at_eof();
             return Ok(None);
         }
@@ -2839,6 +2884,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
             fill_bytes: None,
             coords: Vec::new(),
             selection: Selection::default(),
+            dimension_selectors: BoundDimensionSelectors::default(),
             chunk_cursor: ChunkIndexCursor::default(),
             current_chunk: Vec::new(),
             current_object_key: String::new(),
@@ -3049,7 +3095,10 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
         self.aggregate_quals.clear();
         self.aggregate_reducer = None;
         self.aggregate_emitted = false;
+        self.dimension_selectors = BoundDimensionSelectors::default();
         self.tgt_cols = columns.to_vec();
+        let dimension_selectors =
+            DimensionSelectors::parse(options.get(OPT_DIMENSION_SELECTORS).map(String::as_str))?;
         let time_from_attrs = boolean_table_option(options, OPT_TIME_FROM_ATTRS)?;
         validate_time_from_attrs_options(
             time_from_attrs,
@@ -3129,6 +3178,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
         let variable = dataset.variable();
         self.array_dir = variable.path().to_string();
         self.axes = dataset.axis_names();
+        let bound_dimension_selectors = dimension_selectors.bind(&self.axes, &meta.shape)?;
         debug_assert_eq!(variable.dimensions(), self.axes.as_slice());
         self.axis_roles = dataset
             .dimensions()
@@ -3217,7 +3267,11 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
         let required_coordinates = dataset
             .dimensions()
             .iter()
-            .map(|dimension| columns.iter().any(|column| column.name == dimension.name()))
+            .enumerate()
+            .map(|(axis, dimension)| {
+                columns.iter().any(|column| column.name == dimension.name())
+                    || bound_dimension_selectors.requires_coordinate(axis)
+            })
             .collect::<Vec<_>>();
         checked_total_coordinate_values(
             dataset
@@ -3287,8 +3341,16 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
             }
         }
 
-        let plan =
-            ScanPlanner::new(meta).plan_coordinate_ranges(&self.axes, &self.coords, &ranges)?;
+        let planner = ScanPlanner::new(meta);
+        let qual_selection =
+            planner.selection_from_coordinate_ranges(&self.axes, &self.coords, &ranges)?;
+        let selector_selection =
+            bound_dimension_selectors.resolve(&meta.shape, &self.coords, || {
+                process_postgres_interrupts();
+                Ok(())
+            })?;
+        let plan = planner.plan(qual_selection.intersect(selector_selection))?;
+        self.dimension_selectors = bound_dimension_selectors;
         self.apply_scan_plan(plan, false)
     }
 
@@ -3365,6 +3427,7 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
         self.current_chunk.clear();
         self.coords.clear();
         self.selection = Selection::default();
+        self.dimension_selectors = BoundDimensionSelectors::default();
         self.axis_roles.clear();
         self.sub_lo.clear();
         self.sub_hi.clear();
@@ -3427,6 +3490,9 @@ impl ForeignDataWrapper<ZarrFdwError> for ZarrFdw {
                     if let Some(v) = option_value(&options, OPT_DECODE_CF) {
                         parse_boolean_option(OPT_DECODE_CF, &v)?;
                     }
+                    DimensionSelectors::parse(
+                        option_value(&options, OPT_DIMENSION_SELECTORS).as_deref(),
+                    )?;
                     if let Some(v) = option_value(&options, OPT_ARRAY_GROUP) {
                         if v.trim_matches('/').is_empty() || v.contains("..") {
                             return Err(ZarrFdwError::InvalidOptionValue {

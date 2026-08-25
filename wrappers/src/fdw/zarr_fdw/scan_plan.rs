@@ -80,12 +80,24 @@ impl<'a> ScanPlanner<'a> {
     /// Convert conservative coordinate-space ranges into index bounds, then
     /// derive their lazy chunk plan. Unordered coordinates disable pruning for
     /// that axis; exact consumers still apply their residual predicates.
+    #[cfg(test)]
     pub(crate) fn plan_coordinate_ranges(
         &self,
         axis_names: &[String],
         coordinate_values: &[Option<Vec<f64>>],
         ranges: &[CoordinateRange],
     ) -> ZarrFdwResult<ScanPlan> {
+        let selection =
+            self.selection_from_coordinate_ranges(axis_names, coordinate_values, ranges)?;
+        self.plan(selection)
+    }
+
+    pub(crate) fn selection_from_coordinate_ranges(
+        &self,
+        axis_names: &[String],
+        coordinate_values: &[Option<Vec<f64>>],
+        ranges: &[CoordinateRange],
+    ) -> ZarrFdwResult<Selection> {
         let rank = self.meta.shape.len();
         if axis_names.len() != rank || coordinate_values.len() != rank || ranges.len() != rank {
             return Err(ZarrFdwError::InvalidMetadata(format!(
@@ -117,12 +129,11 @@ impl<'a> ScanPlanner<'a> {
             bounds.push(axis_bounds);
         }
 
-        let selection = if empty {
+        Ok(if empty {
             Selection::empty(rank)
         } else {
             Selection::from_axis_bounds(bounds)
-        };
-        self.plan(selection)
+        })
     }
 }
 

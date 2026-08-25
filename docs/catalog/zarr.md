@@ -272,6 +272,37 @@ not need to be projected. The wrapper reads coordinate metadata for every
 dimension but downloads coordinate chunk values only for dimensions used by
 the query target or restrictions.
 
+Foreign tables can persist exact restrictions on any named numeric dimension
+with `dimension_selectors`. The option is a JSON object whose keys are exact,
+case-sensitive dimension names. Each dimension selects either one zero-based
+physical index or one raw numeric coordinate value:
+
+```sql
+create foreign table temperature_850hpa (
+  time timestamptz,
+  y double precision,
+  x double precision,
+  temperature real
+)
+server public_zarr_server
+options (
+  array_group 'climate/temperature',
+  time_from_attrs 'true',
+  dimension_selectors '{"level":{"value":850},"ensemble":{"index":0}}'
+);
+```
+
+Index selectors do not download coordinate values. Value selectors compare
+exactly in the stored numeric coordinate domain and load only the required
+coordinate vectors; they are not decoded as timestamps, strings, or CF-packed
+values. Duplicate coordinate values select every matching native index, while
+an unmatched value produces an empty scan without data-chunk requests.
+Selectors are always combined with SQL predicates using `AND`; they never
+override a `WHERE` clause. Documents are limited to 64 KiB and 64 dimensions.
+Range/list selectors and string coordinates such as Sentinel band names remain
+deferred. The current spatial functions reject selector-bearing tables until
+their explicit selector-aware overloads are available.
+
 ### Zarr v3 subset
 
 Zarr v3 arrays must use a regular chunk grid and a validated codec pipeline.
@@ -807,7 +838,9 @@ single Foreign Scan or retains a local Aggregate node.
   rank-2 levels instead synthesize `y` and `x` from their scale/translation
   metadata. Other synthesized ordinal coordinates, auxiliary or cross-group
   coordinates, curvilinear/multidimensional coordinates, and string or
-  categorical band/channel coordinates are not supported.
+  categorical band/channel coordinates are not supported. Exact
+  `dimension_selectors` currently accept only a numeric coordinate value or a
+  zero-based index; range and list forms are not yet supported.
 - Coordinate packing, masks, valid ranges, and scale/offset are not decoded. If
   a coordinate used by a query declares those attributes, the scan fails rather
   than silently ignoring them.

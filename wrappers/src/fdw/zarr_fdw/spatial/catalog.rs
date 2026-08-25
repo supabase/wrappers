@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use pgrx::{pg_sys, prelude::*};
 use supabase_wrappers::prelude::{Column, ForeignServer};
 
+use super::super::selectors::OPT_DIMENSION_SELECTORS;
 use super::super::{ZarrFdwError, ZarrFdwResult};
 
 #[derive(Debug)]
@@ -80,6 +81,12 @@ pub(crate) fn load_zarr_foreign_table(relation_name: &str) -> ZarrFdwResult<Spat
           WHERE table_catalog.ftrelid = $1::bigint::pg_catalog.oid",
         table_oid,
     )?;
+    if table_options.contains_key(OPT_DIMENSION_SELECTORS) {
+        return Err(ZarrFdwError::InvalidOptionValue {
+            option: OPT_DIMENSION_SELECTORS.to_string(),
+            message: "spatial operations require a selector-aware function overload".to_string(),
+        });
+    }
     let server_options = load_options(
         "SELECT option.option_name::text, option.option_value::text
            FROM pg_catalog.pg_foreign_server AS server_catalog

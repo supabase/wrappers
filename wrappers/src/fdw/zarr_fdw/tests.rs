@@ -388,7 +388,15 @@ mod tests {
     }
 
     fn create_minio_generic4d_table(table: &str, band_type: &str) {
+        create_minio_generic4d_table_with_options(table, band_type, "");
+    }
+
+    fn create_minio_generic4d_table_with_options(table: &str, band_type: &str, options: &str) {
         create_minio_e2e_server();
+        create_minio_generic4d_table_on_server(table, band_type, options);
+    }
+
+    fn create_minio_generic4d_table_on_server(table: &str, band_type: &str, options: &str) {
         Spi::connect_mut(|c| {
             c.update(
                 &format!(
@@ -402,7 +410,7 @@ mod tests {
                        SERVER zarr_e2e_server
                        OPTIONS (
                          array_group 'nested/generic4d',
-                         time_from_attrs 'true'
+                         time_from_attrs 'true'{options}
                        )"#
                 ),
                 None,
@@ -3207,6 +3215,270 @@ mod tests {
                 143.0
             );
         });
+    }
+
+    #[pg_test]
+    fn zarr_minio_index_selectors_no_coordinate_reads() {
+        create_minio_generic4d_table_with_options(
+            "zarr_e2e_index_selectors",
+            "double precision",
+            r#",
+                         dimension_selectors '{"forecast_time":{"index":1},"level":{"index":4},"band":{"index":3},"channel":{"index":0}}'"#,
+        );
+
+        let aggregate_sql = r#"SELECT count(*) AS total_count,
+                                      sum(measurement) AS value_sum,
+                                      avg(measurement) AS value_avg,
+                                      min(measurement) AS value_min,
+                                      max(measurement) AS value_max
+                                 FROM zarr_e2e_index_selectors"#;
+        assert_aggregate_pushed_down(aggregate_sql);
+
+        Spi::connect(|c| {
+            let values = c
+                .select(
+                    "SELECT measurement FROM zarr_e2e_index_selectors",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .map(|row| row.get_by_name::<f32, _>("measurement").unwrap().unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(values, vec![143.0]);
+
+            let aggregate = c.select(aggregate_sql, None, &[]).unwrap().next().unwrap();
+            assert_eq!(
+                aggregate.get_by_name::<i64, _>("total_count").unwrap(),
+                Some(1)
+            );
+            assert_eq!(
+                aggregate.get_by_name::<f32, _>("value_sum").unwrap(),
+                Some(143.0)
+            );
+            assert_eq!(
+                aggregate.get_by_name::<f64, _>("value_avg").unwrap(),
+                Some(143.0)
+            );
+
+            let plan = c
+                .select(
+                    r#"EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+                       SELECT measurement FROM zarr_e2e_index_selectors"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|row| row.get::<&str>(1).unwrap().map(str::to_string))
+                .collect::<Vec<_>>();
+            let has = |text: &str| plan.iter().any(|line| line.contains(text));
+            assert!(has("Zarr Chunks Total: 4"), "plan: {plan:?}");
+            assert!(has("Zarr Chunks Selected: 1"), "plan: {plan:?}");
+            assert!(has("Zarr Coordinate GET Calls: 0"), "plan: {plan:?}");
+            assert!(has("Zarr Data GET Calls: 1"), "plan: {plan:?}");
+            assert!(has("Zarr Data Encoded Bytes: 96 bytes"), "plan: {plan:?}");
+            assert!(has("Zarr Logical Cells Examined: 1"), "plan: {plan:?}");
+        });
+    }
+
+    #[pg_test]
+    fn zarr_minio_exact_value_dimension_selectors_and_with_sql_quals() {
+        create_minio_e2e_server();
+        create_minio_generic4d_table_on_server(
+            "zarr_e2e_value_selectors",
+            "double precision",
+            r#",
+                         dimension_selectors '{"forecast_time":{"value":3600},"level":{"value":50},"band":{"value":130},"channel":{"value":7}}'"#,
+        );
+        create_minio_generic4d_table_on_server(
+            "zarr_e2e_missing_selector",
+            "double precision",
+            r#",
+                         dimension_selectors '{"band":{"value":999}}'"#,
+        );
+        create_minio_generic4d_table_on_server(
+            "zarr_e2e_conflicting_selector",
+            "double precision",
+            r#",
+                         dimension_selectors '{"band":{"index":3}}'"#,
+        );
+
+        Spi::connect(|c| {
+            let value = c
+                .select(
+                    "SELECT measurement FROM zarr_e2e_value_selectors",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap()
+                .get_by_name::<f32, _>("measurement")
+                .unwrap();
+            assert_eq!(value, Some(143.0));
+
+            let value_plan = c
+                .select(
+                    r#"EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+                       SELECT measurement FROM zarr_e2e_value_selectors"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|row| row.get::<&str>(1).unwrap().map(str::to_string))
+                .collect::<Vec<_>>();
+            let value_has = |text: &str| value_plan.iter().any(|line| line.contains(text));
+            assert!(value_has("Zarr Chunks Selected: 1"), "plan: {value_plan:?}");
+            assert!(
+                value_has("Zarr Coordinate GET Calls: 6"),
+                "plan: {value_plan:?}"
+            );
+            assert!(
+                value_has("Zarr Coordinate Encoded Bytes: 128 bytes"),
+                "plan: {value_plan:?}"
+            );
+            assert!(value_has("Zarr Data GET Calls: 1"), "plan: {value_plan:?}");
+
+            let missing = c
+                .select(
+                    "SELECT count(*) AS count FROM zarr_e2e_missing_selector",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap()
+                .get_by_name::<i64, _>("count")
+                .unwrap();
+            assert_eq!(missing, Some(0));
+            let missing_plan = c
+                .select(
+                    r#"EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+                       SELECT count(*) FROM zarr_e2e_missing_selector"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|row| row.get::<&str>(1).unwrap().map(str::to_string))
+                .collect::<Vec<_>>();
+            let missing_has = |text: &str| missing_plan.iter().any(|line| line.contains(text));
+            assert!(
+                missing_has("Zarr Chunks Selected: 0"),
+                "plan: {missing_plan:?}"
+            );
+            assert!(
+                missing_has("Zarr Chunks Requested: 0"),
+                "plan: {missing_plan:?}"
+            );
+            assert!(
+                missing_has("Zarr Coordinate GET Calls: 2"),
+                "plan: {missing_plan:?}"
+            );
+            assert!(
+                missing_has("Zarr Coordinate Encoded Bytes: 64 bytes"),
+                "plan: {missing_plan:?}"
+            );
+            assert!(
+                missing_has("Zarr Data GET Calls: 0"),
+                "plan: {missing_plan:?}"
+            );
+
+            let conflict = c
+                .select(
+                    "SELECT count(*) AS count FROM zarr_e2e_conflicting_selector WHERE band = 120",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .next()
+                .unwrap()
+                .get_by_name::<i64, _>("count")
+                .unwrap();
+            assert_eq!(conflict, Some(0));
+        });
+    }
+
+    #[pg_test]
+    fn zarr_minio_v3_sharded_index_selectors_preserve_range_execution() {
+        create_minio_v3_e2e_server();
+        Spi::connect_mut(|c| {
+            c.update(
+                r#"CREATE FOREIGN TABLE zarr_v3_shard_selectors (value real)
+                   SERVER zarr_v3_e2e_server
+                   OPTIONS (
+                     array_group 'nested/shard_end',
+                     dimension_selectors '{"time":{"index":0},"y":{"index":1},"x":{"index":1}}'
+                   )"#,
+                None,
+                &[],
+            )
+            .unwrap();
+        });
+
+        Spi::connect(|c| {
+            let value = c
+                .select("SELECT value FROM zarr_v3_shard_selectors", None, &[])
+                .unwrap()
+                .next()
+                .unwrap()
+                .get_by_name::<f32, _>("value")
+                .unwrap();
+            assert_eq!(value, Some(11.0));
+
+            let plan = c
+                .select(
+                    r#"EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF, SUMMARY OFF)
+                       SELECT value FROM zarr_v3_shard_selectors"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|row| row.get::<&str>(1).unwrap().map(str::to_string))
+                .collect::<Vec<_>>();
+            let has = |text: &str| plan.iter().any(|line| line.contains(text));
+            assert!(has("Zarr Chunks Total: 12"), "plan: {plan:?}");
+            assert!(has("Zarr Chunks Selected: 1"), "plan: {plan:?}");
+            assert!(has("Zarr Coordinate GET Calls: 0"), "plan: {plan:?}");
+            assert!(has("Zarr Data GET Calls: 2"), "plan: {plan:?}");
+            assert!(has("Zarr Data Encoded Bytes: 92 bytes"), "plan: {plan:?}");
+            assert!(has("Zarr Shard Index GET Calls: 1"), "plan: {plan:?}");
+            assert!(has("Zarr Shard Payload GET Calls: 1"), "plan: {plan:?}");
+        });
+    }
+
+    #[pg_test(
+        error = "invalid value for option 'dimension_selectors': spatial operations require a selector-aware function overload"
+    )]
+    fn zarr_spatial_table_selectors_fail_closed() {
+        install_postgis_in_test_schema();
+        create_minio_e2e_server();
+        Spi::connect_mut(|c| {
+            c.update(
+                r#"CREATE FOREIGN TABLE zarr_e2e_spatial_selector (
+                     y double precision,
+                     x double precision,
+                     value real
+                   )
+                   SERVER zarr_e2e_server
+                   OPTIONS (
+                     array_group 'nested/spatial2d',
+                     dimension_selectors '{"x":{"index":1}}'
+                   )"#,
+                None,
+                &[],
+            )
+            .unwrap();
+        });
+        Spi::run(
+            r#"SELECT *
+                 FROM zarr_sample(
+                   'zarr_e2e_spatial_selector',
+                   zarr_gis.ST_AsEWKB(
+                     zarr_gis.ST_SetSRID(zarr_gis.ST_Point(999, 999), 3857)
+                   ),
+                   'exact'
+                 )"#,
+        )
+        .unwrap();
     }
 
     #[pg_test(
