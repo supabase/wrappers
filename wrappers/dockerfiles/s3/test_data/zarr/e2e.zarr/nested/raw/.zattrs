@@ -1,0 +1,1 @@
+{"_ARRAY_DIMENSIONS":["time","y","x"],"_FillValue":-7.5,"add_offset":273.15,"grid_mapping":"spatial_ref","long_name":"packed air temperature","missing_value":[42.0],"scale_factor":0.01,"units":"K","valid_range":[0.0,140.0]}

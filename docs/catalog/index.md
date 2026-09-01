@@ -38,6 +38,7 @@ Each FDW documentation includes a detailed "Limitations" section that describes 
 | Redis         |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
 | S3            |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
 | S3 Vectors    |   ✅   |   ✅   |   ❌   |   ✅   |    ❌    |    ✅     |
+| Zarr          |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ✅     |
 | Shopify       |   ✅   |   ❌   |   ❌   |   ❌   |    ❌    |    ❌     |
 | Snowflake     |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |    ✅     |
 | Stripe        |   ✅   |   ✅   |   ✅   |   ✅   |    ❌    |    ✅     |

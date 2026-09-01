@@ -472,6 +472,20 @@ pub enum Value {
     Array(Vec<Cell>),
 }
 
+/// The runtime state of a parameter used by a [`Qual`].
+///
+/// This is separate from [`Value`] so adding SQL NULL support does not add a
+/// new variant to that public enum and break existing exhaustive matches.
+#[derive(Debug, Clone)]
+pub enum ParamValue {
+    /// The executor has not supplied a value yet.
+    Unevaluated,
+    /// The executor supplied SQL NULL.
+    Null,
+    /// The executor supplied a non-NULL value.
+    Value(Value),
+}
+
 // Struct for parameter expression value evaluation
 #[derive(Debug, Clone)]
 pub(super) struct ExprEval {
@@ -497,8 +511,52 @@ pub struct Param {
     /// parameter value which is evaluated during query execution
     pub eval_value: Arc<Mutex<Option<Value>>>,
 
+    /// Explicit runtime state, including the distinction between unevaluated
+    /// and SQL NULL. `eval_value` remains available for source compatibility.
+    pub(super) eval_state: Arc<Mutex<ParamValue>>,
+
     // internal variables for expression evaluation
     pub(super) expr_eval: ExprEval,
+}
+
+impl Param {
+    /// Return the current runtime parameter state.
+    pub fn evaluated_value(&self) -> ParamValue {
+        self.eval_state
+            .lock()
+            .expect("parameter evaluation state should be locked")
+            .clone()
+    }
+
+    pub(super) fn set_evaluated_value(&self, value: ParamValue) {
+        let legacy_value = match &value {
+            ParamValue::Value(value) => Some(value.clone()),
+            ParamValue::Unevaluated | ParamValue::Null => None,
+        };
+        *self
+            .eval_value
+            .lock()
+            .expect("parameter eval value should be locked") = legacy_value;
+        *self
+            .eval_state
+            .lock()
+            .expect("parameter evaluation state should be locked") = value;
+    }
+
+    #[cfg(test)]
+    pub(super) fn clone_for_execution(&self) -> Self {
+        Self {
+            kind: self.kind,
+            id: self.id,
+            type_oid: self.type_oid,
+            eval_value: Mutex::new(None).into(),
+            eval_state: Mutex::new(ParamValue::Unevaluated).into(),
+            expr_eval: ExprEval {
+                expr: self.expr_eval.expr,
+                expr_state: std::ptr::null_mut(),
+            },
+        }
+    }
 }
 
 /// Query restrictions, a.k.a conditions in `WHERE` clause
@@ -554,6 +612,28 @@ pub struct Qual {
 }
 
 impl Qual {
+    #[cfg(test)]
+    pub(super) fn clone_for_execution(&self) -> Self {
+        Self {
+            field: self.field.clone(),
+            operator: self.operator.clone(),
+            value: self.value.clone(),
+            use_or: self.use_or,
+            param: self.param.as_ref().map(Param::clone_for_execution),
+        }
+    }
+
+    /// Return the effective runtime value of this restriction.
+    ///
+    /// Constant restrictions return [`ParamValue::Value`]. Parameterized
+    /// restrictions expose SQL NULL and the pre-execution state explicitly.
+    pub fn evaluated_value(&self) -> ParamValue {
+        self.param
+            .as_ref()
+            .map(Param::evaluated_value)
+            .unwrap_or_else(|| ParamValue::Value(self.value.clone()))
+    }
+
     pub fn deparse(&self) -> String {
         let mut formatter = DefaultFormatter::new();
         self.deparse_with_fmt(&mut formatter)
@@ -851,6 +931,121 @@ impl Aggregate {
     }
 }
 
+/// A typed value emitted by an FDW's runtime [`EXPLAIN`](ForeignDataWrapper::explain) hook.
+///
+/// Keeping values typed preserves numbers and booleans in structured EXPLAIN
+/// formats instead of forcing every FDW-specific property through text.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ExplainValue {
+    Text(String),
+    Integer {
+        value: i64,
+        unit: Option<String>,
+    },
+    Unsigned {
+        value: u64,
+        unit: Option<String>,
+    },
+    Float {
+        value: f64,
+        unit: Option<String>,
+        digits: i32,
+    },
+    Boolean(bool),
+}
+
+/// One FDW-specific property to append to `EXPLAIN ANALYZE` output.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExplainProperty {
+    pub label: String,
+    pub value: ExplainValue,
+}
+
+impl ExplainProperty {
+    pub fn text(label: impl Into<String>, value: impl Into<String>) -> Self {
+        Self {
+            label: label.into(),
+            value: ExplainValue::Text(value.into()),
+        }
+    }
+
+    pub fn integer(label: impl Into<String>, value: i64) -> Self {
+        Self {
+            label: label.into(),
+            value: ExplainValue::Integer { value, unit: None },
+        }
+    }
+
+    pub fn integer_with_unit(
+        label: impl Into<String>,
+        value: i64,
+        unit: impl Into<String>,
+    ) -> Self {
+        Self {
+            label: label.into(),
+            value: ExplainValue::Integer {
+                value,
+                unit: Some(unit.into()),
+            },
+        }
+    }
+
+    pub fn unsigned(label: impl Into<String>, value: u64) -> Self {
+        Self {
+            label: label.into(),
+            value: ExplainValue::Unsigned { value, unit: None },
+        }
+    }
+
+    pub fn unsigned_with_unit(
+        label: impl Into<String>,
+        value: u64,
+        unit: impl Into<String>,
+    ) -> Self {
+        Self {
+            label: label.into(),
+            value: ExplainValue::Unsigned {
+                value,
+                unit: Some(unit.into()),
+            },
+        }
+    }
+
+    pub fn float(label: impl Into<String>, value: f64, digits: i32) -> Self {
+        Self {
+            label: label.into(),
+            value: ExplainValue::Float {
+                value,
+                unit: None,
+                digits,
+            },
+        }
+    }
+
+    pub fn float_with_unit(
+        label: impl Into<String>,
+        value: f64,
+        unit: impl Into<String>,
+        digits: i32,
+    ) -> Self {
+        Self {
+            label: label.into(),
+            value: ExplainValue::Float {
+                value,
+                unit: Some(unit.into()),
+                digits,
+            },
+        }
+    }
+
+    pub fn boolean(label: impl Into<String>, value: bool) -> Self {
+        Self {
+            label: label.into(),
+            value: ExplainValue::Boolean(value),
+        }
+    }
+}
+
 /// The Foreign Data Wrapper trait
 ///
 /// This is the main interface for your foreign data wrapper. Required functions
@@ -938,6 +1133,15 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     ///
     /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-SCAN).
     fn end_scan(&mut self) -> Result<(), E>;
+
+    /// Return FDW-specific properties for a live scan's `EXPLAIN ANALYZE` output.
+    ///
+    /// The framework calls this only when execution constructed an FDW
+    /// instance. Plain `EXPLAIN` remains planning-only and never creates a
+    /// remote client for this hook. The default keeps existing FDWs unchanged.
+    fn explain(&self) -> Vec<ExplainProperty> {
+        Vec::new()
+    }
 
     /// Called when begin executing a foreign table modification operation.
     ///
@@ -1052,6 +1256,27 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     /// ```
     fn supports_group_by(&self) -> bool {
         false
+    }
+
+    /// Decide whether a specific aggregate query is safe for this FDW to push down.
+    ///
+    /// This query-specific hook runs after the framework has extracted the
+    /// aggregates and GROUP BY columns, but before it registers a foreign upper
+    /// path. The default preserves the behavior of existing aggregate-capable
+    /// FDWs. Implementations that require exact local predicate evaluation or
+    /// support only selected input/result type pairs can reject unsupported
+    /// shapes by returning `Ok(false)`.
+    #[allow(clippy::too_many_arguments)]
+    fn can_pushdown_aggregate(
+        &mut self,
+        _aggregates: &[Aggregate],
+        _group_by: &[Column],
+        _quals: &[Qual],
+        _base_columns: &[Column],
+        _all_base_quals_extracted: bool,
+        _options: &HashMap<String, String>,
+    ) -> Result<bool, E> {
+        Ok(true)
     }
 
     /// Estimate the size of aggregate query results for query planning.
@@ -1169,6 +1394,23 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
              override this method when supported_aggregates() is non-empty",
         );
         unreachable!()
+    }
+
+    /// Begin aggregate execution with the base columns retained by the planner.
+    ///
+    /// The default delegates to [`begin_aggregate_scan`](Self::begin_aggregate_scan)
+    /// so existing FDWs remain source compatible. Local aggregate engines can
+    /// override this hook when they need the original input columns after the
+    /// ForeignScan target list has been replaced by aggregate result columns.
+    fn begin_aggregate_scan_with_base_columns(
+        &mut self,
+        aggregates: &[Aggregate],
+        group_by: &[Column],
+        quals: &[Qual],
+        _base_columns: &[Column],
+        options: &HashMap<String, String>,
+    ) -> Result<(), E> {
+        self.begin_aggregate_scan(aggregates, group_by, quals, options)
     }
 
     /// Obtain a list of foreign table creation commands
@@ -1306,6 +1548,129 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn test_param() -> Param {
+        Param {
+            kind: pg_sys::ParamKind::PARAM_EXTERN,
+            id: 1,
+            type_oid: pg_sys::INT4OID,
+            eval_value: Mutex::new(None).into(),
+            eval_state: Mutex::new(ParamValue::Unevaluated).into(),
+            expr_eval: ExprEval {
+                expr: std::ptr::null_mut(),
+                expr_state: std::ptr::null_mut(),
+            },
+        }
+    }
+
+    #[test]
+    fn test_parameter_value_distinguishes_unevaluated_null_and_value() {
+        let param = test_param();
+        assert!(matches!(param.evaluated_value(), ParamValue::Unevaluated));
+
+        param.set_evaluated_value(ParamValue::Null);
+        assert!(matches!(param.evaluated_value(), ParamValue::Null));
+        assert!(
+            param
+                .eval_value
+                .lock()
+                .expect("legacy eval value should be locked")
+                .is_none()
+        );
+
+        param.set_evaluated_value(ParamValue::Value(Value::Cell(Cell::I32(42))));
+        assert!(matches!(
+            param.evaluated_value(),
+            ParamValue::Value(Value::Cell(Cell::I32(42)))
+        ));
+        assert!(matches!(
+            &*param
+                .eval_value
+                .lock()
+                .expect("legacy eval value should be locked"),
+            Some(Value::Cell(Cell::I32(42)))
+        ));
+
+        param.set_evaluated_value(ParamValue::Null);
+        assert!(matches!(param.evaluated_value(), ParamValue::Null));
+        assert!(
+            param
+                .eval_value
+                .lock()
+                .expect("legacy eval value should be locked")
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn test_qual_evaluated_value_uses_constant_or_parameter_state() {
+        let constant = Qual {
+            field: "value".to_string(),
+            operator: "=".to_string(),
+            value: Value::Cell(Cell::I32(7)),
+            use_or: false,
+            param: None,
+        };
+        assert!(matches!(
+            constant.evaluated_value(),
+            ParamValue::Value(Value::Cell(Cell::I32(7)))
+        ));
+
+        let parameter = test_param();
+        parameter.set_evaluated_value(ParamValue::Null);
+        let parameterized = Qual {
+            field: "value".to_string(),
+            operator: "=".to_string(),
+            value: Value::Cell(Cell::I64(0)),
+            use_or: false,
+            param: Some(parameter),
+        };
+        assert!(matches!(parameterized.evaluated_value(), ParamValue::Null));
+    }
+
+    #[test]
+    fn test_qual_execution_clone_has_independent_parameter_state() {
+        let parameter = test_param();
+        parameter.set_evaluated_value(ParamValue::Value(Value::Cell(Cell::I32(11))));
+        let planned = Qual {
+            field: "value".to_string(),
+            operator: "=".to_string(),
+            value: Value::Cell(Cell::I64(0)),
+            use_or: false,
+            param: Some(parameter),
+        };
+
+        let execution = planned.clone_for_execution();
+        let planned_param = planned.param.as_ref().expect("planned parameter");
+        let execution_param = execution.param.as_ref().expect("execution parameter");
+
+        assert!(matches!(
+            planned_param.evaluated_value(),
+            ParamValue::Value(Value::Cell(Cell::I32(11)))
+        ));
+        assert!(matches!(
+            execution_param.evaluated_value(),
+            ParamValue::Unevaluated
+        ));
+        assert!(!Arc::ptr_eq(
+            &planned_param.eval_state,
+            &execution_param.eval_state
+        ));
+        assert!(!Arc::ptr_eq(
+            &planned_param.eval_value,
+            &execution_param.eval_value
+        ));
+
+        execution_param.set_evaluated_value(ParamValue::Null);
+        assert!(matches!(
+            planned_param.evaluated_value(),
+            ParamValue::Value(Value::Cell(Cell::I32(11)))
+        ));
+        assert!(matches!(
+            execution_param.evaluated_value(),
+            ParamValue::Null
+        ));
+    }
 
     #[test]
     fn test_cell_into_datum_type_oid_is_invalid() {

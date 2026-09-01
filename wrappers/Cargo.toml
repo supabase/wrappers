@@ -203,6 +203,27 @@ dynamodb_fdw = [
     "thiserror",
     "tokio",
 ]
+zarr_fdw = [
+    "aws-config",
+    "aws-sdk-s3",
+    "blosc-rs",
+    "cap-std",
+    "crc32c",
+    "chrono",
+    "futures-util",
+    "libc",
+    "lru",
+    "reqwest",
+    "tokio",
+    "tokio-util",
+    "async-compression",
+    "zstd",
+    "serde",
+    "serde_json",
+    "thiserror",
+    "http",
+    "url",
+]
 # Does not include helloworld_fdw because of its general uselessness
 native_fdws = [
     "airtable_fdw",
@@ -222,6 +243,7 @@ native_fdws = [
     "iceberg_fdw",
     "duckdb_fdw",
     "dynamodb_fdw",
+    "zarr_fdw",
 ]
 all_fdws = ["native_fdws", "wasm_fdw"]
 [dependencies]
@@ -253,7 +275,7 @@ wiremock = { version = "0.5", optional = true }
 futures = { version = "0.3", optional = true }
 
 # for stripe_fdw, firebase_fdw, logflare_fdw, iceberg_fdw and etc.
-reqwest = { version = "0.12.12", features = ["json", "gzip"], optional = true }
+reqwest = { version = "0.12.12", features = ["json", "gzip", "rustls-tls"], optional = true }
 reqwest-middleware = { version = "0.4", optional = true }
 reqwest-retry = { version = "0.8", optional = true }
 
@@ -271,6 +293,14 @@ aws-config = { version = "1.8.6", features = [
 
 # for s3_fdw
 aws-sdk-s3 = { version = "1.86.0", optional = true }
+
+# for zarr_fdw
+blosc-rs = { version = "0.4.0", features = ["lz4"], optional = true }
+cap-std = { version = "3.4.5", optional = true }
+crc32c = { version = "0.6.8", optional = true }
+libc = { version = "0.2", optional = true }
+lru = { version = "0.12.5", optional = true }
+zstd = { version = "0.13.3", default-features = false, optional = true }
 
 # for s3vectors_fdw
 aws-sdk-s3vectors = { version = "1.14.0", optional = true }
