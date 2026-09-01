@@ -29,6 +29,7 @@ pg_module_magic!();
 extension_sql_file!("../sql/bootstrap.sql", bootstrap);
 extension_sql_file!("../sql/finalize.sql", finalize);
 
+mod event_triggers;
 /// FDW implementations for various data sources
 pub mod fdw;
 /// Statistics collection and reporting utilities
