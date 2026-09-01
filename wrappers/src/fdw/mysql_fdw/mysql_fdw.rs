@@ -480,6 +480,11 @@ impl ForeignDataWrapper<MysqlFdwError> for MysqlFdw {
     }
 
     fn end_scan(&mut self) -> MysqlFdwResult<()> {
+        // drop the result stream before disconnecting the pool: a partially
+        // consumed stream still holds a Conn checked out from the pool, and
+        // Pool::disconnect() won't resolve until all such connections are
+        // dropped, so disconnecting first deadlocks the backend
+        self.stream = None;
         self.disconnect_pool()
     }
 

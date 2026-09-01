@@ -741,4 +741,114 @@ mod tests {
             );
         });
     }
+
+    // Regression test: a scan the executor stops early (LIMIT) leaves the mysql
+    // result stream partially consumed at end_scan. The stream still holds a Conn
+    // checked out from the pool, and Pool::disconnect() won't resolve until that
+    // Conn is dropped, so end_scan must drop the stream first or the backend
+    // hangs forever (uncancellable, since it blocks inside rt.block_on).
+    fn setup_mysql_partial_scan_test_data() {
+        let rt = create_async_runtime().expect("failed to create runtime");
+        let pool = Pool::new("mysql://root:password@localhost:3306/testdb");
+        let mut conn = rt
+            .block_on(async {
+                let conn = pool.get_conn().await?;
+                Ok::<_, MySqlError>(conn)
+            })
+            .expect("failed to connect to mysql");
+
+        let mut exec = |sql: &str| {
+            rt.block_on(async {
+                conn.query_drop(sql).await?;
+                Ok::<_, MySqlError>(())
+            })
+            .expect("failed to execute query");
+        };
+
+        // dedicated table: tests run in parallel, so sharing testdb.users with
+        // other tests would race their setup/teardown
+        exec("CREATE DATABASE IF NOT EXISTS testdb");
+        exec("DROP TABLE IF EXISTS testdb.people_limit");
+        exec(
+            "CREATE TABLE testdb.people_limit (
+                id   BIGINT PRIMARY KEY,
+                name VARCHAR(100) NOT NULL
+            )",
+        );
+        exec(
+            "INSERT INTO testdb.people_limit (id, name) VALUES
+                (1, 'Alice'), (2, 'Bob'), (3, 'Carol'), (4, 'Dave')",
+        );
+    }
+
+    #[pg_test]
+    fn mysql_partial_scan_does_not_hang() {
+        setup_mysql_partial_scan_test_data();
+
+        Spi::connect_mut(|c| {
+            c.update(
+                r#"CREATE FOREIGN DATA WRAPPER mysql_wrapper
+                    HANDLER mysql_fdw_handler VALIDATOR mysql_fdw_validator"#,
+                None,
+                &[],
+            )
+            .expect("failed to create foreign data wrapper");
+            c.update(
+                r#"CREATE SERVER mysql_server
+                     FOREIGN DATA WRAPPER mysql_wrapper
+                     OPTIONS (
+                       conn_string 'mysql://root:password@localhost:3306/testdb'
+                     )"#,
+                None,
+                &[],
+            )
+            .expect("failed to create server");
+            c.update(
+                r#"
+                CREATE FOREIGN TABLE users_limit (
+                    id bigint,
+                    name varchar(100)
+                )
+                SERVER mysql_server
+                OPTIONS (table 'people_limit', rowid_column 'id');
+            "#,
+                None,
+                &[],
+            )
+            .expect("failed to create foreign table");
+
+            // LIMIT stops the executor after one row; with limit pushdown the
+            // stream's EOF packet is still unobserved, without it three rows are
+            // left unconsumed - either way end_scan sees a live stream
+            let first = c
+                .select("SELECT name FROM users_limit LIMIT 1", None, &[])
+                .expect("LIMIT 1 scan should not hang")
+                .next()
+                .and_then(|r| r.get_by_name::<&str, _>("name").ok().flatten())
+                .map(str::to_string);
+            assert!(first.is_some());
+
+            // volatile qual can't be pushed down, so no limit pushdown either:
+            // MySQL sends all rows, the executor reads one and stops
+            let first = c
+                .select(
+                    "SELECT name FROM users_limit WHERE random() >= 0 LIMIT 1",
+                    None,
+                    &[],
+                )
+                .expect("un-pushed LIMIT 1 scan should not hang")
+                .next()
+                .and_then(|r| r.get_by_name::<&str, _>("name").ok().flatten())
+                .map(str::to_string);
+            assert!(first.is_some());
+
+            // subsequent full scan on the same foreign table still works
+            let names = c
+                .select("SELECT name FROM users_limit ORDER BY id", None, &[])
+                .expect("follow-up full scan should not hang")
+                .filter_map(|r| r.get_by_name::<&str, _>("name").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(names, vec!["Alice", "Bob", "Carol", "Dave"]);
+        });
+    }
 }
