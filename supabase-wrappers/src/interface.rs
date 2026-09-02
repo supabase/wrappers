@@ -551,6 +551,13 @@ pub struct Qual {
     pub value: Value,
     pub use_or: bool,
     pub param: Option<Param>,
+
+    // Address of the original `pg_sys::Const` (or array `pg_sys::Const`) node this
+    // qual's value was decoded from, if any. Stored as a plain address (not a typed
+    // pointer) so `Qual` stays trivially `Send`-safe; only `scan::get_foreign_plan`
+    // casts it back to a pointer, to embed the original node directly into
+    // `fdw_private` so it survives PostgreSQL's plan-cache `copyObject` correctly.
+    pub(crate) const_node: Option<usize>,
 }
 
 impl Qual {
@@ -1184,7 +1191,11 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
         Ok(Vec::new())
     }
 
-    /// Returns a FdwRoutine for the FDW
+    /// The handler function for all foreign data wrappers.
+    ///
+    /// The [`FdwRoutine`] is the same as the `fdw_handler` pseudo-type mentioned in the
+    /// [Postgres documentation](https://www.postgresql.org/docs/current/fdw-functions.html).
+    /// This is the entry point of a foreign table query: the first callback called by Postgres.
     ///
     /// Not to be used directly, use [`wrappers_fdw`](crate::wrappers_fdw) macro instead.
     fn fdw_routine() -> FdwRoutine

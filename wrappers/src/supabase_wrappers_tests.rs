@@ -1,12 +1,15 @@
-//! Runtime tests for `supabase-wrappers` core types that need a live Postgres backend
-//! (e.g. `Cell::into_datum()`/`from_datum()` round trips). These can't run as plain
-//! `cargo test` in the `supabase-wrappers` crate itself since it isn't a pgrx extension,
-//! so they run here instead, against the real Postgres backend `cargo pgrx test` spins up.
+//! Runtime tests for `supabase-wrappers` core types and framework behavior that need a
+//! live Postgres backend (e.g. `Cell::into_datum()`/`from_datum()` round trips, or the
+//! scan callback lifecycle under a cached plan). These can't run as plain `cargo test`
+//! in the `supabase-wrappers` crate itself since it isn't a pgrx extension, so they run
+//! here instead, against the real Postgres backend `cargo pgrx test` spins up.
 
 #[cfg(any(test, feature = "pg_test"))]
 #[pgrx::pg_schema]
 mod tests {
+    use pgrx::pg_sys::panic::ErrorReport;
     use pgrx::prelude::*;
+    use std::collections::HashMap;
     use supabase_wrappers::prelude::*;
     use supabase_wrappers::qual::form_array_from_datum;
 
@@ -249,5 +252,130 @@ mod tests {
 
         let result = unsafe { form_array_from_datum(datum, false, pg_sys::UUIDARRAYOID) };
         assert!(result.is_none());
+    }
+
+    // ==========================================================================
+    // Regression test: cached-plan re-execution must not crash the backend
+    // ==========================================================================
+
+    // Minimal FDW used only to exercise the scan callback lifecycle
+    // (get_foreign_plan / begin_foreign_scan / end_foreign_scan) against a
+    // real, cached Postgres plan. Deliberately independent of any specific
+    // FDW crate feature or external service, so this test always compiles
+    // and runs under `cargo pgrx test`, regardless of which FDWs are enabled.
+    #[wrappers_fdw(
+        version = "0.1.0",
+        author = "Supabase",
+        website = "https://github.com/supabase/wrappers",
+        error_type = "CacheTestFdwError"
+    )]
+    struct CacheTestFdw {
+        done: bool,
+        // count(*) needs zero columns, so iter_scan must only push cells
+        // that are actually in the target list — pushing an extra "id"
+        // column unconditionally trips the framework's
+        // `row.cols.len() != tgts.len()` check.
+        tgt_cols: Vec<Column>,
+    }
+
+    enum CacheTestFdwError {}
+
+    impl From<CacheTestFdwError> for ErrorReport {
+        fn from(_value: CacheTestFdwError) -> Self {
+            ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, "", "")
+        }
+    }
+
+    impl ForeignDataWrapper<CacheTestFdwError> for CacheTestFdw {
+        fn new(_server: ForeignServer) -> Result<Self, CacheTestFdwError> {
+            Ok(Self {
+                done: false,
+                tgt_cols: Vec::new(),
+            })
+        }
+
+        fn begin_scan(
+            &mut self,
+            _quals: &[Qual],
+            columns: &[Column],
+            _sorts: &[Sort],
+            _limit: &Option<Limit>,
+            _options: &HashMap<String, String>,
+        ) -> Result<(), CacheTestFdwError> {
+            self.done = false;
+            self.tgt_cols = columns.to_vec();
+            Ok(())
+        }
+
+        fn iter_scan(&mut self, row: &mut Row) -> Result<Option<()>, CacheTestFdwError> {
+            if self.done {
+                return Ok(None);
+            }
+            self.done = true;
+            for col in &self.tgt_cols {
+                if col.name == "id" {
+                    row.push("id", Some(Cell::I64(1)));
+                }
+            }
+            Ok(Some(()))
+        }
+
+        fn end_scan(&mut self) -> Result<(), CacheTestFdwError> {
+            Ok(())
+        }
+    }
+
+    #[pg_test]
+    fn cached_plan_repeated_execution_does_not_crash() {
+        Spi::connect_mut(|c| {
+            c.update(
+                r#"CREATE FOREIGN DATA WRAPPER cache_test_wrapper
+                         HANDLER cache_test_fdw_handler VALIDATOR cache_test_fdw_validator"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"CREATE SERVER cache_test_server FOREIGN DATA WRAPPER cache_test_wrapper"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"CREATE FOREIGN TABLE cache_test_table (id bigint) SERVER cache_test_server"#,
+                None,
+                &[],
+            )
+            .unwrap();
+
+            // A parameterless prepared statement always reuses Postgres's
+            // generic, cached plan from its second execution onward (see
+            // choose_custom_plan() in plancache.c, which returns early when
+            // boundParams is NULL) — this is exactly the shape that used to
+            // trigger a use-after-free/double-free in get_foreign_plan's old
+            // fdw_private handling: the scan state was freed by the first
+            // execution's end_foreign_scan, then the second execution's
+            // begin_foreign_scan read it (use-after-free) and its
+            // end_foreign_scan freed it again (double free), crashing the
+            // backend. Regression test: this must not crash.
+            c.update(
+                "PREPARE cache_test_q AS SELECT count(*) FROM cache_test_table",
+                None,
+                &[],
+            )
+            .unwrap();
+
+            for _ in 0..3 {
+                let count = c
+                    .select("EXECUTE cache_test_q", None, &[])
+                    .unwrap()
+                    .first()
+                    .get_one::<i64>()
+                    .unwrap();
+                assert_eq!(count, Some(1));
+            }
+
+            c.update("DEALLOCATE cache_test_q", None, &[]).unwrap();
+        });
     }
 }

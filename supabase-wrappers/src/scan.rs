@@ -1,19 +1,26 @@
 use pgrx::FromDatum;
 use pgrx::{
     IntoDatum, PgSqlErrorCode, debug2,
+    list::List,
+    memcx::MemCx,
     memcxt::PgMemoryContexts,
     pg_sys::{Datum, MemoryContext, MemoryContextData, Oid, ParamKind},
     prelude::*,
 };
 use std::collections::HashMap;
+use std::ffi::c_void;
 use std::marker::PhantomData;
+use std::mem;
+use std::sync::Mutex;
 
 use pgrx::pg_sys::panic::ErrorReport;
 use std::os::raw::c_int;
 use std::ptr;
 
 use crate::instance;
-use crate::interface::{Aggregate, Cell, Column, Limit, Qual, Row, Sort, Value};
+use crate::interface::{
+    Aggregate, AggregateKind, Cell, Column, ExprEval, Limit, Param, Qual, Row, Sort, Value,
+};
 use crate::limit::*;
 use crate::memctx;
 use crate::options::options_to_hashmap;
@@ -21,7 +28,7 @@ use crate::polyfill;
 use crate::prelude::ForeignDataWrapper;
 use crate::qual::*;
 use crate::sort::*;
-use crate::utils::{self, ReportableError, SerdeList, report_error};
+use crate::utils::{self, ReportableError, report_error};
 
 // Fdw private state for scan
 pub(crate) struct FdwState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
@@ -152,8 +159,6 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwState<E, W> {
     }
 }
 
-impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> utils::SerdeList for FdwState<E, W> {}
-
 impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> Drop for FdwState<E, W> {
     fn drop(&mut self) {
         // drop foreign data wrapper instance
@@ -173,6 +178,575 @@ unsafe fn drop_fdw_state<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
 ) {
     let boxed_fdw_state = unsafe { Box::from_raw(fdw_state) };
     drop(boxed_fdw_state);
+}
+
+// ---------------------------------------------------------------------------
+// FdwScanPrivate: a serializable snapshot of the planning-time data needed to
+// rebuild `FdwState`.
+//
+// Unlike `FdwState` (which owns a live FDW instance, a Postgres MemoryContext,
+// and per-scan row buffers), this struct holds only plain data, plus — for
+// qual values that came from a real `pg_sys::Const` — the *address* of that
+// original Const node. It is serialized as a flat `pg_sys::List` of `Const`
+// nodes (with the original qual Const nodes embedded directly, unmodified)
+// so that PostgreSQL's `copyObject`, invoked when a plan is cached, deep
+// copies it correctly. `FdwState` is rebuilt from scratch from this data on
+// every `begin_foreign_scan`, so a cached plan re-executed any number of
+// times never revisits memory freed by a previous execution.
+// ---------------------------------------------------------------------------
+struct FdwScanPrivate {
+    foreigntableid: Oid,
+    quals: Vec<Qual>,
+    tgts: Vec<Column>,
+    sorts: Vec<Sort>,
+    limit: Option<Limit>,
+    aggregates: Vec<Aggregate>,
+    group_by: Vec<Column>,
+}
+
+unsafe fn push_i32<'cx>(list: &mut List<'cx, *mut c_void>, mcx: &'cx MemCx<'_>, val: i32) {
+    unsafe {
+        let cst = pg_sys::makeConst(
+            pg_sys::INT4OID,
+            -1,
+            pg_sys::InvalidOid,
+            4,
+            val.into_datum().unwrap(),
+            false,
+            true,
+        );
+        list.unstable_push_in_context(cst as _, mcx);
+    }
+}
+
+unsafe fn push_i64<'cx>(list: &mut List<'cx, *mut c_void>, mcx: &'cx MemCx<'_>, val: i64) {
+    unsafe {
+        let cst = pg_sys::makeConst(
+            pg_sys::INT8OID,
+            -1,
+            pg_sys::InvalidOid,
+            8,
+            val.into_datum().unwrap(),
+            false,
+            true,
+        );
+        list.unstable_push_in_context(cst as _, mcx);
+    }
+}
+
+unsafe fn push_bool<'cx>(list: &mut List<'cx, *mut c_void>, mcx: &'cx MemCx<'_>, val: bool) {
+    unsafe {
+        let cst = pg_sys::makeConst(
+            pg_sys::BOOLOID,
+            -1,
+            pg_sys::InvalidOid,
+            1,
+            val.into_datum().unwrap(),
+            false,
+            true,
+        );
+        list.unstable_push_in_context(cst as _, mcx);
+    }
+}
+
+unsafe fn push_text<'cx>(list: &mut List<'cx, *mut c_void>, mcx: &'cx MemCx<'_>, val: &str) {
+    unsafe {
+        let cst = pg_sys::makeConst(
+            pg_sys::TEXTOID,
+            -1,
+            pg_sys::InvalidOid,
+            -1,
+            val.to_string().into_datum().unwrap(),
+            false,
+            false,
+        );
+        list.unstable_push_in_context(cst as _, mcx);
+    }
+}
+
+unsafe fn push_oid<'cx>(list: &mut List<'cx, *mut c_void>, mcx: &'cx MemCx<'_>, val: Oid) {
+    unsafe { push_i32(list, mcx, val.to_u32() as i32) };
+}
+
+// Reads the raw `Const` at the current cursor position and advances the cursor.
+unsafe fn read_const(list: &List<*mut c_void>, idx: &mut usize) -> Option<pg_sys::Const> {
+    let cst_ptr = *list.get(*idx)? as *mut pg_sys::Const;
+    *idx += 1;
+    Some(unsafe { *cst_ptr })
+}
+
+unsafe fn read_i32(list: &List<*mut c_void>, idx: &mut usize) -> Option<i32> {
+    unsafe {
+        let cst = read_const(list, idx)?;
+        i32::from_datum(cst.constvalue, cst.constisnull)
+    }
+}
+
+unsafe fn read_i64(list: &List<*mut c_void>, idx: &mut usize) -> Option<i64> {
+    unsafe {
+        let cst = read_const(list, idx)?;
+        i64::from_datum(cst.constvalue, cst.constisnull)
+    }
+}
+
+unsafe fn read_bool(list: &List<*mut c_void>, idx: &mut usize) -> Option<bool> {
+    unsafe {
+        let cst = read_const(list, idx)?;
+        bool::from_datum(cst.constvalue, cst.constisnull)
+    }
+}
+
+unsafe fn read_text(list: &List<*mut c_void>, idx: &mut usize) -> Option<String> {
+    unsafe {
+        let cst = read_const(list, idx)?;
+        String::from_datum(cst.constvalue, cst.constisnull)
+    }
+}
+
+unsafe fn read_oid(list: &List<*mut c_void>, idx: &mut usize) -> Option<Oid> {
+    unsafe { read_i32(list, idx) }.map(|v| Oid::from(v as u32))
+}
+
+unsafe fn push_column<'cx>(list: &mut List<'cx, *mut c_void>, mcx: &'cx MemCx<'_>, col: &Column) {
+    unsafe {
+        push_text(list, mcx, &col.name);
+        // usize to i32 cast is safe as Postgres has a maximum of 1600 columns
+        push_i32(list, mcx, col.num as i32);
+        push_oid(list, mcx, col.type_oid);
+    }
+}
+
+unsafe fn read_column(list: &List<*mut c_void>, idx: &mut usize) -> Option<Column> {
+    unsafe {
+        let name = read_text(list, idx)?;
+        let num = read_i32(list, idx)? as usize;
+        let type_oid = read_oid(list, idx)?;
+        Some(Column {
+            name,
+            num,
+            type_oid,
+        })
+    }
+}
+
+unsafe fn push_columns<'cx>(
+    list: &mut List<'cx, *mut c_void>,
+    mcx: &'cx MemCx<'_>,
+    cols: &[Column],
+) {
+    unsafe {
+        push_i32(list, mcx, cols.len() as i32);
+        for col in cols {
+            push_column(list, mcx, col);
+        }
+    }
+}
+
+unsafe fn read_columns(list: &List<*mut c_void>, idx: &mut usize) -> Option<Vec<Column>> {
+    unsafe {
+        let count = read_i32(list, idx)? as usize;
+        let mut cols = Vec::with_capacity(count);
+        for _ in 0..count {
+            cols.push(read_column(list, idx)?);
+        }
+        Some(cols)
+    }
+}
+
+unsafe fn push_sort<'cx>(list: &mut List<'cx, *mut c_void>, mcx: &'cx MemCx<'_>, sort: &Sort) {
+    unsafe {
+        push_text(list, mcx, &sort.field);
+        // usize to i32 cast is safe field_no is also bound by Postgres maximum number of columns(1600)
+        push_i32(list, mcx, sort.field_no as i32);
+        push_bool(list, mcx, sort.reversed);
+        push_bool(list, mcx, sort.nulls_first);
+        push_bool(list, mcx, sort.collate.is_some());
+        if let Some(collate) = &sort.collate {
+            push_text(list, mcx, collate);
+        }
+    }
+}
+
+unsafe fn read_sort(list: &List<*mut c_void>, idx: &mut usize) -> Option<Sort> {
+    unsafe {
+        let field = read_text(list, idx)?;
+        let field_no = read_i32(list, idx)? as usize;
+        let reversed = read_bool(list, idx)?;
+        let nulls_first = read_bool(list, idx)?;
+        let has_collate = read_bool(list, idx)?;
+        let collate = if has_collate {
+            Some(read_text(list, idx)?)
+        } else {
+            None
+        };
+
+        Some(Sort {
+            field,
+            field_no,
+            reversed,
+            nulls_first,
+            collate,
+        })
+    }
+}
+
+unsafe fn push_sorts<'cx>(list: &mut List<'cx, *mut c_void>, mcx: &'cx MemCx<'_>, sorts: &[Sort]) {
+    unsafe {
+        push_i32(list, mcx, sorts.len() as i32);
+        for sort in sorts {
+            push_sort(list, mcx, sort);
+        }
+    }
+}
+
+unsafe fn read_sorts(list: &List<*mut c_void>, idx: &mut usize) -> Option<Vec<Sort>> {
+    unsafe {
+        let count = read_i32(list, idx)? as usize;
+        let mut sorts = Vec::with_capacity(count);
+        for _ in 0..count {
+            sorts.push(read_sort(list, idx)?);
+        }
+        Some(sorts)
+    }
+}
+
+unsafe fn push_limit<'cx>(
+    list: &mut List<'cx, *mut c_void>,
+    mcx: &'cx MemCx<'_>,
+    limit: &Option<Limit>,
+) {
+    unsafe {
+        push_bool(list, mcx, limit.is_some());
+        if let Some(limit) = limit {
+            push_i64(list, mcx, limit.count);
+            push_i64(list, mcx, limit.offset);
+        }
+    }
+}
+
+unsafe fn read_limit(list: &List<*mut c_void>, idx: &mut usize) -> Option<Option<Limit>> {
+    unsafe {
+        let has_limit = read_bool(list, idx)?;
+        if has_limit {
+            let count = read_i64(list, idx)?;
+            let offset = read_i64(list, idx)?;
+            Some(Some(Limit { count, offset }))
+        } else {
+            Some(None)
+        }
+    }
+}
+
+fn aggregate_kind_to_i32(kind: AggregateKind) -> i32 {
+    match kind {
+        AggregateKind::Count => 0,
+        AggregateKind::CountColumn => 1,
+        AggregateKind::Sum => 2,
+        AggregateKind::Avg => 3,
+        AggregateKind::Min => 4,
+        AggregateKind::Max => 5,
+    }
+}
+
+fn aggregate_kind_from_i32(val: i32) -> Option<AggregateKind> {
+    match val {
+        0 => Some(AggregateKind::Count),
+        1 => Some(AggregateKind::CountColumn),
+        2 => Some(AggregateKind::Sum),
+        3 => Some(AggregateKind::Avg),
+        4 => Some(AggregateKind::Min),
+        5 => Some(AggregateKind::Max),
+        _ => None,
+    }
+}
+
+unsafe fn push_aggregate<'cx>(
+    list: &mut List<'cx, *mut c_void>,
+    mcx: &'cx MemCx<'_>,
+    agg: &Aggregate,
+) {
+    unsafe {
+        push_i32(list, mcx, aggregate_kind_to_i32(agg.kind));
+        push_bool(list, mcx, agg.column.is_some());
+        if let Some(col) = &agg.column {
+            push_column(list, mcx, col);
+        }
+        push_bool(list, mcx, agg.distinct);
+        push_text(list, mcx, &agg.alias);
+        push_oid(list, mcx, agg.type_oid);
+    }
+}
+
+unsafe fn read_aggregate(list: &List<*mut c_void>, idx: &mut usize) -> Option<Aggregate> {
+    unsafe {
+        let kind = aggregate_kind_from_i32(read_i32(list, idx)?)?;
+        let has_column = read_bool(list, idx)?;
+        let column = if has_column {
+            Some(read_column(list, idx)?)
+        } else {
+            None
+        };
+        let distinct = read_bool(list, idx)?;
+        let alias = read_text(list, idx)?;
+        let type_oid = read_oid(list, idx)?;
+        Some(Aggregate {
+            kind,
+            column,
+            distinct,
+            alias,
+            type_oid,
+        })
+    }
+}
+
+unsafe fn push_aggregates<'cx>(
+    list: &mut List<'cx, *mut c_void>,
+    mcx: &'cx MemCx<'_>,
+    aggregates: &[Aggregate],
+) {
+    unsafe {
+        push_i32(list, mcx, aggregates.len() as i32);
+        for agg in aggregates {
+            push_aggregate(list, mcx, agg);
+        }
+    }
+}
+
+unsafe fn read_aggregates(list: &List<*mut c_void>, idx: &mut usize) -> Option<Vec<Aggregate>> {
+    unsafe {
+        let count = read_i32(list, idx)? as usize;
+        let mut aggregates = Vec::with_capacity(count);
+        for _ in 0..count {
+            aggregates.push(read_aggregate(list, idx)?);
+        }
+        Some(aggregates)
+    }
+}
+
+unsafe fn push_quals<'cx>(list: &mut List<'cx, *mut c_void>, mcx: &'cx MemCx<'_>, quals: &[Qual]) {
+    unsafe {
+        push_i32(list, mcx, quals.len() as i32);
+        for qual in quals {
+            push_text(list, mcx, &qual.field);
+            push_text(list, mcx, &qual.operator);
+            push_bool(list, mcx, qual.use_or);
+
+            // Value-mode tag: 0 = literal bool, 1 = "don't care" placeholder
+            // (NullTest's literal "null", or a Param's dummy value which is
+            // always overwritten by `assign_parameter_value` before use), 2 =
+            // scalar Const passthrough, 3 = array Const passthrough. Modes
+            // 2/3 embed the *original* Const node directly (see
+            // `Qual::const_node`) instead of re-encoding the already-decoded
+            // `Cell`, so `copyObject` deep-copies it with the correct
+            // consttype, including for non-builtin column types this crate
+            // otherwise only sees as raw bytes.
+            match qual.const_node {
+                Some(addr) => {
+                    let mode: i32 = if matches!(qual.value, Value::Array(_)) {
+                        3
+                    } else {
+                        2
+                    };
+                    push_i32(list, mcx, mode);
+                    list.unstable_push_in_context(addr as *mut c_void, mcx);
+                }
+                None => match &qual.value {
+                    Value::Cell(Cell::Bool(b)) => {
+                        push_i32(list, mcx, 0);
+                        push_bool(list, mcx, *b);
+                    }
+                    _ => {
+                        push_i32(list, mcx, 1);
+                    }
+                },
+            }
+
+            push_bool(list, mcx, qual.param.is_some());
+            if let Some(param) = &qual.param {
+                push_i32(list, mcx, param.kind as i32);
+                push_i32(list, mcx, param.id as i32);
+                push_oid(list, mcx, param.type_oid);
+            }
+        }
+    }
+}
+
+unsafe fn read_quals(list: &List<*mut c_void>, idx: &mut usize) -> Option<Vec<Qual>> {
+    unsafe {
+        let count = read_i32(list, idx)? as usize;
+        let mut quals = Vec::with_capacity(count);
+        for _ in 0..count {
+            let field = read_text(list, idx)?;
+            let operator = read_text(list, idx)?;
+            let use_or = read_bool(list, idx)?;
+
+            let mode = read_i32(list, idx)?;
+            let value = match mode {
+                0 => Value::Cell(Cell::Bool(read_bool(list, idx)?)),
+                1 => Value::Cell(Cell::String("null".to_string())),
+                2 => {
+                    let cst = read_const(list, idx)?;
+                    Value::Cell(Cell::from_polymorphic_datum(
+                        cst.constvalue,
+                        cst.constisnull,
+                        cst.consttype,
+                    )?)
+                }
+                3 => {
+                    let cst = read_const(list, idx)?;
+                    Value::Array(form_array_from_datum(
+                        cst.constvalue,
+                        cst.constisnull,
+                        cst.consttype,
+                    )?)
+                }
+                _ => return None,
+            };
+
+            let has_param = read_bool(list, idx)?;
+            let param = if has_param {
+                let kind = read_i32(list, idx)? as pg_sys::ParamKind::Type;
+                let id = read_i32(list, idx)? as usize;
+                let type_oid = read_oid(list, idx)?;
+                Some(Param {
+                    kind,
+                    id,
+                    type_oid,
+                    eval_value: Mutex::new(None).into(),
+                    expr_eval: ExprEval {
+                        expr: ptr::null_mut(),
+                        expr_state: ptr::null_mut(),
+                    },
+                })
+            } else {
+                None
+            };
+
+            quals.push(Qual {
+                field,
+                operator,
+                value,
+                use_or,
+                param,
+                const_node: None,
+            });
+        }
+        Some(quals)
+    }
+}
+
+impl FdwScanPrivate {
+    unsafe fn serialize_to_list(&self) -> *mut pg_sys::List {
+        unsafe {
+            pgrx::memcx::current_context(|mcx| {
+                let mut ret = List::<*mut c_void>::Nil;
+                push_oid(&mut ret, mcx, self.foreigntableid);
+                push_quals(&mut ret, mcx, &self.quals);
+                push_columns(&mut ret, mcx, &self.tgts);
+                push_sorts(&mut ret, mcx, &self.sorts);
+                push_limit(&mut ret, mcx, &self.limit);
+                push_aggregates(&mut ret, mcx, &self.aggregates);
+                push_columns(&mut ret, mcx, &self.group_by);
+                ret.into_ptr()
+            })
+        }
+    }
+
+    unsafe fn deserialize_from_list(list: *mut pg_sys::List) -> Option<Self> {
+        unsafe {
+            pgrx::memcx::current_context(|mcx| {
+                let list = List::<*mut c_void>::downcast_ptr_in_memcx(list, mcx)?;
+                let mut idx = 0usize;
+
+                let foreigntableid = read_oid(&list, &mut idx)?;
+                let quals = read_quals(&list, &mut idx)?;
+                let tgts = read_columns(&list, &mut idx)?;
+                let sorts = read_sorts(&list, &mut idx)?;
+                let limit = read_limit(&list, &mut idx)?;
+                let aggregates = read_aggregates(&list, &mut idx)?;
+                let group_by = read_columns(&list, &mut idx)?;
+
+                Some(FdwScanPrivate {
+                    foreigntableid,
+                    quals,
+                    tgts,
+                    sorts,
+                    limit,
+                    aggregates,
+                    group_by,
+                })
+            })
+        }
+    }
+}
+
+impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwState<E, W> {
+    // Rebuild a full scan state from a deserialized `FdwScanPrivate` snapshot.
+    // Called fresh on every `begin_foreign_scan`, including repeat executions
+    // of a cached plan, so the FDW instance and `tmp_ctx` always belong
+    // solely to the current execution.
+    unsafe fn from_scan_private(private: FdwScanPrivate, tmp_ctx: MemoryContext) -> Self {
+        unsafe {
+            let foreigntableid = private.foreigntableid;
+            let instance = instance::create_fdw_instance_from_table_id(foreigntableid);
+
+            let ftable = pg_sys::GetForeignTable(foreigntableid);
+            let mut opts = options_to_hashmap((*ftable).options).report_unwrap();
+            opts.insert(
+                "wrappers.fserver_oid".into(),
+                (*ftable).serverid.to_u32().to_string(),
+            );
+            opts.insert(
+                "wrappers.ftable_oid".into(),
+                (*ftable).relid.to_u32().to_string(),
+            );
+
+            let mut quals = private.quals;
+
+            // Rebuild the PARAM_EXEC expression pointer for each qual's param,
+            // if any. The original pointer captured during planning lived in
+            // planner-scope memory and cannot be carried across a cached
+            // plan's re-execution (unlike PARAM_EXTERN, which only needs the
+            // scalar `id`/`type_oid` already restored above). Synthesize a
+            // fresh, plain Param node instead, allocated in `tmp_ctx` so it
+            // outlives every `iterate_foreign_scan`/`re_scan_foreign_scan`
+            // call for this scan — `assign_parameter_value` re-runs
+            // `ExecInitExpr` on it every time, not just once.
+            PgMemoryContexts::For(tmp_ctx).switch_to(|_| {
+                for qual in &mut quals {
+                    if let Some(param) = &mut qual.param
+                        && param.kind == pg_sys::ParamKind::PARAM_EXEC
+                    {
+                        let mut node = PgBox::<pg_sys::Param>::alloc_node(pg_sys::NodeTag::T_Param);
+                        node.paramkind = param.kind;
+                        node.paramid = param.id as _;
+                        node.paramtype = param.type_oid;
+                        node.paramtypmod = -1;
+                        node.paramcollid = pg_sys::InvalidOid;
+                        node.location = -1;
+                        param.expr_eval.expr = node.into_pg() as _;
+                    }
+                }
+            });
+
+            Self {
+                instance: Some(instance),
+                quals,
+                tgts: private.tgts,
+                sorts: private.sorts,
+                limit: private.limit,
+                opts,
+                aggregates: private.aggregates,
+                group_by: private.group_by,
+                tmp_ctx,
+                values: Vec::new(),
+                nulls: Vec::new(),
+                row: Row::new(),
+                param_fingerprint: String::new(),
+                _phantom: PhantomData,
+            }
+        }
+    }
 }
 
 #[pg_guard]
@@ -282,7 +856,7 @@ pub(super) extern "C-unwind" fn get_foreign_paths<
 pub(super) extern "C-unwind" fn get_foreign_plan<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     _root: *mut pg_sys::PlannerInfo,
     baserel: *mut pg_sys::RelOptInfo,
-    _foreigntableid: pg_sys::Oid,
+    foreigntableid: pg_sys::Oid,
     _best_path: *mut pg_sys::ForeignPath,
     tlist: *mut pg_sys::List,
     scan_clauses: *mut pg_sys::List,
@@ -384,14 +958,28 @@ pub(super) extern "C-unwind" fn get_foreign_plan<E: Into<ErrorReport>, W: Foreig
             (tlist, ptr::null_mut())
         };
 
-        // 'serialize' state to list, basically what we're doing here is to store
-        // the state pointer as an integer constant in the list, so it can be
-        // `deserialized` when executing the plan later.
-        // Note that the state itself is not serialized to any memory contexts,
-        // it just sits in Rust managed Box'ed memory and will be dropped when
-        // end_foreign_scan() is called.
-        let fdw_private =
-            PgMemoryContexts::For(state.tmp_ctx).switch_to(|_| FdwState::serialize_to_list(state));
+        // Snapshot only plain, Postgres-copyable data for `fdw_private` — the
+        // plan may be cached and re-executed many times, and `FdwState`
+        // (which owns the live FDW instance and a MemoryContext) must never
+        // be shared across executions; see `FdwScanPrivate`'s docs. This is
+        // deliberately *not* allocated inside `state.tmp_ctx`: that context is
+        // deleted below once `state` is dropped, but `fdw_private` must
+        // outlive this planning call.
+        let private = FdwScanPrivate {
+            foreigntableid,
+            quals: mem::take(&mut state.quals),
+            tgts: mem::take(&mut state.tgts),
+            sorts: mem::take(&mut state.sorts),
+            limit: state.limit.take(),
+            aggregates: mem::take(&mut state.aggregates),
+            group_by: mem::take(&mut state.group_by),
+        };
+        let fdw_private = private.serialize_to_list();
+
+        // Nothing else will ever free this planning-time state now that its
+        // pointer no longer flows into the returned plan's `fdw_private` —
+        // previously `end_foreign_scan` was the *only* place that freed it.
+        drop_fdw_state(state.as_ptr());
 
         pg_sys::make_foreignscan(
             final_tlist,
@@ -551,8 +1139,23 @@ pub(super) extern "C-unwind" fn begin_foreign_scan<
     unsafe {
         let scan_state = (*node).ss;
         let plan = scan_state.ps.plan as *mut pg_sys::ForeignScan;
-        let mut state = FdwState::<E, W>::deserialize_from_list((*plan).fdw_private as _);
-        assert!(!state.is_null());
+
+        let Some(private) = FdwScanPrivate::deserialize_from_list((*plan).fdw_private as _) else {
+            report_error(
+                PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                "invalid fdw_private data in begin_foreign_scan",
+            );
+            return;
+        };
+
+        // Rebuild the scan state from scratch on every execution — including
+        // the Nth execution of a cached plan — so `FdwState` (which owns the
+        // FDW instance and a MemoryContext) is never shared across
+        // executions. See `FdwScanPrivate`'s docs for why.
+        let foreigntableid = private.foreigntableid;
+        let ctx_name = format!("Wrappers_scan_{}", foreigntableid.to_u32());
+        let tmp_ctx = memctx::create_wrappers_memctx(&ctx_name);
+        let mut state = FdwState::<E, W>::from_scan_private(private, tmp_ctx);
 
         // assign parameter values to qual
         assign_parameter_value(node, &mut state);
@@ -566,11 +1169,11 @@ pub(super) extern "C-unwind" fn begin_foreign_scan<
             } else {
                 state.begin_scan()
             };
-            if result.is_err() {
-                drop_fdw_state(state.as_ptr());
-                (*plan).fdw_private = ptr::null::<FdwState<E, W>>() as _;
-                result.report_unwrap();
-            }
+            // `state` is still a plain, un-leaked value here, so if this
+            // panics/errors out, its `Drop` impl runs normally during stack
+            // unwinding (releasing `tmp_ctx` and the FDW instance) — same as
+            // `get_foreign_rel_size`'s analogous `report_unwrap()` call.
+            result.report_unwrap();
 
             // For aggregate upper-rel scans, scanrelid=0 so ss_currentRelation is
             // NULL. Use the number of output columns from state.tgts instead.
@@ -588,7 +1191,7 @@ pub(super) extern "C-unwind" fn begin_foreign_scan<
             state.nulls.extend_from_slice(&vec![true; natts]);
         }
 
-        (*node).fdw_state = state.into_pg() as _;
+        (*node).fdw_state = Box::leak(Box::new(state)) as *mut FdwState<E, W> as _;
     }
 }
 

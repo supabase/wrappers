@@ -216,15 +216,16 @@ pub(crate) unsafe fn extract_from_op_expr(
                     {
                         let field = pg_sys::get_attname(baserel_id, (*left).varattno, false);
 
-                        let (value, param) = if is_a(right, pg_sys::NodeTag::T_Const) {
-                            let right = right as *mut pg_sys::Const;
+                        let (value, param, const_node) = if is_a(right, pg_sys::NodeTag::T_Const) {
+                            let const_ptr = right as *mut pg_sys::Const;
                             (
                                 Cell::from_polymorphic_datum(
-                                    (*right).constvalue,
-                                    (*right).constisnull,
-                                    (*right).consttype,
+                                    (*const_ptr).constvalue,
+                                    (*const_ptr).constisnull,
+                                    (*const_ptr).consttype,
                                 ),
                                 None,
+                                Some(right as usize),
                             )
                         } else if is_a(right, pg_sys::NodeTag::T_Param) {
                             // add a dummy value if this is query parameter, the actual value
@@ -244,9 +245,9 @@ pub(crate) unsafe fn extract_from_op_expr(
                                     expr_state: ptr::null_mut(),
                                 },
                             };
-                            (Some(Cell::I64(0)), Some(param))
+                            (Some(Cell::I64(0)), Some(param), None)
                         } else {
-                            (None, None)
+                            (None, None, None)
                         };
 
                         if let Some(value) = value {
@@ -256,6 +257,7 @@ pub(crate) unsafe fn extract_from_op_expr(
                                 value: Value::Cell(value),
                                 use_or: false,
                                 param,
+                                const_node,
                             };
                             return Some(qual);
                         }
@@ -296,6 +298,7 @@ pub(crate) unsafe fn extract_from_null_test(
             value: Value::Cell(Cell::String("null".to_string())),
             use_or: false,
             param: None,
+            const_node: None,
         };
 
         Some(qual)
@@ -347,6 +350,7 @@ pub(crate) unsafe fn extract_from_scalar_array_op_expr(
                                 value: Value::Array(value),
                                 use_or: (*expr).useOr,
                                 param: None,
+                                const_node: Some(right as usize),
                             };
                             return Some(qual);
                         }
@@ -385,6 +389,7 @@ pub(crate) unsafe fn extract_from_var(
             value: Value::Cell(Cell::Bool(true)),
             use_or: false,
             param: None,
+            const_node: None,
         };
 
         Some(qual)
@@ -420,6 +425,7 @@ pub(crate) unsafe fn extract_from_bool_expr(
                     value: Value::Cell(Cell::Bool(false)),
                     use_or: false,
                     param: None,
+                    const_node: None,
                 };
 
                 return Some(qual);
@@ -456,6 +462,7 @@ pub(crate) unsafe fn extract_from_boolean_test(
             value: Value::Cell(Cell::Bool(value)),
             use_or: false,
             param: None,
+            const_node: None,
         };
 
         Some(qual)
