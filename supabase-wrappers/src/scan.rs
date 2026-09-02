@@ -204,332 +204,382 @@ struct FdwScanPrivate {
     group_by: Vec<Column>,
 }
 
-unsafe fn push_i32<'cx>(list: &mut List<'cx, *mut c_void>, mcx: &'cx MemCx<'_>, val: i32) {
-    unsafe {
-        let cst = pg_sys::makeConst(
-            pg_sys::INT4OID,
-            -1,
-            pg_sys::InvalidOid,
-            4,
-            val.into_datum().unwrap(),
-            false,
-            true,
-        );
-        list.unstable_push_in_context(cst as _, mcx);
-    }
-}
-
-unsafe fn push_i64<'cx>(list: &mut List<'cx, *mut c_void>, mcx: &'cx MemCx<'_>, val: i64) {
-    unsafe {
-        let cst = pg_sys::makeConst(
-            pg_sys::INT8OID,
-            -1,
-            pg_sys::InvalidOid,
-            8,
-            val.into_datum().unwrap(),
-            false,
-            true,
-        );
-        list.unstable_push_in_context(cst as _, mcx);
-    }
-}
-
-unsafe fn push_bool<'cx>(list: &mut List<'cx, *mut c_void>, mcx: &'cx MemCx<'_>, val: bool) {
-    unsafe {
-        let cst = pg_sys::makeConst(
-            pg_sys::BOOLOID,
-            -1,
-            pg_sys::InvalidOid,
-            1,
-            val.into_datum().unwrap(),
-            false,
-            true,
-        );
-        list.unstable_push_in_context(cst as _, mcx);
-    }
-}
-
-unsafe fn push_text<'cx>(list: &mut List<'cx, *mut c_void>, mcx: &'cx MemCx<'_>, val: &str) {
-    unsafe {
-        let cst = pg_sys::makeConst(
-            pg_sys::TEXTOID,
-            -1,
-            pg_sys::InvalidOid,
-            -1,
-            val.to_string().into_datum().unwrap(),
-            false,
-            false,
-        );
-        list.unstable_push_in_context(cst as _, mcx);
-    }
-}
-
-unsafe fn push_oid<'cx>(list: &mut List<'cx, *mut c_void>, mcx: &'cx MemCx<'_>, val: Oid) {
-    unsafe { push_i32(list, mcx, val.to_u32() as i32) };
-}
-
-// Reads the raw `Const` at the current cursor position and advances the cursor.
-unsafe fn read_const(list: &List<*mut c_void>, idx: &mut usize) -> Option<pg_sys::Const> {
-    let cst_ptr = *list.get(*idx)? as *mut pg_sys::Const;
-    *idx += 1;
-    Some(unsafe { *cst_ptr })
-}
-
-unsafe fn read_i32(list: &List<*mut c_void>, idx: &mut usize) -> Option<i32> {
-    unsafe {
-        let cst = read_const(list, idx)?;
-        i32::from_datum(cst.constvalue, cst.constisnull)
-    }
-}
-
-unsafe fn read_i64(list: &List<*mut c_void>, idx: &mut usize) -> Option<i64> {
-    unsafe {
-        let cst = read_const(list, idx)?;
-        i64::from_datum(cst.constvalue, cst.constisnull)
-    }
-}
-
-unsafe fn read_bool(list: &List<*mut c_void>, idx: &mut usize) -> Option<bool> {
-    unsafe {
-        let cst = read_const(list, idx)?;
-        bool::from_datum(cst.constvalue, cst.constisnull)
-    }
-}
-
-unsafe fn read_text(list: &List<*mut c_void>, idx: &mut usize) -> Option<String> {
-    unsafe {
-        let cst = read_const(list, idx)?;
-        String::from_datum(cst.constvalue, cst.constisnull)
-    }
-}
-
-unsafe fn read_oid(list: &List<*mut c_void>, idx: &mut usize) -> Option<Oid> {
-    unsafe { read_i32(list, idx) }.map(|v| Oid::from(v as u32))
-}
-
-unsafe fn push_column<'cx>(list: &mut List<'cx, *mut c_void>, mcx: &'cx MemCx<'_>, col: &Column) {
-    unsafe {
-        push_text(list, mcx, &col.name);
-        // usize to i32 cast is safe as Postgres has a maximum of 1600 columns
-        push_i32(list, mcx, col.num as i32);
-        push_oid(list, mcx, col.type_oid);
-    }
-}
-
-unsafe fn read_column(list: &List<*mut c_void>, idx: &mut usize) -> Option<Column> {
-    unsafe {
-        let name = read_text(list, idx)?;
-        let num = read_i32(list, idx)? as usize;
-        let type_oid = read_oid(list, idx)?;
-        Some(Column {
-            name,
-            num,
-            type_oid,
-        })
-    }
-}
-
-unsafe fn push_columns<'cx>(
-    list: &mut List<'cx, *mut c_void>,
-    mcx: &'cx MemCx<'_>,
-    cols: &[Column],
-) {
-    unsafe {
-        push_i32(list, mcx, cols.len() as i32);
-        for col in cols {
-            push_column(list, mcx, col);
+impl FdwScanPrivate {
+    unsafe fn serialize_to_list(&self) -> *mut pg_sys::List {
+        unsafe {
+            pgrx::memcx::current_context(|mcx| {
+                let mut ret = List::<*mut c_void>::Nil;
+                Self::push_oid(&mut ret, mcx, self.foreigntableid);
+                Self::push_quals(&mut ret, mcx, &self.quals);
+                Self::push_columns(&mut ret, mcx, &self.tgts);
+                Self::push_sorts(&mut ret, mcx, &self.sorts);
+                Self::push_limit(&mut ret, mcx, &self.limit);
+                Self::push_aggregates(&mut ret, mcx, &self.aggregates);
+                Self::push_columns(&mut ret, mcx, &self.group_by);
+                ret.into_ptr()
+            })
         }
     }
-}
 
-unsafe fn read_columns(list: &List<*mut c_void>, idx: &mut usize) -> Option<Vec<Column>> {
-    unsafe {
-        let count = read_i32(list, idx)? as usize;
-        let mut cols = Vec::with_capacity(count);
-        for _ in 0..count {
-            cols.push(read_column(list, idx)?);
-        }
-        Some(cols)
-    }
-}
+    unsafe fn deserialize_from_list(list: *mut pg_sys::List) -> Option<Self> {
+        unsafe {
+            pgrx::memcx::current_context(|mcx| {
+                let list = List::<*mut c_void>::downcast_ptr_in_memcx(list, mcx)?;
+                let mut idx = 0usize;
 
-unsafe fn push_sort<'cx>(list: &mut List<'cx, *mut c_void>, mcx: &'cx MemCx<'_>, sort: &Sort) {
-    unsafe {
-        push_text(list, mcx, &sort.field);
-        // usize to i32 cast is safe field_no is also bound by Postgres maximum number of columns(1600)
-        push_i32(list, mcx, sort.field_no as i32);
-        push_bool(list, mcx, sort.reversed);
-        push_bool(list, mcx, sort.nulls_first);
-        push_bool(list, mcx, sort.collate.is_some());
-        if let Some(collate) = &sort.collate {
-            push_text(list, mcx, collate);
-        }
-    }
-}
+                let foreigntableid = Self::read_oid(&list, &mut idx)?;
+                let quals = Self::read_quals(&list, &mut idx)?;
+                let tgts = Self::read_columns(&list, &mut idx)?;
+                let sorts = Self::read_sorts(&list, &mut idx)?;
+                let limit = Self::read_limit(&list, &mut idx)?;
+                let aggregates = Self::read_aggregates(&list, &mut idx)?;
+                let group_by = Self::read_columns(&list, &mut idx)?;
 
-unsafe fn read_sort(list: &List<*mut c_void>, idx: &mut usize) -> Option<Sort> {
-    unsafe {
-        let field = read_text(list, idx)?;
-        let field_no = read_i32(list, idx)? as usize;
-        let reversed = read_bool(list, idx)?;
-        let nulls_first = read_bool(list, idx)?;
-        let has_collate = read_bool(list, idx)?;
-        let collate = if has_collate {
-            Some(read_text(list, idx)?)
-        } else {
-            None
-        };
-
-        Some(Sort {
-            field,
-            field_no,
-            reversed,
-            nulls_first,
-            collate,
-        })
-    }
-}
-
-unsafe fn push_sorts<'cx>(list: &mut List<'cx, *mut c_void>, mcx: &'cx MemCx<'_>, sorts: &[Sort]) {
-    unsafe {
-        push_i32(list, mcx, sorts.len() as i32);
-        for sort in sorts {
-            push_sort(list, mcx, sort);
+                Some(FdwScanPrivate {
+                    foreigntableid,
+                    quals,
+                    tgts,
+                    sorts,
+                    limit,
+                    aggregates,
+                    group_by,
+                })
+            })
         }
     }
-}
 
-unsafe fn read_sorts(list: &List<*mut c_void>, idx: &mut usize) -> Option<Vec<Sort>> {
-    unsafe {
-        let count = read_i32(list, idx)? as usize;
-        let mut sorts = Vec::with_capacity(count);
-        for _ in 0..count {
-            sorts.push(read_sort(list, idx)?);
-        }
-        Some(sorts)
-    }
-}
-
-unsafe fn push_limit<'cx>(
-    list: &mut List<'cx, *mut c_void>,
-    mcx: &'cx MemCx<'_>,
-    limit: &Option<Limit>,
-) {
-    unsafe {
-        push_bool(list, mcx, limit.is_some());
-        if let Some(limit) = limit {
-            push_i64(list, mcx, limit.count);
-            push_i64(list, mcx, limit.offset);
+    unsafe fn push_i32<'cx>(list: &mut List<'cx, *mut c_void>, mcx: &'cx MemCx<'_>, val: i32) {
+        unsafe {
+            let cst = pg_sys::makeConst(
+                pg_sys::INT4OID,
+                -1,
+                pg_sys::InvalidOid,
+                4,
+                val.into_datum().unwrap(),
+                false,
+                true,
+            );
+            list.unstable_push_in_context(cst as _, mcx);
         }
     }
-}
 
-unsafe fn read_limit(list: &List<*mut c_void>, idx: &mut usize) -> Option<Option<Limit>> {
-    unsafe {
-        let has_limit = read_bool(list, idx)?;
-        if has_limit {
-            let count = read_i64(list, idx)?;
-            let offset = read_i64(list, idx)?;
-            Some(Some(Limit { count, offset }))
-        } else {
-            Some(None)
+    unsafe fn push_i64<'cx>(list: &mut List<'cx, *mut c_void>, mcx: &'cx MemCx<'_>, val: i64) {
+        unsafe {
+            let cst = pg_sys::makeConst(
+                pg_sys::INT8OID,
+                -1,
+                pg_sys::InvalidOid,
+                8,
+                val.into_datum().unwrap(),
+                false,
+                true,
+            );
+            list.unstable_push_in_context(cst as _, mcx);
         }
     }
-}
 
-fn aggregate_kind_to_i32(kind: AggregateKind) -> i32 {
-    match kind {
-        AggregateKind::Count => 0,
-        AggregateKind::CountColumn => 1,
-        AggregateKind::Sum => 2,
-        AggregateKind::Avg => 3,
-        AggregateKind::Min => 4,
-        AggregateKind::Max => 5,
-    }
-}
-
-fn aggregate_kind_from_i32(val: i32) -> Option<AggregateKind> {
-    match val {
-        0 => Some(AggregateKind::Count),
-        1 => Some(AggregateKind::CountColumn),
-        2 => Some(AggregateKind::Sum),
-        3 => Some(AggregateKind::Avg),
-        4 => Some(AggregateKind::Min),
-        5 => Some(AggregateKind::Max),
-        _ => None,
-    }
-}
-
-unsafe fn push_aggregate<'cx>(
-    list: &mut List<'cx, *mut c_void>,
-    mcx: &'cx MemCx<'_>,
-    agg: &Aggregate,
-) {
-    unsafe {
-        push_i32(list, mcx, aggregate_kind_to_i32(agg.kind));
-        push_bool(list, mcx, agg.column.is_some());
-        if let Some(col) = &agg.column {
-            push_column(list, mcx, col);
-        }
-        push_bool(list, mcx, agg.distinct);
-        push_text(list, mcx, &agg.alias);
-        push_oid(list, mcx, agg.type_oid);
-    }
-}
-
-unsafe fn read_aggregate(list: &List<*mut c_void>, idx: &mut usize) -> Option<Aggregate> {
-    unsafe {
-        let kind = aggregate_kind_from_i32(read_i32(list, idx)?)?;
-        let has_column = read_bool(list, idx)?;
-        let column = if has_column {
-            Some(read_column(list, idx)?)
-        } else {
-            None
-        };
-        let distinct = read_bool(list, idx)?;
-        let alias = read_text(list, idx)?;
-        let type_oid = read_oid(list, idx)?;
-        Some(Aggregate {
-            kind,
-            column,
-            distinct,
-            alias,
-            type_oid,
-        })
-    }
-}
-
-unsafe fn push_aggregates<'cx>(
-    list: &mut List<'cx, *mut c_void>,
-    mcx: &'cx MemCx<'_>,
-    aggregates: &[Aggregate],
-) {
-    unsafe {
-        push_i32(list, mcx, aggregates.len() as i32);
-        for agg in aggregates {
-            push_aggregate(list, mcx, agg);
+    unsafe fn push_bool<'cx>(list: &mut List<'cx, *mut c_void>, mcx: &'cx MemCx<'_>, val: bool) {
+        unsafe {
+            let cst = pg_sys::makeConst(
+                pg_sys::BOOLOID,
+                -1,
+                pg_sys::InvalidOid,
+                1,
+                val.into_datum().unwrap(),
+                false,
+                true,
+            );
+            list.unstable_push_in_context(cst as _, mcx);
         }
     }
-}
 
-unsafe fn read_aggregates(list: &List<*mut c_void>, idx: &mut usize) -> Option<Vec<Aggregate>> {
-    unsafe {
-        let count = read_i32(list, idx)? as usize;
-        let mut aggregates = Vec::with_capacity(count);
-        for _ in 0..count {
-            aggregates.push(read_aggregate(list, idx)?);
+    unsafe fn push_text<'cx>(list: &mut List<'cx, *mut c_void>, mcx: &'cx MemCx<'_>, val: &str) {
+        unsafe {
+            let cst = pg_sys::makeConst(
+                pg_sys::TEXTOID,
+                -1,
+                pg_sys::InvalidOid,
+                -1,
+                val.to_string().into_datum().unwrap(),
+                false,
+                false,
+            );
+            list.unstable_push_in_context(cst as _, mcx);
         }
-        Some(aggregates)
     }
-}
 
-unsafe fn push_quals<'cx>(list: &mut List<'cx, *mut c_void>, mcx: &'cx MemCx<'_>, quals: &[Qual]) {
-    unsafe {
-        push_i32(list, mcx, quals.len() as i32);
-        for qual in quals {
-            push_text(list, mcx, &qual.field);
-            push_text(list, mcx, &qual.operator);
-            push_bool(list, mcx, qual.use_or);
+    unsafe fn push_oid<'cx>(list: &mut List<'cx, *mut c_void>, mcx: &'cx MemCx<'_>, val: Oid) {
+        unsafe { Self::push_i32(list, mcx, val.to_u32() as i32) };
+    }
+
+    // Reads the raw `Const` at the current cursor position and advances the cursor.
+    unsafe fn read_const(list: &List<*mut c_void>, idx: &mut usize) -> Option<pg_sys::Const> {
+        let cst_ptr = *list.get(*idx)? as *mut pg_sys::Const;
+        *idx += 1;
+        Some(unsafe { *cst_ptr })
+    }
+
+    unsafe fn read_i32(list: &List<*mut c_void>, idx: &mut usize) -> Option<i32> {
+        unsafe {
+            let cst = Self::read_const(list, idx)?;
+            i32::from_datum(cst.constvalue, cst.constisnull)
+        }
+    }
+
+    unsafe fn read_i64(list: &List<*mut c_void>, idx: &mut usize) -> Option<i64> {
+        unsafe {
+            let cst = Self::read_const(list, idx)?;
+            i64::from_datum(cst.constvalue, cst.constisnull)
+        }
+    }
+
+    unsafe fn read_bool(list: &List<*mut c_void>, idx: &mut usize) -> Option<bool> {
+        unsafe {
+            let cst = Self::read_const(list, idx)?;
+            bool::from_datum(cst.constvalue, cst.constisnull)
+        }
+    }
+
+    unsafe fn read_text(list: &List<*mut c_void>, idx: &mut usize) -> Option<String> {
+        unsafe {
+            let cst = Self::read_const(list, idx)?;
+            String::from_datum(cst.constvalue, cst.constisnull)
+        }
+    }
+
+    unsafe fn read_oid(list: &List<*mut c_void>, idx: &mut usize) -> Option<Oid> {
+        unsafe { Self::read_i32(list, idx) }.map(|v| Oid::from(v as u32))
+    }
+
+    unsafe fn push_column<'cx>(
+        list: &mut List<'cx, *mut c_void>,
+        mcx: &'cx MemCx<'_>,
+        col: &Column,
+    ) {
+        unsafe {
+            Self::push_text(list, mcx, &col.name);
+            // usize to i32 cast is safe as Postgres has a maximum of 1600 columns
+            Self::push_i32(list, mcx, col.num as i32);
+            Self::push_oid(list, mcx, col.type_oid);
+        }
+    }
+
+    unsafe fn read_column(list: &List<*mut c_void>, idx: &mut usize) -> Option<Column> {
+        unsafe {
+            let name = Self::read_text(list, idx)?;
+            let num = Self::read_i32(list, idx)? as usize;
+            let type_oid = Self::read_oid(list, idx)?;
+            Some(Column {
+                name,
+                num,
+                type_oid,
+            })
+        }
+    }
+
+    unsafe fn push_columns<'cx>(
+        list: &mut List<'cx, *mut c_void>,
+        mcx: &'cx MemCx<'_>,
+        cols: &[Column],
+    ) {
+        unsafe {
+            Self::push_i32(list, mcx, cols.len() as i32);
+            for col in cols {
+                Self::push_column(list, mcx, col);
+            }
+        }
+    }
+
+    unsafe fn read_columns(list: &List<*mut c_void>, idx: &mut usize) -> Option<Vec<Column>> {
+        unsafe {
+            let count = Self::read_i32(list, idx)? as usize;
+            let mut cols = Vec::with_capacity(count);
+            for _ in 0..count {
+                cols.push(Self::read_column(list, idx)?);
+            }
+            Some(cols)
+        }
+    }
+
+    unsafe fn push_sort<'cx>(list: &mut List<'cx, *mut c_void>, mcx: &'cx MemCx<'_>, sort: &Sort) {
+        unsafe {
+            Self::push_text(list, mcx, &sort.field);
+            // usize to i32 cast is safe field_no is also bound by Postgres maximum number of columns(1600)
+            Self::push_i32(list, mcx, sort.field_no as i32);
+            Self::push_bool(list, mcx, sort.reversed);
+            Self::push_bool(list, mcx, sort.nulls_first);
+            Self::push_bool(list, mcx, sort.collate.is_some());
+            if let Some(collate) = &sort.collate {
+                Self::push_text(list, mcx, collate);
+            }
+        }
+    }
+
+    unsafe fn read_sort(list: &List<*mut c_void>, idx: &mut usize) -> Option<Sort> {
+        unsafe {
+            let field = Self::read_text(list, idx)?;
+            let field_no = Self::read_i32(list, idx)? as usize;
+            let reversed = Self::read_bool(list, idx)?;
+            let nulls_first = Self::read_bool(list, idx)?;
+            let has_collate = Self::read_bool(list, idx)?;
+            let collate = if has_collate {
+                Some(Self::read_text(list, idx)?)
+            } else {
+                None
+            };
+
+            Some(Sort {
+                field,
+                field_no,
+                reversed,
+                nulls_first,
+                collate,
+            })
+        }
+    }
+
+    unsafe fn push_sorts<'cx>(
+        list: &mut List<'cx, *mut c_void>,
+        mcx: &'cx MemCx<'_>,
+        sorts: &[Sort],
+    ) {
+        unsafe {
+            Self::push_i32(list, mcx, sorts.len() as i32);
+            for sort in sorts {
+                Self::push_sort(list, mcx, sort);
+            }
+        }
+    }
+
+    unsafe fn read_sorts(list: &List<*mut c_void>, idx: &mut usize) -> Option<Vec<Sort>> {
+        unsafe {
+            let count = Self::read_i32(list, idx)? as usize;
+            let mut sorts = Vec::with_capacity(count);
+            for _ in 0..count {
+                sorts.push(Self::read_sort(list, idx)?);
+            }
+            Some(sorts)
+        }
+    }
+
+    unsafe fn push_limit<'cx>(
+        list: &mut List<'cx, *mut c_void>,
+        mcx: &'cx MemCx<'_>,
+        limit: &Option<Limit>,
+    ) {
+        unsafe {
+            Self::push_bool(list, mcx, limit.is_some());
+            if let Some(limit) = limit {
+                Self::push_i64(list, mcx, limit.count);
+                Self::push_i64(list, mcx, limit.offset);
+            }
+        }
+    }
+
+    unsafe fn read_limit(list: &List<*mut c_void>, idx: &mut usize) -> Option<Option<Limit>> {
+        unsafe {
+            let has_limit = Self::read_bool(list, idx)?;
+            if has_limit {
+                let count = Self::read_i64(list, idx)?;
+                let offset = Self::read_i64(list, idx)?;
+                Some(Some(Limit { count, offset }))
+            } else {
+                Some(None)
+            }
+        }
+    }
+
+    fn aggregate_kind_to_i32(kind: AggregateKind) -> i32 {
+        match kind {
+            AggregateKind::Count => 0,
+            AggregateKind::CountColumn => 1,
+            AggregateKind::Sum => 2,
+            AggregateKind::Avg => 3,
+            AggregateKind::Min => 4,
+            AggregateKind::Max => 5,
+        }
+    }
+
+    fn aggregate_kind_from_i32(val: i32) -> Option<AggregateKind> {
+        match val {
+            0 => Some(AggregateKind::Count),
+            1 => Some(AggregateKind::CountColumn),
+            2 => Some(AggregateKind::Sum),
+            3 => Some(AggregateKind::Avg),
+            4 => Some(AggregateKind::Min),
+            5 => Some(AggregateKind::Max),
+            _ => None,
+        }
+    }
+
+    unsafe fn push_aggregate<'cx>(
+        list: &mut List<'cx, *mut c_void>,
+        mcx: &'cx MemCx<'_>,
+        agg: &Aggregate,
+    ) {
+        unsafe {
+            Self::push_i32(list, mcx, Self::aggregate_kind_to_i32(agg.kind));
+            Self::push_bool(list, mcx, agg.column.is_some());
+            if let Some(col) = &agg.column {
+                Self::push_column(list, mcx, col);
+            }
+            Self::push_bool(list, mcx, agg.distinct);
+            Self::push_text(list, mcx, &agg.alias);
+            Self::push_oid(list, mcx, agg.type_oid);
+        }
+    }
+
+    unsafe fn read_aggregate(list: &List<*mut c_void>, idx: &mut usize) -> Option<Aggregate> {
+        unsafe {
+            let kind = Self::aggregate_kind_from_i32(Self::read_i32(list, idx)?)?;
+            let has_column = Self::read_bool(list, idx)?;
+            let column = if has_column {
+                Some(Self::read_column(list, idx)?)
+            } else {
+                None
+            };
+            let distinct = Self::read_bool(list, idx)?;
+            let alias = Self::read_text(list, idx)?;
+            let type_oid = Self::read_oid(list, idx)?;
+            Some(Aggregate {
+                kind,
+                column,
+                distinct,
+                alias,
+                type_oid,
+            })
+        }
+    }
+
+    unsafe fn push_aggregates<'cx>(
+        list: &mut List<'cx, *mut c_void>,
+        mcx: &'cx MemCx<'_>,
+        aggregates: &[Aggregate],
+    ) {
+        unsafe {
+            Self::push_i32(list, mcx, aggregates.len() as i32);
+            for agg in aggregates {
+                Self::push_aggregate(list, mcx, agg);
+            }
+        }
+    }
+
+    unsafe fn read_aggregates(list: &List<*mut c_void>, idx: &mut usize) -> Option<Vec<Aggregate>> {
+        unsafe {
+            let count = Self::read_i32(list, idx)? as usize;
+            let mut aggregates = Vec::with_capacity(count);
+            for _ in 0..count {
+                aggregates.push(Self::read_aggregate(list, idx)?);
+            }
+            Some(aggregates)
+        }
+    }
+
+    unsafe fn push_qual<'cx>(list: &mut List<'cx, *mut c_void>, mcx: &'cx MemCx<'_>, qual: &Qual) {
+        unsafe {
+            Self::push_text(list, mcx, &qual.field);
+            Self::push_text(list, mcx, &qual.operator);
+            Self::push_bool(list, mcx, qual.use_or);
 
             // Value-mode tag: 0 = literal bool, 1 = "don't care" placeholder
             // (NullTest's literal "null", or a Param's dummy value which is
@@ -547,45 +597,54 @@ unsafe fn push_quals<'cx>(list: &mut List<'cx, *mut c_void>, mcx: &'cx MemCx<'_>
                     } else {
                         2
                     };
-                    push_i32(list, mcx, mode);
+                    Self::push_i32(list, mcx, mode);
                     list.unstable_push_in_context(addr as *mut c_void, mcx);
                 }
                 None => match &qual.value {
                     Value::Cell(Cell::Bool(b)) => {
-                        push_i32(list, mcx, 0);
-                        push_bool(list, mcx, *b);
+                        Self::push_i32(list, mcx, 0);
+                        Self::push_bool(list, mcx, *b);
                     }
                     _ => {
-                        push_i32(list, mcx, 1);
+                        Self::push_i32(list, mcx, 1);
                     }
                 },
             }
 
-            push_bool(list, mcx, qual.param.is_some());
+            Self::push_bool(list, mcx, qual.param.is_some());
             if let Some(param) = &qual.param {
-                push_i32(list, mcx, param.kind as i32);
-                push_i32(list, mcx, param.id as i32);
-                push_oid(list, mcx, param.type_oid);
+                Self::push_i32(list, mcx, param.kind as i32);
+                Self::push_i32(list, mcx, param.id as i32);
+                Self::push_oid(list, mcx, param.type_oid);
             }
         }
     }
-}
 
-unsafe fn read_quals(list: &List<*mut c_void>, idx: &mut usize) -> Option<Vec<Qual>> {
-    unsafe {
-        let count = read_i32(list, idx)? as usize;
-        let mut quals = Vec::with_capacity(count);
-        for _ in 0..count {
-            let field = read_text(list, idx)?;
-            let operator = read_text(list, idx)?;
-            let use_or = read_bool(list, idx)?;
+    unsafe fn push_quals<'cx>(
+        list: &mut List<'cx, *mut c_void>,
+        mcx: &'cx MemCx<'_>,
+        quals: &[Qual],
+    ) {
+        unsafe {
+            Self::push_i32(list, mcx, quals.len() as i32);
+            for qual in quals {
+                Self::push_qual(list, mcx, qual);
+            }
+        }
+    }
 
-            let mode = read_i32(list, idx)?;
+    unsafe fn read_qual(list: &List<*mut c_void>, idx: &mut usize) -> Option<Qual> {
+        unsafe {
+            let field = Self::read_text(list, idx)?;
+            let operator = Self::read_text(list, idx)?;
+            let use_or = Self::read_bool(list, idx)?;
+
+            let mode = Self::read_i32(list, idx)?;
             let value = match mode {
-                0 => Value::Cell(Cell::Bool(read_bool(list, idx)?)),
+                0 => Value::Cell(Cell::Bool(Self::read_bool(list, idx)?)),
                 1 => Value::Cell(Cell::String("null".to_string())),
                 2 => {
-                    let cst = read_const(list, idx)?;
+                    let cst = Self::read_const(list, idx)?;
                     Value::Cell(Cell::from_polymorphic_datum(
                         cst.constvalue,
                         cst.constisnull,
@@ -593,7 +652,7 @@ unsafe fn read_quals(list: &List<*mut c_void>, idx: &mut usize) -> Option<Vec<Qu
                     )?)
                 }
                 3 => {
-                    let cst = read_const(list, idx)?;
+                    let cst = Self::read_const(list, idx)?;
                     Value::Array(form_array_from_datum(
                         cst.constvalue,
                         cst.constisnull,
@@ -603,11 +662,11 @@ unsafe fn read_quals(list: &List<*mut c_void>, idx: &mut usize) -> Option<Vec<Qu
                 _ => return None,
             };
 
-            let has_param = read_bool(list, idx)?;
+            let has_param = Self::read_bool(list, idx)?;
             let param = if has_param {
-                let kind = read_i32(list, idx)? as pg_sys::ParamKind::Type;
-                let id = read_i32(list, idx)? as usize;
-                let type_oid = read_oid(list, idx)?;
+                let kind = Self::read_i32(list, idx)? as pg_sys::ParamKind::Type;
+                let id = Self::read_i32(list, idx)? as usize;
+                let type_oid = Self::read_oid(list, idx)?;
                 Some(Param {
                     kind,
                     id,
@@ -622,60 +681,25 @@ unsafe fn read_quals(list: &List<*mut c_void>, idx: &mut usize) -> Option<Vec<Qu
                 None
             };
 
-            quals.push(Qual {
+            Some(Qual {
                 field,
                 operator,
                 value,
                 use_or,
                 param,
                 const_node: None,
-            });
-        }
-        Some(quals)
-    }
-}
-
-impl FdwScanPrivate {
-    unsafe fn serialize_to_list(&self) -> *mut pg_sys::List {
-        unsafe {
-            pgrx::memcx::current_context(|mcx| {
-                let mut ret = List::<*mut c_void>::Nil;
-                push_oid(&mut ret, mcx, self.foreigntableid);
-                push_quals(&mut ret, mcx, &self.quals);
-                push_columns(&mut ret, mcx, &self.tgts);
-                push_sorts(&mut ret, mcx, &self.sorts);
-                push_limit(&mut ret, mcx, &self.limit);
-                push_aggregates(&mut ret, mcx, &self.aggregates);
-                push_columns(&mut ret, mcx, &self.group_by);
-                ret.into_ptr()
             })
         }
     }
 
-    unsafe fn deserialize_from_list(list: *mut pg_sys::List) -> Option<Self> {
+    unsafe fn read_quals(list: &List<*mut c_void>, idx: &mut usize) -> Option<Vec<Qual>> {
         unsafe {
-            pgrx::memcx::current_context(|mcx| {
-                let list = List::<*mut c_void>::downcast_ptr_in_memcx(list, mcx)?;
-                let mut idx = 0usize;
-
-                let foreigntableid = read_oid(&list, &mut idx)?;
-                let quals = read_quals(&list, &mut idx)?;
-                let tgts = read_columns(&list, &mut idx)?;
-                let sorts = read_sorts(&list, &mut idx)?;
-                let limit = read_limit(&list, &mut idx)?;
-                let aggregates = read_aggregates(&list, &mut idx)?;
-                let group_by = read_columns(&list, &mut idx)?;
-
-                Some(FdwScanPrivate {
-                    foreigntableid,
-                    quals,
-                    tgts,
-                    sorts,
-                    limit,
-                    aggregates,
-                    group_by,
-                })
-            })
+            let count = Self::read_i32(list, idx)? as usize;
+            let mut quals = Vec::with_capacity(count);
+            for _ in 0..count {
+                quals.push(Self::read_qual(list, idx)?);
+            }
+            Some(quals)
         }
     }
 }
