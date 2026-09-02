@@ -175,7 +175,6 @@ pub(crate) unsafe fn unnest_clause(node: *mut pg_sys::Node) -> *mut pg_sys::Node
 }
 
 pub(crate) unsafe fn extract_from_op_expr(
-    _root: *mut pg_sys::PlannerInfo,
     baserel_id: pg_sys::Oid,
     baserel_ids: pg_sys::Relids,
     expr: *mut pg_sys::OpExpr,
@@ -217,12 +216,12 @@ pub(crate) unsafe fn extract_from_op_expr(
                         let field = pg_sys::get_attname(baserel_id, (*left).varattno, false);
 
                         let (value, param, const_node) = if is_a(right, pg_sys::NodeTag::T_Const) {
-                            let const_ptr = right as *mut pg_sys::Const;
+                            let right = right as *mut pg_sys::Const;
                             (
                                 Cell::from_polymorphic_datum(
-                                    (*const_ptr).constvalue,
-                                    (*const_ptr).constisnull,
-                                    (*const_ptr).consttype,
+                                    (*right).constvalue,
+                                    (*right).constisnull,
+                                    (*right).consttype,
                                 ),
                                 None,
                                 Some(right as usize),
@@ -484,7 +483,7 @@ pub(crate) unsafe fn extract_quals(
                 for cond in conds.iter() {
                     let expr = (*(*cond as *mut pg_sys::RestrictInfo)).clause as *mut pg_sys::Node;
                     let extracted = if is_a(expr, pg_sys::NodeTag::T_OpExpr) {
-                        extract_from_op_expr(root, baserel_id, (*baserel).relids, expr as _)
+                        extract_from_op_expr(baserel_id, (*baserel).relids, expr as _)
                     } else if is_a(expr, pg_sys::NodeTag::T_NullTest) {
                         extract_from_null_test(baserel_id, expr as _)
                     } else if is_a(expr, pg_sys::NodeTag::T_ScalarArrayOpExpr) {
