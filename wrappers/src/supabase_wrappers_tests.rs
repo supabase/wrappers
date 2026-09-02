@@ -258,11 +258,6 @@ mod tests {
     // Regression test: cached-plan re-execution must not crash the backend
     // ==========================================================================
 
-    // Minimal FDW used only to exercise the scan callback lifecycle
-    // (get_foreign_plan / begin_foreign_scan / end_foreign_scan) against a
-    // real, cached Postgres plan. Deliberately independent of any specific
-    // FDW crate feature or external service, so this test always compiles
-    // and runs under `cargo pgrx test`, regardless of which FDWs are enabled.
     #[wrappers_fdw(
         version = "0.1.0",
         author = "Supabase",
@@ -270,11 +265,8 @@ mod tests {
         error_type = "CacheTestFdwError"
     )]
     struct CacheTestFdw {
-        done: bool,
-        // count(*) needs zero columns, so iter_scan must only push cells
-        // that are actually in the target list — pushing an extra "id"
-        // column unconditionally trips the framework's
-        // `row.cols.len() != tgts.len()` check.
+        iter_done: bool,
+        planning_done: bool,
         tgt_cols: Vec<Column>,
     }
 
@@ -289,9 +281,29 @@ mod tests {
     impl ForeignDataWrapper<CacheTestFdwError> for CacheTestFdw {
         fn new(_server: ForeignServer) -> Result<Self, CacheTestFdwError> {
             Ok(Self {
-                done: false,
+                iter_done: false,
+                planning_done: false,
                 tgt_cols: Vec::new(),
             })
+        }
+
+        // This method is called during the planning phase, we use it to
+        // assert that plan is being cached by checking that this is only
+        // ever called once.
+        fn get_rel_size(
+            &mut self,
+            _quals: &[Qual],
+            _columns: &[Column],
+            _sorts: &[Sort],
+            _limit: &Option<Limit>,
+            _options: &HashMap<String, String>,
+        ) -> Result<(i64, i32), CacheTestFdwError> {
+            assert!(
+                !self.planning_done,
+                "Expected plan to be cached, but it was not cached"
+            );
+            self.planning_done = true;
+            Ok((0, 0))
         }
 
         fn begin_scan(
@@ -302,16 +314,16 @@ mod tests {
             _limit: &Option<Limit>,
             _options: &HashMap<String, String>,
         ) -> Result<(), CacheTestFdwError> {
-            self.done = false;
+            self.iter_done = false;
             self.tgt_cols = columns.to_vec();
             Ok(())
         }
 
         fn iter_scan(&mut self, row: &mut Row) -> Result<Option<()>, CacheTestFdwError> {
-            if self.done {
+            if self.iter_done {
                 return Ok(None);
             }
-            self.done = true;
+            self.iter_done = true;
             for col in &self.tgt_cols {
                 if col.name == "id" {
                     row.push("id", Some(Cell::I64(1)));
@@ -329,45 +341,37 @@ mod tests {
     fn cached_plan_repeated_execution_does_not_crash() {
         Spi::connect_mut(|c| {
             c.update(
-                r#"CREATE FOREIGN DATA WRAPPER cache_test_wrapper
-                         HANDLER cache_test_fdw_handler VALIDATOR cache_test_fdw_validator"#,
+                r#"create foreign data wrapper cache_test_wrapper
+                   handler cache_test_fdw_handler validator cache_test_fdw_validator"#,
                 None,
                 &[],
             )
             .unwrap();
             c.update(
-                r#"CREATE SERVER cache_test_server FOREIGN DATA WRAPPER cache_test_wrapper"#,
+                r#"create server cache_test_server foreign data wrapper cache_test_wrapper"#,
                 None,
                 &[],
             )
             .unwrap();
             c.update(
-                r#"CREATE FOREIGN TABLE cache_test_table (id bigint) SERVER cache_test_server"#,
+                r#"create foreign table cache_test_table (id bigint) server cache_test_server"#,
                 None,
                 &[],
             )
             .unwrap();
 
-            // A parameterless prepared statement always reuses Postgres's
-            // generic, cached plan from its second execution onward (see
-            // choose_custom_plan() in plancache.c, which returns early when
-            // boundParams is NULL) — this is exactly the shape that used to
-            // trigger a use-after-free/double-free in get_foreign_plan's old
-            // fdw_private handling: the scan state was freed by the first
-            // execution's end_foreign_scan, then the second execution's
-            // begin_foreign_scan read it (use-after-free) and its
-            // end_foreign_scan freed it again (double free), crashing the
-            // backend. Regression test: this must not crash.
+            // Use a prepared statement to force plan caching
             c.update(
-                "PREPARE cache_test_q AS SELECT count(*) FROM cache_test_table",
+                "prepare cache_test_q as select count(*) from cache_test_table",
                 None,
                 &[],
             )
             .unwrap();
 
+            // Run the cached plan multiple times
             for _ in 0..3 {
                 let count = c
-                    .select("EXECUTE cache_test_q", None, &[])
+                    .select("execute cache_test_q", None, &[])
                     .unwrap()
                     .first()
                     .get_one::<i64>()
@@ -375,7 +379,7 @@ mod tests {
                 assert_eq!(count, Some(1));
             }
 
-            c.update("DEALLOCATE cache_test_q", None, &[]).unwrap();
+            c.update("deallocate cache_test_q", None, &[]).unwrap();
         });
     }
 }
