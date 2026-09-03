@@ -342,8 +342,9 @@ mod tests {
 
     #[pg_test]
     fn cached_plan_repeated_execution_does_not_crash() {
+        PLANNING_CALLS.store(0, std::sync::atomic::Ordering::SeqCst);
+        NEW_CALLS.store(0, std::sync::atomic::Ordering::SeqCst);
         Spi::connect_mut(|c| {
-            c.update(
                 r#"create foreign data wrapper cache_test_wrapper
                    handler cache_test_fdw_handler validator cache_test_fdw_validator"#,
                 None,
