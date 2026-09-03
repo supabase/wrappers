@@ -1031,7 +1031,7 @@ pub(super) extern "C-unwind" fn get_foreign_plan<E: Into<ErrorReport>, W: Foreig
         };
         let fdw_private = private.serialize_to_list();
 
-        // Drop the state struct because it's values have been serialized into
+        // Drop the state struct because its values have been serialized into
         // `fdw_private` and it is no longer needed.
         drop_fdw_state(state.as_ptr());
 
