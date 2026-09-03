@@ -180,20 +180,15 @@ unsafe fn drop_fdw_state<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     drop(boxed_fdw_state);
 }
 
-// ---------------------------------------------------------------------------
-// FdwScanPrivate: a serializable snapshot of the planning-time data needed to
-// rebuild `FdwState`.
-//
-// Unlike `FdwState` (which owns a live FDW instance, a Postgres MemoryContext,
-// and per-scan row buffers), this struct holds only plain data, plus — for
-// qual values that came from a real `pg_sys::Const` — the *address* of that
-// original Const node. It is serialized as a flat `pg_sys::List` of `Const`
-// nodes (with the original qual Const nodes embedded directly, unmodified)
-// so that PostgreSQL's `copyObject`, invoked when a plan is cached, deep
-// copies it correctly. `FdwState` is rebuilt from scratch from this data on
-// every `begin_foreign_scan`, so a cached plan re-executed any number of
-// times never revisits memory freed by a previous execution.
-// ---------------------------------------------------------------------------
+/// This struct is a serializable state of the planning time data needed to 
+/// rebuild [`FdwState`] in the execution phase.
+/// 
+/// Unline [`FdwState`] which owns a live FDW instance, a Postgres MemoryContext,
+/// and per-scan row buffers, this struct holds only plain data. This struct will
+/// be serialized as a [`pg_sys::List`] of [`pg_sys::Const`] nodes so that when
+/// Postgres calls `copyObject` on it at the end of the plan phasse (after the
+/// function call [`get_foreign_plan`]) it is deep copied correctly and rebuilt
+/// successfully at the beginning of the [`begin_foreign_scan`] function.
 struct FdwScanPrivate {
     foreigntableid: Oid,
     quals: Vec<Qual>,
@@ -202,6 +197,30 @@ struct FdwScanPrivate {
     limit: Option<Limit>,
     aggregates: Vec<Aggregate>,
     group_by: Vec<Column>,
+}
+
+/// How a `Qual::value` is encoded in [`FdwScanPrivate`]'s serialized list. `ScalarConst`/
+/// `ArrayConst` embed the original `pg_sys::Const` node (see [`Qual::value_const`]) so
+/// `copyObject` deep-copies it with the correct `consttype`; `Bool` and `Placeholder`
+/// have no source `Const` node to preserve (see `push_qual`/`read_qual`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum QualValueMode {
+    Bool = 0,
+    Placeholder = 1,
+    ScalarConst = 2,
+    ArrayConst = 3,
+}
+
+impl QualValueMode {
+    fn from_i32(val: i32) -> Option<Self> {
+        match val {
+            0 => Some(Self::Bool),
+            1 => Some(Self::Placeholder),
+            2 => Some(Self::ScalarConst),
+            3 => Some(Self::ArrayConst),
+            _ => None,
+        }
+    }
 }
 
 impl FdwScanPrivate {
@@ -581,32 +600,23 @@ impl FdwScanPrivate {
             Self::push_text(list, mcx, &qual.operator);
             Self::push_bool(list, mcx, qual.use_or);
 
-            // Value-mode tag: 0 = literal bool, 1 = "don't care" placeholder
-            // (NullTest's literal "null", or a Param's dummy value which is
-            // always overwritten by `assign_parameter_value` before use), 2 =
-            // scalar Const passthrough, 3 = array Const passthrough. Modes
-            // 2/3 embed the *original* Const node directly (see
-            // `Qual::const_node`) instead of re-encoding the already-decoded
-            // `Cell`, so `copyObject` deep-copies it with the correct
-            // consttype, including for non-builtin column types this crate
-            // otherwise only sees as raw bytes.
             match qual.value_const {
                 Some(addr) => {
-                    let mode: i32 = if matches!(qual.value, Value::Array(_)) {
-                        3
+                    let mode = if matches!(qual.value, Value::Array(_)) {
+                        QualValueMode::ArrayConst
                     } else {
-                        2
+                        QualValueMode::ScalarConst
                     };
-                    Self::push_i32(list, mcx, mode);
+                    Self::push_i32(list, mcx, mode as i32);
                     list.unstable_push_in_context(addr as *mut c_void, mcx);
                 }
                 None => match &qual.value {
                     Value::Cell(Cell::Bool(b)) => {
-                        Self::push_i32(list, mcx, 0);
+                        Self::push_i32(list, mcx, QualValueMode::Bool as i32);
                         Self::push_bool(list, mcx, *b);
                     }
                     _ => {
-                        Self::push_i32(list, mcx, 1);
+                        Self::push_i32(list, mcx, QualValueMode::Placeholder as i32);
                     }
                 },
             }
@@ -639,11 +649,11 @@ impl FdwScanPrivate {
             let operator = Self::read_text(list, idx)?;
             let use_or = Self::read_bool(list, idx)?;
 
-            let mode = Self::read_i32(list, idx)?;
+            let mode = QualValueMode::from_i32(Self::read_i32(list, idx)?)?;
             let value = match mode {
-                0 => Value::Cell(Cell::Bool(Self::read_bool(list, idx)?)),
-                1 => Value::Cell(Cell::String("null".to_string())),
-                2 => {
+                QualValueMode::Bool => Value::Cell(Cell::Bool(Self::read_bool(list, idx)?)),
+                QualValueMode::Placeholder => Value::Cell(Cell::String("null".to_string())),
+                QualValueMode::ScalarConst => {
                     let cst = Self::read_const(list, idx)?;
                     Value::Cell(Cell::from_polymorphic_datum(
                         cst.constvalue,
@@ -651,7 +661,7 @@ impl FdwScanPrivate {
                         cst.consttype,
                     )?)
                 }
-                3 => {
+                QualValueMode::ArrayConst => {
                     let cst = Self::read_const(list, idx)?;
                     Value::Array(form_array_from_datum(
                         cst.constvalue,
@@ -659,7 +669,6 @@ impl FdwScanPrivate {
                         cst.consttype,
                     )?)
                 }
-                _ => return None,
             };
 
             let has_param = Self::read_bool(list, idx)?;
