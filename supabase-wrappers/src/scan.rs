@@ -68,9 +68,14 @@ pub(crate) struct FdwState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
 }
 
 impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwState<E, W> {
-    unsafe fn new(foreigntableid: Oid, tmp_ctx: MemoryContext) -> Self {
+    // Used only for planning (`get_foreign_rel_size`). `get_rel_size`,
+    // `supported_aggregates` and `supports_group_by` are the only planning-time
+    // trait hooks, and none of them take a `self`, so planning never needs a
+    // live FDW instance — leaving `instance: None` here means the (potentially
+    // expensive) `W::new()` only ever runs once per actual execution.
+    unsafe fn new(tmp_ctx: MemoryContext) -> Self {
         Self {
-            instance: Some(unsafe { instance::create_fdw_instance_from_table_id(foreigntableid) }),
+            instance: None,
             quals: Vec::new(),
             tgts: Vec::new(),
             sorts: Vec::new(),
@@ -89,17 +94,13 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwState<E, W> {
 
     #[inline]
     fn get_rel_size(&mut self) -> Result<(i64, i32), E> {
-        if let Some(ref mut instance) = self.instance {
-            instance.get_rel_size(
-                &self.quals,
-                &self.tgts,
-                &self.sorts,
-                &self.limit,
-                &self.opts,
-            )
-        } else {
-            Ok((0, 0))
-        }
+        W::get_rel_size(
+            &self.quals,
+            &self.tgts,
+            &self.sorts,
+            &self.limit,
+            &self.opts,
+        )
     }
 
     #[inline]
@@ -803,7 +804,7 @@ pub(super) extern "C-unwind" fn get_foreign_rel_size<
         let ctx = memctx::create_wrappers_memctx(&ctx_name);
 
         // create scan state
-        let mut state = FdwState::<E, W>::new(foreigntableid, ctx);
+        let mut state = FdwState::<E, W>::new(ctx);
 
         PgMemoryContexts::For(state.tmp_ctx).switch_to(|_| {
             // extract qual list

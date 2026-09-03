@@ -301,16 +301,10 @@ pub(super) extern "C-unwind" fn get_foreign_upper_paths<
         let mut state = PgBox::<FdwState<E, W>>::from_pg(fdw_private as _);
 
         // Check if FDW supports any aggregates
-        let supported = {
-            let Some(ref instance) = state.instance else {
-                return;
-            };
-            let supported = instance.supported_aggregates();
-            if supported.is_empty() {
-                return;
-            }
-            supported
-        };
+        let supported = W::supported_aggregates();
+        if supported.is_empty() {
+            return;
+        }
 
         // Extract aggregates from the query
         let aggregates = match extract_aggregates(root, output_rel, extra) {
@@ -339,14 +333,9 @@ pub(super) extern "C-unwind" fn get_foreign_upper_paths<
         }
 
         // Check if GROUP BY is supported (if present)
-        if !group_by.is_empty() {
-            let Some(ref instance) = state.instance else {
-                return;
-            };
-            if !instance.supports_group_by() {
-                debug2!("GROUP BY not supported, skipping pushdown");
-                return;
-            }
+        if !group_by.is_empty() && !W::supports_group_by() {
+            debug2!("GROUP BY not supported, skipping pushdown");
+            return;
         }
 
         // Store aggregates and group_by in the FdwState so they survive to

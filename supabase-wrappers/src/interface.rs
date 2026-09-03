@@ -890,6 +890,12 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     /// You can do any initalization in this function, like saving connection
     /// info or API url in an variable, but don't do heavy works like database
     /// connection or API call.
+    ///
+    /// Never called during query planning — [`get_rel_size`](Self::get_rel_size),
+    /// [`supported_aggregates`](Self::supported_aggregates) and
+    /// [`supports_group_by`](Self::supports_group_by) are the only planning-time
+    /// hooks, and none of them take a `self`. `new` only runs once per actual
+    /// execution (once per `EXECUTE` of a cached/prepared plan).
     fn new(server: ForeignServer) -> Result<Self, E>
     where
         Self: Sized;
@@ -899,9 +905,12 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     /// Return the expected number of rows and row size (in bytes) by the
     /// foreign table scan.
     ///
+    /// Called during query planning, before any instance of this FDW exists for the
+    /// query (planning never constructs one, see `new`'s docs) — implementations must
+    /// not depend on any FDW-instance state.
+    ///
     /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-SCAN).
     fn get_rel_size(
-        &mut self,
         _quals: &[Qual],
         _columns: &[Column],
         _sorts: &[Sort],
@@ -1027,10 +1036,13 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     ///
     /// ## Examples
     ///
+    /// Called during query planning, before any instance of this FDW exists for the
+    /// query — implementations must not depend on any FDW-instance state.
+    ///
     /// ```rust,ignore
     /// use supabase_wrappers::prelude::*;
     ///
-    /// fn supported_aggregates(&self) -> Vec<AggregateKind> {
+    /// fn supported_aggregates() -> Vec<AggregateKind> {
     ///     vec![
     ///         AggregateKind::Count,
     ///         AggregateKind::CountColumn,
@@ -1041,7 +1053,7 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     ///     ]
     /// }
     /// ```
-    fn supported_aggregates(&self) -> Vec<AggregateKind> {
+    fn supported_aggregates() -> Vec<AggregateKind> {
         vec![]
     }
 
@@ -1052,14 +1064,17 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     ///
     /// When `true`, GROUP BY columns will be passed to [`begin_aggregate_scan`](Self::begin_aggregate_scan).
     ///
+    /// Called during query planning, before any instance of this FDW exists for the
+    /// query — implementations must not depend on any FDW-instance state.
+    ///
     /// ## Examples
     ///
     /// ```rust,ignore
-    /// fn supports_group_by(&self) -> bool {
+    /// fn supports_group_by() -> bool {
     ///     true
     /// }
     /// ```
-    fn supports_group_by(&self) -> bool {
+    fn supports_group_by() -> bool {
         false
     }
 

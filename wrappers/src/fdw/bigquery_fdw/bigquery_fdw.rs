@@ -360,17 +360,6 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
         Ok(ret)
     }
 
-    fn get_rel_size(
-        &mut self,
-        _quals: &[Qual],
-        _columns: &[Column],
-        _sorts: &[Sort],
-        _limit: &Option<Limit>,
-        _options: &HashMap<String, String>,
-    ) -> Result<(i64, i32), BigQueryFdwError> {
-        Ok((0, 0))
-    }
-
     fn begin_scan(
         &mut self,
         quals: &[Qual],
@@ -557,7 +546,7 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
         Ok(())
     }
 
-    fn supported_aggregates(&self) -> Vec<AggregateKind> {
+    fn supported_aggregates() -> Vec<AggregateKind> {
         vec![
             AggregateKind::Count,
             AggregateKind::CountColumn,
@@ -568,7 +557,7 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
         ]
     }
 
-    fn supports_group_by(&self) -> bool {
+    fn supports_group_by() -> bool {
         true
     }
 

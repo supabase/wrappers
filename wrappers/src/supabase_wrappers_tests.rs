@@ -258,6 +258,15 @@ mod tests {
     // Regression test: cached-plan re-execution must not crash the backend
     // ==========================================================================
 
+    // `get_rel_size` is a planning-time-only trait hook and takes no `self` (planning
+    // never constructs an FDW instance), so it can't use instance-local state to detect
+    // repeat calls. Use a static counter instead to assert it's never re-run once the
+    // plan is cached.
+    static PLANNING_CALLS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    // Likewise, `new()` should now only run once per `EXECUTE` of the cached plan (never
+    // during planning), so this counter should end up equal to the number of executions.
+    static NEW_CALLS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
     #[wrappers_fdw(
         version = "0.1.0",
         author = "Supabase",
@@ -266,7 +275,6 @@ mod tests {
     )]
     struct CacheTestFdw {
         iter_done: bool,
-        planning_done: bool,
         tgt_cols: Vec<Column>,
     }
 
@@ -280,9 +288,9 @@ mod tests {
 
     impl ForeignDataWrapper<CacheTestFdwError> for CacheTestFdw {
         fn new(_server: ForeignServer) -> Result<Self, CacheTestFdwError> {
+            NEW_CALLS.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
             Ok(Self {
                 iter_done: false,
-                planning_done: false,
                 tgt_cols: Vec::new(),
             })
         }
@@ -291,18 +299,13 @@ mod tests {
         // assert that plan is being cached by checking that this is only
         // ever called once.
         fn get_rel_size(
-            &mut self,
             _quals: &[Qual],
             _columns: &[Column],
             _sorts: &[Sort],
             _limit: &Option<Limit>,
             _options: &HashMap<String, String>,
         ) -> Result<(i64, i32), CacheTestFdwError> {
-            assert!(
-                !self.planning_done,
-                "Expected plan to be cached, but it was not cached"
-            );
-            self.planning_done = true;
+            PLANNING_CALLS.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
             Ok((0, 0))
         }
 
@@ -380,6 +383,17 @@ mod tests {
             }
 
             c.update("deallocate cache_test_q", None, &[]).unwrap();
+
+            assert_eq!(
+                PLANNING_CALLS.load(std::sync::atomic::Ordering::SeqCst),
+                1,
+                "expected get_rel_size to run exactly once for the whole cached plan"
+            );
+            assert_eq!(
+                NEW_CALLS.load(std::sync::atomic::Ordering::SeqCst),
+                3,
+                "expected new() to run exactly once per execution, never during planning"
+            );
         });
     }
 }
