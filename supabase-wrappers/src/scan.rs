@@ -32,6 +32,14 @@ use crate::utils::{self, ReportableError, report_error};
 
 // Fdw private state for scan
 pub(crate) struct FdwState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
+    // The base relation's foreign table Oid, captured once during
+    // `get_foreign_rel_size` (always called for the base rel, so always valid).
+    // `get_foreign_plan` must use this rather than its own `foreigntableid`
+    // parameter: for an aggregate-pushdown plan, `baserel` there is the upper
+    // (GROUP_AGG) relation, and Postgres passes `InvalidOid` in that case since
+    // an upper rel isn't tied to a single base relation.
+    pub(crate) foreigntableid: Oid,
+
     // foreign data wrapper instance
     pub(crate) instance: Option<W>,
 
@@ -73,8 +81,9 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwState<E, W> {
     // trait hooks, and none of them take a `self`, so planning never needs a
     // live FDW instance — leaving `instance: None` here means the (potentially
     // expensive) `W::new()` only ever runs once per actual execution.
-    unsafe fn new(tmp_ctx: MemoryContext) -> Self {
+    unsafe fn new(foreigntableid: Oid, tmp_ctx: MemoryContext) -> Self {
         Self {
+            foreigntableid,
             instance: None,
             quals: Vec::new(),
             tgts: Vec::new(),
@@ -769,6 +778,7 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwState<E, W> {
             });
 
             Self {
+                foreigntableid,
                 instance: Some(instance),
                 quals,
                 tgts: private.tgts,
@@ -804,7 +814,7 @@ pub(super) extern "C-unwind" fn get_foreign_rel_size<
         let ctx = memctx::create_wrappers_memctx(&ctx_name);
 
         // create scan state
-        let mut state = FdwState::<E, W>::new(ctx);
+        let mut state = FdwState::<E, W>::new(foreigntableid, ctx);
 
         PgMemoryContexts::For(state.tmp_ctx).switch_to(|_| {
             // extract qual list
@@ -895,7 +905,9 @@ pub(super) extern "C-unwind" fn get_foreign_paths<
 pub(super) extern "C-unwind" fn get_foreign_plan<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     _root: *mut pg_sys::PlannerInfo,
     baserel: *mut pg_sys::RelOptInfo,
-    foreigntableid: pg_sys::Oid,
+    // Not `state.foreigntableid`'s source: unreliable (`InvalidOid`) for
+    // aggregate-pushdown (upper-rel) plans — see the comment below.
+    _foreigntableid: pg_sys::Oid,
     _best_path: *mut pg_sys::ForeignPath,
     tlist: *mut pg_sys::List,
     scan_clauses: *mut pg_sys::List,
@@ -1004,8 +1016,12 @@ pub(super) extern "C-unwind" fn get_foreign_plan<E: Into<ErrorReport>, W: Foreig
         // When postgres runs the scan phase it `copyObject`'s the plan (including
         // `fdw_private`) before passing it to the scan phase's `begin_foreign_scan`
         // callback where this state will be reconstitued.
+        // Use `state.foreigntableid` (captured for the base rel during
+        // `get_foreign_rel_size`), not this callback's own `foreigntableid`
+        // parameter: for an aggregate-pushdown plan, `baserel` here is the
+        // upper (GROUP_AGG) relation and Postgres passes `InvalidOid` for it.
         let private = FdwScanPrivate {
-            foreigntableid,
+            foreigntableid: state.foreigntableid,
             quals: mem::take(&mut state.quals),
             tgts: mem::take(&mut state.tgts),
             sorts: mem::take(&mut state.sorts),
