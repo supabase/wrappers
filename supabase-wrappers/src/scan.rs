@@ -703,7 +703,7 @@ impl FdwScanPrivate {
             })
         }
     }
-    
+
     unsafe fn read_param(list: &List<*mut c_void>, idx: &mut usize) -> Option<Param> {
         unsafe {
             let has_param = Self::read_bool(list, idx)?;
