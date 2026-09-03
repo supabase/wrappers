@@ -180,9 +180,9 @@ unsafe fn drop_fdw_state<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     drop(boxed_fdw_state);
 }
 
-/// This struct is a serializable state of the planning time data needed to 
+/// This struct is a serializable state of the planning time data needed to
 /// rebuild [`FdwState`] in the execution phase.
-/// 
+///
 /// Unline [`FdwState`] which owns a live FDW instance, a Postgres MemoryContext,
 /// and per-scan row buffers, this struct holds only plain data. This struct will
 /// be serialized as a [`pg_sys::List`] of [`pg_sys::Const`] nodes so that when
@@ -621,8 +621,18 @@ impl FdwScanPrivate {
                 },
             }
 
-            Self::push_bool(list, mcx, qual.param.is_some());
-            if let Some(param) = &qual.param {
+            Self::push_param(list, mcx, &qual.param);
+        }
+    }
+
+    unsafe fn push_param<'cx>(
+        list: &mut List<'cx, *mut c_void>,
+        mcx: &'cx MemCx<'_>,
+        param: &Option<Param>,
+    ) {
+        unsafe {
+            Self::push_bool(list, mcx, param.is_some());
+            if let Some(param) = param {
                 Self::push_i32(list, mcx, param.kind as i32);
                 Self::push_i32(list, mcx, param.id as i32);
                 Self::push_oid(list, mcx, param.type_oid);
@@ -671,8 +681,22 @@ impl FdwScanPrivate {
                 }
             };
 
+            let param = Self::read_param(list, idx);
+
+            Some(Qual {
+                field,
+                operator,
+                value,
+                use_or,
+                param,
+                value_const: None,
+            })
+        }
+    }
+    unsafe fn read_param(list: &List<*mut c_void>, idx: &mut usize) -> Option<Param> {
+        unsafe {
             let has_param = Self::read_bool(list, idx)?;
-            let param = if has_param {
+            if has_param {
                 let kind = Self::read_i32(list, idx)? as pg_sys::ParamKind::Type;
                 let id = Self::read_i32(list, idx)? as usize;
                 let type_oid = Self::read_oid(list, idx)?;
@@ -688,16 +712,7 @@ impl FdwScanPrivate {
                 })
             } else {
                 None
-            };
-
-            Some(Qual {
-                field,
-                operator,
-                value,
-                use_or,
-                param,
-                value_const: None,
-            })
+            }
         }
     }
 
