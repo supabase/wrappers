@@ -552,12 +552,14 @@ pub struct Qual {
     pub use_or: bool,
     pub param: Option<Param>,
 
-    // Address of the original `pg_sys::Const` (or array `pg_sys::Const`) node this
-    // qual's value was decoded from, if any. Stored as a plain address (not a typed
-    // pointer) so `Qual` stays trivially `Send`-safe; only `scan::get_foreign_plan`
-    // casts it back to a pointer, to embed the original node directly into
-    // `fdw_private` so it survives PostgreSQL's plan-cache `copyObject` correctly.
-    pub(crate) const_node: Option<usize>,
+    // Stores the address of the original const node this qual's value was decoded
+    // from, if any. This is only used during serialization/deserialization to
+    // smuggle the `value` field across the planning and execution phase boundaries
+    // in fdw_private. This ensure the Qual survices the Postgres's plan-cache
+    // copyObject call correctly. It's a usize instead of a *mut pg_sys::Const
+    // to make it Send which is important for certain fdw's like clickhouse which
+    // send it across tokio task boundaries.
+    pub(crate) value_const: Option<usize>,
 }
 
 impl Qual {

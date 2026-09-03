@@ -215,7 +215,7 @@ pub(crate) unsafe fn extract_from_op_expr(
                     {
                         let field = pg_sys::get_attname(baserel_id, (*left).varattno, false);
 
-                        let (value, param, const_node) = if is_a(right, pg_sys::NodeTag::T_Const) {
+                        let (value, param, value_const) = if is_a(right, pg_sys::NodeTag::T_Const) {
                             let right = right as *mut pg_sys::Const;
                             (
                                 Cell::from_polymorphic_datum(
@@ -256,7 +256,7 @@ pub(crate) unsafe fn extract_from_op_expr(
                                 value: Value::Cell(value),
                                 use_or: false,
                                 param,
-                                const_node,
+                                value_const,
                             };
                             return Some(qual);
                         }
@@ -297,7 +297,7 @@ pub(crate) unsafe fn extract_from_null_test(
             value: Value::Cell(Cell::String("null".to_string())),
             use_or: false,
             param: None,
-            const_node: None,
+            value_const: None,
         };
 
         Some(qual)
@@ -348,7 +348,7 @@ pub(crate) unsafe fn extract_from_scalar_array_op_expr(
                                 value: Value::Array(value),
                                 use_or: (*expr).useOr,
                                 param: None,
-                                const_node: Some(right as usize),
+                                value_const: Some(right as usize),
                             };
                             return Some(qual);
                         }
@@ -386,7 +386,7 @@ pub(crate) unsafe fn extract_from_var(
             value: Value::Cell(Cell::Bool(true)),
             use_or: false,
             param: None,
-            const_node: None,
+            value_const: None,
         };
 
         Some(qual)
@@ -421,7 +421,7 @@ pub(crate) unsafe fn extract_from_bool_expr(
                     value: Value::Cell(Cell::Bool(false)),
                     use_or: false,
                     param: None,
-                    const_node: None,
+                    value_const: None,
                 };
 
                 return Some(qual);
@@ -458,7 +458,7 @@ pub(crate) unsafe fn extract_from_boolean_test(
             value: Value::Cell(Cell::Bool(value)),
             use_or: false,
             param: None,
-            const_node: None,
+            value_const: None,
         };
 
         Some(qual)

@@ -590,7 +590,7 @@ impl FdwScanPrivate {
             // `Cell`, so `copyObject` deep-copies it with the correct
             // consttype, including for non-builtin column types this crate
             // otherwise only sees as raw bytes.
-            match qual.const_node {
+            match qual.value_const {
                 Some(addr) => {
                     let mode: i32 = if matches!(qual.value, Value::Array(_)) {
                         3
@@ -687,7 +687,7 @@ impl FdwScanPrivate {
                 value,
                 use_or,
                 param,
-                const_node: None,
+                value_const: None,
             })
         }
     }
