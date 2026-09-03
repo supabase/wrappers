@@ -1013,9 +1013,9 @@ pub(super) extern "C-unwind" fn get_foreign_plan<E: Into<ErrorReport>, W: Foreig
         // via a Postgres `copyObject` call. Since `get_foreign_plan` is the last
         // callback of the plan phase, Postgres needs to potentially be able to
         // cache the plan and run the scan phase repeatedly using this cached plan.
-        // When postgres runs the scan phase it `copyObject`'s the plan (including
+        // When Postgres runs the scan phase it calls `copyObject` on the plan (including
         // `fdw_private`) before passing it to the scan phase's `begin_foreign_scan`
-        // callback where this state will be reconstitued.
+        // callback where this state will be reconstituted.
         // Use `state.foreigntableid` (captured for the base rel during
         // `get_foreign_rel_size`), not this callback's own `foreigntableid`
         // parameter: for an aggregate-pushdown plan, `baserel` here is the
