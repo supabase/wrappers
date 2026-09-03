@@ -53,12 +53,13 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     fn end_modify(&mut self) -> Result<(), E>;
 
     // Optional methods for aggregate pushdown
-    fn supported_aggregates(&self) -> Vec<AggregateKind>;
-    fn supports_group_by(&self) -> bool;
+    fn supported_aggregates() -> Vec<AggregateKind>;
+    fn supports_group_by() -> bool;
     fn begin_aggregate_scan(&mut self, aggregates: &[Aggregate], group_by: &[Column], quals: &[Qual], options: &HashMap<String, String>) -> Result<(), E>;
 
     // Optional methods
     fn re_scan(&mut self) -> Result<(), E>;
+    // Called during planning, before any FDW instance exists — takes no `self`.
     fn get_rel_size(...) -> Result<(i64, i32), E>;
     fn import_foreign_schema(...) -> Result<Vec<String>, E>;
     fn validator(options: Vec<Option<String>>, catalog: Option<Oid>) -> Result<(), E>;
@@ -315,10 +316,10 @@ Use `Qual::deparse()` to convert to SQL-like strings.
 
 ### Aggregate Pushdown
 
-FDWs can push `COUNT`, `SUM`, `AVG`, `MIN`, `MAX` (with optional `GROUP BY`) down to the remote source by implementing three optional trait methods:
+FDWs can push `COUNT`, `SUM`, `AVG`, `MIN`, `MAX` (with optional `GROUP BY`) down to the remote source by implementing three optional trait methods. `supported_aggregates`/`supports_group_by` are called during query planning, before any instance of the FDW exists — they take no `self` and must not depend on FDW-instance state:
 
 ```rust
-fn supported_aggregates(&self) -> Vec<AggregateKind> {
+fn supported_aggregates() -> Vec<AggregateKind> {
     vec![
         AggregateKind::Count,
         AggregateKind::CountColumn,
@@ -329,7 +330,7 @@ fn supported_aggregates(&self) -> Vec<AggregateKind> {
     ]
 }
 
-fn supports_group_by(&self) -> bool { true }
+fn supports_group_by() -> bool { true }
 
 fn begin_aggregate_scan(
     &mut self,
