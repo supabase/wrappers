@@ -729,10 +729,7 @@ impl FdwScanPrivate {
 }
 
 impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwState<E, W> {
-    // Rebuild a full scan state from a deserialized `FdwScanPrivate` snapshot.
-    // Called fresh on every `begin_foreign_scan`, including repeat executions
-    // of a cached plan, so the FDW instance and `tmp_ctx` always belong
-    // solely to the current execution.
+    /// Deserialize [`FdwState`] from a [`FdwScanPrivate`] struct.
     unsafe fn from_scan_private(private: FdwScanPrivate, tmp_ctx: MemoryContext) -> Self {
         unsafe {
             let foreigntableid = private.foreigntableid;
@@ -751,15 +748,8 @@ impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwState<E, W> {
 
             let mut quals = private.quals;
 
-            // Rebuild the PARAM_EXEC expression pointer for each qual's param,
-            // if any. The original pointer captured during planning lived in
-            // planner-scope memory and cannot be carried across a cached
-            // plan's re-execution (unlike PARAM_EXTERN, which only needs the
-            // scalar `id`/`type_oid` already restored above). Synthesize a
-            // fresh, plain Param node instead, allocated in `tmp_ctx` so it
-            // outlives every `iterate_foreign_scan`/`re_scan_foreign_scan`
-            // call for this scan — `assign_parameter_value` re-runs
-            // `ExecInitExpr` on it every time, not just once.
+            // Reallocate the `pg_sys::ParamKind::PARAM_EXEC` node in the `tmp_ctx`
+            // memory context.
             PgMemoryContexts::For(tmp_ctx).switch_to(|_| {
                 for qual in &mut quals {
                     if let Some(param) = &mut qual.param
@@ -1006,13 +996,13 @@ pub(super) extern "C-unwind" fn get_foreign_plan<E: Into<ErrorReport>, W: Foreig
             (tlist, ptr::null_mut())
         };
 
-        // Snapshot only plain, Postgres-copyable data for `fdw_private` — the
-        // plan may be cached and re-executed many times, and `FdwState`
-        // (which owns the live FDW instance and a MemoryContext) must never
-        // be shared across executions; see `FdwScanPrivate`'s docs. This is
-        // deliberately *not* allocated inside `state.tmp_ctx`: that context is
-        // deleted below once `state` is dropped, but `fdw_private` must
-        // outlive this planning call.
+        // It is critical that the data we pass in `fdw_private` be deep copyable
+        // via a Postgres `copyObject` call. Since `get_foreign_plan` is the last
+        // callback of the plan phase, Postgres needs to potentially be able to
+        // cache the plan and run the scan phase repeatedly using this cached plan.
+        // When postgres runs the scan phase it `copyObject`'s the plan (including
+        // `fdw_private`) before passing it to the scan phase's `begin_foreign_scan`
+        // callback where this state will be reconstitued.
         let private = FdwScanPrivate {
             foreigntableid,
             quals: mem::take(&mut state.quals),
@@ -1024,9 +1014,8 @@ pub(super) extern "C-unwind" fn get_foreign_plan<E: Into<ErrorReport>, W: Foreig
         };
         let fdw_private = private.serialize_to_list();
 
-        // Nothing else will ever free this planning-time state now that its
-        // pointer no longer flows into the returned plan's `fdw_private` —
-        // previously `end_foreign_scan` was the *only* place that freed it.
+        // Drop the state struct because it's values have been serialized into
+        // `fdw_private` and it is no longer needed.
         drop_fdw_state(state.as_ptr());
 
         pg_sys::make_foreignscan(
@@ -1196,10 +1185,9 @@ pub(super) extern "C-unwind" fn begin_foreign_scan<
             return;
         };
 
-        // Rebuild the scan state from scratch on every execution — including
-        // the Nth execution of a cached plan — so `FdwState` (which owns the
-        // FDW instance and a MemoryContext) is never shared across
-        // executions. See `FdwScanPrivate`'s docs for why.
+        // Rebuild the scan state again from the serialized `FdwScanPrivate` afresh each time
+        // `begin_foreign_scan` is called to avoid state struct lifetime issues. The plan phase
+        // might have cached the plan, so we create a fresh copy in the scan phase.
         let foreigntableid = private.foreigntableid;
         let ctx_name = format!("Wrappers_scan_{}", foreigntableid.to_u32());
         let tmp_ctx = memctx::create_wrappers_memctx(&ctx_name);
@@ -1217,10 +1205,6 @@ pub(super) extern "C-unwind" fn begin_foreign_scan<
             } else {
                 state.begin_scan()
             };
-            // `state` is still a plain, un-leaked value here, so if this
-            // panics/errors out, its `Drop` impl runs normally during stack
-            // unwinding (releasing `tmp_ctx` and the FDW instance) — same as
-            // `get_foreign_rel_size`'s analogous `report_unwrap()` call.
             result.report_unwrap();
 
             // For aggregate upper-rel scans, scanrelid=0 so ss_currentRelation is
@@ -1239,6 +1223,7 @@ pub(super) extern "C-unwind" fn begin_foreign_scan<
             state.nulls.extend_from_slice(&vec![true; natts]);
         }
 
+        // This is leaked here but dropped in `end_foreign_scan`
         (*node).fdw_state = Box::leak(Box::new(state)) as *mut FdwState<E, W> as _;
     }
 }
