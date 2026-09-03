@@ -193,10 +193,10 @@ unsafe fn drop_fdw_state<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
 /// This struct is a serializable state of the planning time data needed to
 /// rebuild [`FdwState`] in the execution phase.
 ///
-/// Unline [`FdwState`] which owns a live FDW instance, a Postgres MemoryContext,
+/// Unlike [`FdwState`] which owns a live FDW instance, a Postgres MemoryContext,
 /// and per-scan row buffers, this struct holds only plain data. This struct will
 /// be serialized as a [`pg_sys::List`] of [`pg_sys::Const`] nodes so that when
-/// Postgres calls `copyObject` on it at the end of the plan phasse (after the
+/// Postgres calls `copyObject` on it at the end of the plan phase (after the
 /// function call [`get_foreign_plan`]) it is deep copied correctly and rebuilt
 /// successfully at the beginning of the [`begin_foreign_scan`] function.
 struct FdwScanPrivate {
