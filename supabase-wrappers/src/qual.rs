@@ -305,7 +305,6 @@ pub(crate) unsafe fn extract_from_null_test(
 }
 
 pub(crate) unsafe fn extract_from_scalar_array_op_expr(
-    _root: *mut pg_sys::PlannerInfo,
     baserel_id: pg_sys::Oid,
     baserel_ids: pg_sys::Relids,
     expr: *mut pg_sys::ScalarArrayOpExpr,
@@ -367,7 +366,6 @@ pub(crate) unsafe fn extract_from_scalar_array_op_expr(
 }
 
 pub(crate) unsafe fn extract_from_var(
-    _root: *mut pg_sys::PlannerInfo,
     baserel_id: pg_sys::Oid,
     baserel_ids: pg_sys::Relids,
     var: *mut pg_sys::Var,
@@ -396,7 +394,6 @@ pub(crate) unsafe fn extract_from_var(
 }
 
 pub(crate) unsafe fn extract_from_bool_expr(
-    _root: *mut pg_sys::PlannerInfo,
     baserel_id: pg_sys::Oid,
     baserel_ids: pg_sys::Relids,
     expr: *mut pg_sys::BoolExpr,
@@ -469,7 +466,6 @@ pub(crate) unsafe fn extract_from_boolean_test(
 }
 
 pub(crate) unsafe fn extract_quals(
-    root: *mut pg_sys::PlannerInfo,
     baserel: *mut pg_sys::RelOptInfo,
     baserel_id: pg_sys::Oid,
 ) -> Vec<Qual> {
@@ -487,16 +483,11 @@ pub(crate) unsafe fn extract_quals(
                     } else if is_a(expr, pg_sys::NodeTag::T_NullTest) {
                         extract_from_null_test(baserel_id, expr as _)
                     } else if is_a(expr, pg_sys::NodeTag::T_ScalarArrayOpExpr) {
-                        extract_from_scalar_array_op_expr(
-                            root,
-                            baserel_id,
-                            (*baserel).relids,
-                            expr as _,
-                        )
+                        extract_from_scalar_array_op_expr(baserel_id, (*baserel).relids, expr as _)
                     } else if is_a(expr, pg_sys::NodeTag::T_Var) {
-                        extract_from_var(root, baserel_id, (*baserel).relids, expr as _)
+                        extract_from_var(baserel_id, (*baserel).relids, expr as _)
                     } else if is_a(expr, pg_sys::NodeTag::T_BoolExpr) {
-                        extract_from_bool_expr(root, baserel_id, (*baserel).relids, expr as _)
+                        extract_from_bool_expr(baserel_id, (*baserel).relids, expr as _)
                     } else if is_a(expr, pg_sys::NodeTag::T_BooleanTest) {
                         extract_from_boolean_test(baserel_id, expr as _)
                     } else {

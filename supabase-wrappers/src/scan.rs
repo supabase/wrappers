@@ -793,7 +793,7 @@ pub(super) extern "C-unwind" fn get_foreign_rel_size<
 
         PgMemoryContexts::For(state.tmp_ctx).switch_to(|_| {
             // extract qual list
-            state.quals = extract_quals(root, baserel, foreigntableid);
+            state.quals = extract_quals(baserel, foreigntableid);
 
             // extract target column list from target and restriction expression
             state.tgts = utils::extract_target_columns(root, baserel);
