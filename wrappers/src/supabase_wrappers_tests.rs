@@ -396,4 +396,121 @@ mod tests {
             );
         });
     }
+
+    // ==========================================================================
+    // Regression test: https://github.com/supabase/wrappers/issues/237
+    // ==========================================================================
+    
+    // Same underlying cause as a cached plan. This test is there just for completion
+
+    #[wrappers_fdw(
+        version = "0.1.0",
+        author = "Supabase",
+        website = "https://github.com/supabase/wrappers",
+        error_type = "PlpgsqlCacheTestFdwError"
+    )]
+    struct PlpgsqlCacheTestFdw {
+        rows: Vec<i64>,
+        row_idx: usize,
+    }
+
+    enum PlpgsqlCacheTestFdwError {}
+
+    impl From<PlpgsqlCacheTestFdwError> for ErrorReport {
+        fn from(_value: PlpgsqlCacheTestFdwError) -> Self {
+            ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, "", "")
+        }
+    }
+
+    impl ForeignDataWrapper<PlpgsqlCacheTestFdwError> for PlpgsqlCacheTestFdw {
+        fn new(_server: ForeignServer) -> Result<Self, PlpgsqlCacheTestFdwError> {
+            Ok(Self {
+                rows: vec![1, 2],
+                row_idx: 0,
+            })
+        }
+
+        fn begin_scan(
+            &mut self,
+            _quals: &[Qual],
+            _columns: &[Column],
+            _sorts: &[Sort],
+            _limit: &Option<Limit>,
+            _options: &HashMap<String, String>,
+        ) -> Result<(), PlpgsqlCacheTestFdwError> {
+            self.row_idx = 0;
+            Ok(())
+        }
+
+        fn iter_scan(&mut self, row: &mut Row) -> Result<Option<()>, PlpgsqlCacheTestFdwError> {
+            if self.row_idx >= self.rows.len() {
+                return Ok(None);
+            }
+            row.push("id", Some(Cell::I64(self.rows[self.row_idx])));
+            self.row_idx += 1;
+            Ok(Some(()))
+        }
+
+        fn end_scan(&mut self) -> Result<(), PlpgsqlCacheTestFdwError> {
+            Ok(())
+        }
+    }
+
+    #[pg_test]
+    fn plpgsql_function_wrapping_foreign_table_returns_consistent_results_across_calls() {
+        Spi::connect_mut(|c| {
+            c.update(
+                r#"create foreign data wrapper plpgsql_cache_test_wrapper
+                   handler plpgsql_cache_test_fdw_handler validator plpgsql_cache_test_fdw_validator"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"create server plpgsql_cache_test_server foreign data wrapper plpgsql_cache_test_wrapper"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"create foreign table plpgsql_cache_test_table (id bigint) server plpgsql_cache_test_server"#,
+                None,
+                &[],
+            )
+            .unwrap();
+
+            // Mirrors the issue's `get_products()` repro: a plpgsql function whose
+            // body selects from the foreign table, called multiple times.
+            c.update(
+                r#"create function plpgsql_cache_test_get_ids()
+                   returns table (id bigint)
+                   language plpgsql as
+                   $$
+                   begin
+                       return query select t.id from plpgsql_cache_test_table t;
+                   end
+                   $$"#,
+                None,
+                &[],
+            )
+            .unwrap();
+
+            for call in 0..3 {
+                let ids = c
+                    .select(
+                        "select id from plpgsql_cache_test_get_ids() order by id",
+                        None,
+                        &[],
+                    )
+                    .unwrap()
+                    .filter_map(|r| r.get_by_name::<i64, _>("id").unwrap())
+                    .collect::<Vec<_>>();
+                assert_eq!(
+                    ids,
+                    vec![1, 2],
+                    "call #{call} to the cached plpgsql function returned wrong/missing rows"
+                );
+            }
+        });
+    }
 }
