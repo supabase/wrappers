@@ -563,7 +563,7 @@ impl ForeignDataWrapper<MysqlFdwError> for MysqlFdw {
         self.disconnect_pool()
     }
 
-    fn supported_aggregates(&self) -> Vec<AggregateKind> {
+    fn supported_aggregates() -> Vec<AggregateKind> {
         vec![
             AggregateKind::Count,
             AggregateKind::CountColumn,
@@ -574,7 +574,7 @@ impl ForeignDataWrapper<MysqlFdwError> for MysqlFdw {
         ]
     }
 
-    fn supports_group_by(&self) -> bool {
+    fn supports_group_by() -> bool {
         true
     }
 

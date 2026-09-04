@@ -1094,7 +1094,7 @@ impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
         Ok(())
     }
 
-    fn supported_aggregates(&self) -> Vec<AggregateKind> {
+    fn supported_aggregates() -> Vec<AggregateKind> {
         vec![
             AggregateKind::Count,
             AggregateKind::CountColumn,
@@ -1105,7 +1105,7 @@ impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
         ]
     }
 
-    fn supports_group_by(&self) -> bool {
+    fn supports_group_by() -> bool {
         true
     }
 

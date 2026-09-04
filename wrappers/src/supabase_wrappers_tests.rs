@@ -1,12 +1,15 @@
-//! Runtime tests for `supabase-wrappers` core types that need a live Postgres backend
-//! (e.g. `Cell::into_datum()`/`from_datum()` round trips). These can't run as plain
-//! `cargo test` in the `supabase-wrappers` crate itself since it isn't a pgrx extension,
-//! so they run here instead, against the real Postgres backend `cargo pgrx test` spins up.
+//! Runtime tests for `supabase-wrappers` core types and framework behavior that need a
+//! live Postgres backend (e.g. `Cell::into_datum()`/`from_datum()` round trips, or the
+//! scan callback lifecycle under a cached plan). These can't run as plain `cargo test`
+//! in the `supabase-wrappers` crate itself since it isn't a pgrx extension, so they run
+//! here instead, against the real Postgres backend `cargo pgrx test` spins up.
 
 #[cfg(any(test, feature = "pg_test"))]
 #[pgrx::pg_schema]
 mod tests {
+    use pgrx::pg_sys::panic::ErrorReport;
     use pgrx::prelude::*;
+    use std::collections::HashMap;
     use supabase_wrappers::prelude::*;
     use supabase_wrappers::qual::form_array_from_datum;
 
@@ -249,5 +252,265 @@ mod tests {
 
         let result = unsafe { form_array_from_datum(datum, false, pg_sys::UUIDARRAYOID) };
         assert!(result.is_none());
+    }
+
+    // ==========================================================================
+    // Regression test: cached-plan re-execution must not crash the backend
+    // ==========================================================================
+
+    // `get_rel_size` is a planning-time-only trait hook and takes no `self` (planning
+    // never constructs an FDW instance), so it can't use instance-local state to detect
+    // repeat calls. Use a static counter instead to assert it's never re-run once the
+    // plan is cached.
+    static PLANNING_CALLS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    // Likewise, `new()` should now only run once per `EXECUTE` of the cached plan (never
+    // during planning), so this counter should end up equal to the number of executions.
+    static NEW_CALLS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+    #[wrappers_fdw(
+        version = "0.1.0",
+        author = "Supabase",
+        website = "https://github.com/supabase/wrappers",
+        error_type = "CacheTestFdwError"
+    )]
+    struct CacheTestFdw {
+        iter_done: bool,
+        tgt_cols: Vec<Column>,
+    }
+
+    enum CacheTestFdwError {}
+
+    impl From<CacheTestFdwError> for ErrorReport {
+        fn from(_value: CacheTestFdwError) -> Self {
+            ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, "", "")
+        }
+    }
+
+    impl ForeignDataWrapper<CacheTestFdwError> for CacheTestFdw {
+        fn new(_server: ForeignServer) -> Result<Self, CacheTestFdwError> {
+            NEW_CALLS.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            Ok(Self {
+                iter_done: false,
+                tgt_cols: Vec::new(),
+            })
+        }
+
+        // This method is called during the planning phase, we use it to
+        // assert that plan is being cached by checking that this is only
+        // ever called once.
+        fn get_rel_size(
+            _quals: &[Qual],
+            _columns: &[Column],
+            _sorts: &[Sort],
+            _limit: &Option<Limit>,
+            _options: &HashMap<String, String>,
+        ) -> Result<(i64, i32), CacheTestFdwError> {
+            PLANNING_CALLS.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            Ok((0, 0))
+        }
+
+        fn begin_scan(
+            &mut self,
+            _quals: &[Qual],
+            columns: &[Column],
+            _sorts: &[Sort],
+            _limit: &Option<Limit>,
+            _options: &HashMap<String, String>,
+        ) -> Result<(), CacheTestFdwError> {
+            self.iter_done = false;
+            self.tgt_cols = columns.to_vec();
+            Ok(())
+        }
+
+        fn iter_scan(&mut self, row: &mut Row) -> Result<Option<()>, CacheTestFdwError> {
+            if self.iter_done {
+                return Ok(None);
+            }
+            self.iter_done = true;
+            for col in &self.tgt_cols {
+                if col.name == "id" {
+                    row.push("id", Some(Cell::I64(1)));
+                }
+            }
+            Ok(Some(()))
+        }
+
+        fn end_scan(&mut self) -> Result<(), CacheTestFdwError> {
+            Ok(())
+        }
+    }
+
+    #[pg_test]
+    fn cached_plan_repeated_execution_does_not_crash() {
+        Spi::connect_mut(|c| {
+            c.update(
+                r#"create foreign data wrapper cache_test_wrapper
+                   handler cache_test_fdw_handler validator cache_test_fdw_validator"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"create server cache_test_server foreign data wrapper cache_test_wrapper"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"create foreign table cache_test_table (id bigint) server cache_test_server"#,
+                None,
+                &[],
+            )
+            .unwrap();
+
+            // Use a prepared statement to force plan caching
+            c.update(
+                "prepare cache_test_q as select count(*) from cache_test_table",
+                None,
+                &[],
+            )
+            .unwrap();
+
+            // Run the cached plan multiple times
+            for _ in 0..3 {
+                let count = c
+                    .select("execute cache_test_q", None, &[])
+                    .unwrap()
+                    .first()
+                    .get_one::<i64>()
+                    .unwrap();
+                assert_eq!(count, Some(1));
+            }
+
+            c.update("deallocate cache_test_q", None, &[]).unwrap();
+
+            assert_eq!(
+                PLANNING_CALLS.load(std::sync::atomic::Ordering::SeqCst),
+                1,
+                "expected get_rel_size to run exactly once for the whole cached plan"
+            );
+            assert_eq!(
+                NEW_CALLS.load(std::sync::atomic::Ordering::SeqCst),
+                3,
+                "expected new() to run exactly once per execution, never during planning"
+            );
+        });
+    }
+
+    // ==========================================================================
+    // Regression test: https://github.com/supabase/wrappers/issues/237
+    // ==========================================================================
+
+    // Same underlying cause as a cached plan. This test is there just for completion
+
+    #[wrappers_fdw(
+        version = "0.1.0",
+        author = "Supabase",
+        website = "https://github.com/supabase/wrappers",
+        error_type = "PlpgsqlCacheTestFdwError"
+    )]
+    struct PlpgsqlCacheTestFdw {
+        rows: Vec<i64>,
+        row_idx: usize,
+    }
+
+    enum PlpgsqlCacheTestFdwError {}
+
+    impl From<PlpgsqlCacheTestFdwError> for ErrorReport {
+        fn from(_value: PlpgsqlCacheTestFdwError) -> Self {
+            ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, "", "")
+        }
+    }
+
+    impl ForeignDataWrapper<PlpgsqlCacheTestFdwError> for PlpgsqlCacheTestFdw {
+        fn new(_server: ForeignServer) -> Result<Self, PlpgsqlCacheTestFdwError> {
+            Ok(Self {
+                rows: vec![1, 2],
+                row_idx: 0,
+            })
+        }
+
+        fn begin_scan(
+            &mut self,
+            _quals: &[Qual],
+            _columns: &[Column],
+            _sorts: &[Sort],
+            _limit: &Option<Limit>,
+            _options: &HashMap<String, String>,
+        ) -> Result<(), PlpgsqlCacheTestFdwError> {
+            self.row_idx = 0;
+            Ok(())
+        }
+
+        fn iter_scan(&mut self, row: &mut Row) -> Result<Option<()>, PlpgsqlCacheTestFdwError> {
+            if self.row_idx >= self.rows.len() {
+                return Ok(None);
+            }
+            row.push("id", Some(Cell::I64(self.rows[self.row_idx])));
+            self.row_idx += 1;
+            Ok(Some(()))
+        }
+
+        fn end_scan(&mut self) -> Result<(), PlpgsqlCacheTestFdwError> {
+            Ok(())
+        }
+    }
+
+    #[pg_test]
+    fn plpgsql_function_wrapping_foreign_table_returns_consistent_results_across_calls() {
+        Spi::connect_mut(|c| {
+            c.update(
+                r#"create foreign data wrapper plpgsql_cache_test_wrapper
+                   handler plpgsql_cache_test_fdw_handler validator plpgsql_cache_test_fdw_validator"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"create server plpgsql_cache_test_server foreign data wrapper plpgsql_cache_test_wrapper"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"create foreign table plpgsql_cache_test_table (id bigint) server plpgsql_cache_test_server"#,
+                None,
+                &[],
+            )
+            .unwrap();
+
+            // Mirrors the issue's `get_products()` repro: a plpgsql function whose
+            // body selects from the foreign table, called multiple times.
+            c.update(
+                r#"create function plpgsql_cache_test_get_ids()
+                   returns table (id bigint)
+                   language plpgsql as
+                   $$
+                   begin
+                       return query select t.id from plpgsql_cache_test_table t;
+                   end
+                   $$"#,
+                None,
+                &[],
+            )
+            .unwrap();
+
+            for call in 0..3 {
+                let ids = c
+                    .select(
+                        "select id from plpgsql_cache_test_get_ids() order by id",
+                        None,
+                        &[],
+                    )
+                    .unwrap()
+                    .filter_map(|r| r.get_by_name::<i64, _>("id").unwrap())
+                    .collect::<Vec<_>>();
+                assert_eq!(
+                    ids,
+                    vec![1, 2],
+                    "call #{call} to the cached plpgsql function returned wrong/missing rows"
+                );
+            }
+        });
     }
 }
