@@ -400,7 +400,7 @@ mod tests {
     // ==========================================================================
     // Regression test: https://github.com/supabase/wrappers/issues/237
     // ==========================================================================
-    
+
     // Same underlying cause as a cached plan. This test is there just for completion
 
     #[wrappers_fdw(
