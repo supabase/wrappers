@@ -1,6 +1,6 @@
 [package]
 name = "supabase-wrappers"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Supabase Inc. https://supabase.com/"]
 license = "Apache-2.0"
 description = "Postgres Foreign Data Wrapper development framework in Rust."
@@ -25,6 +25,9 @@ thiserror = "1.0.63"
 tokio = { version = "1.43", features = ["rt", "net"] }
 uuid = { version = "1.10.0" }
 supabase-wrappers-macros = { version = "0.1", path = "../supabase-wrappers-macros" }
+# Pin serde to an exact version to avoid docs.rs build failures like these:
+# https://docs.rs/crate/supabase-wrappers/0.2.0/builds/4418539
+serde = "=1.0.228"
 
 [package.metadata.docs.rs]
 features = ["pg15"]
