@@ -2,7 +2,6 @@
 name = "wrappers"
 version = "0.6.3"
 publish = false
-homepage = "https://github.com/supabase/wrappers/tree/main/wrappers"
 repository = "https://github.com/supabase/wrappers/tree/main/wrappers"
 edition = { workspace = true }
 rust-version = { workspace = true }

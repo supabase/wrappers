@@ -26,7 +26,6 @@ resolver = "3"
 edition = "2024"
 rust-version = "1.97.1"
 homepage = "https://github.com/supabase/wrappers"
-repository = "https://github.com/supabase/wrappers"
 
 [profile.dev]
 panic = "unwind"
