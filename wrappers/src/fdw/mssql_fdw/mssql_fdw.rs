@@ -396,7 +396,7 @@ impl ForeignDataWrapper<MssqlFdwError> for MssqlFdw {
         Ok(())
     }
 
-    fn supported_aggregates(&self) -> Vec<AggregateKind> {
+    fn supported_aggregates() -> Vec<AggregateKind> {
         vec![
             AggregateKind::Count,
             AggregateKind::CountColumn,
@@ -407,7 +407,7 @@ impl ForeignDataWrapper<MssqlFdwError> for MssqlFdw {
         ]
     }
 
-    fn supports_group_by(&self) -> bool {
+    fn supports_group_by() -> bool {
         true
     }
 

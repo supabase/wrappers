@@ -175,7 +175,6 @@ pub(crate) unsafe fn unnest_clause(node: *mut pg_sys::Node) -> *mut pg_sys::Node
 }
 
 pub(crate) unsafe fn extract_from_op_expr(
-    _root: *mut pg_sys::PlannerInfo,
     baserel_id: pg_sys::Oid,
     baserel_ids: pg_sys::Relids,
     expr: *mut pg_sys::OpExpr,
@@ -216,7 +215,7 @@ pub(crate) unsafe fn extract_from_op_expr(
                     {
                         let field = pg_sys::get_attname(baserel_id, (*left).varattno, false);
 
-                        let (value, param) = if is_a(right, pg_sys::NodeTag::T_Const) {
+                        let (value, param, value_const) = if is_a(right, pg_sys::NodeTag::T_Const) {
                             let right = right as *mut pg_sys::Const;
                             (
                                 Cell::from_polymorphic_datum(
@@ -225,6 +224,7 @@ pub(crate) unsafe fn extract_from_op_expr(
                                     (*right).consttype,
                                 ),
                                 None,
+                                Some(right as usize),
                             )
                         } else if is_a(right, pg_sys::NodeTag::T_Param) {
                             // add a dummy value if this is query parameter, the actual value
@@ -244,9 +244,9 @@ pub(crate) unsafe fn extract_from_op_expr(
                                     expr_state: ptr::null_mut(),
                                 },
                             };
-                            (Some(Cell::I64(0)), Some(param))
+                            (Some(Cell::I64(0)), Some(param), None)
                         } else {
-                            (None, None)
+                            (None, None, None)
                         };
 
                         if let Some(value) = value {
@@ -256,6 +256,7 @@ pub(crate) unsafe fn extract_from_op_expr(
                                 value: Value::Cell(value),
                                 use_or: false,
                                 param,
+                                value_const,
                             };
                             return Some(qual);
                         }
@@ -296,6 +297,7 @@ pub(crate) unsafe fn extract_from_null_test(
             value: Value::Cell(Cell::String("null".to_string())),
             use_or: false,
             param: None,
+            value_const: None,
         };
 
         Some(qual)
@@ -303,7 +305,6 @@ pub(crate) unsafe fn extract_from_null_test(
 }
 
 pub(crate) unsafe fn extract_from_scalar_array_op_expr(
-    _root: *mut pg_sys::PlannerInfo,
     baserel_id: pg_sys::Oid,
     baserel_ids: pg_sys::Relids,
     expr: *mut pg_sys::ScalarArrayOpExpr,
@@ -347,6 +348,7 @@ pub(crate) unsafe fn extract_from_scalar_array_op_expr(
                                 value: Value::Array(value),
                                 use_or: (*expr).useOr,
                                 param: None,
+                                value_const: Some(right as usize),
                             };
                             return Some(qual);
                         }
@@ -364,7 +366,6 @@ pub(crate) unsafe fn extract_from_scalar_array_op_expr(
 }
 
 pub(crate) unsafe fn extract_from_var(
-    _root: *mut pg_sys::PlannerInfo,
     baserel_id: pg_sys::Oid,
     baserel_ids: pg_sys::Relids,
     var: *mut pg_sys::Var,
@@ -385,6 +386,7 @@ pub(crate) unsafe fn extract_from_var(
             value: Value::Cell(Cell::Bool(true)),
             use_or: false,
             param: None,
+            value_const: None,
         };
 
         Some(qual)
@@ -392,7 +394,6 @@ pub(crate) unsafe fn extract_from_var(
 }
 
 pub(crate) unsafe fn extract_from_bool_expr(
-    _root: *mut pg_sys::PlannerInfo,
     baserel_id: pg_sys::Oid,
     baserel_ids: pg_sys::Relids,
     expr: *mut pg_sys::BoolExpr,
@@ -420,6 +421,7 @@ pub(crate) unsafe fn extract_from_bool_expr(
                     value: Value::Cell(Cell::Bool(false)),
                     use_or: false,
                     param: None,
+                    value_const: None,
                 };
 
                 return Some(qual);
@@ -456,6 +458,7 @@ pub(crate) unsafe fn extract_from_boolean_test(
             value: Value::Cell(Cell::Bool(value)),
             use_or: false,
             param: None,
+            value_const: None,
         };
 
         Some(qual)
@@ -463,7 +466,6 @@ pub(crate) unsafe fn extract_from_boolean_test(
 }
 
 pub(crate) unsafe fn extract_quals(
-    root: *mut pg_sys::PlannerInfo,
     baserel: *mut pg_sys::RelOptInfo,
     baserel_id: pg_sys::Oid,
 ) -> Vec<Qual> {
@@ -477,20 +479,15 @@ pub(crate) unsafe fn extract_quals(
                 for cond in conds.iter() {
                     let expr = (*(*cond as *mut pg_sys::RestrictInfo)).clause as *mut pg_sys::Node;
                     let extracted = if is_a(expr, pg_sys::NodeTag::T_OpExpr) {
-                        extract_from_op_expr(root, baserel_id, (*baserel).relids, expr as _)
+                        extract_from_op_expr(baserel_id, (*baserel).relids, expr as _)
                     } else if is_a(expr, pg_sys::NodeTag::T_NullTest) {
                         extract_from_null_test(baserel_id, expr as _)
                     } else if is_a(expr, pg_sys::NodeTag::T_ScalarArrayOpExpr) {
-                        extract_from_scalar_array_op_expr(
-                            root,
-                            baserel_id,
-                            (*baserel).relids,
-                            expr as _,
-                        )
+                        extract_from_scalar_array_op_expr(baserel_id, (*baserel).relids, expr as _)
                     } else if is_a(expr, pg_sys::NodeTag::T_Var) {
-                        extract_from_var(root, baserel_id, (*baserel).relids, expr as _)
+                        extract_from_var(baserel_id, (*baserel).relids, expr as _)
                     } else if is_a(expr, pg_sys::NodeTag::T_BoolExpr) {
-                        extract_from_bool_expr(root, baserel_id, (*baserel).relids, expr as _)
+                        extract_from_bool_expr(baserel_id, (*baserel).relids, expr as _)
                     } else if is_a(expr, pg_sys::NodeTag::T_BooleanTest) {
                         extract_from_boolean_test(baserel_id, expr as _)
                     } else {

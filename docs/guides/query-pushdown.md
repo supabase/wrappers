@@ -78,11 +78,11 @@ The Wrappers framework supports pushing down these aggregate functions:
 FDW developers can enable aggregate pushdown by implementing these trait methods:
 
 ```rust
-fn supported_aggregates(&self) -> Vec<AggregateKind> {
+fn supported_aggregates() -> Vec<AggregateKind> {
     vec![AggregateKind::Count, AggregateKind::Sum, AggregateKind::Avg]
 }
 
-fn supports_group_by(&self) -> bool {
+fn supports_group_by() -> bool {
     true
 }
 
