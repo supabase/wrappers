@@ -292,6 +292,8 @@
 //! - [SQL Server](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/mssql_fdw): A FDW for [Microsoft SQL Server](https://www.microsoft.com/en-au/sql-server/) which supports data read only.
 //! - [Redis](https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/redis_fdw): A FDW for [Redis](https://redis.io/) which supports data read only.
 
+pub mod attrs;
+pub mod event_triggers;
 pub mod interface;
 pub mod options;
 pub mod qual;

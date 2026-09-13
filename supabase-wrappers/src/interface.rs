@@ -312,7 +312,11 @@ impl FromDatum for Cell {
                 PgOid::BuiltIn(PgBuiltInOids::NUMERICOID) => {
                     AnyNumeric::from_datum(datum, is_null).map(Cell::Numeric)
                 }
-                PgOid::BuiltIn(PgBuiltInOids::TEXTOID) => {
+                PgOid::BuiltIn(PgBuiltInOids::TEXTOID)
+                | PgOid::BuiltIn(PgBuiltInOids::VARCHAROID)
+                | PgOid::BuiltIn(PgBuiltInOids::BPCHAROID) => {
+                    // `text`, `varchar` and `bpchar` all share the same varlena
+                    // representation, so it's safe to read any of them as a `String`.
                     String::from_datum(datum, is_null).map(Cell::String)
                 }
                 PgOid::BuiltIn(PgBuiltInOids::DATEOID) => {
@@ -361,7 +365,9 @@ impl FromDatum for Cell {
                 PgOid::BuiltIn(PgBuiltInOids::FLOAT8ARRAYOID) => {
                     Vec::<Option<f64>>::from_datum(datum, false).map(Cell::F64Array)
                 }
-                PgOid::BuiltIn(PgBuiltInOids::TEXTARRAYOID) => {
+                PgOid::BuiltIn(PgBuiltInOids::TEXTARRAYOID)
+                | PgOid::BuiltIn(PgBuiltInOids::VARCHARARRAYOID)
+                | PgOid::BuiltIn(PgBuiltInOids::BPCHARARRAYOID) => {
                     Vec::<Option<String>>::from_datum(datum, false).map(Cell::StringArray)
                 }
                 PgOid::Custom(_) => {
