@@ -245,19 +245,22 @@ impl NotionFdw {
                 continue;
             }
 
+            // check for errors
+            if resp.status_code == 404 {
+                // if the 404 is caused by no object found, we shouldn't take it as an error
+                if let Ok(resp_json) = serde_json::from_str::<JsonValue>(&resp.body) {
+                    if resp_json.pointer("/code").and_then(|v| v.as_str())
+                        == Some("object_not_found")
+                    {
+                        break;
+                    }
+                }
+            }
+            http::error_for_status(&resp).map_err(|err| format!("{}: {}", err, resp.body))?;
+
             // transform response to json
             let resp_json: JsonValue =
                 serde_json::from_str(&resp.body).map_err(|e| e.to_string())?;
-
-            // if the 404 is caused by no object found, we shouldn't take it as an error
-            if resp.status_code == 404
-                && resp_json.pointer("/code").and_then(|v| v.as_str()) == Some("object_not_found")
-            {
-                break;
-            }
-
-            // check for errors
-            http::error_for_status(&resp).map_err(|err| format!("{}: {}", err, resp.body))?;
 
             // unify response object to array and save source rows
             let resp_data = if resp_json.pointer("/object").and_then(|v| v.as_str()) == Some("list")
