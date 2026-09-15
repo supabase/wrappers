@@ -1,8 +1,10 @@
 # This docker file is s3-init image
 
+FROM minio/mc:latest AS mc
+
 FROM python:3.13-slim
 
-RUN apt-get update && apt-get install -y --no-install-recommends wget
+COPY --from=mc /usr/bin/mc /mc
+
 RUN pip install "pyiceberg[s3fs,pyarrow]==0.10.0" \
-    && wget https://dl.min.io/client/mc/release/linux-amd64/mc \
-    && chmod +x mc
+    && chmod +x /mc
