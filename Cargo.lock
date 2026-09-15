@@ -8335,10 +8335,9 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
 name = "supabase-wrappers"
-version = "0.2.1"
+version = "0.2.3"
 dependencies = [
  "pgrx",
- "serde 1.0.228",
  "supabase-wrappers-macros",
  "thiserror 1.0.69",
  "tokio",
