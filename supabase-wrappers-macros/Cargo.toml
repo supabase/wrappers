@@ -4,7 +4,6 @@ version = "0.1.18"
 authors = ["Supabase Inc. https://supabase.com/"]
 license = "Apache-2.0"
 description = "Postgres Foreign Data Wrapper development framework macros for supabase-wrappers"
-homepage = "https://github.com/supabase/wrappers/tree/main/supabase-wrappers-macros"
 repository = "https://github.com/supabase/wrappers/tree/main/supabase-wrappers-macros"
 categories = ["database"]
 keywords = ["database", "postgres", "postgresql", "extension"]
