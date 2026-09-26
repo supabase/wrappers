@@ -300,6 +300,22 @@ pub(super) extern "C-unwind" fn get_foreign_upper_paths<
 
         let mut state = PgBox::<FdwState<E, W>>::from_pg(fdw_private as _);
 
+        // Every WHERE clause on the foreign table must have been extracted as a
+        // qual for the FDW to push down. A clause we couldn't extract (e.g.
+        // `lower(name) = 'x'` or `a > b`) is normally checked locally on each
+        // row, but the upper path has no local filter, so the remote aggregate
+        // would silently run without it.
+        let restrictinfo = (*input_rel).baserestrictinfo;
+        let n_clauses = if restrictinfo.is_null() {
+            0
+        } else {
+            (*restrictinfo).length as usize
+        };
+        if state.quals.len() != n_clauses {
+            debug2!("WHERE clause cannot be pushed down, skipping aggregate pushdown");
+            return;
+        }
+
         // Check if FDW supports any aggregates
         let supported = W::supported_aggregates();
         if supported.is_empty() {

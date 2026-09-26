@@ -683,6 +683,56 @@ mod tests {
                 "SELECT SUM(amount) FROM mysql_agg.orders WHERE id IN (1, 2, 3)"
             );
 
+            // --- Negative: WHERE clause that can't be extracted as a qual ---
+            // `lower(name) = ...` stays a local filter, so the aggregate must not
+            // be pushed down, otherwise MySQL aggregates over rows the filter
+            // would have removed.
+            let cnt: i64 = c
+                .select(
+                    "SELECT COUNT(*) FROM mysql_agg.orders WHERE lower(name) = 'carol'",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .first()
+                .get_one::<i64>()
+                .unwrap()
+                .unwrap();
+            assert_eq!(
+                cnt, 1,
+                "COUNT(*) WHERE lower(name) = 'carol' expected 1, got {cnt}"
+            );
+            assert_not_pushed_down!(
+                c,
+                "SELECT COUNT(*) FROM mysql_agg.orders WHERE lower(name) = 'carol'"
+            );
+
+            // mixed: `status` is pushable, `lower(name)` is not → Eve only = 150
+            let s: f64 = c
+                .select(
+                    "SELECT SUM(amount) FROM mysql_agg.orders
+                     WHERE status = 'inactive' AND lower(name) = 'eve'",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .first()
+                .get_one::<pgrx::AnyNumeric>()
+                .unwrap()
+                .unwrap()
+                .to_string()
+                .parse()
+                .unwrap();
+            assert!(
+                (s - 150.0).abs() < 0.01,
+                "SUM WHERE status = 'inactive' AND lower(name) = 'eve' expected 150.0, got {s}"
+            );
+            assert_not_pushed_down!(
+                c,
+                "SELECT SUM(amount) FROM mysql_agg.orders
+                 WHERE status = 'inactive' AND lower(name) = 'eve'"
+            );
+
             // --- Subquery table: verify aggregate pushdown through starts_with('(') branch ---
             // COUNT(*) over the subquery — same 5 rows
             let cnt: i64 = c
