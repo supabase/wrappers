@@ -178,7 +178,13 @@ fn deparse_qual(qual: &Qual, fmt: &mut MysqlCellFormatter) -> String {
                     .iter()
                     .map(|cell| format!("{} {} {}", field, qual.operator, fmt.fmt_cell(cell)))
                     .collect();
-                conds.join(" or ")
+                // parenthesize so the OR list stays one condition when it is
+                // joined with other quals by `and`
+                if conds.len() > 1 {
+                    format!("({})", conds.join(" or "))
+                } else {
+                    conds.join(" or ")
+                }
             }
         }
     } else {

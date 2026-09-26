@@ -579,7 +579,13 @@ impl Qual {
                             format!("{} {} {}", self.field, self.operator, t.fmt_cell(cell))
                         })
                         .collect();
-                    conds.join(" or ")
+                    // parenthesize so the OR list stays one condition when it is
+                    // joined with other quals by `and`
+                    if conds.len() > 1 {
+                        format!("({})", conds.join(" or "))
+                    } else {
+                        conds.join(" or ")
+                    }
                 }
             }
         } else {
@@ -1338,5 +1344,43 @@ mod tests {
     #[test]
     fn test_cell_into_datum_type_oid_is_invalid() {
         assert_eq!(Cell::type_oid(), Oid::INVALID);
+    }
+
+    fn array_qual(operator: &str, values: Vec<i64>, use_or: bool) -> Qual {
+        Qual {
+            field: "id".to_string(),
+            operator: operator.to_string(),
+            value: Value::Array(values.into_iter().map(Cell::I64).collect()),
+            use_or,
+            param: None,
+            value_const: None,
+        }
+    }
+
+    #[test]
+    fn test_qual_deparse_or_list_is_parenthesized() {
+        let qual = array_qual("=", vec![1, 2, 3], true);
+        assert_eq!(qual.deparse(), "(id = 1 or id = 2 or id = 3)");
+
+        // joined with another qual the OR list must stay one condition
+        let other = Qual {
+            field: "status".to_string(),
+            operator: "=".to_string(),
+            value: Value::Cell(Cell::String("inactive".to_string())),
+            use_or: false,
+            param: None,
+            value_const: None,
+        };
+        let cond = [qual, other]
+            .iter()
+            .map(|q| q.deparse())
+            .collect::<Vec<_>>()
+            .join(" and ");
+        assert_eq!(cond, "(id = 1 or id = 2 or id = 3) and status = 'inactive'");
+    }
+
+    #[test]
+    fn test_qual_deparse_single_element_or_list() {
+        assert_eq!(array_qual("=", vec![7], true).deparse(), "id = 7");
     }
 }

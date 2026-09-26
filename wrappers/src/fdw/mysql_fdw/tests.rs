@@ -641,7 +641,7 @@ mod tests {
 
             // --- IN clause: array-valued qual must be included in the pushed-down WHERE ---
             // id IN (1,2,3) → Alice(100,active), Bob(50,active), Carol(200,inactive)
-            // deparse_aggregate renders use_or=true array quals as `id`=1 or `id`=2 or `id`=3
+            // deparse_aggregate renders use_or=true array quals as (`id`=1 or `id`=2 or `id`=3)
             let cnt: i64 = c
                 .select(
                     "SELECT COUNT(*) FROM mysql_agg.orders WHERE id IN (1, 2, 3)",
@@ -681,6 +681,29 @@ mod tests {
             assert_pushed_down!(
                 c,
                 "SELECT SUM(amount) FROM mysql_agg.orders WHERE id IN (1, 2, 3)"
+            );
+
+            // IN list combined with another qual: the OR list must stay grouped,
+            // otherwise `id = 1 or id = 2 or id = 3 and status = ...` matches ids 1 and 2
+            // regardless of status. Only Carol (id 3) is inactive.
+            let cnt: i64 = c
+                .select(
+                    "SELECT COUNT(*) FROM mysql_agg.orders WHERE id IN (1, 2, 3) AND status = 'inactive'",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .first()
+                .get_one::<i64>()
+                .unwrap()
+                .unwrap();
+            assert_eq!(
+                cnt, 1,
+                "COUNT(*) WHERE id IN (1,2,3) AND status = 'inactive' expected 1, got {cnt}"
+            );
+            assert_pushed_down!(
+                c,
+                "SELECT COUNT(*) FROM mysql_agg.orders WHERE id IN (1, 2, 3) AND status = 'inactive'"
             );
 
             // --- Subquery table: verify aggregate pushdown through starts_with('(') branch ---
