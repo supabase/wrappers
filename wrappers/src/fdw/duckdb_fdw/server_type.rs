@@ -22,6 +22,7 @@ pub(super) enum ServerType {
 
     // SQL-like Remotes
     MotherDuck,
+    DuckLake,
 }
 
 impl ServerType {
@@ -36,6 +37,7 @@ impl ServerType {
             "polaris" => Self::Polaris,
             "lakekeeper" => Self::Lakekeeper,
             "md" => Self::MotherDuck,
+            "ducklake" => Self::DuckLake,
             _ => return Err(DuckdbFdwError::InvalidServerType(svr_type.to_owned())),
         };
         Ok(ret)
@@ -51,6 +53,7 @@ impl ServerType {
             Self::Polaris => "polaris",
             Self::Lakekeeper => "lakekeeper",
             Self::MotherDuck => "md",
+            Self::DuckLake => "ducklake",
         }
     }
 
@@ -62,17 +65,23 @@ impl ServerType {
     }
 
     pub(super) fn is_sql_like(&self) -> bool {
-        matches!(self, Self::MotherDuck)
+        matches!(self, Self::MotherDuck | Self::DuckLake)
     }
 
-    pub(super) fn get_duckdb_extension_sql(&self) -> &'static str {
-        match self {
+    pub(super) fn get_duckdb_extension_sql(&self) -> Vec<String> {
+        let extensions = match self {
             Self::Iceberg | Self::S3Tables | Self::R2Catalog | Self::Polaris | Self::Lakekeeper => {
-                "install iceberg;load iceberg;"
+                vec!["iceberg"]
             }
-            Self::MotherDuck => "install md;load md;",
-            _ => "",
-        }
+            Self::MotherDuck => vec!["md"],
+            // Load dependencies before disabling local filesystem access.
+            Self::DuckLake => vec!["ducklake", "postgres", "httpfs", "parquet"],
+            _ => vec![],
+        };
+        extensions
+            .into_iter()
+            .flat_map(|ext| [format!("install {ext}"), format!("load {ext}")])
+            .collect()
     }
 
     fn allowed_secret_params(&self) -> Vec<&'static str> {
@@ -100,7 +109,7 @@ impl ServerType {
                 "oauth2_scope",
                 "oauth2_server_uri",
             ],
-            Self::MotherDuck => vec![],
+            Self::MotherDuck | Self::DuckLake => vec![],
         }
     }
 
@@ -126,10 +135,11 @@ impl ServerType {
     }
 
     // make 'create secret' sql for DuckDB from server options
-    pub(super) fn get_create_secret_sql(&self, svr_opts: &ServerOptions) -> String {
+    pub(super) fn get_create_secret_sql(&self, svr_opts: &ServerOptions) -> Vec<String> {
         let secrets: Vec<(&str, Vec<&str>)> = match self {
             Self::S3 | Self::S3Tables => vec![("s3", self.allowed_secret_params())],
             Self::R2 => vec![("r2", self.allowed_secret_params())],
+            Self::DuckLake => vec![("s3", Self::S3.allowed_secret_params())],
 
             // note: for generic Iceberg, we only support S3 compatible storage for now,
             // so we need to create 2 secrets: one for S3 and one for Iceberg
@@ -147,16 +157,19 @@ impl ServerType {
             _ => vec![],
         };
 
-        let mut ret = String::default();
+        let mut ret = Vec::new();
         for (typ, params) in secrets {
             let opts = self.format_options(svr_opts, &params);
-            ret.push_str(&format!("create or replace secret (type {typ}, {opts});"));
+            // Public storage and catalogs with inlined data need no S3 secret.
+            if !opts.is_empty() {
+                ret.push(format!("create or replace secret (type {typ}, {opts})"));
+            }
         }
 
         ret
     }
 
-    pub(super) fn get_settings_sql(&self, svr_opts: &ServerOptions) -> String {
+    pub(super) fn get_settings_sql(&self, svr_opts: &ServerOptions) -> Vec<String> {
         let settings: Vec<(&str, String)> = match self {
             Self::MotherDuck => {
                 let token = if svr_opts.contains_key("vault_motherduck_token") {
@@ -186,16 +199,33 @@ impl ServerType {
                 ]
             }
         };
-        let mut ret = String::default();
-        for (key, value) in settings {
-            ret.push_str(&format!("set {key}={value};"));
-        }
-
-        ret
+        settings
+            .into_iter()
+            .map(|(key, value)| format!("set {key}={value}"))
+            .collect()
     }
 
     pub(super) fn get_attach_sql(&self, svr_opts: &ServerOptions) -> DuckdbFdwResult<String> {
         let ret = match self {
+            Self::DuckLake => {
+                let metadata_path = if let Some(secret_id) = svr_opts.get("vault_metadata_path") {
+                    get_vault_secret(secret_id).ok_or_else(|| {
+                        OptionsError::OptionNameNotFound("vault_metadata_path".to_string())
+                    })?
+                } else {
+                    require_option("metadata_path", svr_opts)?.to_string()
+                };
+                let opts = self.format_options(svr_opts, &["data_path", "metadata_schema"]);
+                let opts = if opts.is_empty() {
+                    String::new()
+                } else {
+                    format!(", {opts}")
+                };
+                format!(
+                    "attach 'ducklake:{}' as ducklake (read_only, create_if_not_exists false{opts})",
+                    metadata_path.replace("'", "''")
+                )
+            }
             Self::S3Tables => {
                 let arn = require_option("s3_tables_arn", svr_opts)?;
                 let db_name = self.as_str();
