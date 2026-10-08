@@ -28,6 +28,7 @@ impl DuckdbFdw {
 
     fn init_duckdb(&self) -> DuckdbFdwResult<()> {
         let sql_batch = String::default()
+            + self.svr_type.get_presettings_sql()
             + self.svr_type.get_duckdb_extension_sql()
             + &self.svr_type.get_settings_sql(&self.svr_opts)
             + &self.svr_type.get_create_secret_sql(&self.svr_opts)
