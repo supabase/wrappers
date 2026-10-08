@@ -65,13 +65,29 @@ impl ServerType {
         matches!(self, Self::MotherDuck)
     }
 
+    // Settings that must be applied before anything else in the init batch.
+    // Loading an extension initializes the secret manager, and DuckDB refuses to
+    // change secret manager settings afterwards.
+    pub(super) fn get_presettings_sql(&self) -> &'static str {
+        match self {
+            // MotherDuck manages its own credentials and creates no DuckDB secret.
+            Self::MotherDuck => "",
+            // Keep secrets in memory only. Required since DuckDB 1.5, where the
+            // secret manager lazily initializes its on-disk storage: without this,
+            // 'create secret' fails once 'disabled_filesystems' has been set.
+            _ => "set allow_persistent_secrets=false;",
+        }
+    }
+
+    // All extensions need to be loaded explicitly, since relying on DuckDB's autoloading is blocked
+    // when filesystem access is not allowed.
     pub(super) fn get_duckdb_extension_sql(&self) -> &'static str {
         match self {
             Self::Iceberg | Self::S3Tables | Self::R2Catalog | Self::Polaris | Self::Lakekeeper => {
-                "install iceberg;load iceberg;"
+                "install httpfs;load httpfs;install iceberg;load iceberg;"
             }
             Self::MotherDuck => "install md;load md;",
-            _ => "",
+            _ => "install httpfs;load httpfs;",
         }
     }
 
