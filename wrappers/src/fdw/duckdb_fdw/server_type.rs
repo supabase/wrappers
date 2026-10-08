@@ -79,13 +79,15 @@ impl ServerType {
         }
     }
 
+    // All extensions need to be loaded explicitly, since relying on DuckDB's autoloading is blocked
+    // when filesystem access is not allowed.
     pub(super) fn get_duckdb_extension_sql(&self) -> &'static str {
         match self {
             Self::Iceberg | Self::S3Tables | Self::R2Catalog | Self::Polaris | Self::Lakekeeper => {
-                "install iceberg;load iceberg;"
+                "install httpfs;load httpfs;install iceberg;load iceberg;"
             }
             Self::MotherDuck => "install md;load md;",
-            _ => "",
+            _ => "install httpfs;load httpfs;",
         }
     }
 
