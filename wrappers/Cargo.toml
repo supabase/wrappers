@@ -334,6 +334,7 @@ wasmtime = { version = "36.0.7", features = [
     "runtime",
     "cranelift",
     "component-model",
+    "debug-builtins",
 ], default-features = false, optional = true }
 warg-client = { version = "0.7.0", optional = true }
 warg-protocol = { version = "0.7.0", optional = true }
