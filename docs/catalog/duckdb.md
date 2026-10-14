@@ -506,6 +506,67 @@ A `create server` statement example used to access local Iceberg service:
       );
     ```
 
+#### DuckLake
+
+This is to access an existing [DuckLake](https://ducklake.select/) catalog backed by PostgreSQL, with data files on S3-compatible storage. The wrapper attaches the catalog read-only and does not create or migrate it. Local catalog and data files are disabled, as with the other remote server types.
+
+| Server Option | Description | Required | Default |
+| ------------- | ----------- | :------: | ------- |
+| type | Server type, must be `ducklake` | Y | |
+| metadata_path | Catalog connection string, including the `postgres:` prefix | Y | |
+| metadata_schema | Schema containing the DuckLake metadata tables in PostgreSQL | | DuckLake default (`main`) |
+| data_path | Optional data location override; omit to use the catalog's stored location | | Stored catalog path |
+| key_id | S3 access key ID | For private S3 storage | |
+| secret | S3 secret access key | For private S3 storage | |
+
+The S3 options listed above, including `region`, `endpoint`, `url_style`, `use_ssl` and `session_token`, are also supported. Use these for services such as MinIO, Supabase Storage, or Cloudflare R2's S3 endpoint. The `ducklake`, `postgres`, `httpfs` and `parquet` extensions are installed and loaded automatically.
+
+Store the complete catalog connection string in Vault to protect its credentials:
+
+```sql
+select vault.create_secret(
+  'postgres:host=catalog.example.com port=5432 dbname=ducklake user=reader password=<password> sslmode=require',
+  'ducklake_catalog'
+);
+
+create server ducklake_server
+  foreign data wrapper duckdb_wrapper
+  options (
+    type 'ducklake',
+    vault_metadata_path '<catalog_secret_id>',
+    vault_key_id '<s3_key_secret_id>',
+    vault_secret '<s3_secret_secret_id>',
+    region 'us-east-1'
+  );
+```
+
+Alternatively, set `metadata_path`, `key_id` and `secret` directly. The metadata catalog must already be initialized and accessible to the PostgreSQL user in the connection string.
+
+Import tables from a logical DuckLake schema (this is separate from `metadata_schema`):
+
+```sql
+create schema if not exists ducklake;
+
+import foreign schema "main"
+  limit to (products)
+  from server ducklake_server into ducklake;
+
+select * from ducklake.products;
+```
+
+Imported tables retain their original names. `EXCEPT` and importing the whole schema are also supported. To define a table manually, qualify its source with the `ducklake` catalog alias:
+
+```sql
+create foreign table ducklake.products (
+  id bigint,
+  name text
+)
+server ducklake_server
+options (table 'ducklake.main.products');
+```
+
+See [DuckLake connection options](https://ducklake.select/docs/stable/duckdb/usage/connecting) for details about metadata and data paths.
+
 #### MotherDuck
 
 This is to access [MotherDuck](https://motherduck.com/), a cloud-hosted DuckDB service.
@@ -605,7 +666,7 @@ import foreign schema "docs_example"
   from server duckdb_server into duckdb;
 ```
 
-Currently only MotherDuck and Iceberg-like servers, such as S3 Tables, R2 Data Catalog and etc., support `import foreign schema` without specifying source tables. For other types of servers, source tables must be explicitly specified in options. For example,
+MotherDuck, DuckLake and Iceberg-like servers, such as S3 Tables and R2 Data Catalog, support `import foreign schema` without specifying source tables. For other types of servers, source tables must be explicitly specified in options. For example,
 
 ```sql
 -- 'duckdb_server_md' server type is 'md', all tables under 'main' schema

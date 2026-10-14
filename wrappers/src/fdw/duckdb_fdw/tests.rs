@@ -5,6 +5,150 @@ mod tests {
     use serde_json::json;
     use std::str::FromStr;
 
+    use super::super::server_type::ServerType;
+
+    #[pg_test]
+    fn ducklake_import_foreign_schema() {
+        let options = [
+            ("type", "ducklake"),
+            (
+                "metadata_path",
+                "postgres:host=localhost port=5433 dbname=ducklake user=ducklake password=ducklake",
+            ),
+            ("metadata_schema", "fdw_test"),
+            ("key_id", "admin"),
+            ("secret", "password"),
+            ("region", "us-east-1"),
+            ("endpoint", "localhost:8000"),
+            ("url_style", "path"),
+            ("use_ssl", "false"),
+        ]
+        .map(|(key, value)| (key.to_string(), value.to_string()))
+        .into_iter()
+        .collect();
+        let server_type = ServerType::new(&options).unwrap();
+
+        // Provision an existing catalog independently of the read-only FDW.
+        let conn = duckdb::Connection::open_in_memory().unwrap();
+        for sql in server_type
+            .get_duckdb_extension_sql()
+            .into_iter()
+            .chain(server_type.get_create_secret_sql(&options))
+        {
+            conn.execute(&sql, []).unwrap();
+        }
+        conn
+            .execute_batch(
+                "attach 'ducklake:postgres:host=localhost port=5433 dbname=ducklake user=ducklake password=ducklake'
+                 as lake (metadata_schema 'fdw_test', data_path 's3://warehouse/ducklake_fdw_test/',
+                          data_inlining_row_limit 0);
+                 create schema if not exists lake.inventory;
+                 create or replace table lake.inventory.products as
+                 select 1::integer as id, 'Apple' as name
+                 union all select 2, 'Pear';
+                 create or replace table lake.inventory.excluded (id integer);
+                 detach lake;",
+            )
+            .unwrap();
+
+        // Reattach with the FDW's read-only settings.
+        for sql in server_type
+            .get_settings_sql(&options)
+            .into_iter()
+            .chain([server_type.get_attach_sql(&options).unwrap()])
+        {
+            conn.execute(&sql, []).unwrap();
+        }
+        assert!(
+            conn.execute(
+                "insert into ducklake.inventory.products values (3, 'Plum')",
+                []
+            )
+            .is_err()
+        );
+        assert!(
+            conn.prepare("select * from read_text('/etc/passwd')")
+                .and_then(|mut stmt| stmt.query([]).map(|_| ()))
+                .is_err()
+        );
+
+        Spi::run(
+            "CREATE FOREIGN DATA WRAPPER duckdb_wrapper
+               HANDLER duckdb_fdw_handler VALIDATOR duckdb_fdw_validator;
+             CREATE SERVER ducklake_server FOREIGN DATA WRAPPER duckdb_wrapper OPTIONS (
+               type 'ducklake',
+               metadata_path 'postgres:host=localhost port=5433 dbname=ducklake user=ducklake password=ducklake',
+               metadata_schema 'fdw_test',
+               key_id 'admin', secret 'password', region 'us-east-1',
+               endpoint 'localhost:8000', url_style 'path', use_ssl 'false'
+             );
+             CREATE SCHEMA ducklake_all;
+             CREATE SCHEMA ducklake_limited;
+             CREATE SCHEMA ducklake_except;
+             IMPORT FOREIGN SCHEMA inventory FROM SERVER ducklake_server INTO ducklake_all;
+             IMPORT FOREIGN SCHEMA inventory LIMIT TO (products)
+               FROM SERVER ducklake_server INTO ducklake_limited;
+             IMPORT FOREIGN SCHEMA inventory EXCEPT (excluded)
+               FROM SERVER ducklake_server INTO ducklake_except;",
+        )
+        .unwrap();
+
+        for schema in ["ducklake_all", "ducklake_limited", "ducklake_except"] {
+            assert_eq!(
+                Spi::get_one::<String>(&format!(
+                    "select name from {schema}.products where id > 0 order by id desc limit 1"
+                ))
+                .unwrap(),
+                Some("Pear".to_string())
+            );
+        }
+        assert_eq!(
+            Spi::get_one::<i64>(
+                "select count(*) from information_schema.foreign_tables
+                 where foreign_table_schema in ('ducklake_all', 'ducklake_limited', 'ducklake_except')"
+            )
+            .unwrap(),
+            Some(4)
+        );
+        assert_eq!(
+            Spi::get_one::<i64>("select count(*) from ducklake_all.excluded").unwrap(),
+            Some(0)
+        );
+    }
+
+    #[pg_test]
+    fn ducklake_options_preserve_quoted_values() {
+        let options = [
+            ("type", "ducklake"),
+            (
+                "metadata_path",
+                "postgres:dbname=catalog password=quo'te;value",
+            ),
+            ("metadata_schema", "custom's;schema"),
+            ("key_id", "test"),
+            ("secret", "quo'te;value"),
+        ]
+        .map(|(key, value)| (key.to_string(), value.to_string()))
+        .into_iter()
+        .collect();
+        let server_type = ServerType::new(&options).unwrap();
+        let attach = server_type.get_attach_sql(&options).unwrap();
+        assert!(attach.contains("password=quo''te;value'"));
+        assert!(attach.contains("metadata_schema 'custom''s;schema'"));
+        assert!(attach.contains("read_only, create_if_not_exists false"));
+
+        let conn = duckdb::Connection::open_in_memory().unwrap();
+        conn.execute("install httpfs", []).unwrap();
+        conn.execute("load httpfs", []).unwrap();
+        for sql in server_type.get_create_secret_sql(&options) {
+            conn.execute(&sql, []).unwrap();
+        }
+
+        let empty_options = Default::default();
+        assert!(server_type.get_attach_sql(&empty_options).is_err());
+        assert!(server_type.get_create_secret_sql(&empty_options).is_empty());
+    }
+
     #[pg_test]
     fn duckdb_smoketest() {
         Spi::connect_mut(|c| {

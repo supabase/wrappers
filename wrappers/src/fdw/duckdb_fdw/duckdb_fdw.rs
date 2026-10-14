@@ -9,7 +9,7 @@ use supabase_wrappers::prelude::*;
 use super::{DuckdbFdwError, DuckdbFdwResult, mapper, server_type::ServerType};
 
 #[wrappers_fdw(
-    version = "0.1.2",
+    version = "0.1.3",
     author = "Supabase",
     website = "https://github.com/supabase/wrappers/tree/main/wrappers/src/fdw/duckdb_fdw",
     error_type = "DuckdbFdwError"
@@ -27,20 +27,18 @@ impl DuckdbFdw {
     const FDW_NAME: &'static str = "DuckdbFdw";
 
     fn init_duckdb(&self) -> DuckdbFdwResult<()> {
-        let sql_batch = String::default()
-            + self.svr_type.get_duckdb_extension_sql()
-            + &self.svr_type.get_settings_sql(&self.svr_opts)
-            + &self.svr_type.get_create_secret_sql(&self.svr_opts)
-            + &self.svr_type.get_attach_sql(&self.svr_opts)?;
+        let statements = self
+            .svr_type
+            .get_duckdb_extension_sql()
+            .into_iter()
+            .chain(self.svr_type.get_settings_sql(&self.svr_opts))
+            .chain(self.svr_type.get_create_secret_sql(&self.svr_opts))
+            .chain([self.svr_type.get_attach_sql(&self.svr_opts)?]);
 
-        // execute_batch() won't raise error when one of the statements failed,
-        // so we execute each sql separately
-        for sql in sql_batch
-            .split(";")
-            .map(|s| s.trim())
-            .filter(|s| !s.is_empty())
-        {
-            self.conn.execute(sql, [])?;
+        // Execute each statement separately to propagate errors, preserving
+        // semicolons inside quoted credentials and connection strings.
+        for sql in statements.filter(|sql| !sql.is_empty()) {
+            self.conn.execute(&sql, [])?;
         }
 
         Ok(())

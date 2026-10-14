@@ -97,6 +97,29 @@ pub fn is_sensitive_option(option_name: &str) -> bool {
     SENSITIVE_OPTION_NAMES.iter().any(|&s| lower.contains(s))
 }
 
+fn redact_postgres_urls(message: &str) -> String {
+    let mut result = String::with_capacity(message.len());
+    for token in message.split_inclusive(char::is_whitespace) {
+        // ASCII case folding keeps byte offsets valid for UTF-8 messages.
+        let lower = token.to_ascii_lowercase();
+        let start = ["postgres://", "postgresql://"]
+            .iter()
+            .filter_map(|scheme| lower.find(scheme))
+            .min();
+        if let Some(start) = start {
+            result.push_str(&token[..start]);
+            result.push_str("[REDACTED]");
+            // Conservatively hide the whole URL, including query credentials
+            // and trailing punctuation. Valid URLs encode embedded whitespace.
+            let end = token.trim_end_matches(char::is_whitespace).len();
+            result.push_str(&token[end..]);
+        } else {
+            result.push_str(token);
+        }
+    }
+    result
+}
+
 /// Masks credential values in an error message string.
 /// Scans for patterns like `key = 'value'` or `key: value` and masks sensitive values.
 ///
@@ -104,6 +127,7 @@ pub fn is_sensitive_option(option_name: &str) -> bool {
 /// - SQL-style: `secret = 'value'`
 /// - JSON-style: `"secret": "value"`
 /// - URL parameters: `secret=value`
+/// - PostgreSQL connection URLs: the complete URL is hidden
 ///
 /// # Examples
 /// ```
@@ -114,7 +138,9 @@ pub fn is_sensitive_option(option_name: &str) -> bool {
 /// assert!(masked.contains("wJal***"));
 /// ```
 pub fn mask_credentials_in_message(message: &str) -> String {
-    let mut result = message.to_string();
+    // Do this before named-field masking, which could otherwise modify a URL
+    // containing query parameters before its embedded credentials are removed.
+    let mut result = redact_postgres_urls(message);
 
     for sensitive_name in SENSITIVE_OPTION_NAMES {
         let lower_name = sensitive_name.to_lowercase();
