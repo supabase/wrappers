@@ -9,6 +9,7 @@ use bindings::{
             Cell, Column, Context, FdwError, FdwResult, ImportForeignSchemaStmt, OptionsType, Row,
             TypeOid,
         },
+        utils,
     },
 };
 
@@ -116,14 +117,14 @@ impl GsheetsFdw {
             urlencoding::encode(&format!("'{}'", self.sheet.replace('\'', "''"))).into_owned();
 
         let url = format!(
-            "{}/{}/values/{}?valueRenderOption=UNFORMATTED_VALUE&key={}",
-            API, self.spreadsheet_id, range, self.api_key
+            "{}/{}/values/{}?valueRenderOption=UNFORMATTED_VALUE",
+            API, self.spreadsheet_id, range
         );
 
         let req = http::Request {
             method: http::Method::Get,
             url,
-            headers: vec![],
+            headers: vec![("x-goog-api-key".to_owned(), self.api_key.clone())],
             body: String::default(),
         };
 
@@ -186,14 +187,22 @@ impl Guest for GsheetsFdw {
 
     fn init(ctx: &Context) -> FdwResult {
         Self::init();
-        let this = Self::this_mut();
-        this.api_key = ctx.get_options(&OptionsType::Server).require("api_key")?;
+        let this = Self::this_mut()?;
+        let opts = ctx.get_options(&OptionsType::Server);
+        this.api_key = match opts.get("api_key") {
+            Some(key) => key,
+            None => {
+                let key_id = opts.require("api_key_id")?;
+                utils::get_vault_secret(&key_id)
+                    .ok_or_else(|| format!("cannot read vault secret '{key_id}' for api_key_id"))?
+            }
+        };
         stats::inc_stats(FDW_NAME, stats::Metric::CreateTimes, 1);
         Ok(())
     }
 
     fn begin_scan(ctx: &Context) -> FdwResult {
-        let this = Self::this_mut();
+        let this = Self::this_mut()?;
         let opts = ctx.get_options(&OptionsType::Table);
         this.spreadsheet_id = opts.require("spreadsheet_id")?;
         this.sheet = opts.require("sheet")?;
@@ -205,7 +214,7 @@ impl Guest for GsheetsFdw {
     }
 
     fn iter_scan(ctx: &Context, row: &Row) -> Result<Option<u32>, FdwError> {
-        let this = Self::this_mut();
+        let this = Self::this_mut()?;
 
         // all rows are consumed
         if this.src_idx >= this.src_rows.len() {
@@ -233,13 +242,13 @@ impl Guest for GsheetsFdw {
     }
 
     fn re_scan(_ctx: &Context) -> FdwResult {
-        let this = Self::this_mut();
+        let this = Self::this_mut()?;
         this.src_idx = 1;
         Ok(())
     }
 
     fn end_scan(_ctx: &Context) -> FdwResult {
-        let this = Self::this_mut();
+        let this = Self::this_mut()?;
         this.src_rows.clear();
         Ok(())
     }

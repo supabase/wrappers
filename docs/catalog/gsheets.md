@@ -47,21 +47,50 @@ create foreign data wrapper wasm_wrapper
 2. Create an **API key** under _APIs & Services_ > _Credentials_.
 3. Share the spreadsheet you want to query as **Anyone with the link can view**. An API key can only read publicly shared spreadsheets.
 
-### Connecting to Google Sheets
+### Store your credentials (optional)
 
-We need to provide Postgres with the API key and any additional options. We can do this using the `create server` command:
+By default, Postgres stores FDW credentials inside `pg_catalog.pg_foreign_server` in plain text. Anyone with access to this table will be able to view these credentials. Wrappers is designed to work with [Vault](https://supabase.com/docs/guides/database/vault), which provides an additional level of security for storing credentials. We recommend using Vault to store your credentials.
 
 ```sql
-create server gsheets_server
-  foreign data wrapper wasm_wrapper
-  options (
-    fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_gsheets_fdw_v0.1.0/gsheets_fdw.wasm',
-    fdw_package_name 'supabase:gsheets-fdw',
-    fdw_package_version '0.1.0',
-    fdw_package_checksum 'tbd',
-    api_key '<Google API key>'
-  );
+-- Save your Google API key in Vault and retrieve the created `key_id`
+select vault.create_secret(
+  '<Google API key>', -- Google API key
+  'gsheets',
+  'Google API key for Wrappers'
+);
 ```
+
+### Connecting to Google Sheets
+
+We need to provide Postgres with the credentials to access Google Sheets and any additional options. We can do this using the `create server` command:
+
+=== "With Vault"
+
+    ```sql
+    create server gsheets_server
+      foreign data wrapper wasm_wrapper
+      options (
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_gsheets_fdw_v0.1.0/gsheets_fdw.wasm',
+        fdw_package_name 'supabase:gsheets-fdw',
+        fdw_package_version '0.1.0',
+        fdw_package_checksum 'tbd',
+        api_key_id '<key_ID>' -- The Key ID from above.
+      );
+    ```
+
+=== "Without Vault"
+
+    ```sql
+    create server gsheets_server
+      foreign data wrapper wasm_wrapper
+      options (
+        fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_gsheets_fdw_v0.1.0/gsheets_fdw.wasm',
+        fdw_package_name 'supabase:gsheets-fdw',
+        fdw_package_version '0.1.0',
+        fdw_package_checksum 'tbd',
+        api_key '<Google API key>'
+      );
+    ```
 
 Note the `fdw_package_*` options are required, which specify the Wasm package metadata. You can get the available package version list from [above](#available-versions).
 
@@ -79,7 +108,8 @@ The following options are available.
 
 ### Server options
 
-- `api_key` - Google API key, required.
+- `api_key` - Google API key, required if `api_key_id` is not specified.
+- `api_key_id` - Vault secret ID storing the Google API key, required if `api_key` is not specified.
 
 ### Foreign table options
 
