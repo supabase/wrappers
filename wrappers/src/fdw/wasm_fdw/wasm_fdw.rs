@@ -443,6 +443,12 @@ impl ForeignDataWrapper<WasmFdwError> for WasmFdw {
 
         let mut config = Config::new();
         config.wasm_component_model(true);
+
+        #[cfg(debug_assertions)]
+        config
+            .debug_info(true)
+            .cranelift_opt_level(wasmtime::OptLevel::None);
+
         let engine = Engine::new(&config)?;
 
         let component =
