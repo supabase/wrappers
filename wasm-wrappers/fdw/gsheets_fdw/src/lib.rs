@@ -45,8 +45,13 @@ impl GsheetsFdw {
         }
     }
 
-    fn this_mut() -> &'static mut Self {
-        unsafe { &mut (*INSTANCE) }
+    fn this_mut() -> Result<&'static mut Self, FdwError> {
+        unsafe {
+            if INSTANCE.is_null() {
+                return Err("GsheetsFdw is not initialized".to_string());
+            }
+            Ok(&mut (*INSTANCE))
+        }
     }
 
     fn make_request(&self, req: &http::Request) -> Result<JsonValue, FdwError> {
