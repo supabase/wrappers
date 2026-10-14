@@ -247,10 +247,40 @@ fn split_link_entries(s: &str) -> Vec<&str> {
     entries
 }
 
+/// Split the parameter portion of a Link entry on top-level semicolons,
+/// ignoring semicolons inside quoted strings. Honors RFC 7230 `quoted-pair`
+/// escapes so an escaped quote (e.g. `title="a \"semi;colon\""`) does not
+/// flip the quote state.
+fn split_link_params(s: &str) -> Vec<&str> {
+    let mut params = Vec::new();
+    let mut in_quotes = false;
+    let mut escape = false;
+    let mut start = 0;
+    for (i, c) in s.char_indices() {
+        if escape {
+            escape = false;
+            continue;
+        }
+        match c {
+            '\\' if in_quotes => escape = true,
+            '"' => in_quotes = !in_quotes,
+            ';' if !in_quotes => {
+                params.push(&s[start..i]);
+                start = i + 1;
+            }
+            _ => {}
+        }
+    }
+    if start <= s.len() {
+        params.push(&s[start..]);
+    }
+    params
+}
+
 /// Returns true if the parameter list (after the URI part of a Link entry)
 /// contains a `rel` parameter whose value is or includes `next`.
 fn has_rel_next(params: &str) -> bool {
-    for raw in params.split(';') {
+    for raw in split_link_params(params) {
         let part = raw.trim();
         let Some((name, value)) = part.split_once('=') else {
             continue;
