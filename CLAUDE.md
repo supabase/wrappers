@@ -120,7 +120,7 @@ pub struct MyFdw { ... }
 
 ### Wasm FDWs (wasm-wrappers/fdw/)
 
-Cal.com, Calendly, Clerk, Cloudflare D1, HubSpot, Infura, Notion, Orb, Paddle, Shopify, Slack, Snowflake
+Cal.com, Calendly, Clerk, Cloudflare D1, Google Sheets, HubSpot, Infura, Notion, Orb, Paddle, Shopify, Slack, Snowflake
 
 ## Development Workflows
 
@@ -160,9 +160,10 @@ cargo component build --release --target wasm32-unknown-unknown
 # so a bare `cargo component build` from there requires explicit package selection)
 cd wasm-wrappers/fdw
 cargo component build --release --target wasm32-unknown-unknown \
-  -p cal_fdw -p calendly_fdw -p cfd1_fdw -p clerk_fdw -p helloworld_fdw \
-  -p hubspot_fdw -p infura_fdw -p langfuse_fdw -p notion_fdw -p openapi_fdw \
-  -p orb_fdw -p paddle_fdw -p shopify_fdw -p slack_fdw -p snowflake_fdw
+  -p cal_fdw -p calendly_fdw -p cfd1_fdw -p clerk_fdw -p gsheets_fdw \
+  -p helloworld_fdw -p hubspot_fdw -p infura_fdw -p langfuse_fdw -p notion_fdw \
+  -p openapi_fdw -p orb_fdw -p paddle_fdw -p shopify_fdw -p slack_fdw \
+  -p snowflake_fdw
 ```
 
 ### Running Interactive Development

@@ -3643,6 +3643,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "gsheets_fdw"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
+ "urlencoding",
+ "wit-bindgen-rt",
+]
+
+[[package]]
 name = "h2"
 version = "0.3.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
