@@ -17,11 +17,20 @@ use serde_json::Value as JsonValue;
 
 #[derive(Debug, Default)]
 struct GsheetsFdw {
+    // Google API key, from the server options or Vault
     api_key: String,
+    // spreadsheet and sheet (tab) of the foreign table being scanned
     spreadsheet_id: String,
     sheet: String,
+    // rows requested per batch, 0 means the whole sheet is fetched at once
+    batch_size: usize,
+    // number of sheet rows read so far, header included, where the next batch starts
+    rows_read: usize,
+    // foreign table column position to column index in the sheet
     col_idx: Vec<usize>,
+    // rows of the current batch, or of the whole sheet if batching is not used
     src_rows: Vec<JsonValue>,
+    // index of the next row to return in `src_rows`
     src_idx: usize,
 }
 
@@ -109,12 +118,26 @@ impl GsheetsFdw {
         Ok(())
     }
 
+    fn is_batched(&self) -> bool {
+        self.batch_size != 0
+    }
+
     fn fetch_source_data(&mut self) -> FdwResult {
         self.src_rows.clear();
         self.src_idx = 0;
 
-        let range =
-            urlencoding::encode(&format!("'{}'", self.sheet.replace('\'', "''"))).into_owned();
+        let range = match self.is_batched() {
+            false => {
+                urlencoding::encode(&format!("'{}'", self.sheet.replace('\'', "''"))).into_owned()
+            }
+            true => urlencoding::encode(&format!(
+                "'{}'!{}:{}",
+                self.sheet.replace('\'', "''"),
+                self.rows_read + 1,
+                self.rows_read + self.batch_size
+            ))
+            .into_owned(),
+        };
 
         let url = format!(
             "{}/{}/values/{}?valueRenderOption=UNFORMATTED_VALUE",
@@ -136,6 +159,15 @@ impl GsheetsFdw {
             .cloned()
             .unwrap_or_default();
 
+        Ok(())
+    }
+
+    fn start_scan(&mut self) -> FdwResult {
+        self.rows_read = 0;
+        self.fetch_source_data()?;
+        // We expect that first row is column definition and we need to skip it.
+        self.src_idx = 1;
+        self.rows_read = 1;
         Ok(())
     }
 
@@ -206,19 +238,31 @@ impl Guest for GsheetsFdw {
         let opts = ctx.get_options(&OptionsType::Table);
         this.spreadsheet_id = opts.require("spreadsheet_id")?;
         this.sheet = opts.require("sheet")?;
-        this.fetch_source_data()?;
+        this.batch_size = match opts.get("batch_size") {
+            None => 0,
+            Some(v) => v
+                .parse::<usize>()
+                .map_err(|_| format!("invalid batch_size '{v}'"))?,
+        };
+        this.start_scan()?;
         this.map_columns(ctx)?;
-        // skip column header row
-        this.src_idx = 1;
         Ok(())
     }
 
     fn iter_scan(ctx: &Context, row: &Row) -> Result<Option<u32>, FdwError> {
         let this = Self::this_mut()?;
 
-        // all rows are consumed
         if this.src_idx >= this.src_rows.len() {
-            return Ok(None);
+            // If batching is not used or last batch has fewer than batch_size rows
+            // we can exit scan.
+            if !this.is_batched() || this.src_rows.len() < this.batch_size {
+                return Ok(None);
+            }
+            // Request next batch.
+            this.fetch_source_data()?;
+            if this.src_rows.is_empty() {
+                return Ok(None);
+            }
         }
 
         let src_row = this.src_rows[this.src_idx]
@@ -227,12 +271,13 @@ impl Guest for GsheetsFdw {
             .unwrap_or_default();
 
         this.src_idx += 1;
+        this.rows_read += 1;
 
         for (tgt_col, &idx) in ctx.get_columns().iter().zip(this.col_idx.iter()) {
             // trailing empty cells are omitted by the API, treat them as NULL
             let cell = match src_row.get(idx) {
                 Some(src) => Self::src_to_cell(src, tgt_col)
-                    .map_err(|e| format!("sheet row {0}, {1}", this.src_idx, e))?,
+                    .map_err(|e| format!("sheet row {0}, {1}", this.rows_read, e))?,
                 None => None,
             };
             row.push(cell.as_ref());
@@ -243,8 +288,15 @@ impl Guest for GsheetsFdw {
 
     fn re_scan(_ctx: &Context) -> FdwResult {
         let this = Self::this_mut()?;
-        this.src_idx = 1;
-        Ok(())
+        // With batching only the last batch is in memory, so the scan has to start over.
+        // Otherwise the whole sheet is already fetched, so just reset the counters.
+        if this.is_batched() {
+            this.start_scan()
+        } else {
+            this.src_idx = 1;
+            this.rows_read = 1;
+            Ok(())
+        }
     }
 
     fn end_scan(_ctx: &Context) -> FdwResult {

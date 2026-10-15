@@ -115,6 +115,7 @@ The following options are available.
 
 - `spreadsheet_id` - ID of the spreadsheet, required. It is the part of the spreadsheet URL between `/d/` and `/edit`: `https://docs.google.com/spreadsheets/d/<spreadsheet_id>/edit`.
 - `sheet` - Name of the sheet (tab) inside the spreadsheet, required.
+- `batch_size` - Number of sheet rows to request from Google Sheets at a time, optional. If not specified (or `0`), the whole sheet is fetched with a single request. Set it for large sheets to limit memory usage.
 
 ## Entities
 
@@ -173,7 +174,7 @@ select * from gsheets.people;
   Other types, such as `real` or `jsonb`, are not supported.
 - A value that cannot be converted to the column type returns an error with the sheet row number and column name.
 - Values are read unformatted, so a cell showing `$1,234.50` is returned as the number `1234.5`.
-- The whole sheet is fetched on every query, and no filter, sort or limit is pushed down to Google Sheets.
+- The sheet is fetched on every query, and no filter, sort or limit is pushed down to Google Sheets. By default the whole sheet is fetched with a single request, use the `batch_size` table option to fetch it in batches.
 
 ## Limitations
 
