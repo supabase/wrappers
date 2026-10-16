@@ -26,6 +26,8 @@ struct LangfuseFdw {
     endpoint: String,
     // query string carrying pushed-down filters, rebuilt per page with a new cursor
     filter_qs: String,
+    // fixed query params from the table's `params` option, e.g. `isRootObservation=true`
+    params: String,
     // `fields` field-group selection for the v2 endpoints; empty for the others
     fields: String,
     src_rows: Vec<JsonValue>,
@@ -140,8 +142,8 @@ impl LangfuseFdw {
         };
 
         let mut url = format!(
-            "{}/api/public/{}?limit={}{}{}",
-            self.base_url, self.endpoint, limit, self.fields, self.filter_qs
+            "{}/api/public/{}?limit={}{}{}{}",
+            self.base_url, self.endpoint, limit, self.fields, self.params, self.filter_qs
         );
         if let Some(cursor) = &self.next_cursor {
             url.push_str(&format!("&cursor={}", url_encode(cursor)));
@@ -169,6 +171,16 @@ impl LangfuseFdw {
             body: String::default(),
         };
         let resp = http::get(&req)?;
+        // Langfuse v4 removed the v1 read endpoints (Cloud is v4-only from 2026-11-16), so
+        // they answer 404. Say what to change instead of surfacing a bare 404.
+        if resp.status_code == 404 && is_legacy_endpoint(&self.endpoint) {
+            return Err(format!(
+                "Langfuse returned 404 for '{}': this v1 endpoint was removed in Langfuse v4. \
+                 Use object 'v2/observations' instead (add params 'isRootObservation=true' \
+                 for one row per trace).",
+                self.endpoint
+            ));
+        }
         // surfaces 401/403 as a Postgres error rather than an empty result set
         http::error_for_status(&resp).map_err(|err| format!("{}: {}", err, resp.body))?;
 
@@ -209,6 +221,22 @@ impl LangfuseFdw {
 
         Ok(())
     }
+}
+
+// v1 read endpoints that Langfuse v4 serves as 404.
+fn is_legacy_endpoint(endpoint: &str) -> bool {
+    let path = endpoint.trim_matches('/');
+    [
+        "traces",
+        "observations",
+        "sessions",
+        "scores",
+        "v2/scores",
+        "metrics",
+        "metrics/daily",
+    ]
+    .iter()
+    .any(|legacy| path == *legacy || path.starts_with(&format!("{legacy}/")))
 }
 
 // Postgres columns are snake_case by convention, the Langfuse API is camelCase.
@@ -337,13 +365,30 @@ impl Guest for LangfuseFdw {
         // reads self.endpoint to pick the right time filter params, so it must run after
         this.filter_qs = this.pushdown_quals(ctx);
 
+        // Fixed filters the table always applies, as `key=value&key=value`. Each part is
+        // re-encoded so a stray `&` or space in a value cannot change the request.
+        this.params = match opts.get("params") {
+            Some(p) => {
+                let mut qs = String::new();
+                for pair in p.split('&').filter(|s| !s.is_empty()) {
+                    let (k, v) = pair
+                        .split_once('=')
+                        .ok_or(format!("invalid params entry '{pair}': expected key=value"))?;
+                    qs.push_str(&format!("&{}={}", url_encode(k), url_encode(v)));
+                }
+                qs
+            }
+            None => String::new(),
+        };
+
         // The v2 endpoints return only the `core` and `basic` groups unless asked
-        // otherwise, which would leave usage/cost columns silently NULL. Request the
-        // groups backing the columns this wrapper exposes.
+        // otherwise, which would leave usage/cost/prompt columns silently NULL. Request
+        // the groups backing the columns this wrapper exposes.
         this.fields = match opts.get("fields") {
             Some(f) => format!("&fields={}", url_encode(&f)),
             None if this.endpoint.starts_with("v2/") => {
-                "&fields=core,basic,time,io,metadata,model,usage,metrics,trace_context".to_owned()
+                "&fields=core,basic,time,io,metadata,model,usage,prompt,metrics,trace_context"
+                    .to_owned()
             }
             None => String::new(),
         };
@@ -465,12 +510,16 @@ impl Guest for LangfuseFdw {
         _ctx: &Context,
         stmt: ImportForeignSchemaStmt,
     ) -> Result<Vec<String>, FdwError> {
+        // Langfuse v4 has no trace list endpoint: trace attributes (user, session, name,
+        // tags) are carried on every observation. Both tables read Observations API v2.
         Ok(vec![
-            // Traces carry user_id and an aggregate cost, so this is the table to join
-            // local user tables against.
+            // One row per trace, read from its root observation. `total_cost` is the root
+            // observation's own cost; for a trace's total, sum `observations` by trace_id.
             format!(
                 r#"create foreign table if not exists traces (
+                    trace_id text,
                     id text,
+                    trace_name text,
                     name text,
                     user_id text,
                     session_id text,
@@ -479,29 +528,33 @@ impl Guest for LangfuseFdw {
                     version text,
                     total_cost double precision,
                     latency double precision,
-                    timestamp timestamp,
-                    created_at timestamp,
-                    updated_at timestamp,
+                    start_time timestamp,
+                    end_time timestamp,
                     input text,
                     output text,
                     metadata jsonb,
                     tags jsonb
                 )
                 server {} options (
-                    object 'traces',
+                    object 'v2/observations',
+                    params 'isRootObservation=true',
                     rowid_column 'id'
                 )"#,
                 stmt.server_name,
             ),
-            // One row per model call, with token counts and per-call cost. No user_id in
-            // the response — that lives on the trace; join through trace_id.
+            // One row per observation (model call, span, tool call, ...), with token
+            // counts and per-call cost. v2 carries user_id and session_id directly.
             format!(
                 r#"create foreign table if not exists observations (
                     id text,
                     trace_id text,
+                    parent_observation_id text,
                     type text,
                     name text,
                     level text,
+                    user_id text,
+                    session_id text,
+                    environment text,
                     model text,
                     input_tokens bigint,
                     output_tokens bigint,
@@ -522,7 +575,7 @@ impl Guest for LangfuseFdw {
                     model_parameters jsonb
                 )
                 server {} options (
-                    object 'observations',
+                    object 'v2/observations',
                     rowid_column 'id'
                 )"#,
                 stmt.server_name,
