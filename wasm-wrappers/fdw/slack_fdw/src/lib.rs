@@ -97,6 +97,19 @@ static FDW_NAME: &str = "SlackFdw";
 /// Maximum number of rows returned per API request for pagination
 static BATCH_SIZE: u32 = 100;
 
+/// Extract the pagination cursor from a Slack API response
+///
+/// Slack returns an empty `next_cursor` on the last page, which means there
+/// are no more results, so it is treated the same as a missing cursor.
+fn get_next_cursor(resp_json: &JsonValue) -> Option<String> {
+    resp_json
+        .get("response_metadata")
+        .and_then(|m| m.get("next_cursor"))
+        .and_then(|c| c.as_str())
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string())
+}
+
 impl SlackFdw {
     fn init() {
         let instance = Self::default();
@@ -759,6 +772,11 @@ impl SlackFdw {
             return Err("channel_id is required for querying messages".to_string());
         }
 
+        // Add cursor if available
+        if let Some(cursor) = &self.next_cursor {
+            params.push(("cursor".to_string(), cursor.clone()));
+        }
+
         // Create request and send it
         let req = self.create_request("conversations.history", &params)?;
         let resp_json = self.make_request(&req)?;
@@ -775,11 +793,7 @@ impl SlackFdw {
                 .get("has_more")
                 .and_then(|h| h.as_bool())
                 .unwrap_or(false);
-            self.next_cursor = resp_json
-                .get("response_metadata")
-                .and_then(|m| m.get("next_cursor"))
-                .and_then(|c| c.as_str())
-                .map(|s| s.to_string());
+            self.next_cursor = get_next_cursor(&resp_json);
 
             // Reset position
             self.result_index = 0;
@@ -816,6 +830,11 @@ impl SlackFdw {
             params.push(("types".to_string(), "public_channel".to_string()));
         }
 
+        // Add cursor if available
+        if let Some(cursor) = &self.next_cursor {
+            params.push(("cursor".to_string(), cursor.clone()));
+        }
+
         // Create request and send it
         let req = self.create_request("conversations.list", &params)?;
         let resp_json = self.make_request(&req)?;
@@ -828,11 +847,7 @@ impl SlackFdw {
                 .collect::<Vec<Channel>>();
 
             // Get pagination info
-            self.next_cursor = resp_json
-                .get("response_metadata")
-                .and_then(|m| m.get("next_cursor"))
-                .and_then(|c| c.as_str())
-                .map(|s| s.to_string());
+            self.next_cursor = get_next_cursor(&resp_json);
 
             // Reset position
             self.result_index = 0;
@@ -1063,11 +1078,7 @@ impl SlackFdw {
 
             // Get pagination info (if we haven't already cleared it due to limit)
             if self.next_cursor.is_some() {
-                self.next_cursor = resp_json
-                    .get("response_metadata")
-                    .and_then(|m| m.get("next_cursor"))
-                    .and_then(|c| c.as_str())
-                    .map(|s| s.to_string());
+                self.next_cursor = get_next_cursor(&resp_json);
             }
 
             // Reset position
@@ -1553,6 +1564,37 @@ impl Guest for SlackFdw {
             ),
         ];
         Ok(ret)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn test_get_next_cursor() {
+        let resp = json!({
+            "ok": true,
+            "response_metadata": { "next_cursor": "dXNlcjpVMDYxTkZUVDI=" }
+        });
+        assert_eq!(
+            get_next_cursor(&resp),
+            Some("dXNlcjpVMDYxTkZUVDI=".to_string())
+        );
+    }
+
+    #[test]
+    fn test_get_next_cursor_last_page() {
+        // Slack returns an empty cursor on the last page
+        let resp = json!({
+            "ok": true,
+            "response_metadata": { "next_cursor": "" }
+        });
+        assert_eq!(get_next_cursor(&resp), None);
+
+        let resp = json!({ "ok": true });
+        assert_eq!(get_next_cursor(&resp), None);
     }
 }
 
