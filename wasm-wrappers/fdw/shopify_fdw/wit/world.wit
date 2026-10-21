@@ -1,6 +1,6 @@
-package supabase:paddle-fdw@0.2.0;
+package supabase:shopify-fdw@0.1.0;
 
-world paddle {
+world shopify {
     import supabase:wrappers/http@0.2.0;
     import supabase:wrappers/jwt@0.2.0;
     import supabase:wrappers/stats@0.2.0;
