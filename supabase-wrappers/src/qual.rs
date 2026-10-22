@@ -190,7 +190,7 @@ pub(crate) unsafe fn extract_from_op_expr(
 
                 // get operator
                 let opno = (*expr).opno;
-                let opr = get_operator(opno);
+                let mut opr = get_operator(opno);
                 if opr.is_null() {
                     report_warning("operator is empty");
                     return None;
@@ -204,6 +204,7 @@ pub(crate) unsafe fn extract_from_op_expr(
                     && !is_a(left, pg_sys::NodeTag::T_Var)
                     && (*opr).oprcom != Oid::INVALID
                 {
+                    opr = get_operator((*opr).oprcom);
                     std::mem::swap(&mut left, &mut right);
                 }
 
