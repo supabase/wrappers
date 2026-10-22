@@ -7,7 +7,7 @@ use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::PgSqlErrorCode;
 use thiserror::Error;
 
-use supabase_wrappers::prelude::{CreateRuntimeError, OptionsError, sanitize_error_message};
+use supabase_wrappers::prelude::{OptionsError, WrapperRuntimeError, sanitize_error_message};
 
 #[derive(Error, Debug)]
 enum StripeFdwError {
@@ -21,7 +21,7 @@ enum StripeFdwError {
     OptionsError(#[from] OptionsError),
 
     #[error("{0}")]
-    CreateRuntimeError(#[from] CreateRuntimeError),
+    WrapperRuntimeError(#[from] WrapperRuntimeError),
 
     #[error("parse url failed: {0}")]
     UrlParseError(#[from] url::ParseError),

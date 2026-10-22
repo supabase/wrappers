@@ -117,8 +117,7 @@ impl ForeignDataWrapper<S3FdwError> for S3Fdw {
     fn new(server: ForeignServer) -> S3FdwResult<Self> {
         // cannot use create_async_runtime() as the runtime needs to be created
         // for multiple threads
-        let rt = tokio::runtime::Runtime::new()
-            .map_err(CreateRuntimeError::FailedToCreateAsyncRuntime)?;
+        let rt = tokio::runtime::Runtime::new().map_err(WrapperRuntimeError::FailedToCreate)?;
         let mut ret = S3Fdw {
             rt,
             client: None,

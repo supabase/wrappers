@@ -78,7 +78,7 @@ impl Auth0Client {
 #[derive(Error, Debug)]
 pub(crate) enum Auth0ClientError {
     #[error("{0}")]
-    CreateRuntimeError(#[from] CreateRuntimeError),
+    WrapperRuntimeError(#[from] WrapperRuntimeError),
 
     #[error("invalid api_key header")]
     InvalidApiKeyHeader,
@@ -99,7 +99,7 @@ pub(crate) enum Auth0ClientError {
 impl From<Auth0ClientError> for ErrorReport {
     fn from(value: Auth0ClientError) -> Self {
         match value {
-            Auth0ClientError::CreateRuntimeError(e) => e.into(),
+            Auth0ClientError::WrapperRuntimeError(e) => e.into(),
             // SECURITY: Sanitize error messages to prevent credential leakage
             // HTTP errors may contain Authorization headers with Bearer tokens
             Auth0ClientError::UrlParseError(_)

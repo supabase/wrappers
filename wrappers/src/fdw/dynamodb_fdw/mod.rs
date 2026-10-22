@@ -15,7 +15,7 @@ use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::PgSqlErrorCode;
 use thiserror::Error;
 
-use supabase_wrappers::prelude::{CreateRuntimeError, OptionsError, sanitize_error_message};
+use supabase_wrappers::prelude::{OptionsError, WrapperRuntimeError, sanitize_error_message};
 
 #[derive(Error, Debug)]
 enum DynamoDbFdwError {
@@ -35,7 +35,7 @@ enum DynamoDbFdwError {
     InvalidServerOptions(String),
 
     #[error("{0}")]
-    CreateRuntimeError(#[from] CreateRuntimeError),
+    WrapperRuntimeError(#[from] WrapperRuntimeError),
 
     #[error("{0}")]
     OptionsError(#[from] OptionsError),

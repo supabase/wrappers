@@ -7,7 +7,7 @@ use pgrx::PgSqlErrorCode;
 use pgrx::pg_sys::panic::ErrorReport;
 use thiserror::Error;
 
-use supabase_wrappers::prelude::{CreateRuntimeError, OptionsError, sanitize_error_message};
+use supabase_wrappers::prelude::{OptionsError, WrapperRuntimeError, sanitize_error_message};
 
 #[derive(Error, Debug)]
 enum CognitoFdwError {
@@ -18,7 +18,7 @@ enum CognitoFdwError {
     UnsupportedColumn(String),
 
     #[error("{0}")]
-    CreateRuntimeError(#[from] CreateRuntimeError),
+    WrapperRuntimeError(#[from] WrapperRuntimeError),
 
     #[error("parse url failed: {0}")]
     UrlParseError(#[from] url::ParseError),

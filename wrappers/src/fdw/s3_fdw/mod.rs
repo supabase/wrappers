@@ -10,7 +10,7 @@ use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::PgSqlErrorCode;
 use thiserror::Error;
 
-use supabase_wrappers::prelude::{CreateRuntimeError, OptionsError};
+use supabase_wrappers::prelude::{OptionsError, WrapperRuntimeError};
 
 #[derive(Error, Debug)]
 enum S3FdwError {
@@ -51,7 +51,7 @@ enum S3FdwError {
     OptionsError(#[from] OptionsError),
 
     #[error("{0}")]
-    CreateRuntimeError(#[from] CreateRuntimeError),
+    WrapperRuntimeError(#[from] WrapperRuntimeError),
 
     #[error("parse uri failed: {0}")]
     UriParseError(#[from] http::uri::InvalidUri),

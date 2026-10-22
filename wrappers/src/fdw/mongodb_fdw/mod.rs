@@ -6,7 +6,7 @@ use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::PgSqlErrorCode;
 use thiserror::Error;
 
-use supabase_wrappers::prelude::{CreateRuntimeError, OptionsError, sanitize_error_message};
+use supabase_wrappers::prelude::{OptionsError, WrapperRuntimeError, sanitize_error_message};
 
 #[derive(Error, Debug)]
 enum MongodbFdwError {
@@ -29,7 +29,7 @@ enum MongodbFdwError {
     PgrxNumericError(#[from] pgrx::datum::numeric_support::error::Error),
 
     #[error("{0}")]
-    CreateRuntimeError(#[from] CreateRuntimeError),
+    WrapperRuntimeError(#[from] WrapperRuntimeError),
 
     #[error("{0}")]
     OptionsError(#[from] OptionsError),
@@ -47,7 +47,7 @@ enum MongodbFdwError {
 impl From<MongodbFdwError> for ErrorReport {
     fn from(value: MongodbFdwError) -> Self {
         match value {
-            MongodbFdwError::CreateRuntimeError(e) => e.into(),
+            MongodbFdwError::WrapperRuntimeError(e) => e.into(),
             MongodbFdwError::OptionsError(e) => e.into(),
             // SECURITY: Sanitize error messages to prevent credential leakage —
             // mongodb URI parse errors and some driver errors can echo the

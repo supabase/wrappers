@@ -6,7 +6,7 @@ use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::PgSqlErrorCode;
 use thiserror::Error;
 
-use supabase_wrappers::prelude::{CreateRuntimeError, OptionsError};
+use supabase_wrappers::prelude::{OptionsError, WrapperRuntimeError};
 
 #[derive(Error, Debug)]
 enum MssqlFdwError {
@@ -26,7 +26,7 @@ enum MssqlFdwError {
     PgrxNumericError(#[from] pgrx::datum::numeric_support::error::Error),
 
     #[error("{0}")]
-    CreateRuntimeError(#[from] CreateRuntimeError),
+    WrapperRuntimeError(#[from] WrapperRuntimeError),
 
     #[error("{0}")]
     OptionsError(#[from] OptionsError),

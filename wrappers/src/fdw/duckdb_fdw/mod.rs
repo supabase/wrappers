@@ -8,7 +8,7 @@ use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::PgSqlErrorCode;
 use thiserror::Error;
 
-use supabase_wrappers::prelude::{CreateRuntimeError, OptionsError, sanitize_error_message};
+use supabase_wrappers::prelude::{OptionsError, WrapperRuntimeError, sanitize_error_message};
 
 #[derive(Error, Debug)]
 enum DuckdbFdwError {
@@ -43,7 +43,7 @@ enum DuckdbFdwError {
     Options(#[from] OptionsError),
 
     #[error("{0}")]
-    CreateRuntime(#[from] CreateRuntimeError),
+    WrapperRuntimeError(#[from] WrapperRuntimeError),
 }
 
 impl From<DuckdbFdwError> for ErrorReport {
