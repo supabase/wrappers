@@ -45,8 +45,8 @@ Foreign data wrappers built with Wasm which can be used on Supabase platform.
 
     Supported by [Supabase](https://www.supabase.com)
 
-    :octicons-tag-24: [v0.1.0](https://github.com/supabase/wrappers/releases/tag/clerk_fdw_v0.1.0) &nbsp;
-    :octicons-code-24: [source](https://github.com/supabase/wrappers/tree/wasm_clerk_fdw_v0.1.0/wasm-wrappers/fdw/clerk_fdw) &nbsp;
+    :octicons-tag-24: [v0.2.2](https://github.com/supabase/wrappers/releases/tag/wasm_clerk_fdw_v0.2.2) &nbsp;
+    :octicons-code-24: [source](https://github.com/supabase/wrappers/tree/wasm_clerk_fdw_v0.2.2/wasm-wrappers/fdw/clerk_fdw) &nbsp;
     :material-file-document: [docs](../clerk.md)
 
 - :simple-webassembly: &nbsp; **[Cloudflare D1](../cfd1.md)**
@@ -93,8 +93,8 @@ Foreign data wrappers built with Wasm which can be used on Supabase platform.
 
     Supported by [Supabase](https://www.supabase.com)
 
-    :octicons-tag-24: [v0.2.0](https://github.com/supabase/wrappers/releases/tag/wasm_infura_fdw_v0.2.0) &nbsp;
-    :octicons-code-24: [source](https://github.com/supabase/wrappers/tree/wasm_infura_fdw_v0.2.0/wasm-wrappers/fdw/infura_fdw) &nbsp;
+    :octicons-tag-24: [v0.1.0](https://github.com/supabase/wrappers/releases/tag/wasm_infura_fdw_v0.1.0) &nbsp;
+    :octicons-code-24: [source](https://github.com/supabase/wrappers/tree/wasm_infura_fdw_v0.1.0/wasm-wrappers/fdw/infura_fdw) &nbsp;
     :material-file-document: [docs](../infura.md)
 
 - :simple-webassembly: &nbsp; **[Langfuse](../langfuse.md)**
@@ -153,8 +153,8 @@ Foreign data wrappers built with Wasm which can be used on Supabase platform.
 
     Supported by [Supabase](https://www.supabase.com)
 
-    :octicons-tag-24: [v0.1.1](https://github.com/supabase/wrappers/releases/tag/wasm_paddle_fdw_v0.1.1) &nbsp;
-    :octicons-code-24: [source](https://github.com/supabase/wrappers/tree/wasm_paddle_fdw_v0.1.1/wasm-wrappers/fdw/paddle_fdw) &nbsp;
+    :octicons-tag-24: [v0.3.0](https://github.com/supabase/wrappers/releases/tag/wasm_paddle_fdw_v0.3.0) &nbsp;
+    :octicons-code-24: [source](https://github.com/supabase/wrappers/tree/wasm_paddle_fdw_v0.3.0/wasm-wrappers/fdw/paddle_fdw) &nbsp;
     :material-file-document: [docs](../paddle.md)
 
 - :simple-webassembly: &nbsp; **[Shopify](../shopify.md)**

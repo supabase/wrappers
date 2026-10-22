@@ -17,7 +17,7 @@ The Paddle Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you 
 
 | Version | Wasm Package URL                                                                                    | Checksum                                                           | Required Wrappers Version |
 | ------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------- |
-| 0.3.0   | `https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.3.0/paddle_fdw.wasm`     | `<checksum added when the v0.3.0 artifact is released>`            | >=0.5.0                   |
+| 0.3.0   | `https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.3.0/paddle_fdw.wasm`     | `58cff911385e27dae977ee1754cd9b5cac72dc24938a3a0b0eabb4a430435f53` | >=0.5.0                   |
 | 0.2.0   | `https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.2.0/paddle_fdw.wasm`     | `e788b29ae46c158643e1e1f229d94b28a9af8edbd3233f59c5a79053c25da213` | >=0.5.0                   |
 | 0.1.1   | `https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.1.1/paddle_fdw.wasm`     | `c5ac70bb2eef33693787b7d4efce9a83cde8d4fa40889d2037403a51263ba657` | >=0.4.0                   |
 | 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.1.0/paddle_fdw.wasm`     | `7d0b902440ac2ef1af85d09807145247f14d1d8fd4d700227e5a4d84c8145409` | >=0.4.0                   |
@@ -70,7 +70,7 @@ We need to provide Postgres with the credentials to access Paddle, and any addit
         fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.3.0/paddle_fdw.wasm',
         fdw_package_name 'supabase:paddle-fdw',
         fdw_package_version '0.3.0',
-        fdw_package_checksum '<checksum added when the v0.3.0 artifact is released>',
+        fdw_package_checksum '58cff911385e27dae977ee1754cd9b5cac72dc24938a3a0b0eabb4a430435f53',
         api_url 'https://sandbox-api.paddle.com', -- Use https://api.paddle.com for live account
         api_key_id '<key_ID>' -- The Key ID from above.
       );
@@ -85,7 +85,7 @@ We need to provide Postgres with the credentials to access Paddle, and any addit
         fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_paddle_fdw_v0.3.0/paddle_fdw.wasm',
         fdw_package_name 'supabase:paddle-fdw',
         fdw_package_version '0.3.0',
-        fdw_package_checksum '<checksum added when the v0.3.0 artifact is released>',
+        fdw_package_checksum '58cff911385e27dae977ee1754cd9b5cac72dc24938a3a0b0eabb4a430435f53',
         api_url 'https://sandbox-api.paddle.com', -- Use https://api.paddle.com for live account
         api_key 'bb4e69088ea07a98a90565ac610c63654423f8f1e2d48b39b5'
       );
