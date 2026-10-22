@@ -1267,6 +1267,9 @@ pub(super) extern "C-unwind" fn iterate_foreign_scan<
 
         state.row.clear();
 
+        // check for interrupts before next iteration
+        pgrx::check_for_interrupts!();
+
         let result = state.iter_scan();
         if result.is_err() {
             drop_fdw_state(state.as_ptr());
