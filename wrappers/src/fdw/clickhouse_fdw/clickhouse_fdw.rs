@@ -657,7 +657,7 @@ impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
             .worker_threads(1)
             .enable_all()
             .build()
-            .map_err(CreateRuntimeError::from)?;
+            .map_err(WrapperRuntimeError::from)?;
         let conn_str = match server.options.get("conn_string") {
             Some(conn_str) => conn_str.to_owned(),
             None => {

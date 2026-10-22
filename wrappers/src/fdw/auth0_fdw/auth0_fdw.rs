@@ -31,7 +31,7 @@ enum Auth0FdwError {
     Auth0ClientError(#[from] Auth0ClientError),
 
     #[error("{0}")]
-    CreateRuntimeError(#[from] CreateRuntimeError),
+    WrapperRuntimeError(#[from] WrapperRuntimeError),
 
     #[error("parse url failed: {0}")]
     UrlParseError(#[from] url::ParseError),
@@ -63,7 +63,7 @@ enum Auth0FdwError {
 impl From<Auth0FdwError> for ErrorReport {
     fn from(value: Auth0FdwError) -> Self {
         match value {
-            Auth0FdwError::CreateRuntimeError(e) => e.into(),
+            Auth0FdwError::WrapperRuntimeError(e) => e.into(),
             Auth0FdwError::OptionsError(e) => e.into(),
             Auth0FdwError::Auth0ClientError(e) => e.into(),
             // SECURITY: Sanitize all error messages to prevent credential leakage

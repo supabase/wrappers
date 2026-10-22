@@ -12,6 +12,7 @@ use std::ffi::CStr;
 use std::ffi::c_void;
 use std::num::NonZeroUsize;
 use std::ptr;
+use std::time::Duration;
 use thiserror::Error;
 use tokio::runtime::{Builder, Runtime};
 use uuid::Uuid;
@@ -308,13 +309,16 @@ pub fn report_error(code: PgSqlErrorCode, msg: impl Into<String>) {
 }
 
 #[derive(Error, Debug)]
-pub enum CreateRuntimeError {
+pub enum WrapperRuntimeError {
     #[error("failed to create async runtime: {0}")]
-    FailedToCreateAsyncRuntime(#[from] std::io::Error),
+    FailedToCreate(#[from] std::io::Error),
+
+    #[error("runtime block timed out after {0:?}")]
+    TimedOut(Duration),
 }
 
-impl From<CreateRuntimeError> for ErrorReport {
-    fn from(value: CreateRuntimeError) -> Self {
+impl From<WrapperRuntimeError> for ErrorReport {
+    fn from(value: WrapperRuntimeError) -> Self {
         let error_message = format!("{value}");
         ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, error_message, "")
     }
@@ -329,8 +333,8 @@ impl From<CreateRuntimeError> for ErrorReport {
 /// For example,
 ///
 /// ```rust,no_run
-/// # use supabase_wrappers::utils::CreateRuntimeError;
-/// # fn main() -> Result<(), CreateRuntimeError> {
+/// # use supabase_wrappers::utils::WrapperRuntimeError;
+/// # fn main() -> Result<(), WrapperRuntimeError> {
 /// # use supabase_wrappers::prelude::create_async_runtime;
 /// # struct Client {
 /// # }
@@ -350,8 +354,38 @@ impl From<CreateRuntimeError> for ErrorReport {
 /// # }
 /// ```
 #[inline]
-pub fn create_async_runtime() -> Result<Runtime, CreateRuntimeError> {
+pub fn create_async_runtime() -> Result<Runtime, WrapperRuntimeError> {
     Ok(Builder::new_current_thread().enable_all().build()?)
+}
+
+/// Run a future on the runtime, giving up if it doesn't complete within `timeout`
+///
+/// Blocks until the future completes and returns its output, or returns
+/// `WrapperRuntimeError::TimedOut` once `timeout` expires, dropping the future.
+///
+/// It is only checked when the future yields, so it can't interrupt blocking
+/// operations or futures that never yield.
+///
+/// For example,
+///
+/// ```rust,no_run
+/// # use supabase_wrappers::utils::WrapperRuntimeError;
+/// # fn main() -> Result<(), WrapperRuntimeError> {
+/// # use std::time::Duration;
+/// # use supabase_wrappers::prelude::{block_on_with_timeout, create_async_runtime};
+/// # async fn query() {}
+/// # let rt = create_async_runtime().unwrap();
+/// # block_on_with_timeout(&rt, Duration::from_secs(30), query())?;
+/// # Ok(())
+/// # }
+/// ```
+pub fn block_on_with_timeout<F: Future>(
+    rt: &Runtime,
+    timeout: Duration,
+    fut: F,
+) -> Result<F::Output, WrapperRuntimeError> {
+    rt.block_on(async { tokio::time::timeout(timeout, fut).await })
+        .map_err(|_| WrapperRuntimeError::TimedOut(timeout))
 }
 
 /// Get decrypted secret from Vault by secret ID or name
@@ -531,6 +565,38 @@ impl<T, E: Into<ErrorReport>> ReportableError for Result<T, E> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // ==========================================================================
+    // Tests for block_on_with_timeout
+    // ==========================================================================
+
+    #[test]
+    fn test_block_on_with_timeout_completes() {
+        let rt = create_async_runtime().unwrap();
+        let result = block_on_with_timeout(&rt, Duration::from_secs(5), async { 42 });
+        assert_eq!(result.unwrap(), 42);
+    }
+
+    #[test]
+    fn test_block_on_with_timeout_stalled_future_times_out() {
+        let rt = create_async_runtime().unwrap();
+        let timeout = Duration::from_millis(200);
+
+        // a future that never completes, like a remote call that never answers
+        let start = std::time::Instant::now();
+        let result = block_on_with_timeout(&rt, timeout, std::future::pending::<()>());
+        let elapsed = start.elapsed();
+
+        assert!(matches!(result, Err(WrapperRuntimeError::TimedOut(t)) if t == timeout));
+        assert!(
+            elapsed >= timeout,
+            "returned before the timeout: {elapsed:?}"
+        );
+        assert!(
+            elapsed < Duration::from_secs(2),
+            "expected the timeout to end the wait, took {elapsed:?}"
+        );
+    }
 
     // ==========================================================================
     // Tests for mask_credential_value

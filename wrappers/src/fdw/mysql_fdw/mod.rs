@@ -6,7 +6,7 @@ use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::PgSqlErrorCode;
 use thiserror::Error;
 
-use supabase_wrappers::prelude::{CreateRuntimeError, OptionsError, sanitize_error_message};
+use supabase_wrappers::prelude::{OptionsError, WrapperRuntimeError, sanitize_error_message};
 
 #[derive(Error, Debug)]
 enum MysqlFdwError {
@@ -26,7 +26,7 @@ enum MysqlFdwError {
     PgrxNumericError(#[from] pgrx::datum::numeric_support::error::Error),
 
     #[error("{0}")]
-    CreateRuntimeError(#[from] CreateRuntimeError),
+    WrapperRuntimeError(#[from] WrapperRuntimeError),
 
     #[error("{0}")]
     OptionsError(#[from] OptionsError),
@@ -41,7 +41,7 @@ enum MysqlFdwError {
 impl From<MysqlFdwError> for ErrorReport {
     fn from(value: MysqlFdwError) -> Self {
         match value {
-            MysqlFdwError::CreateRuntimeError(e) => e.into(),
+            MysqlFdwError::WrapperRuntimeError(e) => e.into(),
             MysqlFdwError::OptionsError(e) => e.into(),
             MysqlFdwError::MysqlError(ref e) => ErrorReport::new(
                 PgSqlErrorCode::ERRCODE_FDW_ERROR,

@@ -3,7 +3,7 @@
 use gcp_bigquery_client::error::BQError;
 use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::{PgSqlErrorCode, prelude::DateTimeConversionError};
-use supabase_wrappers::prelude::{CreateRuntimeError, OptionsError};
+use supabase_wrappers::prelude::{OptionsError, WrapperRuntimeError};
 use thiserror::Error;
 
 mod bigquery_fdw;
@@ -12,7 +12,7 @@ mod tests;
 #[derive(Error, Debug)]
 enum BigQueryFdwError {
     #[error("{0}")]
-    CreateRuntimeError(#[from] CreateRuntimeError),
+    WrapperRuntimeError(#[from] WrapperRuntimeError),
 
     #[error("{0}")]
     OptionsError(#[from] OptionsError),
@@ -33,7 +33,7 @@ enum BigQueryFdwError {
 impl From<BigQueryFdwError> for ErrorReport {
     fn from(value: BigQueryFdwError) -> Self {
         match value {
-            BigQueryFdwError::CreateRuntimeError(e) => e.into(),
+            BigQueryFdwError::WrapperRuntimeError(e) => e.into(),
             BigQueryFdwError::OptionsError(e) => e.into(),
             BigQueryFdwError::BigQueryError(e) => ErrorReport::new(
                 PgSqlErrorCode::ERRCODE_FDW_INVALID_DATA_TYPE,

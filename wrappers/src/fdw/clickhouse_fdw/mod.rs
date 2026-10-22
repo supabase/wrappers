@@ -7,7 +7,7 @@ use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::PgSqlErrorCode;
 use thiserror::Error;
 
-use supabase_wrappers::prelude::{CreateRuntimeError, OptionsError};
+use supabase_wrappers::prelude::{OptionsError, WrapperRuntimeError};
 
 #[derive(Error, Debug)]
 enum ClickHouseFdwError {
@@ -39,7 +39,7 @@ enum ClickHouseFdwError {
     OptionsError(#[from] OptionsError),
 
     #[error("{0}")]
-    CreateRuntimeError(#[from] CreateRuntimeError),
+    WrapperRuntimeError(#[from] WrapperRuntimeError),
 
     #[error("{0}")]
     ClickHouseError(#[from] clickhouse_rs::errors::Error),

@@ -8,7 +8,7 @@ use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::PgSqlErrorCode;
 use thiserror::Error;
 
-use supabase_wrappers::prelude::{CreateRuntimeError, OptionsError};
+use supabase_wrappers::prelude::{OptionsError, WrapperRuntimeError};
 
 use self::bindings::v1::supabase::wrappers::types::FdwError as GuestFdwError;
 
@@ -39,7 +39,7 @@ enum WasmFdwError {
     Io(#[from] std::io::Error),
 
     #[error("{0}")]
-    CreateRuntime(#[from] CreateRuntimeError),
+    WrapperRuntimeError(#[from] WrapperRuntimeError),
 
     #[error("{0}")]
     Options(#[from] OptionsError),

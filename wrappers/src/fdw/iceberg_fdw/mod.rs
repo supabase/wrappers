@@ -11,7 +11,7 @@ use pgrx::pg_sys::panic::ErrorReport;
 use pgrx::prelude::PgSqlErrorCode;
 use thiserror::Error;
 
-use supabase_wrappers::prelude::{Cell, CreateRuntimeError, OptionsError};
+use supabase_wrappers::prelude::{Cell, OptionsError, WrapperRuntimeError};
 
 #[derive(Error, Debug)]
 enum IcebergFdwError {
@@ -67,7 +67,7 @@ enum IcebergFdwError {
     JsonError(#[from] serde_json::Error),
 
     #[error("{0}")]
-    CreateRuntimeError(#[from] CreateRuntimeError),
+    WrapperRuntimeError(#[from] WrapperRuntimeError),
 
     #[error("{0}")]
     OptionsError(#[from] OptionsError),
