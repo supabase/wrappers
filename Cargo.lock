@@ -8405,7 +8405,7 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
 name = "supabase-wrappers"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "pgrx",
  "supabase-wrappers-macros",
@@ -10720,7 +10720,7 @@ dependencies = [
 
 [[package]]
 name = "wrappers"
-version = "0.6.3"
+version = "0.6.4"
 dependencies = [
  "anyhow",
  "arrow-array 57.3.0",
