@@ -12,6 +12,7 @@ use std::ffi::CStr;
 use std::ffi::c_void;
 use std::num::NonZeroUsize;
 use std::ptr;
+use std::time::Duration;
 use thiserror::Error;
 use tokio::runtime::{Builder, Runtime};
 use uuid::Uuid;
@@ -352,6 +353,25 @@ impl From<CreateRuntimeError> for ErrorReport {
 #[inline]
 pub fn create_async_runtime() -> Result<Runtime, CreateRuntimeError> {
     Ok(Builder::new_current_thread().enable_all().build()?)
+}
+
+/// Run a future on the runtime until it completes, waking up every 250ms
+/// to process pending Postgres interrupts
+///
+/// There is no deadline of its own: it runs until the future completes or
+/// Postgres interrupts it.
+pub fn block_on_with_check_interrupts<F: Future>(rt: &Runtime, fut: F) -> F::Output {
+    const INTERRUPT_CHECK_INTERVAL: Duration = Duration::from_millis(250);
+    let mut fut = Box::pin(fut);
+    loop {
+        match rt.block_on(async { tokio::time::timeout(INTERRUPT_CHECK_INTERVAL, &mut fut).await })
+        {
+            Ok(res) => return res,
+            Err(_) => {
+                pgrx::check_for_interrupts!()
+            }
+        }
+    }
 }
 
 /// Get decrypted secret from Vault by secret ID or name

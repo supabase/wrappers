@@ -84,7 +84,7 @@ impl IcebergFdw {
     // and convert it local cached row data
     fn next_batch(&mut self) -> IcebergFdwResult<()> {
         if let Some(stream) = &mut self.stream {
-            if let Some(result) = self.rt.block_on(stream.next()) {
+            if let Some(result) = block_on_with_check_interrupts(&self.rt, stream.next()) {
                 let batch = result?;
                 self.record_batch_to_row_data(&batch)?;
                 if batch.num_rows() > 0 {
@@ -155,8 +155,8 @@ impl IcebergFdw {
 
             // debug the record count and data files has been scanned
             if cfg!(debug_assertions) {
-                let mut scan_files = self.rt.block_on(scan.plan_files())?;
-                while let Some(sf) = self.rt.block_on(scan_files.next()) {
+                let mut scan_files = block_on_with_check_interrupts(&self.rt, scan.plan_files())?;
+                while let Some(sf) = block_on_with_check_interrupts(&self.rt, scan_files.next()) {
                     let sf = sf.unwrap();
                     report_info(format!(
                         "file scan: {:?}, {}",
@@ -166,7 +166,7 @@ impl IcebergFdw {
             }
 
             // convert to record stream and cache it locally
-            self.stream = self.rt.block_on(scan.to_arrow())?.into();
+            self.stream = block_on_with_check_interrupts(&self.rt, scan.to_arrow())?.into();
         }
 
         Ok(())
@@ -188,7 +188,8 @@ impl IcebergFdw {
             .name(tbl_ident.name().to_string())
             .schema(schema)
             .build();
-        let _ = self.rt.block_on(
+        let _ = block_on_with_check_interrupts(
+            &self.rt,
             self.catalog
                 .create_table(tbl_ident.namespace(), table_creation),
         )?;
@@ -283,15 +284,19 @@ impl IcebergFdw {
                         pv,
                     )
                 });
-                let mut data_file_writer = self
-                    .rt
-                    .block_on(data_file_writer_builder.build(partition_key))?;
+                let mut data_file_writer = block_on_with_check_interrupts(
+                    &self.rt,
+                    data_file_writer_builder.build(partition_key),
+                )?;
 
                 // write the record batch to Iceberg and close the writer and get
                 // the data file
-                self.rt
-                    .block_on(data_file_writer.write(record_batch.clone()))?;
-                let mut part_data_files = self.rt.block_on(data_file_writer.close())?;
+                block_on_with_check_interrupts(
+                    &self.rt,
+                    data_file_writer.write(record_batch.clone()),
+                )?;
+                let mut part_data_files =
+                    block_on_with_check_interrupts(&self.rt, data_file_writer.close())?;
 
                 data_files.append(&mut part_data_files);
             }
@@ -300,7 +305,8 @@ impl IcebergFdw {
             let tx = Transaction::new(table);
             let append_action = tx.fast_append().add_data_files(data_files.clone());
             let tx = append_action.apply(tx)?;
-            updated_table = self.rt.block_on(tx.commit(self.catalog.as_ref()))?.into();
+            updated_table =
+                block_on_with_check_interrupts(&self.rt, tx.commit(self.catalog.as_ref()))?.into();
         }
 
         // update the cached table reference with the new metadata
@@ -445,13 +451,12 @@ impl ForeignDataWrapper<IcebergFdwError> for IcebergFdw {
         //   2. REST catalog with S3 (or compatible) as backend storage
         let catalog: Box<dyn Catalog> =
             if let Some(aws_s3table_arn) = props.get("aws_s3table_bucket_arn").cloned() {
-                Box::new(
-                    rt.block_on(
-                        S3TablesCatalogBuilder::default()
-                            .with_table_bucket_arn(aws_s3table_arn)
-                            .load("s3tables", props),
-                    )?,
-                )
+                Box::new(block_on_with_check_interrupts(
+                    &rt,
+                    S3TablesCatalogBuilder::default()
+                        .with_table_bucket_arn(aws_s3table_arn)
+                        .load("s3tables", props),
+                )?)
             } else {
                 let catalog_uri = require_option("catalog_uri", &props)?.to_string();
                 let warehouse = require_option_or("warehouse", &props, "warehouse").to_string();
@@ -470,13 +475,12 @@ impl ForeignDataWrapper<IcebergFdwError> for IcebergFdw {
                     .build()
                     .map_err(IcebergFdwError::ReqwestError)?;
 
-                Box::new(
-                    rt.block_on(
-                        RestCatalogBuilder::default()
-                            .with_client(client)
-                            .load("rest", props),
-                    )?,
-                )
+                Box::new(block_on_with_check_interrupts(
+                    &rt,
+                    RestCatalogBuilder::default()
+                        .with_client(client)
+                        .load("rest", props),
+                )?)
             };
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
@@ -510,7 +514,7 @@ impl ForeignDataWrapper<IcebergFdwError> for IcebergFdw {
         options: &HashMap<String, String>,
     ) -> IcebergFdwResult<()> {
         let tbl_ident = TableIdent::from_strs(require_option("table", options)?.split("."))?;
-        let table = self.rt.block_on(self.catalog.load_table(&tbl_ident))?;
+        let table = block_on_with_check_interrupts(&self.rt, self.catalog.load_table(&tbl_ident))?;
 
         // resolve schema by id if specified (for schema evolution support), else use current
         let schema = if let Some(id_str) = options.get("schema_id") {
@@ -576,13 +580,15 @@ impl ForeignDataWrapper<IcebergFdwError> for IcebergFdw {
             .clamp(1, 65536);
 
         // create target table in Iceberg if needed
-        if create_table && !self.rt.block_on(self.catalog.table_exists(&tbl_ident))? {
+        if create_table
+            && !block_on_with_check_interrupts(&self.rt, self.catalog.table_exists(&tbl_ident))?
+        {
             let ftable_oid = require_option("wrappers.ftable_oid", options)?.parse::<u32>()?;
             self.create_iceberg_table(&tbl_ident, ftable_oid)?;
         }
 
         // load Iceberg table
-        let table = self.rt.block_on(self.catalog.load_table(&tbl_ident))?;
+        let table = block_on_with_check_interrupts(&self.rt, self.catalog.load_table(&tbl_ident))?;
 
         self.table = table.into();
         self.input_rows.clear();
@@ -625,7 +631,7 @@ impl ForeignDataWrapper<IcebergFdwError> for IcebergFdw {
 
         // get table list under specified remote schema
         let ns = NamespaceIdent::from_strs(stmt.remote_schema.split('.'))?;
-        let tbl_idents = self.rt.block_on(self.catalog.list_tables(&ns))?;
+        let tbl_idents = block_on_with_check_interrupts(&self.rt, self.catalog.list_tables(&ns))?;
 
         // filter out selected table name list
         let all_tables: HashSet<&str> =
@@ -645,7 +651,7 @@ impl ForeignDataWrapper<IcebergFdwError> for IcebergFdw {
         let tbls: Vec<Table> = tbl_idents
             .iter()
             .filter(|t| selected.contains(t.name.as_str()))
-            .map(|t| self.rt.block_on(self.catalog.load_table(t)))
+            .map(|t| block_on_with_check_interrupts(&self.rt, self.catalog.load_table(t)))
             .collect::<Result<Vec<_>, _>>()?;
 
         let mut ret: Vec<String> = Vec::new();

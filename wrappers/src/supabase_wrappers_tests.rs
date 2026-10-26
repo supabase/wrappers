@@ -10,6 +10,10 @@ mod tests {
     use pgrx::pg_sys::panic::ErrorReport;
     use pgrx::prelude::*;
     use std::collections::HashMap;
+    use std::future::Future;
+    use std::pin::Pin;
+    use std::task::{Context, Poll};
+    use std::time::{Duration, Instant};
     use supabase_wrappers::prelude::*;
     use supabase_wrappers::qual::form_array_from_datum;
 
@@ -512,5 +516,49 @@ mod tests {
                 );
             }
         });
+    }
+
+    // ==========================================================================
+    // Tests for block_on_with_check_interrupts
+    // ==========================================================================
+
+    // Future that is ready on its third poll attempt.
+    struct ReadyAfterPolls(usize);
+
+    impl Future for ReadyAfterPolls {
+        type Output = usize;
+
+        fn poll(mut self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<usize> {
+            self.0 += 1;
+            if self.0 == 3 {
+                Poll::Ready(self.0)
+            } else {
+                Poll::Pending
+            }
+        }
+    }
+
+    #[pg_test]
+    fn test_block_on_with_check_interrupts_keeps_progress_across_slices() {
+        let rt = create_async_runtime().unwrap();
+
+        let start = Instant::now();
+        let polls = block_on_with_check_interrupts(&rt, ReadyAfterPolls(0));
+
+        assert_eq!(polls, 3);
+        assert!(start.elapsed() >= Duration::from_millis(250));
+    }
+
+    #[pg_test(error = "canceling statement due to user request")]
+    fn test_block_on_with_check_interrupts_cancel_while_waiting() {
+        let rt = create_async_runtime().unwrap();
+
+        // Set cancel interrupt which is checked after first interval.
+        unsafe {
+            pg_sys::QueryCancelPending = 1;
+            pg_sys::InterruptPending = 1;
+        }
+
+        block_on_with_check_interrupts(&rt, std::future::pending::<()>());
     }
 }
