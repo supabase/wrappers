@@ -19,7 +19,7 @@ It targets the Langfuse [Public API](https://langfuse.com/docs/api) rather than 
 
 | Version | Wasm Package URL                                                                                    | Checksum                                                           | Required Wrappers Version |
 | ------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------- |
-| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_langfuse_fdw_v0.1.0/langfuse_fdw.wasm` | `<to be filled in on release>`                                     | >=0.5.0                   |
+| 0.1.0   | `https://github.com/supabase/wrappers/releases/download/wasm_langfuse_fdw_v0.1.0/langfuse_fdw.wasm` | `c6f5264c5426e0f2ea7c7679116fd0df034708fdbdb949a30146bea8a7ceb571` | >=0.5.0                   |
 
 ## Preparation
 
@@ -77,7 +77,7 @@ We need to provide Postgres with the credentials to access Langfuse and any addi
         fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_langfuse_fdw_v0.1.0/langfuse_fdw.wasm',
         fdw_package_name 'supabase:langfuse-fdw',
         fdw_package_version '0.1.0',
-        fdw_package_checksum '<checksum>',
+        fdw_package_checksum 'c6f5264c5426e0f2ea7c7679116fd0df034708fdbdb949a30146bea8a7ceb571',
         api_url 'https://cloud.langfuse.com',  -- optional
         public_key_name 'langfuse_public_key', -- the Vault secret name from above
         secret_key_name 'langfuse_secret_key'
@@ -93,7 +93,7 @@ We need to provide Postgres with the credentials to access Langfuse and any addi
         fdw_package_url 'https://github.com/supabase/wrappers/releases/download/wasm_langfuse_fdw_v0.1.0/langfuse_fdw.wasm',
         fdw_package_name 'supabase:langfuse-fdw',
         fdw_package_version '0.1.0',
-        fdw_package_checksum '<checksum>',
+        fdw_package_checksum 'c6f5264c5426e0f2ea7c7679116fd0df034708fdbdb949a30146bea8a7ceb571',
         api_url 'https://cloud.langfuse.com',  -- optional
         public_key '<Langfuse public key>',
         secret_key '<Langfuse secret key>'
