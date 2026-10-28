@@ -1,0 +1,9 @@
+# A raw `block_on` waits inside the executor without servicing Postgres
+# interrupts, so a backend stuck on an unresponsive remote ignores query cancel,
+# statement_timeout and pg_terminate_backend(). Use the runtime returned by
+# `supabase_wrappers::prelude::create_async_runtime()` instead.
+disallowed-methods = [
+    { path = "tokio::runtime::Runtime::block_on", reason = "use supabase_wrappers::prelude::Runtime::block_on, which services Postgres interrupts" },
+    { path = "tokio::runtime::Handle::block_on", reason = "use supabase_wrappers::prelude::Runtime::block_on, which services Postgres interrupts" },
+    { path = "futures::executor::block_on", reason = "use supabase_wrappers::prelude::Runtime::block_on, which services Postgres interrupts" },
+]

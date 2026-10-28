@@ -541,4 +541,33 @@ mod tests {
             );
         });
     }
+
+    // The backend must still respond to query cancel, statement_timeout and
+    // pg_terminate_backend() while waiting on a remote which never answers
+    #[pg_test]
+    fn mssql_cancellable_while_remote_unresponsive() {
+        let server = crate::test_utils::UnresponsiveServer::start();
+        let port = server.port;
+        Spi::run(
+            r#"CREATE FOREIGN DATA WRAPPER mssql_unresponsive_wrapper
+                 HANDLER mssql_fdw_handler VALIDATOR mssql_fdw_validator"#,
+        )
+        .unwrap();
+        Spi::run(&format!(
+            r#"CREATE SERVER mssql_unresponsive_server
+                 FOREIGN DATA WRAPPER mssql_unresponsive_wrapper
+                 OPTIONS (
+                   conn_string 'Server=127.0.0.1,{port};User=sa;Password=Password1234_56;Database=master;IntegratedSecurity=false;TrustServerCertificate=true;encrypt=DANGER_PLAINTEXT'
+                 )"#
+        ))
+        .unwrap();
+        Spi::run(
+            r#"CREATE FOREIGN TABLE mssql_unresponsive_table (id bigint)
+                 SERVER mssql_unresponsive_server
+                 OPTIONS (table 'users')"#,
+        )
+        .unwrap();
+
+        server.assert_cancellable("SELECT * FROM mssql_unresponsive_table");
+    }
 }

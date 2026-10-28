@@ -90,4 +90,34 @@ mod tests {
             assert_eq!(results, vec!["84e1ed2a-3627-4d70-b311-c0e7c0bed313"]);
         });
     }
+
+    // The backend must still respond to query cancel, statement_timeout and
+    // pg_terminate_backend() while waiting on a remote which never answers
+    #[pg_test]
+    fn logflare_cancellable_while_remote_unresponsive() {
+        let server = crate::test_utils::UnresponsiveServer::start();
+        let port = server.port;
+        Spi::run(
+            r#"CREATE FOREIGN DATA WRAPPER logflare_unresponsive_wrapper
+                 HANDLER logflare_fdw_handler VALIDATOR logflare_fdw_validator"#,
+        )
+        .unwrap();
+        Spi::run(&format!(
+            r#"CREATE SERVER logflare_unresponsive_server
+                 FOREIGN DATA WRAPPER logflare_unresponsive_wrapper
+                 OPTIONS (
+                   api_url 'http://127.0.0.1:{port}/v1/endpoint',
+                   api_key 'apiKey'
+                 )"#
+        ))
+        .unwrap();
+        Spi::run(
+            r#"CREATE FOREIGN TABLE logflare_unresponsive_table (id text)
+                 SERVER logflare_unresponsive_server
+                 OPTIONS (endpoint '3d48cbfe-5d65-494f-be06-910479aed6c1')"#,
+        )
+        .unwrap();
+
+        server.assert_cancellable("SELECT * FROM logflare_unresponsive_table");
+    }
 }

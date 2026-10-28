@@ -576,4 +576,34 @@ mod tests {
             // assert!(results.is_empty());
         });
     }
+
+    // The backend must still respond to query cancel, statement_timeout and
+    // pg_terminate_backend() while waiting on a remote which never answers
+    #[pg_test]
+    fn stripe_cancellable_while_remote_unresponsive() {
+        let server = crate::test_utils::UnresponsiveServer::start();
+        let port = server.port;
+        Spi::run(
+            r#"CREATE FOREIGN DATA WRAPPER stripe_unresponsive_wrapper
+                 HANDLER stripe_fdw_handler VALIDATOR stripe_fdw_validator"#,
+        )
+        .unwrap();
+        Spi::run(&format!(
+            r#"CREATE SERVER stripe_unresponsive_server
+                 FOREIGN DATA WRAPPER stripe_unresponsive_wrapper
+                 OPTIONS (
+                   api_url 'http://127.0.0.1:{port}/v1',
+                   api_key 'sk_test'
+                 )"#
+        ))
+        .unwrap();
+        Spi::run(
+            r#"CREATE FOREIGN TABLE stripe_unresponsive_table (id text)
+                 SERVER stripe_unresponsive_server
+                 OPTIONS (object 'customers')"#,
+        )
+        .unwrap();
+
+        server.assert_cancellable("SELECT * FROM stripe_unresponsive_table");
+    }
 }

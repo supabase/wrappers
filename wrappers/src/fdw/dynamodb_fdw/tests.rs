@@ -940,4 +940,36 @@ mod tests {
             );
         });
     }
+
+    // The backend must still respond to query cancel, statement_timeout and
+    // pg_terminate_backend() while waiting on a remote which never answers
+    #[pg_test]
+    fn dynamodb_cancellable_while_remote_unresponsive() {
+        let server = crate::test_utils::UnresponsiveServer::start();
+        let port = server.port;
+        Spi::run(
+            r#"CREATE FOREIGN DATA WRAPPER dynamodb_unresponsive_wrapper
+                 HANDLER dynamo_db_fdw_handler VALIDATOR dynamo_db_fdw_validator"#,
+        )
+        .unwrap();
+        Spi::run(&format!(
+            r#"CREATE SERVER dynamodb_unresponsive_server
+                 FOREIGN DATA WRAPPER dynamodb_unresponsive_wrapper
+                 OPTIONS (
+                   aws_access_key_id 'test',
+                   aws_secret_access_key 'test',
+                   region 'us-east-1',
+                   endpoint_url 'http://127.0.0.1:{port}'
+                 )"#
+        ))
+        .unwrap();
+        Spi::run(
+            r#"CREATE FOREIGN TABLE dynamodb_unresponsive_table (id text)
+                 SERVER dynamodb_unresponsive_server
+                 OPTIONS (table 'wrappers_test_users')"#,
+        )
+        .unwrap();
+
+        server.assert_cancellable("SELECT * FROM dynamodb_unresponsive_table");
+    }
 }

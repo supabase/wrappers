@@ -1,5 +1,4 @@
 use crate::stats;
-use futures::executor;
 use gcp_bigquery_client::{
     Client,
     client_builder::ClientBuilder,
@@ -309,8 +308,8 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
         let sa_key_json = match mock_auth {
             true => {
                 // Key file is not required if we're mocking auth
-                let auth_mock = executor::block_on(GoogleAuthMock::start());
-                executor::block_on(auth_mock.mock_token(1));
+                let auth_mock = ret.rt.block_on(GoogleAuthMock::start());
+                ret.rt.block_on(auth_mock.mock_token(1));
                 let auth_mock_uri = auth_mock.uri();
                 let dummy_auth_config = dummy_configuration(&auth_mock_uri);
                 ret.auth_mock = Some(auth_mock);

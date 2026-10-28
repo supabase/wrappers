@@ -2148,7 +2148,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba5a308b75df32fe02788e748662718f03fde005016435c444eea572398219fd"
 dependencies = [
  "bytes",
+ "futures-core",
  "memchr",
+ "pin-project-lite",
+ "tokio",
+ "tokio-util",
 ]
 
 [[package]]
@@ -7143,11 +7147,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "09d8f99a4090c89cc489a94833c901ead69bfbf3877b4867d5482e321ee875bc"
 dependencies = [
  "arc-swap",
+ "async-trait",
+ "bytes",
  "combine",
+ "futures-util",
  "itertools 0.13.0",
  "itoa",
  "num-bigint",
  "percent-encoding",
+ "pin-project-lite",
  "rustls 0.23.37",
  "rustls-native-certs 0.7.3",
  "rustls-pemfile 2.2.0",
@@ -7155,6 +7163,9 @@ dependencies = [
  "ryu",
  "sha1_smol",
  "socket2 0.5.10",
+ "tokio",
+ "tokio-rustls 0.26.4",
+ "tokio-util",
  "url",
 ]
 
@@ -8407,6 +8418,7 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 name = "supabase-wrappers"
 version = "0.2.4"
 dependencies = [
+ "libc",
  "pgrx",
  "supabase-wrappers-macros",
  "thiserror 1.0.69",
@@ -10742,7 +10754,6 @@ dependencies = [
  "chrono",
  "chrono-tz 0.6.3",
  "clickhouse-rs",
- "crossbeam",
  "csv",
  "dirs",
  "duckdb",
@@ -10756,6 +10767,7 @@ dependencies = [
  "iceberg-catalog-rest",
  "iceberg-catalog-s3tables",
  "jwt-simple",
+ "libc",
  "mongodb",
  "mysql_async",
  "num-traits 0.2.19",

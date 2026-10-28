@@ -37,7 +37,6 @@ clickhouse_fdw = [
     "thiserror",
     "either",
     "uuid",
-    "crossbeam",
     "tokio",
     "futures-util",
 ]
@@ -72,6 +71,7 @@ s3_fdw = [
     "serde_json",
     "http",
     "parquet",
+    "bytes",
     "futures",
     "arrow-array",
     "chrono",
@@ -147,7 +147,7 @@ mongodb_fdw = [
     "mongodb/bson-2",
     "mongodb/compat-3-3-0",
 ]
-redis_fdw = ["redis", "serde_json", "thiserror"]
+redis_fdw = ["redis", "tokio", "serde_json", "thiserror"]
 wasm_fdw = [
     "wasmtime",
     "warg-client",
@@ -167,6 +167,7 @@ wasm_fdw = [
     "jwt-simple",
     "bytes",
     "uuid",
+    "tokio",
 ]
 iceberg_fdw = [
     "iceberg",
@@ -225,6 +226,7 @@ native_fdws = [
 all_fdws = ["native_fdws", "wasm_fdw"]
 [dependencies]
 pgrx = { version = "=0.19.2" }
+libc = "0.2"
 #supabase-wrappers = "0.1"
 supabase-wrappers = { path = "../supabase-wrappers", default-features = false }
 
@@ -241,7 +243,6 @@ clickhouse-rs = { git = "https://github.com/burmecia/clickhouse-rs.git", branch 
 chrono = { version = "0.4", optional = true }
 chrono-tz = { version = "0.6", optional = true }
 either = { version = "1.12.0", optional = true }
-crossbeam = { version = "0.8.4", optional = true }
 futures-util = { version = "0.3.31", optional = true }
 
 # for bigquery_fdw, firebase_fdw, airtable_fdw and etc.
@@ -327,6 +328,8 @@ redis = { version = "0.27.5", features = [
     "streams",
     "tls-rustls",
     "tls-rustls-insecure",
+    "tokio-comp",
+    "tokio-rustls-comp",
 ], optional = true }
 
 # for wasm_fdw

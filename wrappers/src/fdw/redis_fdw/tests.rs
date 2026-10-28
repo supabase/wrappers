@@ -398,4 +398,32 @@ mod tests {
             );
         });
     }
+
+    // The backend must still respond to query cancel, statement_timeout and
+    // pg_terminate_backend() while waiting on a Redis server which never
+    // answers
+    #[pg_test]
+    fn redis_cancellable_while_remote_unresponsive() {
+        let server = crate::test_utils::UnresponsiveServer::start();
+        let port = server.port;
+        Spi::run(
+            r#"CREATE FOREIGN DATA WRAPPER redis_unresponsive_wrapper
+                 HANDLER redis_fdw_handler VALIDATOR redis_fdw_validator"#,
+        )
+        .unwrap();
+        Spi::run(&format!(
+            r#"CREATE SERVER redis_unresponsive_server
+                 FOREIGN DATA WRAPPER redis_unresponsive_wrapper
+                 OPTIONS (conn_url 'redis://127.0.0.1:{port}')"#
+        ))
+        .unwrap();
+        Spi::run(
+            r#"CREATE FOREIGN TABLE redis_unresponsive_table (element text)
+                 SERVER redis_unresponsive_server
+                 OPTIONS (src_type 'list', src_key 'list')"#,
+        )
+        .unwrap();
+
+        server.assert_cancellable("SELECT * FROM redis_unresponsive_table");
+    }
 }

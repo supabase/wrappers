@@ -1,39 +1,38 @@
 use crate::stats;
 use arrow_array::{Array, RecordBatch, array};
 use aws_sdk_s3 as s3;
+use bytes::Bytes;
 use chrono::NaiveDate;
-use futures::TryStreamExt;
+use futures::{FutureExt, TryStreamExt, future::BoxFuture};
 use parquet::arrow::ProjectionMask;
+use parquet::arrow::arrow_reader::ArrowReaderOptions;
 use parquet::arrow::async_reader::{
     AsyncFileReader, ParquetRecordBatchStream, ParquetRecordBatchStreamBuilder,
 };
+use parquet::errors::{ParquetError, Result as ParquetResult};
+use parquet::file::metadata::{PageIndexPolicy, ParquetMetaData, ParquetMetaDataReader};
 use pgrx::datum::datetime_support::to_timestamp;
 use pgrx::pg_sys;
 use pgrx::prelude::Date;
-use std::cmp::min;
-use std::io::{Cursor, Error as IoError, Result as IoResult, SeekFrom};
-use std::pin::Pin;
-use std::task::{Context, Poll};
-use tokio::io::{AsyncRead, AsyncSeek, ReadBuf};
-use tokio::runtime::Handle;
+use std::io::Cursor;
+use std::ops::Range;
+use std::sync::Arc;
 
 use supabase_wrappers::prelude::*;
 
 use super::{S3FdwError, S3FdwResult};
 
-// convert an error to IO error
+// convert an error to parquet error
 #[inline]
-fn to_io_error(err: impl std::error::Error) -> IoError {
-    IoError::other(err.to_string())
+fn to_parquet_error(err: impl std::error::Error + Send + Sync + 'static) -> ParquetError {
+    ParquetError::External(Box::new(err))
 }
 
-// async reader for a single S3 parquet file
+// async reader for a single S3 parquet file, fetching byte ranges on demand
 pub(super) struct S3ParquetReader {
     client: s3::Client,
     bucket: String,
     object: String,
-    object_size: Option<u64>,
-    pos: u64,
 }
 
 impl S3ParquetReader {
@@ -42,107 +41,75 @@ impl S3ParquetReader {
             client: client.clone(),
             bucket: bucket.to_owned(),
             object: object.to_owned(),
-            object_size: None,
-            pos: 0,
         }
     }
 
-    fn get_object_size(&mut self) -> IoResult<u64> {
-        if let Some(object_size) = self.object_size {
-            return Ok(object_size);
-        }
-
-        // wait on current thread to get object metadata
-        futures::executor::block_on(
-            self.client
-                .get_object_attributes()
-                .bucket(&self.bucket)
-                .key(&self.object)
-                .object_attributes(s3::types::ObjectAttributes::ObjectSize)
-                .send(),
-        )
-        .map_err(to_io_error)
-        .and_then(|output| {
-            let object_size = output
-                .object_size()
-                .ok_or::<IoError>(IoError::other("object has no size attribute"))?
-                as u64;
-            self.object_size = Some(object_size);
-            Ok(object_size)
-        })
+    async fn get_object_size(&self) -> ParquetResult<u64> {
+        let output = self
+            .client
+            .get_object_attributes()
+            .bucket(&self.bucket)
+            .key(&self.object)
+            .object_attributes(s3::types::ObjectAttributes::ObjectSize)
+            .send()
+            .await
+            .map_err(to_parquet_error)?;
+        output
+            .object_size()
+            .map(|size| size as u64)
+            .ok_or_else(|| ParquetError::General("object has no size attribute".to_string()))
     }
 }
 
-impl AsyncRead for S3ParquetReader {
-    fn poll_read(
-        mut self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-        buf: &mut ReadBuf<'_>,
-    ) -> Poll<IoResult<()>> {
-        // ensure object size is already available
-        let object_size = match self.get_object_size() {
-            Ok(size) => size,
-            Err(err) => {
-                return Poll::Ready(Err(err));
+impl AsyncFileReader for S3ParquetReader {
+    fn get_bytes(&mut self, range: Range<u64>) -> BoxFuture<'_, ParquetResult<Bytes>> {
+        async move {
+            if range.is_empty() {
+                return Ok(Bytes::new());
             }
-        };
-
-        // calculate request range
-        let object_remaining = object_size.saturating_sub(self.pos);
-        let remaining = min(buf.remaining() as u64, object_remaining);
-        let upper_bound = self.pos.saturating_add(remaining).saturating_sub(1);
-        let range = format!("bytes={}-{}", self.pos, upper_bound);
-
-        // wait on current thread to get object contents
-        match futures::executor::block_on(
-            self.client
+            let output = self
+                .client
                 .get_object()
                 .bucket(&self.bucket)
                 .key(&self.object)
-                .range(range)
-                .send(),
-        ) {
-            Ok(output) => {
-                let pre_filled = buf.filled().len();
-                let mut rdr = output.body.into_async_read();
-                match AsyncRead::poll_read(Pin::new(&mut rdr), cx, buf) {
-                    Poll::Ready(result) => match result {
-                        Ok(_) => {
-                            // calculate consumed length of bytes and add it to current position
-                            let consumed = buf.filled().len().saturating_sub(pre_filled);
-                            self.pos = self.pos.saturating_add(consumed as u64);
-                            Poll::Ready(Ok(()))
-                        }
-                        Err(err) => Poll::Ready(Err(err)),
-                    },
-                    Poll::Pending => Poll::Pending,
-                }
+                .range(format!("bytes={}-{}", range.start, range.end - 1))
+                .send()
+                .await
+                .map_err(to_parquet_error)?;
+            let bytes = output
+                .body
+                .collect()
+                .await
+                .map_err(to_parquet_error)?
+                .into_bytes();
+            if bytes.len() as u64 != range.end - range.start {
+                return Err(ParquetError::EOF(format!(
+                    "expected to read {} bytes, got {}",
+                    range.end - range.start,
+                    bytes.len()
+                )));
             }
-            Err(err) => Poll::Ready(Err(to_io_error(err))),
+            Ok(bytes)
         }
-    }
-}
-
-impl AsyncSeek for S3ParquetReader {
-    fn start_seek(mut self: Pin<&mut Self>, position: SeekFrom) -> IoResult<()> {
-        let object_size = self.get_object_size()?;
-        match position {
-            SeekFrom::Start(pos) => {
-                self.pos = pos;
-            }
-            SeekFrom::End(pos) => {
-                self.pos = (object_size as i64 + pos) as u64;
-            }
-            SeekFrom::Current(pos) => {
-                self.pos = (self.pos as i64 + pos) as u64;
-            }
-        }
-
-        Ok(())
+        .boxed()
     }
 
-    fn poll_complete(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<IoResult<u64>> {
-        Poll::Ready(Ok(self.pos))
+    fn get_metadata<'a>(
+        &'a mut self,
+        options: Option<&'a ArrowReaderOptions>,
+    ) -> BoxFuture<'a, ParquetResult<Arc<ParquetMetaData>>> {
+        async move {
+            let object_size = self.get_object_size().await?;
+            let metadata = ParquetMetaDataReader::new()
+                .with_page_index_policy(PageIndexPolicy::from(
+                    options.is_some_and(|o| o.page_index()),
+                ))
+                .with_metadata_options(options.map(|o| o.metadata_options().clone()))
+                .load_and_finish(self, object_size)
+                .await?;
+            Ok(Arc::new(metadata))
+        }
+        .boxed()
     }
 }
 
@@ -169,10 +136,7 @@ impl S3Parquet {
         Ok(())
     }
 
-    // open async record batch stream
-    //
-    // This is done by spawning a thread to create builder and then get read stream
-    // Note: this function should be called on a tokio runtime executor thread
+    // open async record batch stream which reads the file from S3 on demand
     pub(super) async fn open_async_stream(
         &mut self,
         client: &s3::Client,
@@ -180,47 +144,29 @@ impl S3Parquet {
         object: &str,
         tgt_cols: &[Column],
     ) -> S3FdwResult<()> {
-        let handle = Handle::current();
-        let rdr = S3ParquetReader::new(client, bucket, object);
+        let rdr: Box<dyn AsyncFileReader> = Box::new(S3ParquetReader::new(client, bucket, object));
+        let builder = ParquetRecordBatchStreamBuilder::new(rdr).await?;
 
-        let task = handle
-            .spawn_blocking(move || {
-                // we need to create another thread and wait on it to create builder
-                let handle = Handle::current();
-                let task = handle.spawn_blocking(move || {
-                    let boxed_rdr: Box<dyn AsyncFileReader> = Box::new(rdr);
-                    Handle::current().block_on(ParquetRecordBatchStreamBuilder::new(boxed_rdr))
-                });
-                handle.block_on(task)
-            })
-            .await;
+        // get parquet file metadata
+        let file_metadata = builder.metadata().file_metadata();
+        let schema = file_metadata.schema_descr();
+        let cols = schema.columns();
 
-        let stream = task
-            .expect("create parquet batch stream builder failed")
-            .expect("create parquet batch stream builder failed")
-            .and_then(|builder| {
-                // get parquet file metadata
-                let file_metadata = builder.metadata().file_metadata();
-                let schema = file_metadata.schema_descr();
-                let cols = schema.columns();
-
-                // find target column indexes in parquest columns
-                let project_indexes = tgt_cols
-                    .iter()
-                    .map(|tgt_col| {
-                        cols.iter()
-                            .position(|col| col.name() == tgt_col.name)
-                            .unwrap_or_else(|| {
-                                panic!("column '{}' not found in parquet file", tgt_col.name)
-                            })
+        // find target column indexes in parquest columns
+        let project_indexes = tgt_cols
+            .iter()
+            .map(|tgt_col| {
+                cols.iter()
+                    .position(|col| col.name() == tgt_col.name)
+                    .unwrap_or_else(|| {
+                        panic!("column '{}' not found in parquet file", tgt_col.name)
                     })
-                    .collect::<Vec<usize>>();
-
-                // set up projections for the builder
-                let mask = ProjectionMask::roots(schema, project_indexes);
-                builder.with_projection(mask).build()
             })
-            .map_err(|err| parquet::errors::ParquetError::General(err.to_string()))?;
+            .collect::<Vec<usize>>();
+
+        // set up projections for the builder
+        let mask = ProjectionMask::roots(schema, project_indexes);
+        let stream = builder.with_projection(mask).build()?;
 
         self.stream = Some(stream);
         self.batch = None;

@@ -4,13 +4,13 @@ mod tests {
     use bson::{Document, doc};
     use mongodb::Client;
     use pgrx::prelude::*;
-    use supabase_wrappers::prelude::create_async_runtime;
+    use supabase_wrappers::prelude::{Runtime, create_async_runtime};
 
     const MONGO_URI: &str = "mongodb://localhost:27017";
 
     /// Set up a named users-style collection, dropping it first for idempotency.
     /// Each test passes a unique collection name to avoid parallel-run collisions.
-    fn setup_mongo_users(rt: &tokio::runtime::Runtime, coll_name: &str) {
+    fn setup_mongo_users(rt: &Runtime, coll_name: &str) {
         rt.block_on(async {
             let client = Client::with_uri_str(MONGO_URI).await.unwrap();
             let db = client.database("testdb");
@@ -838,5 +838,34 @@ mod tests {
                 .unwrap();
             assert_eq!(label.as_deref(), Some("alpha"));
         });
+    }
+
+    // The backend must still respond to query cancel, statement_timeout and
+    // pg_terminate_backend() while waiting on a remote which never answers
+    #[pg_test]
+    fn mongodb_cancellable_while_remote_unresponsive() {
+        let server = crate::test_utils::UnresponsiveServer::start();
+        let port = server.port;
+        Spi::run(
+            r#"CREATE FOREIGN DATA WRAPPER mongodb_unresponsive_wrapper
+                 HANDLER mongodb_fdw_handler VALIDATOR mongodb_fdw_validator"#,
+        )
+        .unwrap();
+        Spi::run(&format!(
+            r#"CREATE SERVER mongodb_unresponsive_server
+                 FOREIGN DATA WRAPPER mongodb_unresponsive_wrapper
+                 OPTIONS (
+                   conn_string 'mongodb://127.0.0.1:{port}/?directConnection=true&serverSelectionTimeoutMS=3600000&connectTimeoutMS=3600000'
+                 )"#
+        ))
+        .unwrap();
+        Spi::run(
+            r#"CREATE FOREIGN TABLE mongodb_unresponsive_table (_id text)
+                 SERVER mongodb_unresponsive_server
+                 OPTIONS (database 'testdb', collection 'users')"#,
+        )
+        .unwrap();
+
+        server.assert_cancellable("SELECT * FROM mongodb_unresponsive_table");
     }
 }

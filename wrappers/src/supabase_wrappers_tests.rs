@@ -513,4 +513,67 @@ mod tests {
             }
         });
     }
+
+    // ==========================================================================
+    // Tests for Runtime::block_on
+    // ==========================================================================
+
+    /// Completes once a background thread wakes it, exercising the cross-thread
+    /// wakeup path the I/O worker uses
+    struct WokenByThread {
+        done: std::sync::Arc<std::sync::atomic::AtomicBool>,
+        started: bool,
+    }
+
+    impl std::future::Future for WokenByThread {
+        type Output = ();
+
+        fn poll(
+            mut self: std::pin::Pin<&mut Self>,
+            cx: &mut std::task::Context<'_>,
+        ) -> std::task::Poll<()> {
+            if self.done.load(std::sync::atomic::Ordering::Acquire) {
+                return std::task::Poll::Ready(());
+            }
+            if !self.started {
+                self.started = true;
+                let done = self.done.clone();
+                let waker = cx.waker().clone();
+                std::thread::spawn(move || {
+                    std::thread::sleep(std::time::Duration::from_millis(50));
+                    done.store(true, std::sync::atomic::Ordering::Release);
+                    waker.wake();
+                });
+            }
+            std::task::Poll::Pending
+        }
+    }
+
+    #[pg_test]
+    fn runtime_block_on_wakes_up() {
+        let rt = create_async_runtime().unwrap();
+
+        rt.block_on(WokenByThread {
+            done: Default::default(),
+            started: false,
+        });
+
+        let task = rt.spawn(async { 42 });
+        assert_eq!(rt.block_on(task).unwrap(), 42);
+    }
+
+    #[pg_extern]
+    fn wrappers_block_on_forever() -> bool {
+        let rt = create_async_runtime().unwrap();
+        rt.block_on(std::future::pending::<()>());
+        true
+    }
+
+    // Regression test for backends getting stuck while an FDW waits on a remote
+    // that never answers: the wait must still service query cancel (same path
+    // as statement_timeout and pg_terminate_backend).
+    #[pg_test]
+    fn runtime_block_on_is_interruptible() {
+        crate::test_utils::assert_cancellable("SELECT tests.wrappers_block_on_forever()");
+    }
 }

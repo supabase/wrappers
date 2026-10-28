@@ -2,6 +2,7 @@
 //!
 
 use crate::interface::{Cell, Column, Row};
+use crate::runtime::Runtime;
 use pgrx::{
     list::List,
     pg_sys::panic::{ErrorReport, ErrorReportable},
@@ -13,7 +14,6 @@ use std::ffi::c_void;
 use std::num::NonZeroUsize;
 use std::ptr;
 use thiserror::Error;
-use tokio::runtime::{Builder, Runtime};
 use uuid::Uuid;
 
 // ============================================================================
@@ -320,11 +320,13 @@ impl From<CreateRuntimeError> for ErrorReport {
     }
 }
 
-/// Create a Tokio async runtime
+/// Create an async runtime
 ///
-/// Use this runtime to run async code in `block` mode. Run blocked code is
-/// required by Postgres callback functions which is fine because Postgres
-/// process is single-threaded.
+/// Use this runtime to run async code from Postgres callback functions, which
+/// have to block until the result is available. Unlike a plain tokio runtime,
+/// [`Runtime::block_on`] keeps servicing Postgres interrupts while waiting, so
+/// query cancel, `statement_timeout` and `pg_terminate_backend()` still work
+/// when the remote side is unresponsive. See [`crate::runtime`] for details.
 ///
 /// For example,
 ///
@@ -351,7 +353,7 @@ impl From<CreateRuntimeError> for ErrorReport {
 /// ```
 #[inline]
 pub fn create_async_runtime() -> Result<Runtime, CreateRuntimeError> {
-    Ok(Builder::new_current_thread().enable_all().build()?)
+    Ok(Runtime::new()?)
 }
 
 /// Get decrypted secret from Vault by secret ID or name
