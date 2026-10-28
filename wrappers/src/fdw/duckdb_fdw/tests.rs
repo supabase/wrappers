@@ -193,4 +193,31 @@ mod tests {
             let _results = c.select("SELECT * FROM duckdb.passwd", None, &[]);
         });
     }
+
+    // DuckDB runs queries synchronously, so the backend must still respond to
+    // query cancel while a long-running DuckDB query is in progress
+    #[pg_test]
+    fn duckdb_cancellable_while_query_running() {
+        Spi::run(
+            r#"CREATE FOREIGN DATA WRAPPER duckdb_long_query_wrapper
+                 HANDLER duckdb_fdw_handler VALIDATOR duckdb_fdw_validator"#,
+        )
+        .unwrap();
+        Spi::run(
+            r#"CREATE SERVER duckdb_long_query_server
+                 FOREIGN DATA WRAPPER duckdb_long_query_wrapper
+                 OPTIONS (type 's3', key_id 'test', secret 'test', region 'us-east-1')"#,
+        )
+        .unwrap();
+        Spi::run(
+            r#"CREATE FOREIGN TABLE duckdb_long_query_table (c bigint)
+                 SERVER duckdb_long_query_server
+                 OPTIONS (
+                   table '(select (sum(a.range * b.range) % 1000)::bigint as c from range(1000000) a, range(1000000) b)'
+                 )"#,
+        )
+        .unwrap();
+
+        crate::test_utils::assert_cancellable("SELECT * FROM duckdb_long_query_table");
+    }
 }

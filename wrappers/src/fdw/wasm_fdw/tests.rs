@@ -1062,4 +1062,49 @@ mod tests {
 
         server.assert_cancellable("SELECT * FROM wasm_unresponsive.customers");
     }
+
+    // Wasm FDWs sleep through the host when rate limited, so the backend must
+    // still respond to query cancel while the guest is sleeping
+    #[pg_test]
+    fn wasm_cancellable_while_sleeping() {
+        use crate::test_utils::{HttpResponse, HttpServer, assert_cancellable_when};
+
+        // always rate limited, asking the guest to wait for an hour
+        let server = HttpServer::start(|_| {
+            Some(HttpResponse {
+                status: 429,
+                headers: vec![("x-ratelimit-reset".into(), "3600".into())],
+                body: Vec::new(),
+            })
+        });
+        let port = server.port;
+
+        Spi::run(
+            r#"CREATE FOREIGN DATA WRAPPER wasm_sleep_wrapper
+                 HANDLER wasm_fdw_handler VALIDATOR wasm_fdw_validator"#,
+        )
+        .unwrap();
+        Spi::run(&format!(
+            r#"CREATE SERVER wasm_sleep_server
+                 FOREIGN DATA WRAPPER wasm_sleep_wrapper
+                 OPTIONS (
+                   fdw_package_url 'file://../../../target/wasm32-unknown-unknown/release/cal_fdw.wasm',
+                   fdw_package_name 'supabase:cal-fdw',
+                   fdw_package_version '>=0.1.0',
+                   api_url 'http://127.0.0.1:{port}/cal',
+                   api_key '1234567890'
+                 )"#
+        ))
+        .unwrap();
+        Spi::run(
+            r#"CREATE FOREIGN TABLE wasm_sleep_table (id bigint, attrs jsonb)
+                 SERVER wasm_sleep_server
+                 OPTIONS (object 'my_profile')"#,
+        )
+        .unwrap();
+
+        // the host retries rate limited requests 3 times before the guest
+        // sees the response and goes to sleep
+        assert_cancellable_when("SELECT * FROM wasm_sleep_table", server.when_answered(4));
+    }
 }

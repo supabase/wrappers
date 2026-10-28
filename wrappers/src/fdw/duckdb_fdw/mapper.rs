@@ -19,143 +19,135 @@ use supabase_wrappers::prelude::*;
 
 use super::{DuckdbFdwError, DuckdbFdwResult};
 
-fn array_ref_to_json_cell(arr: &ArrayRef) -> DuckdbFdwResult<Option<Cell>> {
+fn array_ref_to_json(arr: &ArrayRef) -> DuckdbFdwResult<JsonValue> {
     let batch = RecordBatch::try_from_iter(vec![("dummy", arr.clone())])?;
     let mut buf = Vec::with_capacity(1024);
     let mut writer = ArrayWriter::new(&mut buf);
     writer.write(&batch)?;
     writer.finish()?;
     let json = serde_json::from_slice::<JsonValue>(&buf)?;
-    let val = json.pointer("/0/dummy").cloned().unwrap_or_default();
-    Ok(Some(Cell::Json(JsonB(val))))
+    Ok(json.pointer("/0/dummy").cloned().unwrap_or_default())
 }
 
-fn array_to_json_cell(arr: impl Array + Clone + 'static) -> DuckdbFdwResult<Option<Cell>> {
+fn array_to_json(arr: impl Array + Clone + 'static) -> DuckdbFdwResult<JsonValue> {
     let arr: ArrayRef = Arc::new(arr.clone());
-    array_ref_to_json_cell(&arr)
+    array_ref_to_json(&arr)
 }
 
-// convert a DuckDB field to a wrappers cell
-pub(super) fn map_cell(
+/// A DuckDB field value read from a result row, before it's converted to a
+/// wrappers cell
+///
+/// Rows are read off the backend's main thread, where Postgres functions
+/// can't be used, so conversions which need them are done by [`to_cell`] on
+/// the main thread.
+pub(super) enum RawCell {
+    Null,
+    Bool(bool),
+    I8(i8),
+    I16(i16),
+    F32(f32),
+    I32(i32),
+    F64(f64),
+    I64(i64),
+    Numeric(f64),
+    String(String),
+    Date(i64),
+    Time(i64),
+    Timestamp(i64),
+    Timestamptz(i64),
+    Json(JsonValue),
+    Bytea(Vec<u8>),
+    Uuid(String),
+}
+
+// read a DuckDB field for a target column type, without using any Postgres
+// functions
+pub(super) fn read_cell(
     src_row: &duckdb::Row<'_>,
     col_idx: usize,
-    tgt_col: &Column,
-) -> DuckdbFdwResult<Option<Cell>> {
-    let ret = match tgt_col.type_oid {
-        pg_sys::BOOLOID => src_row
-            .get::<_, Option<bool>>(col_idx)
-            .map(|v| v.map(Cell::Bool))
-            .map_err(|e| e.into()),
-        pg_sys::CHAROID => src_row
-            .get::<_, Option<i8>>(col_idx)
-            .map(|v| v.map(Cell::I8))
-            .map_err(|e| e.into()),
-        pg_sys::INT2OID => src_row
-            .get::<_, Option<i16>>(col_idx)
-            .map(|v| v.map(Cell::I16))
-            .map_err(|e| e.into()),
-        pg_sys::FLOAT4OID => src_row
-            .get::<_, Option<f32>>(col_idx)
-            .map(|v| v.map(Cell::F32))
-            .map_err(|e| e.into()),
-        pg_sys::INT4OID => src_row
-            .get::<_, Option<i32>>(col_idx)
-            .map(|v| v.map(Cell::I32))
-            .map_err(|e| e.into()),
-        pg_sys::FLOAT8OID => src_row
-            .get::<_, Option<f64>>(col_idx)
-            .map(|v| v.map(Cell::F64))
-            .map_err(|e| e.into()),
-        pg_sys::INT8OID => src_row
-            .get::<_, Option<i64>>(col_idx)
-            .map(|v| v.map(Cell::I64))
-            .map_err(|e| e.into()),
-        pg_sys::NUMERICOID => {
-            let v = src_row.get::<_, Option<f64>>(col_idx)?;
-            match v {
-                Some(v) => {
-                    let cell = pgrx::AnyNumeric::try_from(v).map(Cell::Numeric)?;
-                    Ok(Some(cell))
-                }
-                None => Ok(None),
-            }
-        }
-        pg_sys::TEXTOID => src_row
-            .get::<_, Option<String>>(col_idx)
-            .map(|v| v.map(Cell::String))
-            .map_err(|e| e.into()),
-        pg_sys::DATEOID => src_row
-            .get::<_, Option<i64>>(col_idx)
-            .map(|v| {
-                v.map(|v| {
-                    let ts = to_timestamp((v * 86_400) as f64);
-                    Cell::Date(pgrx::prelude::Date::from(ts))
-                })
-            })
-            .map_err(|e| e.into()),
-        pg_sys::TIMEOID => {
-            let cell = if let Some(tm) = src_row.get::<_, Option<i64>>(col_idx)? {
-                let tm = Time::try_from(tm).map_err(|_| DateTimeConversionError::FieldOverflow)?;
-                Some(Cell::Time(tm))
-            } else {
-                None
-            };
-            Ok(cell)
-        }
-        pg_sys::TIMESTAMPOID => src_row
-            .get::<_, Option<i64>>(col_idx)
-            .map(|v| {
-                v.map(|v| {
-                    let ts = to_timestamp((v / 1_000_000) as _);
-                    Cell::Timestamp(ts.to_utc())
-                })
-            })
-            .map_err(|e| e.into()),
-        pg_sys::TIMESTAMPTZOID => src_row
-            .get::<_, Option<i64>>(col_idx)
-            .map(|v| {
-                v.map(|v| {
-                    let ts = to_timestamp((v / 1_000_000) as _);
-                    Cell::Timestamptz(ts)
-                })
-            })
-            .map_err(|e| e.into()),
-        pg_sys::JSONBOID => {
-            let v = src_row.get_ref::<_>(col_idx)?;
-            match v {
-                ValueRef::Null => Ok(None),
-                ValueRef::List(arr, _) => match arr {
-                    ListType::Regular(arr) => array_to_json_cell(arr.clone()),
-                    ListType::Large(arr) => array_to_json_cell(arr.clone()),
-                },
-                ValueRef::Enum(arr, _) => match arr {
-                    EnumType::UInt8(arr) => array_to_json_cell(arr.clone()),
-                    EnumType::UInt16(arr) => array_to_json_cell(arr.clone()),
-                    EnumType::UInt32(arr) => array_to_json_cell(arr.clone()),
-                },
-                ValueRef::Struct(arr, _) => array_to_json_cell(arr.clone()),
-                ValueRef::Array(arr, _) => array_to_json_cell(arr.clone()),
-                ValueRef::Map(arr, _) => array_to_json_cell(arr.clone()),
-                ValueRef::Union(arr, _) => array_ref_to_json_cell(arr),
-                _ => return Err(DuckdbFdwError::UnsupportedColumnType(tgt_col.name.clone())),
-            }
-        }
-        pg_sys::BYTEAOID => src_row
-            .get::<_, Option<Vec<u8>>>(col_idx)
-            .map(|v| v.map(|data| Cell::Bytea(varlena::rust_byte_slice_to_bytea(&data).into_pg())))
-            .map_err(|e| e.into()),
-        pg_sys::UUIDOID => {
-            let cell = if let Some(uuid_str) = src_row.get::<_, Option<String>>(col_idx)? {
-                let uuid = Uuid::parse_str(&uuid_str)?;
-                Some(Cell::Uuid(pgrx::Uuid::from_bytes(*uuid.as_bytes())))
-            } else {
-                None
-            };
-            Ok(cell)
-        }
-        _ => return Err(DuckdbFdwError::UnsupportedColumnType(tgt_col.name.clone())),
-    }?;
+    type_oid: pg_sys::Oid,
+    col_name: &str,
+) -> DuckdbFdwResult<RawCell> {
+    macro_rules! read {
+        ($type:ty, $variant:ident) => {
+            src_row
+                .get::<_, Option<$type>>(col_idx)?
+                .map_or(RawCell::Null, RawCell::$variant)
+        };
+    }
+
+    let ret = match type_oid {
+        pg_sys::BOOLOID => read!(bool, Bool),
+        pg_sys::CHAROID => read!(i8, I8),
+        pg_sys::INT2OID => read!(i16, I16),
+        pg_sys::FLOAT4OID => read!(f32, F32),
+        pg_sys::INT4OID => read!(i32, I32),
+        pg_sys::FLOAT8OID => read!(f64, F64),
+        pg_sys::INT8OID => read!(i64, I64),
+        pg_sys::NUMERICOID => read!(f64, Numeric),
+        pg_sys::TEXTOID => read!(String, String),
+        pg_sys::DATEOID => read!(i64, Date),
+        pg_sys::TIMEOID => read!(i64, Time),
+        pg_sys::TIMESTAMPOID => read!(i64, Timestamp),
+        pg_sys::TIMESTAMPTZOID => read!(i64, Timestamptz),
+        pg_sys::JSONBOID => match src_row.get_ref::<_>(col_idx)? {
+            ValueRef::Null => RawCell::Null,
+            ValueRef::List(arr, _) => RawCell::Json(match arr {
+                ListType::Regular(arr) => array_to_json(arr.clone())?,
+                ListType::Large(arr) => array_to_json(arr.clone())?,
+            }),
+            ValueRef::Enum(arr, _) => RawCell::Json(match arr {
+                EnumType::UInt8(arr) => array_to_json(arr.clone())?,
+                EnumType::UInt16(arr) => array_to_json(arr.clone())?,
+                EnumType::UInt32(arr) => array_to_json(arr.clone())?,
+            }),
+            ValueRef::Struct(arr, _) => RawCell::Json(array_to_json(arr.clone())?),
+            ValueRef::Array(arr, _) => RawCell::Json(array_to_json(arr.clone())?),
+            ValueRef::Map(arr, _) => RawCell::Json(array_to_json(arr.clone())?),
+            ValueRef::Union(arr, _) => RawCell::Json(array_ref_to_json(arr)?),
+            _ => return Err(DuckdbFdwError::UnsupportedColumnType(col_name.to_owned())),
+        },
+        pg_sys::BYTEAOID => read!(Vec<u8>, Bytea),
+        pg_sys::UUIDOID => read!(String, Uuid),
+        _ => return Err(DuckdbFdwError::UnsupportedColumnType(col_name.to_owned())),
+    };
     Ok(ret)
+}
+
+// convert a DuckDB field value to a wrappers cell
+pub(super) fn to_cell(raw: RawCell) -> DuckdbFdwResult<Option<Cell>> {
+    let cell = match raw {
+        RawCell::Null => None,
+        RawCell::Bool(v) => Some(Cell::Bool(v)),
+        RawCell::I8(v) => Some(Cell::I8(v)),
+        RawCell::I16(v) => Some(Cell::I16(v)),
+        RawCell::F32(v) => Some(Cell::F32(v)),
+        RawCell::I32(v) => Some(Cell::I32(v)),
+        RawCell::F64(v) => Some(Cell::F64(v)),
+        RawCell::I64(v) => Some(Cell::I64(v)),
+        RawCell::Numeric(v) => Some(Cell::Numeric(pgrx::AnyNumeric::try_from(v)?)),
+        RawCell::String(v) => Some(Cell::String(v)),
+        RawCell::Date(v) => {
+            let ts = to_timestamp((v * 86_400) as f64);
+            Some(Cell::Date(pgrx::prelude::Date::from(ts)))
+        }
+        RawCell::Time(v) => {
+            let tm = Time::try_from(v).map_err(|_| DateTimeConversionError::FieldOverflow)?;
+            Some(Cell::Time(tm))
+        }
+        RawCell::Timestamp(v) => {
+            let ts = to_timestamp((v / 1_000_000) as _);
+            Some(Cell::Timestamp(ts.to_utc()))
+        }
+        RawCell::Timestamptz(v) => Some(Cell::Timestamptz(to_timestamp((v / 1_000_000) as _))),
+        RawCell::Json(v) => Some(Cell::Json(JsonB(v))),
+        RawCell::Bytea(v) => Some(Cell::Bytea(varlena::rust_byte_slice_to_bytea(&v).into_pg())),
+        RawCell::Uuid(v) => {
+            let uuid = Uuid::parse_str(&v)?;
+            Some(Cell::Uuid(pgrx::Uuid::from_bytes(*uuid.as_bytes())))
+        }
+    };
+    Ok(cell)
 }
 
 // map DuckDB column type to Postgres column type

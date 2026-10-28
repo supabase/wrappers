@@ -1,8 +1,9 @@
 use crate::stats;
-use duckdb::{self, Connection};
+use duckdb::{self, Connection, InterruptHandle};
 use pgrx::pg_sys;
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::{Arc, Mutex, PoisonError};
 
 use supabase_wrappers::prelude::*;
 
@@ -15,9 +16,13 @@ use super::{DuckdbFdwError, DuckdbFdwResult, mapper, server_type::ServerType};
     error_type = "DuckdbFdwError"
 )]
 pub(crate) struct DuckdbFdw {
+    rt: Runtime,
     svr_type: ServerType,
     svr_opts: HashMap<String, String>,
-    conn: Connection,
+    // DuckDB runs queries synchronously, so the connection is used from the
+    // runtime's blocking threads to keep the backend interruptible
+    conn: Arc<Mutex<Connection>>,
+    interrupt: Arc<InterruptHandle>,
     table: String,
     scan_result: Vec<Row>,
     iter_idx: usize,
@@ -25,6 +30,33 @@ pub(crate) struct DuckdbFdw {
 
 impl DuckdbFdw {
     const FDW_NAME: &'static str = "DuckdbFdw";
+
+    // run DuckDB work off the backend's main thread, interrupting it on query
+    // cancel or backend termination
+    fn with_conn<R: Send + 'static>(
+        &self,
+        f: impl FnOnce(&Connection) -> DuckdbFdwResult<R> + Send + 'static,
+    ) -> DuckdbFdwResult<R> {
+        let conn = self.conn.clone();
+        let interrupt = self.interrupt.clone();
+        self.rt.run_blocking(
+            move || f(&conn.lock().unwrap_or_else(PoisonError::into_inner)),
+            move || interrupt.interrupt(),
+        )
+    }
+
+    // run a query returning a single text column
+    fn query_strings(&self, sql: String, params: Vec<String>) -> DuckdbFdwResult<Vec<String>> {
+        self.with_conn(move |conn| {
+            let mut stmt = conn.prepare(&sql)?;
+            let rows = stmt
+                .query_map(duckdb::params_from_iter(params.iter()), |row| {
+                    row.get::<_, String>(0)
+                })?
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(rows)
+        })
+    }
 
     fn init_duckdb(&self) -> DuckdbFdwResult<()> {
         let sql_batch = String::default()
@@ -36,15 +68,16 @@ impl DuckdbFdw {
 
         // execute_batch() won't raise error when one of the statements failed,
         // so we execute each sql separately
-        for sql in sql_batch
-            .split(";")
-            .map(|s| s.trim())
-            .filter(|s| !s.is_empty())
-        {
-            self.conn.execute(sql, [])?;
-        }
-
-        Ok(())
+        self.with_conn(move |conn| {
+            for sql in sql_batch
+                .split(";")
+                .map(|s| s.trim())
+                .filter(|s| !s.is_empty())
+            {
+                conn.execute(sql, [])?;
+            }
+            Ok(())
+        })
     }
 
     fn deparse(
@@ -120,16 +153,21 @@ impl DuckdbFdw {
         // 'information_schema.columns' table won't have the external table
         // column info as for now, so we use 'show' statement to fetch it from remote
         let sql = format!(r#"show {tbl_duckdb}"#);
-        let mut stmt = self.conn.prepare(&sql)?;
-        let mut columns = stmt.query([])?;
-        while let Some(col) = columns.next()? {
-            let col_name = col.get::<_, String>("column_name")?;
-            let col_type = col.get::<_, String>("column_type")?;
-            let is_null = if col.get::<_, String>("null")? == "YES" {
-                ""
-            } else {
-                "not null"
-            };
+        let columns = self.with_conn(move |conn| {
+            let mut stmt = conn.prepare(&sql)?;
+            let mut rows = stmt.query([])?;
+            let mut columns = Vec::new();
+            while let Some(col) = rows.next()? {
+                columns.push((
+                    col.get::<_, String>("column_name")?,
+                    col.get::<_, String>("column_type")?,
+                    col.get::<_, String>("null")?,
+                ));
+            }
+            Ok(columns)
+        })?;
+        for (col_name, col_type, null) in columns {
+            let is_null = if null == "YES" { "" } else { "not null" };
 
             if let Some(pg_type) = mapper::map_column_type(tbl_pg, &col_name, &col_type, is_strict)?
             {
@@ -158,13 +196,16 @@ impl ForeignDataWrapper<DuckdbFdwError> for DuckdbFdw {
     fn new(server: ForeignServer) -> DuckdbFdwResult<Self> {
         let svr_type = ServerType::new(&server.options)?;
         let conn = Connection::open_in_memory()?;
+        let interrupt = conn.interrupt_handle();
 
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
 
         Ok(DuckdbFdw {
+            rt: create_async_runtime()?,
             svr_type,
             svr_opts: server.options.clone(),
-            conn,
+            conn: Arc::new(Mutex::new(conn)),
+            interrupt,
             table: String::default(),
             scan_result: Vec::new(),
             iter_idx: 0,
@@ -190,19 +231,35 @@ impl ForeignDataWrapper<DuckdbFdwError> for DuckdbFdw {
             log_debug1(&format!("sql on DuckDB: {sql}"));
         }
 
-        // run sql query on DuckDB
-        let mut stmt = self.conn.prepare(&sql)?;
-        let tgt_rows: Result<Vec<_>, DuckdbFdwError> = stmt
-            .query_and_then([], |src_row| {
+        // run sql query on DuckDB, then convert the result on this thread as
+        // that can need Postgres functions
+        let tgt_cols: Vec<_> = columns
+            .iter()
+            .map(|col| (col.type_oid, col.name.clone()))
+            .collect();
+        let src_rows = self.with_conn(move |conn| {
+            let mut stmt = conn.prepare(&sql)?;
+            stmt.query_and_then([], |src_row| {
+                tgt_cols
+                    .iter()
+                    .enumerate()
+                    .map(|(col_idx, (type_oid, name))| {
+                        mapper::read_cell(src_row, col_idx, *type_oid, name)
+                    })
+                    .collect::<DuckdbFdwResult<Vec<_>>>()
+            })?
+            .collect::<DuckdbFdwResult<Vec<_>>>()
+        })?;
+        self.scan_result = src_rows
+            .into_iter()
+            .map(|src_row| {
                 let mut tgt_row = Row::new();
-                for (col_idx, tgt_col) in columns.iter().enumerate() {
-                    let cell = mapper::map_cell(src_row, col_idx, tgt_col)?;
-                    tgt_row.push(&tgt_col.name, cell);
+                for (raw, tgt_col) in src_row.into_iter().zip(columns) {
+                    tgt_row.push(&tgt_col.name, mapper::to_cell(raw)?);
                 }
                 Ok(tgt_row)
-            })?
-            .collect();
-        self.scan_result = tgt_rows?;
+            })
+            .collect::<DuckdbFdwResult<Vec<_>>>()?;
 
         stats::inc_stats(
             Self::FDW_NAME,
@@ -261,10 +318,7 @@ impl ForeignDataWrapper<DuckdbFdwError> for DuckdbFdw {
                     where catalog_name = ?
                       and schema_name is not null
                 ";
-            let mut stmt = self.conn.prepare(sql)?;
-            let schemas = stmt
-                .query_map([db_name], |row| row.get::<_, String>(0))?
-                .collect::<Result<Vec<_>, _>>()?;
+            let schemas = self.query_strings(sql.to_string(), vec![db_name.to_string()])?;
 
             let mut tables = Vec::new();
 
@@ -276,10 +330,8 @@ impl ForeignDataWrapper<DuckdbFdwError> for DuckdbFdw {
                           and table_schema = ?
                         order by table_name
                     ";
-                let mut stmt = self.conn.prepare(sql)?;
-                let tbls = stmt
-                    .query_map([db_name, &schema], |row| row.get::<_, String>(0))?
-                    .collect::<Result<Vec<_>, _>>()?;
+                let tbls =
+                    self.query_strings(sql.to_string(), vec![db_name.to_string(), schema.clone()])?;
                 tables.extend(tbls.into_iter().map(|t| format!("{db_name}.{schema}.{t}")));
             }
 
@@ -316,10 +368,7 @@ impl ForeignDataWrapper<DuckdbFdwError> for DuckdbFdw {
                     order by table_name
                 "
             );
-            let mut stmt = self.conn.prepare(&query)?;
-            let tables = stmt
-                .query_map([db_name, &schema], |row| row.get::<_, String>(0))?
-                .collect::<Result<Vec<_>, _>>()?;
+            let tables = self.query_strings(query, vec![db_name.to_string(), schema.clone()])?;
 
             // NOTE: We don't do any munging of the postgres table names because
             // the pg code will ignore CREATE FOREIGN TABLE statements that don't target

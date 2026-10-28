@@ -33,7 +33,11 @@ const _: () = {
         }
 
         fn sleep(&mut self, millis: u64) {
-            std::thread::sleep(std::time::Duration::from_millis(millis));
+            // sleep on the runtime so the backend still services interrupts,
+            // the timer must be created inside the runtime context
+            let duration = std::time::Duration::from_millis(millis);
+            self.rt
+                .block_on(async move { tokio::time::sleep(duration).await });
         }
     }
 };

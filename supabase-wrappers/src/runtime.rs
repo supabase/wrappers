@@ -189,6 +189,43 @@ impl Runtime {
         }
     }
 
+    /// Run blocking code on the runtime's blocking thread pool, servicing
+    /// Postgres interrupts while waiting for it to finish
+    ///
+    /// For synchronous libraries which can't be polled. If a query cancel,
+    /// `statement_timeout` or backend termination arrives while waiting,
+    /// `on_interrupt` is called to make `f` stop early (e.g. by interrupting a
+    /// query) and the corresponding Postgres error is raised without waiting
+    /// for `f` to return.
+    ///
+    /// `f` must not call any Postgres functions, since it doesn't run on the
+    /// backend's main thread.
+    pub fn run_blocking<F, R>(&self, f: F, on_interrupt: impl FnOnce()) -> R
+    where
+        F: FnOnce() -> R + Send + 'static,
+        R: Send + 'static,
+    {
+        struct OnDrop<C: FnOnce()>(Option<C>);
+
+        impl<C: FnOnce()> Drop for OnDrop<C> {
+            fn drop(&mut self) {
+                if let Some(f) = self.0.take() {
+                    f();
+                }
+            }
+        }
+
+        let task = self.rt.spawn_blocking(f);
+        let mut on_interrupt = OnDrop(Some(on_interrupt));
+        let result = self.block_on(task);
+        on_interrupt.0 = None;
+
+        match result {
+            Ok(output) => output,
+            Err(err) => std::panic::resume_unwind(err.into_panic()),
+        }
+    }
+
     /// Spawn a `Send` future onto the runtime's worker thread
     ///
     /// The task must not call any Postgres functions, since it doesn't run on

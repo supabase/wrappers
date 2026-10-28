@@ -7,7 +7,7 @@ use pgrx::prelude::PgSqlErrorCode;
 use redis::RedisError;
 use thiserror::Error;
 
-use supabase_wrappers::prelude::OptionsError;
+use supabase_wrappers::prelude::{CreateRuntimeError, OptionsError};
 
 #[derive(Error, Debug)]
 enum RedisFdwError {
@@ -34,6 +34,9 @@ enum RedisFdwError {
 
     #[error("{0}")]
     IoError(#[from] std::io::Error),
+
+    #[error("{0}")]
+    CreateRuntimeError(#[from] CreateRuntimeError),
 }
 
 impl From<RedisFdwError> for ErrorReport {

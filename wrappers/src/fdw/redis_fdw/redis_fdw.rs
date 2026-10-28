@@ -1,6 +1,6 @@
 use crate::stats;
 use pgrx::{JsonB, PgBuiltInOids};
-use redis::{Client, Commands, Connection, TlsCertificates};
+use redis::{AsyncCommands, AsyncIter, Client, TlsCertificates, aio::MultiplexedConnection};
 use serde_json::json;
 use serde_json::value::Value as JsonValue;
 use std::collections::HashMap;
@@ -9,6 +9,15 @@ use crate::setup_rustls_default_crypto_provider;
 use supabase_wrappers::prelude::*;
 
 use super::{RedisFdwError, RedisFdwResult};
+
+// collect all items from a Redis async cursor
+async fn collect_iter(mut iter: AsyncIter<'_, String>) -> Vec<String> {
+    let mut items = Vec::new();
+    while let Some(item) = iter.next_item().await {
+        items.push(item);
+    }
+    items
+}
 
 // check target columns number and types to make sure match the spec
 fn check_target_columns(
@@ -48,8 +57,9 @@ fn check_target_columns(
     error_type = "RedisFdwError"
 )]
 pub(crate) struct RedisFdw {
+    rt: Runtime,
     client: Client,
-    conn: Option<Connection>,
+    conn: Option<MultiplexedConnection>,
     src_type: String,
     src_key: String,
     tgt_cols: Vec<Column>,
@@ -89,9 +99,9 @@ impl RedisFdw {
                 let start = self.iter_idx;
                 let stop = self.iter_idx + Self::BUF_SIZE - 1;
                 self.scan_result = if self.src_type == "list" {
-                    conn.lrange(&self.src_key, start, stop)?
+                    self.rt.block_on(conn.lrange(&self.src_key, start, stop))?
                 } else {
-                    conn.zrange(&self.src_key, start, stop)?
+                    self.rt.block_on(conn.zrange(&self.src_key, start, stop))?
                 };
                 if self.scan_result.is_empty() {
                     return Ok(None);
@@ -153,8 +163,12 @@ impl RedisFdw {
     fn fetch_row_stream(&mut self) -> RedisFdwResult<Option<Row>> {
         if let Some(conn) = &mut self.conn {
             if self.iter_idx as usize >= self.scan_result_stream.len() {
-                self.scan_result_stream =
-                    conn.xrange_count(&self.src_key, &self.iter_idx_stream, "+", Self::BUF_SIZE)?;
+                self.scan_result_stream = self.rt.block_on(conn.xrange_count(
+                    &self.src_key,
+                    &self.iter_idx_stream,
+                    "+",
+                    Self::BUF_SIZE,
+                ))?;
                 if self.scan_result_stream.is_empty() {
                     return Ok(None);
                 }
@@ -203,19 +217,21 @@ impl RedisFdw {
             let key = &self.scan_result[self.iter_idx as usize];
             let items: JsonValue = match self.src_type.as_str() {
                 "multi_list" => {
-                    let items: Vec<String> = conn.lrange(key, 0, -1)?;
+                    let items: Vec<String> = self.rt.block_on(conn.lrange(key, 0, -1))?;
                     json!(items)
                 }
                 "multi_set" => {
-                    let items: Vec<String> = conn.sscan(key)?.collect();
+                    let items = self.rt.block_on(async {
+                        Ok::<_, RedisFdwError>(collect_iter(conn.sscan(key).await?).await)
+                    })?;
                     json!(items)
                 }
                 "multi_zset" => {
-                    let items: Vec<String> = conn.zrange(key, 0, -1)?;
+                    let items: Vec<String> = self.rt.block_on(conn.zrange(key, 0, -1))?;
                     json!(items)
                 }
                 "multi_hash" => {
-                    let items: Vec<String> = conn.hgetall(key)?;
+                    let items: Vec<String> = self.rt.block_on(conn.hgetall(key))?;
                     let items: HashMap<_, _> = HashMap::from_iter(
                         items.iter().step_by(2).zip(items.iter().skip(1).step_by(2)),
                     );
@@ -267,6 +283,7 @@ impl ForeignDataWrapper<RedisFdwError> for RedisFdw {
         stats::inc_stats(Self::FDW_NAME, stats::Metric::CreateTimes, 1);
 
         Ok(RedisFdw {
+            rt: create_async_runtime()?,
             client,
             conn: None,
             src_type: String::default(),
@@ -290,7 +307,9 @@ impl ForeignDataWrapper<RedisFdwError> for RedisFdw {
         let src_type = require_option("src_type", options)?.to_string();
         let src_key = require_option("src_key", options)?.to_string();
 
-        let mut conn = self.client.get_connection()?;
+        let mut conn = self
+            .rt
+            .block_on(self.client.get_multiplexed_async_connection())?;
 
         self.reset();
 
@@ -310,7 +329,9 @@ impl ForeignDataWrapper<RedisFdwError> for RedisFdw {
                     &[PgBuiltInOids::TEXTOID],
                     src_type.as_str(),
                 )?;
-                self.scan_result = conn.sscan(&src_key)?.collect::<Vec<String>>();
+                self.scan_result = self.rt.block_on(async {
+                    Ok::<_, RedisFdwError>(collect_iter(conn.sscan(&src_key).await?).await)
+                })?;
                 stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsIn, 1_i64);
                 stats::inc_stats(
                     Self::FDW_NAME,
@@ -325,7 +346,7 @@ impl ForeignDataWrapper<RedisFdwError> for RedisFdw {
                     &[PgBuiltInOids::TEXTOID, PgBuiltInOids::TEXTOID],
                     src_type.as_str(),
                 )?;
-                self.scan_result = conn.hgetall(&src_key)?;
+                self.scan_result = self.rt.block_on(conn.hgetall(&src_key))?;
                 stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsIn, 1_i64);
                 stats::inc_stats(
                     Self::FDW_NAME,
@@ -348,7 +369,9 @@ impl ForeignDataWrapper<RedisFdwError> for RedisFdw {
                     &[PgBuiltInOids::TEXTOID, PgBuiltInOids::JSONBOID],
                     src_type.as_str(),
                 )?;
-                self.scan_result = conn.scan_match(&src_key)?.collect::<Vec<String>>();
+                self.scan_result = self.rt.block_on(async {
+                    Ok::<_, RedisFdwError>(collect_iter(conn.scan_match(&src_key).await?).await)
+                })?;
                 stats::inc_stats(Self::FDW_NAME, stats::Metric::RowsIn, 1_i64);
                 stats::inc_stats(
                     Self::FDW_NAME,
