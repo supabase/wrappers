@@ -16,28 +16,29 @@ Each example shows how to configure the FDW against a real API, with complete se
 | --- | --- | --- | --- |
 | [github](github/) | [GitHub REST API](https://docs.github.com/en/rest) | Bearer token | Path params, custom headers, `items` wrapper, search pushdown |
 | [threads](threads/) | [Meta Threads API](https://developers.facebook.com/docs/threads) | OAuth token (query param) | Cursor-based pagination, path params, query pushdown |
+| [xquik](xquik/) | [Xquik X (Twitter) data API](https://docs.xquik.com) | API key (custom header) | Cursor-based pagination, path params, search pushdown, camelCase keys |
 
 ## Feature Coverage
 
-| Feature | Weather.gov | CarAPI | PokéAPI | GitHub | Threads |
-| --- | :---: | :---: | :---: | :---: | :---: |
-| IMPORT FOREIGN SCHEMA (`spec_url`) | ✓ | ✓ | ✓ | ✓ | |
-| IMPORT FOREIGN SCHEMA (`spec_json`) | | | | | ✓ |
-| YAML spec support | | | ✓ | | |
-| Page/offset-based pagination | | ✓ | ✓ | ✓ | |
-| Cursor-based pagination | ✓ | | | | ✓ |
-| URL-based pagination (auto-detected) | | | ✓ | ✓ | |
-| Path parameter substitution | ✓ | | ✓ | ✓ | ✓ |
-| Query parameter pushdown | ✓ | ✓ | | ✓ | ✓ |
-| LIMIT pushdown | ✓ | ✓ | ✓ | ✓ | ✓ |
-| GeoJSON extraction (`object_path`) | ✓ | | | | |
-| Nested response path (`response_path`) | ✓ | | | | |
-| Bearer token / API key auth | | | | ✓ | |
-| Query param auth (`api_key_location`) | | | | | ✓ |
-| Custom headers | ✓ | | | ✓ | |
-| Type coercion (int, bool, timestamptz) | ✓ | ✓ | ✓ | ✓ | ✓ |
-| camelCase to snake_case matching | ✓ | | | | |
-| Single object response | ✓ | | ✓ | ✓ | |
-| Auto-detected wrapper key | | ✓ | ✓ | ✓ | |
-| Debug mode | ✓ | ✓ | ✓ | ✓ | |
-| `attrs` full JSON column | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Feature | Weather.gov | CarAPI | PokéAPI | GitHub | Threads | Xquik |
+| --- | :---: | :---: | :---: | :---: | :---: | :---: |
+| IMPORT FOREIGN SCHEMA (`spec_url`) | ✓ | ✓ | ✓ | ✓ | | |
+| IMPORT FOREIGN SCHEMA (`spec_json`) | | | | | ✓ | |
+| YAML spec support | | | ✓ | | | |
+| Page/offset-based pagination | | ✓ | ✓ | ✓ | | |
+| Cursor-based pagination | ✓ | | | | ✓ | ✓ |
+| URL-based pagination (auto-detected) | | | ✓ | ✓ | | |
+| Path parameter substitution | ✓ | | ✓ | ✓ | ✓ | ✓ |
+| Query parameter pushdown | ✓ | ✓ | | ✓ | ✓ | ✓ |
+| LIMIT pushdown | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| GeoJSON extraction (`object_path`) | ✓ | | | | | |
+| Nested response path (`response_path`) | ✓ | | | | | ✓ |
+| Bearer token / API key auth | | | | ✓ | | ✓ |
+| Query param auth (`api_key_location`) | | | | | ✓ | |
+| Custom headers | ✓ | | | ✓ | | |
+| Type coercion (int, bool, timestamptz) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| camelCase to snake_case matching | ✓ | | | | | ✓ |
+| Single object response | ✓ | | ✓ | ✓ | | ✓ |
+| Auto-detected wrapper key | | ✓ | ✓ | ✓ | | |
+| Debug mode | ✓ | ✓ | ✓ | ✓ | | ✓ |
+| `attrs` full JSON column | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
