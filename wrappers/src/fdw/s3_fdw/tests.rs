@@ -252,4 +252,37 @@ mod tests {
             assert_eq!(results, vec![(1, "Braund, Mr. Owen Harris")]);
         });
     }
+
+    // The backend must still respond to query cancel, statement_timeout and
+    // pg_terminate_backend() while waiting on a remote which never answers
+    #[pg_test]
+    fn s3_cancellable_while_remote_unresponsive() {
+        let server = crate::test_utils::UnresponsiveServer::start();
+        let port = server.port;
+        Spi::run(
+            r#"CREATE FOREIGN DATA WRAPPER s3_unresponsive_wrapper
+                 HANDLER s3_fdw_handler VALIDATOR s3_fdw_validator"#,
+        )
+        .unwrap();
+        Spi::run(&format!(
+            r#"CREATE SERVER s3_unresponsive_server
+                 FOREIGN DATA WRAPPER s3_unresponsive_wrapper
+                 OPTIONS (
+                   aws_access_key_id 'admin',
+                   aws_secret_access_key 'password',
+                   aws_region 'us-east-1',
+                   endpoint_url 'http://127.0.0.1:{port}',
+                   path_style_url 'true'
+                 )"#
+        ))
+        .unwrap();
+        Spi::run(
+            r#"CREATE FOREIGN TABLE s3_unresponsive_table (name text)
+                 SERVER s3_unresponsive_server
+                 OPTIONS (uri 's3://warehouse/test_data.csv', format 'csv', has_header 'true')"#,
+        )
+        .unwrap();
+
+        server.assert_cancellable("SELECT * FROM s3_unresponsive_table");
+    }
 }

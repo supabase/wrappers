@@ -1441,4 +1441,33 @@ mod tests {
             assert_pushed_down!(c, "SELECT SUM(amt) FROM sub_param WHERE filter_id = 2");
         });
     }
+
+    // The backend must still respond to query cancel, statement_timeout and
+    // pg_terminate_backend() while waiting on a remote which never answers
+    #[pg_test]
+    fn clickhouse_cancellable_while_remote_unresponsive() {
+        let server = crate::test_utils::UnresponsiveServer::start();
+        let port = server.port;
+        Spi::run(
+            r#"CREATE FOREIGN DATA WRAPPER clickhouse_unresponsive_wrapper
+                 HANDLER click_house_fdw_handler VALIDATOR click_house_fdw_validator"#,
+        )
+        .unwrap();
+        Spi::run(&format!(
+            r#"CREATE SERVER clickhouse_unresponsive_server
+                 FOREIGN DATA WRAPPER clickhouse_unresponsive_wrapper
+                 OPTIONS (
+                   conn_string 'tcp://default:default@127.0.0.1:{port}/default?connection_timeout=3600s&query_timeout=3600s&ping_timeout=3600s&retry_timeout=3600s'
+                 )"#
+        ))
+        .unwrap();
+        Spi::run(
+            r#"CREATE FOREIGN TABLE clickhouse_unresponsive_table (id bigint)
+                 SERVER clickhouse_unresponsive_server
+                 OPTIONS (table 'test_table')"#,
+        )
+        .unwrap();
+
+        server.assert_cancellable("SELECT * FROM clickhouse_unresponsive_table");
+    }
 }

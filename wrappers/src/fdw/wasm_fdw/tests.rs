@@ -1029,4 +1029,37 @@ mod tests {
             assert_eq!(costs, vec![0.0435, 0.0294]);
         });
     }
+
+    // The backend must still respond to query cancel, statement_timeout and
+    // pg_terminate_backend() while a Wasm FDW's HTTP request waits on a remote
+    // which never answers
+    #[pg_test]
+    fn wasm_cancellable_while_remote_unresponsive() {
+        let server = crate::test_utils::UnresponsiveServer::start();
+        let port = server.port;
+        Spi::run(
+            r#"CREATE FOREIGN DATA WRAPPER wasm_unresponsive_wrapper
+                 HANDLER wasm_fdw_handler VALIDATOR wasm_fdw_validator"#,
+        )
+        .unwrap();
+        Spi::run(&format!(
+            r#"CREATE SERVER wasm_unresponsive_server
+                 FOREIGN DATA WRAPPER wasm_unresponsive_wrapper
+                 OPTIONS (
+                   fdw_package_url 'file://../../../target/wasm32-unknown-unknown/release/paddle_fdw.wasm',
+                   fdw_package_name 'supabase:paddle-fdw',
+                   fdw_package_version '>=0.1.0',
+                   api_url 'http://127.0.0.1:{port}/paddle',
+                   api_key '1234567890'
+                 )"#
+        ))
+        .unwrap();
+        Spi::run("CREATE SCHEMA wasm_unresponsive").unwrap();
+        Spi::run(
+            "IMPORT FOREIGN SCHEMA paddle FROM SERVER wasm_unresponsive_server INTO wasm_unresponsive",
+        )
+        .unwrap();
+
+        server.assert_cancellable("SELECT * FROM wasm_unresponsive.customers");
+    }
 }

@@ -35,6 +35,8 @@ pub mod fdw;
 pub mod stats;
 
 mod supabase_wrappers_tests;
+#[cfg(any(test, feature = "pg_test"))]
+mod test_utils;
 
 #[cfg(test)]
 pub mod pg_test {

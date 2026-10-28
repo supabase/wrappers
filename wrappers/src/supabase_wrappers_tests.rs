@@ -574,31 +574,6 @@ mod tests {
     // as statement_timeout and pg_terminate_backend).
     #[pg_test]
     fn runtime_block_on_is_interruptible() {
-        // pg_cancel_backend() delivers SIGINT, do the same from a helper thread
-        // once the backend is blocked. The thread blocks the signal itself so
-        // it's delivered to the backend's main thread.
-        let pid = std::process::id() as libc::pid_t;
-        std::thread::spawn(move || unsafe {
-            let mut set = std::mem::MaybeUninit::<libc::sigset_t>::uninit();
-            libc::sigfillset(set.as_mut_ptr());
-            libc::pthread_sigmask(libc::SIG_BLOCK, set.as_ptr(), std::ptr::null_mut());
-            std::thread::sleep(std::time::Duration::from_secs(1));
-            libc::kill(pid, libc::SIGINT);
-        });
-
-        let start = std::time::Instant::now();
-        let result = std::panic::catch_unwind(|| {
-            Spi::get_one::<bool>("SELECT tests.wrappers_block_on_forever()")
-        });
-        let elapsed = start.elapsed();
-
-        assert!(
-            result.is_err(),
-            "expected the blocked query to be cancelled"
-        );
-        assert!(
-            elapsed < std::time::Duration::from_secs(10),
-            "query cancel was not serviced while blocked, took {elapsed:?}"
-        );
+        crate::test_utils::assert_cancellable("SELECT tests.wrappers_block_on_forever()");
     }
 }

@@ -839,4 +839,33 @@ mod tests {
             assert_eq!(label.as_deref(), Some("alpha"));
         });
     }
+
+    // The backend must still respond to query cancel, statement_timeout and
+    // pg_terminate_backend() while waiting on a remote which never answers
+    #[pg_test]
+    fn mongodb_cancellable_while_remote_unresponsive() {
+        let server = crate::test_utils::UnresponsiveServer::start();
+        let port = server.port;
+        Spi::run(
+            r#"CREATE FOREIGN DATA WRAPPER mongodb_unresponsive_wrapper
+                 HANDLER mongodb_fdw_handler VALIDATOR mongodb_fdw_validator"#,
+        )
+        .unwrap();
+        Spi::run(&format!(
+            r#"CREATE SERVER mongodb_unresponsive_server
+                 FOREIGN DATA WRAPPER mongodb_unresponsive_wrapper
+                 OPTIONS (
+                   conn_string 'mongodb://127.0.0.1:{port}/?directConnection=true&serverSelectionTimeoutMS=3600000&connectTimeoutMS=3600000'
+                 )"#
+        ))
+        .unwrap();
+        Spi::run(
+            r#"CREATE FOREIGN TABLE mongodb_unresponsive_table (_id text)
+                 SERVER mongodb_unresponsive_server
+                 OPTIONS (database 'testdb', collection 'users')"#,
+        )
+        .unwrap();
+
+        server.assert_cancellable("SELECT * FROM mongodb_unresponsive_table");
+    }
 }
