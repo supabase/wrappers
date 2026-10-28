@@ -47,6 +47,9 @@ impl S3ParquetReader {
         }
     }
 
+    // FIXME: blocks inside an async context without servicing Postgres
+    // interrupts, to be reworked so it yields instead
+    #[allow(clippy::disallowed_methods)]
     fn get_object_size(&mut self) -> IoResult<u64> {
         if let Some(object_size) = self.object_size {
             return Ok(object_size);
@@ -74,6 +77,9 @@ impl S3ParquetReader {
 }
 
 impl AsyncRead for S3ParquetReader {
+    // FIXME: blocks inside an async context without servicing Postgres
+    // interrupts, to be reworked so it yields instead
+    #[allow(clippy::disallowed_methods)]
     fn poll_read(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
@@ -173,6 +179,9 @@ impl S3Parquet {
     //
     // This is done by spawning a thread to create builder and then get read stream
     // Note: this function should be called on a tokio runtime executor thread
+    // FIXME: blocks inside an async context without servicing Postgres
+    // interrupts, to be reworked so it yields instead
+    #[allow(clippy::disallowed_methods)]
     pub(super) async fn open_async_stream(
         &mut self,
         client: &s3::Client,

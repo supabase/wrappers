@@ -8407,6 +8407,7 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 name = "supabase-wrappers"
 version = "0.2.4"
 dependencies = [
+ "libc",
  "pgrx",
  "supabase-wrappers-macros",
  "thiserror 1.0.69",
@@ -10742,7 +10743,6 @@ dependencies = [
  "chrono",
  "chrono-tz 0.6.3",
  "clickhouse-rs",
- "crossbeam",
  "csv",
  "dirs",
  "duckdb",
@@ -10756,6 +10756,7 @@ dependencies = [
  "iceberg-catalog-rest",
  "iceberg-catalog-s3tables",
  "jwt-simple",
+ "libc",
  "mongodb",
  "mysql_async",
  "num-traits 0.2.19",

@@ -4,13 +4,13 @@ mod tests {
     use bson::{Document, doc};
     use mongodb::Client;
     use pgrx::prelude::*;
-    use supabase_wrappers::prelude::create_async_runtime;
+    use supabase_wrappers::prelude::{Runtime, create_async_runtime};
 
     const MONGO_URI: &str = "mongodb://localhost:27017";
 
     /// Set up a named users-style collection, dropping it first for idempotency.
     /// Each test passes a unique collection name to avoid parallel-run collisions.
-    fn setup_mongo_users(rt: &tokio::runtime::Runtime, coll_name: &str) {
+    fn setup_mongo_users(rt: &Runtime, coll_name: &str) {
         rt.block_on(async {
             let client = Client::with_uri_str(MONGO_URI).await.unwrap();
             let db = client.database("testdb");

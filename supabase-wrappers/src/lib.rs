@@ -295,6 +295,7 @@
 pub mod interface;
 pub mod options;
 pub mod qual;
+pub mod runtime;
 pub mod utils;
 
 /// The prelude includes all necessary imports to make Wrappers work
@@ -303,9 +304,9 @@ pub mod prelude {
     pub use crate::instance::ForeignServer;
     pub use crate::interface::*;
     pub use crate::options::*;
+    pub use crate::runtime::Runtime;
     pub use crate::utils::*;
     pub use crate::wrappers_fdw;
-    pub use tokio::runtime::Runtime;
 }
 
 use pgrx::AllocatedByPostgres;

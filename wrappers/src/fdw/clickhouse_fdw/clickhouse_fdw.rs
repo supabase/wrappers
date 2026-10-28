@@ -8,7 +8,6 @@ use clickhouse_rs::{
     types::Value as ChValue,
     types::{i256, u256},
 };
-use crossbeam::channel;
 use futures_util::stream::StreamExt;
 use pgrx::pg_sys;
 use pgrx::{PgBuiltInOids, datum::numeric::AnyNumeric};
@@ -17,10 +16,7 @@ use regex::{Captures, Regex};
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
-use tokio::{
-    runtime::{Builder, Runtime},
-    task::JoinHandle,
-};
+use tokio::{sync::mpsc, task::JoinHandle};
 use uuid::Uuid;
 
 use supabase_wrappers::prelude::*;
@@ -373,7 +369,7 @@ pub(crate) struct ClickHouseFdw {
     conn_str: String,
 
     // streaming components
-    row_receiver: Option<channel::Receiver<ClickHouseFdwResult<Option<ConvertedRow>>>>,
+    row_receiver: Option<mpsc::Receiver<ClickHouseFdwResult<Option<ConvertedRow>>>>,
     streaming_task: Option<JoinHandle<()>>,
 
     // current state
@@ -574,9 +570,10 @@ impl ClickHouseFdw {
     }
 
     fn fetch_next_row(&mut self) -> ClickHouseFdwResult<()> {
-        if let Some(ref rx) = self.row_receiver {
-            match rx.recv() {
-                Ok(row_result) => match row_result {
+        let rt = self.rt;
+        if let Some(ref mut rx) = self.row_receiver {
+            match rt.block_on(rx.recv()) {
+                Some(row_result) => match row_result {
                     Ok(Some(mut row)) => {
                         // got a valid row from sender, and then do the numeric
                         // column conversion because sender is unable
@@ -608,7 +605,7 @@ impl ClickHouseFdw {
                         Err(e)
                     }
                 },
-                Err(_) => {
+                None => {
                     // channel disconnected - streaming is complete or error occurred
                     self.current_row_data = None;
                     self.is_scan_complete = true;
@@ -627,7 +624,7 @@ impl ClickHouseFdw {
     fn setup_streaming(&mut self) -> ClickHouseFdwResult<()> {
         // Create bounded channel
         let (tx, rx) =
-            channel::bounded::<ClickHouseFdwResult<Option<ConvertedRow>>>(self.stream_buffer_size);
+            mpsc::channel::<ClickHouseFdwResult<Option<ConvertedRow>>>(self.stream_buffer_size);
         self.row_receiver = Some(rx);
 
         // Clone data needed by the async task
@@ -651,13 +648,19 @@ impl ClickHouseFdw {
     }
 }
 
+impl Drop for ClickHouseFdw {
+    fn drop(&mut self) {
+        // the runtime is shared and outlives this instance, so the streaming
+        // task has to be stopped explicitly
+        if let Some(task) = self.streaming_task.take() {
+            task.abort();
+        }
+    }
+}
+
 impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
     fn new(server: ForeignServer) -> ClickHouseFdwResult<Self> {
-        let rt = Builder::new_multi_thread()
-            .worker_threads(1)
-            .enable_all()
-            .build()
-            .map_err(CreateRuntimeError::from)?;
+        let rt = create_async_runtime()?;
         let conn_str = match server.options.get("conn_string") {
             Some(conn_str) => conn_str.to_owned(),
             None => {
@@ -1154,7 +1157,7 @@ async fn stream_data_to_channel(
     sql: String,
     tgt_cols: Vec<Column>,
     params: Vec<Qual>,
-    tx: channel::Sender<ClickHouseFdwResult<Option<ConvertedRow>>>,
+    tx: mpsc::Sender<ClickHouseFdwResult<Option<ConvertedRow>>>,
 ) {
     let client_result = async {
         let pool = Pool::new(conn_str);
@@ -1166,7 +1169,7 @@ async fn stream_data_to_channel(
         Ok(client) => client,
         Err(e) => {
             // send the connection error through the channel
-            let _ = tx.send(Err(e));
+            let _ = tx.send(Err(e)).await;
             return;
         }
     };
@@ -1178,24 +1181,24 @@ async fn stream_data_to_channel(
             Ok(src_row) => {
                 match convert_row_simple(&src_row, &tgt_cols, &params) {
                     Ok(converted_row) => {
-                        if tx.send(Ok(Some(converted_row))).is_err() {
+                        if tx.send(Ok(Some(converted_row))).await.is_err() {
                             // receiver dropped, stop streaming
                             return;
                         }
                     }
                     Err(e) => {
-                        let _ = tx.send(Err(e));
+                        let _ = tx.send(Err(e)).await;
                         return;
                     }
                 }
             }
             Err(e) => {
-                let _ = tx.send(Err(ClickHouseFdwError::from(e)));
+                let _ = tx.send(Err(ClickHouseFdwError::from(e))).await;
                 return;
             }
         }
     }
 
     // send end-of-stream marker to signal that no more data is coming
-    let _ = tx.send(Ok(None));
+    let _ = tx.send(Ok(None)).await;
 }
