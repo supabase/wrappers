@@ -420,7 +420,7 @@ For APIs with very strict rate limits, consider using materialized views to cach
 
 ## Examples
 
-For additional real-world examples with multiple tables, pagination, and advanced features, see the **[examples directory on GitHub](https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/openapi_fdw/examples)**. There are step-by-step walkthroughs for querying the NWS Weather API, PokéAPI, CarAPI, GitHub, and Threads.
+For additional real-world examples with multiple tables, pagination, and advanced features, see the **[examples directory on GitHub](https://github.com/supabase/wrappers/tree/main/wasm-wrappers/fdw/openapi_fdw/examples)**. There are step-by-step walkthroughs for querying the NWS Weather API, PokéAPI, CarAPI, GitHub, Threads, and Xquik.
 
 ### Basic Query
 

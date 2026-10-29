@@ -14,7 +14,7 @@ WASM_BIN="../target/wasm32-unknown-unknown/release/openapi_fdw.wasm"
 
 CLEANUP=true
 EXAMPLES=()
-ALL_EXAMPLES=(nws carapi pokeapi github threads)
+ALL_EXAMPLES=(nws carapi pokeapi github threads xquik)
 COMPOSE="test/docker-compose.yml"
 
 while [[ $# -gt 0 ]]; do
@@ -28,7 +28,7 @@ while [[ $# -gt 0 ]]; do
       echo "Options:"
       echo "  --no-cleanup  Keep Docker container running after tests"
       echo ""
-      echo "Authenticated examples (github, threads) require tokens in test/.env."
+      echo "Authenticated examples (github, threads, xquik) require tokens in test/.env."
       echo "See test/.env.example for the template."
       exit 0
       ;;
@@ -137,6 +137,13 @@ check_auth() {
         exit 1
       fi
       ;;
+    xquik)
+      if [ -z "${XQUIK_API_KEY:-}" ]; then
+        echo "ERROR: XQUIK_API_KEY not set."
+        echo "  cp test/.env.example test/.env  # then add your key"
+        exit 1
+      fi
+      ;;
   esac
 }
 
@@ -191,6 +198,12 @@ load_example() {
         ALTER SERVER threads OPTIONS (SET api_key '${THREADS_ACCESS_TOKEN}');
         ALTER SERVER threads_debug OPTIONS (SET api_key '${THREADS_ACCESS_TOKEN}');
         ALTER SERVER threads_import OPTIONS (SET api_key '${THREADS_ACCESS_TOKEN}');
+      " > /dev/null 2>&1
+      ;;
+    xquik)
+      psql_cmd -c "
+        ALTER SERVER xquik OPTIONS (SET api_key '${XQUIK_API_KEY}');
+        ALTER SERVER xquik_debug OPTIONS (SET api_key '${XQUIK_API_KEY}');
       " > /dev/null 2>&1
       ;;
   esac
@@ -591,6 +604,52 @@ verify_threads() {
   run_test "Extra fields in attrs" \
     "SELECT id, attrs->>'media_product_type' AS product_type FROM my_threads LIMIT 3;" \
     "THREADS"
+}
+
+verify_xquik() {
+  echo "=== Xquik API ==="
+  echo ""
+
+  echo "Profile (path param, single object):"
+  run_test "Fetch @NASA" \
+    "SELECT username, id, followers FROM x_user WHERE username = 'NASA';" \
+    "(1 row)"
+  run_test "Parse created_at" \
+    "SELECT to_timestamp(created_at, 'Dy Mon DD HH24:MI:SS +0000 YYYY') FROM x_user WHERE username = 'NASA';" \
+    "2007"
+
+  echo ""
+  echo "Posts (path param + cursor pagination):"
+  run_count_test "Has posts" \
+    "SELECT count(*) FROM (SELECT 1 FROM user_tweets WHERE account = 'NASA' LIMIT 5) t;" \
+    1
+  run_test "camelCase keys" \
+    "SELECT like_count FROM user_tweets WHERE account = 'NASA' LIMIT 1;" \
+    "like_count"
+
+  echo ""
+  echo "Search (query pushdown):"
+  run_test "Search from:NASA" \
+    "SELECT author ->> 'username' FROM search_tweets WHERE q = 'from:NASA' LIMIT 3;" \
+    "NASA"
+
+  echo ""
+  echo "Followers (path param + cursor pagination):"
+  run_count_test "Has followers" \
+    "SELECT count(*) FROM (SELECT 1 FROM user_followers WHERE account = 'NASA' LIMIT 5) t;" \
+    1
+
+  echo ""
+  echo "Trends (response_path):"
+  run_count_test "Has trends" \
+    "SELECT count(*) FROM (SELECT 1 FROM trends LIMIT 5) t;" \
+    1
+
+  echo ""
+  echo "Debug Mode:"
+  run_test "HTTP request details" \
+    "SELECT id FROM search_tweets_debug WHERE q = 'from:NASA' LIMIT 1;" \
+    "HTTP GET"
 }
 
 # ---------------------------------------------------------------------------
