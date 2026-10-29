@@ -204,6 +204,6 @@ INFO:  [openapi_fdw] Scan complete: 1 rows, 2 columns
 
 ## 7. Every Read Operation
 
-[supabase-xquik](https://github.com/Xquik-dev/supabase-xquik) creates 1 foreign table for each public Xquik read, from the same spec. It also calls write operations from SQL & checks webhook signatures in an Edge Function.
+[xquik-supabase](https://github.com/Xquik-dev/xquik-supabase) creates 1 foreign table for each public Xquik read, from the same spec. It also calls write operations from SQL & checks webhook signatures in an Edge Function.
 
 Don't run `IMPORT FOREIGN SCHEMA` on the full Xquik spec. It also imports write operations as POST tables & the event stream, which never ends.
