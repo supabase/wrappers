@@ -984,3 +984,57 @@ fn test_link_header_empty_or_malformed() {
     fdw.handle_pagination(&resp, &headers);
     assert!(fdw.pagination.next.is_none());
 }
+
+#[test]
+fn test_link_header_quoted_semicolon_in_param() {
+    // A quoted parameter value containing a semicolon (e.g. title="a;rel=next")
+    // must not split the parameter list and wrongly identify rel=next when rel is actually "last".
+    let mut fdw = make_fdw_for_pagination("");
+    let resp = serde_json::json!({});
+    let headers = vec![h(
+        "Link",
+        "<https://api.example.com/x>; title=\"a;rel=next\"; rel=\"last\"",
+    )];
+    fdw.handle_pagination(&resp, &headers);
+    assert!(
+        fdw.pagination.next.is_none(),
+        "Expected no next URL because rel is 'last', but got: {:?}",
+        fdw.pagination.next
+    );
+}
+
+#[test]
+fn test_link_header_quoted_semicolon_with_valid_next() {
+    // Semicolons inside other parameters must not disrupt finding rel="next".
+    let mut fdw = make_fdw_for_pagination("");
+    let resp = serde_json::json!({});
+    let headers = vec![h(
+        "Link",
+        "<https://api.example.com/x>; title=\"item 1; item 2; item 3\"; rel=\"next\"",
+    )];
+    fdw.handle_pagination(&resp, &headers);
+    assert_eq!(
+        fdw.pagination.next,
+        Some(PaginationToken::Url(
+            "https://api.example.com/x".to_string()
+        ))
+    );
+}
+
+#[test]
+fn test_link_header_escaped_quote_in_param() {
+    // Backslash-escaped quotes inside parameters must not disrupt quote state.
+    let mut fdw = make_fdw_for_pagination("");
+    let resp = serde_json::json!({});
+    let headers = vec![h(
+        "Link",
+        "<https://api.example.com/x>; title=\"item \\\"foo;bar\\\"\"; rel=\"next\"",
+    )];
+    fdw.handle_pagination(&resp, &headers);
+    assert_eq!(
+        fdw.pagination.next,
+        Some(PaginationToken::Url(
+            "https://api.example.com/x".to_string()
+        ))
+    );
+}
