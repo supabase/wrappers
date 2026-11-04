@@ -238,6 +238,13 @@ unsafe fn extract_group_by_columns(
             return Some(group_by);
         }
 
+        // GROUPING SETS / ROLLUP / CUBE produce extra grouping levels (e.g. the
+        // ROLLUP total row) that a plain remote GROUP BY cannot express.
+        if !(*parse).groupingSets.is_null() {
+            debug2!("GROUPING SETS present, skipping pushdown");
+            return None;
+        }
+
         let group_clause = (*parse).groupClause;
         if group_clause.is_null() || (*group_clause).length == 0 {
             return Some(group_by);

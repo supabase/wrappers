@@ -827,6 +827,38 @@ mod tests {
                 "SELECT upper(status), COUNT(*) FROM mysql_agg.orders GROUP BY status"
             );
 
+            // --- GROUPING SETS / ROLLUP must stay local ---
+            // ROLLUP adds a grand total row (status NULL) on top of the groups.
+            let mut rows: Vec<(Option<String>, i64)> = c
+                .select(
+                    "SELECT status, COUNT(*) AS cnt FROM mysql_agg.orders GROUP BY ROLLUP(status)",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .map(|r| {
+                    let st = r
+                        .get_by_name::<&str, _>("status")
+                        .unwrap()
+                        .map(str::to_string);
+                    let n = r.get_by_name::<i64, _>("cnt").unwrap().unwrap();
+                    (st, n)
+                })
+                .collect();
+            rows.sort();
+            assert_eq!(
+                rows,
+                vec![
+                    (None, 5),
+                    (Some("active".to_string()), 3),
+                    (Some("inactive".to_string()), 2)
+                ]
+            );
+            assert_not_pushed_down!(
+                c,
+                "SELECT status, COUNT(*) FROM mysql_agg.orders GROUP BY ROLLUP(status)"
+            );
+
             // --- Constant in the target list must stay local ---
             let (one, n) = c
                 .select(
