@@ -739,6 +739,123 @@ mod tests {
                 c,
                 "SELECT status, SUM(amount) FROM mysql_agg.orders_sub GROUP BY status"
             );
+
+            // --- Expression over an aggregate mixed with other aggregates ---
+            // `max(id)::text` is not a bare Aggref, so the whole aggregation must
+            // stay local; pushing down only count(*) used to write an int8 into
+            // the text column and crash the backend.
+            let (mx, n) = c
+                .select(
+                    "SELECT max(id)::text AS mx, count(*) AS n FROM mysql_agg.orders",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .first()
+                .get_two::<&str, i64>()
+                .unwrap();
+            assert_eq!((mx, n), (Some("5"), Some(5)));
+            assert_not_pushed_down!(
+                c,
+                "SELECT max(id)::text AS mx, count(*) AS n FROM mysql_agg.orders"
+            );
+
+            // reversed order used to return NULL for max silently
+            let (n, mx) = c
+                .select(
+                    "SELECT count(*) AS n, max(id)::text AS mx FROM mysql_agg.orders",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .first()
+                .get_two::<i64, &str>()
+                .unwrap();
+            assert_eq!((n, mx), (Some(5), Some("5")));
+
+            // --- Aggregate listed before its GROUP BY column ---
+            // The FDW returns GROUP BY columns first; results must still land in
+            // the right output columns.
+            let rows: Vec<(i64, String)> = c
+                .select(
+                    "SELECT COUNT(*) AS cnt, status FROM mysql_agg.orders
+                     GROUP BY status ORDER BY status",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .map(|r| {
+                    let n = r.get_by_name::<i64, _>("cnt").unwrap().unwrap();
+                    let st = r
+                        .get_by_name::<&str, _>("status")
+                        .unwrap()
+                        .unwrap()
+                        .to_string();
+                    (n, st)
+                })
+                .collect();
+            assert_eq!(
+                rows,
+                vec![(3, "active".to_string()), (2, "inactive".to_string())]
+            );
+            assert_pushed_down!(
+                c,
+                "SELECT COUNT(*), status FROM mysql_agg.orders GROUP BY status"
+            );
+
+            // --- Expression over a GROUP BY column must stay local ---
+            let rows: Vec<(String, i64)> = c
+                .select(
+                    "SELECT upper(status) AS st, COUNT(*) AS cnt FROM mysql_agg.orders
+                     GROUP BY status ORDER BY 1",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .map(|r| {
+                    let st = r.get_by_name::<&str, _>("st").unwrap().unwrap().to_string();
+                    let n = r.get_by_name::<i64, _>("cnt").unwrap().unwrap();
+                    (st, n)
+                })
+                .collect();
+            assert_eq!(
+                rows,
+                vec![("ACTIVE".to_string(), 3), ("INACTIVE".to_string(), 2)]
+            );
+            assert_not_pushed_down!(
+                c,
+                "SELECT upper(status), COUNT(*) FROM mysql_agg.orders GROUP BY status"
+            );
+
+            // --- Constant in the target list must stay local ---
+            let (one, n) = c
+                .select(
+                    "SELECT 1 AS one, COUNT(*) AS n FROM mysql_agg.orders",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .first()
+                .get_two::<i32, i64>()
+                .unwrap();
+            assert_eq!((one, n), (Some(1), Some(5)));
+            assert_not_pushed_down!(c, "SELECT 1, COUNT(*) FROM mysql_agg.orders");
+
+            // --- GROUP BY column not in the select list ---
+            // The grouping column is still carried in the upper rel target list,
+            // so pushdown applies and only the aggregate is returned.
+            let mut counts: Vec<i64> = c
+                .select(
+                    "SELECT COUNT(*) AS cnt FROM mysql_agg.orders GROUP BY status",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .map(|r| r.get_by_name::<i64, _>("cnt").unwrap().unwrap())
+                .collect();
+            counts.sort();
+            assert_eq!(counts, vec![2, 3]);
+            assert_pushed_down!(c, "SELECT COUNT(*) FROM mysql_agg.orders GROUP BY status");
         });
     }
 
