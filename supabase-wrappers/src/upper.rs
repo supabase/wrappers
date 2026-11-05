@@ -9,7 +9,7 @@ use std::ptr;
 
 use crate::interface::{Aggregate, AggregateKind, Column};
 use crate::prelude::ForeignDataWrapper;
-use crate::scan::FdwState;
+use crate::scan::{FdwState, aggregate_output_attnos};
 
 /// Helper to iterate over a pg_sys::List using raw pointer access.
 /// Returns an iterator over pointers to the list elements.
@@ -196,6 +196,12 @@ unsafe fn extract_aggregates(
                     alias: format!("agg_{}", resno + 1),
                     type_oid: (*aggref).aggtype,
                 });
+            } else if (*expr).type_ != pg_sys::NodeTag::T_Var {
+                // Expressions over aggregates (e.g. `max(ts)::text`) or other
+                // computed outputs cannot be returned by the remote side as-is,
+                // so leave the whole aggregation to Postgres.
+                debug2!("Target list has a non-aggregate expression, skipping pushdown");
+                return None;
             }
         }
 
@@ -230,6 +236,13 @@ unsafe fn extract_group_by_columns(
         let parse = (*root).parse;
         if parse.is_null() {
             return Some(group_by);
+        }
+
+        // GROUPING SETS / ROLLUP / CUBE produce extra grouping levels (e.g. the
+        // ROLLUP total row) that a plain remote GROUP BY cannot express.
+        if !(*parse).groupingSets.is_null() {
+            debug2!("GROUPING SETS present, skipping pushdown");
+            return None;
         }
 
         let group_clause = (*parse).groupClause;
@@ -306,6 +319,25 @@ pub(super) extern "C-unwind" fn get_foreign_upper_paths<
             return;
         }
 
+        // The remote side aggregates over the rows matching the pushed-down quals
+        // only, so every restriction must have been turned into a qual. Otherwise
+        // a WHERE clause that cannot be pushed down (e.g. `lower(col) = 'x'` or
+        // `a > b`) would be silently dropped and the aggregate would cover rows
+        // Postgres should have filtered out.
+        if (*input_rel).reloptkind != pg_sys::RelOptKind::RELOPT_BASEREL {
+            return;
+        }
+        let restrictions = (*input_rel).baserestrictinfo;
+        let restriction_cnt = if restrictions.is_null() {
+            0
+        } else {
+            (*restrictions).length as usize
+        };
+        if restriction_cnt != state.quals.len() {
+            debug2!("Not all quals can be pushed down, skipping aggregate pushdown");
+            return;
+        }
+
         // Extract aggregates from the query
         let aggregates = match extract_aggregates(root, output_rel, extra) {
             Some(aggs) => aggs,
@@ -335,6 +367,13 @@ pub(super) extern "C-unwind" fn get_foreign_upper_paths<
         // Check if GROUP BY is supported (if present)
         if !group_by.is_empty() && !W::supports_group_by() {
             debug2!("GROUP BY not supported, skipping pushdown");
+            return;
+        }
+
+        // Every target list entry must map to exactly one pushed-down output,
+        // otherwise get_foreign_plan cannot place the remote results correctly.
+        if aggregate_output_attnos((*output_rel).reltarget, &group_by, &aggregates).is_none() {
+            debug2!("Target list does not match pushed-down outputs, skipping pushdown");
             return;
         }
 
