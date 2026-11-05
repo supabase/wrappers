@@ -319,6 +319,25 @@ pub(super) extern "C-unwind" fn get_foreign_upper_paths<
             return;
         }
 
+        // The remote side aggregates over the rows matching the pushed-down quals
+        // only, so every restriction must have been turned into a qual. Otherwise
+        // a WHERE clause that cannot be pushed down (e.g. `lower(col) = 'x'` or
+        // `a > b`) would be silently dropped and the aggregate would cover rows
+        // Postgres should have filtered out.
+        if (*input_rel).reloptkind != pg_sys::RelOptKind::RELOPT_BASEREL {
+            return;
+        }
+        let restrictions = (*input_rel).baserestrictinfo;
+        let restriction_cnt = if restrictions.is_null() {
+            0
+        } else {
+            (*restrictions).length as usize
+        };
+        if restriction_cnt != state.quals.len() {
+            debug2!("Not all quals can be pushed down, skipping aggregate pushdown");
+            return;
+        }
+
         // Extract aggregates from the query
         let aggregates = match extract_aggregates(root, output_rel, extra) {
             Some(aggs) => aggs,

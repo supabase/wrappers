@@ -859,6 +859,31 @@ mod tests {
                 "SELECT status, COUNT(*) FROM mysql_agg.orders GROUP BY ROLLUP(status)"
             );
 
+            // --- WHERE clauses that cannot be pushed down must disable pushdown ---
+            // otherwise the remote side aggregates over the unfiltered table
+            for (sql, expected) in [
+                // active: 3 rows, inactive: 2 rows
+                (
+                    "SELECT COUNT(*) FROM mysql_agg.orders WHERE lower(status) = 'active'",
+                    3,
+                ),
+                // (id, amount): (1,100) (2,50) (3,200) (4,75) (5,150) -> ids 1 and 3
+                (
+                    "SELECT COUNT(*) FROM mysql_agg.orders WHERE amount > id * 40",
+                    2,
+                ),
+            ] {
+                let n: i64 = c
+                    .select(sql, None, &[])
+                    .unwrap()
+                    .first()
+                    .get_one::<i64>()
+                    .unwrap()
+                    .unwrap();
+                assert_eq!(n, expected, "wrong count for [{sql}]");
+                assert_not_pushed_down!(c, sql);
+            }
+
             // --- Constant in the target list must stay local ---
             let (one, n) = c
                 .select(
