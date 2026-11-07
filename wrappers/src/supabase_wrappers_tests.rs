@@ -513,4 +513,202 @@ mod tests {
             }
         });
     }
+
+    // ==========================================================================
+    // Regression tests: https://github.com/supabase/wrappers/issues/657
+    // ==========================================================================
+
+    #[wrappers_fdw(
+        version = "0.1.0",
+        author = "Supabase",
+        website = "https://github.com/supabase/wrappers",
+        error_type = "WholeRowTestFdwError"
+    )]
+    struct WholeRowTestFdw {
+        rows: Vec<(i64, &'static str)>,
+        row_idx: usize,
+        tgt_cols: Vec<Column>,
+    }
+
+    enum WholeRowTestFdwError {}
+
+    impl From<WholeRowTestFdwError> for ErrorReport {
+        fn from(_value: WholeRowTestFdwError) -> Self {
+            ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, "", "")
+        }
+    }
+
+    impl ForeignDataWrapper<WholeRowTestFdwError> for WholeRowTestFdw {
+        fn new(_server: ForeignServer) -> Result<Self, WholeRowTestFdwError> {
+            Ok(Self {
+                rows: vec![(1, "alice"), (2, "bob")],
+                row_idx: 0,
+                tgt_cols: Vec::new(),
+            })
+        }
+
+        fn begin_scan(
+            &mut self,
+            _quals: &[Qual],
+            columns: &[Column],
+            _sorts: &[Sort],
+            _limit: &Option<Limit>,
+            _options: &HashMap<String, String>,
+        ) -> Result<(), WholeRowTestFdwError> {
+            self.row_idx = 0;
+            self.tgt_cols = columns.to_vec();
+            Ok(())
+        }
+
+        fn iter_scan(&mut self, row: &mut Row) -> Result<Option<()>, WholeRowTestFdwError> {
+            if self.row_idx >= self.rows.len() {
+                return Ok(None);
+            }
+
+            let (id, name) = self.rows[self.row_idx];
+            for col in &self.tgt_cols {
+                match col.name.as_str() {
+                    "id" => row.push("id", Some(Cell::I64(id))),
+                    "name" => row.push("name", Some(Cell::String(name.to_string()))),
+                    _ => {}
+                }
+            }
+
+            self.row_idx += 1;
+            Ok(Some(()))
+        }
+
+        fn end_scan(&mut self) -> Result<(), WholeRowTestFdwError> {
+            Ok(())
+        }
+    }
+
+    fn setup_whole_row_test(c: &mut pgrx::spi::SpiClient) {
+        c.update(
+            r#"create foreign data wrapper whole_row_test_wrapper
+               handler whole_row_test_fdw_handler validator whole_row_test_fdw_validator"#,
+            None,
+            &[],
+        )
+        .unwrap();
+        c.update(
+            r#"create server whole_row_test_server foreign data wrapper whole_row_test_wrapper"#,
+            None,
+            &[],
+        )
+        .unwrap();
+        c.update(
+            r#"create foreign table whole_row_test_table (id bigint, name text)
+               server whole_row_test_server"#,
+            None,
+            &[],
+        )
+        .unwrap();
+    }
+
+    #[pg_test]
+    fn whole_row_reference_fetches_all_columns() {
+        Spi::connect_mut(|c| {
+            setup_whole_row_test(c);
+
+            let rows = c
+                .select(
+                    "select t::text from whole_row_test_table t order by id",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|r| r.get::<String>(1).unwrap())
+                .collect::<Vec<_>>();
+
+            assert_eq!(rows, vec!["(1,alice)", "(2,bob)"]);
+        });
+    }
+
+    #[pg_test]
+    fn whole_row_reference_in_where_fetches_all_columns() {
+        Spi::connect_mut(|c| {
+            setup_whole_row_test(c);
+
+            let ids = c
+                .select(
+                    r#"select id from whole_row_test_table t
+                       where t::text like '%bob%' order by id"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|r| r.get::<i64>(1).unwrap())
+                .collect::<Vec<_>>();
+
+            assert_eq!(ids, vec![2]);
+        });
+    }
+
+    #[pg_test]
+    fn system_column_is_not_added_to_target_columns() {
+        Spi::connect_mut(|c| {
+            setup_whole_row_test(c);
+
+            let matches = c
+                .select(
+                    r#"select tableoid = 'whole_row_test_table'::regclass
+                       from whole_row_test_table limit 1"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .first()
+                .get_one::<bool>()
+                .unwrap();
+
+            assert_eq!(matches, Some(true));
+        });
+    }
+
+    #[pg_test]
+    fn whole_row_reference_through_partition_fetches_all_columns() {
+        Spi::connect_mut(|c| {
+            setup_whole_row_test(c);
+            c.update(
+                r#"create table whole_row_test_parent (id bigint, name text)
+                   partition by range (id)"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"create foreign table whole_row_test_partition
+                   partition of whole_row_test_parent for values from (0) to (100)
+                   server whole_row_test_server"#,
+                None,
+                &[],
+            )
+            .unwrap();
+
+            let rows = c
+                .select(
+                    "select p::text from whole_row_test_parent p order by id",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|r| r.get::<String>(1).unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(rows, vec!["(1,alice)", "(2,bob)"]);
+
+            let matches = c
+                .select(
+                    r#"select tableoid = 'whole_row_test_partition'::regclass
+                       from whole_row_test_parent limit 1"#,
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .first()
+                .get_one::<bool>()
+                .unwrap();
+            assert_eq!(matches, Some(true));
+        });
+    }
 }
