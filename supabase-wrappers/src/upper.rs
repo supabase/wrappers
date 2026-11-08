@@ -306,6 +306,25 @@ pub(super) extern "C-unwind" fn get_foreign_upper_paths<
             return;
         }
 
+        // Nothing above a pushed-down aggregate re-checks the scan's restrictions,
+        // so every one of them must have reached the FDW as a qual.
+        let restrictions = (*input_rel).baserestrictinfo;
+        let num_restrictions = if restrictions.is_null() {
+            0
+        } else {
+            (*restrictions).length as usize
+        };
+        if state.quals.len() != num_restrictions {
+            debug2!("WHERE clause has conditions not extracted as quals, skipping pushdown");
+            return;
+        }
+
+        // The pushed-down scan returns a single grouping, not one per set
+        if !(*(*root).parse).groupingSets.is_null() {
+            debug2!("GROUPING SETS present, skipping aggregate pushdown");
+            return;
+        }
+
         // Extract aggregates from the query
         let aggregates = match extract_aggregates(root, output_rel, extra) {
             Some(aggs) => aggs,

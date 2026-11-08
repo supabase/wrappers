@@ -1254,6 +1254,44 @@ mod tests {
                 c,
                 "SELECT id + 1 AS g, COUNT(*) FROM agg_test GROUP BY id + 1"
             );
+
+            // WHERE condition that is not extracted as a qual: it never reaches
+            // the FDW, so only a local aggregate above the scan can apply it.
+            let cnt: i64 = c
+                .select(
+                    "SELECT COUNT(*) FROM agg_test WHERE name || '' = 'alice'",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .first()
+                .get_one::<i64>()
+                .unwrap()
+                .unwrap();
+            assert_eq!(cnt, 2);
+            assert_not_pushed_down!(
+                c,
+                "SELECT COUNT(*) FROM agg_test WHERE name || '' = 'alice'"
+            );
+
+            // GROUPING SETS: two empty sets produce two rows of 4.
+            let total: i64 = c
+                .select(
+                    "SELECT SUM(cnt)::bigint FROM (SELECT COUNT(*) AS cnt FROM agg_test \
+                     GROUP BY GROUPING SETS ((), ())) s",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .first()
+                .get_one::<i64>()
+                .unwrap()
+                .unwrap();
+            assert_eq!(total, 8);
+            assert_not_pushed_down!(
+                c,
+                "SELECT COUNT(*) FROM agg_test GROUP BY GROUPING SETS ((), ())"
+            );
         });
     }
 
