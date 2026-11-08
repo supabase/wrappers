@@ -1305,12 +1305,17 @@ pub(super) extern "C-unwind" fn iterate_foreign_scan<
                     // by Sort) to re-read tts_values after zeroing tts_nvalid —
                     // resulting in a SIGSEGV when a Sort node is present (ORDER BY).
                     // Form a proper HeapTuple and use ExecStoreHeapTuple instead.
+                    // The slot frees the tuple when it is cleared, which can be
+                    // after end_foreign_scan has deleted tmp_ctx, so allocate it
+                    // in the slot's own context.
                     let desc = (*slot).tts_tupleDescriptor;
-                    let htup = pg_sys::heap_form_tuple(
-                        desc,
-                        state.values.as_mut_ptr(),
-                        state.nulls.as_mut_ptr(),
-                    );
+                    let htup = PgMemoryContexts::For((*slot).tts_mcxt).switch_to(|_| {
+                        pg_sys::heap_form_tuple(
+                            desc,
+                            state.values.as_mut_ptr(),
+                            state.nulls.as_mut_ptr(),
+                        )
+                    });
                     pg_sys::ExecStoreHeapTuple(htup, slot, true);
                 } else {
                     (*slot).tts_values = state.values.as_mut_ptr();
