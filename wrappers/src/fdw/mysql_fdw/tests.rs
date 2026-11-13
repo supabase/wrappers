@@ -851,4 +851,29 @@ mod tests {
             assert_eq!(names, vec!["Alice", "Bob", "Carol", "Dave"]);
         });
     }
+
+    #[pg_test]
+    fn mysql_sanitize_input() {
+        use crate::fdw::mysql_fdw::mysql_fdw::MysqlCellFormatter;
+        use supabase_wrappers::prelude::{Cell, CellFormatter};
+
+        let mut fmt = MysqlCellFormatter;
+
+        // quote is escaped with a backslash
+        assert_eq!(fmt.fmt_cell(&Cell::String("a'b".into())), r"'a\'b'");
+
+        // backslash is escaped first, so it cannot consume the closing quote
+        assert_eq!(fmt.fmt_cell(&Cell::String(r"abc\".into())), r"'abc\\'");
+        assert_eq!(fmt.fmt_cell(&Cell::String(r"a\'b".into())), r"'a\\\'b'");
+
+        // every array element is quoted and escaped, NULL stays NULL
+        assert_eq!(
+            fmt.fmt_cell(&Cell::StringArray(vec![
+                Some("a".into()),
+                None,
+                Some("b'c".into())
+            ])),
+            r#"['a',null,'b\'c']"#
+        );
+    }
 }
