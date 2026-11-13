@@ -521,4 +521,40 @@ mod tests {
             );
         });
     }
+
+    #[pg_test]
+    fn bigquery_sanitize_input() {
+        use crate::fdw::bigquery_fdw::bigquery_fdw::BigQueryCellFormatter;
+        use pgrx::JsonB;
+        use serde_json::json;
+        use supabase_wrappers::prelude::{Cell, CellFormatter};
+
+        let mut fmt = BigQueryCellFormatter;
+
+        // quote is escaped with a backslash
+        assert_eq!(fmt.fmt_cell(&Cell::String("a'b".into())), r"'a\'b'");
+
+        // backslash is escaped first, so it cannot consume the closing quote
+        assert_eq!(fmt.fmt_cell(&Cell::String(r"abc\".into())), r"'abc\\'");
+        assert_eq!(fmt.fmt_cell(&Cell::String(r"a\'b".into())), r"'a\\\'b'");
+
+        // every array element is quoted and escaped, NULL stays NULL
+        assert_eq!(
+            fmt.fmt_cell(&Cell::StringArray(vec![
+                Some("a".into()),
+                None,
+                Some("b'c".into())
+            ])),
+            r#"['a',null,'b\'c']"#
+        );
+
+        // raw newlines are not allowed in BigQuery quoted literals
+        assert_eq!(fmt.fmt_cell(&Cell::String("a\nb\rc".into())), r"'a\nb\rc'");
+
+        // JSON text is escaped inside parse_json()
+        assert_eq!(
+            fmt.fmt_cell(&Cell::Json(JsonB(json!({"k": "O'B"})))),
+            r#"parse_json('{"k":"O\'B"}')"#
+        );
+    }
 }

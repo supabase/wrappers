@@ -103,13 +103,29 @@ fn field_to_cell(src_row: &tiberius::Row, tgt_col: &Column) -> MssqlFdwResult<Op
     Ok(ret)
 }
 
-struct MssqlCellFormatter {}
+pub(crate) struct MssqlCellFormatter;
 
 impl CellFormatter for MssqlCellFormatter {
+    fn sanitize(&self, s: &str) -> String {
+        s.replace('\'', "''")
+    }
     fn fmt_cell(&mut self, cell: &Cell) -> String {
         match cell {
             // format boolean type to 0 or 1
             Cell::Bool(v) => format!("{}", *v as u8),
+            Cell::String(v) => format!("'{}'", self.sanitize(v)),
+            Cell::Json(v) => format!("'{}'", self.sanitize(&v.0.to_string())),
+            Cell::StringArray(v) => {
+                let res = v
+                    .iter()
+                    .map(|e| match e {
+                        Some(val) => format!("'{}'", self.sanitize(val)),
+                        None => "null".to_owned(),
+                    })
+                    .collect::<Vec<String>>()
+                    .join(",");
+                format!("({res})")
+            }
             _ => format!("{cell}"),
         }
     }
@@ -157,7 +173,7 @@ impl MssqlFdw {
                 .iter()
                 .map(|q| {
                     let oper = q.operator.as_str();
-                    let mut fmt = MssqlCellFormatter {};
+                    let mut fmt = MssqlCellFormatter;
                     if let Value::Cell(cell) = &q.value {
                         // deparse boolean test qual, e.g. "bool_col is true" => "bool_col = 1"
                         if let Cell::Bool(_) = cell {
@@ -264,7 +280,7 @@ impl MssqlFdw {
                 .iter()
                 .map(|q| {
                     let oper = q.operator.as_str();
-                    let mut fmt = MssqlCellFormatter {};
+                    let mut fmt = MssqlCellFormatter;
                     if let Value::Cell(cell) = &q.value
                         && let Cell::Bool(_) = cell
                     {
