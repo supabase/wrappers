@@ -171,14 +171,15 @@ impl LangfuseFdw {
             body: String::default(),
         };
         let resp = http::get(&req)?;
-        // Langfuse v4 removed the v1 read endpoints (Cloud is v4-only from 2026-11-16), so
-        // they answer 404. Say what to change instead of surfacing a bare 404.
-        if resp.status_code == 404 && is_legacy_endpoint(&self.endpoint) {
+        // Langfuse v4 removed the v1 read endpoints: self-hosted v4 answers 404, and
+        // Langfuse Cloud answers 410 since 2026-11-16. Say what to change instead of
+        // surfacing a bare status.
+        if matches!(resp.status_code, 404 | 410) && is_legacy_endpoint(&self.endpoint) {
             return Err(format!(
-                "Langfuse returned 404 for '{}': this v1 endpoint was removed in Langfuse v4. \
+                "Langfuse returned {} for '{}': this v1 endpoint was removed in Langfuse v4. \
                  Use object 'v2/observations' instead (add params 'isRootObservation=true' \
                  for one row per trace).",
-                self.endpoint
+                resp.status_code, self.endpoint
             ));
         }
         // surfaces 401/403 as a Postgres error rather than an empty result set
@@ -203,7 +204,8 @@ impl LangfuseFdw {
             .map(|s| s.to_owned());
 
         if self.next_cursor.is_some() {
-            self.has_more = !self.src_rows.is_empty();
+            // V2 may return an empty page with a cursor for the next page.
+            self.has_more = true;
         } else {
             let page = meta.and_then(|m| m.get("page")).and_then(|p| p.as_i64());
             let total_pages = meta
@@ -223,7 +225,7 @@ impl LangfuseFdw {
     }
 }
 
-// v1 read endpoints that Langfuse v4 serves as 404.
+// v1 read endpoints that Langfuse v4 removed (404 self-hosted, 410 on Cloud).
 fn is_legacy_endpoint(endpoint: &str) -> bool {
     let path = endpoint.trim_matches('/');
     [
@@ -412,14 +414,18 @@ impl Guest for LangfuseFdw {
         }
 
         // current page drained: pull the next one, if any
-        if this.src_idx >= this.src_rows.len() {
+        let mut empty_page_cursors = std::collections::HashSet::new();
+        while this.src_idx >= this.src_rows.len() {
             if !this.has_more {
                 return Ok(None);
             }
-            this.fetch_page()?;
-            if this.src_rows.is_empty() {
-                return Ok(None);
+            if this.src_rows.is_empty()
+                && let Some(cursor) = this.next_cursor.as_ref()
+                && !empty_page_cursors.insert(cursor.clone())
+            {
+                return Err("Langfuse repeated a pagination cursor on empty pages".to_owned());
             }
+            this.fetch_page()?;
         }
 
         let src_row = &this.src_rows[this.src_idx];
