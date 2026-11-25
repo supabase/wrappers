@@ -338,6 +338,27 @@ pub(super) extern "C-unwind" fn get_foreign_upper_paths<
             return;
         }
 
+        // A qual left in baserestrictinfo is rechecked above a plain foreign
+        // scan. Nothing rechecks it once this upper path replaces the scan, and
+        // grouping sets are not a single group.
+        let restrict_clauses = if (*input_rel).baserestrictinfo.is_null() {
+            0
+        } else {
+            (*(*input_rel).baserestrictinfo).length as usize
+        };
+        let has_grouping_sets =
+            !root.is_null() && !(*root).parse.is_null() && !(*(*root).parse).groupingSets.is_null();
+        if !crate::aggregate_pushdown::aggregate_pushdown_allowed(
+            restrict_clauses,
+            state.quals.len(),
+            has_grouping_sets,
+        ) {
+            debug2!(
+                "Skipping aggregate pushdown: WHERE was not fully pushed or GROUPING SETS is present"
+            );
+            return;
+        }
+
         // Store aggregates and group_by in the FdwState so they survive to
         // execution. Note: input_rel.fdw_private and output_rel.fdw_private
         // share the same FdwState pointer, so this mutation is visible through
