@@ -199,18 +199,31 @@ fn deparse_qual(qual: &Qual, fmt: &mut MysqlCellFormatter) -> String {
     }
 }
 
-struct MysqlCellFormatter;
+pub(crate) struct MysqlCellFormatter;
 
 impl CellFormatter for MysqlCellFormatter {
+    fn sanitize(&self, s: &str) -> String {
+        s.replace('\\', "\\\\").replace('\'', "\\'")
+    }
     fn fmt_cell(&mut self, cell: &Cell) -> String {
         match cell {
             Cell::Bool(v) => format!("{}", *v as u8),
             Cell::String(v) => {
-                format!("'{}'", v.replace('\\', "\\\\").replace('\'', "\\'"))
+                format!("'{}'", self.sanitize(v))
             }
             Cell::Json(v) => {
-                let s = v.0.to_string();
-                format!("'{}'", s.replace('\\', "\\\\").replace('\'', "\\'"))
+                format!("'{}'", self.sanitize(&v.0.to_string()))
+            }
+            Cell::StringArray(v) => {
+                let res = v
+                    .iter()
+                    .map(|e| match e {
+                        Some(val) => format!("'{}'", self.sanitize(val)),
+                        None => "null".to_owned(),
+                    })
+                    .collect::<Vec<String>>()
+                    .join(",");
+                format!("[{res}]")
             }
             _ => format!("{cell}"),
         }

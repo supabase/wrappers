@@ -18,6 +18,36 @@ use std::str::FromStr;
 use crate::setup_rustls_default_crypto_provider;
 use supabase_wrappers::prelude::*;
 
+pub(crate) struct BigQueryCellFormatter;
+
+impl CellFormatter for BigQueryCellFormatter {
+    fn sanitize(&self, s: &str) -> String {
+        // The backslash must be replaced first
+        s.replace('\\', "\\\\")
+            .replace('\'', "\\'")
+            .replace('\n', "\\n")
+            .replace('\r', "\\r")
+    }
+    fn fmt_cell(&mut self, cell: &Cell) -> String {
+        match cell {
+            Cell::String(v) => format!("'{}'", self.sanitize(v)),
+            Cell::Json(v) => format!("parse_json('{}')", self.sanitize(&v.0.to_string())),
+            Cell::StringArray(v) => {
+                let res = v
+                    .iter()
+                    .map(|e| match e {
+                        Some(val) => format!("'{}'", self.sanitize(val)),
+                        None => "null".to_owned(),
+                    })
+                    .collect::<Vec<String>>()
+                    .join(",");
+                format!("[{res}]")
+            }
+            _ => format!("{cell}"),
+        }
+    }
+}
+
 #[wrappers_fdw(
     version = "0.1.7",
     author = "Supabase",
@@ -74,9 +104,10 @@ impl BigQueryFdw {
         );
 
         if !quals.is_empty() {
+            let mut fmt = BigQueryCellFormatter;
             let cond = quals
                 .iter()
-                .map(|q| q.deparse())
+                .map(|q| q.deparse_with_fmt(&mut fmt))
                 .collect::<Vec<String>>()
                 .join(" and ");
             if !cond.is_empty() {
@@ -117,9 +148,10 @@ impl BigQueryFdw {
         let mut sql = if quals.is_empty() {
             format!("select {tgts} from {table}")
         } else {
+            let mut fmt = BigQueryCellFormatter;
             let cond = quals
                 .iter()
-                .map(|q| q.deparse())
+                .map(|q| q.deparse_with_fmt(&mut fmt))
                 .collect::<Vec<String>>()
                 .join(" and ");
             format!("select {tgts} from {table} where {cond}")
@@ -489,16 +521,14 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
 
     fn update(&mut self, rowid: &Cell, new_row: &Row) -> Result<(), BigQueryFdwError> {
         if let Some(ref mut client) = self.client {
+            let mut fmt = BigQueryCellFormatter;
             let mut sets = Vec::new();
             for (col, cell) in new_row.iter() {
                 if col == &self.rowid_col {
                     continue;
                 }
                 if let Some(cell) = cell {
-                    match cell {
-                        Cell::Json(v) => sets.push(format!("{} = parse_json('{}')", col, v.0)),
-                        _ => sets.push(format!("{col} = {cell}")),
-                    }
+                    sets.push(format!("{col} = {}", fmt.fmt_cell(cell)));
                 } else {
                     sets.push(format!("{col} = null"));
                 }
@@ -510,7 +540,7 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
                 self.table,
                 sets.join(", "),
                 self.rowid_col,
-                rowid
+                fmt.fmt_cell(rowid)
             );
 
             let query_job = client.job().query(&self.project_id, QueryRequest::new(sql));
@@ -528,9 +558,14 @@ impl ForeignDataWrapper<BigQueryFdwError> for BigQueryFdw {
 
     fn delete(&mut self, rowid: &Cell) -> Result<(), BigQueryFdwError> {
         if let Some(ref mut client) = self.client {
+            let mut fmt = BigQueryCellFormatter;
             let sql = format!(
                 "delete from `{}.{}.{}` where {} = {}",
-                self.project_id, self.dataset_id, self.table, self.rowid_col, rowid
+                self.project_id,
+                self.dataset_id,
+                self.table,
+                self.rowid_col,
+                fmt.fmt_cell(rowid)
             );
 
             let query_job = client.job().query(&self.project_id, QueryRequest::new(sql));

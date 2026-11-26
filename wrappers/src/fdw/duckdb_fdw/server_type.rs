@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use supabase_wrappers::prelude::*;
 
-use super::{DuckdbFdwError, DuckdbFdwResult};
+use super::{DuckdbFdwError, DuckdbFdwResult, duckdb_fdw::DuckDBCellFormatter};
 
 type ServerOptions = HashMap<String, String>;
 
@@ -136,7 +136,7 @@ impl ServerType {
                 (key, value)
             })
             .filter(|(k, _)| param_list.contains(&k.as_str()))
-            .map(|(k, v)| format!("{} '{}'", k, v.replace("'", "''")))
+            .map(|(k, v)| format!("{} '{}'", k, DuckDBCellFormatter.sanitize(&v)))
             .collect::<Vec<_>>()
             .join(",")
     }
@@ -184,7 +184,7 @@ impl ServerType {
                 }
                 .expect("motherduck_token is required");
 
-                let sanitized_token = format!("'{}'", token.replace("'", "''"));
+                let sanitized_token = format!("'{}'", DuckDBCellFormatter.sanitize(&token));
                 vec![
                     ("motherduck_token", sanitized_token),
                     ("motherduck_attach_mode", "'single'".to_string()),
@@ -237,7 +237,7 @@ impl ServerType {
                 )
             }
             Self::MotherDuck => {
-                let database = require_option("database", svr_opts)?.replace("'", "''");
+                let database = DuckDBCellFormatter.sanitize(require_option("database", svr_opts)?);
                 let db_name = self.as_str();
                 format!("attach 'md:{database}' as {db_name};")
             }

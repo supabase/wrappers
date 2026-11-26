@@ -8,6 +8,36 @@ use supabase_wrappers::prelude::*;
 
 use super::{DuckdbFdwError, DuckdbFdwResult, mapper, server_type::ServerType};
 
+pub(crate) struct DuckDBCellFormatter;
+
+impl CellFormatter for DuckDBCellFormatter {
+    fn sanitize(&self, s: &str) -> String {
+        s.replace('\'', "''")
+    }
+    fn fmt_cell(&mut self, cell: &Cell) -> String {
+        match cell {
+            Cell::String(v) => {
+                format!("'{}'", self.sanitize(v))
+            }
+            Cell::Json(v) => {
+                format!("'{}'", self.sanitize(&v.0.to_string()))
+            }
+            Cell::StringArray(v) => {
+                let res = v
+                    .iter()
+                    .map(|e| match e {
+                        Some(val) => format!("'{}'", self.sanitize(val)),
+                        None => "null".to_owned(),
+                    })
+                    .collect::<Vec<String>>()
+                    .join(",");
+                format!("[{res}]")
+            }
+            _ => format!("{cell}"),
+        }
+    }
+}
+
 #[wrappers_fdw(
     version = "0.1.3",
     author = "Supabase",
@@ -65,11 +95,12 @@ impl DuckdbFdw {
         };
 
         let mut sql = format!("select {} from {} as _wrappers_tbl", tgts, self.table);
+        let mut fmt = DuckDBCellFormatter;
 
         if !quals.is_empty() {
             let cond = quals
                 .iter()
-                .map(|q| q.deparse())
+                .map(|q| q.deparse_with_fmt(&mut fmt))
                 .collect::<Vec<String>>()
                 .join(" and ");
 
@@ -144,7 +175,7 @@ impl DuckdbFdw {
                 tbl_pg,
                 fields.join(","),
                 server_name,
-                tbl_duckdb.replace("'", "''"),
+                DuckDBCellFormatter.sanitize(tbl_duckdb),
             )
         } else {
             String::default()
@@ -294,7 +325,7 @@ impl ForeignDataWrapper<DuckdbFdwError> for DuckdbFdw {
             let table_list = import_stmt
                 .table_list
                 .iter()
-                .map(|name| format!("'{}'", name.replace("'", "''")))
+                .map(|name| format!("'{}'", DuckDBCellFormatter.sanitize(name)))
                 .collect::<Vec<_>>()
                 .join(",");
             let table_filter = match import_stmt.list_type {

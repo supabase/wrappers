@@ -27,12 +27,32 @@ use supabase_wrappers::prelude::*;
 
 use super::{ClickHouseFdwError, ClickHouseFdwResult};
 
-struct Formatter;
+pub(crate) struct ClickHouseCellFormatter;
 
-impl CellFormatter for Formatter {
+impl CellFormatter for ClickHouseCellFormatter {
+    fn sanitize(&self, s: &str) -> String {
+        s.replace('\\', "\\\\").replace('\'', "\\'")
+    }
     fn fmt_cell(&mut self, cell: &Cell) -> String {
         match cell {
             Cell::Timestamptz(tstz) => format!("parseDateTime64BestEffort('{tstz}', 6)"),
+            Cell::String(v) => {
+                format!("'{}'", self.sanitize(v))
+            }
+            Cell::Json(v) => {
+                format!("'{}'", self.sanitize(&v.0.to_string()))
+            }
+            Cell::StringArray(v) => {
+                let res = v
+                    .iter()
+                    .map(|e| match e {
+                        Some(val) => format!("'{}'", self.sanitize(val)),
+                        None => "null".to_owned(),
+                    })
+                    .collect::<Vec<String>>()
+                    .join(",");
+                format!("[{res}]")
+            }
             _ => format!("{cell}"),
         }
     }
@@ -424,7 +444,7 @@ impl ClickHouseFdw {
                     if qual.field == param {
                         params.push(qual.clone());
                         match &qual.value {
-                            Value::Cell(cell) => return Ok(cell.to_string()),
+                            Value::Cell(cell) => return Ok(ClickHouseCellFormatter.fmt_cell(cell)),
                             Value::Array(arr) => {
                                 return Err(ClickHouseFdwError::NoArrayParameter(format!(
                                     "{arr:?}"
@@ -456,7 +476,7 @@ impl ClickHouseFdw {
         let mut sql = format!("select {} from {}", tgts, table);
 
         if !quals.is_empty() {
-            let mut formatter = Formatter {};
+            let mut fmt = ClickHouseCellFormatter {};
             let cond = quals
                 .iter()
                 .filter(|q| {
@@ -467,7 +487,7 @@ impl ClickHouseFdw {
                     };
                     !is_param && !is_array
                 })
-                .map(|q| q.deparse_with_fmt(&mut formatter))
+                .map(|q| q.deparse_with_fmt(&mut fmt))
                 .collect::<Vec<String>>()
                 .join(" and ");
 
@@ -513,7 +533,7 @@ impl ClickHouseFdw {
                     if qual.field == param {
                         params.push(qual.clone());
                         match &qual.value {
-                            Value::Cell(cell) => return Ok(cell.to_string()),
+                            Value::Cell(cell) => return Ok(ClickHouseCellFormatter.fmt_cell(cell)),
                             Value::Array(arr) => {
                                 return Err(ClickHouseFdwError::NoArrayParameter(format!(
                                     "{arr:?}"
@@ -540,7 +560,7 @@ impl ClickHouseFdw {
 
         // WHERE: same filtering as deparse() — skip params and array-valued quals
         if !quals.is_empty() {
-            let mut formatter = Formatter {};
+            let mut fmt = ClickHouseCellFormatter {};
             let cond = quals
                 .iter()
                 .filter(|q| {
@@ -551,7 +571,7 @@ impl ClickHouseFdw {
                     };
                     !is_param && !is_array
                 })
-                .map(|q| q.deparse_with_fmt(&mut formatter))
+                .map(|q| q.deparse_with_fmt(&mut fmt))
                 .collect::<Vec<String>>()
                 .join(" and ");
 
@@ -1053,14 +1073,14 @@ impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
         let pool = Pool::new(self.conn_str.clone());
         let mut client = self.rt.block_on(pool.get_handle())?;
 
-        let mut formatter = Formatter {};
+        let mut fmt = ClickHouseCellFormatter {};
         let mut sets = Vec::new();
         for (col, cell) in new_row.iter() {
             if col == &self.rowid_col {
                 continue;
             }
             if let Some(cell) = cell {
-                let formatted = formatter.fmt_cell(cell);
+                let formatted = fmt.fmt_cell(cell);
                 sets.push(format!("{col} = {formatted}"));
             } else {
                 sets.push(format!("{col} = null"));
@@ -1071,7 +1091,7 @@ impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
             self.table,
             sets.join(", "),
             self.rowid_col,
-            rowid
+            fmt.fmt_cell(rowid)
         );
 
         // execute query on ClickHouse
@@ -1083,10 +1103,13 @@ impl ForeignDataWrapper<ClickHouseFdwError> for ClickHouseFdw {
         // create a client for delete operations
         let pool = Pool::new(self.conn_str.clone());
         let mut client = self.rt.block_on(pool.get_handle())?;
+        let mut fmt = ClickHouseCellFormatter {};
 
         let sql = format!(
             "alter table {} delete where {} = {}",
-            self.table, self.rowid_col, rowid
+            self.table,
+            self.rowid_col,
+            fmt.fmt_cell(rowid)
         );
 
         // execute query on ClickHouse

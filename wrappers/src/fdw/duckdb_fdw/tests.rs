@@ -193,4 +193,29 @@ mod tests {
             let _results = c.select("SELECT * FROM duckdb.passwd", None, &[]);
         });
     }
+
+    #[pg_test]
+    fn duckdb_sanitize_input() {
+        use crate::fdw::duckdb_fdw::duckdb_fdw::DuckDBCellFormatter;
+        use supabase_wrappers::prelude::{Cell, CellFormatter};
+
+        let mut fmt = DuckDBCellFormatter;
+
+        // quote is escaped by doubling it
+        assert_eq!(fmt.fmt_cell(&Cell::String("a'b".into())), "'a''b'");
+
+        // backslash is not an escape character, so it is kept as is
+        assert_eq!(fmt.fmt_cell(&Cell::String(r"abc\".into())), r"'abc\'");
+        assert_eq!(fmt.fmt_cell(&Cell::String(r"a\'b".into())), r"'a\''b'");
+
+        // every array element is quoted and escaped, NULL stays NULL
+        assert_eq!(
+            fmt.fmt_cell(&Cell::StringArray(vec![
+                Some("a".into()),
+                None,
+                Some("b'c".into())
+            ])),
+            "['a',null,'b''c']"
+        );
+    }
 }

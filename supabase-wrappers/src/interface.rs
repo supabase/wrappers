@@ -378,6 +378,9 @@ impl FromDatum for Cell {
 }
 
 pub trait CellFormatter {
+    fn sanitize(&self, s: &str) -> String {
+        s.to_string()
+    }
     fn fmt_cell(&mut self, cell: &Cell) -> String;
 }
 
