@@ -3,6 +3,8 @@
 mod tests {
     use pgrx::prelude::*;
 
+    use crate::unresponsive_server::UnresponsiveServer;
+
     #[pg_test]
     fn airtable_smoketest() {
         Spi::connect_mut(|c| {
@@ -220,5 +222,54 @@ mod tests {
                 .collect::<Vec<_>>();
             assert_eq!(results, vec!["three"]);
         });
+    }
+
+    #[pg_test]
+    fn airtable_backend_cancellable() {
+        let server = UnresponsiveServer::start();
+        let port = server.port;
+
+        Spi::connect_mut(|connection| {
+            connection
+                .update(
+                    r#"CREATE FOREIGN DATA WRAPPER airtable_wrapper
+                         HANDLER airtable_fdw_handler VALIDATOR airtable_fdw_validator"#,
+                    None,
+                    &[],
+                )
+                .unwrap();
+
+            connection
+                .update(
+                    &format!(
+                        r#"CREATE SERVER airtable_server
+                         FOREIGN DATA WRAPPER airtable_wrapper
+                         OPTIONS (
+                            api_url 'http://127.0.0.1:{port}',
+                            api_key 'apiKey'
+                         )"#
+                    ),
+                    None,
+                    &[],
+                )
+                .unwrap();
+
+            connection
+                .update(
+                    r#"
+                  CREATE FOREIGN TABLE airtable_table (id text)
+                  SERVER airtable_server
+                  OPTIONS (
+                    base_id 'baseID',
+                    table_id 'table-foo'
+                  )
+             "#,
+                    None,
+                    &[],
+                )
+                .unwrap();
+        });
+
+        server.assert_cancellable("SELECT * from airtable_table");
     }
 }
