@@ -1,6 +1,7 @@
 #[cfg(any(test, feature = "pg_test"))]
 #[pgrx::pg_schema]
 mod tests {
+    use crate::unresponsive_server::UnresponsiveServer;
     use pgrx::JsonB;
     use pgrx::prelude::*;
 
@@ -143,5 +144,68 @@ mod tests {
                 )]
             );
         });
+    }
+
+    /// Start an unresponsive server and create a foreign table.
+    fn setup_unresponsive_server() -> UnresponsiveServer {
+        let server = UnresponsiveServer::start();
+        let port = server.port;
+
+        Spi::connect_mut(|connection| {
+            connection
+                .update(
+                    r#"CREATE FOREIGN DATA WRAPPER firebase_wrapper
+                         HANDLER firebase_fdw_handler VALIDATOR firebase_fdw_validator"#,
+                    None,
+                    &[],
+                )
+                .unwrap();
+
+            connection
+                .update(
+                    r#"CREATE SERVER firebase_server
+                         FOREIGN DATA WRAPPER firebase_wrapper
+                         OPTIONS (
+                          project_id 'supa',
+                          access_token 'owner'
+                         )"#,
+                    None,
+                    &[],
+                )
+                .unwrap();
+
+            connection
+                .update(
+                    &format!(
+                        r#"
+                  CREATE FOREIGN TABLE firebase_table (uid text)
+                  SERVER firebase_server
+                  OPTIONS (
+                    object 'auth/users',
+                    base_url 'http://127.0.0.1:{port}/identitytoolkit.googleapis.com/v1/projects'
+                  )
+             "#
+                    ),
+                    None,
+                    &[],
+                )
+                .unwrap();
+        });
+
+        server
+    }
+
+    #[pg_test]
+    #[ignore = "backend gets stuck due to blocking I/O"]
+    fn firebase_backend_cancellable() {
+        let server = setup_unresponsive_server();
+        server.assert_cancellable("SELECT * from firebase_table");
+    }
+
+    #[pg_test(error = "terminating connection due to administrator command")]
+    #[ignore = "backend gets stuck due to blocking I/O"]
+    fn firebase_backend_terminable() {
+        let server = setup_unresponsive_server();
+        server.assert_terminable("SELECT * from firebase_table");
     }
 }
