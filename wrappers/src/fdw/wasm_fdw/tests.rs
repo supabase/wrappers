@@ -1,6 +1,7 @@
 #[cfg(any(test, feature = "pg_test"))]
 #[pgrx::pg_schema]
 mod tests {
+    use crate::unresponsive_server::UnresponsiveServer;
     use pgrx::prelude::*;
 
     #[pg_test]
@@ -1028,5 +1029,70 @@ mod tests {
                 .collect::<Vec<_>>();
             assert_eq!(costs, vec![0.0435, 0.0294]);
         });
+    }
+
+    /// Start an unresponsive server and create a foreign table.
+    fn setup_unresponsive_server() -> UnresponsiveServer {
+        let server = UnresponsiveServer::start();
+        let port = server.port;
+
+        Spi::connect_mut(|connection| {
+            connection
+                .update(
+                    r#"CREATE FOREIGN DATA WRAPPER wasm_wrapper
+                         HANDLER wasm_fdw_handler VALIDATOR wasm_fdw_validator"#,
+                    None,
+                    &[],
+                )
+                .unwrap();
+
+            connection
+                .update(
+                    &format!(
+                        r#"CREATE SERVER clerk_server
+                         FOREIGN DATA WRAPPER wasm_wrapper
+                         OPTIONS (
+                           fdw_package_url 'file://../../../target/wasm32-unknown-unknown/release/clerk_fdw.wasm',
+                           fdw_package_name 'supabase:clerk-fdw',
+                           fdw_package_version '>=0.1.0',
+                           api_url 'http://127.0.0.1:{port}/clerk',
+                           api_key 'ccc'
+                         )"#
+                    ),
+                    None,
+                    &[],
+                )
+                .unwrap();
+
+            connection
+                .update(
+                    r#"
+                  CREATE FOREIGN TABLE clerk_table (id text)
+                  SERVER clerk_server
+                  OPTIONS (
+                    object 'users'
+                  )
+             "#,
+                    None,
+                    &[],
+                )
+                .unwrap();
+        });
+
+        server
+    }
+
+    #[pg_test]
+    #[ignore = "backend gets stuck due to blocking I/O"]
+    fn wasm_backend_cancellable() {
+        let server = setup_unresponsive_server();
+        server.assert_cancellable("SELECT * from clerk_table");
+    }
+
+    #[pg_test(error = "terminating connection due to administrator command")]
+    #[ignore = "backend gets stuck due to blocking I/O"]
+    fn wasm_backend_terminable() {
+        let server = setup_unresponsive_server();
+        server.assert_terminable("SELECT * from clerk_table");
     }
 }
