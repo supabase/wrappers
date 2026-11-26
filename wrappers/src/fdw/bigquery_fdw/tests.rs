@@ -577,14 +577,14 @@ mod tests {
 
     #[pg_test]
     #[ignore = "backend gets stuck due to blocking I/O"]
-    fn backend_cancellable() {
+    fn bigquery_backend_cancellable() {
         let server = setup_unresponsive_server();
         server.assert_cancellable("SELECT * from bigquery_table");
     }
 
     #[pg_test(error = "terminating connection due to administrator command")]
     #[ignore = "backend gets stuck due to blocking I/O"]
-    fn backend_terminable() {
+    fn bigquery_backend_terminable() {
         let server = setup_unresponsive_server();
         server.assert_terminable("SELECT * from bigquery_table");
     }
