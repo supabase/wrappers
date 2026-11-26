@@ -1,5 +1,5 @@
 use crate::interface::Limit;
-use pgrx::{FromDatum, is_a, pg_sys};
+use pgrx::{FromDatum, pg_sys::{self, PgNode}};
 
 // extract limit
 pub(crate) unsafe fn extract_limit(
@@ -18,7 +18,7 @@ pub(crate) unsafe fn extract_limit(
         // only push down constant LIMITs that are not NULL
         let limit_count = (*parse).limitCount as *mut pg_sys::Const;
         if limit_count.is_null()
-            || !is_a(limit_count as *mut pg_sys::Node, pg_sys::NodeTag::T_Const)
+            || !pg_sys::Node::is_a_ptr(limit_count as *mut pg_sys::Node, pg_sys::NodeTag::T_Const)
         {
             return None;
         }
@@ -35,7 +35,7 @@ pub(crate) unsafe fn extract_limit(
         // only consider OFFSETS that are non-NULL constants
         let limit_offset = (*parse).limitOffset as *mut pg_sys::Const;
         if !limit_offset.is_null()
-            && is_a(limit_offset as *mut pg_sys::Node, pg_sys::NodeTag::T_Const)
+            && pg_sys::Node::is_a_ptr(limit_offset as *mut pg_sys::Node, pg_sys::NodeTag::T_Const)
             && let Some(offset) = i64::from_polymorphic_datum(
                 (*limit_offset).constvalue,
                 (*limit_offset).constisnull,

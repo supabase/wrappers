@@ -17,15 +17,14 @@ rustdoc-args = ["--cfg", "docsrs"]
 
 [features]
 default = ["pg15"]
-pg13 = ["pgrx/pg13"]
-pg14 = ["pgrx/pg14"]
 pg15 = ["pgrx/pg15"]
 pg16 = ["pgrx/pg16"]
 pg17 = ["pgrx/pg17"]
 pg18 = ["pgrx/pg18"]
+pg19 = ["pgrx/pg19"]
 
 [dependencies]
-pgrx = { version = "=0.19.2", default-features = false }
+pgrx = { version = "=0.20.1", default-features = false }
 thiserror = "1.0.63"
 tokio = { version = "1.43", features = ["rt", "net"] }
 uuid = { version = "1.10.0" }

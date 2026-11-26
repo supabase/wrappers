@@ -12,7 +12,7 @@
 //! $ cargo pgrx new my_project
 //! ```
 //!
-//! And then change default Postgres version to `pg14` or `pg15` and add below dependencies to your project's `Cargo.toml`,
+//! And then change default Postgres version to `pg15` or newer and add below dependencies to your project's `Cargo.toml`,
 //!
 //! ```toml
 //! [features]
@@ -320,15 +320,7 @@ mod polyfill;
 mod scan;
 mod sort;
 
-// The upper module uses pgrx::PgList which requires PG features
-#[cfg(any(
-    feature = "pg13",
-    feature = "pg14",
-    feature = "pg15",
-    feature = "pg16",
-    feature = "pg17",
-    feature = "pg18"
-))]
+
 mod upper;
 
 /// PgBox'ed `FdwRoutine`, used in [`fdw_routine`](interface::ForeignDataWrapper::fdw_routine)

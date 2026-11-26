@@ -28,8 +28,8 @@ share one `Cargo.lock` and one MSRV. `default-members` is scoped to the native c
 building or testing the wasm crates requires explicit `-p <crate>` selection (or `--workspace` with
 `--exclude` for the native crates), since `wasm-wrappers/fdw` is no longer its own workspace root.
 
-**Rust version**: 1.97.1 (specified in `workspace.package`, applies to every member)
-**pgrx version**: 0.19.2 (PostgreSQL extension framework)
+**Rust version**: 1.99.1 (specified in `workspace.package`, applies to every member)
+**pgrx version**: 0.20.1 (PostgreSQL extension framework)
 
 ## Key Components
 
@@ -128,11 +128,11 @@ Cal.com, Calendly, Clerk, Cloudflare D1, HubSpot, Infura, Notion, Orb, Paddle, S
 
 ```bash
 # Install Rust toolchain
-rustup install 1.97.1
-rustup default 1.97.1
+rustup install 1.99.1
+rustup default 1.99.1
 
 # Install pgrx
-cargo install --locked cargo-pgrx --version 0.19.2
+cargo install --locked cargo-pgrx --version 0.20.1
 
 # Initialize pgrx with PostgreSQL
 cargo pgrx init --pg15 /usr/lib/postgresql/15/bin/pg_config
@@ -357,7 +357,7 @@ FDWs that support aggregate pushdown: BigQuery, ClickHouse, MySQL.
 
 ## PostgreSQL Version Support
 
-Supported via feature flags: `pg13`, `pg14`, `pg15` (default), `pg16`, `pg17`, `pg18`
+Supported via feature flags: `pg15` (default), `pg16`, `pg17`, `pg18`, `pg19`
 
 ## CI/CD
 

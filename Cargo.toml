@@ -24,7 +24,7 @@ resolver = "3"
 
 [workspace.package]
 edition = "2024"
-rust-version = "1.97.1"
+rust-version = "1.99.1"
 homepage = "https://github.com/supabase/wrappers"
 
 [profile.dev]
