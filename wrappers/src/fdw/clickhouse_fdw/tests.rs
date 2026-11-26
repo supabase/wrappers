@@ -1022,6 +1022,22 @@ mod tests {
             );
             assert_pushed_down!(c, "SELECT COUNT(*) FROM agg_test");
 
+            // --- SELECT ... INTO stops after the first row, leaving it in the
+            // scan slot until executor end, after the scan state is dropped ---
+            c.update(
+                "DO $$
+                 DECLARE n bigint;
+                 BEGIN
+                   SELECT COUNT(*) INTO n FROM agg_test;
+                   IF n <> 4 THEN
+                     RAISE EXCEPTION 'expected 4, got %', n;
+                   END IF;
+                 END $$",
+                None,
+                &[],
+            )
+            .unwrap();
+
             // --- COUNT(name) GROUP BY id ---
             let mut rows: Vec<(i64, i64)> = c
                 .select(
