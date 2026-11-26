@@ -311,6 +311,7 @@ pub mod prelude {
 use pgrx::AllocatedByPostgres;
 use pgrx::prelude::*;
 
+mod aggregate_pushdown;
 mod import_foreign_schema;
 mod instance;
 mod limit;
