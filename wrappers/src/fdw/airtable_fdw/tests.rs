@@ -224,8 +224,9 @@ mod tests {
         });
     }
 
-    #[pg_test]
-    fn airtable_backend_cancellable() {
+    /// Start an unrespnsive server and create an `airtable_table`
+    /// FDW.
+    fn setup_unresponsive_airtable() -> UnresponsiveServer {
         let server = UnresponsiveServer::start();
         let port = server.port;
 
@@ -270,6 +271,18 @@ mod tests {
                 .unwrap();
         });
 
+        server
+    }
+
+    #[pg_test]
+    fn airtable_backend_cancellable() {
+        let server = setup_unresponsive_airtable();
         server.assert_cancellable("SELECT * from airtable_table");
+    }
+
+    #[pg_test(error = "terminating connection due to administrator command")]
+    fn airtable_backend_terminable() {
+        let server = setup_unresponsive_airtable();
+        server.assert_terminable("SELECT * from airtable_table");
     }
 }

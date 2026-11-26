@@ -60,6 +60,34 @@ impl UnresponsiveServer {
     /// Runs the query and then cancels it by calling `pg_cancel_backend`
     /// to test that it can be cancelled.
     pub(crate) fn assert_cancellable(&self, query: &str) {
+        let query_result = self.run_and_interrupt(query, Interrupt::Cancel);
+
+        assert_eq!(
+            query_result,
+            Some(PgSqlErrorCode::ERRCODE_QUERY_CANCELED),
+            "query should have been cancelled by pg_cancel_backend"
+        );
+    }
+
+    /// Runs the query and then terminates the backend by calling
+    /// `pg_terminate_backend` to test that it can be terminated.
+    /// A terminated backend exits with a FATAL error, so this function
+    /// never returns when termination works.
+    pub(crate) fn assert_terminable(&self, query: &str) {
+        let query_result = self.run_and_interrupt(query, Interrupt::Terminate);
+
+        panic!(
+            "backend should have been terminated by pg_terminate_backend, but the query returned {query_result:?}"
+        );
+    }
+
+    /// Runs the query and interrupts it from another thread. Interrupt
+    /// can be either `pg_cancel_backend` or `pg_terminate_backend`.
+    /// If the backend doesn't interrupt the query within 10 seconds it
+    /// is sigkilled to avoid hanging the test indefinitely.
+    ///
+    /// Returns the query error code, if any.
+    fn run_and_interrupt(&self, query: &str, interrupt: Interrupt) -> Option<PgSqlErrorCode> {
         let pid = unsafe { pg_sys::MyProcPid };
         let conn_settings = ConnectionSettings::from_current_server();
 
@@ -84,14 +112,14 @@ impl UnresponsiveServer {
                 thread::sleep(Duration::from_millis(100));
             }
 
-            // Actually send the cancel command
+            // Actually send the interrupt command
             let sent: bool = client
-                .query_one("SELECT pg_cancel_backend($1)", &[&pid])
+                .query_one(&format!("SELECT {}($1)", interrupt.sql_function()), &[&pid])
                 .unwrap()
                 .get(0);
-            assert!(sent, "pg_cancel_backend({pid}) returned false");
+            assert!(sent, "{}({pid}) returned false", interrupt.sql_function());
 
-            // Keep looking for cancellation to succeed for 10 seconds
+            // Keep looking for the interrupt to succeed for 10 seconds
             // and sigkill the backend after that to avoid hanging the
             // test indefinitely
             let deadline = Instant::now() + Duration::from_secs(10);
@@ -109,17 +137,31 @@ impl UnresponsiveServer {
         // to avoid the code unwinding past the code after this call
         let query_result = run_query(query);
 
-        // Tell the canceller thread that the query was successfully
-        // cancelled
+        // Tell the canceller thread that the query has returned
         query_finished.store(true, Ordering::Release);
 
         canceller_thread.join().unwrap();
 
-        assert_eq!(
-            query_result,
-            Some(PgSqlErrorCode::ERRCODE_QUERY_CANCELED),
-            "query should have been cancelled by pg_cancel_backend"
-        );
+        query_result
+    }
+}
+
+/// How a backend is interrupted
+#[derive(Clone, Copy)]
+enum Interrupt {
+    /// Backend is interrupted by calling `pg_cancel_backend`
+    Cancel,
+    /// Backend is interrupted by calling `pg_terminate_backend`
+    Terminate,
+}
+
+impl Interrupt {
+    /// Return the sql function name used to interrupt a backend
+    fn sql_function(self) -> &'static str {
+        match self {
+            Interrupt::Cancel => "pg_cancel_backend",
+            Interrupt::Terminate => "pg_terminate_backend",
+        }
     }
 }
 
