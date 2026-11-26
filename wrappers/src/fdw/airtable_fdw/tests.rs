@@ -224,9 +224,8 @@ mod tests {
         });
     }
 
-    /// Start an unrespnsive server and create an `airtable_table`
-    /// FDW.
-    fn setup_unresponsive_airtable() -> UnresponsiveServer {
+    /// Start an unrespnsive server and create a foreign table.
+    fn setup_unresponsive_server() -> UnresponsiveServer {
         let server = UnresponsiveServer::start();
         let port = server.port;
 
@@ -275,16 +274,16 @@ mod tests {
     }
 
     #[pg_test]
-    #[ignore = "airtable backend gets stuck if the remote doesn't respond; the SIGKILL fallback restarts Postgres"]
-    fn airtable_backend_cancellable() {
-        let server = setup_unresponsive_airtable();
+    #[ignore = "backend gets stuck due to blocking I/O"]
+    fn backend_cancellable() {
+        let server = setup_unresponsive_server();
         server.assert_cancellable("SELECT * from airtable_table");
     }
 
     #[pg_test(error = "terminating connection due to administrator command")]
-    #[ignore = "airtable backend gets stuck if the remote doesn't respond; the SIGKILL fallback restarts Postgres"]
-    fn airtable_backend_terminable() {
-        let server = setup_unresponsive_airtable();
+    #[ignore = "backend gets stuck due to blocking I/O"]
+    fn backend_terminable() {
+        let server = setup_unresponsive_server();
         server.assert_terminable("SELECT * from airtable_table");
     }
 }
