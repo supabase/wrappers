@@ -987,9 +987,17 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     ///
     /// - row - the new row to be inserted
     ///
+    /// The default implementation aborts the transaction: an FDW that does
+    /// not support inserts must not report a successful write while storing
+    /// nothing.
+    ///
     /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-UPDATE).
     fn insert(&mut self, _row: &Row) -> Result<(), E> {
-        Ok(())
+        crate::utils::report_error(
+            pgrx::PgSqlErrorCode::ERRCODE_FDW_ERROR,
+            "insert is not supported by this foreign data wrapper",
+        );
+        unreachable!()
     }
 
     /// Called when update one row into the foreign table
@@ -999,7 +1007,11 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     ///
     /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-UPDATE).
     fn update(&mut self, _rowid: &Cell, _new_row: &Row) -> Result<(), E> {
-        Ok(())
+        crate::utils::report_error(
+            pgrx::PgSqlErrorCode::ERRCODE_FDW_ERROR,
+            "update is not supported by this foreign data wrapper",
+        );
+        unreachable!()
     }
 
     /// Called when delete one row into the foreign table
@@ -1008,7 +1020,11 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
     ///
     /// [See more details](https://www.postgresql.org/docs/current/fdw-callbacks.html#FDW-CALLBACKS-UPDATE).
     fn delete(&mut self, _rowid: &Cell) -> Result<(), E> {
-        Ok(())
+        crate::utils::report_error(
+            pgrx::PgSqlErrorCode::ERRCODE_FDW_ERROR,
+            "delete is not supported by this foreign data wrapper",
+        );
+        unreachable!()
     }
 
     /// Called when end the table update
@@ -1262,6 +1278,8 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
             fdw_routine.ExecForeignDelete = Some(modify::exec_foreign_delete::<E, Self>);
             fdw_routine.ExecForeignUpdate = Some(modify::exec_foreign_update::<E, Self>);
             fdw_routine.EndForeignModify = Some(modify::end_foreign_modify::<E, Self>);
+            fdw_routine.BeginForeignInsert = Some(modify::begin_foreign_insert::<E, Self>);
+            fdw_routine.EndForeignInsert = Some(modify::end_foreign_insert::<E, Self>);
 
             Self::fdw_routine_hook(&mut fdw_routine);
             fdw_routine.into_pg_boxed()

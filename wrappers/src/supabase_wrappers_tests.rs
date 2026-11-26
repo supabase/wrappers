@@ -513,4 +513,236 @@ mod tests {
             }
         });
     }
+
+    // ==========================================================================
+    // Regression tests: https://github.com/supabase/wrappers/issues/658
+    // ==========================================================================
+
+    static INSERTED_ID: std::sync::atomic::AtomicI64 = std::sync::atomic::AtomicI64::new(0);
+
+    #[wrappers_fdw(
+        version = "0.1.0",
+        author = "Supabase",
+        website = "https://github.com/supabase/wrappers",
+        error_type = "ReadOnlyTestFdwError"
+    )]
+    struct ReadOnlyTestFdw;
+
+    enum ReadOnlyTestFdwError {}
+
+    impl From<ReadOnlyTestFdwError> for ErrorReport {
+        fn from(_value: ReadOnlyTestFdwError) -> Self {
+            ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, "", "")
+        }
+    }
+
+    impl ForeignDataWrapper<ReadOnlyTestFdwError> for ReadOnlyTestFdw {
+        fn new(_server: ForeignServer) -> Result<Self, ReadOnlyTestFdwError> {
+            Ok(Self)
+        }
+
+        fn begin_scan(
+            &mut self,
+            _quals: &[Qual],
+            _columns: &[Column],
+            _sorts: &[Sort],
+            _limit: &Option<Limit>,
+            _options: &HashMap<String, String>,
+        ) -> Result<(), ReadOnlyTestFdwError> {
+            Ok(())
+        }
+
+        fn iter_scan(&mut self, _row: &mut Row) -> Result<Option<()>, ReadOnlyTestFdwError> {
+            Ok(None)
+        }
+
+        fn end_scan(&mut self) -> Result<(), ReadOnlyTestFdwError> {
+            Ok(())
+        }
+    }
+
+    fn setup_read_only_test(c: &mut pgrx::spi::SpiClient) {
+        c.update(
+            r#"create foreign data wrapper read_only_test_wrapper
+               handler read_only_test_fdw_handler validator read_only_test_fdw_validator"#,
+            None,
+            &[],
+        )
+        .unwrap();
+        c.update(
+            r#"create server read_only_test_server foreign data wrapper read_only_test_wrapper"#,
+            None,
+            &[],
+        )
+        .unwrap();
+    }
+
+    #[wrappers_fdw(
+        version = "0.1.0",
+        author = "Supabase",
+        website = "https://github.com/supabase/wrappers",
+        error_type = "WriteTestFdwError"
+    )]
+    struct WriteTestFdw;
+
+    enum WriteTestFdwError {}
+
+    impl From<WriteTestFdwError> for ErrorReport {
+        fn from(_value: WriteTestFdwError) -> Self {
+            ErrorReport::new(PgSqlErrorCode::ERRCODE_FDW_ERROR, "", "")
+        }
+    }
+
+    impl ForeignDataWrapper<WriteTestFdwError> for WriteTestFdw {
+        fn new(_server: ForeignServer) -> Result<Self, WriteTestFdwError> {
+            Ok(Self)
+        }
+
+        fn begin_scan(
+            &mut self,
+            _quals: &[Qual],
+            _columns: &[Column],
+            _sorts: &[Sort],
+            _limit: &Option<Limit>,
+            _options: &HashMap<String, String>,
+        ) -> Result<(), WriteTestFdwError> {
+            Ok(())
+        }
+
+        fn iter_scan(&mut self, _row: &mut Row) -> Result<Option<()>, WriteTestFdwError> {
+            Ok(None)
+        }
+
+        fn end_scan(&mut self) -> Result<(), WriteTestFdwError> {
+            Ok(())
+        }
+
+        fn begin_modify(
+            &mut self,
+            _options: &HashMap<String, String>,
+        ) -> Result<(), WriteTestFdwError> {
+            Ok(())
+        }
+
+        fn insert(&mut self, row: &Row) -> Result<(), WriteTestFdwError> {
+            for (name, cell) in row.iter() {
+                if name == "id"
+                    && let Some(Cell::I64(id)) = cell
+                {
+                    INSERTED_ID.store(*id, std::sync::atomic::Ordering::SeqCst);
+                }
+            }
+            Ok(())
+        }
+
+        fn end_modify(&mut self) -> Result<(), WriteTestFdwError> {
+            Ok(())
+        }
+    }
+
+    fn setup_write_test(c: &mut pgrx::spi::SpiClient) {
+        c.update(
+            r#"create foreign data wrapper write_test_wrapper
+               handler write_test_fdw_handler validator write_test_fdw_validator"#,
+            None,
+            &[],
+        )
+        .unwrap();
+        c.update(
+            r#"create server write_test_server foreign data wrapper write_test_wrapper"#,
+            None,
+            &[],
+        )
+        .unwrap();
+    }
+
+    #[pg_test(error = "insert is not supported by this foreign data wrapper")]
+    fn read_only_fdw_rejects_direct_insert() {
+        Spi::connect_mut(|c| {
+            setup_read_only_test(c);
+            c.update(
+                r#"create foreign table ro_direct_test (id bigint, name text)
+                   server read_only_test_server options (rowid_column 'id')"#,
+                None,
+                &[],
+            )
+            .unwrap();
+
+            c.update("insert into ro_direct_test values (1, 'x')", None, &[])
+                .unwrap();
+        });
+    }
+
+    #[pg_test(error = "insert is not supported by this foreign data wrapper")]
+    fn read_only_fdw_rejects_routed_insert() {
+        Spi::connect_mut(|c| {
+            setup_read_only_test(c);
+            c.update(
+                r#"create table ro_parent (id bigint, name text) partition by range (id)"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"create foreign table ro_partition
+                   partition of ro_parent for values from (0) to (100)
+                   server read_only_test_server options (rowid_column 'id')"#,
+                None,
+                &[],
+            )
+            .unwrap();
+
+            c.update("insert into ro_parent values (1, 'x')", None, &[])
+                .unwrap();
+        });
+    }
+
+    #[pg_test]
+    fn write_fdw_supports_direct_insert() {
+        INSERTED_ID.store(0, std::sync::atomic::Ordering::SeqCst);
+
+        Spi::connect_mut(|c| {
+            setup_write_test(c);
+            c.update(
+                r#"create foreign table write_direct_test (id bigint, name text)
+                   server write_test_server options (rowid_column 'id')"#,
+                None,
+                &[],
+            )
+            .unwrap();
+
+            c.update("insert into write_direct_test values (7, 'x')", None, &[])
+                .unwrap();
+        });
+
+        assert_eq!(INSERTED_ID.load(std::sync::atomic::Ordering::SeqCst), 7);
+    }
+
+    #[pg_test]
+    fn write_fdw_supports_routed_insert() {
+        INSERTED_ID.store(0, std::sync::atomic::Ordering::SeqCst);
+
+        Spi::connect_mut(|c| {
+            setup_write_test(c);
+            c.update(
+                r#"create table write_parent (id bigint, name text) partition by range (id)"#,
+                None,
+                &[],
+            )
+            .unwrap();
+            c.update(
+                r#"create foreign table write_partition
+                   partition of write_parent for values from (0) to (100)
+                   server write_test_server options (rowid_column 'id')"#,
+                None,
+                &[],
+            )
+            .unwrap();
+
+            c.update("insert into write_parent values (9, 'x')", None, &[])
+                .unwrap();
+        });
+
+        assert_eq!(INSERTED_ID.load(std::sync::atomic::Ordering::SeqCst), 9);
+    }
 }

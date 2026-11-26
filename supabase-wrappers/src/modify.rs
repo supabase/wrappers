@@ -535,9 +535,16 @@ pub(super) extern "C-unwind" fn exec_foreign_insert<
 ) -> *mut pg_sys::TupleTableSlot {
     debug2!("---> exec_foreign_insert");
     unsafe {
-        let mut state = PgBox::<FdwModifyState<E, W>>::from_pg(
-            (*rinfo).ri_FdwState as *mut FdwModifyState<E, W>,
-        );
+        let state_ptr = (*rinfo).ri_FdwState as *mut FdwModifyState<E, W>;
+        if state_ptr.is_null() {
+            report_error(
+                PgSqlErrorCode::ERRCODE_FDW_ERROR,
+                "foreign modify state is not initialized",
+            );
+            return slot;
+        }
+
+        let mut state = PgBox::<FdwModifyState<E, W>>::from_pg(state_ptr);
 
         let result = PgMemoryContexts::For(state.tmp_ctx).switch_to(|_| {
             let row = utils::tuple_table_slot_to_row(slot);
@@ -551,6 +558,91 @@ pub(super) extern "C-unwind" fn exec_foreign_insert<
     }
 
     slot
+}
+
+#[pg_guard]
+pub(super) extern "C-unwind" fn begin_foreign_insert<
+    E: Into<ErrorReport>,
+    W: ForeignDataWrapper<E>,
+>(
+    _mtstate: *mut pg_sys::ModifyTableState,
+    rinfo: *mut pg_sys::ResultRelInfo,
+) {
+    debug2!("---> begin_foreign_insert");
+    unsafe {
+        // A direct INSERT goes through BeginForeignModify. Tuple routing and
+        // COPY FROM reach BeginForeignInsert instead; PostgreSQL then calls
+        // ExecForeignInsert without a modify state from BeginForeignModify.
+        if !(*rinfo).ri_FdwState.is_null() {
+            return;
+        }
+
+        let rel = (*rinfo).ri_RelationDesc;
+        let foreigntableid = (*rel).rd_id;
+        let ctx_name = format!("Wrappers_modify_{}", foreigntableid.to_u32());
+        let tmp_ctx = memctx::create_wrappers_memctx(&ctx_name);
+
+        let fdw_instance: W = instance::create_fdw_instance_from_table_id(foreigntableid);
+
+        let ftable = pg_sys::GetForeignTable(foreigntableid);
+        let mut opts = options_to_hashmap((*ftable).options).report_unwrap();
+        opts.insert(
+            "wrappers.fserver_oid".into(),
+            (*ftable).serverid.to_u32().to_string(),
+        );
+        opts.insert(
+            "wrappers.ftable_oid".into(),
+            (*ftable).relid.to_u32().to_string(),
+        );
+
+        // Insert does not use the row identity column, so no rowid is
+        // required here.
+        let mut state = FdwModifyState::<E, W> {
+            instance: Some(fdw_instance),
+            rowid_name: String::new(),
+            rowid_attno: 0,
+            rowid_typid: pg_sys::Oid::INVALID,
+            opts,
+            tmp_ctx,
+            _phantom: PhantomData,
+            #[cfg(feature = "pg13")]
+            update_cols: Vec::new(),
+        };
+
+        match state.begin_modify() {
+            Ok(()) => {
+                (*rinfo).ri_FdwState = Box::leak(Box::new(state)) as *mut FdwModifyState<E, W> as _;
+            }
+            Err(err) => {
+                drop(state);
+                Err::<(), E>(err).report_unwrap();
+            }
+        }
+    }
+}
+
+#[pg_guard]
+pub(super) extern "C-unwind" fn end_foreign_insert<
+    E: Into<ErrorReport>,
+    W: ForeignDataWrapper<E>,
+>(
+    _estate: *mut pg_sys::EState,
+    rinfo: *mut pg_sys::ResultRelInfo,
+) {
+    debug2!("---> end_foreign_insert");
+    unsafe {
+        let fdw_state = (*rinfo).ri_FdwState as *mut FdwModifyState<E, W>;
+        if fdw_state.is_null() {
+            return;
+        }
+
+        let mut state = PgBox::<FdwModifyState<E, W>>::from_pg(fdw_state);
+        let result = state.end_modify();
+        drop_fdw_modify_state(state.as_ptr());
+        (*rinfo).ri_FdwState = ptr::null::<FdwModifyState<E, W>>() as _;
+
+        result.report_unwrap();
+    }
 }
 
 unsafe fn get_rowid_cell<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
