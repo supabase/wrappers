@@ -487,24 +487,77 @@ pub(super) unsafe fn extract_target_columns(
 
             // get column names from var list
             if let Some(col_vars) = List::<*mut c_void>::downcast_ptr_in_memcx(col_vars, mcx) {
+                // A column can show up more than once: directly, and again when a
+                // whole-row reference is expanded into every attribute.
+                let mut seen_attnos = Vec::new();
+
                 for var in col_vars.iter() {
                     let var: pg_sys::Var = *(*var as *mut pg_sys::Var);
                     let rte = pg_sys::planner_rt_fetch(var.varno as _, root);
+                    let relid = (*rte).relid;
                     let attno = var.varattno;
-                    let attname = pg_sys::get_attname((*rte).relid, attno, true);
+
+                    // A whole-row reference (varattno == 0) must fetch every live
+                    // attribute of the relation. Otherwise PostgreSQL builds the
+                    // whole-row value from a slot whose unnamed columns are NULL.
+                    if attno == 0 {
+                        if (*rte).rtekind == pg_sys::RTEKind::RTE_RELATION {
+                            let rel = pg_sys::RelationIdGetRelation(relid);
+                            if !rel.is_null() {
+                                let natts = (*(*rel).rd_rel).relnatts;
+                                pg_sys::RelationClose(rel);
+
+                                for attno in 1..=natts {
+                                    let attname = pg_sys::get_attname(relid, attno, true);
+                                    if attname.is_null() {
+                                        // dropped attribute
+                                        continue;
+                                    }
+                                    if seen_attnos.contains(&(attno as usize)) {
+                                        continue;
+                                    }
+
+                                    // generated column is not supported
+                                    if pg_sys::get_attgenerated(relid, attno) > 0 {
+                                        report_warning("generated column is not supported");
+                                        continue;
+                                    }
+
+                                    let type_oid = pg_sys::get_atttype(relid, attno);
+                                    ret.push(Column {
+                                        name: CStr::from_ptr(attname).to_str().unwrap().to_owned(),
+                                        num: attno as usize,
+                                        type_oid,
+                                    });
+                                    seen_attnos.push(attno as usize);
+                                }
+                            }
+                        }
+                        continue;
+                    }
+
+                    // System columns (varattno < 0) are filled in by PostgreSQL
+                    // itself and are not part of the foreign scan's attribute
+                    // list. Adding them underflows the slot index later.
+                    if attno < 1 || seen_attnos.contains(&(attno as usize)) {
+                        continue;
+                    }
+
+                    let attname = pg_sys::get_attname(relid, attno, true);
                     if !attname.is_null() {
                         // generated column is not supported
-                        if pg_sys::get_attgenerated((*rte).relid, attno) > 0 {
+                        if pg_sys::get_attgenerated(relid, attno) > 0 {
                             report_warning("generated column is not supported");
                             continue;
                         }
 
-                        let type_oid = pg_sys::get_atttype((*rte).relid, attno);
+                        let type_oid = pg_sys::get_atttype(relid, attno);
                         ret.push(Column {
                             name: CStr::from_ptr(attname).to_str().unwrap().to_owned(),
                             num: attno as usize,
                             type_oid,
                         });
+                        seen_attnos.push(attno as usize);
                     }
                 }
             }
