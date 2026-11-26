@@ -1,6 +1,7 @@
 #[cfg(any(test, feature = "pg_test"))]
 #[pgrx::pg_schema]
 mod tests {
+    use crate::unresponsive_server::UnresponsiveServer;
     use pgrx::prelude::*;
 
     #[pg_test]
@@ -89,5 +90,67 @@ mod tests {
 
             assert_eq!(results, vec!["84e1ed2a-3627-4d70-b311-c0e7c0bed313"]);
         });
+    }
+
+    /// Start an unresponsive server and create a foreign table.
+    fn setup_unresponsive_server() -> UnresponsiveServer {
+        let server = UnresponsiveServer::start();
+        let port = server.port;
+
+        Spi::connect_mut(|connection| {
+            connection
+                .update(
+                    r#"CREATE FOREIGN DATA WRAPPER logflare_wrapper
+                         HANDLER logflare_fdw_handler VALIDATOR logflare_fdw_validator"#,
+                    None,
+                    &[],
+                )
+                .unwrap();
+
+            connection
+                .update(
+                    &format!(
+                        r#"CREATE SERVER logflare_server
+                         FOREIGN DATA WRAPPER logflare_wrapper
+                         OPTIONS (
+                            api_url 'http://127.0.0.1:{port}/v1/endpoint',
+                            api_key 'apiKey'
+                         )"#
+                    ),
+                    None,
+                    &[],
+                )
+                .unwrap();
+
+            connection
+                .update(
+                    r#"
+                  CREATE FOREIGN TABLE logflare_table (id text)
+                  SERVER logflare_server
+                  OPTIONS (
+                    endpoint '3d48cbfe-5d65-494f-be06-910479aed6c1'
+                  )
+             "#,
+                    None,
+                    &[],
+                )
+                .unwrap();
+        });
+
+        server
+    }
+
+    #[pg_test]
+    #[ignore = "backend gets stuck due to blocking I/O"]
+    fn logflare_backend_cancellable() {
+        let server = setup_unresponsive_server();
+        server.assert_cancellable("SELECT * from logflare_table");
+    }
+
+    #[pg_test(error = "terminating connection due to administrator command")]
+    #[ignore = "backend gets stuck due to blocking I/O"]
+    fn logflare_backend_terminable() {
+        let server = setup_unresponsive_server();
+        server.assert_terminable("SELECT * from logflare_table");
     }
 }
