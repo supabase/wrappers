@@ -902,6 +902,71 @@ pub(super) extern "C-unwind" fn get_foreign_paths<
     }
 }
 
+/// Map each column an aggregate scan produces to its 1-based attribute number
+/// in the upper rel's target list.
+///
+/// The FDW returns rows shaped as GROUP BY columns first, then aggregates, while
+/// the scan tuple follows `reltarget->exprs` order, so the two orders must be
+/// mapped explicitly. Returns `None` if the target list holds anything other than
+/// plain GROUP BY column references and the extracted aggregates, or if any
+/// output does not appear exactly once. Such queries must not be pushed down:
+/// writing results into the wrong attribute either returns wrong values or makes
+/// Postgres dereference a by-value Datum as a pointer.
+///
+/// # Safety
+///
+/// `reltarget` must be a valid PathTarget pointer (or null).
+pub(crate) unsafe fn aggregate_output_attnos(
+    reltarget: *mut pg_sys::PathTarget,
+    group_by: &[Column],
+    aggregates: &[Aggregate],
+) -> Option<Vec<usize>> {
+    unsafe {
+        if reltarget.is_null() {
+            return None;
+        }
+        let exprs = (*reltarget).exprs;
+        let n = if exprs.is_null() {
+            0
+        } else {
+            (*exprs).length as usize
+        };
+
+        let mut group_attnos: Vec<Option<usize>> = vec![None; group_by.len()];
+        let mut agg_attnos = Vec::with_capacity(aggregates.len());
+        for i in 0..n {
+            let node = (*(*exprs).elements.add(i)).ptr_value as *mut pg_sys::Node;
+            if node.is_null() {
+                return None;
+            }
+            let attno = i + 1;
+            match (*node).type_ {
+                pg_sys::NodeTag::T_Aggref => agg_attnos.push(attno),
+                pg_sys::NodeTag::T_Var => {
+                    let var = node as *mut pg_sys::Var;
+                    if (*var).varlevelsup != 0 || (*var).varattno <= 0 {
+                        return None;
+                    }
+                    let col_num = (*var).varattno as usize;
+                    let pos = group_by.iter().position(|c| c.num == col_num)?;
+                    if group_attnos[pos].replace(attno).is_some() {
+                        // same column referenced twice in the target list
+                        return None;
+                    }
+                }
+                _ => return None,
+            }
+        }
+
+        if agg_attnos.len() != aggregates.len() {
+            return None;
+        }
+        let mut attnos = group_attnos.into_iter().collect::<Option<Vec<_>>>()?;
+        attnos.extend(agg_attnos);
+        Some(attnos)
+    }
+}
+
 #[pg_guard]
 pub(super) extern "C-unwind" fn get_foreign_plan<E: Into<ErrorReport>, W: ForeignDataWrapper<E>>(
     _root: *mut pg_sys::PlannerInfo,
@@ -980,30 +1045,41 @@ pub(super) extern "C-unwind" fn get_foreign_plan<E: Into<ErrorReport>, W: Foreig
             // Now that we know the upper path is in the plan, project state.tgts
             // to match the aggregate output shape. iterate_foreign_scan uses
             // tgts to map cells returned by the FDW's iter_scan into the
-            // correct attribute slots; for aggregate scans this is GROUP BY
-            // columns first, then aggregate result columns keyed by alias.
+            // correct attribute slots. The FDW returns GROUP BY columns first,
+            // then aggregate result columns keyed by alias, but the slot follows
+            // reltarget order (e.g. `SELECT count(*), status ... GROUP BY status`),
+            // so each tgt's `num` must be its position in reltarget.
             // We keep this off the base-rel-scan code path so state.tgts (the
             // base-rel scan columns set in get_foreign_rel_size) is preserved
             // when the planner picks the base-rel path.
-            let mut new_tgts = Vec::new();
-            let mut col_num = 1usize;
-            for col in &state.group_by {
-                new_tgts.push(Column {
-                    name: col.name.clone(),
-                    num: col_num,
-                    type_oid: col.type_oid,
-                });
-                col_num += 1;
-            }
-            for agg in &state.aggregates {
-                new_tgts.push(Column {
-                    name: agg.alias.clone(),
-                    num: col_num,
-                    type_oid: agg.type_oid,
-                });
-                col_num += 1;
-            }
-            state.tgts = new_tgts;
+            let Some(attnos) =
+                aggregate_output_attnos(reltarget, &state.group_by, &state.aggregates)
+            else {
+                // upper.rs only creates the path when this mapping succeeds
+                report_error(
+                    PgSqlErrorCode::ERRCODE_FDW_INVALID_COLUMN_NUMBER,
+                    "aggregate pushdown target list does not match pushed-down outputs",
+                );
+                return ptr::null_mut();
+            };
+            let outputs = state
+                .group_by
+                .iter()
+                .map(|col| (col.name.clone(), col.type_oid))
+                .chain(
+                    state
+                        .aggregates
+                        .iter()
+                        .map(|agg| (agg.alias.clone(), agg.type_oid)),
+                );
+            state.tgts = outputs
+                .zip(attnos)
+                .map(|((name, type_oid), num)| Column {
+                    name,
+                    num,
+                    type_oid,
+                })
+                .collect();
 
             (agg_tlist, fdw_scan_tlist)
         } else {
