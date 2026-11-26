@@ -5,16 +5,6 @@ edition = { workspace = true }
 rust-version = { workspace = true }
 homepage = { workspace = true }
 
-[lib]
-crate-type = ["cdylib"]
-
-[dependencies]
-wit-bindgen-rt = "0.41.0"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-serde_yaml_ng = "0.10"
-urlencoding = "2.1"
-
 [package.metadata.component]
 package = "supabase:openapi-fdw"
 
@@ -25,3 +15,13 @@ path = "wit"
 
 [package.metadata.component.target.dependencies]
 "supabase:wrappers" = { path = "../../wit/v2" }
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wit-bindgen-rt = "0.41.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml_ng = "0.10"
+urlencoding = "2.1"
