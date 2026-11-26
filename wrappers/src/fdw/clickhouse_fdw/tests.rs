@@ -10,7 +10,7 @@ mod tests {
     };
     use supabase_wrappers::prelude::create_async_runtime;
 
-use crate::unresponsive_server::UnresponsiveServer;
+    use crate::unresponsive_server::UnresponsiveServer;
 
     #[pg_test]
     fn clickhouse_smoketest() {

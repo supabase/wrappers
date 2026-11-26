@@ -1,6 +1,7 @@
 #[cfg(any(test, feature = "pg_test"))]
 #[pgrx::pg_schema]
 mod tests {
+    use crate::unresponsive_server::UnresponsiveServer;
     use pgrx::prelude::*;
     use serde_json::json;
     use std::str::FromStr;
@@ -192,5 +193,72 @@ mod tests {
             .unwrap();
             let _results = c.select("SELECT * FROM duckdb.passwd", None, &[]);
         });
+    }
+
+    /// Start an unresponsive server and create a foreign table.
+    fn setup_unresponsive_server() -> UnresponsiveServer {
+        let server = UnresponsiveServer::start();
+        let port = server.port;
+
+        Spi::connect_mut(|connection| {
+            connection
+                .update(
+                    r#"CREATE FOREIGN DATA WRAPPER duckdb_wrapper
+                         HANDLER duckdb_fdw_handler VALIDATOR duckdb_fdw_validator"#,
+                    None,
+                    &[],
+                )
+                .unwrap();
+
+            connection
+                .update(
+                    &format!(
+                        r#"CREATE SERVER duckdb_server
+                         FOREIGN DATA WRAPPER duckdb_wrapper
+                         OPTIONS (
+                            type 's3',
+                            key_id 'admin',
+                            secret 'password',
+                            region 'us-east-1',
+                            endpoint '127.0.0.1:{port}',
+                            url_style 'path',
+                            use_ssl 'false'
+                         )"#
+                    ),
+                    None,
+                    &[],
+                )
+                .unwrap();
+
+            connection
+                .update(
+                    r#"
+                  CREATE FOREIGN TABLE duckdb_table (id bigint)
+                  SERVER duckdb_server
+                  OPTIONS (
+                    table 's3://warehouse/test_data.csv'
+                  )
+             "#,
+                    None,
+                    &[],
+                )
+                .unwrap();
+        });
+
+        server
+    }
+
+    #[pg_test]
+    #[ignore = "backend gets stuck due to blocking I/O"]
+    fn duckdb_backend_cancellable() {
+        let server = setup_unresponsive_server();
+        server.assert_cancellable("SELECT * from duckdb_table");
+    }
+
+    #[pg_test(error = "terminating connection due to administrator command")]
+    #[ignore = "backend gets stuck due to blocking I/O"]
+    fn duckdb_backend_terminable() {
+        let server = setup_unresponsive_server();
+        server.assert_terminable("SELECT * from duckdb_table");
     }
 }
