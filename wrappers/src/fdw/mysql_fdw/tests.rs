@@ -851,4 +851,93 @@ mod tests {
             assert_eq!(names, vec!["Alice", "Bob", "Carol", "Dave"]);
         });
     }
+
+    // Regression test: a qual written as `const op col` is swapped to `col op' const`
+    // before being pushed down; `op'` must be the commutator of `op`, otherwise the
+    // remote side filters on the reversed comparison and rows go missing.
+    fn setup_mysql_swapped_qual_test_data() {
+        let rt = create_async_runtime().expect("failed to create runtime");
+        let pool = Pool::new("mysql://root:password@localhost:3306/testdb");
+        let mut conn = rt
+            .block_on(async {
+                let conn = pool.get_conn().await?;
+                Ok::<_, MySqlError>(conn)
+            })
+            .expect("failed to connect to mysql");
+
+        let mut exec = |sql: &str| {
+            rt.block_on(async {
+                conn.query_drop(sql).await?;
+                Ok::<_, MySqlError>(())
+            })
+            .expect("failed to execute query");
+        };
+
+        exec("CREATE DATABASE IF NOT EXISTS testdb");
+        exec("DROP TABLE IF EXISTS testdb.people_swap");
+        exec(
+            "CREATE TABLE testdb.people_swap (
+                id   BIGINT PRIMARY KEY,
+                age  INT NOT NULL,
+                born DATETIME NOT NULL
+            )",
+        );
+        exec(
+            "INSERT INTO testdb.people_swap (id, age, born) VALUES
+                (1, 20, '2000-01-01 00:00:00'),
+                (2, 30, '1990-01-01 00:00:00'),
+                (3, 40, '1980-01-01 00:00:00')",
+        );
+    }
+
+    #[pg_test]
+    fn mysql_swapped_qual_test() {
+        setup_mysql_swapped_qual_test_data();
+
+        Spi::connect_mut(|c| {
+            c.update(
+                r#"CREATE FOREIGN DATA WRAPPER mysql_wrapper
+                    HANDLER mysql_fdw_handler VALIDATOR mysql_fdw_validator"#,
+                None,
+                &[],
+            )
+            .expect("failed to create foreign data wrapper");
+            c.update(
+                r#"CREATE SERVER mysql_server
+                     FOREIGN DATA WRAPPER mysql_wrapper
+                     OPTIONS (conn_string 'mysql://root:password@localhost:3306/testdb')"#,
+                None,
+                &[],
+            )
+            .expect("failed to create server");
+            c.update(
+                r#"CREATE FOREIGN TABLE people_swap (id bigint, age integer, born timestamp)
+                     SERVER mysql_server OPTIONS (table 'people_swap')"#,
+                None,
+                &[],
+            )
+            .expect("failed to create foreign table");
+
+            for (cond, expected) in [
+                ("25 < age", vec![2, 3]),
+                ("25 > age", vec![1]),
+                ("30 <= age", vec![2, 3]),
+                ("30 >= age", vec![1, 2]),
+                ("30 = age", vec![2]),
+                ("30 <> age", vec![1, 3]),
+                ("'1985-01-01'::timestamp < born", vec![1, 2]),
+            ] {
+                let ids = c
+                    .select(
+                        &format!("SELECT id FROM people_swap WHERE {cond} ORDER BY id"),
+                        None,
+                        &[],
+                    )
+                    .unwrap()
+                    .filter_map(|r| r.get_by_name::<i64, _>("id").unwrap())
+                    .collect::<Vec<_>>();
+                assert_eq!(ids, expected, "wrong rows for [{cond}]");
+            }
+        });
+    }
 }

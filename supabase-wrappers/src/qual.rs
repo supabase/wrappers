@@ -190,7 +190,7 @@ pub(crate) unsafe fn extract_from_op_expr(
 
                 // get operator
                 let opno = (*expr).opno;
-                let opr = get_operator(opno);
+                let mut opr = get_operator(opno);
                 if opr.is_null() {
                     report_warning("operator is empty");
                     return None;
@@ -199,12 +199,15 @@ pub(crate) unsafe fn extract_from_op_expr(
                 let mut left = unnest_clause(*args.get(0).unwrap() as _);
                 let mut right = unnest_clause(*args.get(1).unwrap() as _);
 
-                // swap operands if needed
+                // swap operands if needed, e.g. `10 < col` becomes `col > 10`: the
+                // operator must be replaced by its commutator, otherwise the qual
+                // would be pushed down with the comparison reversed
                 if is_a(right, pg_sys::NodeTag::T_Var)
                     && !is_a(left, pg_sys::NodeTag::T_Var)
                     && (*opr).oprcom != Oid::INVALID
                 {
                     std::mem::swap(&mut left, &mut right);
+                    opr = get_operator((*opr).oprcom);
                 }
 
                 if is_a(left, pg_sys::NodeTag::T_Var) {
