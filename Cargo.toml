@@ -7,6 +7,7 @@ members = [
     "wasm-wrappers/fdw/calendly_fdw",
     "wasm-wrappers/fdw/cfd1_fdw",
     "wasm-wrappers/fdw/clerk_fdw",
+    "wasm-wrappers/fdw/gsheets_fdw",
     "wasm-wrappers/fdw/helloworld_fdw",
     "wasm-wrappers/fdw/hubspot_fdw",
     "wasm-wrappers/fdw/infura_fdw",
@@ -47,6 +48,9 @@ strip = "debuginfo"
 strip = "debuginfo"
 
 [profile.release.package.clerk_fdw]
+strip = "debuginfo"
+
+[profile.release.package.gsheets_fdw]
 strip = "debuginfo"
 
 [profile.release.package.helloworld_fdw]

@@ -61,6 +61,18 @@ Foreign data wrappers built with Wasm which can be used on Supabase platform.
     :octicons-code-24: [source](https://github.com/supabase/wrappers/tree/wasm_cfd1_fdw_v0.1.0/wasm-wrappers/fdw/cfd1_fdw) &nbsp;
     :material-file-document: [docs](../cfd1.md)
 
+- :simple-webassembly: &nbsp; **[Google Sheets](../gsheets.md)**
+
+    ----
+
+    Foreign data wrapper for [Google Sheets](https://www.google.com/sheets/about/).
+
+    Supported by [Supabase](https://www.supabase.com)
+
+    :octicons-tag-24: [v0.1.0](https://github.com/supabase/wrappers/releases/tag/gsheets_fdw_v0.1.0) &nbsp;
+    :octicons-code-24: [source](https://github.com/supabase/wrappers/tree/wasm_gsheets_fdw_v0.1.0/wasm-wrappers/fdw/gsheets_fdw) &nbsp;
+    :material-file-document: [docs](../gsheets.md)
+
 - :simple-webassembly: &nbsp; **[Gravatar](../gravatar.md)**
 
     ----

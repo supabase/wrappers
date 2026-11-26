@@ -19,6 +19,7 @@
 | [DuckDB](./wrappers/src/fdw/duckdb_fdw)         | A FDW for [DuckDB](https://duckdb.org/)                                       | ✅   | ❌     |
 | [DynamoDB](./wrappers/src/fdw/dynamodb_fdw)     | A FDW for [DynamoDB](https://aws.amazon.com/dynamodb/)                        | ✅   | ✅     |
 | [Firebase](./wrappers/src/fdw/firebase_fdw)     | A FDW for Google [Firebase](https://firebase.google.com/)                     | ✅   | ❌     |
+| [Google Sheets](./wasm-wrappers/fdw/gsheets_fdw)| A Wasm FDW for [Google Sheets](https://www.google.com/sheets/about/)          | ✅   | ❌     |
 | [HelloWorld](./wrappers/src/fdw/helloworld_fdw) | A demo FDW to show how to develop a basic FDW.                                |      |        |
 | [HubSpot](./wasm-wrappers/fdw/hubspot_fdw)      | A Wasm FDW for [HubSpot](https://www.hubspot.com/)                            | ✅   | ❌     |
 | [Infura](./wasm-wrappers/fdw/infura_fdw)        | A Wasm FDW for [Infura](https://www.infura.io/) blockchain data               | ✅   | ❌     |

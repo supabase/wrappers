@@ -38,6 +38,7 @@ nav:
           - Calendly: "catalog/calendly.md"
           - Clerk: "catalog/clerk.md"
           - Cloudflare D1: "catalog/cfd1.md"
+          - Google Sheets: "catalog/gsheets.md"
           - Gravatar: "catalog/gravatar.md"
           - HubSpot: "catalog/hubspot.md"
           - Infura: "catalog/infura.md"
