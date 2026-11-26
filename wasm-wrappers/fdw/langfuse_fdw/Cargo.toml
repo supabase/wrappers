@@ -5,14 +5,6 @@ edition = { workspace = true }
 homepage = { workspace = true }
 rust-version = { workspace = true }
 
-[lib]
-crate-type = ["cdylib"]
-
-[dependencies]
-wit-bindgen-rt = "0.41.0"
-serde_json = "1.0"
-base64 = "0.22"
-
 [package.metadata.component]
 package = "supabase:langfuse-fdw"
 
@@ -22,4 +14,12 @@ package = "supabase:langfuse-fdw"
 path = "wit"
 
 [package.metadata.component.target.dependencies]
+
 "supabase:wrappers" = { path = "../../wit/v2" }
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wit-bindgen-rt = "0.41.0"
+serde_json = "1.0"
+base64 = "0.22"
