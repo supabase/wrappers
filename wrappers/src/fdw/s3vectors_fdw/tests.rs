@@ -1,6 +1,7 @@
 #[cfg(any(test, feature = "pg_test"))]
 #[pgrx::pg_schema]
 mod tests {
+    use crate::unresponsive_server::UnresponsiveServer;
     use pgrx::prelude::*;
 
     #[pg_test]
@@ -80,5 +81,71 @@ mod tests {
             )
             .unwrap();
         });
+    }
+
+    /// Start an unresponsive server and create a foreign table.
+    fn setup_unresponsive_server() -> UnresponsiveServer {
+        let server = UnresponsiveServer::start();
+        let port = server.port;
+
+        Spi::connect_mut(|connection| {
+            connection
+                .update(
+                    r#"CREATE FOREIGN DATA WRAPPER s3_vectors_wrapper
+                         HANDLER s3_vectors_fdw_handler VALIDATOR s3_vectors_fdw_validator"#,
+                    None,
+                    &[],
+                )
+                .unwrap();
+
+            connection
+                .update(
+                    &format!(
+                        r#"CREATE SERVER s3_vectors_server
+                         FOREIGN DATA WRAPPER s3_vectors_wrapper
+                         OPTIONS (
+                           aws_access_key_id 'test',
+                           aws_secret_access_key 'test',
+                           endpoint_url 'http://127.0.0.1:{port}',
+                           batch_size '200'
+                         )"#
+                    ),
+                    None,
+                    &[],
+                )
+                .unwrap();
+
+            connection
+                .update(
+                    r#"
+                  CREATE FOREIGN TABLE s3_vectors_table (key text)
+                  SERVER s3_vectors_server
+                  OPTIONS (
+                    bucket_name 'my-vector-bucket',
+                    index_name 'my-vector-index',
+                    rowid_column 'key'
+                  )
+             "#,
+                    None,
+                    &[],
+                )
+                .unwrap();
+        });
+
+        server
+    }
+
+    #[pg_test]
+    #[ignore = "backend gets stuck due to blocking I/O"]
+    fn s3vectors_backend_cancellable() {
+        let server = setup_unresponsive_server();
+        server.assert_cancellable("SELECT * from s3_vectors_table");
+    }
+
+    #[pg_test(error = "terminating connection due to administrator command")]
+    #[ignore = "backend gets stuck due to blocking I/O"]
+    fn s3vectors_backend_terminable() {
+        let server = setup_unresponsive_server();
+        server.assert_terminable("SELECT * from s3_vectors_table");
     }
 }
