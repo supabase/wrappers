@@ -295,18 +295,22 @@ impl PaddleFdw {
             body: String::default(),
         };
         let resp = http::get(&req)?;
-        let resp_json: JsonValue = serde_json::from_str(&resp.body).map_err(|e| e.to_string())?;
 
-        // if the 404 is caused by no object found, we shouldn't take it as an error
-        if resp.status_code == 404 && resp_json.pointer("/error/code") == Some(&json!("not_found"))
-        {
-            self.src_rows = Vec::default();
-            self.src_idx = 0;
-            self.url = None;
-            return Ok(());
+        // check for errors
+        if resp.status_code == 404 {
+            // if the 404 is caused by no object found, we shouldn't take it as an error
+            if let Ok(resp_json) = serde_json::from_str::<JsonValue>(&resp.body) {
+                if resp_json.pointer("/error/code") == Some(&json!("not_found")) {
+                    self.src_rows = Vec::default();
+                    self.src_idx = 0;
+                    self.url = None;
+                    return Ok(());
+                }
+            }
         }
-
         http::error_for_status(&resp).map_err(|err| format!("{}: {}", err, resp.body))?;
+
+        let resp_json: JsonValue = serde_json::from_str(&resp.body).map_err(|e| e.to_string())?;
 
         // save source rows
         self.src_rows = resp_json

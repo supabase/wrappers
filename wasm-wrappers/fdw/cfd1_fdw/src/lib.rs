@@ -226,12 +226,12 @@ impl Cfd1Fdw {
                 continue;
             }
 
+            // check for HTTP errors
+            http::error_for_status(&resp).map_err(|err| format!("{}: {}", err, resp.body))?;
+
             // transform response to json
             let resp_json: JsonValue =
                 serde_json::from_str(&resp.body).map_err(|e| e.to_string())?;
-
-            // check for HTTP errors
-            http::error_for_status(&resp).map_err(|err| format!("{}: {}", err, resp.body))?;
 
             // check for API request errors
             if let Some(success) = resp_json["success"].as_bool()

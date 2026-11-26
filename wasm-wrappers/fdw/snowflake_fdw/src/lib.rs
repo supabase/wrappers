@@ -61,6 +61,10 @@ impl SnowflakeFdw {
             http::Method::Post => http::post(&req),
             _ => unreachable!(),
         }?;
+
+        // Check for errors
+        http::error_for_status(&resp).map_err(|err| format!("{}: {}", err, resp.body))?;
+
         let json_value = serde_json::from_str(&resp.body).map_err(|e| e.to_string())?;
 
         stats::inc_stats(FDW_NAME, stats::Metric::BytesIn, resp.body.len() as i64);
@@ -213,7 +217,7 @@ impl SnowflakeFdw {
 
         // polling query result
         loop {
-            http::error_for_status(&resp)?;
+            http::error_for_status(&resp).map_err(|err| format!("{}: {}", err, resp.body))?;
 
             // make sure response status code is 200 or 202 only
             if resp.status_code != 200 && resp.status_code != 202 {
