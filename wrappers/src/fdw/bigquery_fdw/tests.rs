@@ -4,6 +4,8 @@ mod tests {
     use pgrx::pg_test;
     use pgrx::prelude::*;
 
+    use crate::unresponsive_server::UnresponsiveServer;
+
     #[pg_test]
     fn bigquery_smoketest() {
         Spi::connect_mut(|c| {
@@ -520,5 +522,70 @@ mod tests {
                 "SELECT id + 1 AS g, COUNT(*) FROM agg_test GROUP BY id + 1"
             );
         });
+    }
+
+    /// Start an unrespnsive server and create a foreign table.
+    fn setup_unresponsive_server() -> UnresponsiveServer {
+        let server = UnresponsiveServer::start();
+        let port = server.port;
+
+        Spi::connect_mut(|connection| {
+            connection
+                .update(
+                    r#"CREATE FOREIGN DATA WRAPPER bigquery_wrapper
+                         HANDLER big_query_fdw_handler VALIDATOR big_query_fdw_validator"#,
+                    None,
+                    &[],
+                )
+                .unwrap();
+
+            connection
+                .update(
+                    &format!(
+                        r#"CREATE SERVER bigquery_server
+                         FOREIGN DATA WRAPPER bigquery_wrapper
+                         OPTIONS (
+                            project_id 'test_project',
+                            dataset_id 'test_dataset',
+                            api_endpoint 'http://localhost:{port}',
+                            mock_auth 'true'
+                         )"#
+                    ),
+                    None,
+                    &[],
+                )
+                .unwrap();
+
+            connection
+                .update(
+                    r#"
+                  CREATE FOREIGN TABLE bigquery_table (id bigint)
+                  SERVER bigquery_server
+                  OPTIONS (
+                    table 'test_table',
+                    rowid_column 'id'
+                  )
+             "#,
+                    None,
+                    &[],
+                )
+                .unwrap();
+        });
+
+        server
+    }
+
+    #[pg_test]
+    #[ignore = "backend gets stuck due to blocking I/O"]
+    fn backend_cancellable() {
+        let server = setup_unresponsive_server();
+        server.assert_cancellable("SELECT * from bigquery_table");
+    }
+
+    #[pg_test(error = "terminating connection due to administrator command")]
+    #[ignore = "backend gets stuck due to blocking I/O"]
+    fn backend_terminable() {
+        let server = setup_unresponsive_server();
+        server.assert_terminable("SELECT * from bigquery_table");
     }
 }
