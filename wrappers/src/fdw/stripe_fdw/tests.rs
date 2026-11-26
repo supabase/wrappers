@@ -1,6 +1,7 @@
 #[cfg(any(test, feature = "pg_test"))]
 #[pgrx::pg_schema]
 mod tests {
+    use crate::unresponsive_server::UnresponsiveServer;
     use pgrx::prelude::*;
 
     #[pg_test]
@@ -575,5 +576,65 @@ mod tests {
 
             // assert!(results.is_empty());
         });
+    }
+
+    /// Start an unresponsive server and create a foreign table.
+    fn setup_unresponsive_server() -> UnresponsiveServer {
+        let server = UnresponsiveServer::start();
+        let port = server.port;
+
+        Spi::connect_mut(|connection| {
+            connection
+                .update(
+                    r#"CREATE FOREIGN DATA WRAPPER stripe_wrapper
+                         HANDLER stripe_fdw_handler VALIDATOR stripe_fdw_validator"#,
+                    None,
+                    &[],
+                )
+                .unwrap();
+
+            connection
+                .update(
+                    &format!(
+                        r#"CREATE SERVER stripe_server
+                         FOREIGN DATA WRAPPER stripe_wrapper
+                         OPTIONS (
+                           api_url 'http://127.0.0.1:{port}/v1',
+                           api_key 'sk_test_key'
+                         )"#
+                    ),
+                    None,
+                    &[],
+                )
+                .unwrap();
+
+            connection
+                .update(
+                    r#"
+                  CREATE FOREIGN TABLE stripe_table (id text)
+                  SERVER stripe_server
+                  OPTIONS (object 'customers', rowid_column 'id')
+             "#,
+                    None,
+                    &[],
+                )
+                .unwrap();
+        });
+
+        server
+    }
+
+    #[pg_test]
+    #[ignore = "backend gets stuck due to blocking I/O"]
+    fn stripe_backend_cancellable() {
+        let server = setup_unresponsive_server();
+        server.assert_cancellable("SELECT * from stripe_table");
+    }
+
+    #[pg_test(error = "terminating connection due to administrator command")]
+    #[ignore = "backend gets stuck due to blocking I/O"]
+    fn stripe_backend_terminable() {
+        let server = setup_unresponsive_server();
+        server.assert_terminable("SELECT * from stripe_table");
     }
 }

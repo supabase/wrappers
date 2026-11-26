@@ -1,6 +1,7 @@
 #[cfg(any(test, feature = "pg_test"))]
 #[pgrx::pg_schema]
 mod tests {
+    use crate::unresponsive_server::UnresponsiveServer;
     use pgrx::pg_test;
     use pgrx::prelude::*;
     use redis::Client;
@@ -397,5 +398,67 @@ mod tests {
                 ]
             );
         });
+    }
+
+    /// Start an unresponsive server and create a foreign table.
+    fn setup_unresponsive_server() -> UnresponsiveServer {
+        let server = UnresponsiveServer::start();
+        let port = server.port;
+
+        Spi::connect_mut(|connection| {
+            connection
+                .update(
+                    r#"CREATE FOREIGN DATA WRAPPER redis_wrapper
+                         HANDLER redis_fdw_handler VALIDATOR redis_fdw_validator"#,
+                    None,
+                    &[],
+                )
+                .unwrap();
+
+            connection
+                .update(
+                    &format!(
+                        r#"CREATE SERVER redis_server
+                         FOREIGN DATA WRAPPER redis_wrapper
+                         OPTIONS (
+                           conn_url 'redis://127.0.0.1:{port}'
+                         )"#
+                    ),
+                    None,
+                    &[],
+                )
+                .unwrap();
+
+            connection
+                .update(
+                    r#"
+                  CREATE FOREIGN TABLE redis_table (element text)
+                  SERVER redis_server
+                  OPTIONS (
+                    src_type 'list',
+                    src_key 'list'
+                  )
+             "#,
+                    None,
+                    &[],
+                )
+                .unwrap();
+        });
+
+        server
+    }
+
+    #[pg_test]
+    #[ignore = "backend gets stuck due to blocking I/O"]
+    fn redis_backend_cancellable() {
+        let server = setup_unresponsive_server();
+        server.assert_cancellable("SELECT * from redis_table");
+    }
+
+    #[pg_test(error = "terminating connection due to administrator command")]
+    #[ignore = "backend gets stuck due to blocking I/O"]
+    fn redis_backend_terminable() {
+        let server = setup_unresponsive_server();
+        server.assert_terminable("SELECT * from redis_table");
     }
 }

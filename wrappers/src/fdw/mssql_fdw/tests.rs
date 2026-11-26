@@ -1,6 +1,7 @@
 #[cfg(any(test, feature = "pg_test"))]
 #[pgrx::pg_schema]
 mod tests {
+    use crate::unresponsive_server::UnresponsiveServer;
     use pgrx::pg_test;
     use pgrx::prelude::*;
     use supabase_wrappers::prelude::create_async_runtime;
@@ -540,5 +541,64 @@ mod tests {
                 "SELECT id + 1 AS g, COUNT(*) FROM agg_test GROUP BY id + 1"
             );
         });
+    }
+
+    /// Start an unresponsive server and create a foreign table.
+    fn setup_unresponsive_server() -> UnresponsiveServer {
+        let server = UnresponsiveServer::start();
+        let port = server.port;
+
+        Spi::connect_mut(|connection| {
+            connection
+                .update(
+                    r#"CREATE FOREIGN DATA WRAPPER mssql_wrapper
+                         HANDLER mssql_fdw_handler VALIDATOR mssql_fdw_validator"#,
+                    None,
+                    &[],
+                )
+                .unwrap();
+
+            connection
+                .update(
+                    &format!(
+                        r#"CREATE SERVER mssql_server
+                         FOREIGN DATA WRAPPER mssql_wrapper
+                         OPTIONS (
+                           conn_string 'Server=127.0.0.1,{port};User=sa;Password=Password1234_56;Database=master;IntegratedSecurity=false;TrustServerCertificate=true;encrypt=DANGER_PLAINTEXT;ApplicationName=wrappers'
+                         )"#
+                    ),
+                    None,
+                    &[],
+                )
+                .unwrap();
+
+            connection
+                .update(
+                    r#"
+                  CREATE FOREIGN TABLE mssql_table (id bigint)
+                  SERVER mssql_server
+                  OPTIONS (table 'users')
+             "#,
+                    None,
+                    &[],
+                )
+                .unwrap();
+        });
+
+        server
+    }
+
+    #[pg_test]
+    #[ignore = "backend gets stuck due to blocking I/O"]
+    fn mssql_backend_cancellable() {
+        let server = setup_unresponsive_server();
+        server.assert_cancellable("SELECT * from mssql_table");
+    }
+
+    #[pg_test(error = "terminating connection due to administrator command")]
+    #[ignore = "backend gets stuck due to blocking I/O"]
+    fn mssql_backend_terminable() {
+        let server = setup_unresponsive_server();
+        server.assert_terminable("SELECT * from mssql_table");
     }
 }

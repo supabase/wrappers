@@ -1,6 +1,7 @@
 #[cfg(any(test, feature = "pg_test"))]
 #[pgrx::pg_schema]
 mod tests {
+    use crate::unresponsive_server::UnresponsiveServer;
     use pgrx::prelude::*;
     use serde_json::json;
     use std::str::FromStr;
@@ -496,5 +497,68 @@ mod tests {
             elapsed < std::time::Duration::from_secs(5),
             "expected connect_timeout_ms/request_timeout_ms to bound the failure, took {elapsed:?}"
         );
+    }
+
+    /// Start an unresponsive server and create a foreign table.
+    fn setup_unresponsive_server() -> UnresponsiveServer {
+        let server = UnresponsiveServer::start();
+        let port = server.port;
+
+        Spi::connect_mut(|connection| {
+            connection
+                .update(
+                    r#"CREATE FOREIGN DATA WRAPPER iceberg_wrapper
+                         HANDLER iceberg_fdw_handler VALIDATOR iceberg_fdw_validator"#,
+                    None,
+                    &[],
+                )
+                .unwrap();
+
+            connection
+                .update(
+                    &format!(
+                        r#"CREATE SERVER iceberg_server
+                         FOREIGN DATA WRAPPER iceberg_wrapper
+                         OPTIONS (
+                           aws_access_key_id 'admin',
+                           aws_secret_access_key 'password',
+                           catalog_uri 'http://127.0.0.1:{port}',
+                           warehouse 'warehouse',
+                           "s3.endpoint" 'http://127.0.0.1:{port}'
+                         )"#
+                    ),
+                    None,
+                    &[],
+                )
+                .unwrap();
+
+            connection
+                .update(
+                    r#"
+                  CREATE FOREIGN TABLE iceberg_table (id bigint)
+                  SERVER iceberg_server
+                  OPTIONS ("table" 'docs_example.bids')
+             "#,
+                    None,
+                    &[],
+                )
+                .unwrap();
+        });
+
+        server
+    }
+
+    #[pg_test]
+    #[ignore = "backend gets stuck due to blocking I/O"]
+    fn iceberg_backend_cancellable() {
+        let server = setup_unresponsive_server();
+        server.assert_cancellable("SELECT * from iceberg_table");
+    }
+
+    #[pg_test(error = "terminating connection due to administrator command")]
+    #[ignore = "backend gets stuck due to blocking I/O"]
+    fn iceberg_backend_terminable() {
+        let server = setup_unresponsive_server();
+        server.assert_terminable("SELECT * from iceberg_table");
     }
 }

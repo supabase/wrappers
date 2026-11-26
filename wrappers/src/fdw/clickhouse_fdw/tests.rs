@@ -10,6 +10,8 @@ mod tests {
     };
     use supabase_wrappers::prelude::create_async_runtime;
 
+    use crate::unresponsive_server::UnresponsiveServer;
+
     #[pg_test]
     fn clickhouse_smoketest() {
         Spi::connect_mut(|c| {
@@ -1440,5 +1442,68 @@ mod tests {
             assert!((s - 70.0).abs() < 1e-9, "expected 70.0, got {s}");
             assert_pushed_down!(c, "SELECT SUM(amt) FROM sub_param WHERE filter_id = 2");
         });
+    }
+
+    /// Start an unrespnsive server and create a foreign table.
+    fn setup_unresponsive_server() -> UnresponsiveServer {
+        let server = UnresponsiveServer::start();
+        let port = server.port;
+
+        Spi::connect_mut(|connection| {
+            connection
+                .update(
+                    r#"CREATE FOREIGN DATA WRAPPER clickhouse_wrapper
+                         HANDLER click_house_fdw_handler VALIDATOR click_house_fdw_validator"#,
+                    None,
+                    &[],
+                )
+                .unwrap();
+
+            connection
+                .update(
+                    &format!(
+                        r#"CREATE SERVER clickhouse_server
+                         FOREIGN DATA WRAPPER clickhouse_wrapper
+                         OPTIONS (
+                            conn_string 'tcp://default:default@localhost:{port}/default'
+                         )"#
+                    ),
+                    None,
+                    &[],
+                )
+                .unwrap();
+
+            connection
+                .update(
+                    r#"
+                  CREATE FOREIGN TABLE clickhouse_table (id bigint)
+                  SERVER clickhouse_server
+                  OPTIONS (
+                    table 'test_table',
+                    rowid_column 'id',
+                    stream_buffer_size '512'
+                  )
+             "#,
+                    None,
+                    &[],
+                )
+                .unwrap();
+        });
+
+        server
+    }
+
+    #[pg_test]
+    #[ignore = "backend gets stuck due to blocking I/O"]
+    fn clickhouse_backend_cancellable() {
+        let server = setup_unresponsive_server();
+        server.assert_cancellable("SELECT * from clickhouse_table");
+    }
+
+    #[pg_test(error = "terminating connection due to administrator command")]
+    #[ignore = "backend gets stuck due to blocking I/O"]
+    fn clickhouse_backend_terminable() {
+        let server = setup_unresponsive_server();
+        server.assert_terminable("SELECT * from clickhouse_table");
     }
 }

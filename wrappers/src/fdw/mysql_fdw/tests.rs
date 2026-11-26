@@ -1,6 +1,7 @@
 #[cfg(any(test, feature = "pg_test"))]
 #[pgrx::pg_schema]
 mod tests {
+    use crate::unresponsive_server::UnresponsiveServer;
     use mysql_async::{Error as MySqlError, Pool, prelude::*};
     use pgrx::prelude::*;
     use supabase_wrappers::prelude::create_async_runtime;
@@ -850,5 +851,64 @@ mod tests {
                 .collect::<Vec<_>>();
             assert_eq!(names, vec!["Alice", "Bob", "Carol", "Dave"]);
         });
+    }
+
+    /// Start an unresponsive server and create a foreign table.
+    fn setup_unresponsive_server() -> UnresponsiveServer {
+        let server = UnresponsiveServer::start();
+        let port = server.port;
+
+        Spi::connect_mut(|connection| {
+            connection
+                .update(
+                    r#"CREATE FOREIGN DATA WRAPPER mysql_wrapper
+                         HANDLER mysql_fdw_handler VALIDATOR mysql_fdw_validator"#,
+                    None,
+                    &[],
+                )
+                .unwrap();
+
+            connection
+                .update(
+                    &format!(
+                        r#"CREATE SERVER mysql_server
+                         FOREIGN DATA WRAPPER mysql_wrapper
+                         OPTIONS (
+                           conn_string 'mysql://root:password@127.0.0.1:{port}/testdb'
+                         )"#
+                    ),
+                    None,
+                    &[],
+                )
+                .unwrap();
+
+            connection
+                .update(
+                    r#"
+                  CREATE FOREIGN TABLE mysql_table (id bigint)
+                  SERVER mysql_server
+                  OPTIONS (table 'users')
+             "#,
+                    None,
+                    &[],
+                )
+                .unwrap();
+        });
+
+        server
+    }
+
+    #[pg_test]
+    #[ignore = "backend gets stuck due to blocking I/O"]
+    fn mysql_backend_cancellable() {
+        let server = setup_unresponsive_server();
+        server.assert_cancellable("SELECT * from mysql_table");
+    }
+
+    #[pg_test(error = "terminating connection due to administrator command")]
+    #[ignore = "backend gets stuck due to blocking I/O"]
+    fn mysql_backend_terminable() {
+        let server = setup_unresponsive_server();
+        server.assert_terminable("SELECT * from mysql_table");
     }
 }

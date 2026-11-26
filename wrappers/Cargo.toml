@@ -17,7 +17,7 @@ pg15 = ["pgrx/pg15", "pgrx-tests/pg15", "supabase-wrappers/pg15"]
 pg16 = ["pgrx/pg16", "pgrx-tests/pg16", "supabase-wrappers/pg16"]
 pg17 = ["pgrx/pg17", "pgrx-tests/pg17", "supabase-wrappers/pg17"]
 pg18 = ["pgrx/pg18", "pgrx-tests/pg18", "supabase-wrappers/pg18"]
-pg_test = []
+pg_test = ["dep:postgres"]
 
 helloworld_fdw = []
 bigquery_fdw = [
@@ -365,12 +365,16 @@ duckdb = { version = "=1.10506.0", features = [
     "parquet",
     "json",
 ], optional = true }
+
 # Version-pinned arrow compat deps matching duckdb's bundled arrow (58.x).
 # The workspace uses arrow 57.x for iceberg_fdw; using 57.x here causes type
 # incompatibilities because duckdb::arrow::* types implement the 58.x traits.
 arrow-array-compat = { package = "arrow-array", version = "58", optional = true }
 arrow-json-compat = { package = "arrow-json", version = "58", optional = true }
 arrow-schema-compat = { package = "arrow-schema", version = "58", optional = true }
+libc = { version = "0.2.191" }
+postgres = { version = "0.19.14", optional = true }
 
 [dev-dependencies]
 pgrx-tests = "=0.19.2"
+postgres = "0.19.14"

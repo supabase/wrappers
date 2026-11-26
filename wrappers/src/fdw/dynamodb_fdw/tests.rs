@@ -1,6 +1,7 @@
 #[cfg(any(test, feature = "pg_test"))]
 #[pgrx::pg_schema]
 mod tests {
+    use crate::unresponsive_server::UnresponsiveServer;
     use pgrx::pg_test;
     use pgrx::prelude::*;
 
@@ -939,5 +940,67 @@ mod tests {
                 ]
             );
         });
+    }
+
+    /// Start an unresponsive server and create a foreign table.
+    fn setup_unresponsive_server() -> UnresponsiveServer {
+        let server = UnresponsiveServer::start();
+        let port = server.port;
+
+        Spi::connect_mut(|connection| {
+            connection
+                .update(
+                    r#"CREATE FOREIGN DATA WRAPPER dynamodb_wrapper
+                         HANDLER dynamo_db_fdw_handler VALIDATOR dynamo_db_fdw_validator"#,
+                    None,
+                    &[],
+                )
+                .unwrap();
+
+            connection
+                .update(
+                    &format!(
+                        r#"CREATE SERVER dynamodb_server
+                         FOREIGN DATA WRAPPER dynamodb_wrapper
+                         OPTIONS (
+                            aws_access_key_id 'test',
+                            aws_secret_access_key 'test',
+                            region 'us-east-1',
+                            endpoint_url 'http://127.0.0.1:{port}'
+                         )"#
+                    ),
+                    None,
+                    &[],
+                )
+                .unwrap();
+
+            connection
+                .update(
+                    r#"
+                  CREATE FOREIGN TABLE dynamodb_table (id text)
+                  SERVER dynamodb_server
+                  OPTIONS (table 'wrappers_test_users', rowid_column 'id')
+             "#,
+                    None,
+                    &[],
+                )
+                .unwrap();
+        });
+
+        server
+    }
+
+    #[pg_test]
+    #[ignore = "backend gets stuck due to blocking I/O"]
+    fn dynamodb_backend_cancellable() {
+        let server = setup_unresponsive_server();
+        server.assert_cancellable("SELECT * from dynamodb_table");
+    }
+
+    #[pg_test(error = "terminating connection due to administrator command")]
+    #[ignore = "backend gets stuck due to blocking I/O"]
+    fn dynamodb_backend_terminable() {
+        let server = setup_unresponsive_server();
+        server.assert_terminable("SELECT * from dynamodb_table");
     }
 }

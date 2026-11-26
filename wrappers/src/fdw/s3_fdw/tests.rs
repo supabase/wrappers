@@ -1,6 +1,7 @@
 #[cfg(any(test, feature = "pg_test"))]
 #[pgrx::pg_schema]
 mod tests {
+    use crate::unresponsive_server::UnresponsiveServer;
     use pgrx::prelude::*;
 
     #[pg_test]
@@ -251,5 +252,73 @@ mod tests {
                 .collect::<Vec<_>>();
             assert_eq!(results, vec![(1, "Braund, Mr. Owen Harris")]);
         });
+    }
+
+    /// Start an unresponsive server and create a foreign table.
+    fn setup_unresponsive_server() -> UnresponsiveServer {
+        let server = UnresponsiveServer::start();
+        let port = server.port;
+
+        Spi::connect_mut(|connection| {
+            connection
+                .update(
+                    r#"CREATE FOREIGN DATA WRAPPER s3_wrapper
+                         HANDLER s3_fdw_handler VALIDATOR s3_fdw_validator"#,
+                    None,
+                    &[],
+                )
+                .unwrap();
+
+            connection
+                .update(
+                    &format!(
+                        r#"CREATE SERVER s3_server
+                         FOREIGN DATA WRAPPER s3_wrapper
+                         OPTIONS (
+                           aws_access_key_id 'admin',
+                           aws_secret_access_key 'password',
+                           aws_region 'us-east-1',
+                           endpoint_url 'http://127.0.0.1:{port}',
+                           path_style_url 'true'
+                         )"#
+                    ),
+                    None,
+                    &[],
+                )
+                .unwrap();
+
+            connection
+                .update(
+                    r#"
+                  CREATE FOREIGN TABLE s3_table (name text)
+                  SERVER s3_server
+                  OPTIONS (
+                    uri 's3://warehouse/test_data.csv',
+                    format 'csv',
+                    has_header 'true',
+                    delimiter ','
+                  )
+             "#,
+                    None,
+                    &[],
+                )
+                .unwrap();
+        });
+
+        server
+    }
+
+    #[pg_test]
+    #[ignore = "backend gets stuck due to blocking I/O"]
+    fn s3_backend_cancellable() {
+        let server = setup_unresponsive_server();
+        server.assert_cancellable("SELECT * from s3_table");
+    }
+
+    #[pg_test(error = "terminating connection due to administrator command")]
+    #[ignore = "backend gets stuck due to blocking I/O"]
+    fn s3_backend_terminable() {
+        let server = setup_unresponsive_server();
+        server.assert_terminable("SELECT * from s3_table");
     }
 }

@@ -1,6 +1,7 @@
 #[cfg(any(test, feature = "pg_test"))]
 #[pgrx::pg_schema]
 mod tests {
+    use crate::unresponsive_server::UnresponsiveServer;
     use bson::{Document, doc};
     use mongodb::Client;
     use pgrx::prelude::*;
@@ -838,5 +839,64 @@ mod tests {
                 .unwrap();
             assert_eq!(label.as_deref(), Some("alpha"));
         });
+    }
+
+    /// Start an unresponsive server and create a foreign table.
+    fn setup_unresponsive_server() -> UnresponsiveServer {
+        let server = UnresponsiveServer::start();
+        let port = server.port;
+
+        Spi::connect_mut(|connection| {
+            connection
+                .update(
+                    r#"CREATE FOREIGN DATA WRAPPER mongodb_wrapper
+                         HANDLER mongodb_fdw_handler VALIDATOR mongodb_fdw_validator"#,
+                    None,
+                    &[],
+                )
+                .unwrap();
+
+            connection
+                .update(
+                    &format!(
+                        r#"CREATE SERVER mongodb_server
+                         FOREIGN DATA WRAPPER mongodb_wrapper
+                         OPTIONS (
+                            conn_string 'mongodb://127.0.0.1:{port}'
+                         )"#
+                    ),
+                    None,
+                    &[],
+                )
+                .unwrap();
+
+            connection
+                .update(
+                    r#"
+                  CREATE FOREIGN TABLE mongodb_table (_id text)
+                  SERVER mongodb_server
+                  OPTIONS (database 'testdb', collection 'test_table', rowid_column '_id')
+             "#,
+                    None,
+                    &[],
+                )
+                .unwrap();
+        });
+
+        server
+    }
+
+    #[pg_test]
+    #[ignore = "backend gets stuck due to blocking I/O"]
+    fn mongodb_backend_cancellable() {
+        let server = setup_unresponsive_server();
+        server.assert_cancellable("SELECT * from mongodb_table");
+    }
+
+    #[pg_test(error = "terminating connection due to administrator command")]
+    #[ignore = "backend gets stuck due to blocking I/O"]
+    fn mongodb_backend_terminable() {
+        let server = setup_unresponsive_server();
+        server.assert_terminable("SELECT * from mongodb_table");
     }
 }

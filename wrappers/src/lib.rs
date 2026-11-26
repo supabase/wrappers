@@ -36,6 +36,9 @@ pub mod stats;
 
 mod supabase_wrappers_tests;
 
+#[cfg(any(test, feature = "pg_test"))]
+mod unresponsive_server;
+
 #[cfg(test)]
 pub mod pg_test {
     pub fn setup(_options: Vec<&str>) {
