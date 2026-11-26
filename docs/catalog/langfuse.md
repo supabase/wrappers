@@ -13,7 +13,11 @@ tags:
 
 The Langfuse Wrapper is a WebAssembly(Wasm) foreign data wrapper which allows you to read trace and observation data from Langfuse for use within your Postgres database.
 
-It targets the Langfuse [Public API](https://langfuse.com/docs/api) rather than the ClickHouse store behind it, which upstream documents as [not a stable API contract](https://langfuse.com/self-hosting/infrastructure/clickhouse) and which Langfuse Cloud users cannot reach at all.
+It reads Langfuse's [Observations API v2](https://api.reference.langfuse.com/#tag/observations/GET/api/public/v2/observations), the read path Langfuse v4 keeps. It targets the Langfuse Public API rather than the ClickHouse store behind it, which upstream documents as [not a stable API contract](https://langfuse.com/self-hosting/infrastructure/clickhouse) and which Langfuse Cloud users cannot reach at all.
+
+!!! warning
+
+    Langfuse v4 removed the v1 read endpoints (`traces`, `observations`, `sessions`, `scores`, `metrics`). Langfuse Cloud is v4-only from 2026-11-16 ([upgrade notes](https://langfuse.com/faq/all/upgrade-to-langfuse-v4)); self-hosted v4 in `events_only` mode returns 404 for them too. Point foreign tables at `v2/observations`. The wrapper reports a clear error if a table still uses a removed path.
 
 ## Available Versions
 
@@ -118,8 +122,9 @@ create schema if not exists langfuse;
 
 The full list of foreign table options are below:
 
-- `object` - API path after `/api/public/`, required. For example `traces` or `observations`.
-- `fields` - Field groups to request, optional. Applies to the `v2/` endpoints only.
+- `object` - API path after `/api/public/`, required. Use `v2/observations`.
+- `params` - Fixed query parameters applied to every request, optional, as `key=value&key=value`. For example `isRootObservation=true` for one row per trace.
+- `fields` - Field groups to request, optional. Applies to the `v2/` endpoints only. Defaults to every group the columns below use.
 
 The full list of server options are below:
 
@@ -143,7 +148,9 @@ import foreign schema langfuse from server langfuse_server into langfuse;
 
 ### Traces
 
-A trace is one end-to-end request through the application. Traces carry `user_id` and an aggregate cost, which makes this the table to join local user tables against.
+A trace is one end-to-end request through the application. Langfuse v4 has no trace list endpoint, so this table reads each trace's root observation (`isRootObservation=true`). It carries `user_id`, `session_id` and the trace name.
+
+`total_cost` here is the root observation's own cost. For the cost of a whole trace, sum `observations` grouped by `trace_id`.
 
 Ref: [Langfuse data model](https://langfuse.com/docs/observability/data-model)
 
@@ -157,7 +164,9 @@ Ref: [Langfuse data model](https://langfuse.com/docs/observability/data-model)
 
 ```sql
 create foreign table langfuse.traces (
+  trace_id text,
   id text,
+  trace_name text,
   name text,
   user_id text,
   session_id text,
@@ -166,9 +175,8 @@ create foreign table langfuse.traces (
   version text,
   total_cost double precision,
   latency double precision,
-  timestamp timestamp,
-  created_at timestamp,
-  updated_at timestamp,
+  start_time timestamp,
+  end_time timestamp,
   input text,
   output text,
   metadata jsonb,
@@ -176,7 +184,8 @@ create foreign table langfuse.traces (
 )
   server langfuse_server
   options (
-    object 'traces',
+    object 'v2/observations',
+    params 'isRootObservation=true',
     rowid_column 'id'
   );
 ```
@@ -201,9 +210,13 @@ An observation is a single step inside a trace, most usefully a model call, with
 create foreign table langfuse.observations (
   id text,
   trace_id text,
+  parent_observation_id text,
   type text,
   name text,
   level text,
+  user_id text,
+  session_id text,
+  environment text,
   model text,
   input_tokens bigint,
   output_tokens bigint,
@@ -225,7 +238,7 @@ create foreign table langfuse.observations (
 )
   server langfuse_server
   options (
-    object 'observations',
+    object 'v2/observations',
     rowid_column 'id'
   );
 ```
@@ -245,9 +258,9 @@ create foreign table langfuse.observations (
     | `input_cost`     | `costDetails.input`, else `calculatedInputCost`           |
     | `output_cost`    | `costDetails.output`, else `calculatedOutputCost`         |
 
-    The fallbacks matter in practice: the `observations` endpoint returns cost as `calculatedTotalCost` and has no `totalCost` key at all.
+    The fallbacks only apply to self-hosted servers still on v3 with a table pointed at a legacy path.
 
-- `observations` does not return `user_id`, which lives on the parent trace, although it is still accepted as a filter. Join through `trace_id` to attribute a call to a user.
+- In v4, `user_id` and `session_id` are returned on every observation, so cost per user no longer needs a join through the trace.
 
 - `input`, `output`, and `metadata` hold arbitrary JSON. Declare them as `jsonb` to query into them, or as `text` for the raw value.
 
@@ -261,19 +274,19 @@ This FDW supports:
 
 Pages are fetched lazily as the scan consumes them, rather than up front.
 
-The time column and its parameters differ per endpoint: `observations` filters `start_time` via `fromStartTime`/`toStartTime`, everything else filters `timestamp` via `fromTimestamp`/`toTimestamp`.
+Both tables filter on `start_time` via `fromStartTime`/`toStartTime`.
 
 Time bounds need literal timestamps. Postgres only forwards quals it can evaluate up front, so `now()` arrives as an empty qual list and the filter runs locally after every page has been fetched:
 
 ```sql
 -- pushed down
 select * from langfuse.traces
-where timestamp >= '2026-08-02'::timestamp
-  and timestamp <  '2026-08-09'::timestamp;
+where start_time >= '2026-08-02'::timestamp
+  and start_time <  '2026-08-09'::timestamp;
 
 -- not pushed down; fetches every page, then filters
 select * from langfuse.traces
-where timestamp >= now() - interval '7 days';
+where start_time >= now() - interval '7 days';
 ```
 
 Confirm with `explain (verbose)` and read the `Wrappers: quals` line — an empty list means nothing was pushed down.
@@ -298,7 +311,7 @@ This section describes important limitations and considerations when using this 
 - Read only; no `insert`, `update`, or `delete` support
 - Only `>=` and `<` time bounds are pushed down. The API's bounds are inclusive-from and exclusive-to, so `>` and `<=` would need an epsilon shift to stay correct and are left to Postgres
 - `now()` and other non-constant expressions in a time filter are not pushed down; use literal timestamps
-- The `v2/observations` endpoint reads a different store than `observations`. On a freshly created cloud project, rows ingested through both `/api/public/ingestion` and the OTLP endpoint were readable via `observations` while `v2/observations` returned an empty result, although it still validated query parameters. Prefer `observations` until that settles
+- Self-hosted servers on v3 in `legacy` write mode do not populate the v4 store, so `v2/observations` can return no rows there. Switch the server to `dual` or `events_only` mode (see the [v3 to v4 upgrade guide](https://langfuse.com/self-hosting/upgrade/upgrade-guides/upgrade-v3-to-v4))
 - `re_scan` is not supported, so these tables cannot sit on the inner side of a nested-loop join. Materialize with a CTE if needed
 - Materialized views using these foreign tables may fail during logical backups
 
@@ -311,7 +324,7 @@ Below are some examples on how to use Langfuse foreign tables.
 ```sql
 import foreign schema langfuse from server langfuse_server into langfuse;
 
-select id, name, user_id, total_cost
+select trace_id, trace_name, user_id, start_time
 from langfuse.traces
 limit 10;
 ```
@@ -320,10 +333,9 @@ limit 10;
 
 ```sql
 select user_id,
-       count(*)          as traces,
-       sum(total_cost)   as cost_usd,
-       round(avg(latency)::numeric, 2) as avg_latency_s
-from langfuse.traces
+       count(distinct trace_id) as traces,
+       sum(total_cost)          as cost_usd
+from langfuse.observations
 group by user_id
 order by cost_usd desc;
 ```
@@ -345,19 +357,19 @@ order by cost_usd desc;
 
 This is the query the wrapper exists for: attributing LLM spend to rows in your own database.
 
-Aggregate the foreign table separately before joining. A direct join against several local tables multiplies the trace rows and inflates `sum()`.
+Aggregate the foreign table separately before joining. A direct join against several local tables multiplies the rows and inflates `sum()`.
 
 ```sql
 with llm as (
   select user_id,
-         count(*)        as llm_calls,
-         sum(total_cost) as cost_usd
-  from langfuse.traces
-  where timestamp >= '2026-08-01'::timestamp
+         count(distinct trace_id) as llm_requests,
+         sum(total_cost)          as cost_usd
+  from langfuse.observations
+  where start_time >= '2026-08-01'::timestamp
   group by user_id
 )
 select u.email,
-       coalesce(l.llm_calls, 0) as llm_calls,
+       coalesce(l.llm_requests, 0) as llm_requests,
        l.cost_usd
 from auth.users u
 left join llm l on l.user_id = u.id::text

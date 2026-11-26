@@ -1027,6 +1027,36 @@ mod tests {
                 .filter_map(|r| r.get_by_name::<f64, _>("total_cost").unwrap())
                 .collect::<Vec<_>>();
             assert_eq!(costs, vec![0.0435, 0.0294]);
+
+            // The v2 mock answers with a row, then an empty page that still carries a
+            // cursor, then a row. Stopping at the empty page would drop obs-v2-2.
+            c.update(
+                r#"
+                  CREATE FOREIGN TABLE langfuse_observations_v2 (
+                    id text,
+                    trace_id text
+                  )
+                  SERVER langfuse_server
+                  OPTIONS (
+                    object 'v2/observations',
+                    rowid_column 'id'
+                  )
+             "#,
+                None,
+                &[],
+            )
+            .unwrap();
+
+            let ids = c
+                .select(
+                    "SELECT id FROM langfuse_observations_v2 ORDER BY id",
+                    None,
+                    &[],
+                )
+                .unwrap()
+                .filter_map(|r| r.get_by_name::<&str, _>("id").unwrap())
+                .collect::<Vec<_>>();
+            assert_eq!(ids, vec!["obs-v2-1", "obs-v2-2"]);
         });
     }
 }

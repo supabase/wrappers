@@ -493,7 +493,20 @@ class MockServer(BaseHTTPRequestHandler):
             qs = parse_qs(urlparse(req_path).query)
             page = int(qs.get("page", ["1"])[0])
 
-            if req_path.startswith("/api/public/traces"):
+            if req_path.startswith("/api/public/v2/observations"):
+                # Observations API v2 pages by cursor and may answer with an empty
+                # page that still carries a cursor. The second page here is such a
+                # page, so a scan that stops at it never returns obs-v2-2.
+                cursor = qs.get("cursor", [None])[0]
+                if cursor is None:
+                    rows, next_cursor = [{"id": "obs-v2-1", "traceId": "trace-1"}], "p2"
+                elif cursor == "p2":
+                    rows, next_cursor = [], "p3"
+                else:
+                    rows, next_cursor = [{"id": "obs-v2-2", "traceId": "trace-2"}], None
+                meta = {"cursor": next_cursor} if next_cursor else {}
+                body = json.dumps({"data": rows, "meta": meta})
+            elif req_path.startswith("/api/public/traces"):
                 # A userId filter is pushed down as a query param. Returning nothing for
                 # a non-matching value keeps the pushdown assertion honest: were the
                 # filter dropped, the unfiltered rows below would still come back.
