@@ -1,3 +1,8 @@
+// Allowing dead code because this helper is only used by
+// FDW tests that opt into it, so it is unused in builds
+// which don't enable any of those FDWs.
+#![allow(dead_code)]
+
 use std::{
     net::TcpListener,
     sync::{

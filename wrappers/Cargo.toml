@@ -377,3 +377,4 @@ postgres = { version = "0.19.14", optional = true }
 
 [dev-dependencies]
 pgrx-tests = "=0.19.2"
+postgres = "0.19.14"
