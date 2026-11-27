@@ -1282,7 +1282,14 @@ pub(super) extern "C-unwind" fn iterate_foreign_scan<
             }
 
             let is_agg = state.is_aggregate_scan();
-            PgMemoryContexts::For(state.tmp_ctx).switch_to(|_| {
+            // A virtual slot is valid for one tuple cycle. PostgreSQL resets this
+            // context before the next cycle, releasing the converted Datums.
+            let datum_context = if is_agg {
+                state.tmp_ctx
+            } else {
+                (*(*node).ss.ps.ps_ExprContext).ecxt_per_tuple_memory
+            };
+            PgMemoryContexts::For(datum_context).switch_to(|_| {
                 for i in 0..state.row.cells.len() {
                     let att_idx = state.tgts[i].num - 1;
                     let cell = state.row.cells.get_unchecked_mut(i);
