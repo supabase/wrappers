@@ -48,7 +48,7 @@ select vault.create_secret(
   'AWS access key for Wrappers'  -- secret description
 );
 select vault.create_secret(
-  '<secret access key>'
+  '<secret access key>',
   'aws_secret_access_key',
   'AWS secret access key for Wrappers'
 );
@@ -58,7 +58,7 @@ select vault.create_secret(
 
 We need to provide Postgres with the credentials to connect to Iceberg. We can do this using the `create server` command.
 
-For any server options need to be stored in Vault, you can add a prefix `vault_` to its name and use the secret ID returned from the `select vault.create_secret()` statement as the option value.
+For any server options that need to be stored in Vault, you can add a prefix `vault_` to its name and use the secret ID returned from the `select vault.create_secret()` statement as the option value.
 
 #### Connecting to AWS S3 Tables
 
