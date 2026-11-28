@@ -26,6 +26,31 @@ struct CalFdw {
 static mut INSTANCE: *mut CalFdw = std::ptr::null_mut::<CalFdw>();
 static FDW_NAME: &str = "CalFdw";
 
+// Cap a rate limit wait at one full window. Cal.com limits are per minute, so
+// waiting longer than this cannot help, and it bounds the damage if the header
+// is malformed or the clocks disagree.
+const MAX_RETRY_DELAY_SECS: i64 = 60;
+
+// Translate the `x-ratelimit-reset` header into milliseconds to sleep.
+//
+// Cal.com sends this header as the UTC epoch second at which the current rate
+// limit window resets, not as a number of seconds to wait, so the value has to
+// be made relative to the current time before it can be used as a delay.
+// ref: https://cal.com/docs/api-reference/v2/rate-limits
+//
+// The result is clamped to at least one second, so a reset that has already
+// passed backs off briefly instead of retrying in a tight loop.
+fn retry_delay_ms(reset_header: &str, now_secs: i64) -> Result<u64, FdwError> {
+    let reset_secs = reset_header
+        .trim()
+        .parse::<i64>()
+        .map_err(|e| format!("invalid x-ratelimit-reset header {reset_header:?}: {e}"))?;
+    let delay_secs = reset_secs
+        .saturating_sub(now_secs)
+        .clamp(1, MAX_RETRY_DELAY_SECS);
+    Ok(delay_secs as u64 * 1000)
+}
+
 impl CalFdw {
     fn init() {
         let instance = Self::default();
@@ -149,12 +174,11 @@ impl CalFdw {
             };
 
             // idle for a while for retry when got rate limited error
-            // ref: https://cal.com/docs/api-reference/v1/rate-limit
+            // ref: https://cal.com/docs/api-reference/v2/rate-limits
             if resp.status_code == 429
                 && let Some(retry) = resp.headers.iter().find(|h| h.0 == "x-ratelimit-reset")
             {
-                let delay_secs = retry.1.parse::<u64>().map_err(|e| e.to_string())?;
-                time::sleep(delay_secs * 1000);
+                time::sleep(retry_delay_ms(&retry.1, time::epoch_secs())?);
                 continue;
             }
 
@@ -383,3 +407,7 @@ impl Guest for CalFdw {
 }
 
 bindings::export!(CalFdw with_types_in bindings);
+
+#[cfg(test)]
+#[path = "lib_tests.rs"]
+mod tests;
