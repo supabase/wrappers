@@ -38,25 +38,43 @@ jobs:
             exit 0
           fi
           CHANGED=$(git diff --name-only "$BASE" "$HEAD")
-          echo "native=$(echo "$CHANGED" | grep -qE '^(wrappers/|supabase-wrappers/|supabase-wrappers-macros/|\.github/workflows/test_wrappers\.yml)' && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "native=$(echo "$CHANGED" | grep -qE '^(wrappers/|supabase-wrappers/|supabase-wrappers-macros/|Cargo\.(toml|lock)$|\.github/workflows/test_wrappers\.yml)' && echo true || echo false)" >> "$GITHUB_OUTPUT"
           echo "wasm=$(echo "$CHANGED" | grep -qE '^(wasm-wrappers/|supabase-wrappers/|wrappers/src/fdw/wasm_fdw/|\.github/workflows/test_wrappers\.yml)' && echo true || echo false)" >> "$GITHUB_OUTPUT"
 
   # =============================================================
   # Native wrappers test
   # =============================================================
   test_native:
-    name: Run native wrappers tests
+    name: ${{ matrix.name }}
     needs: [changes]
     if: needs.changes.outputs.native == 'true'
     runs-on: blacksmith-4vcpu-ubuntu-2404
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - pg: 15
+            name: Run native wrappers tests
+            fdws: native_fdws
+          - pg: 19
+            name: Run PG19 MySQL FDW regressions
+            fdws: mysql_fdw
+    env:
+      PG_MAJOR: ${{ matrix.pg }}
+      FDW_FEATURES: ${{ matrix.fdws }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Build docker images
+        if: matrix.pg == 15
         run: |
           docker compose -f wrappers/.ci/docker-compose-native.yaml up -d
+
+      - name: Start MySQL for aggregate pushdown and scan tests
+        if: matrix.pg == 19
+        run: docker compose -f wrappers/.ci/docker-compose-native.yaml up -d --wait mysql
 
       - uses: actions-rust-lang/setup-rust-toolchain@150fca883cd4034361b621bd4e6a9d34e5143606 # v1.15.4
         with:
@@ -71,12 +89,13 @@ jobs:
           . /etc/os-release
           sudo sh -c "echo 'deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $VERSION_CODENAME-pgdg main' > /etc/apt/sources.list.d/pgdg.list"
           sudo apt update -y -qq --fix-missing
-          sudo apt -y install postgresql-client-15 postgresql-15 postgresql-server-dev-15
+          sudo apt -y install "postgresql-client-$PG_MAJOR" "postgresql-$PG_MAJOR" "postgresql-server-dev-$PG_MAJOR"
           sudo apt -y autoremove && sudo apt -y clean
-          sudo chmod a+rwx `/usr/lib/postgresql/15/bin/pg_config --pkglibdir` `/usr/lib/postgresql/15/bin/pg_config --sharedir`/extension /var/run/postgresql/
+          pg_config="/usr/lib/postgresql/$PG_MAJOR/bin/pg_config"
+          sudo chmod a+rwx "$("$pg_config" --pkglibdir)" "$("$pg_config" --sharedir)/extension" /var/run/postgresql/
 
       - run: cargo install --locked cargo-pgrx --version 0.20.1
-      - run: cargo pgrx init --pg15 /usr/lib/postgresql/15/bin/pg_config
+      - run: cargo pgrx init "--pg$PG_MAJOR" "/usr/lib/postgresql/$PG_MAJOR/bin/pg_config"
 
       - name: Format code
         run: |
@@ -92,10 +111,10 @@ jobs:
             --exclude helloworld_fdw --exclude hubspot_fdw --exclude infura_fdw --exclude langfuse_fdw \
             --exclude notion_fdw --exclude openapi_fdw --exclude orb_fdw --exclude paddle_fdw \
             --exclude shopify_fdw --exclude slack_fdw --exclude snowflake_fdw \
-            --tests --no-deps --features native_fdws,helloworld_fdw
+            --tests --no-deps --no-default-features --features "pg$PG_MAJOR,$FDW_FEATURES,helloworld_fdw"
 
       - name: Perform test
-        run: cd wrappers && cargo pgrx test --features "native_fdws pg15"
+        run: cd wrappers && cargo pgrx test --no-default-features --features "$FDW_FEATURES" "pg$PG_MAJOR"
 
   # =============================================================
   # Wasm wrappers test

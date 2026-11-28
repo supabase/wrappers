@@ -437,7 +437,8 @@ pub(super) unsafe fn tuple_table_slot_to_row(slot: *mut pg_sys::TupleTableSlot) 
     for (att_idx, attr) in tup_desc.iter().filter(|a| !a.attisdropped).enumerate() {
         let col = pgrx::name_data_to_str(&attr.attname);
         let attno = NonZeroUsize::new(att_idx + 1).unwrap();
-        let cell: Option<Cell> = pgrx::htup::heap_getattr(&htup, attno, &tup_desc);
+        // SAFETY: the tuple and its descriptor come from the same live executor slot.
+        let cell: Option<Cell> = unsafe { pgrx::htup::heap_getattr(&htup, attno, &tup_desc) };
         row.push(col, cell);
     }
 

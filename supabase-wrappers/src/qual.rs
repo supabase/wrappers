@@ -148,10 +148,11 @@ pub unsafe fn form_array_from_datum(
 
 pub(crate) unsafe fn get_operator(opno: pg_sys::Oid) -> pg_sys::Form_pg_operator {
     unsafe {
-        let htup = pg_sys::SearchSysCache1(
-            pg_sys::SysCacheIdentifier::OPEROID.try_into().unwrap(),
-            opno.into(),
-        );
+        let cache_id = pg_sys::SysCacheIdentifier::OPEROID;
+        // Before PG19, SearchSysCache1 takes a plain C int.
+        #[cfg(not(feature = "pg19"))]
+        let cache_id = cache_id.try_into().unwrap();
+        let htup = pg_sys::SearchSysCache1(cache_id, opno.into());
         if htup.is_null() {
             pg_sys::ReleaseSysCache(htup);
             pgrx::error!("cache lookup operator {:?} failed", opno);
