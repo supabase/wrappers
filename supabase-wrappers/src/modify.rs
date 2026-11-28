@@ -80,7 +80,6 @@ impl FdwModifyPrivate {
             );
             ret.unstable_push_in_context(cst as _, mcx);
 
-
             ret.into_ptr()
         })
     }
@@ -106,7 +105,6 @@ impl FdwModifyPrivate {
             let cst = *cst_ptr;
             let rowid_typid_i32 = i32::from_datum(cst.constvalue, cst.constisnull)?;
             let rowid_typid = Oid::from(rowid_typid_i32 as u32);
-
 
             Some(FdwModifyPrivate {
                 foreigntableid,
@@ -134,7 +132,6 @@ struct FdwModifyState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
     // memory context
     tmp_ctx: MemoryContext,
     _phantom: PhantomData<E>,
-
 }
 
 impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwModifyState<E, W> {
@@ -225,7 +222,6 @@ unsafe fn find_rowid_column(
     None
 }
 
-
 #[pg_guard]
 pub(super) extern "C-unwind" fn add_foreign_update_targets(
     root: *mut pg_sys::PlannerInfo,
@@ -298,7 +294,6 @@ pub(super) extern "C-unwind" fn plan_foreign_modify<
             let attname = pgrx::name_data_to_str(&attr.attname);
             if attname == rowid_name {
                 let foreigntableid = rel.oid();
-
 
                 // Create FdwModifyPrivate with serializable data only.
                 // This data will survive PostgreSQL's query plan caching because
@@ -517,7 +512,6 @@ pub(super) extern "C-unwind" fn exec_foreign_update<
                     });
 
                     is_ft_col && state.rowid_name != col.as_str()
-
                 });
 
                 state.update(&rowid, &new_row)

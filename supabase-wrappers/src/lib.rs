@@ -320,7 +320,6 @@ mod polyfill;
 mod scan;
 mod sort;
 
-
 mod upper;
 
 /// PgBox'ed `FdwRoutine`, used in [`fdw_routine`](interface::ForeignDataWrapper::fdw_routine)

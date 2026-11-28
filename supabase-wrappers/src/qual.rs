@@ -3,10 +3,10 @@ use pgrx::pg_sys::Oid;
 use pgrx::{
     FromDatum, PgBuiltInOids, PgOid,
     datum::{Array, Date, JsonB, Timestamp},
-    pg_sys::PgNode,
     list::List,
     pg_sys,
     pg_sys::Datum,
+    pg_sys::PgNode,
 };
 use std::ffi::CStr;
 use std::ffi::c_void;
@@ -156,7 +156,9 @@ pub(crate) unsafe fn get_operator(opno: pg_sys::Oid) -> pg_sys::Form_pg_operator
             pg_sys::ReleaseSysCache(htup);
             pgrx::error!("cache lookup operator {:?} failed", opno);
         }
-        let op = pg_sys::GETSTRUCT!(htup).get().cast::<pg_sys::FormData_pg_operator>();
+        let op = pg_sys::GETSTRUCT!(htup)
+            .get()
+            .cast::<pg_sys::FormData_pg_operator>();
         pg_sys::ReleaseSysCache(htup);
         op
     }
@@ -215,39 +217,41 @@ pub(crate) unsafe fn extract_from_op_expr(
                     {
                         let field = pg_sys::get_attname(baserel_id, (*left).varattno, false);
 
-                        let (value, param, value_const) = if pg_sys::Node::is_a_ptr(right, pg_sys::NodeTag::T_Const) {
-                            let right = right as *mut pg_sys::Const;
-                            (
-                                Cell::from_polymorphic_datum(
-                                    (*right).constvalue,
-                                    (*right).constisnull,
-                                    (*right).consttype,
-                                ),
-                                None,
-                                Some(right as usize),
-                            )
-                        } else if pg_sys::Node::is_a_ptr(right, pg_sys::NodeTag::T_Param) {
-                            // add a dummy value if this is query parameter, the actual value
-                            // will be extracted from execution state
-                            let right = right as *mut pg_sys::Param;
-                            let param = Param {
-                                kind: (*right).paramkind,
-                                id: (*right).paramid as _,
-                                type_oid: (*right).paramtype,
-                                eval_value: Mutex::new(None).into(),
-                                expr_eval: ExprEval {
-                                    expr: if (*right).paramkind == pg_sys::ParamKind::PARAM_EXEC {
-                                        right as _
-                                    } else {
-                                        ptr::null_mut()
+                        let (value, param, value_const) =
+                            if pg_sys::Node::is_a_ptr(right, pg_sys::NodeTag::T_Const) {
+                                let right = right as *mut pg_sys::Const;
+                                (
+                                    Cell::from_polymorphic_datum(
+                                        (*right).constvalue,
+                                        (*right).constisnull,
+                                        (*right).consttype,
+                                    ),
+                                    None,
+                                    Some(right as usize),
+                                )
+                            } else if pg_sys::Node::is_a_ptr(right, pg_sys::NodeTag::T_Param) {
+                                // add a dummy value if this is query parameter, the actual value
+                                // will be extracted from execution state
+                                let right = right as *mut pg_sys::Param;
+                                let param = Param {
+                                    kind: (*right).paramkind,
+                                    id: (*right).paramid as _,
+                                    type_oid: (*right).paramtype,
+                                    eval_value: Mutex::new(None).into(),
+                                    expr_eval: ExprEval {
+                                        expr: if (*right).paramkind == pg_sys::ParamKind::PARAM_EXEC
+                                        {
+                                            right as _
+                                        } else {
+                                            ptr::null_mut()
+                                        },
+                                        expr_state: ptr::null_mut(),
                                     },
-                                    expr_state: ptr::null_mut(),
-                                },
+                                };
+                                (Some(Cell::I64(0)), Some(param), None)
+                            } else {
+                                (None, None, None)
                             };
-                            (Some(Cell::I64(0)), Some(param), None)
-                        } else {
-                            (None, None, None)
-                        };
 
                         if let Some(value) = value {
                             let qual = Qual {
@@ -327,7 +331,9 @@ pub(crate) unsafe fn extract_from_scalar_array_op_expr(
                 let left = unnest_clause(*args.get(0).unwrap() as _);
                 let right = unnest_clause(*args.get(1).unwrap() as _);
 
-                if pg_sys::Node::is_a_ptr(left, pg_sys::NodeTag::T_Var) && pg_sys::Node::is_a_ptr(right, pg_sys::NodeTag::T_Const) {
+                if pg_sys::Node::is_a_ptr(left, pg_sys::NodeTag::T_Var)
+                    && pg_sys::Node::is_a_ptr(right, pg_sys::NodeTag::T_Const)
+                {
                     let left = left as *mut pg_sys::Var;
                     let right = right as *mut pg_sys::Const;
 

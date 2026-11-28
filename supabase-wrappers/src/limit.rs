@@ -1,5 +1,8 @@
 use crate::interface::Limit;
-use pgrx::{FromDatum, pg_sys::{self, PgNode}};
+use pgrx::{
+    FromDatum,
+    pg_sys::{self, PgNode},
+};
 
 // extract limit
 pub(crate) unsafe fn extract_limit(
