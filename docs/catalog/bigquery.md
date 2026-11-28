@@ -115,7 +115,7 @@ table '(select * except(props), to_json_string(props) as props from `my_project.
 
 Note: When using subquery, full qualified table name must be used.
 
-## Entites
+## Entities
 
 ### Tables
 
@@ -223,11 +223,11 @@ Let's prepare the source table in BigQuery first:
 
 ```sql
 -- Run below SQLs on BigQuery to create source table
-create table your_project_id.your_dataset_id.people (
+create table test_ds.people (
   id int64,
   name string,
   ts timestamp,
-  props jsonb
+  props JSON
 );
 
 -- Add some test data
