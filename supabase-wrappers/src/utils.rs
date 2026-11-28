@@ -437,7 +437,8 @@ pub(super) unsafe fn tuple_table_slot_to_row(slot: *mut pg_sys::TupleTableSlot) 
     for (att_idx, attr) in tup_desc.iter().filter(|a| !a.attisdropped).enumerate() {
         let col = pgrx::name_data_to_str(&attr.attname);
         let attno = NonZeroUsize::new(att_idx + 1).unwrap();
-        let cell: Option<Cell> = pgrx::htup::heap_getattr(&htup, attno, &tup_desc);
+        // SAFETY: the tuple and its descriptor come from the same live executor slot.
+        let cell: Option<Cell> = unsafe { pgrx::htup::heap_getattr(&htup, attno, &tup_desc) };
         row.push(col, cell);
     }
 
@@ -489,7 +490,8 @@ pub(super) unsafe fn extract_target_columns(
             if let Some(col_vars) = List::<*mut c_void>::downcast_ptr_in_memcx(col_vars, mcx) {
                 for var in col_vars.iter() {
                     let var: pg_sys::Var = *(*var as *mut pg_sys::Var);
-                    let rte = pg_sys::planner_rt_fetch(var.varno as _, root);
+                    let relation_index = var.varno as pg_sys::Index;
+                    let rte = pg_sys::planner_rt_fetch!(relation_index, root).get();
                     let attno = var.varattno;
                     let attname = pg_sys::get_attname((*rte).relid, attno, true);
                     if !attname.is_null() {

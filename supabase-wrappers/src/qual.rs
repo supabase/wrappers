@@ -3,10 +3,10 @@ use pgrx::pg_sys::Oid;
 use pgrx::{
     FromDatum, PgBuiltInOids, PgOid,
     datum::{Array, Date, JsonB, Timestamp},
-    is_a,
     list::List,
     pg_sys,
     pg_sys::Datum,
+    pg_sys::PgNode,
 };
 use std::ffi::CStr;
 use std::ffi::c_void;
@@ -148,15 +148,18 @@ pub unsafe fn form_array_from_datum(
 
 pub(crate) unsafe fn get_operator(opno: pg_sys::Oid) -> pg_sys::Form_pg_operator {
     unsafe {
-        let htup = pg_sys::SearchSysCache1(
-            pg_sys::SysCacheIdentifier::OPEROID.try_into().unwrap(),
-            opno.into(),
-        );
+        let cache_id = pg_sys::SysCacheIdentifier::OPEROID;
+        // Before PG19, SearchSysCache1 takes a plain C int.
+        #[cfg(not(feature = "pg19"))]
+        let cache_id = cache_id.try_into().unwrap();
+        let htup = pg_sys::SearchSysCache1(cache_id, opno.into());
         if htup.is_null() {
             pg_sys::ReleaseSysCache(htup);
             pgrx::error!("cache lookup operator {:?} failed", opno);
         }
-        let op = pg_sys::GETSTRUCT(htup) as pg_sys::Form_pg_operator;
+        let op = pg_sys::GETSTRUCT!(htup)
+            .get()
+            .cast::<pg_sys::FormData_pg_operator>();
         pg_sys::ReleaseSysCache(htup);
         op
     }
@@ -164,9 +167,9 @@ pub(crate) unsafe fn get_operator(opno: pg_sys::Oid) -> pg_sys::Form_pg_operator
 
 pub(crate) unsafe fn unnest_clause(node: *mut pg_sys::Node) -> *mut pg_sys::Node {
     unsafe {
-        if is_a(node, pg_sys::NodeTag::T_RelabelType) {
+        if pg_sys::Node::is_a_ptr(node, pg_sys::NodeTag::T_RelabelType) {
             (*(node as *mut pg_sys::RelabelType)).arg as _
-        } else if is_a(node, pg_sys::NodeTag::T_ArrayCoerceExpr) {
+        } else if pg_sys::Node::is_a_ptr(node, pg_sys::NodeTag::T_ArrayCoerceExpr) {
             (*(node as *mut pg_sys::ArrayCoerceExpr)).arg as _
         } else {
             node
@@ -200,14 +203,14 @@ pub(crate) unsafe fn extract_from_op_expr(
                 let mut right = unnest_clause(*args.get(1).unwrap() as _);
 
                 // swap operands if needed
-                if is_a(right, pg_sys::NodeTag::T_Var)
-                    && !is_a(left, pg_sys::NodeTag::T_Var)
+                if pg_sys::Node::is_a_ptr(right, pg_sys::NodeTag::T_Var)
+                    && !pg_sys::Node::is_a_ptr(left, pg_sys::NodeTag::T_Var)
                     && (*opr).oprcom != Oid::INVALID
                 {
                     std::mem::swap(&mut left, &mut right);
                 }
 
-                if is_a(left, pg_sys::NodeTag::T_Var) {
+                if pg_sys::Node::is_a_ptr(left, pg_sys::NodeTag::T_Var) {
                     let left = left as *mut pg_sys::Var;
 
                     if pg_sys::bms_is_member((*left).varno as c_int, baserel_ids)
@@ -215,39 +218,41 @@ pub(crate) unsafe fn extract_from_op_expr(
                     {
                         let field = pg_sys::get_attname(baserel_id, (*left).varattno, false);
 
-                        let (value, param, value_const) = if is_a(right, pg_sys::NodeTag::T_Const) {
-                            let right = right as *mut pg_sys::Const;
-                            (
-                                Cell::from_polymorphic_datum(
-                                    (*right).constvalue,
-                                    (*right).constisnull,
-                                    (*right).consttype,
-                                ),
-                                None,
-                                Some(right as usize),
-                            )
-                        } else if is_a(right, pg_sys::NodeTag::T_Param) {
-                            // add a dummy value if this is query parameter, the actual value
-                            // will be extracted from execution state
-                            let right = right as *mut pg_sys::Param;
-                            let param = Param {
-                                kind: (*right).paramkind,
-                                id: (*right).paramid as _,
-                                type_oid: (*right).paramtype,
-                                eval_value: Mutex::new(None).into(),
-                                expr_eval: ExprEval {
-                                    expr: if (*right).paramkind == pg_sys::ParamKind::PARAM_EXEC {
-                                        right as _
-                                    } else {
-                                        ptr::null_mut()
+                        let (value, param, value_const) =
+                            if pg_sys::Node::is_a_ptr(right, pg_sys::NodeTag::T_Const) {
+                                let right = right as *mut pg_sys::Const;
+                                (
+                                    Cell::from_polymorphic_datum(
+                                        (*right).constvalue,
+                                        (*right).constisnull,
+                                        (*right).consttype,
+                                    ),
+                                    None,
+                                    Some(right as usize),
+                                )
+                            } else if pg_sys::Node::is_a_ptr(right, pg_sys::NodeTag::T_Param) {
+                                // add a dummy value if this is query parameter, the actual value
+                                // will be extracted from execution state
+                                let right = right as *mut pg_sys::Param;
+                                let param = Param {
+                                    kind: (*right).paramkind,
+                                    id: (*right).paramid as _,
+                                    type_oid: (*right).paramtype,
+                                    eval_value: Mutex::new(None).into(),
+                                    expr_eval: ExprEval {
+                                        expr: if (*right).paramkind == pg_sys::ParamKind::PARAM_EXEC
+                                        {
+                                            right as _
+                                        } else {
+                                            ptr::null_mut()
+                                        },
+                                        expr_state: ptr::null_mut(),
                                     },
-                                    expr_state: ptr::null_mut(),
-                                },
+                                };
+                                (Some(Cell::I64(0)), Some(param), None)
+                            } else {
+                                (None, None, None)
                             };
-                            (Some(Cell::I64(0)), Some(param), None)
-                        } else {
-                            (None, None, None)
-                        };
 
                         if let Some(value) = value {
                             let qual = Qual {
@@ -279,7 +284,7 @@ pub(crate) unsafe fn extract_from_null_test(
 ) -> Option<Qual> {
     unsafe {
         let var = (*expr).arg as *mut pg_sys::Var;
-        if !is_a(var as _, pg_sys::NodeTag::T_Var) || (*var).varattno < 1 {
+        if !pg_sys::Node::is_a_ptr(var as _, pg_sys::NodeTag::T_Var) || (*var).varattno < 1 {
             return None;
         }
 
@@ -327,7 +332,9 @@ pub(crate) unsafe fn extract_from_scalar_array_op_expr(
                 let left = unnest_clause(*args.get(0).unwrap() as _);
                 let right = unnest_clause(*args.get(1).unwrap() as _);
 
-                if is_a(left, pg_sys::NodeTag::T_Var) && is_a(right, pg_sys::NodeTag::T_Const) {
+                if pg_sys::Node::is_a_ptr(left, pg_sys::NodeTag::T_Var)
+                    && pg_sys::Node::is_a_ptr(right, pg_sys::NodeTag::T_Const)
+                {
                     let left = left as *mut pg_sys::Var;
                     let right = right as *mut pg_sys::Const;
 
@@ -438,7 +445,7 @@ pub(crate) unsafe fn extract_from_boolean_test(
 ) -> Option<Qual> {
     unsafe {
         let var = (*expr).arg as *mut pg_sys::Var;
-        if !is_a(var as _, pg_sys::NodeTag::T_Var) || (*var).varattno < 1 {
+        if !pg_sys::Node::is_a_ptr(var as _, pg_sys::NodeTag::T_Var) || (*var).varattno < 1 {
             return None;
         }
 
@@ -478,17 +485,17 @@ pub(crate) unsafe fn extract_quals(
             {
                 for cond in conds.iter() {
                     let expr = (*(*cond as *mut pg_sys::RestrictInfo)).clause as *mut pg_sys::Node;
-                    let extracted = if is_a(expr, pg_sys::NodeTag::T_OpExpr) {
+                    let extracted = if pg_sys::Node::is_a_ptr(expr, pg_sys::NodeTag::T_OpExpr) {
                         extract_from_op_expr(baserel_id, (*baserel).relids, expr as _)
-                    } else if is_a(expr, pg_sys::NodeTag::T_NullTest) {
+                    } else if pg_sys::Node::is_a_ptr(expr, pg_sys::NodeTag::T_NullTest) {
                         extract_from_null_test(baserel_id, expr as _)
-                    } else if is_a(expr, pg_sys::NodeTag::T_ScalarArrayOpExpr) {
+                    } else if pg_sys::Node::is_a_ptr(expr, pg_sys::NodeTag::T_ScalarArrayOpExpr) {
                         extract_from_scalar_array_op_expr(baserel_id, (*baserel).relids, expr as _)
-                    } else if is_a(expr, pg_sys::NodeTag::T_Var) {
+                    } else if pg_sys::Node::is_a_ptr(expr, pg_sys::NodeTag::T_Var) {
                         extract_from_var(baserel_id, (*baserel).relids, expr as _)
-                    } else if is_a(expr, pg_sys::NodeTag::T_BoolExpr) {
+                    } else if pg_sys::Node::is_a_ptr(expr, pg_sys::NodeTag::T_BoolExpr) {
                         extract_from_bool_expr(baserel_id, (*baserel).relids, expr as _)
-                    } else if is_a(expr, pg_sys::NodeTag::T_BooleanTest) {
+                    } else if pg_sys::Node::is_a_ptr(expr, pg_sys::NodeTag::T_BooleanTest) {
                         extract_from_boolean_test(baserel_id, expr as _)
                     } else {
                         if let Some(stm) = pgrx::nodes::node_to_string(expr) {

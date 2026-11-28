@@ -47,7 +47,6 @@ pub(super) unsafe fn exec_eval_expr(
     }
 }
 
-#[cfg(not(feature = "pg13"))]
 #[inline]
 pub(super) unsafe fn outer_plan_state(node: *mut pg_sys::PlanState) -> *mut pg_sys::PlanState {
     unsafe { (*node).lefttree }

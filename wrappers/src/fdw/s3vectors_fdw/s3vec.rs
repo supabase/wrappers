@@ -133,7 +133,7 @@ fn metadata_filter(_left: JsonB, _right: JsonB) -> bool {
     true
 }
 
-#[pg_extern(create_or_replace)]
+#[pg_extern(create_or_replace, requires = ["s3vec_type"])]
 fn s3vec_distance(s3vec: S3Vec) -> f32 {
     s3vec.distance
 }

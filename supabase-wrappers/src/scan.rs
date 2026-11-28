@@ -887,14 +887,14 @@ pub(super) extern "C-unwind" fn get_foreign_paths<
             baserel,
             ptr::null_mut(), // default pathtarget
             (*baserel).rows,
-            #[cfg(feature = "pg18")]
+            #[cfg(any(feature = "pg18", feature = "pg19"))]
             0, // disabled_nodes
             startup_cost,
             total_cost,
             ptr::null_mut(), // no pathkeys
             ptr::null_mut(), // no outer rel either
             ptr::null_mut(), // no extra plan
-            #[cfg(any(feature = "pg17", feature = "pg18"))]
+            #[cfg(any(feature = "pg17", feature = "pg18", feature = "pg19"))]
             ptr::null_mut(), // no restrict info
             ptr::null_mut(), // no fdw_private data
         );

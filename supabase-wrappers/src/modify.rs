@@ -32,9 +32,6 @@ struct FdwModifyPrivate {
     rowid_name: String,
     /// Row identifier type OID
     rowid_typid: Oid,
-    /// Update columns (pg13 only)
-    #[cfg(feature = "pg13")]
-    update_cols: Vec<String>,
 }
 
 impl FdwModifyPrivate {
@@ -43,8 +40,6 @@ impl FdwModifyPrivate {
     /// - [0] INT4: foreigntableid as i32
     /// - [1] TEXT: rowid_name
     /// - [2] INT4: rowid_typid as i32
-    /// - [3] INT4: update_cols_count (pg13 only)
-    /// - [4..N] TEXT: update_cols entries (pg13 only)
     unsafe fn serialize_to_list(&self) -> *mut pg_sys::List {
         pgrx::memcx::current_context(|mcx| unsafe {
             let mut ret = List::<*mut c_void>::Nil;
@@ -85,35 +80,6 @@ impl FdwModifyPrivate {
             );
             ret.unstable_push_in_context(cst as _, mcx);
 
-            #[cfg(feature = "pg13")]
-            {
-                // [3] update_cols_count as i32
-                let cst = pg_sys::makeConst(
-                    pg_sys::INT4OID,
-                    -1,
-                    pg_sys::InvalidOid,
-                    4,
-                    (self.update_cols.len() as i32).into_datum().unwrap(),
-                    false,
-                    true,
-                );
-                ret.unstable_push_in_context(cst as _, mcx);
-
-                // [4..N] update_cols as TEXT
-                for col in &self.update_cols {
-                    let cst = pg_sys::makeConst(
-                        pg_sys::TEXTOID,
-                        -1,
-                        pg_sys::InvalidOid,
-                        -1,
-                        col.clone().into_datum().unwrap(),
-                        false,
-                        false,
-                    );
-                    ret.unstable_push_in_context(cst as _, mcx);
-                }
-            }
-
             ret.into_ptr()
         })
     }
@@ -140,30 +106,10 @@ impl FdwModifyPrivate {
             let rowid_typid_i32 = i32::from_datum(cst.constvalue, cst.constisnull)?;
             let rowid_typid = Oid::from(rowid_typid_i32 as u32);
 
-            #[cfg(feature = "pg13")]
-            let update_cols = {
-                // [3] update_cols_count
-                let cst_ptr = *list.get(3)? as *mut pg_sys::Const;
-                let cst = *cst_ptr;
-                let count = i32::from_datum(cst.constvalue, cst.constisnull)? as usize;
-
-                // [4..N] update_cols
-                let mut cols = Vec::with_capacity(count);
-                for i in 0..count {
-                    let cst_ptr = *list.get(4 + i)? as *mut pg_sys::Const;
-                    let cst = *cst_ptr;
-                    let col = String::from_datum(cst.constvalue, cst.constisnull)?;
-                    cols.push(col);
-                }
-                cols
-            };
-
             Some(FdwModifyPrivate {
                 foreigntableid,
                 rowid_name,
                 rowid_typid,
-                #[cfg(feature = "pg13")]
-                update_cols,
             })
         })
     }
@@ -186,9 +132,6 @@ struct FdwModifyState<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> {
     // memory context
     tmp_ctx: MemoryContext,
     _phantom: PhantomData<E>,
-
-    #[cfg(feature = "pg13")]
-    update_cols: Vec<String>,
 }
 
 impl<E: Into<ErrorReport>, W: ForeignDataWrapper<E>> FdwModifyState<E, W> {
@@ -267,7 +210,7 @@ unsafe fn find_rowid_column(
     let tup_desc = unsafe { PgTupleDesc::from_pg_copy((*target_relation).rd_att) };
     for attr in tup_desc.iter().filter(|a| !a.is_dropped()) {
         if pgrx::name_data_to_str(&attr.attname) == rowid_name {
-            return Some(*attr);
+            return Some(attr);
         }
     }
 
@@ -279,41 +222,6 @@ unsafe fn find_rowid_column(
     None
 }
 
-#[cfg(feature = "pg13")]
-#[pg_guard]
-pub(super) extern "C-unwind" fn add_foreign_update_targets(
-    parsetree: *mut pg_sys::Query,
-    _target_rte: *mut pg_sys::RangeTblEntry,
-    target_relation: pg_sys::Relation,
-) {
-    debug2!("---> add_foreign_update_targets");
-    unsafe {
-        if let Some(attr) = find_rowid_column(target_relation) {
-            // make a Var representing the desired value
-            let var = pg_sys::makeVar(
-                (*parsetree).resultRelation as _,
-                attr.attnum,
-                attr.atttypid,
-                attr.atttypmod,
-                attr.attcollation,
-                0,
-            );
-
-            // wrap the var in a resjunk TLE
-            let tle = pg_sys::makeTargetEntry(
-                var as _,
-                ((*(*parsetree).targetList).length + 1) as _,
-                pg_sys::pstrdup(attr.attname.data.as_ptr()),
-                true,
-            );
-
-            // add it to the query's target list
-            (*parsetree).targetList = pg_sys::lappend((*parsetree).targetList, tle as _);
-        }
-    }
-}
-
-#[cfg(not(feature = "pg13"))]
 #[pg_guard]
 pub(super) extern "C-unwind" fn add_foreign_update_targets(
     root: *mut pg_sys::PlannerInfo,
@@ -360,7 +268,7 @@ pub(super) extern "C-unwind" fn plan_foreign_modify<
             )
         }
 
-        let rte = pg_sys::planner_rt_fetch(result_relation, root);
+        let rte = pg_sys::planner_rt_fetch!(result_relation, root).get();
 
         // core code already has some lock on each rel being planned, so we can
         // use NoLock here.
@@ -387,24 +295,6 @@ pub(super) extern "C-unwind" fn plan_foreign_modify<
             if attname == rowid_name {
                 let foreigntableid = rel.oid();
 
-                // Collect update columns for pg13
-                #[cfg(feature = "pg13")]
-                let update_cols = {
-                    let mut cols = Vec::new();
-                    let tgts: pgrx::PgList<pg_sys::TargetEntry> =
-                        pgrx::PgList::from_pg((*(*root).parse).targetList);
-                    for tgt in tgts.iter_ptr() {
-                        let col_name = std::ffi::CStr::from_ptr((*tgt).resname)
-                            .to_str()
-                            .unwrap()
-                            .to_owned();
-                        if !(*tgt).resjunk {
-                            cols.push(col_name);
-                        }
-                    }
-                    cols
-                };
-
                 // Create FdwModifyPrivate with serializable data only.
                 // This data will survive PostgreSQL's query plan caching because
                 // we serialize actual data values, not pointers.
@@ -412,8 +302,6 @@ pub(super) extern "C-unwind" fn plan_foreign_modify<
                     foreigntableid,
                     rowid_name: rowid_name.to_string(),
                     rowid_typid: attr.atttypid,
-                    #[cfg(feature = "pg13")]
-                    update_cols,
                 };
 
                 // Serialize the data to a PostgreSQL List.
@@ -496,14 +384,9 @@ pub(super) extern "C-unwind" fn begin_foreign_modify<
             opts,
             tmp_ctx,
             _phantom: PhantomData,
-            #[cfg(feature = "pg13")]
-            update_cols: private.update_cols,
         };
 
         // search for rowid attribute number
-        #[cfg(feature = "pg13")]
-        let subplan = (*(*(*mtstate).mt_plans.offset(_subplan_index as _))).plan;
-        #[cfg(not(feature = "pg13"))]
         let subplan = (*polyfill::outer_plan_state(&mut (*mtstate).ps)).plan;
         let rowid_name_c = PgMemoryContexts::For(state.tmp_ctx).pstrdup(&state.rowid_name);
         state.rowid_attno =
@@ -628,15 +511,7 @@ pub(super) extern "C-unwind" fn exec_foreign_update<
                         attr_name == col.as_str()
                     });
 
-                    #[cfg(not(feature = "pg13"))]
-                    {
-                        is_ft_col && state.rowid_name != col.as_str()
-                    }
-
-                    #[cfg(feature = "pg13")]
-                    {
-                        is_ft_col && state.update_cols.iter().any(|c| c == col.as_str())
-                    }
+                    is_ft_col && state.rowid_name != col.as_str()
                 });
 
                 state.update(&rowid, &new_row)

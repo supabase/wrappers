@@ -1,6 +1,6 @@
 use crate::interface::Sort;
 use pgrx::list::List;
-use pgrx::{is_a, pg_sys};
+use pgrx::pg_sys::{self, PgNode};
 use std::ffi::CStr;
 use std::ffi::c_void;
 
@@ -16,9 +16,9 @@ pub(crate) unsafe fn create_sort(
             let sort = Sort {
                 field: CStr::from_ptr(attname).to_str().unwrap().to_owned(),
                 field_no: attno as usize,
-                #[cfg(feature = "pg18")]
+                #[cfg(any(feature = "pg18", feature = "pg19"))]
                 reversed: (*pathkey).pk_cmptype == pg_sys::BTGreaterStrategyNumber,
-                #[cfg(not(feature = "pg18"))]
+                #[cfg(not(any(feature = "pg18", feature = "pg19")))]
                 reversed: (*pathkey).pk_strategy as u32 == pg_sys::BTGreaterStrategyNumber,
                 nulls_first: (*pathkey).pk_nulls_first,
                 ..Default::default()
@@ -63,17 +63,23 @@ pub(crate) unsafe fn extract_sorts(
                                 let expr = (*(*em as *mut pg_sys::EquivalenceMember)).em_expr
                                     as *mut pg_sys::Node;
 
-                                if is_a(expr, pg_sys::NodeTag::T_Var) {
+                                if pg_sys::Node::is_a_ptr(expr, pg_sys::NodeTag::T_Var) {
                                     let var = expr as *mut pg_sys::Var;
                                     let sort = create_sort(*pathkey as _, var, baserel_id);
                                     if let Some(sort) = sort {
                                         ret.push(sort);
                                     }
-                                } else if is_a(expr, pg_sys::NodeTag::T_RelabelType) {
+                                } else if pg_sys::Node::is_a_ptr(
+                                    expr,
+                                    pg_sys::NodeTag::T_RelabelType,
+                                ) {
                                     // ORDER BY clauses having a COLLATE option will be RelabelType
                                     let expr = expr as *mut pg_sys::RelabelType;
                                     let var = (*expr).arg as *mut pg_sys::Var;
-                                    if is_a(var as *mut pg_sys::Node, pg_sys::NodeTag::T_Var) {
+                                    if pg_sys::Node::is_a_ptr(
+                                        var as *mut pg_sys::Node,
+                                        pg_sys::NodeTag::T_Var,
+                                    ) {
                                         let sort = create_sort(*pathkey as _, var, baserel_id);
                                         if let Some(mut sort) = sort {
                                             let coll_id = (*expr).resultcollid;

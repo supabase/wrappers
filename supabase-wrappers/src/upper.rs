@@ -72,7 +72,7 @@ unsafe fn extract_column_from_var(
     unsafe {
         let relid = (*var).varno as pg_sys::Index;
         let attno = (*var).varattno;
-        let rte = pg_sys::planner_rt_fetch(relid, root);
+        let rte = pg_sys::planner_rt_fetch!(relid, root).get();
         if rte.is_null() {
             return None;
         }
@@ -376,13 +376,13 @@ pub(super) extern "C-unwind" fn get_foreign_upper_paths<
             output_rel,
             (*output_rel).reltarget, // pathtarget
             rows as f64,             // rows
-            #[cfg(feature = "pg18")]
+            #[cfg(any(feature = "pg18", feature = "pg19"))]
             0, // disabled_nodes (pg18 only)
             startup_cost,            // startup_cost
             total_cost,              // total_cost
             ptr::null_mut(),         // pathkeys
             ptr::null_mut(),         // fdw_outerpath
-            #[cfg(any(feature = "pg17", feature = "pg18"))]
+            #[cfg(any(feature = "pg17", feature = "pg18", feature = "pg19"))]
             ptr::null_mut(), // fdw_restrictinfo (pg17+ only)
             ptr::null_mut(),         // fdw_private (path-level, not needed)
         );

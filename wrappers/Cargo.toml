@@ -11,12 +11,11 @@ crate-type = ["cdylib"]
 
 [features]
 default = ["pg15"]
-pg13 = ["pgrx/pg13", "pgrx-tests/pg13", "supabase-wrappers/pg13"]
-pg14 = ["pgrx/pg14", "pgrx-tests/pg14", "supabase-wrappers/pg14"]
 pg15 = ["pgrx/pg15", "pgrx-tests/pg15", "supabase-wrappers/pg15"]
 pg16 = ["pgrx/pg16", "pgrx-tests/pg16", "supabase-wrappers/pg16"]
 pg17 = ["pgrx/pg17", "pgrx-tests/pg17", "supabase-wrappers/pg17"]
 pg18 = ["pgrx/pg18", "pgrx-tests/pg18", "supabase-wrappers/pg18"]
+pg19 = ["pgrx/pg19", "pgrx-tests/pg19", "supabase-wrappers/pg19"]
 pg_test = []
 
 helloworld_fdw = []
@@ -224,7 +223,7 @@ native_fdws = [
 ]
 all_fdws = ["native_fdws", "wasm_fdw"]
 [dependencies]
-pgrx = { version = "=0.19.2" }
+pgrx = { version = "=0.20.1" }
 #supabase-wrappers = "0.1"
 supabase-wrappers = { path = "../supabase-wrappers", default-features = false }
 
@@ -373,4 +372,4 @@ arrow-json-compat = { package = "arrow-json", version = "58", optional = true }
 arrow-schema-compat = { package = "arrow-schema", version = "58", optional = true }
 
 [dev-dependencies]
-pgrx-tests = "=0.19.2"
+pgrx-tests = "=0.20.1"

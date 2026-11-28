@@ -1235,14 +1235,7 @@ pub trait ForeignDataWrapper<E: Into<ErrorReport>> {
             fdw_routine.ExplainForeignScan = Some(scan::explain_foreign_scan::<E, Self>);
 
             // upper path planning (aggregate pushdown)
-            #[cfg(any(
-                feature = "pg13",
-                feature = "pg14",
-                feature = "pg15",
-                feature = "pg16",
-                feature = "pg17",
-                feature = "pg18"
-            ))]
+
             {
                 use crate::upper;
                 fdw_routine.GetForeignUpperPaths = Some(upper::get_foreign_upper_paths::<E, Self>);
